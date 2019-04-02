@@ -2,15 +2,16 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -23,6 +24,48 @@ type ValidatorServer struct {
 	beaconDB           *db.BeaconDB
 	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
+}
+
+// WaitForActivation checks if a validator public key exists in the active validator registry of the current
+// beacon state, if not, then it creates a stream which listens for canonical states which contain
+// the validator with the public key as an active validator record.
+func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
+	if vs.beaconDB.HasValidator(req.Pubkey) {
+		beaconState, err := vs.beaconDB.State(vs.ctx)
+		if err != nil {
+			return fmt.Errorf("could not retrieve beacon state: %v", err)
+		}
+		activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
+		if err != nil {
+			return fmt.Errorf("could not retrieve active validator from state: %v", err)
+		}
+		res := &pb.ValidatorActivationResponse{
+			Validator: activeVal,
+		}
+		return stream.Send(res)
+	}
+	for {
+		select {
+		case <-time.After(3 * time.Second):
+			if !vs.beaconDB.HasValidator(req.Pubkey) {
+				continue
+			}
+			beaconState, err := vs.beaconDB.State(vs.ctx)
+			if err != nil {
+				return fmt.Errorf("could not retrieve beacon state: %v", err)
+			}
+			activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
+			if err != nil {
+				return fmt.Errorf("could not retrieve active validator from state: %v", err)
+			}
+			res := &pb.ValidatorActivationResponse{
+				Validator: activeVal,
+			}
+			return stream.Send(res)
+		case <-vs.ctx.Done():
+			return errors.New("rpc context closed, exiting goroutine")
+		}
+	}
 }
 
 // ValidatorIndex is called by a validator to get its index location that corresponds
@@ -55,7 +98,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	}
 	avgBalance := totalBalance / float32(len(beaconState.ValidatorBalances))
 	balance := beaconState.ValidatorBalances[index]
-	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, req.Slot)
+	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, helpers.SlotToEpoch(req.Slot))
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                 balance,
 		AverageValidatorBalance: avgBalance,
@@ -90,9 +133,21 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
-	val := beaconState.ValidatorRegistry[idx]
-	if val.ActivationEpoch > helpers.SlotToEpoch(beaconState.Slot) {
-		return nil, status.Error(codes.NotFound, "validator not yet activated")
+	chainHead, err := vs.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not get chain head: %v", err)
+	}
+	headRoot, err := hashutil.HashBeaconBlock(chainHead)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+	for beaconState.Slot < req.EpochStart {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
 	}
 
 	committee, shard, slot, isProposer, err :=
@@ -162,4 +217,12 @@ func (vs *ValidatorServer) ValidatorStatus(
 	return &pb.ValidatorStatusResponse{
 		Status: status,
 	}, nil
+}
+
+func (vs *ValidatorServer) retrieveActiveValidator(beaconState *pbp2p.BeaconState, pubkey []byte) (*pbp2p.Validator, error) {
+	validatorIdx, err := vs.beaconDB.ValidatorIndex(pubkey)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve validator index: %v", err)
+	}
+	return beaconState.ValidatorRegistry[validatorIdx], nil
 }

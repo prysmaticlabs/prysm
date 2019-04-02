@@ -77,9 +77,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{109, 97}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{123, 65}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{109, 97}, attesterIndices)
+			[]uint64{123, 65}, attesterIndices)
 	}
 }
 
@@ -119,9 +119,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{1141, 688}) {
+	if !reflect.DeepEqual(indices, []uint64{1134, 1150}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{1141, 688}, indices)
+			[]uint64{1134, 1150}, indices)
 	}
 }
 
@@ -586,14 +586,15 @@ func TestUpdateRegistry_Exits(t *testing.T) {
 }
 
 func TestMaxBalanceChurn_OK(t *testing.T) {
+	maxDepositAmount := params.BeaconConfig().MaxDepositAmount
 	tests := []struct {
 		totalBalance    uint64
 		maxBalanceChurn uint64
 	}{
-		{totalBalance: 1e9, maxBalanceChurn: params.BeaconConfig().MaxDepositAmount},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount, maxBalanceChurn: 512 * 1e9},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount * 10, maxBalanceChurn: 512 * 1e10},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount * 1000, maxBalanceChurn: 512 * 1e12},
+		{totalBalance: 1e9, maxBalanceChurn: maxDepositAmount},
+		{totalBalance: maxDepositAmount, maxBalanceChurn: maxDepositAmount},
+		{totalBalance: maxDepositAmount * 10, maxBalanceChurn: maxDepositAmount},
+		{totalBalance: params.BeaconConfig().MaxDepositAmount * 1000, maxBalanceChurn: 5 * 1e11},
 	}
 
 	for _, tt := range tests {
