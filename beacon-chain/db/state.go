@@ -126,7 +126,15 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	defer db.stateLock.Unlock()
 	lockSpan.End()
 
-	db.currentState = beaconState
+	// Clone to prevent mutations of the cached copy
+	ctx, cloneSpan := trace.StartSpan(ctx, "proto.Clone")
+	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
+	if !ok {
+		cloneSpan.End()
+		return errors.New("could not clone beacon state")
+	}
+	db.currentState = currentState
+	cloneSpan.End()
 
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
