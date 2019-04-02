@@ -13,4 +13,4 @@ while test $# -gt 0; do
     esac
 done
 
-bazel run //beacon-chain -- --deposit-contract $DEPOSIT_CONTRACT --clear-db
+bazel run //beacon-chain -- --clear-db --deposit-contract $DEPOSIT_CONTRACT

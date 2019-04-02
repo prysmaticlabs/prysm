@@ -15,7 +15,7 @@ UNAME=$(echo `uname` | tr '[A-Z]' '[a-z]')
 echo $PASSWORD > $PASSWORD_PATH
 
 bazel build //validator
-bazel build //contracts/deposit-contract/sendDepositTx:sendDepositTx
+bazel build //contracts/deposit-contract/sendDepositTx
 
 START_INDEX=1
 END_INDEX=8
@@ -73,7 +73,7 @@ do
   nohup $CMD $> /tmp/validator$i.log &
 done
 
-echo "Started $VALIDATORS validators"
+echo "Started $END_INDEX validators"
 
 for i in `seq $START_INDEX $END_INDEX`;
 do
@@ -84,14 +84,13 @@ do
   HTTPFLAG="--httpPath=https://goerli.prylabs.net"
   PASSFLAG="--passwordFile=$PASSWORD_PATH"
   CONTRACTFLAG="--depositContract=$DEPOSIT_CONTRACT"
-  DEPOSITSFLAG="--numberOfDeposits=1"
   PRIVFLAG="--privKey=$(cat $PRIVATE_KEY_PATH)"
   KEYFLAG="--prysm-keystore=$KEYSTORE"
   AMOUNTFLAG="--depositAmount=3200000"
 
   CMD="bazel-bin/contracts/deposit-contract/sendDepositTx/${UNAME}_amd64_stripped/sendDepositTx"
 
-  DEPOSITCMD="$CMD $HTTPFLAG $PASSFLAG $CONTRACTFLAG $DEPOSITSFLAG $PRIVFLAG $KEYFLAG $AMOUNTFLAG"
+  DEPOSITCMD="$CMD $HTTPFLAG $PASSFLAG $CONTRACTFLAG $PRIVFLAG $KEYFLAG $AMOUNTFLAG"
 
   $DEPOSITCMD
 done
