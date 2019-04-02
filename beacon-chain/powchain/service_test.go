@@ -272,10 +272,11 @@ func TestRPCRestart_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	gr := &goodReader{}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
-		Reader:          &goodReader{},
+		Reader:          gr,
 		Logger:          &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
@@ -293,7 +294,7 @@ func TestRPCRestart_OK(t *testing.T) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 	// clientPTR := &web3Service.client
-	// web3Service.runError = errors.New("EOF")
+	// web3Service.headerChan <-
 	// time.Sleep(5 * time.Second)
 	// msg = hook.LastEntry().Message
 	// want = "EOF"
