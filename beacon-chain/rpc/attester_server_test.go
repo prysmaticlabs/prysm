@@ -34,6 +34,8 @@ func TestAttestHead_OK(t *testing.T) {
 func TestAttestationDataAtSlot_EpochBoundaryFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	beaconState := &pbp2p.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().SlotsPerEpoch,
 		LatestBlockRootHash32S: make([][]byte, 20),
@@ -47,7 +49,7 @@ func TestAttestationDataAtSlot_EpochBoundaryFailure(t *testing.T) {
 	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(block, beaconState); err != nil {
+	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	want := "could not get epoch boundary block"
@@ -60,6 +62,8 @@ func TestAttestationDataAtSlot_EpochBoundaryFailure(t *testing.T) {
 func TestAttestationDataAtSlot_JustifiedBlockFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	beaconState := &pbp2p.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 2,
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
@@ -73,7 +77,7 @@ func TestAttestationDataAtSlot_JustifiedBlockFailure(t *testing.T) {
 	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(block, beaconState); err != nil {
+	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
@@ -82,7 +86,7 @@ func TestAttestationDataAtSlot_JustifiedBlockFailure(t *testing.T) {
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(epochBoundaryBlock, beaconState); err != nil {
+	if err := attesterServer.beaconDB.UpdateChainHead(ctx, epochBoundaryBlock, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	want := "could not get justified block"
@@ -95,6 +99,8 @@ func TestAttestationDataAtSlot_JustifiedBlockFailure(t *testing.T) {
 func TestAttestationDataAtSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	block := &pbp2p.BeaconBlock{
 		Slot: 1 + params.BeaconConfig().GenesisSlot,
 	}
@@ -135,19 +141,19 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(epochBoundaryBlock, beaconState); err != nil {
+	if err := attesterServer.beaconDB.UpdateChainHead(ctx, epochBoundaryBlock, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	if err := attesterServer.beaconDB.SaveBlock(justifiedBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(justifiedBlock, beaconState); err != nil {
+	if err := attesterServer.beaconDB.UpdateChainHead(ctx, justifiedBlock, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(block, beaconState); err != nil {
+	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	req := &pb.AttestationDataRequest{

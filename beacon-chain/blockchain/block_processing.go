@@ -178,17 +178,10 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 	}
 
 	// Update attestation store with latest attestation target.
-	log.Info("Updating latest attestation target")
 	for _, att := range block.Body.Attestations {
 		if err := c.attsService.UpdateLatestAttestation(c.ctx, att); err != nil {
 			return fmt.Errorf("failed to update latest attestation for store: %v", err)
 		}
-		log.WithFields(
-			logrus.Fields{
-				"attestationSlot": att.Data.Slot - params.BeaconConfig().GenesisSlot,
-				"justifiedEpoch":  att.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
-			},
-		).Info("Attestation store updated")
 	}
 
 	// Remove pending deposits from the deposit queue.

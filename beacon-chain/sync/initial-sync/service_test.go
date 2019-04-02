@@ -89,7 +89,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	if err := beaconDB.SaveBlock(genBlock); err != nil {
 		t.Fatalf("could not save genesis block to disk: %v", err)
 	}
-	if err := beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
+	if err := beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		t.Fatalf("could not set chain head, %v", err)
 	}
 }
@@ -413,6 +413,7 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	setUpGenesisStateAndBlock(db, t)
+	ctx := context.Background()
 
 	cfg := &Config{
 		P2P:             &mockP2P{},
@@ -427,7 +428,7 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 		t.Fatalf("could not create new state %v", err)
 	}
 
-	err = ss.db.SaveState(newState)
+	err = ss.db.SaveState(ctx, newState)
 	if err != nil {
 		t.Fatalf("could not save beacon state %v", err)
 	}
