@@ -74,6 +74,7 @@ func GenesisBeaconState(
 	}
 
 	latestBalances := make([]uint64, len(genesisValidatorDeposits))
+	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 
 	state := &pb.BeaconState{
 		// Misc fields.
@@ -110,6 +111,7 @@ func GenesisBeaconState(
 		LatestCrosslinks:        latestCrosslinks,
 		LatestBlockRootHash32S:  latestBlockRoots,
 		LatestIndexRootHash32S:  latestActiveIndexRoots,
+		LatestSlashedBalances:   latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},
 
