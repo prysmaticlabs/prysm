@@ -44,11 +44,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		)
 	}
 
-	fBlock, err := db.BlockBySlot(fState.Slot)
-	if err != nil {
-		return nil, err
+	if fState.LatestBlock == nil {
+		return nil, fmt.Errorf("latest head in state is nil %v", err)
 	}
-	fRoot, err := hashutil.HashBeaconBlock(fBlock)
+
+	fRoot, err := hashutil.HashBeaconBlock(fState.LatestBlock)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get block root %v", err)
 	}
