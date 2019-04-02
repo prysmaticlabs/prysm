@@ -113,7 +113,7 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 }
 
 // SaveState updates the beacon chain state.
-func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
+func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) error {
 	db.stateLock.Lock()
 	defer db.stateLock.Unlock()
 
@@ -213,14 +213,17 @@ func (db *BeaconDB) SaveHistoricalState(beaconState *pb.BeaconState) error {
 }
 
 // SaveCurrentAndFinalizedState saves the state as both the current and last finalized state.
-func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) error {
+func (db *BeaconDB) SaveCurrentAndFinalizedState(ctx context.Context, beaconState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.SaveCurrentAndFinalizedState")
+	defer span.End()
+
 	// Clone to prevent mutations of the cached copy
 	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
 	if !ok {
 		return errors.New("could not clone beacon state")
 	}
 
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		return err
 	}
 

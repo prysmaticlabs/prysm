@@ -257,7 +257,7 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 	}
 
 	bState.Slot = slot
-	return service.beaconDB.SaveState(bState)
+	return service.beaconDB.SaveState(context.Background(), bState)
 }
 
 func TestChainStartStop_Uninitialized(t *testing.T) {
