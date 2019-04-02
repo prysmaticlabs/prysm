@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -27,6 +28,7 @@ type validator struct {
 	attesterClient  pb.AttesterServiceClient
 	key             *keystore.Key
 	prevBalance     uint64
+	db              *db.ValidatorDB
 }
 
 // Done cleans up the validator.

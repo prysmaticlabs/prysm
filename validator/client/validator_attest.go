@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -22,6 +23,31 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
+
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+
+	// Retrieve the current fork data from the beacon node.
+	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
+	if err != nil {
+		log.Errorf("Failed to get fork data from beacon node's state: %v", err)
+		return
+	}
+
+	// if the attestation has already been submit, then resend it
+	attestation, err := v.db.GetAttestation(fork, v.key.PublicKey, epoch)
+	if err != nil {
+		log.Errorf("Failed to get saved attestation: %v", err)
+		return
+	}
+	if attestation != nil {
+		if attestation.Data.Slot != slot {
+			log.Errorf("Try to attest for slot %d, but already have attest for the slot %d in the same epoch", slot-params.BeaconConfig().GenesisSlot, attestation.Data.Slot-params.BeaconConfig().GenesisSlot)
+		} else {
+			// Broadcast to the network via beacon chain node.
+			v.submitAttestation(ctx, attestation)
+		}
+		return
+	}
 
 	v.waitToSlotMidpoint(ctx, slot)
 
@@ -88,7 +114,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 
 	// The validator now creates an Attestation object using the AttestationData as
 	// set in the code above after all properties have been set.
-	attestation := &pbp2p.Attestation{
+	attestation = &pbp2p.Attestation{
 		Data: attData,
 	}
 
@@ -121,6 +147,16 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		"slot":           slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Attesting to beacon chain head...")
 
+	// Keep the attestation
+	if err := v.db.SaveAttestation(fork, v.key.PublicKey, attestation); err != nil {
+		log.WithError(err).Error("Failed to save attestation")
+		return
+	}
+
+	v.submitAttestation(ctx, attestation)
+}
+
+func (v *validator) submitAttestation(ctx context.Context, attestation *pbp2p.Attestation) {
 	log.Debugf("Produced attestation: %v", attestation)
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
@@ -129,8 +165,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	log.WithFields(logrus.Fields{
 		"attestationHash": fmt.Sprintf("%#x", attResp.AttestationHash),
-		"shard":           attData.Shard,
-		"slot":            slot - params.BeaconConfig().GenesisSlot,
+		"shard":           attestation.Data.Shard,
+		"slot":            attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Beacon node processed attestation successfully")
 }
 

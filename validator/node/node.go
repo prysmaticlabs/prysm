@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"sync"
 	"syscall"
 
@@ -19,12 +20,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
 var log = logrus.WithField("prefix", "node")
+
+const validatorDBName = "validatordata"
 
 // ValidatorClient defines an instance of a sharding validator that manages
 // the entire lifecycle of services attached to it participating in
@@ -34,6 +38,7 @@ type ValidatorClient struct {
 	services *shared.ServiceRegistry // Lifecycle and service store.
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
+	db       *db.ValidatorDB
 }
 
 // NewValidatorClient creates a new, Ethereum Serenity validator client.
@@ -60,6 +65,10 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	featureconfig.ConfigureBeaconFeatures(ctx)
+
+	if err := ValidatorClient.startDB(ctx); err != nil {
+		return nil, err
+	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err
@@ -114,7 +123,30 @@ func (s *ValidatorClient) Close() {
 	s.services.StopAll()
 	log.Info("Stopping sharding validator")
 
+	if err := s.db.Close(); err != nil {
+		log.Errorf("Failed to close database: %v", err)
+	}
+
 	close(s.stop)
+}
+
+func (s *ValidatorClient) startDB(ctx *cli.Context) error {
+	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+
+	if ctx.GlobalBool(cmd.ClearDBFlag.Name) {
+		if err := db.ClearDB(path.Join(baseDir, validatorDBName)); err != nil {
+			return err
+		}
+	}
+
+	db, err := db.NewDB(path.Join(baseDir, validatorDBName))
+	if err != nil {
+		return err
+	}
+
+	log.Info("checking db")
+	s.db = db
+	return nil
 }
 
 func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
@@ -134,6 +166,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context) error {
 		Endpoint:     endpoint,
 		KeystorePath: keystoreDirectory,
 		Password:     keystorePassword,
+		db:           s.ValidatorDB,
 	})
 	if err != nil {
 		return fmt.Errorf("could not initialize client service: %v", err)

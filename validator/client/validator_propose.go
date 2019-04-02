@@ -31,6 +31,38 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 	log.Info("Performing a beacon block proposal...")
+
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+
+	// Retrieve the current fork data from the beacon node.
+	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
+	if err != nil {
+		log.Errorf("Failed to get fork data from beacon node's state: %v", err)
+		return
+	}
+
+	// if the block has already been proposed, then resend it
+	block, err := v.db.GetProposedBlock(fork, v.key.PublicKey, epoch)
+	if err != nil {
+		log.Errorf("Failed to get saved proposed block: %v", err)
+		return
+	}
+	if block != nil {
+		if block.Slot != slot {
+			log.Errorf("Try to propose the block for slot %d, but already proposed block for the slot %d in the same epoch", slot-params.BeaconConfig().GenesisSlot, block.Slot-params.BeaconConfig().GenesisSlot)
+		} else {
+			// Broadcast to the network via beacon chain node.
+			blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
+			if err != nil {
+				log.WithError(err).Error("Failed to propose block")
+			}
+			log.WithFields(logrus.Fields{
+				"blockRoot": fmt.Sprintf("%#x", blkResp.BlockRootHash32),
+			}).Info("Repropose beacon block")
+		}
+		return
+	}
+
 	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.
 	headBlock, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
@@ -58,12 +90,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
-	// Retrieve the current fork data from the beacon node.
-	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
-	if err != nil {
-		log.Errorf("Failed to get fork data from beacon node's state: %v", err)
-		return
-	}
 	// Then, we generate a RandaoReveal by signing the block's slot information using
 	// the validator's private key.
 	// epoch_signature = bls_sign(
@@ -75,7 +101,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	//	   domain_type=DOMAIN_RANDAO,
 	//   )
 	// )
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
@@ -92,7 +117,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	}
 
 	// 2. Construct block.
-	block := &pbp2p.BeaconBlock{
+	block = &pbp2p.BeaconBlock{
 		Slot:             slot,
 		ParentRootHash32: parentTreeRoot[:],
 		RandaoReveal:     epochSignature.Marshal(),
@@ -119,6 +144,12 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// 4. Sign the complete block.
 	// TODO(1366): BLS sign block
 	block.Signature = nil
+
+	// Keep the block that signed
+	if err := v.db.SaveProposedBlock(fork, v.key.PublicKey, block); err != nil {
+		log.WithError(err).Error("Failed to save block")
+		return
+	}
 
 	// 5. Broadcast to the network via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)

@@ -8,6 +8,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -26,6 +27,7 @@ type ValidatorService struct {
 	endpoint  string
 	withCert  string
 	key       *keystore.Key
+	db        *db.ValidatorDB
 }
 
 // Config for the validator service.
@@ -34,6 +36,7 @@ type Config struct {
 	CertFlag     string
 	KeystorePath string
 	Password     string
+	db           *db.ValidatorDB
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -44,6 +47,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 	ks := keystore.NewKeystore(cfg.KeystorePath)
 	key, err := ks.GetKey(validatorKeyFile, cfg.Password)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("could not get private key: %v", err)
 	}
 	return &ValidatorService{
@@ -52,6 +56,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		endpoint: cfg.Endpoint,
 		withCert: cfg.CertFlag,
 		key:      key,
+		db:       cfg.db,
 	}, nil
 }
 
@@ -85,6 +90,7 @@ func (v *ValidatorService) Start() {
 		attesterClient:  pb.NewAttesterServiceClient(v.conn),
 		proposerClient:  pb.NewProposerServiceClient(v.conn),
 		key:             v.key,
+		db:              v.db,
 	}
 	go run(v.ctx, v.validator)
 }
