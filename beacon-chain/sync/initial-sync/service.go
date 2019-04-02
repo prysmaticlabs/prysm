@@ -108,9 +108,7 @@ type InitialSync struct {
 	finalizedStateRoot             [32]byte
 	mutex                          *sync.Mutex
 	nodeIsSynced                   bool
-	blocksAboveHighestObservedSlot map[uint64]*pb.BeaconBlock
 	highestObservedCanonicalState  *pb.BeaconState
-	pendingBlockAnnouncements      int
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
