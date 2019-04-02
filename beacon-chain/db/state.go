@@ -114,6 +114,9 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 
 // SaveState updates the beacon chain state.
 func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
+	defer span.End()
+
 	db.stateLock.Lock()
 	defer db.stateLock.Unlock()
 
