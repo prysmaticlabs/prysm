@@ -72,6 +72,14 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 	return &pb.BeaconState{}, nil
 }
 
+func (ms *mockChainService) ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (ms *mockChainService) VerifyBlockValidity(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+	return nil
+}
+
 func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
@@ -372,10 +380,11 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}
+	ctx := context.Background()
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	if err := db.SaveState(&pb.BeaconState{
+	if err := db.SaveState(ctx, &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + 2,
 	}); err != nil {
 		t.Fatalf("Could not save state: %v", err)
@@ -413,11 +422,12 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}
+	ctx := context.Background()
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch}
-	if err := db.SaveState(state); err != nil {
+	if err := db.SaveState(ctx, state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
 	cfg := &RegularSyncConfig{

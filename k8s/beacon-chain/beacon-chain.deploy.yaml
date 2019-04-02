@@ -6,6 +6,7 @@ metadata:
 spec:
   replicas: 3
   serviceName: beacon-chain
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       component: beacon-chain
@@ -18,6 +19,10 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9090'
+        # Disable sidecar proxy for p2p.
+        traffic.sidecar.istio.io/excludeInboundPorts: '5000'
+        traffic.sidecar.istio.io/includeInboundPorts: '*'
+        traffic.sidecar.istio.io/includeOutboundIPRanges: ''
     spec:
       priorityClassName: production-priority
       affinity:
@@ -38,7 +43,7 @@ spec:
         - name: beacon-chain
           image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
           args: 
-            - --web3provider=ws://public-rpc-nodes.pow.svc.cluster.local:8546
+            - --web3provider=wss://goerli.infura.io/ws/v3/be3fb7ed377c418087602876a40affa1
             #- --verbosity=debug
             - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
             - --rpc-port=4000

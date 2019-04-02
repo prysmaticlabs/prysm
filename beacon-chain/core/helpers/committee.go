@@ -285,20 +285,17 @@ func CrosslinkCommitteesAtSlot(
 func Shuffling(
 	seed [32]byte,
 	validators []*pb.Validator,
-	slot uint64) ([][]uint64, error) {
+	epoch uint64) ([][]uint64, error) {
 
-	// Normalize slot to start of epoch boundary.
-	slot -= slot % params.BeaconConfig().SlotsPerEpoch
-
-	// Figure out how many committees can be in a single slot.
-	activeIndices := ActiveValidatorIndices(validators, slot)
+	// Figure out how many committees can be in a single epoch.
+	activeIndices := ActiveValidatorIndices(validators, epoch)
 	activeCount := uint64(len(activeIndices))
 	committeesPerEpoch := EpochCommitteeCount(activeCount)
 
 	// Convert slot to bytes and xor it with seed.
-	slotInBytes := make([]byte, 32)
-	binary.LittleEndian.PutUint64(slotInBytes, slot)
-	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], slotInBytes))
+	epochInBytes := make([]byte, 32)
+	binary.LittleEndian.PutUint64(epochInBytes, epoch)
+	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], epochInBytes))
 
 	shuffledIndices, err := utils.ShuffleIndices(seed, activeIndices)
 	if err != nil {
@@ -703,7 +700,7 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 	shuffledIndices, err := Shuffling(
 		bytesutil.ToBytes32(input.seed),
 		state.ValidatorRegistry,
-		input.shufflingEpoch)
+		CurrentEpoch(state))
 	if err != nil {
 		return nil, err
 	}

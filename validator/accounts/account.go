@@ -3,6 +3,7 @@ package accounts
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -20,16 +21,14 @@ func VerifyAccountNotExists(directory string, password string) error {
 	if directory == "" || password == "" {
 		return errors.New("expected a path to the validator keystore and password to be provided, received nil")
 	}
-	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
-	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
 	ks := keystore.NewKeystore(directory)
-	if _, err := ks.GetKey(shardWithdrawalKeyFile, password); err == nil {
-		return fmt.Errorf("keystore at path already exists: %s", shardWithdrawalKeyFile)
+	if _, err := ks.GetKeys(directory, params.BeaconConfig().WithdrawalPrivkeyFileName, password); err == nil {
+		return fmt.Errorf("keystore at path already exists: %s", directory)
 	}
-	if _, err := ks.GetKey(validatorKeyFile, password); err == nil {
-		return fmt.Errorf("keystore at path already exists: %s", validatorKeyFile)
+	if _, err := ks.GetKeys(directory, params.BeaconConfig().ValidatorPrivkeyFileName, password); err == nil {
+		return fmt.Errorf("keystore at path already exists: %s", directory)
 	}
 	return nil
 }
@@ -39,11 +38,6 @@ func VerifyAccountNotExists(directory string, password string) error {
 // generates a BLS private and public key, and then logs the serialized deposit input hex string
 // to be used in an ETH1.0 transaction by the validator.
 func NewValidatorAccount(directory string, password string) error {
-	// First, if the keystore already exists, throws an error as there can only be
-	// one keystore per validator client.
-	if err := VerifyAccountNotExists(directory, password); err != nil {
-		return fmt.Errorf("validator account exists: %v", err)
-	}
 	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
 	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
@@ -52,6 +46,7 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return err
 	}
+	shardWithdrawalKeyFile = shardWithdrawalKeyFile + hex.EncodeToString(shardWithdrawalKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(shardWithdrawalKeyFile, shardWithdrawalKey, password); err != nil {
 		return fmt.Errorf("unable to store key %v", err)
 	}
@@ -63,6 +58,7 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return err
 	}
+	validatorKeyFile = validatorKeyFile + hex.EncodeToString(validatorKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(validatorKeyFile, validatorKey, password); err != nil {
 		return fmt.Errorf("unable to store key %v", err)
 	}

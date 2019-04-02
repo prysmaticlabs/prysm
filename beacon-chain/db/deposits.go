@@ -37,6 +37,28 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 	historicalDepositsCount.Inc()
 }
 
+// MarkPubkeyForChainstart sets the pubkey deposit status to true.
+func (db *BeaconDB) MarkPubkeyForChainstart(ctx context.Context, pubkey string) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.MarkPubkeyForChainstart")
+	defer span.End()
+	db.chainstartPubkeysLock.Lock()
+	defer db.chainstartPubkeysLock.Unlock()
+	db.chainstartPubkeys[pubkey] = true
+}
+
+// PubkeyInChainstart returns bool for whether the pubkey passed in has deposited.
+func (db *BeaconDB) PubkeyInChainstart(ctx context.Context, pubkey string) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.PubkeyInChainstart")
+	defer span.End()
+	db.chainstartPubkeysLock.Lock()
+	defer db.chainstartPubkeysLock.Unlock()
+	if db.chainstartPubkeys != nil {
+		return db.chainstartPubkeys[pubkey]
+	}
+	db.chainstartPubkeys = make(map[string]bool)
+	return false
+}
+
 // AllDeposits returns a list of deposits all historical deposits until the given block number
 // (inclusive). If no block is specified then this method returns all historical deposits.
 func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.Deposit {

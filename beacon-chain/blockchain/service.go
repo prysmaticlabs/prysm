@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "blockchain")
@@ -43,7 +44,6 @@ type ChainService struct {
 	canonicalBlockChan   chan *pb.BeaconBlock
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
-	enablePOWChain       bool
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
@@ -57,7 +57,6 @@ type Config struct {
 	BeaconDB       *db.BeaconDB
 	OpsPoolService operations.OperationFeeds
 	DevMode        bool
-	EnablePOWChain bool
 	P2p            p2p.Broadcaster
 }
 
@@ -76,7 +75,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalBlockChan:   make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
-		enablePOWChain:       cfg.EnablePOWChain,
 		p2p:                  cfg.P2p,
 	}, nil
 }
@@ -136,6 +134,8 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
 func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
 	eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
+	defer span.End()
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
@@ -158,7 +158,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
-	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
+	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
 	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {
