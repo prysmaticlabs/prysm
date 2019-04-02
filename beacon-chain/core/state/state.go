@@ -41,11 +41,6 @@ func GenesisBeaconState(
 		latestActiveIndexRoots[i] = zeroHash
 	}
 
-	latestVDFOutputs := make([][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength/params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(latestVDFOutputs); i++ {
-		latestVDFOutputs[i] = zeroHash
-	}
 
 	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
@@ -80,17 +75,11 @@ func GenesisBeaconState(
 	}
 
 	latestBalances := make([]uint64, len(genesisValidatorDeposits))
-	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 
 	state := &pb.BeaconState{
 		// Misc fields.
 		Slot:        params.BeaconConfig().GenesisSlot,
 		GenesisTime: genesisTime,
-		Fork: &pb.Fork{
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			Epoch:           params.BeaconConfig().GenesisEpoch,
-		},
 
 		// Validator registry fields.
 		ValidatorRegistry:            validatorRegistry,
@@ -116,7 +105,6 @@ func GenesisBeaconState(
 		LatestCrosslinks:        latestCrosslinks,
 		LatestBlockRootHash32S:  latestBlockRoots,
 		LatestIndexRootHash32S:  latestActiveIndexRoots,
-		LatestSlashedBalances:   latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},
 
