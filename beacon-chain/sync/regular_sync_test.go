@@ -380,10 +380,11 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}
+	ctx := context.Background()
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	if err := db.SaveState(&pb.BeaconState{
+	if err := db.SaveState(ctx, &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + 2,
 	}); err != nil {
 		t.Fatalf("Could not save state: %v", err)
@@ -421,11 +422,12 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}
+	ctx := context.Background()
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch}
-	if err := db.SaveState(state); err != nil {
+	if err := db.SaveState(ctx, state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
 	cfg := &RegularSyncConfig{

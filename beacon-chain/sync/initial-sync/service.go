@@ -428,7 +428,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.SaveCurrentAndFinalizedState(beaconState); err != nil {
+	if err := s.db.SaveCurrentAndFinalizedState(ctx, beaconState); err != nil {
 		log.Errorf("Unable to set beacon state for initial sync %v", err)
 		return
 	}
@@ -443,7 +443,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.UpdateChainHead(beaconState.LatestBlock, beaconState); err != nil {
+	if err := s.db.UpdateChainHead(ctx, beaconState.LatestBlock, beaconState); err != nil {
 		log.Errorf("Could not update chainhead %v", err)
 		return
 	}

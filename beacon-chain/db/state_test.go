@@ -142,6 +142,7 @@ func TestFinalizeState_OK(t *testing.T) {
 func TestCurrentAndFinalizeState_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
@@ -157,7 +158,7 @@ func TestCurrentAndFinalizeState_OK(t *testing.T) {
 	state.FinalizedEpoch = 10000
 	state.BatchedBlockRootHash32S = [][]byte{[]byte("testing-prysm")}
 
-	if err := db.SaveCurrentAndFinalizedState(state); err != nil {
+	if err := db.SaveCurrentAndFinalizedState(ctx, state); err != nil {
 		t.Fatalf("Unable to save state")
 	}
 
@@ -196,7 +197,7 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		b.Fatalf("Could not read DV beacon state from DB: %v", err)
 	}
 	state.Slot++
-	err = db.SaveState(state)
+	err = db.SaveState(ctx, state)
 	if err != nil {
 		b.Fatalf("Could not save beacon state to cache from DB: %v", err)
 	}
