@@ -30,6 +30,7 @@ type BlockReceiver interface {
 type BlockProcessor interface {
 	VerifyBlockValidity(block *pb.BeaconBlock, beaconState *pb.BeaconState) error
 	ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error)
+	CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
@@ -50,12 +51,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(block, beaconState); err != nil {
-		return nil, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
+		return beaconState, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
 	}
 
 	// We save the block to the DB and broadcast it to our peers.
 	if err := c.SaveAndBroadcastBlock(ctx, block); err != nil {
-		return nil, fmt.Errorf(
+		return beaconState, fmt.Errorf(
 			"could not save and broadcast beacon block with slot %d: %v",
 			block.Slot-params.BeaconConfig().GenesisSlot, err,
 		)
@@ -67,7 +68,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
 	beaconState, err = c.ApplyBlockStateTransition(ctx, block, beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not apply block state transition: %v", err)
+		return beaconState, fmt.Errorf("could not apply block state transition: %v", err)
 	}
 
 	log.WithFields(logrus.Fields{
@@ -79,7 +80,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
 	if err := c.CleanupBlockOperations(ctx, block); err != nil {
-		return nil, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
+		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
 	}
 
 	// Check state root
@@ -123,7 +124,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 	// Retrieve the last processed beacon block's hash root.
 	headRoot, err := c.ChainHeadRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve chain head root: %v", err)
+		return beaconState, fmt.Errorf("could not retrieve chain head root: %v", err)
 	}
 
 	// Check for skipped slots.
@@ -131,7 +132,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = c.runStateTransition(headRoot, nil, beaconState)
 		if err != nil {
-			return nil, fmt.Errorf("could not execute state transition without block %v", err)
+			return beaconState, fmt.Errorf("could not execute state transition without block %v", err)
 		}
 		numSkippedSlots++
 	}
@@ -141,7 +142,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 
 	beaconState, err = c.runStateTransition(headRoot, block, beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition with block %v", err)
+		return beaconState, fmt.Errorf("could not execute state transition with block %v", err)
 	}
 	return beaconState, nil
 }
@@ -214,7 +215,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 func (c *ChainService) runStateTransition(
 	headRoot [32]byte, block *pb.BeaconBlock, beaconState *pb.BeaconState,
 ) (*pb.BeaconState, error) {
-	beaconState, err := state.ExecuteStateTransition(
+	newState, err := state.ExecuteStateTransition(
 		c.ctx,
 		beaconState,
 		block,
@@ -225,40 +226,40 @@ func (c *ChainService) runStateTransition(
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition %v", err)
+		return beaconState, fmt.Errorf("could not execute state transition %v", err)
 	}
 	log.WithField(
-		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Slot transition successfully processed")
 
 	if block != nil {
 		log.WithField(
-			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Block transition successfully processed")
 	}
 
-	if helpers.IsEpochEnd(beaconState.Slot) {
+	if helpers.IsEpochEnd(newState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
-		if err := c.saveValidatorIdx(beaconState); err != nil {
-			return nil, fmt.Errorf("could not save validator index: %v", err)
+		if err := c.saveValidatorIdx(newState); err != nil {
+			return newState, fmt.Errorf("could not save validator index: %v", err)
 		}
 		// Delete exited validators of this epoch to public key -> index DB.
-		if err := c.deleteValidatorIdx(beaconState); err != nil {
-			return nil, fmt.Errorf("could not delete validator index: %v", err)
+		if err := c.deleteValidatorIdx(newState); err != nil {
+			return newState, fmt.Errorf("could not delete validator index: %v", err)
 		}
 		// Update FFG checkpoints in DB.
-		if err := c.updateFFGCheckPts(beaconState); err != nil {
-			return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
+		if err := c.updateFFGCheckPts(newState); err != nil {
+			return newState, fmt.Errorf("could not update FFG checkpts: %v", err)
 		}
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
-			return nil, fmt.Errorf("could not save historical state: %v", err)
+		if err := c.beaconDB.SaveHistoricalState(newState); err != nil {
+			return newState, fmt.Errorf("could not save historical state: %v", err)
 		}
 		log.WithField(
-			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+			"SlotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
 	}
-	return beaconState, nil
+	return newState, nil
 }
 
 // saveValidatorIdx saves the validators public key to index mapping in DB, these

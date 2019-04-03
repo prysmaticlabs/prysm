@@ -59,7 +59,7 @@ message ChainHeadRequest {}
 message ChainHeadResponse {
   bytes hash = 1;
   uint64 slot = 2;
-  bytes finalized_state_root_hash32s =3;
+  bytes finalized_state_root_hash32s = 3;
 }
 
 message BeaconStateHashAnnounce {
@@ -71,7 +71,9 @@ message BeaconStateRequest {
 }
 
 message BeaconStateResponse {
-  BeaconState beacon_state = 1;
+  BeaconState finalized_state = 1;
+  BeaconState justified_state = 2;
+  BeaconState canonical_state = 3;
 }
 
 message AttestationAnnounce {

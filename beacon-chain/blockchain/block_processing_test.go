@@ -425,7 +425,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot:                     attestationSlot,
+					Slot: attestationSlot,
 					JustifiedBlockRootHash32: parentRoot[:],
 				},
 			}},
