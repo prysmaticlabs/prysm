@@ -25,6 +25,9 @@ type BeaconDB struct {
 	db           *bolt.DB
 	DatabasePath string
 
+	// Beacon block info in memory
+	highestBlockSlot uint64
+
 	// Beacon chain deposits in memory.
 	pendingDeposits       []*depositContainer
 	deposits              []*depositContainer

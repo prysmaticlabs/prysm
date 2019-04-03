@@ -113,9 +113,15 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 	return nil
 }
 
-// ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
-// weighted function to select a canonical head in Ethereum Serenity.
-func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, postState *pb.BeaconState) error {
+// ApplyForkChoiceRule determines the current beacon chain head using LMD
+// GHOST as a block-vote weighted function to select a canonical head in
+// Ethereum Serenity. The inputs are the the recently processed block and its
+// associated state.
+func (c *ChainService) ApplyForkChoiceRule(
+	ctx context.Context,
+	block *pb.BeaconBlock,
+	postState *pb.BeaconState,
+) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
 	defer span.End()
 	log.Info("Applying LMD-GHOST Fork Choice Rule")
@@ -132,7 +138,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified head: %v", err)
 	}
-	head, err := c.lmdGhost(justifiedHead, justifiedState, postState, attestationTargets)
+	head, err := c.lmdGhost(justifiedHead, justifiedState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
@@ -197,12 +203,13 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 func (c *ChainService) lmdGhost(
 	startBlock *pb.BeaconBlock,
 	startState *pb.BeaconState,
-	currState *pb.BeaconState,
 	voteTargets map[uint64]*pb.BeaconBlock,
 ) (*pb.BeaconBlock, error) {
+	highestSlot := c.beaconDB.HighestBlockSlot()
+
 	head := startBlock
 	for {
-		children, err := c.blockChildren(head, currState.Slot)
+		children, err := c.blockChildren(head, highestSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
@@ -228,7 +235,9 @@ func (c *ChainService) lmdGhost(
 	}
 }
 
-// blockChildren returns the child blocks of the given block.
+// blockChildren returns the child blocks of the given block up to a given
+// highest slot.
+//
 // ex:
 //       /- C - E
 // A - B - D - F
@@ -238,7 +247,7 @@ func (c *ChainService) lmdGhost(
 // Spec pseudocode definition:
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
-func (c *ChainService) blockChildren(block *pb.BeaconBlock, stateSlot uint64) ([]*pb.BeaconBlock, error) {
+func (c *ChainService) blockChildren(block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
 
 	currentRoot, err := hashutil.HashBeaconBlock(block)
@@ -246,8 +255,7 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, stateSlot uint64) ([
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
 	startSlot := block.Slot + 1
-	currentSlot := stateSlot
-	for i := startSlot; i <= currentSlot; i++ {
+	for i := startSlot; i <= highestSlot; i++ {
 		block, err := c.beaconDB.BlockBySlot(i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block by slot: %v", err)
