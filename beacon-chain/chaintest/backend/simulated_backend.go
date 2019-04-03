@@ -32,7 +32,6 @@ type SimulatedBackend struct {
 	state              *pb.BeaconState
 	prevBlockRoots     [][32]byte
 	inMemoryBlocks     []*pb.BeaconBlock
-	inMemoryStateRoots [][32]byte
 	historicalDeposits []*pb.Deposit
 }
 
@@ -64,7 +63,6 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		chainService:       cs,
 		beaconDB:           db,
 		inMemoryBlocks:     make([]*pb.BeaconBlock, 0),
-		inMemoryStateRoots: make([][32]byte, 0),
 		historicalDeposits: make([]*pb.Deposit, 0),
 	}, nil
 }
@@ -115,15 +113,10 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 	if err != nil {
 		return fmt.Errorf("could not execute state transition: %v", err)
 	}
-	stateRoot, err := hashutil.HashProto(newState)
-	if err != nil {
-		return fmt.Errorf("could not hash state: %v", err)
-	}
 
 	sb.state = newState
 	sb.prevBlockRoots = append(sb.prevBlockRoots, newBlockRoot)
 	sb.inMemoryBlocks = append(sb.inMemoryBlocks, newBlock)
-	sb.inMemoryStateRoots = append(sb.inMemoryStateRoots, stateRoot)
 	if len(newBlock.Body.Deposits) > 0 {
 		sb.historicalDeposits = append(sb.historicalDeposits, newBlock.Body.Deposits...)
 	}
@@ -163,12 +156,6 @@ func (sb *SimulatedBackend) State() *pb.BeaconState {
 // backend.
 func (sb *SimulatedBackend) InMemoryBlocks() []*pb.BeaconBlock {
 	return sb.inMemoryBlocks
-}
-
-// InMemoryStateRoots returns the state roots that have been processed by the simulated
-// backend.
-func (sb *SimulatedBackend) InMemoryStateRoots() [][32]byte {
-	return sb.inMemoryStateRoots
 }
 
 // RunForkChoiceTest uses a parsed set of chaintests from a YAML file
@@ -306,7 +293,6 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	// a slice.
 	sb.prevBlockRoots = [][32]byte{genesisBlockRoot}
 	sb.inMemoryBlocks = append(sb.inMemoryBlocks, genesisBlock)
-	sb.inMemoryStateRoots = append(sb.inMemoryStateRoots, stateRoot)
 	return nil
 }
 

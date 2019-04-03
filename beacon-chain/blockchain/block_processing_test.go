@@ -336,7 +336,6 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("State root: %#x", stateRoot)
 		if err = db.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
