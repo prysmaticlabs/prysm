@@ -399,6 +399,8 @@ func CommitteeAssignment(
 	return ValidatorAssignment(validatorIndex, slot, crosslinkCommittees)
 }
 
+// ValidatorAssignment takes individual validator's index and returns its committee list,
+// assigned shard, slot and role.
 func ValidatorAssignment(vIndex uint64, slot uint64, committees []*CrosslinkCommittee) ([]uint64, uint64, uint64, bool, error) {
 	var selectedCommittees []*CrosslinkCommittee
 	for _, committee := range committees {
