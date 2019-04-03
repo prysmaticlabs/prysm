@@ -64,7 +64,7 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		chainService:       cs,
 		beaconDB:           db,
 		inMemoryBlocks:     make([]*pb.BeaconBlock, 0),
-		inMemoryStateRoots:     make([][32]byte, 0),
+		inMemoryStateRoots: make([][32]byte, 0),
 		historicalDeposits: make([]*pb.Deposit, 0),
 	}, nil
 }

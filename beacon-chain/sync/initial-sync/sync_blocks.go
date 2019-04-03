@@ -169,7 +169,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err != nil {
 		return err
 	}
-	log.Infof("State root in sync block: %#x", h)
 	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
 		return err
 	}

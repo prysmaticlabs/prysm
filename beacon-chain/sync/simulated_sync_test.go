@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type simulatedP2P struct {
@@ -170,21 +171,21 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 
 	for i := 1; i <= numOfBlocks; i++ {
 		block := &pb.BeaconBlock{
-			Slot:             params.BeaconConfig().GenesisSlot+uint64(i),
+			Slot:             params.BeaconConfig().GenesisSlot + uint64(i),
 			ParentRootHash32: parentRoot[:],
 			StateRootHash32:  stateRoot[:],
 		}
 		state, err = mockChain.ApplyBlockStateTransition(ctx, block, state)
 		if err != nil {
-            t.Fatal(err)
+			t.Fatal(err)
 		}
 		stateRoot, err = hashutil.HashProto(state)
 		if err != nil {
-            t.Fatal(err)
+			t.Fatal(err)
 		}
 		parentRoot, err = hashutil.HashBeaconBlock(block)
 		if err := mockChain.CleanupBlockOperations(ctx, block); err != nil {
-            t.Fatal(err)
+			t.Fatal(err)
 		}
 		if err := beacondb.SaveBlock(block); err != nil {
 			t.Fatal(err)
@@ -193,9 +194,6 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 			t.Fatal(err)
 		}
 	}
-	head, _ := beacondb.ChainHead()
-	log.Infof("Current chain head: %v", head.Slot)
-
 	return ss, beacondb, stateRoot
 }
 
@@ -229,7 +227,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(simP2P.ctx, &pb.ChainHeadResponse{
-			CanonicalSlot: params.BeaconConfig().GenesisSlot + 12,
+			CanonicalSlot:            params.BeaconConfig().GenesisSlot + 12,
 			CanonicalStateRootHash32: stateRoot[:],
 		}, "")
 	}
@@ -238,6 +236,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 }
 
 func TestSyncing_AFullySyncedNode(t *testing.T) {
+	hook := logTest.NewGlobal()
 	numOfBlocks := 12
 	ctx := context.Background()
 	newP2P := &simulatedP2P{

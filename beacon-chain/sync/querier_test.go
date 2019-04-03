@@ -146,7 +146,7 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 	}()
 
 	response := &pb.ChainHeadResponse{
-		CanonicalSlot: 0,
+		CanonicalSlot:            0,
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
 
