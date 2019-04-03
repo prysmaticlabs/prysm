@@ -104,7 +104,6 @@ func (c *committeesCache) AddCommittees(committees *committeesInfo) error {
 	}
 
 	trim(c.committeesCache, maxCacheSize)
-	// ??????
 	committeeCacheSize.Set(float64(len(c.committeesCache.ListKeys())))
 	return nil
 }
