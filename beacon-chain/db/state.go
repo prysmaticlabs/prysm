@@ -46,6 +46,10 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, 
 
 	db.currentState = beaconState
 
+	if err := db.SaveHistoricalState(beaconState); err != nil {
+		return err
+	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		blockBkt := tx.Bucket(blockBucket)
 		validatorBkt := tx.Bucket(validatorBucket)
