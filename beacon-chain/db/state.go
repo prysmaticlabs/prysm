@@ -303,6 +303,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 	err := db.view(func(tx *bolt.Tx) error {
 		var err error
 		var highestStateSlot uint64
+		var stateExists bool
 		histStateKey := make([]byte, 32)
 
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -312,23 +313,25 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 			slotNumber := decodeToSlotNumber(k)
 			if slotNumber == slotSinceGenesis {
+				stateExists = true
 				highestStateSlot = slotNumber
 				histStateKey = v
 				break
 			}
 		}
 		// If no state exists send the closest state.
-		if highestStateSlot == 0 {
+		if !stateExists {
 			for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 				slotNumber := decodeToSlotNumber(k)
 				// find the state with slot closest to the requested slot
 				if slotNumber > highestStateSlot && slotNumber <= slotSinceGenesis {
+					stateExists = true
 					highestStateSlot = slotNumber
 					histStateKey = v
 				}
 			}
 
-			if highestStateSlot == 0 {
+			if !stateExists {
 				return errors.New("no historical states saved in db")
 			}
 		}
