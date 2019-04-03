@@ -68,7 +68,7 @@ func TestCommitteesCache_CommitteesInfoBySlot(t *testing.T) {
 	}
 	if !reflect.DeepEqual(fetchedInfo.committees, cInfo.committees) {
 		t.Errorf(
-			"Expected fetched info hash to be %v, got %v",
+			"Expected fetched info committee to be %v, got %v",
 			cInfo.committees,
 			fetchedInfo.committees,
 		)
