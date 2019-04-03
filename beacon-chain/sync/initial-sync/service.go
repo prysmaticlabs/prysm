@@ -13,6 +13,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"math/big"
 	"sync"
 	"time"
@@ -98,6 +99,7 @@ type InitialSync struct {
 	stateBuf                      chan p2p.Message
 	currentSlot                   uint64
 	highestObservedSlot           uint64
+	highestObservedRoot [32]byte
 	beaconStateSlot               uint64
 	syncPollingInterval           time.Duration
 	inMemoryBlocks                map[uint64]*pb.BeaconBlock
@@ -169,6 +171,11 @@ func (s *InitialSync) InitializeObservedSlot(slot uint64) {
 	s.highestObservedSlot = slot
 }
 
+// InitializeObservedStateRoot sets the highest observed state root.
+func (s *InitialSync) InitializeObservedStateRoot(root [32]byte) {
+	s.highestObservedRoot = root
+}
+
 // InitializeFinalizedStateRoot sets the state root of the last finalized state.
 func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
@@ -207,6 +214,17 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	canonicalState, err := s.db.State(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get state: %v", err)
+	}
+	stateRoot, err := hashutil.HashProto(canonicalState)
+	if err != nil {
+		return fmt.Errorf("could not hash state: %v", err)
+	}
+	if stateRoot != s.highestObservedRoot {
+		log.Fatalf(
+			"Canonical state root %#x does not match highest observed root from peer %#x",
+			stateRoot,
+			s.highestObservedRoot,
+		)
 	}
 	log.Infof("Canonical state slot: %d", canonicalState.Slot-params.BeaconConfig().GenesisSlot)
 	log.Info("Exiting initial sync and starting normal sync")

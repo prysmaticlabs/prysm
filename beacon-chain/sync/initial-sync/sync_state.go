@@ -16,7 +16,6 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	data := msg.Data.(*pb.BeaconStateResponse)
 	finalizedState := data.FinalizedState
 	justifiedState := data.JustifiedState
-	canonicalState := data.CanonicalState
 	recState.Inc()
 
 	if err := s.db.SaveFinalizedState(finalizedState); err != nil {
@@ -71,14 +70,18 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	s.db.PrunePendingDeposits(ctx, blkNum)
 
+	if err := s.db.UpdateChainHead(ctx, finalizedState.LatestBlock, finalizedState); err != nil {
+		log.Errorf("Could not update chain head: %v", err)
+		return
+	}
+
 	// sets the current slot to the last finalized slot of the
 	// beacon state to begin our sync from.
 	s.currentSlot = finalizedState.Slot
 	s.stateReceived = true
 	log.Debugf(
-		"Successfully saved beacon state with the last finalized slot: %d, canonical slot: %d",
+		"Successfully saved beacon state with the last finalized slot: %d",
 		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
-		canonicalState.Slot-params.BeaconConfig().GenesisSlot,
 	)
 	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 	s.lastRequestedSlot = s.highestObservedSlot

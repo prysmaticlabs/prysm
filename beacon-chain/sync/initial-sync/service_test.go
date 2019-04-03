@@ -160,7 +160,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 	stateResponse := &pb.BeaconStateResponse{
 		FinalizedState: fState,
 		JustifiedState: jState,
-		CanonicalState: jState,
 	}
 
 	incorrectState := &pb.BeaconState{
@@ -177,7 +176,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 	incorrectStateResponse := &pb.BeaconStateResponse{
 		FinalizedState: incorrectState,
 		JustifiedState: incorrectState,
-		CanonicalState: incorrectState,
 	}
 
 	stateRoot, err := hashutil.HashProto(fState)
@@ -299,9 +297,6 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	batchSize := 20
 	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
 	ss.highestObservedSlot = expectedSlot
-	ss.highestObservedCanonicalState = &pb.BeaconState{
-		Slot: expectedSlot,
-	}
 	blk, err := ss.db.BlockBySlot(params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
