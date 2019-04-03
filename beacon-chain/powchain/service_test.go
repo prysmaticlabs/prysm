@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"strings"
 	"testing"
@@ -22,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"io.EOF"
 )
 
 type badReader struct{}
@@ -31,10 +31,15 @@ func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.H
 	return nil, errors.New("subscription has failed")
 }
 
-type goodReader struct{}
+type goodReader struct {
+	feed *event.Feed
+	sub  ethereum.Subscription
+}
 
 func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
+	g.feed = new(event.Feed)
+	g.sub = g.feed.Subscribe(ch)
+	return g.sub, nil
 }
 
 type badLogger struct{}
@@ -295,8 +300,9 @@ func TestRPCRestart_OK(t *testing.T) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 	// clientPTR := &web3Service.client
-	// web3Service.headerChan <-
-	// time.Sleep(5 * time.Second)
+	// time.Sleep(2 * time.Second)
+	// gr.feed.Send("EOF")
+	// time.Sleep(2 * time.Second)
 	// msg = hook.LastEntry().Message
 	// want = "EOF"
 	// if msg != want {
