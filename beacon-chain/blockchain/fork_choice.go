@@ -116,8 +116,7 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 // ApplyForkChoiceRule determines the current beacon chain head using LMD
 // GHOST as a block-vote weighted function to select a canonical head in
 // Ethereum Serenity. The inputs are the the recently processed block and its
-// associated state. Additionally, provide the currentSlot as the max slot to
-// check for children.
+// associated state.
 func (c *ChainService) ApplyForkChoiceRule(
 	ctx context.Context,
 	block *pb.BeaconBlock,
