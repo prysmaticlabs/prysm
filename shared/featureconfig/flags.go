@@ -5,6 +5,11 @@ import (
 )
 
 var (
+	// CacheTreeHashFlag determines whether to cache tree hashes for ssz.
+	CacheTreeHashFlag = cli.BoolFlag{
+		Name:  "cache-tree-hash",
+		Usage: "Cache tree hashes for ssz",
+	}
 	// VerifyAttestationSigsFlag determines whether to verify signatures for attestations.
 	VerifyAttestationSigsFlag = cli.BoolFlag{
 		Name:  "enable-attestation-signature-verification",
