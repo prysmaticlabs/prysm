@@ -182,7 +182,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	// Scenario:
 	//
 	// State slot = 10000
-	// Last justified slot = 1500
+	// Last justified slot = epoch start of 1500
 	// LatestBlockRootsLength = 8192
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
@@ -202,7 +202,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(10000 + params.BeaconConfig().GenesisSlot)),
 	}
 	justifiedBlock := &pbp2p.BeaconBlock{
-		Slot: 1500 + params.BeaconConfig().GenesisSlot,
+		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot)),
 	}
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
@@ -259,7 +259,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	expectedInfo := &pb.AttestationDataResponse{
 		BeaconBlockRootHash32:    blockRoot[:],
-		JustifiedEpoch:           2 + params.BeaconConfig().GenesisEpoch,
+		JustifiedEpoch:           helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot),
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
 			CrosslinkDataRootHash32: []byte("A"),
