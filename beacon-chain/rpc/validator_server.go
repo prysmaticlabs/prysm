@@ -14,6 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
@@ -207,7 +209,8 @@ func (vs *ValidatorServer) CommitteeAssignment(
 			}, nil
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Could not find validator %d assignment starting epoch %d", index, req.EpochStart))
+	errString := fmt.Sprintf("Could not find validator %d assignment starting epoch %d", index, req.EpochStart)
+	return nil, status.Error(codes.NotFound, errString)
 }
 
 // ValidatorStatus returns the validator status of the current epoch.
