@@ -19,7 +19,7 @@ var (
 
 	// maxCacheSize is 4x of the epoch length for additional cache padding.
 	// Requests should be only accessing committees within defined epoch length.
-	maxCacheSize = int(2 * params.BeaconConfig().Eth1FollowDistance)
+	maxCacheSize = int(2 * params.BeaconConfig().SlotsPerEpoch)
 
 	// Metrics
 	committeeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -95,15 +95,11 @@ func (c *committeesCache) CommitteesInfoBySlot(slot int) (bool, *committeesInfo,
 
 // AddCommittees adds committeeInfo object to the cache. This method also trims the least
 // recently added committeeInfo object if the cache size has ready the max cache size limit.
-func (c *committeesCache) AddCommittees(slot int, committees []*helpers.CrosslinkCommittee) error {
+func (c *committeesCache) AddCommittees(committees *committeesInfo) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	committeesInfo := &committeesInfo{
-		slot: slot,
-		committees: committees,
-	}
-	if err := c.committeesCache.AddIfNotPresent(committeesInfo); err != nil {
+	if err := c.committeesCache.AddIfNotPresent(committees); err != nil {
 		return err
 	}
 
