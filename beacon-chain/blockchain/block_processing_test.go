@@ -190,6 +190,9 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	depositRoot := depositTrie.Root()
 	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
+	if err := db.SaveHistoricalState(beaconState); err != nil {
+		t.Fatal(err)
+	}
 
 	block := &pb.BeaconBlock{
 		Slot:             currentSlot + 1,
@@ -227,6 +230,9 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 
 	beaconState.Slot--
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHistoricalState(beaconState); err != nil {
 		t.Fatal(err)
 	}
 	computedState, err := chainService.ReceiveBlock(context.Background(), block)
