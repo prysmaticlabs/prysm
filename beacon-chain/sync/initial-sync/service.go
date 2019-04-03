@@ -220,6 +220,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 		return fmt.Errorf("could not hash state: %v", err)
 	}
 	if stateRoot != s.highestObservedRoot {
+		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
 		log.Fatalf(
 			"Canonical state root %#x does not match highest observed root from peer %#x",
 			stateRoot,
