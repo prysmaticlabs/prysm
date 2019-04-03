@@ -221,11 +221,6 @@ func (c *ChainService) runStateTransition(
 		log.WithField(
 			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Block transition successfully processed")
-
-		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
-			return nil, fmt.Errorf("could not save historical state: %v", err)
-		}
 	}
 
 	if helpers.IsEpochEnd(newState.Slot) {
@@ -244,6 +239,10 @@ func (c *ChainService) runStateTransition(
 		log.WithField(
 			"SlotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
+	}
+	// Save Historical States.
+	if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
+		return nil, fmt.Errorf("could not save historical state: %v", err)
 	}
 	return newState, nil
 }

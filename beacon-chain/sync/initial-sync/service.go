@@ -108,7 +108,6 @@ type InitialSync struct {
 	finalizedStateRoot            [32]byte
 	mutex                         *sync.Mutex
 	nodeIsSynced                  bool
-	highestObservedCanonicalState *pb.BeaconState
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -184,16 +183,25 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	if s.nodeIsSynced {
 		return nil
 	}
-	state := s.highestObservedCanonicalState
-	var err error
+	state, err := s.db.State(ctx)
+	if err != nil {
+		return err
+	}
+	if err := s.chainService.VerifyBlockValidity(s.latestSyncedBlock, state); err != nil {
+		return err
+	}
 	if err := s.db.SaveBlock(s.latestSyncedBlock); err != nil {
-		return fmt.Errorf("could not save block: %v", err)
+		return err
+	}
+	state, err = s.chainService.ApplyBlockStateTransition(ctx, s.latestSyncedBlock, state)
+	if err != nil {
+		return err
+	}
+	if err := s.chainService.CleanupBlockOperations(ctx, s.latestSyncedBlock); err != nil {
+		return err
 	}
 	if err := s.db.UpdateChainHead(ctx, s.latestSyncedBlock, state); err != nil {
-		return fmt.Errorf("could not update chain head: %v", err)
-	}
-	if err := s.db.SaveHistoricalState(state); err != nil {
-		return fmt.Errorf("could not save state: %v", err)
+		return err
 	}
 
 	canonicalState, err := s.db.State(ctx)

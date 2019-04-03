@@ -71,26 +71,10 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	s.db.PrunePendingDeposits(ctx, blkNum)
 
-	if err := s.db.SaveBlock(canonicalState.LatestBlock); err != nil {
-		log.Errorf("Could not save block %v", err)
-		return
-	}
-
-	if err := s.db.UpdateChainHead(ctx, finalizedState.LatestBlock, finalizedState); err != nil {
-		log.Errorf("Could not update chain head %v", err)
-		return
-	}
-	if err := s.db.SaveHistoricalState(canonicalState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
-		return
-	}
-
 	// sets the current slot to the last finalized slot of the
 	// beacon state to begin our sync from.
 	s.currentSlot = finalizedState.Slot
 	s.stateReceived = true
-	s.highestObservedCanonicalState = canonicalState
-	s.highestObservedSlot = canonicalState.Slot
 	log.Debugf(
 		"Successfully saved beacon state with the last finalized slot: %d, canonical slot: %d",
 		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
