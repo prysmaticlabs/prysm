@@ -308,6 +308,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
+	t.Logf("State root: %#x", stateRoot)
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
 	if err := db.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
@@ -335,6 +336,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		t.Logf("State root: %#x", stateRoot)
 		if err = db.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
@@ -347,7 +349,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		}
 	}
 
-	// Common ancester is block at slot 3
+	// Common ancestor is block at slot 3
 	commonAncestor, err := db.BlockBySlot(genesisSlot + 3)
 	if err != nil {
 		t.Fatal(err)
@@ -362,6 +364,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("State: %v", beaconState.Slot-params.BeaconConfig().GenesisSlot)
 	stateRoot, err = hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatal(err)

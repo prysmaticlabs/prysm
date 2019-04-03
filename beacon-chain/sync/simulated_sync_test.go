@@ -2,13 +2,11 @@ package sync
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
@@ -16,9 +14,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type simulatedP2P struct {
@@ -240,7 +238,6 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 }
 
 func TestSyncing_AFullySyncedNode(t *testing.T) {
-	hook := logTest.NewGlobal()
 	numOfBlocks := 12
 	ctx := context.Background()
 	newP2P := &simulatedP2P{
@@ -296,5 +293,4 @@ loop:
 			}
 		}
 	}
-	testutil.AssertLogsContain(t, hook, "State root:")
 }
