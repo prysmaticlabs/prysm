@@ -407,7 +407,6 @@ func TestHistoricalState_Pruning(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-
 		if err := db.SaveHistoricalState(tt.histState1); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
@@ -415,7 +414,8 @@ func TestHistoricalState_Pruning(t *testing.T) {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 
-		if err := db.deleteHistoricalStates(tt.histState1.Slot); err != nil {
+		// Delete up to and including historical state 1.
+		if err := db.deleteHistoricalStates(tt.histState1.Slot + 1); err != nil {
 			t.Fatalf("Could not delete historical states %v", err)
 		}
 
