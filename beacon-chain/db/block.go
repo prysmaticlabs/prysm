@@ -269,6 +269,8 @@ func (db *BeaconDB) HasBlockBySlot(slot uint64) (bool, *pb.BeaconBlock, error) {
 	return exists, block, err
 }
 
+// HighestBlockSlot returns the in-memory value for the highest block we've
+// seen in the database.
 func (db *BeaconDB) HighestBlockSlot() uint64 {
 	return db.highestBlockSlot
 }
