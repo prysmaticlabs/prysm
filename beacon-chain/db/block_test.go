@@ -101,7 +101,7 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{Slot: 1}
-	if err := db.UpdateChainHead(block, beaconState); err == nil {
+	if err := db.UpdateChainHead(ctx, block, beaconState); err == nil {
 		t.Fatalf("expected UpdateChainHead to fail if the block does not exist: %v", err)
 	}
 }
@@ -143,7 +143,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	if err := db.SaveBlock(block2); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.UpdateChainHead(block2, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("failed to record the new head of the main chain: %v", err)
 	}
 
@@ -195,7 +195,7 @@ func TestChainProgress_OK(t *testing.T) {
 	if err := db.SaveBlock(block1); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.UpdateChainHead(block1, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, block1, beaconState); err != nil {
 		t.Fatalf("failed to record the new head: %v", err)
 	}
 	heighestBlock, err := db.ChainHead()
@@ -210,7 +210,7 @@ func TestChainProgress_OK(t *testing.T) {
 	if err := db.SaveBlock(block2); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.UpdateChainHead(block2, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("failed to record the new head: %v", err)
 	}
 	heighestBlock, err = db.ChainHead()
@@ -225,7 +225,7 @@ func TestChainProgress_OK(t *testing.T) {
 	if err := db.SaveBlock(block3); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.UpdateChainHead(block3, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, block3, beaconState); err != nil {
 		t.Fatalf("failed to update head: %v", err)
 	}
 	heighestBlock, err = db.ChainHead()
@@ -240,6 +240,7 @@ func TestChainProgress_OK(t *testing.T) {
 func TestHasBlockBySlot_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	blkSlot := uint64(10)
 	block1 := &pb.BeaconBlock{
@@ -258,7 +259,7 @@ func TestHasBlockBySlot_OK(t *testing.T) {
 		t.Fatalf("save block failed: %v", err)
 	}
 
-	if err := db.UpdateChainHead(block1, &pb.BeaconState{}); err != nil {
+	if err := db.UpdateChainHead(ctx, block1, &pb.BeaconState{}); err != nil {
 		t.Fatalf("Unable to save block and state in db %v", err)
 	}
 
@@ -328,7 +329,7 @@ func TestFinalizedBlock_CanSaveRetrieve(t *testing.T) {
 		Slot: blkSlot,
 	}
 
-	if err := db.saveFinalizedBlock(block1); err != nil {
+	if err := db.SaveFinalizedBlock(block1); err != nil {
 		t.Fatalf("could not save finalized block: %v", err)
 	}
 

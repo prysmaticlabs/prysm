@@ -4,39 +4,165 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
+var (
+	reorgCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "reorg_counter",
+		Help: "The number of chain reorganization events that have happened in the fork choice rule",
+	})
+)
+
+// ForkChoice interface defines the methods for applying fork choice rule
+// operations to the blockchain.
+type ForkChoice interface {
+	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
+}
+
+// updateFFGCheckPts checks whether the existing FFG check points saved in DB
+// are not older than the ones just processed in state. If it's older, we update
+// the db with the latest FFG check points, both justification and finalization.
+func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
+	lastJustifiedSlot := helpers.StartSlot(state.JustifiedEpoch)
+	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
+	if err != nil {
+		return err
+	}
+	// If the last processed justification slot in state is greater than
+	// the slot of justified block saved in DB.
+	if lastJustifiedSlot > savedJustifiedBlock.Slot {
+		// Retrieve the new justified block from DB using the new justified slot and save it.
+		newJustifiedBlock, err := c.beaconDB.BlockBySlot(lastJustifiedSlot)
+		if err != nil {
+			return err
+		}
+		// If the new justified slot is a skip slot in db then we keep getting it's ancestors
+		// until we can get a block.
+		lastAvailBlkSlot := lastJustifiedSlot
+		for newJustifiedBlock == nil {
+			log.Debugf("Saving new justified block, no block with slot %d in db, trying slot %d",
+				lastAvailBlkSlot, lastAvailBlkSlot-1)
+			lastAvailBlkSlot--
+			newJustifiedBlock, err = c.beaconDB.BlockBySlot(lastAvailBlkSlot)
+			if err != nil {
+				return err
+			}
+		}
+		// Generate the new justified state with using new justified block and save it.
+		newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastJustifiedSlot)
+		if err != nil {
+			return err
+		}
+
+		if err := c.beaconDB.SaveJustifiedBlock(newJustifiedBlock); err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveJustifiedState(newJustifiedState); err != nil {
+			return err
+		}
+	}
+
+	lastFinalizedSlot := helpers.StartSlot(state.FinalizedEpoch)
+	savedFinalizedBlock, err := c.beaconDB.FinalizedBlock()
+	// If the last processed finalized slot in state is greater than
+	// the slot of finalized block saved in DB.
+	if err != nil {
+		return err
+	}
+	if lastFinalizedSlot > savedFinalizedBlock.Slot {
+		// Retrieve the new finalized block from DB using the new finalized slot and save it.
+		newFinalizedBlock, err := c.beaconDB.BlockBySlot(lastFinalizedSlot)
+		if err != nil {
+			return err
+		}
+		// If the new finalized slot is a skip slot in db then we keep getting it's ancestors
+		// until we can get a block.
+		lastAvailBlkSlot := lastFinalizedSlot
+		for newFinalizedBlock == nil {
+			log.Debugf("Saving new finalized block, no block with slot %d in db, trying slot %d",
+				lastAvailBlkSlot, lastAvailBlkSlot-1)
+			lastAvailBlkSlot--
+			newFinalizedBlock, err = c.beaconDB.BlockBySlot(lastAvailBlkSlot)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Generate the new finalized state with using new finalized block and save it.
+		newFinalizedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastFinalizedSlot)
+		if err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveFinalizedBlock(newFinalizedBlock); err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveFinalizedState(newFinalizedState); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
 // weighted function to select a canonical head in Ethereum Serenity.
-func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, postState *pb.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
 	defer span.End()
-	h, err := hashutil.HashBeaconBlock(block)
+	log.Info("Applying LMD-GHOST Fork Choice Rule")
+
+	justifiedState, err := c.beaconDB.JustifiedState()
 	if err != nil {
-		return fmt.Errorf("could not tree hash incoming block: %v", err)
+		return fmt.Errorf("could not retrieve justified state: %v", err)
 	}
-	// TODO(#1307): Use LMD GHOST as the fork-choice rule for Ethereum Serenity.
-	// TODO(#674): Handle chain reorgs.
-	if err := c.beaconDB.UpdateChainHead(block, computedState); err != nil {
+	attestationTargets, err := c.attestationTargets(justifiedState)
+	if err != nil {
+		return fmt.Errorf("could not retrieve attestation target: %v", err)
+	}
+	justifiedHead, err := c.beaconDB.JustifiedBlock()
+	if err != nil {
+		return err
+	}
+	head, err := c.lmdGhost(justifiedHead, justifiedState, postState, attestationTargets)
+	if err != nil {
+		return fmt.Errorf("could not run fork choice: %v", err)
+	}
+	newState := postState
+	if head.Slot != block.Slot {
+		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
+			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
+
+		// Only regenerate head state if there was a reorg.
+		newState, err = stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, head.Slot)
+		if err != nil {
+			return fmt.Errorf("could not gen state: %v", err)
+		}
+
+		if newState.Slot != postState.Slot {
+			log.Warnf("Reorg happened, post state slot at %d, new head state at slot %d",
+				postState.Slot-params.BeaconConfig().GenesisSlot, newState.Slot-params.BeaconConfig().GenesisSlot)
+		}
+
+		reorgCount.Inc()
+	}
+
+	if err := c.beaconDB.UpdateChainHead(ctx, head, newState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-	if err := c.saveFinalizedState(computedState); err != nil {
-		log.Errorf("Could not save new finalized state: %v", err)
+	h, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return fmt.Errorf("could not hash head: %v", err)
 	}
-
-	// Announce the new block to the network.
-	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
-		Hash:       h[:],
-		SlotNumber: block.Slot,
-	})
-
+	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 	return nil
 }
 
@@ -69,13 +195,14 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 //            return head
 //        head = max(children, key=get_vote_count)
 func (c *ChainService) lmdGhost(
-	block *pb.BeaconBlock,
-	state *pb.BeaconState,
+	startBlock *pb.BeaconBlock,
+	startState *pb.BeaconState,
+	currState *pb.BeaconState,
 	voteTargets map[uint64]*pb.BeaconBlock,
 ) (*pb.BeaconBlock, error) {
-	head := block
+	head := startBlock
 	for {
-		children, err := c.blockChildren(head, state)
+		children, err := c.blockChildren(head, currState.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
@@ -84,12 +211,12 @@ func (c *ChainService) lmdGhost(
 		}
 		maxChild := children[0]
 
-		maxChildVotes, err := VoteCount(maxChild, state, voteTargets, c.beaconDB)
+		maxChildVotes, err := VoteCount(maxChild, startState, voteTargets, c.beaconDB)
 		if err != nil {
 			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 		}
 		for i := 0; i < len(children); i++ {
-			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, c.beaconDB)
+			candidateChildVotes, err := VoteCount(children[i], startState, voteTargets, c.beaconDB)
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
@@ -111,7 +238,7 @@ func (c *ChainService) lmdGhost(
 // Spec pseudocode definition:
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
-func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
+func (c *ChainService) blockChildren(block *pb.BeaconBlock, stateSlot uint64) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
 
 	currentRoot, err := hashutil.HashBeaconBlock(block)
@@ -119,7 +246,7 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
 	startSlot := block.Slot + 1
-	currentSlot := state.Slot
+	currentSlot := stateSlot
 	for i := startSlot; i <= currentSlot; i++ {
 		block, err := c.beaconDB.BlockBySlot(i)
 		if err != nil {
@@ -141,18 +268,18 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
-func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestationTarget, error) {
-	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.FinalizedEpoch)
-	attestationTargets := make([]*attestationTarget, len(indices))
+func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
+	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+	attestationTargets := make(map[uint64]*pb.BeaconBlock)
 	for i, index := range indices {
 		block, err := c.attsService.LatestAttestationTarget(c.ctx, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
 		}
-		attestationTargets[i] = &attestationTarget{
-			validatorIndex: index,
-			block:          block,
+		if block == nil {
+			continue
 		}
+		attestationTargets[uint64(i)] = block
 	}
 	return attestationTargets, nil
 }

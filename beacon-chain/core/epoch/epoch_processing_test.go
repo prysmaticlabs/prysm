@@ -12,9 +12,16 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCrosslinks: true,
+	})
+}
 
 func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
@@ -273,7 +280,7 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    state.Slot,
+				Slot: state.Slot,
 				CrosslinkDataRootHash32: []byte{'A'},
 			},
 			// All validators attested to the above roots.
@@ -497,7 +504,7 @@ func TestUpdateLatestSlashedBalances_UpdatesBalances(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength)
 		latestSlashedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
-			Slot:                  tt.epoch * params.BeaconConfig().SlotsPerEpoch,
+			Slot: tt.epoch * params.BeaconConfig().SlotsPerEpoch,
 			LatestSlashedBalances: latestSlashedExitBalances}
 		newState := UpdateLatestSlashedBalances(context.Background(), state)
 		if newState.LatestSlashedBalances[epoch+1] !=
@@ -562,7 +569,7 @@ func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 	latestActiveIndexRoots := make([][]byte,
 		params.BeaconConfig().LatestActiveIndexRootsLength)
 	state := &pb.BeaconState{
-		Slot:                   epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
 		LatestIndexRootHash32S: latestActiveIndexRoots}
 	newState, err := UpdateLatestActiveIndexRoots(context.Background(), state)
 	if err != nil {

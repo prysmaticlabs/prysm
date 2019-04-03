@@ -70,6 +70,8 @@ func (sim *simulatedP2P) Send(ctx context.Context, msg proto.Message, peerID pee
 }
 
 func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB, []*bls.SecretKey) {
+	ctx := context.Background()
+
 	bd, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not set up simulated backend %v", err)
@@ -85,7 +87,7 @@ func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB
 		t.Fatalf("Could not setup beacon db %v", err)
 	}
 
-	if err := beacondb.SaveState(bd.State()); err != nil {
+	if err := beacondb.SaveState(ctx, bd.State()); err != nil {
 		t.Fatalf("Could not save state %v", err)
 	}
 
@@ -94,7 +96,7 @@ func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB
 		t.Fatalf("Could not save block %v", err)
 	}
 
-	if err := beacondb.UpdateChainHead(memBlocks[0], bd.State()); err != nil {
+	if err := beacondb.UpdateChainHead(ctx, memBlocks[0], bd.State()); err != nil {
 		t.Fatalf("Could not update chain head %v", err)
 	}
 
@@ -105,6 +107,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	bd, beacondb, privKeys := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
+	ctx := context.Background()
 
 	mockPow := &genesisPowChain{
 		feed: new(event.Feed),
@@ -114,6 +117,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 		bFeed: new(event.Feed),
 		sFeed: new(event.Feed),
 		cFeed: new(event.Feed),
+		db:    bd.DB(),
 	}
 
 	cfg := &Config{
@@ -139,7 +143,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 		if err := beacondb.SaveBlock(blocks[i]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beacondb.UpdateChainHead(blocks[i], bd.State()); err != nil {
+		if err := beacondb.UpdateChainHead(ctx, blocks[i], bd.State()); err != nil {
 			t.Fatalf("Unable to update chain head %v", err)
 		}
 	}
@@ -151,6 +155,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 	bd, beacondb, privKeys := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
+	ctx := context.Background()
 
 	mockPow := &afterGenesisPowChain{
 		feed: new(event.Feed),
@@ -160,6 +165,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 		bFeed: new(event.Feed),
 		sFeed: new(event.Feed),
 		cFeed: new(event.Feed),
+		db:    bd.DB(),
 	}
 
 	// we add in 2 blocks to the unsynced node so that, we dont request the beacon state from the
@@ -172,7 +178,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 		if err := beacondb.SaveBlock(blocks[i]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beacondb.UpdateChainHead(blocks[i], bd.State()); err != nil {
+		if err := beacondb.UpdateChainHead(ctx, blocks[i], bd.State()); err != nil {
 			t.Fatalf("Unable to update chain head %v", err)
 		}
 	}
@@ -191,8 +197,8 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(simP2P.ctx, &pb.ChainHeadResponse{
-			Slot:                      params.BeaconConfig().GenesisSlot + 12,
-			Hash:                      []byte{'t', 'e', 's', 't'},
+			Slot: params.BeaconConfig().GenesisSlot + 12,
+			Hash: []byte{'t', 'e', 's', 't'},
 			FinalizedStateRootHash32S: stateRoot[:],
 		}, "")
 	}

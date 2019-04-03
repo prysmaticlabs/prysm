@@ -22,10 +22,13 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
+
+	v.waitToSlotMidpoint(ctx, slot)
+
 	// First the validator should construct attestation_data, an AttestationData
 	// object based upon the state at the assigned slot.
 	attData := &pbp2p.AttestationData{
-		Slot:                    slot,
+		Slot: slot,
 		CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
 	}
 	// We fetch the validator index as it is necessary to generate the aggregation
@@ -39,9 +42,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		log.Errorf("Could not fetch validator index: %v", err)
 		return
 	}
-	req := &pb.ValidatorEpochAssignmentsRequest{
+	req := &pb.CommitteeAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  pubKey,
+		PublicKey:  [][]byte{pubKey},
 	}
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
@@ -51,13 +54,13 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	// Set the attestation data's shard as the shard associated with the validator's
 	// committee as retrieved by CrosslinkCommitteesAtSlot.
-	attData.Shard = resp.Shard
+	attData.Shard = resp.Assignment[0].Shard
 
 	// Fetch other necessary information from the beacon node in order to attest
 	// including the justified epoch, epoch boundary information, and more.
 	infoReq := &pb.AttestationDataRequest{
 		Slot:  slot,
-		Shard: resp.Shard,
+		Shard: resp.Assignment[0].Shard,
 	}
 	infoRes, err := v.attesterClient.AttestationDataAtSlot(ctx, infoReq)
 	if err != nil {
@@ -91,12 +94,12 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 
 	// We set the custody bitfield to an slice of zero values as a stub for phase 0
 	// of length len(committee)+7 // 8.
-	attestation.CustodyBitfield = make([]byte, (len(resp.Committee)+7)/8)
+	attestation.CustodyBitfield = make([]byte, (len(resp.Assignment[0].Committee)+7)/8)
 
 	// Find the index in committee to be used for
 	// the aggregation bitfield
 	var indexInCommittee int
-	for i, vIndex := range resp.Committee {
+	for i, vIndex := range resp.Assignment[0].Committee {
 		if vIndex == validatorIndexRes.Index {
 			indexInCommittee = i
 			break
@@ -118,12 +121,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		"slot":           slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Attesting to beacon chain head...")
 
-	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
-	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
-	_, sleepSpan := trace.StartSpan(ctx, "validator.AttestToBlockHead_sleepUntilTimeToBroadcast")
-	time.Sleep(time.Until(timeToBroadcast))
-	sleepSpan.End()
-	log.Debugf("Produced attestation: %v", attestation)
+	log.Infof("Produced attestation with block root: %#x", attestation.Data.BeaconBlockRootHash32)
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
@@ -134,4 +132,17 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		"shard":           attData.Shard,
 		"slot":            slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Beacon node processed attestation successfully")
+}
+
+// waitToSlotMidpoint waits until halfway through the current slot period
+// such that any blocks from this slot have time to reach the beacon node
+// before creating the attestation.
+func (v *validator) waitToSlotMidpoint(ctx context.Context, slot uint64) {
+	_, span := trace.StartSpan(ctx, "validator.waitToSlotMidpoint")
+	defer span.End()
+
+	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
+	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
+
+	time.Sleep(time.Until(timeToBroadcast))
 }

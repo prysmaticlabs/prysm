@@ -215,8 +215,8 @@ func TestCrosslinkCommitteesAtSlot_RegistryChange(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		Slot:                   params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().GenesisSlot,
 		LatestIndexRootHash32S: [][]byte{{'A'}, {'B'}},
 		LatestRandaoMixes:      [][]byte{{'C'}, {'D'}},
 	}
@@ -243,8 +243,8 @@ func TestCrosslinkCommitteesAtSlot_EpochSinceLastUpdatePow2(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry:            validators,
-		Slot:                         params.BeaconConfig().GenesisSlot + 128,
+		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().GenesisSlot + 128,
 		LatestIndexRootHash32S:       [][]byte{{'A'}, {'B'}, {'C'}},
 		LatestRandaoMixes:            [][]byte{{'D'}, {'E'}, {'F'}},
 		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
@@ -322,21 +322,21 @@ func TestAttestationParticipants_OK(t *testing.T) {
 			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
 			shard:           2,
 			bitfield:        []byte{0xC0},
-			wanted:          []uint64{11, 121},
+			wanted:          []uint64{11, 14},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           1,
 			bitfield:        []byte{0x80},
-			wanted:          []uint64{4},
+			wanted:          []uint64{5},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           10,
 			bitfield:        []byte{0xC0},
-			wanted:          []uint64{14, 30},
+			wanted:          []uint64{55, 105},
 		},
 	}
 
@@ -440,31 +440,31 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       params.BeaconConfig().GenesisSlot + 146,
-			committee:  []uint64{105, 0},
-			shard:      18,
+			slot:       params.BeaconConfig().GenesisSlot + 159,
+			committee:  []uint64{0, 123},
+			shard:      31,
 			isProposer: false,
 		},
 		{
 			index:      105,
-			slot:       params.BeaconConfig().GenesisSlot + 146,
-			committee:  []uint64{105, 0},
-			shard:      18,
+			slot:       params.BeaconConfig().GenesisSlot + 185,
+			committee:  []uint64{1, 105},
+			shard:      57,
 			isProposer: true,
 		},
 		{
 			index:      64,
-			slot:       params.BeaconConfig().GenesisSlot + 139,
-			committee:  []uint64{64, 52},
-			shard:      11,
-			isProposer: false,
+			slot:       params.BeaconConfig().GenesisSlot + 176,
+			committee:  []uint64{64, 12},
+			shard:      48,
+			isProposer: true,
 		},
 		{
 			index:      11,
-			slot:       params.BeaconConfig().GenesisSlot + 130,
-			committee:  []uint64{11, 121},
-			shard:      2,
-			isProposer: true,
+			slot:       params.BeaconConfig().GenesisSlot + 188,
+			committee:  []uint64{112, 11},
+			shard:      60,
+			isProposer: false,
 		},
 	}
 

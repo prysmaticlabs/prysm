@@ -77,9 +77,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{109, 97}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{123, 65}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{109, 97}, attesterIndices)
+			[]uint64{123, 65}, attesterIndices)
 	}
 }
 
@@ -102,8 +102,8 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot + 3,
-			Shard:                   6,
+			Slot:  params.BeaconConfig().GenesisSlot + 3,
+			Shard: 6,
 			CrosslinkDataRootHash32: []byte{'B'},
 		},
 		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
@@ -119,9 +119,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{1141, 688}) {
+	if !reflect.DeepEqual(indices, []uint64{1134, 1150}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{1141, 688}, indices)
+			[]uint64{1134, 1150}, indices)
 	}
 }
 
@@ -140,8 +140,8 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    0,
-			Shard:                   1,
+			Slot:  0,
+			Shard: 1,
 			CrosslinkDataRootHash32: []byte{'B'},
 		},
 		AggregationBitfield: []byte{'A'}, // 01000001 = 1,7
@@ -184,7 +184,7 @@ func TestProcessDeposit_BadWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
+			Pubkey: []byte{4, 5, 6},
 			WithdrawalCredentialsHash32: []byte{0},
 		},
 	}
@@ -215,7 +215,7 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
+			Pubkey: []byte{4, 5, 6},
 			WithdrawalCredentialsHash32: []byte{1},
 		},
 	}
@@ -248,11 +248,11 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1, 2, 3},
+			Pubkey: []byte{1, 2, 3},
 			WithdrawalCredentialsHash32: []byte{2},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
+			Pubkey: []byte{4, 5, 6},
 			WithdrawalCredentialsHash32: []byte{1},
 		},
 	}
@@ -288,11 +288,11 @@ func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1, 2, 3},
+			Pubkey: []byte{1, 2, 3},
 			WithdrawalCredentialsHash32: []byte{2},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
+			Pubkey: []byte{4, 5, 6},
 			WithdrawalCredentialsHash32: []byte{1},
 		},
 	}
@@ -375,7 +375,7 @@ func TestInitiateValidatorExit_OK(t *testing.T) {
 
 func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                  100, // epoch 2
+		Slot: 100, // epoch 2
 		LatestSlashedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
@@ -442,7 +442,7 @@ func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                  params.BeaconConfig().LatestSlashedExitLength / 2 * params.BeaconConfig().SlotsPerEpoch,
+		Slot: params.BeaconConfig().LatestSlashedExitLength / 2 * params.BeaconConfig().SlotsPerEpoch,
 		LatestSlashedBalances: latestSlashedExits,
 		ValidatorBalances:     []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
@@ -586,14 +586,15 @@ func TestUpdateRegistry_Exits(t *testing.T) {
 }
 
 func TestMaxBalanceChurn_OK(t *testing.T) {
+	maxDepositAmount := params.BeaconConfig().MaxDepositAmount
 	tests := []struct {
 		totalBalance    uint64
 		maxBalanceChurn uint64
 	}{
-		{totalBalance: 1e9, maxBalanceChurn: params.BeaconConfig().MaxDepositAmount},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount, maxBalanceChurn: 512 * 1e9},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount * 10, maxBalanceChurn: 512 * 1e10},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount * 1000, maxBalanceChurn: 512 * 1e12},
+		{totalBalance: 1e9, maxBalanceChurn: maxDepositAmount},
+		{totalBalance: maxDepositAmount, maxBalanceChurn: maxDepositAmount},
+		{totalBalance: maxDepositAmount * 10, maxBalanceChurn: maxDepositAmount},
+		{totalBalance: params.BeaconConfig().MaxDepositAmount * 1000, maxBalanceChurn: 5 * 1e11},
 	}
 
 	for _, tt := range tests {

@@ -12,13 +12,21 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableComputeStateRoot: true,
+	})
+}
 
 func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
+	ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
@@ -47,7 +55,7 @@ func TestProposeBlock_OK(t *testing.T) {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -60,6 +68,9 @@ func TestProposeBlock_OK(t *testing.T) {
 		Slot:             5,
 		ParentRootHash32: []byte("parent-hash"),
 	}
+	if err := proposerServer.beaconDB.SaveBlock(req); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
 		t.Errorf("Could not propose block correctly: %v", err)
 	}
@@ -68,6 +79,7 @@ func TestProposeBlock_OK(t *testing.T) {
 func TestComputeStateRoot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
 
 	mockChain := &mockChainService{}
 
@@ -100,7 +112,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	beaconState.Slot = 10
 
-	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -126,6 +138,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay + 100,
 	}
@@ -139,9 +153,22 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		},
 		beaconDB: db,
 	}
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
+
+	blk := &pbp2p.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+
+	if err := db.SaveBlock(blk); err != nil {
+		t.Fatalf("failed to save block %v", err)
+	}
+
+	if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
+		t.Fatalf("couldnt update chainhead: %v", err)
+	}
+
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
 		FilterReadyForInclusion: true,
 	})
@@ -156,6 +183,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
 
 	// Edge case: current slot is at the end of an epoch. The pending attestation
 	// for the next slot should come from currentSlot + 1.
@@ -163,18 +191,22 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		params.BeaconConfig().GenesisEpoch+10,
 	) - 1
 
+	expectedEpoch := uint64(100)
+
 	opService := &mockOperationService{
 		pendingAttestations: []*pbp2p.Attestation{
 			// Expired attestations
-			{Data: &pbp2p.AttestationData{Slot: 0}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 100}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - params.BeaconConfig().SlotsPerEpoch}},
-			// Non-expired attestations
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 2}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot}},
+			{Data: &pbp2p.AttestationData{Slot: 0, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 100, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - params.BeaconConfig().SlotsPerEpoch, JustifiedEpoch: expectedEpoch}},
+			// Non-expired attestation with incorrect justified epoch
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch - 1}},
+			// Non-expired attestations with correct justified epoch
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 2, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot, JustifiedEpoch: expectedEpoch}},
 		},
 	}
 	expectedNumberOfAttestations := 3
@@ -183,11 +215,26 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		beaconDB:         db,
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot: currentSlot,
+		Slot:                   currentSlot,
+		JustifiedEpoch:         expectedEpoch,
+		PreviousJustifiedEpoch: expectedEpoch,
 	}
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
+
+	blk := &pbp2p.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+
+	if err := db.SaveBlock(blk); err != nil {
+		t.Fatalf("failed to save block %v", err)
+	}
+
+	if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
+		t.Fatalf("couldnt update chainhead: %v", err)
+	}
+
 	res, err := proposerServer.PendingAttestations(
 		context.Background(),
 		&pb.PendingAttestationsRequest{
@@ -209,6 +256,8 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 func TestPendingAttestations_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{},
 		beaconDB:         db,
@@ -216,9 +265,22 @@ func TestPendingAttestations_OK(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay,
 	}
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
+
+	blk := &pbp2p.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+
+	if err := db.SaveBlock(blk); err != nil {
+		t.Fatalf("failed to save block %v", err)
+	}
+
+	if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
+		t.Fatalf("couldnt update chainhead: %v", err)
+	}
+
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)

@@ -9,11 +9,11 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -59,12 +59,14 @@ func CanProcessValidatorRegistry(ctx context.Context, state *pb.BeaconState) boo
 	if state.FinalizedEpoch <= state.ValidatorRegistryUpdateEpoch {
 		return false
 	}
-	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().SlotsPerEpoch
-	startShard := state.CurrentShufflingStartShard
-	for i := startShard; i < shardsProcessed; i++ {
-		if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
-			state.ValidatorRegistryUpdateEpoch {
-			return false
+	if featureconfig.FeatureConfig().EnableCrosslinks {
+		shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().SlotsPerEpoch
+		startShard := state.CurrentShufflingStartShard
+		for i := startShard; i < shardsProcessed; i++ {
+			if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
+				state.ValidatorRegistryUpdateEpoch {
+				return false
+			}
 		}
 	}
 	return true
@@ -160,7 +162,7 @@ func ProcessJustification(
 		(state.JustificationBitfield>>1)%8 == 7 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 		if enableLogging {
-			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		}
 	}
 	// When the 2nd and 3rd most epochs are all justified, the 2nd can finalize the 3rd epoch
@@ -169,7 +171,7 @@ func ProcessJustification(
 		(state.JustificationBitfield>>1)%4 == 3 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 		if enableLogging {
-			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		}
 	}
 	// When the 1st, 2nd and 3rd most epochs are all justified, the 1st can finalize the 3rd epoch
@@ -178,7 +180,7 @@ func ProcessJustification(
 		(state.JustificationBitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		if enableLogging {
-			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		}
 	}
 	// When the 1st and 2nd most epochs are all justified, the 1st can finalize the 2nd epoch
@@ -187,7 +189,7 @@ func ProcessJustification(
 		(state.JustificationBitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		if enableLogging {
-			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		}
 	}
 	state.PreviousJustifiedEpoch = state.JustifiedEpoch
@@ -243,7 +245,7 @@ func ProcessCrosslinks(
 					return nil, fmt.Errorf("could not get winning root: %v", err)
 				}
 				state.LatestCrosslinks[shard] = &pb.Crosslink{
-					Epoch:                   currentEpoch,
+					Epoch: currentEpoch,
 					CrosslinkDataRootHash32: winningRoot,
 				}
 			}

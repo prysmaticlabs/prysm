@@ -32,7 +32,7 @@ service ProposerService {
 service ValidatorService {
     rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse);
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
-    rpc CommitteeAssignment(ValidatorEpochAssignmentsRequest) returns (CommitteeAssignmentResponse);
+    rpc CommitteeAssignment(CommitteeAssignmentsRequest) returns (CommitteeAssignmentResponse);
     rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
     rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
 }
@@ -117,7 +117,6 @@ enum ValidatorRole {
     UNKNOWN = 0;
     ATTESTER = 1;
     PROPOSER = 2;
-    BOTH = 3;
 }
 
 message ValidatorIndexRequest {
@@ -128,9 +127,9 @@ message ValidatorIndexResponse {
     uint64 index = 1;
 }
 
-message ValidatorEpochAssignmentsRequest {
+message CommitteeAssignmentsRequest {
     uint64 epoch_start = 1;
-    bytes public_key = 2;
+    repeated bytes public_key = 2;
 }
 
 message PendingDepositsResponse {
@@ -138,10 +137,16 @@ message PendingDepositsResponse {
 }
 
 message CommitteeAssignmentResponse {
-    repeated uint64 committee = 1;
-    uint64 shard = 2;
-    uint64 slot = 3;
-    bool is_proposer = 4;
+    
+    repeated CommitteeAssignment assignment = 1;
+    message CommitteeAssignment {
+        repeated uint64 committee = 1;
+        uint64 shard = 2;
+        uint64 slot = 3;
+        bool is_proposer = 4;
+        bytes public_key = 5;
+        ValidatorStatus status = 6;
+    }
 }
 
 message ValidatorStatusResponse {

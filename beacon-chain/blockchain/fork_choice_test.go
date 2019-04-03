@@ -2,6 +2,8 @@ package blockchain
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"reflect"
 	"testing"
 	"time"
@@ -15,60 +17,21 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-// Generates an initial genesis block and state using a custom number of initial
-// deposits as a helper function for LMD Ghost fork-choice testing.
-func generateTestGenesisStateAndBlock(
-	t testing.TB,
-	numDeposits uint64,
-	beaconDB *db.BeaconDB,
-) (*pb.BeaconState, *pb.BeaconBlock, [32]byte, [32]byte) {
-	deposits := make([]*pb.Deposit, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		pubkey := []byte{byte(i)}
-		depositInput := &pb.DepositInput{
-			Pubkey: pubkey,
-		}
-
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Could not encode deposit: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-	}
-	genesisTime := uint64(time.Unix(0, 0).Unix())
-	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := beaconDB.SaveState(beaconState); err != nil {
-		t.Fatal(err)
-	}
-	stateRoot, err := hashutil.HashProto(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	genesisBlock := b.NewGenesisBlock(stateRoot[:])
-	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
-		t.Fatal(err)
-	}
-	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return beaconState, genesisBlock, stateRoot, genesisRoot
-}
+// Ensure ChainService implements interfaces.
+var _ = ForkChoice(&ChainService{})
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
-	beaconState, err := state.GenesisBeaconState(nil, 0, nil)
+	deposits, _ := setupInitialDeposits(t, 5)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
@@ -76,12 +39,12 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-
 	genesis := b.NewGenesisBlock(stateRoot[:])
 	genesisRoot, err := hashutil.HashProto(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block root: %v", err)
 	}
+
 	// Table driven tests for various fork choice scenarios.
 	tests := []struct {
 		blockSlot uint64
@@ -90,23 +53,23 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	}{
 		// Higher slot but same state should trigger chain update.
 		{
-			blockSlot: 64,
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
 			state:     beaconState,
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, but higher last finalized slot.
 		{
-			blockSlot: 64,
-			state:     &pb.BeaconState{FinalizedEpoch: 2},
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
+			state:     &pb.BeaconState{FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 2},
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, same last finalized slot,
 		// but last justified slot.
 		{
-			blockSlot: 64,
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
 			state: &pb.BeaconState{
-				FinalizedEpoch: 0,
-				JustifiedEpoch: 2,
+				FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -115,7 +78,23 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		hook := logTest.NewGlobal()
 		db := internal.SetupDB(t)
 		defer internal.TeardownDB(t, db)
-		chainService := setupBeaconChain(t, false, db, true, nil)
+		attsService := attestation.NewAttestationService(
+			context.Background(),
+			&attestation.Config{BeaconDB: db})
+
+		chainService := setupBeaconChain(t, db, attsService)
+		if err := chainService.beaconDB.SaveBlock(
+			genesis); err != nil {
+			t.Fatal(err)
+		}
+		if err := chainService.beaconDB.SaveJustifiedBlock(
+			genesis); err != nil {
+			t.Fatal(err)
+		}
+		if err := chainService.beaconDB.SaveJustifiedState(
+			beaconState); err != nil {
+			t.Fatal(err)
+		}
 		unixTime := uint64(time.Now().Unix())
 		deposits, _ := setupInitialDeposits(t, 100)
 		if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
@@ -141,20 +120,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		if err := chainService.ApplyForkChoiceRule(context.Background(), block, tt.state); err != nil {
 			t.Errorf("Expected head to update, received %v", err)
 		}
-
-		if err := chainService.beaconDB.SaveBlock(block); err != nil {
-			t.Fatal(err)
-		}
 		chainService.cancel()
 		testutil.AssertLogsContain(t, hook, tt.logAssert)
-
-		mb, ok := chainService.p2p.(*mockBroadcaster)
-		if !ok {
-			t.Fatal("chainService.p2p is not a mockBroadcaster")
-		}
-		if !mb.broadcastCalled {
-			t.Error("ApplyForkChoiceRule did not broadcast the new block")
-		}
 	}
 }
 
@@ -226,6 +193,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
 
 	pubKey := []byte{'A'}
 	state := &pb.BeaconState{
@@ -234,7 +202,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
 	}
 
-	if err := beaconDB.SaveState(state); err != nil {
+	if err := beaconDB.SaveState(ctx, state); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 
@@ -251,31 +219,29 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: beaconDB})
 
-	atts := &pb.Attestation{
+	att := &pb.Attestation{
 		Data: &pb.AttestationData{
 			BeaconBlockRootHash32: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
-	attsService.Store[pubKey48] = atts
+	attsService.InsertAttestationIntoStore(pubKey48, att)
 
-	chainService := setupBeaconChain(t, false, beaconDB, true, attsService)
+	chainService := setupBeaconChain(t, beaconDB, attsService)
 	attestationTargets, err := chainService.attestationTargets(state)
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
 	}
-	if attestationTargets[0].validatorIndex != 0 {
-		t.Errorf("Wanted validator index 0, got %d", attestationTargets[0].validatorIndex)
-	}
-	if attestationTargets[0].block.Slot != block.Slot {
-		t.Errorf("Wanted attested slot %d, got %d", block.Slot, attestationTargets[0].block.Slot)
+	if attestationTargets[0].Slot != block.Slot {
+		t.Errorf("Wanted attested slot %d, got %d", block.Slot, attestationTargets[0].Slot)
 	}
 }
 
 func TestBlockChildren_2InARow(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil)
 
 	state := &pb.BeaconState{
 		Slot: 3,
@@ -294,7 +260,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -309,7 +275,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -320,11 +286,11 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block3, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state)
+	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -339,8 +305,9 @@ func TestBlockChildren_2InARow(t *testing.T) {
 func TestBlockChildren_ChainSplits(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil)
 
 	state := &pb.BeaconState{
 		Slot: 10,
@@ -361,7 +328,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -372,7 +339,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -383,7 +350,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block3, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -394,11 +361,11 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block4, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block4, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state)
+	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -413,8 +380,9 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 func TestBlockChildren_SkipSlots(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil)
 
 	state := &pb.BeaconState{
 		Slot: 10,
@@ -433,7 +401,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -448,7 +416,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block5); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block5, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block5, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -459,11 +427,11 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block9); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block9, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block9, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state)
+	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -478,13 +446,15 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
 
 	state := &pb.BeaconState{
 		Slot:              10,
 		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
+		ValidatorRegistry: []*pb.Validator{{}},
 	}
 
-	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil)
 
 	// Construct the following chain:
 	// B1 - B2 (State is slot 2)
@@ -499,7 +469,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -510,7 +480,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -519,7 +489,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	voteTargets[0] = block2
 
 	// LMDGhost should pick block 2.
-	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	head, err := chainService.lmdGhost(block1, state, state, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -531,6 +501,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
 
 	state := &pb.BeaconState{
 		Slot: 10,
@@ -539,9 +510,10 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount},
+		ValidatorRegistry: []*pb.Validator{{}, {}, {}, {}},
 	}
 
-	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil)
 
 	// Construct the following chain:
 	//    /- B2
@@ -558,7 +530,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -569,7 +541,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -580,7 +552,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block3, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -591,7 +563,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block4, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block4, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -602,7 +574,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	voteTargets[2] = block4
 	voteTargets[3] = block4
 	// LMDGhost should pick block 4.
-	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	head, err := chainService.lmdGhost(block1, state, state, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -614,6 +586,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
 
 	state := &pb.BeaconState{
 		Slot: 10,
@@ -622,9 +595,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount},
+		ValidatorRegistry: []*pb.Validator{{}, {}, {}, {}},
 	}
 
-	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil)
 
 	// Construct the following chain:
 	//    /- B2 - B4 - B6
@@ -640,7 +614,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -655,7 +629,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -670,7 +644,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block3, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -685,7 +659,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block4, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block4, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -696,7 +670,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block5); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block5, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block5, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -707,7 +681,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block6); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(block6, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block6, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -717,7 +691,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	voteTargets[1] = block5
 	voteTargets[2] = block5
 	// LMDGhost should pick block 5.
-	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	head, err := chainService.lmdGhost(block1, state, state, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -733,6 +707,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	beaconDB := internal.SetupDB(b)
 	defer internal.TeardownDB(b, beaconDB)
+	ctx := context.Background()
 
 	validatorCount := 8
 	balances := make([]uint64, validatorCount)
@@ -759,7 +734,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
 		b.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(genesis, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, genesis, state); err != nil {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -772,7 +747,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 		if err = chainService.beaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
 		}
-		if err = chainService.beaconDB.UpdateChainHead(block, state); err != nil {
+		if err = chainService.beaconDB.UpdateChainHead(ctx, block, state); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
 		root, err = hashutil.HashBeaconBlock(block)
@@ -787,7 +762,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(genesis, state, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -803,6 +778,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	beaconDB := internal.SetupDB(b)
 	defer internal.TeardownDB(b, beaconDB)
+	ctx := context.Background()
 
 	validatorCount := 8
 	balances := make([]uint64, validatorCount)
@@ -829,7 +805,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
 		b.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(genesis, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, genesis, state); err != nil {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -842,7 +818,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 		if err = chainService.beaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
 		}
-		if err = chainService.beaconDB.UpdateChainHead(block, state); err != nil {
+		if err = chainService.beaconDB.UpdateChainHead(ctx, block, state); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
 		root, err = hashutil.HashBeaconBlock(block)
@@ -857,7 +833,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(genesis, state, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -871,6 +847,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	beaconDB := internal.SetupDB(b)
 	defer internal.TeardownDB(b, beaconDB)
+	ctx := context.Background()
 
 	validatorCount := 64
 	balances := make([]uint64, validatorCount)
@@ -897,7 +874,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
 		b.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(genesis, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, genesis, state); err != nil {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -910,7 +887,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 		if err = chainService.beaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
 		}
-		if err = chainService.beaconDB.UpdateChainHead(block, state); err != nil {
+		if err = chainService.beaconDB.UpdateChainHead(ctx, block, state); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
 		root, err = hashutil.HashBeaconBlock(block)
@@ -925,7 +902,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(genesis, state, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -939,6 +916,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	beaconDB := internal.SetupDB(b)
 	defer internal.TeardownDB(b, beaconDB)
+	ctx := context.Background()
 
 	validatorCount := 16384
 	balances := make([]uint64, validatorCount)
@@ -965,7 +943,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
 		b.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(genesis, state); err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(ctx, genesis, state); err != nil {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -978,7 +956,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 		if err = chainService.beaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
 		}
-		if err = chainService.beaconDB.UpdateChainHead(block, state); err != nil {
+		if err = chainService.beaconDB.UpdateChainHead(ctx, block, state); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
 		root, err = hashutil.HashBeaconBlock(block)
@@ -993,7 +971,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(genesis, state, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -1035,7 +1013,6 @@ func setupBeaconChainBenchmark(b *testing.B, faultyPoWClient bool, beaconDB *db.
 		BeaconDB:       beaconDB,
 		Web3Service:    web3Service,
 		OpsPoolService: &mockOperationService{},
-		EnablePOWChain: enablePOWChain,
 		AttsService:    attsService,
 	}
 	if err != nil {
@@ -1047,4 +1024,294 @@ func setupBeaconChainBenchmark(b *testing.B, faultyPoWClient bool, beaconDB *db.
 	}
 
 	return chainService
+}
+
+func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
+	genesisSlot := params.BeaconConfig().GenesisSlot
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainSvc := setupBeaconChain(t, db, nil)
+	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
+	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.SaveFinalizedState(gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Last justified check point happened at slot 0.
+	if err := chainSvc.beaconDB.SaveJustifiedBlock(
+		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Also saved finalized block to slot 0 to test justification case only.
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+
+	// New justified slot in state is at slot 64.
+	offset := uint64(64)
+	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+offset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gState.JustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.Slot = genesisSlot + offset
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, gState.JustifiedEpoch)
+	domain := forkutil.DomainVersion(gState.Fork, gState.JustifiedEpoch, params.BeaconConfig().DomainRandao)
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	block := &pb.BeaconBlock{
+		Slot:             genesisSlot + offset,
+		RandaoReveal:     epochSignature.Marshal(),
+		ParentRootHash32: gBlockRoot[:],
+		Body:             &pb.BeaconBlockBody{}}
+	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.updateFFGCheckPts(gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Getting latest justification check point from DB and
+	// verify they have been updated.
+	newJustifiedState, err := chainSvc.beaconDB.JustifiedState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	newJustifiedBlock, err := chainSvc.beaconDB.JustifiedBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newJustifiedState.Slot-genesisSlot != offset {
+		t.Errorf("Wanted justification state slot: %d, got: %d",
+			offset, newJustifiedState.Slot-genesisSlot)
+	}
+	if newJustifiedBlock.Slot-genesisSlot != offset {
+		t.Errorf("Wanted justification block slot: %d, got: %d",
+			offset, newJustifiedBlock.Slot-genesisSlot)
+	}
+}
+
+func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
+	genesisSlot := params.BeaconConfig().GenesisSlot
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainSvc := setupBeaconChain(t, db, nil)
+	ctx := context.Background()
+
+	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
+	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.SaveFinalizedState(gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Last finalized check point happened at slot 0.
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(
+		gBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.SaveFinalizedState(
+		gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// New Finalized slot in state is at slot 64.
+	offset := uint64(64)
+	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+offset)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Also saved justified block to slot 0 to test finalized case only.
+	if err := chainSvc.beaconDB.SaveJustifiedBlock(
+		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+
+	gState.FinalizedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.Slot = genesisSlot + offset
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, gState.FinalizedEpoch)
+	domain := forkutil.DomainVersion(gState.Fork, gState.FinalizedEpoch, params.BeaconConfig().DomainRandao)
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	block := &pb.BeaconBlock{
+		Slot:             genesisSlot + offset,
+		RandaoReveal:     epochSignature.Marshal(),
+		ParentRootHash32: gBlockRoot[:],
+		Body:             &pb.BeaconBlockBody{}}
+
+	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.updateFFGCheckPts(gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Getting latest justification check point from DB and
+	// verify they have been updated.
+	newFinalizedState, err := chainSvc.beaconDB.FinalizedState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	newFinalizedBlock, err := chainSvc.beaconDB.FinalizedBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newFinalizedState.Slot-genesisSlot != offset {
+		t.Errorf("Wanted finalized state slot: %d, got: %d",
+			offset, newFinalizedState.Slot-genesisSlot)
+	}
+	if newFinalizedBlock.Slot-genesisSlot != offset {
+		t.Errorf("Wanted finalized block slot: %d, got: %d",
+			offset, newFinalizedBlock.Slot-genesisSlot)
+	}
+}
+
+func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
+	genesisSlot := params.BeaconConfig().GenesisSlot
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainSvc := setupBeaconChain(t, db, nil)
+	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
+	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.SaveFinalizedState(gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Last justified check point happened at slot 0.
+	if err := chainSvc.beaconDB.SaveJustifiedBlock(
+		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Also saved finalized block to slot 0 to test justification case only.
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(
+		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+
+	// New justified slot in state is at slot 64, but it's a skip slot...
+	offset := uint64(64)
+	lastAvailableSlot := uint64(60)
+	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+lastAvailableSlot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gState.JustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.Slot = genesisSlot + offset
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, params.BeaconConfig().GenesisEpoch)
+	domain := forkutil.DomainVersion(gState.Fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainRandao)
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	block := &pb.BeaconBlock{
+		Slot:             genesisSlot + lastAvailableSlot,
+		RandaoReveal:     epochSignature.Marshal(),
+		ParentRootHash32: gBlockRoot[:],
+		Body:             &pb.BeaconBlockBody{}}
+	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.updateFFGCheckPts(gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Getting latest justification check point from DB and
+	// verify they have been updated.
+	newJustifiedState, err := chainSvc.beaconDB.JustifiedState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	newJustifiedBlock, err := chainSvc.beaconDB.JustifiedBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newJustifiedState.Slot-genesisSlot != offset {
+		t.Errorf("Wanted justification state slot: %d, got: %d",
+			offset, newJustifiedState.Slot-genesisSlot)
+	}
+	if newJustifiedBlock.Slot-genesisSlot != lastAvailableSlot {
+		t.Errorf("Wanted justification block slot: %d, got: %d",
+			offset, newJustifiedBlock.Slot-genesisSlot)
+	}
+}
+
+func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*bls.SecretKey) {
+	genesisSlot := params.BeaconConfig().GenesisSlot
+	var crosslinks []*pb.Crosslink
+	for i := 0; i < int(params.BeaconConfig().ShardCount); i++ {
+		crosslinks = append(crosslinks, &pb.Crosslink{Epoch: params.BeaconConfig().GenesisEpoch})
+	}
+	latestRandaoMixes := make(
+		[][]byte,
+		params.BeaconConfig().LatestRandaoMixesLength,
+	)
+	for i := 0; i < len(latestRandaoMixes); i++ {
+		latestRandaoMixes[i] = make([]byte, 32)
+	}
+	var validatorRegistry []*pb.Validator
+	var validatorBalances []uint64
+	var privKeys []*bls.SecretKey
+	for i := uint64(0); i < 64; i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		privKeys = append(privKeys, priv)
+		validatorRegistry = append(validatorRegistry,
+			&pb.Validator{
+				Pubkey:    priv.PublicKey().Marshal(),
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			})
+		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxDepositAmount)
+	}
+	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
+	gBlockRoot, err := hashutil.HashBeaconBlock(gBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gState := &pb.BeaconState{
+		Slot: genesisSlot,
+		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestRandaoMixes:      latestRandaoMixes,
+		LatestIndexRootHash32S: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestCrosslinks:       crosslinks,
+		ValidatorRegistry:      validatorRegistry,
+		ValidatorBalances:      validatorBalances,
+		LatestBlock:            gBlock,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           params.BeaconConfig().GenesisEpoch,
+		},
+	}
+	return gBlockRoot, gBlock, gState, privKeys
 }

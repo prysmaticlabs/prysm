@@ -8,6 +8,7 @@ import (
 	"net"
 	"reflect"
 	"sync"
+	"time"
 
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
@@ -30,7 +31,10 @@ import (
 )
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
-const maxMessageSize = 1 << 20
+
+// We accommodate p2p message sizes as large as ~17Mb as we are transmitting
+// full beacon states over the wire for our current implementation.
+const maxMessageSize = 1 << 24
 
 // Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
@@ -129,7 +133,9 @@ func (s *Server) Start() {
 		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
-		if err := s.dht.Bootstrap(ctx); err != nil {
+		bcfg := kaddht.DefaultBootstrapConfig
+		bcfg.Period = time.Duration(30 * time.Second)
+		if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
 			log.Errorf("Failed to bootstrap DHT: %v", err)
 		}
 	}
@@ -145,7 +151,7 @@ func (s *Server) Start() {
 		return
 	}
 
-	startPeerWatcher(ctx, s.host)
+	startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
 }
 
 // Stop the main p2p loop.
@@ -225,7 +231,9 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 
 	s.host.SetStreamHandler(protocol.ID(prysmProtocolPrefix+"/"+topic), func(stream libp2pnet.Stream) {
 		log.WithField("topic", topic).Debug("Received new stream")
+		defer stream.Close()
 		r := ggio.NewDelimitedReader(stream, maxMessageSize)
+		defer r.Close()
 
 		msg := &pb.Envelope{}
 		for {
@@ -323,6 +331,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 	}
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
+	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 
 	topic := s.topicMapping[messageType(msg)]
 	pid := protocol.ID(prysmProtocolPrefix + "/" + topic)
@@ -330,6 +339,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 	if err != nil {
 		return err
 	}
+	defer stream.Close()
 
 	w := ggio.NewDelimitedWriter(stream)
 	defer w.Close()

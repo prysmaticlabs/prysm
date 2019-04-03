@@ -9,13 +9,21 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+)
+
+var (
+	stateBytes = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacondb_state_size_bytes",
+		Help: "The protobuf encoded size of the last saved state in the beaconDB",
+	})
 )
 
 // InitializeState creates an initial genesis state for the beacon
@@ -79,13 +87,17 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 
+	ctx, lockSpan := trace.StartSpan(ctx, "BeaconDB.stateLock.Lock")
 	db.stateLock.RLock()
 	defer db.stateLock.RUnlock()
+	lockSpan.End()
 
+	// Return in-memory cached state, if available.
 	if db.currentState != nil {
-		if cachedState, ok := proto.Clone(db.currentState).(*pb.BeaconState); ok {
-			return cachedState, nil
-		}
+		_, span := trace.StartSpan(ctx, "proto.Clone")
+		defer span.End()
+		cachedState := proto.Clone(db.currentState).(*pb.BeaconState)
+		return cachedState, nil
 	}
 
 	var beaconState *pb.BeaconState
@@ -105,16 +117,25 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 }
 
 // SaveState updates the beacon chain state.
-func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
+func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
+	defer span.End()
+
+	ctx, lockSpan := trace.StartSpan(ctx, "BeaconDB.stateLock.Lock")
 	db.stateLock.Lock()
 	defer db.stateLock.Unlock()
+	lockSpan.End()
 
 	// Clone to prevent mutations of the cached copy
+	ctx, cloneSpan := trace.StartSpan(ctx, "proto.Clone")
 	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
 	if !ok {
+		cloneSpan.End()
 		return errors.New("could not clone beacon state")
 	}
 	db.currentState = currentState
+	cloneSpan.End()
+
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 
@@ -135,10 +156,15 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 			}
 		}
 
+		_, marshalSpan := trace.StartSpan(ctx, "proto.Marshal")
 		beaconStateEnc, err := proto.Marshal(beaconState)
 		if err != nil {
 			return err
 		}
+		marshalSpan.End()
+
+		stateBytes.Set(float64(len(beaconStateEnc)))
+		reportStateMetrics(beaconState)
 		return chainInfo.Put(stateLookupKey, beaconStateEnc)
 	})
 }
@@ -157,8 +183,9 @@ func (db *BeaconDB) SaveJustifiedState(beaconState *pb.BeaconState) error {
 
 // SaveFinalizedState saves the last finalized state in the db.
 func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
+	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	// Delete historical states if we are saving a new finalized state.
-	if err := db.deleteHistoricalStates(); err != nil {
+	if err := db.deleteHistoricalStates(finalizedSlot); err != nil {
 		return err
 	}
 	return db.update(func(tx *bolt.Tx) error {
@@ -173,16 +200,15 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 
 // SaveHistoricalState saves the last finalized state in the db.
 func (db *BeaconDB) SaveHistoricalState(beaconState *pb.BeaconState) error {
-	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
-	slotDiff := beaconState.Slot - finalizedSlot
+	slotSinceGenesis := beaconState.Slot - params.BeaconConfig().GenesisSlot
 
 	// Do not save state, if slot diff is not
 	// a power of 2.
-	if !mathutil.IsPowerOf2(slotDiff) {
+	if slotSinceGenesis%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return nil
 	}
 
-	slotBinary := encodeSlotNumber(slotDiff)
+	slotBinary := encodeSlotNumber(slotSinceGenesis)
 	stateHash, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return err
@@ -203,21 +229,17 @@ func (db *BeaconDB) SaveHistoricalState(beaconState *pb.BeaconState) error {
 }
 
 // SaveCurrentAndFinalizedState saves the state as both the current and last finalized state.
-func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) error {
-	// Clone to prevent mutations of the cached copy
-	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
-	if !ok {
-		return errors.New("could not clone beacon state")
-	}
+func (db *BeaconDB) SaveCurrentAndFinalizedState(ctx context.Context, beaconState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.SaveCurrentAndFinalizedState")
+	defer span.End()
 
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		return err
 	}
 
-	db.currentState = currentState
-
+	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	// Delete historical states if we are saving a new finalized state.
-	if err := db.deleteHistoricalStates(); err != nil {
+	if err := db.deleteHistoricalStates(finalizedSlot); err != nil {
 		return err
 	}
 	return db.update(func(tx *bolt.Tx) error {
@@ -275,9 +297,10 @@ func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve finalized state %v", err)
 	}
-	finalizedSlot := state.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
-	slotDiff := slot - finalizedSlot
-	closestSlot := mathutil.ClosestPowerOf2(slotDiff)
+	slotSinceGenesis := slot - params.BeaconConfig().GenesisSlot
+	if slotSinceGenesis%params.BeaconConfig().SlotsPerEpoch != 0 {
+		return state, nil
+	}
 	var beaconState *pb.BeaconState
 
 	err = db.view(func(tx *bolt.Tx) error {
@@ -291,12 +314,12 @@ func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 			slotNumber := decodeToSlotNumber(k)
-			if slotNumber > highestStateSlot && closestSlot >= slotNumber {
+			if slotNumber == slotSinceGenesis {
 				highestStateSlot = slotNumber
 				histStateKey = v
+				break
 			}
 		}
-
 		// If no state exists send the finalized state to be unencoded.
 		if highestStateSlot == 0 {
 			encState := chainInfo.Get(finalizedStateLookupKey)
@@ -340,18 +363,22 @@ func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
 	return genesisTime, nil
 }
 
-func (db *BeaconDB) deleteHistoricalStates() error {
+func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
 	return db.update(func(tx *bolt.Tx) error {
 		histState := tx.Bucket(histStateBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
 		hsCursor := histState.Cursor()
+		slotSinceGenesis := slot - params.BeaconConfig().GenesisSlot
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
-			if err := histState.Delete(k); err != nil {
-				return err
-			}
-			if err := chainInfo.Delete(v); err != nil {
-				return err
+			keySlotNumber := decodeToSlotNumber(k)
+			if keySlotNumber <= slotSinceGenesis {
+				if err := histState.Delete(k); err != nil {
+					return err
+				}
+				if err := chainInfo.Delete(v); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
