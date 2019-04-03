@@ -46,22 +46,11 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(head)
+	headRoot, err := hashutil.HashBeaconBlock(head)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon block: %v", err)
 	}
-	beaconState, err := as.beaconDB.State(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
-	}
-	for beaconState.Slot < req.Slot {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, blockRoot, state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
-		}
-	}
+	as.beaconDB.HistoricalStateFromSlot()
 	// Fetch the epoch boundary root = hash_tree_root(epoch_boundary)
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
