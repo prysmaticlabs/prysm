@@ -110,6 +110,9 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 
 		var err error
 		beaconState, err = createState(enc)
+		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
+			db.highestBlockSlot = beaconState.Slot
+		}
 		return err
 	})
 
@@ -148,10 +151,10 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 			if prevStatePb.Slot >= beaconState.Slot {
 				log.WithField(
 					"prevStateSlot",
-					prevStatePb.Slot,
+					prevStatePb.Slot-params.BeaconConfig().GenesisSlot,
 				).WithField(
 					"newStateSlot",
-					beaconState.Slot,
+					beaconState.Slot-params.BeaconConfig().GenesisSlot,
 				).Warn("Current saved state has a slot number greater or equal to the state attempted to be saved")
 			}
 		}

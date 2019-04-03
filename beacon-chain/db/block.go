@@ -69,6 +69,10 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	}
 	slotBinary := encodeSlotNumber(block.Slot)
 
+	if block.Slot > db.highestBlockSlot {
+		db.highestBlockSlot = block.Slot
+	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 		mainChain := tx.Bucket(mainChainBucket)
@@ -180,6 +184,9 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 	}
 
 	slotBinary := encodeSlotNumber(block.Slot)
+	if block.Slot > db.highestBlockSlot {
+		db.highestBlockSlot = block.Slot
+	}
 
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		return fmt.Errorf("failed to save beacon state as canonical: %v", err)
@@ -260,4 +267,10 @@ func (db *BeaconDB) HasBlockBySlot(slot uint64) (bool, *pb.BeaconBlock, error) {
 		return err
 	})
 	return exists, block, err
+}
+
+// HighestBlockSlot returns the in-memory value for the highest block we've
+// seen in the database.
+func (db *BeaconDB) HighestBlockSlot() uint64 {
+	return db.highestBlockSlot
 }

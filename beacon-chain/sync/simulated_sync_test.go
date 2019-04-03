@@ -87,16 +87,34 @@ func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB
 		t.Fatalf("Could not setup beacon db %v", err)
 	}
 
-	if err := beacondb.SaveState(ctx, bd.State()); err != nil {
-		t.Fatalf("Could not save state %v", err)
-	}
-
 	memBlocks := bd.InMemoryBlocks()
 	if err := beacondb.SaveBlock(memBlocks[0]); err != nil {
 		t.Fatalf("Could not save block %v", err)
 	}
+	if err := beacondb.SaveJustifiedBlock(memBlocks[0]); err != nil {
+		t.Fatalf("Could not save block %v", err)
+	}
+	if err := beacondb.SaveFinalizedBlock(memBlocks[0]); err != nil {
+		t.Fatalf("Could not save block %v", err)
+	}
 
-	if err := beacondb.UpdateChainHead(ctx, memBlocks[0], bd.State()); err != nil {
+	state := bd.State()
+	state.LatestBlock = memBlocks[0]
+	state.LatestEth1Data = &pb.Eth1Data{
+		BlockHash32: []byte{},
+	}
+
+	if err := beacondb.SaveState(ctx, state); err != nil {
+		t.Fatalf("Could not save state %v", err)
+	}
+	if err := beacondb.SaveJustifiedState(state); err != nil {
+		t.Fatalf("Could not save state %v", err)
+	}
+	if err := beacondb.SaveFinalizedState(state); err != nil {
+		t.Fatalf("Could not save state %v", err)
+	}
+
+	if err := beacondb.UpdateChainHead(ctx, memBlocks[0], state); err != nil {
 		t.Fatalf("Could not update chain head %v", err)
 	}
 
@@ -152,10 +170,9 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 }
 
 func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T) (*Service, *db.BeaconDB) {
-	bd, beacondb, privKeys := setupSimBackendAndDB(t)
+	bd, beacondb, _ := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
-	ctx := context.Background()
 
 	mockPow := &afterGenesisPowChain{
 		feed: new(event.Feed),
@@ -166,21 +183,6 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 		sFeed: new(event.Feed),
 		cFeed: new(event.Feed),
 		db:    bd.DB(),
-	}
-
-	// we add in 2 blocks to the unsynced node so that, we dont request the beacon state from the
-	// synced node to reduce test time.
-	for i := 1; i <= 2; i++ {
-		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
-			t.Fatalf("Unable to generate block in simulated backend %v", err)
-		}
-		blocks := bd.InMemoryBlocks()
-		if err := beacondb.SaveBlock(blocks[i]); err != nil {
-			t.Fatalf("Unable to save block %v", err)
-		}
-		if err := beacondb.UpdateChainHead(ctx, blocks[i], bd.State()); err != nil {
-			t.Fatalf("Unable to update chain head %v", err)
-		}
 	}
 
 	cfg := &Config{
@@ -197,9 +199,8 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(simP2P.ctx, &pb.ChainHeadResponse{
-			Slot:                      params.BeaconConfig().GenesisSlot + 12,
-			Hash:                      []byte{'t', 'e', 's', 't'},
-			FinalizedStateRootHash32S: stateRoot[:],
+			Slot: params.BeaconConfig().GenesisSlot + 12,
+			Hash: stateRoot[:],
 		}, "")
 	}
 
@@ -242,29 +243,36 @@ func TestSyncing_AFullySyncedNode(t *testing.T) {
 	defer us2.Stop()
 	defer db.TeardownDB(unSyncedDB2)
 
-	syncedChan := make(chan uint64)
-
-	// Waits for the unsynced node to fire a message signifying it is
-	// synced with its current slot number.
-	sub := us.InitialSync.SyncedFeed().Subscribe(syncedChan)
-	defer sub.Unsubscribe()
-
-	syncedChan2 := make(chan uint64)
-
-	sub2 := us2.InitialSync.SyncedFeed().Subscribe(syncedChan2)
-	defer sub2.Unsubscribe()
-
-	highestSlot := <-syncedChan
-
-	highestSlot2 := <-syncedChan2
-
-	if highestSlot != uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
-		t.Errorf("Sync services didn't sync to expectecd slot, expected %d but got %d",
-			uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot, highestSlot)
+	finalized, err := syncedDB.FinalizedState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	justified, err := syncedDB.JustifiedState()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if highestSlot2 != uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
-		t.Errorf("Sync services didn't sync to expectecd slot, expected %d but got %d",
-			uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot, highestSlot2)
+	newP2P.Send(newP2P.ctx, &pb.BeaconStateResponse{
+		FinalizedState: finalized,
+		JustifiedState: justified,
+		CanonicalState: bState,
+	}, "")
+
+	timeout := time.After(10 * time.Second)
+	tick := time.Tick(200 * time.Millisecond)
+loop:
+	for {
+		select {
+		case <-timeout:
+			t.Error("Could not sync in time")
+			break loop
+		case <-tick:
+			_, slot1 := us.InitialSync.NodeIsSynced()
+			_, slot2 := us.InitialSync.NodeIsSynced()
+			if slot1 == uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot ||
+				slot2 == uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
+				break loop
+			}
+		}
 	}
 }
