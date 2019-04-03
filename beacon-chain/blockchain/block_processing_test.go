@@ -131,8 +131,6 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 }
 
 func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
-	t.Skip() // TODO UNSKIP
-
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -407,7 +405,9 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Fail()
+	if computedState.Slot != blockG.Slot {
+		t.Errorf("Unexpect state slot %d, wanted %d", computedState.Slot, blockG.Slot)
+	}
 }
 
 func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
