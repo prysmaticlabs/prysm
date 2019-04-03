@@ -364,3 +364,30 @@ func TestHasBlock_returnsTrue(t *testing.T) {
 		t.Fatal("db.HasBlock returned false for block just saved")
 	}
 }
+
+func TestHighestBlockSlot_UpdatedOnSaveBlock(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	block := &pb.BeaconBlock{
+		Slot: 23,
+	}
+
+	if err := db.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	if db.HighestBlockSlot() != block.Slot {
+		t.Errorf("Unexpected highest slot %d, wanted %d", db.HighestBlockSlot(), block.Slot)
+	}
+
+	block.Slot = 55
+	if err := db.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	if db.HighestBlockSlot() != block.Slot {
+		t.Errorf("Unexpected highest slot %d, wanted %d", db.HighestBlockSlot(), block.Slot)
+	}
+
+}
