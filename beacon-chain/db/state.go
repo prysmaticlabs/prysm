@@ -317,14 +317,20 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 				break
 			}
 		}
-		// If no state exists send the finalized state to be unencoded.
+		// If no state exists send the closest state.
 		if highestStateSlot == 0 {
-			encState := chainInfo.Get(finalizedStateLookupKey)
-			if encState == nil {
-				return errors.New("no finalized state saved")
+			for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
+				slotNumber := decodeToSlotNumber(k)
+				// find the state with slot closest to the requested slot
+				if slotNumber > highestStateSlot && slotNumber <= slotSinceGenesis {
+					highestStateSlot = slotNumber
+					histStateKey = v
+				}
 			}
-			beaconState, err = createState(encState)
-			return err
+
+			if highestStateSlot == 0 {
+				return errors.New("no historical states saved in db")
+			}
 		}
 
 		// retrieve the stored historical state.
