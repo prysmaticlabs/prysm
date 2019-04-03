@@ -13,10 +13,11 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
@@ -86,30 +87,30 @@ type syncService interface {
 // InitialSync defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type InitialSync struct {
-	ctx                           context.Context
-	cancel                        context.CancelFunc
-	p2p                           p2pAPI
-	syncService                   syncService
-	chainService                  chainService
-	db                            *db.BeaconDB
-	powchain                      powChainService
-	blockAnnounceBuf              chan p2p.Message
-	batchedBlockBuf               chan p2p.Message
-	blockBuf                      chan p2p.Message
-	stateBuf                      chan p2p.Message
-	currentSlot                   uint64
-	highestObservedSlot           uint64
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	p2p                 p2pAPI
+	syncService         syncService
+	chainService        chainService
+	db                  *db.BeaconDB
+	powchain            powChainService
+	blockAnnounceBuf    chan p2p.Message
+	batchedBlockBuf     chan p2p.Message
+	blockBuf            chan p2p.Message
+	stateBuf            chan p2p.Message
+	currentSlot         uint64
+	highestObservedSlot uint64
 	highestObservedRoot [32]byte
-	beaconStateSlot               uint64
-	syncPollingInterval           time.Duration
-	inMemoryBlocks                map[uint64]*pb.BeaconBlock
-	syncedFeed                    *event.Feed
-	stateReceived                 bool
-	latestSyncedBlock             *pb.BeaconBlock
-	lastRequestedSlot             uint64
-	finalizedStateRoot            [32]byte
-	mutex                         *sync.Mutex
-	nodeIsSynced                  bool
+	beaconStateSlot     uint64
+	syncPollingInterval time.Duration
+	inMemoryBlocks      map[uint64]*pb.BeaconBlock
+	syncedFeed          *event.Feed
+	stateReceived       bool
+	latestSyncedBlock   *pb.BeaconBlock
+	lastRequestedSlot   uint64
+	finalizedStateRoot  [32]byte
+	mutex               *sync.Mutex
+	nodeIsSynced        bool
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.

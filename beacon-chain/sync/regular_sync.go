@@ -403,8 +403,8 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 	}
 
 	req := &pb.ChainHeadResponse{
-		HighestSlot:                      block.Slot,
-		HighestStateRootHash32:                      stateRoot[:],
+		CanonicalSlot:             block.Slot,
+		CanonicalStateRootHash32:  stateRoot[:],
 		FinalizedStateRootHash32S: finalizedRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")

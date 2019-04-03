@@ -45,7 +45,7 @@ type ChainService struct {
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
-	lock sync.Mutex
+	lock                 sync.Mutex
 }
 
 // Config options for the service.

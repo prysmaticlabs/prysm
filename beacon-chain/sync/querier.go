@@ -50,7 +50,7 @@ type Querier struct {
 	db                        *db.BeaconDB
 	chainService              chainService
 	currentHeadSlot           uint64
-	currentStateRoot           []byte
+	currentStateRoot          []byte
 	currentFinalizedStateRoot [32]byte
 	responseBuf               chan p2p.Message
 	chainStartBuf             chan time.Time
@@ -163,10 +163,10 @@ func (q *Querier) run() {
 			response := msg.Data.(*pb.ChainHeadResponse)
 			queryLog.Infof(
 				"Latest chain head is at slot: %d and hash %#x",
-				response.HighestSlot-params.BeaconConfig().GenesisSlot, response.HighestStateRootHash32,
+				response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
 			)
-			q.currentHeadSlot = response.HighestSlot
-			q.currentStateRoot = response.HighestStateRootHash32
+			q.currentHeadSlot = response.CanonicalSlot
+			q.currentStateRoot = response.CanonicalStateRootHash32
 			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
 
 			ticker.Stop()

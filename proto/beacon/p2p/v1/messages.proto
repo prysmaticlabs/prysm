@@ -57,8 +57,8 @@ message BatchedBeaconBlockResponse {
 message ChainHeadRequest {}
 
 message ChainHeadResponse {
-  uint64 highest_slot = 1;
-  bytes highest_state_root_hash32 = 2;
+  uint64 canonical_slot = 1;
+  bytes canonical_state_root_hash32 = 2;
   bytes finalized_state_root_hash32s = 3;
 }
 
