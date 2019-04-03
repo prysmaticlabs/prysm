@@ -48,7 +48,9 @@ var (
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{}
+var ValidatorFlags = []cli.Flag{
+	CacheTreeHashFlag,
+}
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
@@ -57,4 +59,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
+	CacheTreeHashFlag,
 }
