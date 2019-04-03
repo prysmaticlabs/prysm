@@ -220,8 +220,9 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not hash state: %v", err)
 	}
+	log.Infof("State root: %#x, highest: %#x", stateRoot, s.highestObservedRoot)
 	if stateRoot != s.highestObservedRoot {
-		log.Fatalf(
+		log.Errorf(
 			"Canonical state root %#x does not match highest observed root from peer %#x",
 			stateRoot,
 			s.highestObservedRoot,
