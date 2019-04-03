@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"runtime/debug"
 	"strings"
@@ -96,8 +97,6 @@ type Web3Service struct {
 	runError                error
 	lastRequestedBlock      *big.Int
 }
-
-type reconnectFunc func()
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
@@ -288,10 +287,12 @@ func (w *Web3Service) handleDelayTicker() {
 		log.Error(err)
 	}
 }
-func (w *Web3Service) rerunRPCClientAndSubscribe(headSub ethereum.Subscription, header *gethTypes.Header) {
+func (w *Web3Service) rerunRPCClientAndSubscribe(headSub ethereum.Subscription) {
 	rpcClient, err := gethRPC.Dial(w.endpoint)
 	if err != nil {
-		log.Errorf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+		log.Errorf("Access to PoW chain is required for validator. Unable to connect to ETH 1.0 node: %v", err)
+		w.runError = err
+		return
 	}
 	headSub.Unsubscribe()
 	powClient := ethclient.NewClient(rpcClient)
@@ -305,7 +306,7 @@ func (w *Web3Service) rerunRPCClientAndSubscribe(headSub ethereum.Subscription, 
 		w.runError = err
 		return
 	}
-	header, err = w.blockFetcher.HeaderByNumber(w.ctx, nil)
+	header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
 	if err != nil {
 		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 		w.runError = err
@@ -313,6 +314,7 @@ func (w *Web3Service) rerunRPCClientAndSubscribe(headSub ethereum.Subscription, 
 	}
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
+	w.runError = nil
 }
 
 // run subscribes to all the services for the ETH1.0 chain.
@@ -358,9 +360,9 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
 			return
 		case w.runError = <-headSub.Err():
-			if w.runError.Error() == "EOF" {
-				log.Infof("Got EOF: restarting rpc client")
-				w.rerunRPCClientAndSubscribe(headSub, header)
+			if w.runError == io.EOF {
+				log.Warn("Got EOF: restarting rpc client")
+				w.rerunRPCClientAndSubscribe(headSub)
 			} else {
 				log.Errorf("Error: %v", w.runError)
 				return

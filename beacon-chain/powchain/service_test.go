@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"io.EOF"
 )
 
 type badReader struct{}
@@ -383,7 +384,7 @@ func TestStatus(t *testing.T) {
 		{isRunning: true, blockTime: beforeFiveMinutesAgo}: "eth1 client is not syncing",
 		{isRunning: true}: "eth1 client is not syncing",
 		{isRunning: true, runError: errors.New("test runError")}: "test runError",
-		{isRunning: true, runError: errors.New("EOF")}:           "EOF",
+		{isRunning: true, runError: io.EOF}:                      "EOF",
 	}
 
 	for web3ServiceState, wantedErrorText := range testCases {
