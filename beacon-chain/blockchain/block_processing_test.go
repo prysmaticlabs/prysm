@@ -308,7 +308,6 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	t.Logf("State root: %#x", stateRoot)
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
 	if err := db.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
