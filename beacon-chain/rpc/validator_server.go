@@ -161,14 +161,14 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		}
 	}
 
-	for slot := req.EpochStart; slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
+	for slot := req.EpochStart; slot < req.EpochStart + params.BeaconConfig().SlotsPerEpoch; slot++ {
 		if exists, committees, err := vs.committeesCache.CommitteesInfoBySlot(int(slot)); exists || err != nil {
 			if err != nil {
 				return nil, err
 			}
 			span.AddAttributes(trace.BoolAttribute("committeeCacheHit", true))
 			committee, shard, slot, isProposer, err :=
-				helpers.ValidatorAssignment(index, slot, committees.Committees)
+				helpers.ValidatorAssignment(index, slot, committees.committees)
 			if err == nil {
 				return &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 					{
@@ -190,7 +190,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		if err != nil {
 			return nil, err
 		}
-		if err := vs.committeesCache.AddCommittees(committees); err != nil {
+		if err := vs.committeesCache.AddCommittees(int(slot), committees); err != nil {
 			return nil, err
 		}
 		committee, shard, slot, isProposer, err :=
@@ -209,7 +209,8 @@ func (vs *ValidatorServer) CommitteeAssignment(
 			}, nil
 		}
 	}
-	errString := fmt.Sprintf("Could not find validator %d assignment starting epoch %d", index, req.EpochStart)
+	errString := fmt.Sprintf("Could not find validator %d assignment starting epoch %d",
+		index, req.EpochStart - params.BeaconConfig().GenesisSlot)
 	return nil, status.Error(codes.NotFound, errString)
 }
 

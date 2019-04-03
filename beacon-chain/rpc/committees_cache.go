@@ -39,7 +39,7 @@ var (
 // committeesInfo species the committee information of a given slot.
 type committeesInfo struct {
 	slot       int
-	Committees []*helpers.CrosslinkCommittee
+	committees []*helpers.CrosslinkCommittee
 }
 
 // committeesCache struct with 1 queue for looking up crosslink committees by slot.
@@ -95,11 +95,15 @@ func (c *committeesCache) CommitteesInfoBySlot(slot int) (bool, *committeesInfo,
 
 // AddCommittees adds committeeInfo object to the cache. This method also trims the least
 // recently added committeeInfo object if the cache size has ready the max cache size limit.
-func (c *committeesCache) AddCommittees(committees []*helpers.CrosslinkCommittee) error {
+func (c *committeesCache) AddCommittees(slot int, committees []*helpers.CrosslinkCommittee) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.committeesCache.AddIfNotPresent(committees); err != nil {
+	committeesInfo := &committeesInfo{
+		slot: slot,
+		committees: committees,
+	}
+	if err := c.committeesCache.AddIfNotPresent(committeesInfo); err != nil {
 		return err
 	}
 

@@ -141,6 +141,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	vs := &ValidatorServer{
 		beaconDB: db,
+		committeesCache: newCommitteesCache(),
 	}
 
 	pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
