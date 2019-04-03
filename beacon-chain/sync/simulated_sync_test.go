@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type simulatedP2P struct {
@@ -236,7 +235,6 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 }
 
 func TestSyncing_AFullySyncedNode(t *testing.T) {
-	hook := logTest.NewGlobal()
 	numOfBlocks := 12
 	ctx := context.Background()
 	newP2P := &simulatedP2P{
@@ -265,14 +263,9 @@ func TestSyncing_AFullySyncedNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	justified, err := syncedDB.JustifiedState()
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	newP2P.Send(newP2P.ctx, &pb.BeaconStateResponse{
 		FinalizedState: finalized,
-		JustifiedState: justified,
 	}, "")
 
 	timeout := time.After(10 * time.Second)

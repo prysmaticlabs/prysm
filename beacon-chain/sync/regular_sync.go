@@ -348,14 +348,8 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		"beaconState", fmt.Sprintf("%#x", root),
 	).Debug("Sending finalized, justified, and canonical states to peer")
 	defer sentState.Inc()
-	jState, err := rs.db.JustifiedState()
-	if err != nil {
-		log.Errorf("Unable to retrieve justified state, %v", err)
-		return err
-	}
 	resp := &pb.BeaconStateResponse{
 		FinalizedState: fState,
-		JustifiedState: jState,
 	}
 	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)

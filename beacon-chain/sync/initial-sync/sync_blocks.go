@@ -165,10 +165,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err != nil {
 		return err
 	}
-	h, err := hashutil.HashProto(state)
-	if err != nil {
-		return err
-	}
 	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
 		return err
 	}
