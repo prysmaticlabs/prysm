@@ -51,6 +51,7 @@ go_test(
     srcs = [
         "attester_server_test.go",
         "beacon_server_test.go",
+        "committee_cache_test.go",
         "proposer_server_test.go",
         "service_test.go",
         "validator_server_test.go",
