@@ -122,6 +122,8 @@ func (c *ChainService) ApplyForkChoiceRule(
 	block *pb.BeaconBlock,
 	postState *pb.BeaconState,
 ) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
 	defer span.End()
 	log.Info("Applying LMD-GHOST Fork Choice Rule")

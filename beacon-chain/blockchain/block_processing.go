@@ -39,6 +39,8 @@ type BlockProcessor interface {
 // 4. Process and cleanup any block operations, such as attestations and deposits, which would need to be
 //    either included or flushed from the beacon node's runtime.
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, block.Slot-1)
