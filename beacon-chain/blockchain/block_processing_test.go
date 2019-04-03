@@ -341,10 +341,6 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatalf("Expected %d pending deposits", len(pendingDeposits))
 	}
 
-	//	beaconState.Slot--
-	//	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
-	//		t.Fatal(err)
-	//	}
 	computedState, err := chainService.ReceiveBlock(context.Background(), block)
 	if err != nil {
 		t.Fatal(err)
@@ -429,7 +425,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot: attestationSlot,
+					Slot:                     attestationSlot,
 					JustifiedBlockRootHash32: parentRoot[:],
 				},
 			}},
