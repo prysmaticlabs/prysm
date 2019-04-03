@@ -6,7 +6,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -59,7 +58,8 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 			}
 		}
 		// Generate the new justified state with using new justified block and save it.
-		newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastJustifiedSlot)
+		//	newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastJustifiedSlot)
+		newJustifiedState, err := c.beaconDB.HistoricalStateFromSlot(context.TODO(), newJustifiedBlock.Slot)
 		if err != nil {
 			return err
 		}
@@ -98,8 +98,9 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 			}
 		}
 
-		// Generate the new finalized state with using new finalized block and save it.
-		newFinalizedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastFinalizedSlot)
+		// Generate the new finalized state with using new finalized block and
+		// save it.
+		newFinalizedState, err := c.beaconDB.HistoricalStateFromSlot(context.TODO(), lastFinalizedSlot)
 		if err != nil {
 			return err
 		}
@@ -148,7 +149,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
 
 		// Only regenerate head state if there was a reorg.
-		newState, err = stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, head.Slot)
+		newState, err = c.beaconDB.HistoricalStateFromSlot(context.TODO(), head.Slot)
 		if err != nil {
 			return fmt.Errorf("could not gen state: %v", err)
 		}
