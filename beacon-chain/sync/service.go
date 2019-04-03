@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -109,6 +110,7 @@ func (ss *Service) run() {
 
 	// Sets the highest observed slot from querier.
 	ss.InitialSync.InitializeObservedSlot(ss.Querier.currentHeadSlot)
+	ss.InitialSync.InitializeObservedStateRoot(bytesutil.ToBytes32(ss.Querier.currentStateRoot))
 	// Sets the state root of the highest observed slot.
 	ss.InitialSync.InitializeFinalizedStateRoot(ss.Querier.currentFinalizedStateRoot)
 	ss.InitialSync.Start()

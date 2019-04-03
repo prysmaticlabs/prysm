@@ -146,8 +146,8 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 	}()
 
 	response := &pb.ChainHeadResponse{
-		Slot: 0,
-		Hash: []byte{'a', 'b'},
+		CanonicalSlot:            0,
+		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
 
 	msg := p2p.Message{
@@ -157,8 +157,8 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 	sq.responseBuf <- msg
 
 	expMsg := fmt.Sprintf(
-		"Latest chain head is at slot: %d and hash %#x",
-		response.Slot-params.BeaconConfig().GenesisSlot, response.Hash,
+		"Latest chain head is at slot: %d and state root: %#x",
+		response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
 	)
 
 	<-exitRoutine
