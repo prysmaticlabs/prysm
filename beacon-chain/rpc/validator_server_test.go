@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -103,7 +104,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	}
 }
 
-func TestCommitteeAssignment_OK(t *testing.T) {
+func TestCommitteeAssignment_CacheMissOk(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -140,7 +141,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:        db,
 		committeesCache: newCommitteesCache(),
 	}
 
@@ -183,6 +184,108 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if res.Assignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.Assignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+	}
+}
+
+func TestCommitteeAssignment_CacheHitOk(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
+	if err != nil {
+		t.Fatalf("Could not setup genesis state: %v", err)
+	}
+	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	var wg sync.WaitGroup
+	numOfValidators := int(params.BeaconConfig().DepositsForChainStart)
+	errs := make(chan error, numOfValidators)
+	for i := 0; i < numOfValidators; i++ {
+		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.PutUvarint(pubKeyBuf, uint64(i))
+		wg.Add(1)
+		go func(index int) {
+			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Could not save validator index: %v", err)
+		}
+	}
+
+	vs := &ValidatorServer{
+		beaconDB:        db,
+		committeesCache: newCommitteesCache(),
+	}
+
+	pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.PutUvarint(pubKeyBuf, 0)
+	// Test the first validator in registry.
+	req := &pb.CommitteeAssignmentsRequest{
+		PublicKey:  [][]byte{pubKeyBuf},
+		EpochStart: params.BeaconConfig().GenesisSlot,
+	}
+	// Save the first validator committee in cache.
+	cInfo := &committeesInfo{
+		slot: int(params.BeaconConfig().GenesisSlot),
+		committees: []*helpers.CrosslinkCommittee{
+			{Shard: 123, Committee: []uint64{0, 1, 2}}},
+	}
+	if err := vs.committeesCache.AddCommittees(cInfo); err != nil {
+		t.Fatal(err)
+	}
+	res, err := vs.CommitteeAssignment(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not call epoch committee assignment %v", err)
+	}
+	if res.Assignment[0].Shard != cInfo.committees[0].Shard {
+		t.Errorf("Assigned shard %d can't be higher than %d",
+			res.Assignment[0].Shard, cInfo.committees[0].Shard)
+	}
+	if !reflect.DeepEqual(res.Assignment[0].Committee, cInfo.committees[0].Committee) {
+		t.Errorf("Expected committee to be %v, got %v",
+			cInfo.committees[0].Committee, res.Assignment[0].Committee)
+	}
+
+	// Test the last validator in registry.
+	// Save the last validator committee in cache.
+	lastValidatorIndex := params.BeaconConfig().DepositsForChainStart - 1
+	cInfo = &committeesInfo{
+		slot: int(params.BeaconConfig().GenesisSlot + 100),
+		committees: []*helpers.CrosslinkCommittee{
+			{Shard: 321, Committee: []uint64{lastValidatorIndex, 999}}},
+	}
+	if err := vs.committeesCache.AddCommittees(cInfo); err != nil {
+		t.Fatal(err)
+	}
+	pubKeyBuf = make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
+	req = &pb.CommitteeAssignmentsRequest{
+		PublicKey:  [][]byte{pubKeyBuf},
+		EpochStart: params.BeaconConfig().GenesisSlot + 100,
+	}
+	res, err = vs.CommitteeAssignment(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not call epoch committee assignment %v", err)
+	}
+	t.Log(res)
+	if res.Assignment[0].Shard != cInfo.committees[0].Shard {
+		t.Errorf("Assigned shard %d can't be higher than %d",
+			res.Assignment[0].Shard, cInfo.committees[0].Shard)
+	}
+	if !reflect.DeepEqual(res.Assignment[0].Committee, cInfo.committees[0].Committee) {
+		t.Errorf("Expected committee to be %v, got %v",
+			cInfo.committees[0].Committee, res.Assignment[0].Committee)
 	}
 }
 
