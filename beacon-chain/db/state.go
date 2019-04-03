@@ -286,8 +286,11 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 }
 
 // HistoricalStateFromSlot retrieves the closest historical state to a slot.
-func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error) {
+func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
+	_, span := trace.StartSpan(ctx, "BeaconDB.HistoricalStateFromSlot")
+	defer span.End()
 	slotSinceGenesis := slot - params.BeaconConfig().GenesisSlot
+	span.AddAttributes(trace.Int64Attribute("slotSinceGenesis", int64(slotSinceGenesis)))
 	var beaconState *pb.BeaconState
 
 	err := db.view(func(tx *bolt.Tx) error {

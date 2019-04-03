@@ -286,6 +286,7 @@ func TestFinalizedState_CanSaveRetrieve(t *testing.T) {
 func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	tests := []struct {
 		state *pb.BeaconState
@@ -330,7 +331,7 @@ func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 
-		retState, err := db.HistoricalStateFromSlot(tt.state.Slot)
+		retState, err := db.HistoricalStateFromSlot(ctx, tt.state.Slot)
 		if err != nil {
 			t.Fatalf("Unable to retrieve state %v", err)
 		}
@@ -344,6 +345,7 @@ func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 func TestHistoricalState_Pruning(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	epochSize := params.BeaconConfig().SlotsPerEpoch
 	slotGen := func(slot uint64) uint64 {
@@ -442,7 +444,7 @@ func TestHistoricalState_Pruning(t *testing.T) {
 			t.Fatalf("Could not delete historical states %v", err)
 		}
 
-		retState, err := db.HistoricalStateFromSlot(tt.histState1.Slot)
+		retState, err := db.HistoricalStateFromSlot(ctx, tt.histState1.Slot)
 		if err != nil {
 			t.Fatalf("Unable to retrieve state %v", err)
 		}
@@ -451,7 +453,7 @@ func TestHistoricalState_Pruning(t *testing.T) {
 			t.Errorf("Saved and retrieved states are equal when they aren't supposed to be for slot %d", retState.Slot)
 		}
 
-		retState, err = db.HistoricalStateFromSlot(tt.histState2.Slot)
+		retState, err = db.HistoricalStateFromSlot(ctx, tt.histState2.Slot)
 		if err != nil {
 			t.Fatalf("Unable to retrieve state %v", err)
 		}
