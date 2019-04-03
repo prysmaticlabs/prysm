@@ -48,14 +48,12 @@ type AssignmentCache struct {
 	currentEpoch       uint64
 	prevAssignments    map[uint64]*ValidatorAssignment
 	currentAssignments map[uint64]*ValidatorAssignment
-	nextAssignments    map[uint64]*ValidatorAssignment
 }
 
 var assignmentCache = &AssignmentCache{
 	currentEpoch:       0,
 	prevAssignments:    make(map[uint64]*ValidatorAssignment, 0),
 	currentAssignments: make(map[uint64]*ValidatorAssignment, 0),
-	nextAssignments:    make(map[uint64]*ValidatorAssignment, 0),
 }
 
 // RecalculateAssignmentsCache calculates validator assignments for the slot's epoch passed in.
@@ -77,11 +75,7 @@ func RecalculateAssignmentsCache(state *pb.BeaconState, slot uint64) error {
 		if err != nil {
 			return fmt.Errorf("could not get committee assignment mapping: %v", err)
 		}
-
-		assignmentCache.nextAssignments, err = CommitteeAssignmentMapping(state, currentEpoch+1, false)
-		if err != nil {
-			return fmt.Errorf("could not get committee assignment mapping: %v", err)
-		}
+		fmt.Printf("Validator assignments for epoch %d: %x\n", currentEpoch, assignmentCache.currentAssignments[0].Committee)
 
 	} else if assignmentCache.currentEpoch != currentEpoch {
 		fmt.Printf(
@@ -93,11 +87,6 @@ func RecalculateAssignmentsCache(state *pb.BeaconState, slot uint64) error {
 
 		assignmentCache.currentEpoch = currentEpoch
 		assignmentCache.currentAssignments, err = CommitteeAssignmentMapping(state, currentEpoch, false)
-		if err != nil {
-			return fmt.Errorf("could not get committee assignment mapping: %v", err)
-		}
-
-		assignmentCache.nextAssignments, err = CommitteeAssignmentMapping(state, currentEpoch+1, false)
 		if err != nil {
 			return fmt.Errorf("could not get committee assignment mapping: %v", err)
 		}
@@ -285,17 +274,20 @@ func CrosslinkCommitteesAtSlot(
 func Shuffling(
 	seed [32]byte,
 	validators []*pb.Validator,
-	epoch uint64) ([][]uint64, error) {
+	slot uint64) ([][]uint64, error) {
 
-	// Figure out how many committees can be in a single epoch.
-	activeIndices := ActiveValidatorIndices(validators, epoch)
+	// Normalize slot to start of epoch boundary.
+	slot -= slot % params.BeaconConfig().SlotsPerEpoch
+
+	// Figure out how many committees can be in a single slot.
+	activeIndices := ActiveValidatorIndices(validators, slot)
 	activeCount := uint64(len(activeIndices))
 	committeesPerEpoch := EpochCommitteeCount(activeCount)
 
 	// Convert slot to bytes and xor it with seed.
-	epochInBytes := make([]byte, 32)
-	binary.LittleEndian.PutUint64(epochInBytes, epoch)
-	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], epochInBytes))
+	slotInBytes := make([]byte, 32)
+	binary.LittleEndian.PutUint64(slotInBytes, slot)
+	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], slotInBytes))
 
 	shuffledIndices, err := utils.ShuffleIndices(seed, activeIndices)
 	if err != nil {
@@ -483,7 +475,32 @@ func CommitteeAssignment(
 	if wantedEpoch == prevEpoch && CurrentEpoch(state) != params.BeaconConfig().GenesisEpoch {
 		assignment, ok = assignmentCache.prevAssignments[validatorIndex]
 	} else if wantedEpoch == nextEpoch {
-		assignment, ok = assignmentCache.nextAssignments[validatorIndex]
+		var selectedCommittees []*CrosslinkCommittee
+
+		startSlot := StartSlot(wantedEpoch)
+		for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+			crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
+				state, slot, registryChange)
+			if err != nil {
+				return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
+			}
+			for _, committee := range crosslinkCommittees {
+				for _, idx := range committee.Committee {
+					if idx == validatorIndex {
+						selectedCommittees = append(selectedCommittees, committee)
+					}
+
+					if len(selectedCommittees) > 0 {
+						validators := selectedCommittees[0].Committee
+						shard := selectedCommittees[0].Shard
+						firstCommitteeAtSlot := crosslinkCommittees[0].Committee
+						isProposer := firstCommitteeAtSlot[slot%
+							uint64(len(firstCommitteeAtSlot))] == validatorIndex
+						return validators, shard, slot, isProposer, nil
+					}
+				}
+			}
+		}
 	} else {
 		assignment, ok = assignmentCache.currentAssignments[validatorIndex]
 	}
@@ -700,7 +717,7 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 	shuffledIndices, err := Shuffling(
 		bytesutil.ToBytes32(input.seed),
 		state.ValidatorRegistry,
-		CurrentEpoch(state))
+		input.shufflingEpoch)
 	if err != nil {
 		return nil, err
 	}
