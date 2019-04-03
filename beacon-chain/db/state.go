@@ -139,6 +139,10 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	db.currentState = currentState
 	cloneSpan.End()
 
+	if err := db.SaveHistoricalState(beaconState); err != nil {
+		return err
+	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 
