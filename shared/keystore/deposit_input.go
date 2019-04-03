@@ -25,7 +25,7 @@ import (
 // See: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositInput, error) {
 	di := &pb.DepositInput{
-		Pubkey: depositKey.PublicKey.Marshal(),
+		Pubkey:                      depositKey.PublicKey.Marshal(),
 		WithdrawalCredentialsHash32: withdrawalCredentialsHash(withdrawalKey),
 	}
 

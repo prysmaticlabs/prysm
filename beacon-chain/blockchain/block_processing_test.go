@@ -22,6 +22,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+// Ensure ChainService implements interfaces.
 var _ = BlockProcessor(&ChainService{})
 
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
@@ -425,7 +426,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot: attestationSlot,
+					Slot:                     attestationSlot,
 					JustifiedBlockRootHash32: parentRoot[:],
 				},
 			}},

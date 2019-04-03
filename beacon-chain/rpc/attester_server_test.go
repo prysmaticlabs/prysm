@@ -21,8 +21,8 @@ func TestAttestHead_OK(t *testing.T) {
 	}
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:  999,
-			Shard: 1,
+			Slot:                    999,
+			Shard:                   1,
 			CrosslinkDataRootHash32: []byte{'a'},
 		},
 	}
@@ -37,7 +37,7 @@ func TestAttestationDataAtSlot_EpochBoundaryFailure(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().SlotsPerEpoch,
+		Slot:                   params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().SlotsPerEpoch,
 		LatestBlockRootHash32S: make([][]byte, 20),
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().GenesisEpoch,
 	}
@@ -65,7 +65,7 @@ func TestAttestationDataAtSlot_JustifiedBlockFailure(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 2,
+		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 2,
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 	}
 	block := &pbp2p.BeaconBlock{

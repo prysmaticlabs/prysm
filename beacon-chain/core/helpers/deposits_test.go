@@ -11,7 +11,7 @@ import (
 
 func TestEncodeDecodeDepositInput_Ok(t *testing.T) {
 	input := &pb.DepositInput{
-		Pubkey: []byte("key"),
+		Pubkey:                      []byte("key"),
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 		ProofOfPossession:           []byte("pop"),
 	}

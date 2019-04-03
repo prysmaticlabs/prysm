@@ -158,8 +158,8 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	// Validator index is at index 4 in the mocked committee defined in this test.
 	expectedAttestation := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:  30,
-			Shard: 5,
+			Slot:                     30,
+			Shard:                    5,
 			BeaconBlockRootHash32:    []byte("A"),
 			EpochBoundaryRootHash32:  []byte("B"),
 			JustifiedBlockRootHash32: []byte("C"),

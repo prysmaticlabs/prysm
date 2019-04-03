@@ -28,7 +28,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// First the validator should construct attestation_data, an AttestationData
 	// object based upon the state at the assigned slot.
 	attData := &pbp2p.AttestationData{
-		Slot: slot,
+		Slot:                    slot,
 		CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
 	}
 	// We fetch the validator index as it is necessary to generate the aggregation

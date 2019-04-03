@@ -58,7 +58,7 @@ func generateSimulatedBlock(
 	}
 	if simObjects.simDeposit != nil {
 		depositInput := &pb.DepositInput{
-			Pubkey: []byte(simObjects.simDeposit.Pubkey),
+			Pubkey:                      []byte(simObjects.simDeposit.Pubkey),
 			WithdrawalCredentialsHash32: make([]byte, 32),
 			ProofOfPossession:           make([]byte, 96),
 		}
@@ -151,7 +151,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 			return nil, nil, fmt.Errorf("could not initialize key: %v", err)
 		}
 		depositInput := &pb.DepositInput{
-			Pubkey: priv.PublicKey().Marshal(),
+			Pubkey:                      priv.PublicKey().Marshal(),
 			WithdrawalCredentialsHash32: make([]byte, 32),
 			ProofOfPossession:           make([]byte, 96),
 		}

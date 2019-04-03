@@ -551,8 +551,8 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2; i++ {
 		attestations = append(attestations, &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:  params.BeaconConfig().GenesisSlot + 1,
-				Shard: 1,
+				Slot:                     params.BeaconConfig().GenesisSlot + 1,
+				Shard:                    1,
 				JustifiedBlockRootHash32: make([]byte, 32),
 			},
 			AggregationBitfield: []byte{0xff},

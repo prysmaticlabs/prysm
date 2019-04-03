@@ -64,7 +64,7 @@ func NewOpsPoolService(ctx context.Context, cfg *Config) *Service {
 		incomingAtt:                make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		incomingProcessedBlockFeed: new(event.Feed),
 		incomingProcessedBlock:     make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
-		p2p: cfg.P2P,
+		p2p:                        cfg.P2P,
 	}
 }
 

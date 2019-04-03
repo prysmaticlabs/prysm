@@ -335,8 +335,8 @@ func TestStatus(t *testing.T) {
 		{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
 		{isRunning: false, runError: errors.New("test runError")}: "",
 		// "status is error" cases
-		{isRunning: true, blockTime: beforeFiveMinutesAgo}:       "eth1 client is not syncing",
-		{isRunning: true}:                                        "eth1 client is not syncing",
+		{isRunning: true, blockTime: beforeFiveMinutesAgo}: "eth1 client is not syncing",
+		{isRunning: true}: "eth1 client is not syncing",
 		{isRunning: true, runError: errors.New("test runError")}: "test runError",
 	}
 

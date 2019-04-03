@@ -516,7 +516,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	shard := att.Data.Shard
 	crosslink := &pb.Crosslink{
 		CrosslinkDataRootHash32: att.Data.CrosslinkDataRootHash32,
-		Epoch: helpers.SlotToEpoch(att.Data.Slot),
+		Epoch:                   helpers.SlotToEpoch(att.Data.Slot),
 	}
 	crosslinkFromAttestation := att.Data.LatestCrosslink
 	crosslinkFromState := beaconState.LatestCrosslinks[shard]
