@@ -40,7 +40,7 @@ type BlockProcessor interface {
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, block.Slot-1)
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, block.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
