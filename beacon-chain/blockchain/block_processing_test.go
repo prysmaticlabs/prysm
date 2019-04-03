@@ -364,7 +364,6 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("State: %v", beaconState.Slot-params.BeaconConfig().GenesisSlot)
 	stateRoot, err = hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatal(err)
