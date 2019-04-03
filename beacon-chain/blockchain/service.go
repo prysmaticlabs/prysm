@@ -6,6 +6,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
@@ -44,6 +45,7 @@ type ChainService struct {
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
+	lock sync.Mutex
 }
 
 // Config options for the service.
