@@ -136,7 +136,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	}
 	justifiedHead, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not retrieve justified head: %v", err)
 	}
 	head, err := c.lmdGhost(justifiedHead, justifiedState, attestationTargets)
 	if err != nil {
