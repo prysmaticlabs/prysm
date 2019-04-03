@@ -58,7 +58,8 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 			}
 		}
 		// Generate the new justified state with using new justified block and save it.
-		newJustifiedState, err := c.beaconDB.HistoricalStateFromSlot(c.ctx, lastJustifiedSlot)
+		//	newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastJustifiedSlot)
+		newJustifiedState, err := c.beaconDB.HistoricalStateFromSlot(context.TODO(), newJustifiedBlock.Slot)
 		if err != nil {
 			return err
 		}
@@ -96,8 +97,9 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 			}
 		}
 
-		// Generate the new finalized state with using new finalized block and save it.
-		newFinalizedState, err := c.beaconDB.HistoricalStateFromSlot(c.ctx, lastFinalizedSlot)
+		// Generate the new finalized state with using new finalized block and
+		// save it.
+		newFinalizedState, err := c.beaconDB.HistoricalStateFromSlot(context.TODO(), lastFinalizedSlot)
 		if err != nil {
 			return err
 		}
@@ -120,8 +122,6 @@ func (c *ChainService) ApplyForkChoiceRule(
 	block *pb.BeaconBlock,
 	postState *pb.BeaconState,
 ) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
 	defer span.End()
 	log.Info("Applying LMD-GHOST Fork Choice Rule")
@@ -148,7 +148,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
 
 		// Only regenerate head state if there was a reorg.
-		newState, err = c.beaconDB.HistoricalStateFromSlot(c.ctx, head.Slot)
+		newState, err = c.beaconDB.HistoricalStateFromSlot(context.TODO(), head.Slot)
 		if err != nil {
 			return fmt.Errorf("could not gen state: %v", err)
 		}
