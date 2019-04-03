@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
@@ -24,6 +25,7 @@ type ValidatorServer struct {
 	beaconDB           *db.BeaconDB
 	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
+	committeesCache    *committeesCache
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -116,6 +118,8 @@ func (vs *ValidatorServer) ValidatorPerformance(
 func (vs *ValidatorServer) CommitteeAssignment(
 	ctx context.Context,
 	req *pb.CommitteeAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.rpcservice.CommitteeAssignment")
+	defer span.End()
 
 	if len(req.PublicKey[0]) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf(
@@ -125,13 +129,18 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		)
 	}
 
+	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey[0])
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator index: %v", err)
+	}
+	vsr, err := vs.ValidatorStatus(ctx, &pb.ValidatorIndexRequest{PublicKey: req.PublicKey[0]})
+	if err != nil {
+		return nil, err
+	}
+
 	beaconState, err := vs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
-	}
-	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey[0])
-	if err != nil {
-		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
 	chainHead, err := vs.beaconDB.ChainHead()
 	if err != nil {
@@ -150,26 +159,55 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		}
 	}
 
-	committee, shard, slot, isProposer, err :=
-		helpers.CommitteeAssignment(beaconState, req.EpochStart, uint64(idx), false)
-	if err != nil {
-		return nil, err
+	for slot := req.EpochStart; slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
+		if exists, committees, err := vs.committeesCache.CommitteesInfoBySlot(int(slot)); exists || err != nil {
+			if err != nil {
+				return nil, err
+			}
+			span.AddAttributes(trace.BoolAttribute("committeeCacheHit", true))
+			committee, shard, slot, isProposer, err :=
+				helpers.ValidatorAssignment(index, slot, committees.Committees)
+			if err == nil {
+				return &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+					{
+						Committee:  committee,
+						Shard:      shard,
+						Slot:       slot,
+						IsProposer: isProposer,
+						PublicKey:  req.PublicKey[0],
+						Status:     vsr.Status,
+					},
+				},
+				}, nil
+			}
+		}
+		committees, err := helpers.CrosslinkCommitteesAtSlot(
+			beaconState,
+			slot,
+			false /* registeryChange */)
+		if err != nil {
+			return nil, err
+		}
+		if err := vs.committeesCache.AddCommittees(committees); err != nil {
+			return nil, err
+		}
+		committee, shard, slot, isProposer, err :=
+			helpers.ValidatorAssignment(index, slot, committees)
+		if err == nil {
+			return &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				{
+					Committee:  committee,
+					Shard:      shard,
+					Slot:       slot,
+					IsProposer: isProposer,
+					PublicKey:  req.PublicKey[0],
+					Status:     vsr.Status,
+				},
+			},
+			}, nil
+		}
 	}
-	vsr, err := vs.ValidatorStatus(ctx, &pb.ValidatorIndexRequest{PublicKey: req.PublicKey[0]})
-	if err != nil {
-		return nil, err
-	}
-	return &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		{
-			Committee:  committee,
-			Shard:      shard,
-			Slot:       slot,
-			IsProposer: isProposer,
-			PublicKey:  req.PublicKey[0],
-			Status:     vsr.Status,
-		},
-	},
-	}, nil
+	return nil, errors.New(fmt.Sprintf("Could not find validator %d assignment starting epoch %d", index, req.EpochStart))
 }
 
 // ValidatorStatus returns the validator status of the current epoch.

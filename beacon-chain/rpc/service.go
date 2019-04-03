@@ -73,6 +73,7 @@ type Service struct {
 	incomingAttestation   chan *pbp2p.Attestation
 	slotAlignmentDuration time.Duration
 	credentialError       error
+	committeesCache       *committeesCache // cache to store committees info.
 }
 
 // Config options for the beacon node RPC server.
@@ -104,6 +105,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation:   make(chan *pbp2p.Attestation, params.BeaconConfig().DefaultBufferSize),
+		committeesCache: newCommitteesCache(),
 	}
 }
 
@@ -168,6 +170,7 @@ func (s *Service) Start() {
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
+		committeesCache: s.committeesCache,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

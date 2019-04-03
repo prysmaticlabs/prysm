@@ -67,9 +67,9 @@ func newCommitteesCache() *committeesCache {
 	}
 }
 
-// CommitteesInfoByHash fetches committeesInfo by slot. Returns true with a
+// CommitteesInfoBySlot fetches committeesInfo by slot. Returns true with a
 // reference to the committees info, if exists. Otherwise returns false, nil.
-func (c *committeesCache) BlockInfoByHash(slot int) (bool, *committeesInfo, error) {
+func (c *committeesCache) CommitteesInfoBySlot(slot int) (bool, *committeesInfo, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
