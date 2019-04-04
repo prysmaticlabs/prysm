@@ -5,10 +5,17 @@ import (
 	"os"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/urfave/cli"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
+}
 
 // Test that the sharding node can build with default flag values.
 func TestNode_Builds(t *testing.T) {
