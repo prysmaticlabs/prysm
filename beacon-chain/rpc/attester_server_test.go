@@ -65,6 +65,10 @@ func TestAttestationDataAtSlot_JustifiedBlockFailure(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
+	finalizedState := &pbp2p.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot + 1,
+		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+	}
 	beaconState := &pbp2p.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 2,
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
@@ -80,6 +84,9 @@ func TestAttestationDataAtSlot_JustifiedBlockFailure(t *testing.T) {
 	}
 	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
+	}
+	if err := attesterServer.beaconDB.SaveHistoricalState(finalizedState); err != nil {
+		t.Fatalf("Could not save historical state in test db: %v", err)
 	}
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot + 1,
@@ -123,6 +130,17 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
+	finalizedState := &pbp2p.BeaconState{
+		Slot:                   1 + params.BeaconConfig().GenesisSlot,
+		JustifiedEpoch:         2 + params.BeaconConfig().GenesisEpoch,
+		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestCrosslinks: []*pbp2p.Crosslink{
+			{
+				CrosslinkDataRootHash32: []byte("A"),
+			},
+		},
+	}
+
 	beaconState := &pbp2p.BeaconState{
 		Slot:                   3*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		JustifiedEpoch:         2 + params.BeaconConfig().GenesisEpoch,
@@ -138,6 +156,9 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
+	}
+	if err := attesterServer.beaconDB.SaveHistoricalState(finalizedState); err != nil {
+		t.Fatalf("Could not save historical state in test db: %v", err)
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
@@ -165,6 +186,7 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 	expectedInfo := &pb.AttestationDataResponse{
+		Slot:                     finalizedState.Slot,
 		BeaconBlockRootHash32:    blockRoot[:],
 		JustifiedEpoch:           2 + params.BeaconConfig().GenesisEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
@@ -258,6 +280,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 	expectedInfo := &pb.AttestationDataResponse{
+		Slot:                     10000 + params.BeaconConfig().GenesisSlot,
 		BeaconBlockRootHash32:    blockRoot[:],
 		JustifiedEpoch:           helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot),
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],

@@ -138,6 +138,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
 	).Return(&pb.AttestationDataResponse{
+		Slot:                     30,
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),
