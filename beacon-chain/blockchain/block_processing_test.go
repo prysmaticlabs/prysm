@@ -121,8 +121,8 @@ func TestReceiveBlock_DeletesFaultyBlockFromDB(t *testing.T) {
 	if err == nil {
 		t.Error("Expected block to fail processing, did not")
 	}
-	if !strings.Contains(err.Error(), BlockFailedProcessing.Error()) {
-		t.Errorf("Expected %v, received %v", BlockFailedProcessing, err)
+	if !strings.Contains(err.Error(), ErrBlockInvalid.Error()) {
+		t.Errorf("Expected %v, received %v", ErrBlockInvalid, err)
 	}
 	if chainService.beaconDB.HasBlock(blockRoot) {
 		t.Error("Expected faulty block to have been deleted from db")
