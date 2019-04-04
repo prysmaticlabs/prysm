@@ -37,7 +37,7 @@ type Config struct {
 	CertFlag     string
 	KeystorePath string
 	Password     string
-	db           *db.ValidatorDB
+	ValidatorDB  *db.ValidatorDB
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -64,7 +64,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		withCert: cfg.CertFlag,
 		keys:     keys,
 		key:      key,
-		db:       cfg.db,
+		db:       cfg.ValidatorDB,
 	}, nil
 }
 

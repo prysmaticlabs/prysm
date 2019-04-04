@@ -166,7 +166,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context) error {
 		Endpoint:     endpoint,
 		KeystorePath: keystoreDirectory,
 		Password:     keystorePassword,
-		db:           s.ValidatorDB,
+		ValidatorDB:  s.db,
 	})
 	if err != nil {
 		return fmt.Errorf("could not initialize client service: %v", err)
