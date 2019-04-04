@@ -442,28 +442,28 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	state = e.CleanupAttestations(ctx, state)
 
 	if config.Logging {
-		log.Infof("Number of current epoch attestations: %d", len(currentEpochAttestations))
-		log.Infof("Current epoch boundary attester indices: %v", currentBoundaryAttesterIndices)
-		log.Infof("Number of prev epoch attestations: %d", len(prevEpochAttestations))
-		log.Infof("Previous epoch attester indices: %v", prevEpochAttesterIndices)
-		log.Infof("Number of prev epoch boundary attestations: %d", len(prevEpochAttestations))
-		log.Infof("Previous epoch boundary attester indices: %v", prevEpochBoundaryAttesterIndices)
+		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")
+		log.WithField("attesterIndices", currentBoundaryAttesterIndices).Info("Current epoch boundary attester indices")
+		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of prev epoch attestations")
+		log.WithField("attesterIndices", prevEpochAttesterIndices).Info("Previous epoch attester indices")
+		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of prev epoch boundary attestations")
+		log.WithField("attesterIndices", prevEpochBoundaryAttesterIndices).Info("Previous epoch boundary attester indices")
 		log.WithField(
-			"PreviousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Previous justified epoch")
 		log.WithField(
-			"JustifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+			"justifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Justified epoch")
 		log.WithField(
-			"FinalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
+			"finalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Finalized epoch")
 		log.WithField(
-			"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
+			"validatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Validator Registry Update Epoch")
 		log.WithField(
-			"NumValidators", len(state.ValidatorRegistry),
+			"numValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
-		log.Infof("Validator balances: %v", state.ValidatorBalances)
+		log.WithField("balances", state.ValidatorBalances).Info("Validator balances")
 	}
 
 	return state, nil

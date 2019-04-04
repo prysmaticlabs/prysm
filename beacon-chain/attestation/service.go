@@ -162,7 +162,6 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 	if err := a.UpdateLatestAttestation(ctx, attestation); err != nil {
 		return fmt.Errorf("could not update attestation pool: %v", err)
 	}
-	log.Infof("Updated attestation pool for attestation %#x", h)
 	return nil
 }
 
@@ -237,7 +236,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 					"attestationSlot": attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
 					"justifiedEpoch":  attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 				},
-			).Info("Attestation store updated")
+			).Debug("Attestation store updated")
 		}
 	}
 	return nil
