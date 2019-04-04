@@ -155,7 +155,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err != nil {
 		return err
 	}
-	if err := s.chainService.VerifyBlockValidity(block, state); err != nil {
+	if err := s.chainService.VerifyBlockValidity(ctx, block, state); err != nil {
 		return err
 	}
 	if err := s.db.SaveBlock(block); err != nil {

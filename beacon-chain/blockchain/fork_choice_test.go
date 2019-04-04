@@ -227,7 +227,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	attsService.InsertAttestationIntoStore(pubKey48, att)
 
 	chainService := setupBeaconChain(t, beaconDB, attsService)
-	attestationTargets, err := chainService.attestationTargets(state)
+	attestationTargets, err := chainService.attestationTargets(ctx, state)
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
 	}
@@ -1078,7 +1078,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.updateFFGCheckPts(gState); err != nil {
+	if err := chainSvc.updateFFGCheckPts(ctx, gState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1161,7 +1161,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.updateFFGCheckPts(gState); err != nil {
+	if err := chainSvc.updateFFGCheckPts(ctx, gState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1239,7 +1239,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.updateFFGCheckPts(gState); err != nil {
+	if err := chainSvc.updateFFGCheckPts(ctx, gState); err != nil {
 		t.Fatal(err)
 	}
 

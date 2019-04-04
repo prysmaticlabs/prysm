@@ -32,7 +32,7 @@ type ForkChoice interface {
 // updateFFGCheckPts checks whether the existing FFG check points saved in DB
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
-func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
+func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconState) error {
 	lastJustifiedSlot := helpers.StartSlot(state.JustifiedEpoch)
 	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 			}
 		}
 		// Generate the new justified state with using new justified block and save it.
-		newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastJustifiedSlot)
+		newJustifiedState, err := stategenerator.GenerateStateFromBlock(ctx, c.beaconDB, lastJustifiedSlot)
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		}
 
 		// Generate the new finalized state with using new finalized block and save it.
-		newFinalizedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastFinalizedSlot)
+		newFinalizedState, err := stategenerator.GenerateStateFromBlock(ctx, c.beaconDB, lastFinalizedSlot)
 		if err != nil {
 			return err
 		}
@@ -130,7 +130,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified state: %v", err)
 	}
-	attestationTargets, err := c.attestationTargets(justifiedState)
+	attestationTargets, err := c.attestationTargets(ctx, justifiedState)
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
@@ -148,7 +148,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
 
 		// Only regenerate head state if there was a reorg.
-		newState, err = stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, head.Slot)
+		newState, err = stategenerator.GenerateStateFromBlock(ctx, c.beaconDB, head.Slot)
 		if err != nil {
 			return fmt.Errorf("could not gen state: %v", err)
 		}
@@ -276,11 +276,11 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, highestSlot uint64) 
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
-func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
+func (c *ChainService) attestationTargets(ctx context.Context, state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
 	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	attestationTargets := make(map[uint64]*pb.BeaconBlock)
 	for i, index := range indices {
-		block, err := c.attsService.LatestAttestationTarget(c.ctx, index)
+		block, err := c.attsService.LatestAttestationTarget(ctx, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
 		}
