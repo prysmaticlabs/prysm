@@ -90,10 +90,14 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	lastJustifiedSlot := helpers.StartSlot(beaconState.JustifiedEpoch)
 	justifiedBlockRoot := make([]byte, 32)
 	if lastJustifiedSlot != beaconState.Slot {
-		justifiedBlock, err := as.beaconDB.BlockBySlot(lastJustifiedSlot)
-		if err != nil {
-			return nil, fmt.Errorf("could not get justified block: %v", err)
+		var justifiedBlock *pbp2p.BeaconBlock
+		for i := uint64(0); justifiedBlock == nil && i < params.BeaconConfig().SlotsPerEpoch; i++ {
+			justifiedBlock, err = as.beaconDB.BlockBySlot(lastJustifiedSlot - i)
+			if err != nil {
+				return nil, fmt.Errorf("could not get justified block: %v", err)
+			}
 		}
+
 		justifiedBlockRoot32, err := hashutil.HashBeaconBlock(justifiedBlock)
 		if err != nil {
 			return nil, fmt.Errorf("could not get justified block: %v", err)
