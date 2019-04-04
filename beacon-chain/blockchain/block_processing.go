@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -17,6 +18,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+var BlockFailedProcessing = errors.New("block failed to process")
 
 // BlockProcessor interface defines the methods in the blockchain service which
 // handle new block operations.
@@ -104,8 +107,10 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	beaconState, err = c.runStateTransition(headRoot, block, beaconState)
 	if err != nil {
-		if err := c.beaconDB.DeleteBlock(block); err != nil {
-			return nil, fmt.Errorf("could not delete faulty block from DB: %v", err)
+		if err == BlockFailedProcessing {
+			if err := c.beaconDB.DeleteBlock(block); err != nil {
+				return nil, fmt.Errorf("could not delete faulty block from DB: %v", err)
+			}
 		}
 		return nil, fmt.Errorf("could not execute state transition with block %v", err)
 	}
@@ -170,7 +175,7 @@ func (c *ChainService) runStateTransition(
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition %v", err)
+		return nil, BlockFailedProcessing
 	}
 	log.WithField(
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,

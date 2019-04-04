@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -116,8 +117,12 @@ func TestReceiveBlock_DeletesFaultyBlockFromDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
+	_, err = chainService.ReceiveBlock(context.Background(), block)
+	if err == nil {
 		t.Error("Expected block to fail processing, did not")
+	}
+	if !strings.Contains(err.Error(), BlockFailedProcessing.Error()) {
+		t.Errorf("Expected %v, received %v", BlockFailedProcessing, err)
 	}
 	if chainService.beaconDB.HasBlock(blockRoot) {
 		t.Error("Expected faulty block to have been deleted from db")
