@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -162,25 +163,28 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	}
 
 	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		if exists, committees, err := vs.committeesCache.CommitteesInfoBySlot(int(slot)); exists || err != nil {
-			if err != nil {
-				return nil, err
-			}
-			span.AddAttributes(trace.BoolAttribute("committeeCacheHit", true))
-			committee, shard, slot, isProposer, err :=
-				helpers.ValidatorAssignment(index, slot, committees.committees)
-			if err == nil {
-				return &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-					{
-						Committee:  committee,
-						Shard:      shard,
-						Slot:       slot,
-						IsProposer: isProposer,
-						PublicKey:  req.PublicKey[0],
-						Status:     vsr.Status,
+		if featureconfig.FeatureConfig().EnableCommitteesCache {
+			fmt.Println("Hello!")
+			if exists, committees, err := vs.committeesCache.CommitteesInfoBySlot(int(slot)); exists || err != nil {
+				if err != nil {
+					return nil, err
+				}
+				span.AddAttributes(trace.BoolAttribute("committeeCacheHit", true))
+				committee, shard, slot, isProposer, err :=
+					helpers.ValidatorAssignment(index, slot, committees.committees)
+				if err == nil {
+					return &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+						{
+							Committee:  committee,
+							Shard:      shard,
+							Slot:       slot,
+							IsProposer: isProposer,
+							PublicKey:  req.PublicKey[0],
+							Status:     vsr.Status,
+						},
 					},
-				},
-				}, nil
+					}, nil
+				}
 			}
 		}
 		committees, err := helpers.CrosslinkCommitteesAtSlot(
@@ -194,8 +198,10 @@ func (vs *ValidatorServer) CommitteeAssignment(
 			slot:       int(slot),
 			committees: committees,
 		}
-		if err := vs.committeesCache.AddCommittees(committeesInfo); err != nil {
-			return nil, err
+		if featureconfig.FeatureConfig().EnableCommitteesCache {
+			if err := vs.committeesCache.AddCommittees(committeesInfo); err != nil {
+				return nil, err
+			}
 		}
 		committee, shard, slot, isProposer, err :=
 			helpers.ValidatorAssignment(index, slot, committees)

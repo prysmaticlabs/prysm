@@ -28,6 +28,7 @@ type FeatureFlagConfig struct {
 	VerifyAttestationSigs  bool // VerifyAttestationSigs declares if the client will verify attestations.
 	EnableComputeStateRoot bool // EnableComputeStateRoot implementation on server side.
 	EnableCrosslinks       bool // EnableCrosslinks in epoch processing.
+	EnableCommitteesCache  bool // EnableCommitteesCache for RPC server.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -58,7 +59,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Info("Enabled crosslink computations")
 		cfg.EnableCrosslinks = true
 	}
-
+	if ctx.GlobalBool(EnableComputeStateRootFlag.Name) {
+		log.Info("Enabled committees cache")
+		cfg.EnableCommitteesCache = true
+	}
 	InitFeatureConfig(cfg)
 }
 

@@ -19,7 +19,14 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: true,
+	})
+}
 
 func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 	genesisTime := time.Unix(0, 0).Unix()
