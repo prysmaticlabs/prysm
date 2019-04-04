@@ -15,16 +15,11 @@ import (
 const hashLengthBytes = 32
 const sszChunkSize = 128
 
-var useCache = false
+var useCache bool
 
 // Hashable defines the interface for supporting tree-hash function.
 type Hashable interface {
 	TreeHashSSZ() ([32]byte, error)
-}
-
-// SetUseCache setter for the use cache var
-func SetUseCache(uc bool) {
-	useCache = uc
 }
 
 // TreeHash calculates tree-hash result for input value.
@@ -61,7 +56,7 @@ func newHashError(msg string, typ reflect.Type) *hashError {
 
 func makeHasher(typ reflect.Type) (hasher, error) {
 	if featureconfig.FeatureConfig().CacheTreeHash {
-		SetUseCache(true)
+		useCache = true
 	}
 	kind := typ.Kind()
 	switch {

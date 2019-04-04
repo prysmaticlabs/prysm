@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 type JunkObject struct {
@@ -134,7 +135,7 @@ func TestMerkleHashWithCache(t *testing.T) {
 }
 
 func BenchmarkHashWithoutCache(b *testing.B) {
-	useCache = false
+	featureconfig.FeatureConfig().CacheTreeHash = false
 	First := GenerateJunkObject(100)
 	TreeHash(&tree{First: First, Second: First})
 	for n := 0; n < b.N; n++ {
@@ -143,7 +144,7 @@ func BenchmarkHashWithoutCache(b *testing.B) {
 }
 
 func BenchmarkHashWithCache(b *testing.B) {
-	useCache = true
+	featureconfig.FeatureConfig().CacheTreeHash = true
 	First := GenerateJunkObject(100)
 	type tree struct {
 		First  []*JunkObject
