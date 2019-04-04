@@ -59,7 +59,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Info("Enabled crosslink computations")
 		cfg.EnableCrosslinks = true
 	}
-	if ctx.GlobalBool(EnableComputeStateRootFlag.Name) {
+	if ctx.GlobalBool(EnableCommitteesCacheFlag.Name) {
 		log.Info("Enabled committees cache")
 		cfg.EnableCommitteesCache = true
 	}

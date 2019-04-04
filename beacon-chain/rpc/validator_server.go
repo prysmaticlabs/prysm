@@ -164,7 +164,6 @@ func (vs *ValidatorServer) CommitteeAssignment(
 
 	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		if featureconfig.FeatureConfig().EnableCommitteesCache {
-			fmt.Println("Hello!")
 			if exists, committees, err := vs.committeesCache.CommitteesInfoBySlot(int(slot)); exists || err != nil {
 				if err != nil {
 					return nil, err
