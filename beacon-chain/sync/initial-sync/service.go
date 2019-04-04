@@ -105,7 +105,6 @@ type InitialSync struct {
 	inMemoryBlocks      map[uint64]*pb.BeaconBlock
 	syncedFeed          *event.Feed
 	stateReceived       bool
-	latestSyncedBlock   *pb.BeaconBlock
 	lastRequestedSlot   uint64
 	finalizedStateRoot  [32]byte
 	mutex               *sync.Mutex
@@ -186,7 +185,7 @@ func (s *InitialSync) NodeIsSynced() (bool, uint64) {
 	return s.nodeIsSynced, s.currentSlot
 }
 
-func (s *InitialSync) exitInitialSync(ctx context.Context) error {
+func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock) error {
 	if s.nodeIsSynced {
 		return nil
 	}
@@ -194,20 +193,20 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := s.chainService.VerifyBlockValidity(s.latestSyncedBlock, state); err != nil {
+	if err := s.chainService.VerifyBlockValidity(block, state); err != nil {
 		return err
 	}
-	if err := s.db.SaveBlock(s.latestSyncedBlock); err != nil {
+	if err := s.db.SaveBlock(block); err != nil {
 		return err
 	}
-	state, err = s.chainService.ApplyBlockStateTransition(ctx, s.latestSyncedBlock, state)
+	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
 		return err
 	}
-	if err := s.chainService.CleanupBlockOperations(ctx, s.latestSyncedBlock); err != nil {
+	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
 		return err
 	}
-	if err := s.db.UpdateChainHead(ctx, s.latestSyncedBlock, state); err != nil {
+	if err := s.db.UpdateChainHead(ctx, block, state); err != nil {
 		return err
 	}
 
