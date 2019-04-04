@@ -68,6 +68,7 @@ message AttestationDataResponse {
     uint64 justified_epoch = 3;
     bytes justified_block_root_hash32 = 4;
     ethereum.beacon.p2p.v1.Crosslink latest_crosslink = 5;
+    uint64 slot = 6;
 }
 
 message PendingAttestationsRequest {

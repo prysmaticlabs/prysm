@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -46,22 +45,15 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(head)
+	headRoot, err := hashutil.HashBeaconBlock(head)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon block: %v", err)
 	}
-	beaconState, err := as.beaconDB.State(ctx)
+	headState, err := as.beaconDB.HistoricalStateFromSlot(ctx, head.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+		return nil, fmt.Errorf("could not fetch head state: %v", err)
 	}
-	for beaconState.Slot < req.Slot {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, blockRoot, state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
-		}
-	}
+
 	// Fetch the epoch boundary root = hash_tree_root(epoch_boundary)
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
@@ -70,15 +62,12 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	epochBoundaryRoot := make([]byte, 32)
 	epochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(head.Slot))
 	if epochStartSlot == head.Slot {
-		hash, err := hashutil.HashBeaconBlock(head)
-		if err != nil {
-			return nil, fmt.Errorf("could not tree hash head block: %v", err)
-		}
-		epochBoundaryRoot = hash[:]
+		epochBoundaryRoot = headRoot[:]
 	} else {
-		epochBoundaryRoot, err = blocks.BlockRoot(beaconState, epochStartSlot)
+		epochBoundaryRoot, err = blocks.BlockRoot(headState, epochStartSlot)
 		if err != nil {
-			return nil, fmt.Errorf("could not get epoch boundary block: %v", err)
+			return nil, fmt.Errorf("could not get epoch boundary block for slot %d: %v",
+				epochStartSlot, err)
 		}
 	}
 	// epoch_start_slot = get_epoch_start_slot(slot_to_epoch(head.slot))
@@ -87,9 +76,9 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
 	// If the last justified boundary slot is the same as state current slot (ex: slot 0),
 	// we set justified block root to an empty root.
-	lastJustifiedSlot := helpers.StartSlot(beaconState.JustifiedEpoch)
+	lastJustifiedSlot := helpers.StartSlot(headState.JustifiedEpoch)
 	justifiedBlockRoot := make([]byte, 32)
-	if lastJustifiedSlot != beaconState.Slot {
+	if lastJustifiedSlot != headState.Slot {
 		justifiedBlock, err := as.beaconDB.BlockBySlot(lastJustifiedSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get justified block: %v", err)
@@ -101,15 +90,18 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 		justifiedBlockRoot = justifiedBlockRoot32[:]
 	}
 
-	if beaconState.Slot == params.BeaconConfig().GenesisSlot {
-		epochBoundaryRoot = blockRoot[:]
-		justifiedBlockRoot = blockRoot[:]
+	// If an attester has to attest for gensis block.
+	if headState.Slot == params.BeaconConfig().GenesisSlot {
+		epochBoundaryRoot = headRoot[:]
+		justifiedBlockRoot = headRoot[:]
 	}
+
 	return &pb.AttestationDataResponse{
-		BeaconBlockRootHash32:    blockRoot[:],
+		Slot:                     headState.Slot,
+		BeaconBlockRootHash32:    headRoot[:],
 		EpochBoundaryRootHash32:  epochBoundaryRoot,
-		JustifiedEpoch:           beaconState.JustifiedEpoch,
+		JustifiedEpoch:           headState.JustifiedEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot,
-		LatestCrosslink:          beaconState.LatestCrosslinks[req.Shard],
+		LatestCrosslink:          headState.LatestCrosslinks[req.Shard],
 	}, nil
 }
