@@ -18,7 +18,10 @@ go_test(
         "slice_test.go",
     ],
     embed = [":go_default_library"],
-    deps = ["//shared/ssz:go_default_library"],
+    deps = [
+        "//shared/featureconfig:go_default_library",
+        "//shared/ssz:go_default_library",
+    ],
 )
 
 go_test(

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -58,6 +60,9 @@ func newHashError(msg string, typ reflect.Type) *hashError {
 }
 
 func makeHasher(typ reflect.Type) (hasher, error) {
+	if featureconfig.FeatureConfig().CacheTreeHash {
+		SetUseCache(true)
+	}
 	kind := typ.Kind()
 	switch {
 	case kind == reflect.Bool ||
