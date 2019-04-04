@@ -341,7 +341,6 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Could not hash block %v", err)
 		}
 		parentHash = hash[:]
-		ss.latestSyncedBlock = block
 		state, err := db.State(context.Background())
 		if err != nil {
 			t.Fatal(err)
