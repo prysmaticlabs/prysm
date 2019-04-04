@@ -198,6 +198,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 			committees: committees,
 		}
 		if featureconfig.FeatureConfig().EnableCommitteesCache {
+			span.AddAttributes(trace.BoolAttribute("committeeCacheMiss", true))
 			if err := vs.committeesCache.AddCommittees(committeesInfo); err != nil {
 				return nil, err
 			}
