@@ -193,7 +193,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	if err != nil {
 		return err
 	}
-	if err := s.chainService.VerifyBlockValidity(block, state); err != nil {
+	if err := s.chainService.VerifyBlockValidity(ctx, block, state); err != nil {
 		return err
 	}
 	if err := s.db.SaveBlock(block); err != nil {

@@ -435,7 +435,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		ParentRootHash32: []byte{'a'},
 	}
 
-	if err := chainService.VerifyBlockValidity(block, beaconState); err == nil {
+	if err := chainService.VerifyBlockValidity(ctx, block, beaconState); err == nil {
 		t.Fatal("block processing succeeded despite block having no parent saved")
 	}
 
@@ -485,7 +485,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		},
 	}
 
-	if err := chainService.VerifyBlockValidity(block2, beaconState); err != nil {
+	if err := chainService.VerifyBlockValidity(ctx, block2, beaconState); err != nil {
 		t.Fatalf("block processing failed despite being a valid block: %v", err)
 	}
 }
