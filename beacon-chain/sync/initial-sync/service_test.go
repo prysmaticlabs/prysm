@@ -74,7 +74,9 @@ func (ms *mockChainService) ApplyBlockStateTransition(
 }
 
 func (ms *mockChainService) VerifyBlockValidity(
-	block *pb.BeaconBlock, beaconState *pb.BeaconState,
+	ctx context.Context,
+	block *pb.BeaconBlock,
+	beaconState *pb.BeaconState,
 ) error {
 	return nil
 }
