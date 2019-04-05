@@ -315,6 +315,9 @@ func (s *Server) emit(msg Message, feed Feed) {
 		"msgType": fmt.Sprintf("%T", msg.Data),
 		"msgName": proto.MessageName(msg.Data),
 	}).Debug("Emit p2p message to feed subscribers")
+	if span := trace.FromContext(msg.Ctx); span != nil {
+		span.AddAttributes(trace.Int64Attribute("feedSubscribers", int64(i)))
+	}
 }
 
 // Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.
