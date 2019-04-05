@@ -41,7 +41,7 @@ type BlockProcessor interface {
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	beaconState, err := c.beaconDB.State(ctx)
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, block.Slot-1)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -226,6 +226,11 @@ func (c *ChainService) runStateTransition(
 		log.WithField(
 			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Block transition successfully processed")
+
+		// Save Historical States.
+		if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
+			return nil, fmt.Errorf("could not save historical state: %v", err)
+		}
 	}
 
 	if helpers.IsEpochEnd(newState.Slot) {
@@ -240,10 +245,6 @@ func (c *ChainService) runStateTransition(
 		// Update FFG checkpoints in DB.
 		if err := c.updateFFGCheckPts(ctx, newState); err != nil {
 			return newState, fmt.Errorf("could not update FFG checkpts: %v", err)
-		}
-		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(newState); err != nil {
-			return newState, fmt.Errorf("could not save historical state: %v", err)
 		}
 		log.WithField(
 			"SlotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
