@@ -366,9 +366,6 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stateRoot != bytesutil.ToBytes32(commonAncestor.StateRootHash32) {
-		t.Fatalf("Mismatched state roots for common ancestor. Wanted %#x got %#x", commonAncestor.StateRootHash32, stateRoot)
-	}
 	// Then we receive the block `f` from slot 6
 	blockF := &pb.BeaconBlock{
 		Slot:             genesisSlot + 6,
