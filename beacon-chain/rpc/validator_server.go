@@ -144,7 +144,7 @@ func (vs *ValidatorServer) assignment(
 	epochStart uint64,
 ) (*pb.CommitteeAssignmentResponse_CommitteeAssignment, error) {
 
-	_, span := trace.StartSpan(ctx, "beacon-chain.rpcservice.CommitteeAssignment.assignment")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.rpcservice.CommitteeAssignment.assignment")
 	defer span.End()
 
 	if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
