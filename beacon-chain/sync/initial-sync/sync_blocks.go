@@ -150,7 +150,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if _, ok := s.inMemoryBlocks[block.Slot]; ok {
 		delete(s.inMemoryBlocks, block.Slot)
 	}
-	state, err := s.db.State(ctx)
+	state, err := s.db.HeadState(ctx)
 	if err != nil {
 		return err
 	}

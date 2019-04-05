@@ -549,7 +549,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}
