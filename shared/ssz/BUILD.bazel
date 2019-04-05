@@ -6,7 +6,6 @@ go_library(
         "decode.go",
         "doc.go",
         "encode.go",
-        "expire_by_use_cache.go",
         "hash.go",
         "hash_cache.go",
         "ssz_utils_cache.go",
@@ -19,11 +18,9 @@ go_library(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_karlseguin_ccache//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
-        "@io_k8s_apimachinery//pkg/util/clock:go_default_library",
-        "@io_k8s_client_go//tools/cache:go_default_library",
-        "@io_k8s_klog//:go_default_library",
     ],
 )
 

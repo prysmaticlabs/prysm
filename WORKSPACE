@@ -1064,3 +1064,9 @@ go_repository(
     commit = "502116f1a0a0c1140aab04fd3787489209b357d3",  # v1.2.0
     importpath = "github.com/grpc-ecosystem/go-grpc-prometheus",
 )
+
+go_repository(
+    name = "com_github_karlseguin_ccache",
+    commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",
+    importpath = "github.com/karlseguin/ccache",
+)

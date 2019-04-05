@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/karlseguin/ccache"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -22,7 +22,6 @@ var (
 	// Requests should be only accessing blocks within recent blocks within the
 	// Eth1FollowDistance.
 	maxCacheSize = params.BeaconConfig().HashCacheSize
-
 	// Metrics
 	hashCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "powchain_hash_cache_miss",
@@ -40,7 +39,7 @@ var (
 
 // hashCacheS struct with one queue for looking up by hash.
 type hashCacheS struct {
-	hashCache *ExpirationByUseCache
+	hashCache *ccache.Cache
 }
 
 // markleRoot specifies the hash of data in a struct
@@ -63,7 +62,7 @@ func hashKeyFn(obj interface{}) (string, error) {
 // memory.
 func newHashCache() *hashCacheS {
 	return &hashCacheS{
-		hashCache: NewTTLStoreRestampOnGet(hashKeyFn, time.Hour),
+		hashCache: ccache.New(ccache.Configure().MaxSize(maxCacheSize)),
 	}
 }
 
@@ -71,19 +70,14 @@ func newHashCache() *hashCacheS {
 // reference to the root if exists. Otherwise returns false, nil.
 func (b *hashCacheS) RootByEncodedHash(h common.Hash) (bool, *root, error) {
 
-	obj, exists, err := b.hashCache.GetByKey(h.Hex())
-	if err != nil {
-		return false, nil, err
-	}
-
-	if exists {
-		hashCacheHit.Inc()
-	} else {
+	item := b.hashCache.Get(h.Hex())
+	if item == nil {
 		hashCacheMiss.Inc()
 		return false, nil, nil
+	} else {
+		hashCacheHit.Inc()
 	}
-
-	hInfo, ok := obj.(*root)
+	hInfo, ok := item.Value().(*root)
 	if !ok {
 		return false, nil, ErrNotMerkleRoot
 	}
@@ -155,13 +149,8 @@ func (b *hashCacheS) MerkleHashCached(byteSlice [][]byte) ([]byte, error) {
 			Hash:       bytesutil.ToBytes32(hs),
 			MarkleRoot: mh,
 		}
-		if err := b.hashCache.Add(mr); err != nil {
-			return nil, err
-		}
-
-		b.trim(maxCacheSize)
-
-		hashCacheSize.Set(float64(len(b.hashCache.ListKeys())))
+		b.hashCache.Set(mr.Hash.Hex(), mr, time.Hour)
+		hashCacheSize.Set(float64(b.hashCache.ItemCount()))
 	}
 
 	return mh, nil
@@ -172,19 +161,11 @@ func (b *hashCacheS) MerkleHashCached(byteSlice [][]byte) ([]byte, error) {
 // least recently added root info if the cache size has reached the max cache
 // size limit.
 func (b *hashCacheS) AddRoot(h common.Hash, rootB []byte) error {
-
 	mr := &root{
 		Hash:       h,
 		MarkleRoot: rootB,
 	}
-	if err := b.hashCache.Add(mr); err != nil {
-		return err
-	}
-
-	b.trim(maxCacheSize)
-
-	hashCacheSize.Set(float64(len(b.hashCache.ListKeys())))
-
+	b.hashCache.Set(mr.Hash.Hex(), mr, time.Hour)
 	return nil
 }
 
@@ -223,6 +204,8 @@ func makeSliceHasherCache(typ reflect.Type) (hasher, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to add root to cache: %v", err)
 			}
+			hashCacheSize.Set(float64(hashCache.hashCache.ItemCount()))
+
 		}
 
 		return output, nil
@@ -263,40 +246,4 @@ func makeStructHasherCache(typ reflect.Type) (hasher, error) {
 		return result[:], nil
 	}
 	return hasher, nil
-}
-
-// trim the store to the maxSize.
-func (b *hashCacheS) trim(maxSize int) {
-	b.hashCache.PurgeByDateAndSize(maxSize)
-}
-
-type byLeastUsed []timestampedKey
-
-func (a byLeastUsed) Len() int           { return len(a) }
-func (a byLeastUsed) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byLeastUsed) Less(i, j int) bool { return a[i].timestamp.After(a[j].timestamp) }
-
-// PurgeByDateAndSize purges the hash to its max size by least used items
-func (c *ExpirationByUseCache) PurgeByDateAndSize(maxSize int) {
-	items := c.cacheStorage.List()
-
-	if len(items) > maxSize {
-		list := make(byLeastUsed, 0, len(items))
-		for _, item := range items {
-			ts := item.(*timestampedEntry).timestamp
-			obj := item.(*timestampedEntry).obj
-			key, err := c.keyFunc(obj)
-			if err == nil {
-				list = append(list, timestampedKey{timestamp: ts, key: key})
-			}
-		}
-		sort.Sort(list)
-		c.expirationLock.Lock()
-		defer c.expirationLock.Unlock()
-		for s := len(list) - 1; s > maxSize-1; s-- {
-
-			c.cacheStorage.Delete(list[s].key)
-		}
-	}
-
 }
