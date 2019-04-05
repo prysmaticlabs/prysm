@@ -418,14 +418,14 @@ func TestRegisterTopic_HandlesPanic(t *testing.T) {
 }
 
 func TestStatus_MinimumPeers(t *testing.T) {
-	minPeers := 5
+	minPeers := 3
 
 	ctx := context.Background()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 	s := Server{host: h}
 
 	err := s.Status()
-	if err == nil || err.Error() != "less than 5 peers" {
+	if err == nil || err.Error() != "less than 3 peers" {
 		t.Errorf("p2p server did not return expected status, instead returned %v", err)
 	}
 
