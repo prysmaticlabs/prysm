@@ -343,6 +343,28 @@ func TestFinalizedBlock_CanSaveRetrieve(t *testing.T) {
 	}
 }
 
+func TestHasBlock_returnsTrue(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	block := &pb.BeaconBlock{
+		Slot: uint64(44),
+	}
+
+	root, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	if !db.HasBlock(root) {
+		t.Fatal("db.HasBlock returned false for block just saved")
+	}
+}
+
 func TestHighestBlockSlot_UpdatedOnSaveBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)

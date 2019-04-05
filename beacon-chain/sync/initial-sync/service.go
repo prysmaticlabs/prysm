@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -85,30 +86,29 @@ type syncService interface {
 // InitialSync defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type InitialSync struct {
-	ctx                           context.Context
-	cancel                        context.CancelFunc
-	p2p                           p2pAPI
-	syncService                   syncService
-	chainService                  chainService
-	db                            *db.BeaconDB
-	powchain                      powChainService
-	blockAnnounceBuf              chan p2p.Message
-	batchedBlockBuf               chan p2p.Message
-	blockBuf                      chan p2p.Message
-	stateBuf                      chan p2p.Message
-	currentSlot                   uint64
-	highestObservedSlot           uint64
-	beaconStateSlot               uint64
-	syncPollingInterval           time.Duration
-	inMemoryBlocks                map[uint64]*pb.BeaconBlock
-	syncedFeed                    *event.Feed
-	stateReceived                 bool
-	latestSyncedBlock             *pb.BeaconBlock
-	lastRequestedSlot             uint64
-	finalizedStateRoot            [32]byte
-	mutex                         *sync.Mutex
-	nodeIsSynced                  bool
-	highestObservedCanonicalState *pb.BeaconState
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	p2p                 p2pAPI
+	syncService         syncService
+	chainService        chainService
+	db                  *db.BeaconDB
+	powchain            powChainService
+	blockAnnounceBuf    chan p2p.Message
+	batchedBlockBuf     chan p2p.Message
+	blockBuf            chan p2p.Message
+	stateBuf            chan p2p.Message
+	currentSlot         uint64
+	highestObservedSlot uint64
+	highestObservedRoot [32]byte
+	beaconStateSlot     uint64
+	syncPollingInterval time.Duration
+	inMemoryBlocks      map[uint64]*pb.BeaconBlock
+	syncedFeed          *event.Feed
+	stateReceived       bool
+	lastRequestedSlot   uint64
+	finalizedStateRoot  [32]byte
+	mutex               *sync.Mutex
+	nodeIsSynced        bool
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -170,6 +170,11 @@ func (s *InitialSync) InitializeObservedSlot(slot uint64) {
 	s.highestObservedSlot = slot
 }
 
+// InitializeObservedStateRoot sets the highest observed state root.
+func (s *InitialSync) InitializeObservedStateRoot(root [32]byte) {
+	s.highestObservedRoot = root
+}
+
 // InitializeFinalizedStateRoot sets the state root of the last finalized state.
 func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
@@ -180,25 +185,46 @@ func (s *InitialSync) NodeIsSynced() (bool, uint64) {
 	return s.nodeIsSynced, s.currentSlot
 }
 
-func (s *InitialSync) exitInitialSync(ctx context.Context) error {
+func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock) error {
 	if s.nodeIsSynced {
 		return nil
 	}
-	state := s.highestObservedCanonicalState
-	var err error
-	if err := s.db.SaveBlock(s.latestSyncedBlock); err != nil {
-		return fmt.Errorf("could not save block: %v", err)
+	state, err := s.db.State(ctx)
+	if err != nil {
+		return err
 	}
-	if err := s.db.UpdateChainHead(ctx, s.latestSyncedBlock, state); err != nil {
-		return fmt.Errorf("could not update chain head: %v", err)
+	if err := s.chainService.VerifyBlockValidity(ctx, block, state); err != nil {
+		return err
 	}
-	if err := s.db.SaveHistoricalState(state); err != nil {
-		return fmt.Errorf("could not save state: %v", err)
+	if err := s.db.SaveBlock(block); err != nil {
+		return err
+	}
+	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
+	if err != nil {
+		return err
+	}
+	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
+		return err
+	}
+	if err := s.db.UpdateChainHead(ctx, block, state); err != nil {
+		return err
 	}
 
 	canonicalState, err := s.db.State(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get state: %v", err)
+	}
+	stateRoot, err := hashutil.HashProto(canonicalState)
+	if err != nil {
+		return fmt.Errorf("could not hash state: %v", err)
+	}
+	if stateRoot != s.highestObservedRoot {
+		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
+		log.Fatalf(
+			"Canonical state root %#x does not match highest observed root from peer %#x",
+			stateRoot,
+			s.highestObservedRoot,
+		)
 	}
 	log.Infof("Canonical state slot: %d", canonicalState.Slot-params.BeaconConfig().GenesisSlot)
 	log.Info("Exiting initial sync and starting normal sync")

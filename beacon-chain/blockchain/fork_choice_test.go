@@ -1236,6 +1236,9 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
+	if err := chainSvc.beaconDB.SaveState(ctx, &pb.BeaconState{Slot: genesisSlot + lastAvailableSlot}); err != nil {
+		t.Fatal(err)
+	}
 	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
 		t.Fatal(err)
 	}
@@ -1253,7 +1256,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if newJustifiedState.Slot-genesisSlot != offset {
+	if newJustifiedState.Slot-genesisSlot != lastAvailableSlot {
 		t.Errorf("Wanted justification state slot: %d, got: %d",
 			offset, newJustifiedState.Slot-genesisSlot)
 	}

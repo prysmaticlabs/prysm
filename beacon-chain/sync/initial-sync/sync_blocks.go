@@ -34,7 +34,7 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 
 	if block.Slot == s.highestObservedSlot {
 		s.currentSlot = s.highestObservedSlot
-		if err := s.exitInitialSync(s.ctx); err != nil {
+		if err := s.exitInitialSync(s.ctx, block); err != nil {
 			log.Errorf("Could not exit initial sync: %v", err)
 			return
 		}
@@ -143,7 +143,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	log.Infof("Saving block with root %#x and slot %d for initial sync", root, block.Slot-params.BeaconConfig().GenesisSlot)
 	s.currentSlot = block.Slot
-	s.latestSyncedBlock = block
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
