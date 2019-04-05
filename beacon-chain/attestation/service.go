@@ -238,6 +238,8 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 					"justifiedEpoch":  attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 				},
 			).Info("Attestation store updated")
+
+			reportVoteMetrics(committee[i], attestation.Data.Slot - params.BeaconConfig().GenesisSlot)
 		}
 	}
 	return nil
