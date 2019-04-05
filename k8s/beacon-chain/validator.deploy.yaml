@@ -10,8 +10,9 @@ spec:
       component: validator
   strategy:
     type: RollingUpdate
-    maxSurge: 0
-    maxUnavailable: '10%'
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: '5%'
   minReadySeconds: 20
   template:
     metadata:
