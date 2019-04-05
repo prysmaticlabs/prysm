@@ -77,7 +77,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -138,7 +138,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
 		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}

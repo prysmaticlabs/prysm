@@ -18,7 +18,7 @@ import (
 func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.checkBlockValidity")
 	defer span.End()
-	beaconState, err := s.db.State(ctx)
+	beaconState, err := s.db.HeadState(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}

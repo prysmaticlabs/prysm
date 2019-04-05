@@ -72,7 +72,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	// Set the attestation data's slot to head_state.slot where the slot
 	// is the canonical head of the beacon chain.
-	attData.Slot = infoRes.Slot
+	attData.Slot = infoRes.HeadSlot
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head
 	// is the validator's view of the head block of the beacon chain during the slot.
 	attData.BeaconBlockRootHash32 = infoRes.BeaconBlockRootHash32
