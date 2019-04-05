@@ -158,20 +158,9 @@ func (q *Querier) run() {
 			queryLog.Info("Exiting goroutine")
 			return
 		case <-ticker.C:
-			q.RequestLatestHead()
+			go q.RequestLatestHead()
 		case msg := <-q.responseBuf:
-			response := msg.Data.(*pb.ChainHeadResponse)
-			queryLog.Infof(
-				"Latest chain head is at slot: %d and state root: %#x",
-				response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
-			)
-			q.currentHeadSlot = response.CanonicalSlot
-			q.currentStateRoot = response.CanonicalStateRootHash32
-			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
-
-			ticker.Stop()
-			responseSub.Unsubscribe()
-			q.cancel()
+			go q.handleLatestHeadResponse(msg, ticker, responseSub)
 		}
 	}
 }
@@ -181,6 +170,21 @@ func (q *Querier) run() {
 func (q *Querier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
 	q.p2p.Broadcast(context.Background(), request)
+}
+
+func (q *Querier) handleLatestHeadResponse(msg p2p.Message, ticker time.Ticker, sub event.Subscription) {
+	response := msg.Data.(*pb.ChainHeadResponse)
+	queryLog.Infof(
+		"Latest chain head is at slot: %d and state root: %#x",
+		response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
+	)
+	q.currentHeadSlot = response.CanonicalSlot
+	q.currentStateRoot = response.CanonicalStateRootHash32
+	q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
+
+	ticker.Stop()
+	sub.Unsubscribe()
+	q.cancel()
 }
 
 // IsSynced checks if the node is currently synced with the
