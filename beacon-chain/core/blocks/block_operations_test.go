@@ -876,7 +876,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 		},
 	}
 	justifiedBlock := &pb.BeaconBlock{
-		Slot: helpers.StartSlot(params.BeaconConfig().GenesisEpoch + 1) - 2, // Imagine 2 skip blocks
+		Slot: helpers.StartSlot(params.BeaconConfig().GenesisEpoch+1) - 2, // Imagine 2 skip blocks
 	}
 	if err := db.SaveBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
