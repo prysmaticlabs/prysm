@@ -164,8 +164,8 @@ func (s *Server) Stop() error {
 
 // Status returns an error if the p2p service does not have sufficient peers.
 func (s *Server) Status() error {
-	if peerCount(s.host) < 5 {
-		return errors.New("less than 5 peers")
+	if peerCount(s.host) < 3 {
+		return errors.New("less than 3 peers")
 	}
 	return nil
 }
