@@ -123,5 +123,5 @@ func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, b *big.Int) {
 		db.pendingDeposits = db.pendingDeposits[idx+1:]
 	}
 
-	pendingDepositsCount.Set(len(db.pendingDeposits))
+	pendingDepositsCount.Set(float64(len(db.pendingDeposits)))
 }
