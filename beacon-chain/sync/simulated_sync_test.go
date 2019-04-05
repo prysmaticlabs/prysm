@@ -121,8 +121,8 @@ func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB
 	return bd, beacondb, privKeys
 }
 
-func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB) {
-	bd, beacondb, privKeys := setupSimBackendAndDB(t)
+func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB, [32]byte) {
+	bd, beacondb, _ := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
 	ctx := context.Background()
@@ -153,20 +153,47 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 		mockChain.sFeed.Send(time.Now())
 	}
 
-	for i := 1; i <= numOfBlocks; i++ {
-		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
-			t.Fatalf("Unable to generate block in simulated backend %v", err)
-		}
-		blocks := bd.InMemoryBlocks()
-		if err := beacondb.SaveBlock(blocks[i]); err != nil {
-			t.Fatalf("Unable to save block %v", err)
-		}
-		if err := beacondb.UpdateChainHead(ctx, blocks[i], bd.State()); err != nil {
-			t.Fatalf("Unable to update chain head %v", err)
-		}
+	state, err := beacondb.State(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inMemoryBlocks := bd.InMemoryBlocks()
+	genesisBlock := inMemoryBlocks[0]
+	stateRoot, err := hashutil.HashProto(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parentRoot, err := hashutil.HashBeaconBlock(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	return ss, beacondb
+	for i := 1; i <= numOfBlocks; i++ {
+		block := &pb.BeaconBlock{
+			Slot:             params.BeaconConfig().GenesisSlot + uint64(i),
+			ParentRootHash32: parentRoot[:],
+			StateRootHash32:  stateRoot[:],
+		}
+		state, err = mockChain.ApplyBlockStateTransition(ctx, block, state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stateRoot, err = hashutil.HashProto(state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		parentRoot, err = hashutil.HashBeaconBlock(block)
+		if err := mockChain.CleanupBlockOperations(ctx, block); err != nil {
+			t.Fatal(err)
+		}
+		if err := beacondb.SaveBlock(block); err != nil {
+			t.Fatal(err)
+		}
+		if err := beacondb.UpdateChainHead(ctx, block, state); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return ss, beacondb, stateRoot
 }
 
 func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T) (*Service, *db.BeaconDB) {
@@ -199,8 +226,8 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(simP2P.ctx, &pb.ChainHeadResponse{
-			Slot: params.BeaconConfig().GenesisSlot + 12,
-			Hash: stateRoot[:],
+			CanonicalSlot:            params.BeaconConfig().GenesisSlot + 12,
+			CanonicalStateRootHash32: stateRoot[:],
 		}, "")
 	}
 
@@ -219,27 +246,16 @@ func TestSyncing_AFullySyncedNode(t *testing.T) {
 	// Sets up a synced service which has its head at the current
 	// numOfBlocks from genesis. The blocks are generated through
 	// simulated backend.
-	ss, syncedDB := setUpSyncedService(numOfBlocks, newP2P, t)
+	ss, syncedDB, stateRoot := setUpSyncedService(numOfBlocks, newP2P, t)
 	defer ss.Stop()
 	defer db.TeardownDB(syncedDB)
 
-	bState, err := syncedDB.State(ctx)
-	if err != nil {
-		t.Fatalf("Could not retrieve state %v", err)
-	}
-
-	h, err := hashutil.HashProto(bState)
-	if err != nil {
-		t.Fatalf("unable to marshal the beacon state: %v", err)
-	}
-
 	// Sets up a sync service which has its current head at genesis.
-	us, unSyncedDB := setUpUnSyncedService(newP2P, h, t)
+	us, unSyncedDB := setUpUnSyncedService(newP2P, stateRoot, t)
 	defer us.Stop()
 	defer db.TeardownDB(unSyncedDB)
 
-	// Sets up another sync service which has its current head at genesis.
-	us2, unSyncedDB2 := setUpUnSyncedService(newP2P, h, t)
+	us2, unSyncedDB2 := setUpUnSyncedService(newP2P, stateRoot, t)
 	defer us2.Stop()
 	defer db.TeardownDB(unSyncedDB2)
 
@@ -247,15 +263,9 @@ func TestSyncing_AFullySyncedNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	justified, err := syncedDB.JustifiedState()
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	newP2P.Send(newP2P.ctx, &pb.BeaconStateResponse{
 		FinalizedState: finalized,
-		JustifiedState: justified,
-		CanonicalState: bState,
 	}, "")
 
 	timeout := time.After(10 * time.Second)
@@ -268,7 +278,7 @@ loop:
 			break loop
 		case <-tick:
 			_, slot1 := us.InitialSync.NodeIsSynced()
-			_, slot2 := us.InitialSync.NodeIsSynced()
+			_, slot2 := us2.InitialSync.NodeIsSynced()
 			if slot1 == uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot ||
 				slot2 == uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
 				break loop

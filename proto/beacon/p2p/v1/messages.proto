@@ -57,8 +57,8 @@ message BatchedBeaconBlockResponse {
 message ChainHeadRequest {}
 
 message ChainHeadResponse {
-  bytes hash = 1;
-  uint64 slot = 2;
+  uint64 canonical_slot = 1;
+  bytes canonical_state_root_hash32 = 2;
   bytes finalized_state_root_hash32s = 3;
 }
 
@@ -72,8 +72,6 @@ message BeaconStateRequest {
 
 message BeaconStateResponse {
   BeaconState finalized_state = 1;
-  BeaconState justified_state = 2;
-  BeaconState canonical_state = 3;
 }
 
 message AttestationAnnounce {

@@ -224,7 +224,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(10000 + params.BeaconConfig().GenesisSlot)),
 	}
 	justifiedBlock := &pbp2p.BeaconBlock{
-		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot)),
+		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500+params.BeaconConfig().GenesisSlot)) - 2, // Imagine two skip blocks
 	}
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
