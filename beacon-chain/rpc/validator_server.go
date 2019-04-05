@@ -31,7 +31,7 @@ type ValidatorServer struct {
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
 	if vs.beaconDB.HasValidator(req.Pubkey) {
-		beaconState, err := vs.beaconDB.State(vs.ctx)
+		beaconState, err := vs.beaconDB.HeadState(vs.ctx)
 		if err != nil {
 			return fmt.Errorf("could not retrieve beacon state: %v", err)
 		}
@@ -50,7 +50,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 			if !vs.beaconDB.HasValidator(req.Pubkey) {
 				continue
 			}
-			beaconState, err := vs.beaconDB.State(vs.ctx)
+			beaconState, err := vs.beaconDB.HeadState(vs.ctx)
 			if err != nil {
 				return fmt.Errorf("could not retrieve beacon state: %v", err)
 			}
@@ -88,7 +88,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
-	beaconState, err := vs.beaconDB.State(ctx)
+	beaconState, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -116,7 +116,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 func (vs *ValidatorServer) CommitteeAssignment(
 	ctx context.Context,
 	req *pb.CommitteeAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {
-	beaconState, err := vs.beaconDB.State(ctx)
+	beaconState, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
@@ -200,7 +200,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
 
-	beaconState, err := vs.beaconDB.State(ctx)
+	beaconState, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}

@@ -251,7 +251,7 @@ func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB, attsService *attestat
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.State(context.Background())
+	bState, err := service.beaconDB.HeadState(context.Background())
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 		)
 	}
 
-	beaconState, err := db.State(context.Background())
+	beaconState, err := db.HeadState(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +312,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Could not fetch beacon state: %v", err)
 	}
