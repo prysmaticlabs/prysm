@@ -3,6 +3,7 @@ package blocks_test
 import (
 	"bytes"
 	"context"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	// "crypto/rand"
 	"encoding/binary"
@@ -19,12 +20,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-var ValidatorCount = 4000000
-var RunAmount = 67108864 / ValidatorCount
-var QuickRunAmount = 268435456 / ValidatorCount
-var conditions = "SML"
+var ValidatorCount = 16000
+var RunAmount = 134217728 / ValidatorCount
+var QuickRunAmount = 100000
+var conditions = "BIG"
 
-var deposits = setupBenchmarkInitialDeposits(ValidatorCount)
+var genesisState = createGenesisState(ValidatorCount)
 
 func setBenchmarkConfig() {
 	c := params.BeaconConfig()
@@ -53,16 +54,13 @@ func setBenchmarkConfig() {
 }
 
 func BenchmarkProcessBlockRandao(b *testing.B) {
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-	if err != nil {
-		b.Fatal(err)
-	}
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
 
 	block := &pb.BeaconBlock{
 		RandaoReveal: []byte{2, 3, 4},
 	}
 
-	b.N = RunAmount
+	b.N = QuickRunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = blocks.ProcessBlockRandao(
@@ -76,10 +74,8 @@ func BenchmarkProcessBlockRandao(b *testing.B) {
 }
 
 func BenchmarkProcessEth1Data(b *testing.B) {
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-	if err != nil {
-		b.Fatal(err)
-	}
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
+
 	beaconState.Eth1DataVotes = []*pb.Eth1DataVote{
 		{
 			Eth1Data: &pb.Eth1Data{
@@ -111,10 +107,7 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-	if err != nil {
-		b.Fatal(err)
-	}
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
 
 	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings; i++ {
@@ -156,10 +149,7 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessAttesterSlashings(b *testing.B) {
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-	if err != nil {
-		b.Fatal(err)
-	}
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
 
 	slashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
@@ -218,10 +208,7 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessBlockAttestations(b *testing.B) {
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-	if err != nil {
-		b.Fatal(err)
-	}
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
 
 	var blockRoots [][]byte
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
@@ -275,10 +262,7 @@ func BenchmarkProcessBlockAttestations(b *testing.B) {
 }
 
 func BenchmarkProcessValidatorDeposits(b *testing.B) {
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-	if err != nil {
-		b.Fatal(err)
-	}
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
 
 	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
 
@@ -360,10 +344,7 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 }
 
 func BenchmarkProcessValidatorExits(b *testing.B) {
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-	if err != nil {
-		b.Fatal(err)
-	}
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
 
 	voluntaryExits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits)
 	for i := 0; i < len(voluntaryExits); i++ {
@@ -392,10 +373,7 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 }
 
 func BenchmarkProcessBlock(b *testing.B) {
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-	if err != nil {
-		b.Fatal(err)
-	}
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
 
 	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch + 6
 
@@ -514,7 +492,7 @@ func BenchmarkProcessBlock(b *testing.B) {
 	}
 }
 
-func setupBenchmarkInitialDeposits(numDeposits int) []*pb.Deposit {
+func createGenesisState(numDeposits int) *pb.BeaconState {
 	setBenchmarkConfig()
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
@@ -531,5 +509,10 @@ func setupBenchmarkInitialDeposits(numDeposits int) []*pb.Deposit {
 			DepositData: depositData,
 		}
 	}
-	return deposits
+	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		panic(err)
+	}
+
+	return genesisState
 }
