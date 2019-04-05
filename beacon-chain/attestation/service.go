@@ -91,7 +91,7 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
 func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
-	state, err := a.beaconDB.State(ctx)
+	state, err := a.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
 	// Potential improvement, instead of getting the state,
 	// we could get a mapping of validator index to public key.
-	state, err := a.beaconDB.State(ctx)
+	state, err := a.beaconDB.HeadState(ctx)
 	if err != nil {
 		return err
 	}

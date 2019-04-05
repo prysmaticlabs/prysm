@@ -289,12 +289,9 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.CurrentShufflingStartShard = (state.CurrentShufflingStartShard +
 		helpers.CurrentEpochCommitteeCount(state)) % params.BeaconConfig().ShardCount
-	seed, err := helpers.GenerateSeed(state, state.CurrentShufflingEpoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not update current shuffling seed: %v", err)
-	}
+	// TODO(#2072)we have removed the generation of a new seed for the timebeing to get it stable for the testnet.
+	// this will be handled in Q2.
 	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
-	state.CurrentShufflingSeedHash32 = seed[:]
 	return state, nil
 }
 
@@ -319,11 +316,8 @@ func ProcessPartialValidatorRegistry(ctx context.Context, state *pb.BeaconState)
 	if epochsSinceLastRegistryChange > 1 &&
 		mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
 		state.CurrentShufflingEpoch = helpers.NextEpoch(state)
-		seed, err := helpers.GenerateSeed(state, state.CurrentShufflingEpoch)
-		if err != nil {
-			return nil, fmt.Errorf("could not generate seed: %v", err)
-		}
-		state.CurrentShufflingSeedHash32 = seed[:]
+		// TODO(#2072)we have removed the generation of a new seed for the timebeing to get it stable for the testnet.
+		// this will be handled in Q2.
 	}
 	return state, nil
 }

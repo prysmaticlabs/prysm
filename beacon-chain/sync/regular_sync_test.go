@@ -76,7 +76,7 @@ func (ms *mockChainService) ApplyBlockStateTransition(ctx context.Context, block
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) VerifyBlockValidity(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+func (ms *mockChainService) VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
 	return nil
 }
 
@@ -687,7 +687,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := db.InitializeState(unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}

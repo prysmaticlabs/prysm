@@ -70,7 +70,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 		return nil
 	}
 
-	beaconState, err := rs.db.State(ctx)
+	beaconState, err := rs.db.HeadState(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return err
