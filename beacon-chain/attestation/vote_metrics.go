@@ -1,7 +1,6 @@
-package db
+package attestation
 
 import (
-	"encoding/hex"
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -23,15 +22,8 @@ var (
 	})
 )
 
-func reportVoteMetrics(state *pb.BeaconState) {
-	s := params.BeaconConfig().GenesisSlot
+func reportVoteMetrics(index uint64, block *pb.BeaconBlock) {
 	e := params.BeaconConfig().GenesisEpoch
-	currentEpoch := state.Slot / params.BeaconConfig().SlotsPerEpoch
-	// Validator balances
-	for i, bal := range state.ValidatorBalances {
-		validatorBalancesGauge.WithLabelValues(
-			"0x" + hex.EncodeToString(state.ValidatorRegistry[i].Pubkey), // Validator
-		).Set(float64(bal))
-	}
-
+	validatorLastVoteGauge.WithLabelValues(
+		"v" + strconv.Itoa(int(index))).Set(float64(block.Slot - e))
 }

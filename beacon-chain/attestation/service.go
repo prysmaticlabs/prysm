@@ -171,6 +171,7 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 // have been noted in the attestation pool. If not, it updates the
 // attestation pool with attester's public key to attestation.
 func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
+	totalAttestationSeen.Inc()
 	// Potential improvement, instead of getting the state,
 	// we could get a mapping of validator index to public key.
 	state, err := a.beaconDB.HeadState(ctx)
@@ -239,7 +240,12 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 				},
 			).Info("Attestation store updated")
 
-			reportVoteMetrics(committee[i], attestation.Data.Slot - params.BeaconConfig().GenesisSlot)
+			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+			votedBlock, err := a.beaconDB.Block(blockRoot)
+			if err != nil {
+				return err
+			}
+			reportVoteMetrics(committee[i], votedBlock)
 		}
 	}
 	return nil
