@@ -234,7 +234,7 @@ func (vs *ValidatorServer) assignment(
 		}
 	}
 
-	return nil, fmt.Errorf("Could not find validator %d assignment starting epoch %d",
+	return nil, fmt.Errorf("could not find validator %d assignment starting epoch %d",
 		idx, epochStart-params.BeaconConfig().GenesisSlot)
 }
 
