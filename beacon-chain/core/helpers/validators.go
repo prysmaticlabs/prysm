@@ -71,7 +71,6 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
-<<<<<<< HEAD
 	}
 
 	if err := activeIndicesCache.AddActiveIndicesList(&cache.ActiveIndicesByEpoch{
@@ -107,8 +106,6 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		ActiveCount: count,
 	}); err != nil {
 		return 0, fmt.Errorf("could not save active count for cache: %v", err)
-=======
->>>>>>> 9f9aff1c8... Make cases for max conditions
 	}
 
 	return count, nil
