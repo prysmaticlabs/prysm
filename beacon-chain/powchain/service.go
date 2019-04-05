@@ -247,7 +247,7 @@ func (w *Web3Service) processSubscribedHeaders(header *gethTypes.Header) {
 	blockNumberGauge.Set(float64(header.Number.Int64()))
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
-	w.blockTime = time.Unix(header.Time.Int64(), 0)
+	w.blockTime = time.Unix(int64(header.Time), 0)
 	log.WithFields(logrus.Fields{
 		"blockNumber": w.blockHeight,
 		"blockHash":   w.blockHash.Hex(),
