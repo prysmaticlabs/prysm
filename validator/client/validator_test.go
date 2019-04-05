@@ -288,6 +288,35 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	}
 }
 
+func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+
+	slot := uint64(1)
+	v := validator{
+		key:             validatorKey,
+		validatorClient: client,
+		assignment: &pb.CommitteeAssignmentResponse{
+			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				{
+					Committee: []uint64{},
+					Slot:      10,
+					Shard:     20,
+				},
+			},
+		},
+	}
+	client.EXPECT().CommitteeAssignment(
+		gomock.Any(),
+		gomock.Any(),
+	).Times(0)
+
+	if err := v.UpdateAssignments(context.Background(), slot); err != nil {
+		t.Errorf("Could not update assignments: %v", err)
+	}
+}
+
 func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
