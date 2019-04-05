@@ -26,7 +26,7 @@ import (
 var _ = BlockProcessor(&ChainService{})
 
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
-	beaconState, _ := chainService.beaconDB.State(context.TODO())
+	beaconState, _ := chainService.beaconDB.HeadState(context.Background())
 	saveLatestBlock := beaconState.LatestBlock
 
 	chainHeadRoot, err := chainService.ChainHeadRoot()
