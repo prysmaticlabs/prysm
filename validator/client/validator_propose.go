@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -106,7 +107,14 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	}
 
 	// 3. Compute state root transition from parent block to the new block.
-	block.StateRootHash32 = []byte("root")
+	resp, err := v.proposerClient.ComputeStateRoot(ctx, block)
+	if err != nil {
+		log.WithField(
+			"block", proto.MarshalTextString(block),
+		).Errorf("Not proposing! Unable to compute state root: %v", err)
+		return
+	}
+	block.StateRootHash32 = resp.GetStateRoot()
 
 	// 4. Sign the complete block.
 	// TODO(1366): BLS sign block
