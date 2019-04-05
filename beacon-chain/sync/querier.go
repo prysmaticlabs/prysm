@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	queryLog = logrus.WithField("prefix", "syncQuerier")
-	chainHeadPollingInterval = 5*time.Second
+	queryLog                 = logrus.WithField("prefix", "syncQuerier")
+	chainHeadPollingInterval = 5 * time.Second
 )
 
 type powChainService interface {
