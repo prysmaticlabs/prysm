@@ -12,6 +12,7 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -53,6 +54,7 @@ func ExecuteStateTransition(
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
 	headRoot [32]byte,
+	beaconDB *db.BeaconDB,
 	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
 	var err error
@@ -62,7 +64,7 @@ func ExecuteStateTransition(
 
 	// Execute per block transition.
 	if block != nil {
-		state, err = ProcessBlock(ctx, state, block, config)
+		state, err = ProcessBlock(ctx, state, block, beaconDB, config)
 		if err != nil {
 			return nil, fmt.Errorf("could not process block: %v", err)
 		}
@@ -103,6 +105,7 @@ func ProcessBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
+	beaconDB *db.BeaconDB,
 	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
 
@@ -153,7 +156,7 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
 
-	state, err = b.ProcessBlockAttestations(ctx, state, block, config.VerifySignatures)
+	state, err = b.ProcessBlockAttestations(ctx, state, block, config.VerifySignatures, beaconDB)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
