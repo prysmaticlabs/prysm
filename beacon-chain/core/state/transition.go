@@ -295,6 +295,9 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 			prevEpochAttesterIndices,
 			prevEpochAttestingBalance,
 			totalBalance)
+		if config.Logging {
+			log.WithField("balances", state.ValidatorBalances).Debug("Balance after FFG src calculation")
+		}
 		// Apply rewards/penalties to validators for attesting
 		// expected FFG target.
 		state = bal.ExpectedFFGTarget(
@@ -303,6 +306,9 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 			prevEpochBoundaryAttesterIndices,
 			prevEpochBoundaryAttestingBalances,
 			totalBalance)
+		if config.Logging {
+			log.WithField("balances", state.ValidatorBalances).Debug("Balance after FFG target calculation")
+		}
 		// Apply rewards/penalties to validators for attesting
 		// expected beacon chain head.
 		state = bal.ExpectedBeaconChainHead(
@@ -311,6 +317,9 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 			prevEpochHeadAttesterIndices,
 			prevEpochHeadAttestingBalances,
 			totalBalance)
+		if config.Logging {
+			log.WithField("balances", state.ValidatorBalances).Debug("Balance after chain head calculation")
+		}
 		// Apply rewards for to validators for including attestations
 		// based on inclusion distance.
 		state, err = bal.InclusionDistance(
@@ -322,10 +331,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 			return nil, fmt.Errorf("could not calculate inclusion dist rewards: %v", err)
 		}
 		if config.Logging {
-			log.Infof("Balance after FFG src calculation: %v", state.ValidatorBalances)
-			log.Infof("Balance after FFG target calculation: %v", state.ValidatorBalances)
-			log.Infof("Balance after chain head calculation: %v", state.ValidatorBalances)
-			log.Infof("Balance after inclusion distance calculation: %v", state.ValidatorBalances)
+			log.WithField("balances", state.ValidatorBalances).Debug("Balance after inclusion distance calculation")
 		}
 
 	case epochsSinceFinality > 4:
@@ -443,11 +449,11 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 
 	if config.Logging {
 		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")
-		log.WithField("attesterIndices", currentBoundaryAttesterIndices).Info("Current epoch boundary attester indices")
+		log.WithField("attesterIndices", currentBoundaryAttesterIndices).Debug("Current epoch boundary attester indices")
 		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of prev epoch attestations")
-		log.WithField("attesterIndices", prevEpochAttesterIndices).Info("Previous epoch attester indices")
+		log.WithField("attesterIndices", prevEpochAttesterIndices).Debug("Previous epoch attester indices")
 		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of prev epoch boundary attestations")
-		log.WithField("attesterIndices", prevEpochBoundaryAttesterIndices).Info("Previous epoch boundary attester indices")
+		log.WithField("attesterIndices", prevEpochBoundaryAttesterIndices).Debug("Previous epoch boundary attester indices")
 		log.WithField(
 			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Previous justified epoch")
