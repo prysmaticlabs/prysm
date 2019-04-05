@@ -495,22 +495,16 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
 	blockRoot, err := BlockRoot(beaconState, helpers.StartSlot(att.Data.JustifiedEpoch))
 	if err != nil {
-		log.Errorf("DEBUG: continuing anyway with this error: could not get block root for justified epoch: %v", err)
-		//return fmt.Errorf("could not get block root for justified epoch: %v", err)
-	} else {
-		justifiedBlockRoot := att.Data.JustifiedBlockRootHash32
-		if !bytes.Equal(justifiedBlockRoot, blockRoot) {
-			log.Errorf(
-				"DEBUG: Continuing anyway with this error: expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
-				justifiedBlockRoot,
-				blockRoot,
-			)
-			//	return fmt.Errorf(
-			//		"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
-			//		justifiedBlockRoot,
-			//		blockRoot,
-			//	)
-		}
+		return fmt.Errorf("could not get block root for justified epoch: %v", err)
+	}
+
+	justifiedBlockRoot := att.Data.JustifiedBlockRootHash32
+	if !bytes.Equal(justifiedBlockRoot, blockRoot) {
+		return fmt.Errorf(
+			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
+			justifiedBlockRoot,
+			blockRoot,
+		)
 	}
 
 	// Verify that either:
