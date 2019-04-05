@@ -9,14 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -286,12 +287,22 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
+	justifiedBlock := &pb.BeaconBlock{
+		Slot: helpers.StartSlot(params.BeaconConfig().GenesisEpoch),
+	}
+	if err := db.SaveBlock(justifiedBlock); err != nil {
+		t.Fatal(err)
+	}
+	justifiedRoot, err := hashutil.HashBeaconBlock(justifiedBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			JustifiedBlockRootHash32: blockRoots[0],
+			JustifiedBlockRootHash32: justifiedRoot[:],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},
@@ -381,12 +392,22 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		},
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
+	justifiedBlock := &pb.BeaconBlock{
+		Slot: helpers.StartSlot(params.BeaconConfig().GenesisEpoch),
+	}
+	if err := db.SaveBlock(justifiedBlock); err != nil {
+		t.Fatal(err)
+	}
+	justifiedRoot, err := hashutil.HashBeaconBlock(justifiedBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			JustifiedBlockRootHash32: blockRoots[0],
+			JustifiedBlockRootHash32: justifiedRoot[:],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},
