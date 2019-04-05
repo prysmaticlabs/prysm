@@ -91,6 +91,12 @@ func (ss *Service) Stop() error {
 // Status checks the status of the node. It returns nil if it's synced
 // with the rest of the network and no errors occurred. Otherwise, it returns an error.
 func (ss *Service) Status() error {
+	if !ss.Querier.chainStarted {
+		return nil
+	}
+	if ss.Querier.atGenesis {
+		return nil
+	}
 	synced, currentSyncedSlot := ss.InitialSync.NodeIsSynced()
 	if !synced {
 		return fmt.Errorf(
