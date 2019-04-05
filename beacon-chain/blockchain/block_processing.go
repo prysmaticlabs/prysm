@@ -69,8 +69,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	log.WithFields(logrus.Fields{
-		"slotNumber":     block.Slot - params.BeaconConfig().GenesisSlot,
-		"currentEpoch": helpers.SlotToEpoch(block.Slot)-params.BeaconConfig().GenesisEpoch,
+		"slotNumber":   block.Slot - params.BeaconConfig().GenesisSlot,
+		"currentEpoch": helpers.SlotToEpoch(block.Slot) - params.BeaconConfig().GenesisEpoch,
 	}).Info("State transition complete")
 
 	// We process the block's contained deposits, attestations, and other operations

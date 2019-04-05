@@ -471,7 +471,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 		).Info("Validator registry length")
 		totalBalance := float32(0)
 		lowestBalance := float32(state.ValidatorBalances[0])
-        highestBalance := float32(state.ValidatorBalances[0])
+		highestBalance := float32(state.ValidatorBalances[0])
 		for _, val := range state.ValidatorBalances {
 			if float32(val) < lowestBalance {
 				lowestBalance = float32(val)
@@ -482,11 +482,11 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 			totalBalance += float32(val)
 		}
 		avgBalance := totalBalance / float32(len(state.ValidatorBalances)) / float32(params.BeaconConfig().GweiPerEth)
-        lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
+		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
 		highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
 		log.WithFields(logrus.Fields{
 			"averageBalance": avgBalance,
-			"lowestBalance": lowestBalance,
+			"lowestBalance":  lowestBalance,
 			"highestBalance": highestBalance,
 		}).Info("Validator balances")
 	}
