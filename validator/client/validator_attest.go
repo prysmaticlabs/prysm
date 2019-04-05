@@ -22,6 +22,9 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
+	span.AddAttributes(
+		trace.StringAttribute("validator", fmt.Sprintf("%#x", v.key.PublicKey.Marshal())),
+	)
 
 	v.waitToSlotMidpoint(ctx, slot)
 
@@ -132,6 +135,14 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		"shard":           attData.Shard,
 		"slot":            slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Beacon node processed attestation successfully")
+	span.AddAttributes(
+		trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)),
+		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationHash)),
+		trace.Int64Attribute("shard", int64(attData.Shard)),
+		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32)),
+		trace.Int64Attribute("justifiedEpoch", int64(attData.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)),
+		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
+	)
 }
 
 // waitToSlotMidpoint waits until halfway through the current slot period
