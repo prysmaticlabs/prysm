@@ -32,14 +32,14 @@ The block-processing benches are marked with the following:
 
 | Benchmark             |   16K BIG  | 300K SML | 300K BIG | 4M SML | 4M BIG |
 | --------------------- | ---------- | -------- | -------- | ------ | ------ |
-| ProcessBlockRandao      | 650.38 μs | 14.367 ms | 25.047 ms | dddddd | dddsad |
-| ProcessEth1Data          | 1.523 μs | 2.216 μs | 4.422 μs | dddddd | dddsad |
-| ProcessProposerSlashings | 9.950 ms | 4.145 μs | 288.01 ms | dddddd | dddsad |
-| ProcessAttesterSlashings | 5.015 ms | 1.479 μs | 140.65 ms | dddddd | dddsad |
-| ProcessBlockAttestations | 127.27 μs | 19.20 μs | 116.3 μs | dddddd | dddsad |
-| ProcessValidatorDeposits | 2.992 ms | 81.012 ms | 82.948 ms | dddddd | dddsad |
-| ProcessValidatorExits    | 487 ns   | 510 ns | 3.240 μs  | dddddd | dddsad |
-| ProcessBlock            | 18.357 ms | 91.70 ms | 468.05 ms | dddddd | dddsad |
+| ProcessBlockRandao       | 1.324 μs | 1.331 μs | 1.420 μs | dddddd | dddsad |
+| ProcessEth1Data          | 1.645 μs  | 1.479 μs | 1.472 μs | dddddd | dddsad |
+| ProcessProposerSlashings | 9.717 ms  |  390 ns  | 210.27 ms | dddddd | dddsad |
+| ProcessAttesterSlashings | 4.753 ms  |  268 ns  | 105.17 ms | dddddd | dddsad |
+| ProcessBlockAttestations | 127.69 μs | 13.62 μs | 116.98 μs | dddddd | dddsad |
+| ProcessValidatorDeposits | 3.042 ms  | 61.147 ms | 60.855 ms | dddddd | dddsad |
+| ProcessValidatorExits    |  486 ns   |  271 ns  | 450 ns  | dddddd | dddsad |
+| ProcessBlock             | 17.708 ms | 61.821 ms | 375.97 ms | dddddd | dddsad |
 
 
 ### Epoch Processing

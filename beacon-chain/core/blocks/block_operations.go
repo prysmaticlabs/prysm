@@ -95,11 +95,11 @@ func ProcessBlockRandao(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockRandao")
 	defer span.End()
 
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
-	if err != nil {
-		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
-	}
 	if verifySignatures {
+		proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+		if err != nil {
+			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+		}
 		if err := verifyBlockRandao(beaconState, block, proposerIdx, enableLogging); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
