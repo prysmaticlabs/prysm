@@ -296,9 +296,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) error {
 		return errors.New("incoming message is not type *pb.BeaconBlockRequestBySlotNumber")
 	}
 
-	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
-	block, err := rs.db.BlockBySlot(request.SlotNumber)
-	getBlockSpan.End()
+	block, err := rs.db.BlockBySlot(ctx, request.SlotNumber)
 	if err != nil || block == nil {
 		if block == nil {
 			log.Debugf("Block with slot %d does not exist", request.SlotNumber)
@@ -560,7 +558,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	response := make([]*pb.BeaconBlock, 0, blockRange)
 	for i := startSlot; i <= endSlot; i++ {
-		retBlock, err := rs.db.BlockBySlot(i)
+		retBlock, err := rs.db.BlockBySlot(ctx, i)
 		if err != nil {
 			log.Errorf("Unable to retrieve block from db %v", err)
 			continue

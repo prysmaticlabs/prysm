@@ -41,7 +41,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 	// the slot of justified block saved in DB.
 	if lastJustifiedSlot > savedJustifiedBlock.Slot {
 		// Retrieve the new justified block from DB using the new justified slot and save it.
-		newJustifiedBlock, err := c.beaconDB.BlockBySlot(lastJustifiedSlot)
+		newJustifiedBlock, err := c.beaconDB.BlockBySlot(ctx, lastJustifiedSlot)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 			log.Debugf("Saving new justified block, no block with slot %d in db, trying slot %d",
 				lastAvailBlkSlot, lastAvailBlkSlot-1)
 			lastAvailBlkSlot--
-			newJustifiedBlock, err = c.beaconDB.BlockBySlot(lastAvailBlkSlot)
+			newJustifiedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
 				return err
 			}
@@ -80,7 +80,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 	}
 	if lastFinalizedSlot > savedFinalizedBlock.Slot {
 		// Retrieve the new finalized block from DB using the new finalized slot and save it.
-		newFinalizedBlock, err := c.beaconDB.BlockBySlot(lastFinalizedSlot)
+		newFinalizedBlock, err := c.beaconDB.BlockBySlot(ctx, lastFinalizedSlot)
 		if err != nil {
 			return err
 		}
@@ -91,7 +91,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 			log.Debugf("Saving new finalized block, no block with slot %d in db, trying slot %d",
 				lastAvailBlkSlot, lastAvailBlkSlot-1)
 			lastAvailBlkSlot--
-			newFinalizedBlock, err = c.beaconDB.BlockBySlot(lastAvailBlkSlot)
+			newFinalizedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
 				return err
 			}
@@ -138,7 +138,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified head: %v", err)
 	}
-	head, err := c.lmdGhost(justifiedHead, justifiedState, attestationTargets)
+	head, err := c.lmdGhost(ctx, justifiedHead, justifiedState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
@@ -201,6 +201,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 //            return head
 //        head = max(children, key=get_vote_count)
 func (c *ChainService) lmdGhost(
+	ctx context.Context,
 	startBlock *pb.BeaconBlock,
 	startState *pb.BeaconState,
 	voteTargets map[uint64]*pb.BeaconBlock,
@@ -209,7 +210,7 @@ func (c *ChainService) lmdGhost(
 
 	head := startBlock
 	for {
-		children, err := c.blockChildren(head, highestSlot)
+		children, err := c.blockChildren(ctx, head, highestSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
@@ -247,7 +248,7 @@ func (c *ChainService) lmdGhost(
 // Spec pseudocode definition:
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
-func (c *ChainService) blockChildren(block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
+func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
 
 	currentRoot, err := hashutil.HashBeaconBlock(block)
@@ -256,7 +257,7 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, highestSlot uint64) 
 	}
 	startSlot := block.Slot + 1
 	for i := startSlot; i <= highestSlot; i++ {
-		block, err := c.beaconDB.BlockBySlot(i)
+		block, err := c.beaconDB.BlockBySlot(ctx, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block by slot: %v", err)
 		}
