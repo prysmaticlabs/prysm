@@ -186,7 +186,7 @@ func (q *Querier) RequestLatestHead() {
 // IsSynced checks if the node is currently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
-	if !q.chainStarted  {
+	if !q.chainStarted {
 		return true, nil
 	}
 	if q.atGenesis {
