@@ -96,7 +96,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	}
 	for beaconState.Slot < req.ProposalBlockSlot {
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
+			ctx, beaconState, nil /* block */, blockRoot, ps.beaconDB, &state.TransitionConfig{},
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
@@ -168,6 +168,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 			beaconState,
 			nil,
 			parentHash,
+			ps.beaconDB,
 			state.DefaultConfig(),
 		)
 		if err != nil {
@@ -179,6 +180,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		beaconState,
 		req,
 		parentHash,
+		ps.beaconDB,
 		state.DefaultConfig(),
 	)
 	if err != nil {

@@ -11,8 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
@@ -28,7 +27,7 @@ var (
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
 func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, eth1Data *pb.Eth1Data) error {
-	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
+	beaconState, err := genesis.BeaconState(deposits, genesisTime, eth1Data)
 	if err != nil {
 		return err
 	}
@@ -36,7 +35,7 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, 
 	// #nosec G104
 	stateEnc, _ := proto.Marshal(beaconState)
 	stateHash := hashutil.Hash(stateEnc)
-	genesisBlock := b.NewGenesisBlock(stateHash[:])
+	genesisBlock := genesis.NewGenesisBlock(stateHash[:])
 	// #nosec G104
 	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
