@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
@@ -46,7 +47,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 
 func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	beaconState, err := genesis.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +81,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 
 func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	beaconState, err := genesis.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -684,6 +685,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	attestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1)
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -703,12 +706,15 @@ func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
 		state,
 		block,
 		false,
+		db,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -736,12 +742,15 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 		state,
 		block,
 		false,
+		db,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -769,12 +778,15 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 		state,
 		block,
 		false,
+		db,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -803,12 +815,15 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 		state,
 		block,
 		false,
+		db,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -837,49 +852,15 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		state,
 		block,
 		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
-	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-
-	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 64,
-		PreviousJustifiedEpoch: 1,
-		LatestBlockRootHash32S: blockRoots,
-	}
-	attestations := []*pb.Attestation{
-		{
-			Data: &pb.AttestationData{
-				Slot:                     params.BeaconConfig().GenesisSlot + 60,
-				JustifiedBlockRootHash32: []byte{},
-				JustifiedEpoch:           1,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-
-	want := "could not get block root for justified epoch"
-	if _, err := blocks.ProcessBlockAttestations(
-		context.Background(),
-		state,
-		block,
-		false,
+		db,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	var blockRoots [][]byte
 	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
@@ -915,12 +896,15 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 		state,
 		block,
 		false,
+		db,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	var blockRoots [][]byte
 	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
@@ -967,12 +951,15 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		state,
 		block,
 		false,
+		db,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	var blockRoots [][]byte
 	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
@@ -1015,12 +1002,15 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		state,
 		block,
 		false,
+		db,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	var blockRoots [][]byte
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
@@ -1059,6 +1049,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		state,
 		block,
 		false,
+		db,
 	)
 	pendingAttestations := newState.LatestAttestations
 	if err != nil {
