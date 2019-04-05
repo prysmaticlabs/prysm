@@ -174,7 +174,7 @@ func (vs *ValidatorServer) assignment(
 	if err != nil {
 		return nil, err
 	}
-	vsr, err := vs.ValidatorStatus(ctx, &pb.ValidatorIndexRequest{PublicKey: pubkey})
+	status, err := vs.validatorStatus(pubkey, beaconState)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (vs *ValidatorServer) assignment(
 		Slot:       slot,
 		IsProposer: isProposer,
 		PublicKey:  pubkey,
-		Status:     vsr.Status,
+		Status:     status,
 	}, nil
 }
 
@@ -204,9 +204,21 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
+
+	status, err := vs.validatorStatus(req.PublicKey, beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not get active validator index: %v", err)
+		return nil, err
+	}
+
+	return &pb.ValidatorStatusResponse{
+		Status: status,
+	}, nil
+}
+
+func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.BeaconState) (pb.ValidatorStatus, error) {
+	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
+	if err != nil {
+		return pb.ValidatorStatus_UNKNOWN_STATUS, fmt.Errorf("could not get active validator index: %v", err)
 	}
 
 	var status pb.ValidatorStatus
@@ -230,9 +242,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 		status = pb.ValidatorStatus_UNKNOWN_STATUS
 	}
 
-	return &pb.ValidatorStatusResponse{
-		Status: status,
-	}, nil
+	return status, nil
 }
 
 func (vs *ValidatorServer) retrieveActiveValidator(beaconState *pbp2p.BeaconState, pubkey []byte) (*pbp2p.Validator, error) {
