@@ -175,7 +175,7 @@ func (q *Querier) RequestLatestHead() {
 	q.p2p.Broadcast(context.Background(), request)
 }
 
-func (q *Querier) handleLatestHeadResponse(msg p2p.Message, ticker time.Ticker, sub event.Subscription) {
+func (q *Querier) handleLatestHeadResponse(msg p2p.Message, ticker *time.Ticker, sub event.Subscription) {
 	response := msg.Data.(*pb.ChainHeadResponse)
 	queryLog.Infof(
 		"Latest chain head is at slot: %d and state root: %#x",
