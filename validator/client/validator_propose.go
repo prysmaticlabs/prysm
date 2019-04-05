@@ -28,6 +28,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.key.PublicKey.Marshal())))
 	log.Info("Performing a beacon block proposal...")
 	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.
@@ -117,6 +118,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		log.WithError(err).Error("Failed to propose block")
 		return
 	}
+	span.AddAttributes(
+		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRootHash32)),
+		trace.Int64Attribute("numDeposits", int64(len(block.Body.Deposits))),
+		trace.Int64Attribute("numAttestations", int64(len(block.Body.Attestations))),
+	)
 	log.WithFields(logrus.Fields{
 		"blockRoot": fmt.Sprintf("%#x", blkResp.BlockRootHash32),
 	}).Info("Proposed new beacon block")
