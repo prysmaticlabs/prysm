@@ -495,9 +495,14 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 
 	// Verify that attestation.data.justified_block_root is equal to
 	// get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
-	justifiedBlock, err := beaconDB.BlockBySlot(helpers.StartSlot(att.Data.JustifiedEpoch))
-	if err != nil {
-		return fmt.Errorf("could not get justified block: %v", err)
+	justifiedSlot := helpers.StartSlot(att.Data.JustifiedEpoch)
+	var justifiedBlock *pb.BeaconBlock
+	var err error
+	for i := uint64(0); justifiedBlock == nil && i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		justifiedBlock, err = beaconDB.BlockBySlot(justifiedSlot - i)
+		if err != nil {
+			return fmt.Errorf("could not get justified block: %v", err)
+		}
 	}
 	blockRoot, err := hashutil.HashBeaconBlock(justifiedBlock)
 	if err != nil {
