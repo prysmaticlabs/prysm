@@ -13,6 +13,7 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -33,10 +34,8 @@ func init() {
 }
 
 type chainService interface {
-	CanonicalBlockFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pbp2p.BeaconBlock) (*pbp2p.BeaconState, error)
-	SaveHistoricalState(beaconState *pbp2p.BeaconState) error
+	blockchain.BlockReceiver
 }
 
 type operationService interface {
@@ -58,22 +57,20 @@ type powChainService interface {
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	beaconDB              *db.BeaconDB
-	chainService          chainService
-	powChainService       powChainService
-	operationService      operationService
-	port                  string
-	listener              net.Listener
-	withCert              string
-	withKey               string
-	grpcServer            *grpc.Server
-	canonicalBlockChan    chan *pbp2p.BeaconBlock
-	canonicalStateChan    chan *pbp2p.BeaconState
-	incomingAttestation   chan *pbp2p.Attestation
-	slotAlignmentDuration time.Duration
-	credentialError       error
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	beaconDB            *db.BeaconDB
+	chainService        chainService
+	powChainService     powChainService
+	operationService    operationService
+	port                string
+	listener            net.Listener
+	withCert            string
+	withKey             string
+	grpcServer          *grpc.Server
+	canonicalStateChan  chan *pbp2p.BeaconState
+	incomingAttestation chan *pbp2p.Attestation
+	credentialError     error
 }
 
 // Config options for the beacon node RPC server.
@@ -92,19 +89,17 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                   ctx,
-		cancel:                cancel,
-		beaconDB:              cfg.BeaconDB,
-		chainService:          cfg.ChainService,
-		powChainService:       cfg.POWChainService,
-		operationService:      cfg.OperationService,
-		port:                  cfg.Port,
-		withCert:              cfg.CertFlag,
-		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
-		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
-		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation:   make(chan *pbp2p.Attestation, params.BeaconConfig().DefaultBufferSize),
+		ctx:                 ctx,
+		cancel:              cancel,
+		beaconDB:            cfg.BeaconDB,
+		chainService:        cfg.ChainService,
+		powChainService:     cfg.POWChainService,
+		operationService:    cfg.OperationService,
+		port:                cfg.Port,
+		withCert:            cfg.CertFlag,
+		withKey:             cfg.KeyFlag,
+		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation: make(chan *pbp2p.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
 }
 

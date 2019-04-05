@@ -57,7 +57,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if params.BeaconConfig().LatestSlashedExitLength != 8192 {
 		t.Error("LatestSlashedExitLength should be 8192 for these tests to pass")
 	}
-	latestSlashedExitLength := int(params.BeaconConfig().LatestSlashedExitLength)
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
@@ -143,8 +142,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.LatestCrosslinks) != shardCount {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.LatestSlashedBalances,
-		make([]uint64, latestSlashedExitLength)) {
+	if !reflect.DeepEqual(newState.LatestSlashedBalances, make([]uint64, params.BeaconConfig().LatestSlashedExitLength)) {
 		t.Error("LatestSlashedBalances was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.LatestAttestations, []*pb.PendingAttestation{}) {

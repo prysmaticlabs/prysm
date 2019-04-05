@@ -26,6 +26,7 @@ type ValidatorService struct {
 	endpoint  string
 	withCert  string
 	key       *keystore.Key
+	keys      map[string]*keystore.Key
 }
 
 // Config for the validator service.
@@ -40,17 +41,24 @@ type Config struct {
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	validatorKeyFile := cfg.KeystorePath + params.BeaconConfig().ValidatorPrivkeyFileName
+	validatorFolder := cfg.KeystorePath
+	validatorPrefix := params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(cfg.KeystorePath)
-	key, err := ks.GetKey(validatorKeyFile, cfg.Password)
+	keys, err := ks.GetKeys(validatorFolder, validatorPrefix, cfg.Password)
 	if err != nil {
 		return nil, fmt.Errorf("could not get private key: %v", err)
+	}
+	var key *keystore.Key
+	for _, v := range keys {
+		key = v
+		break
 	}
 	return &ValidatorService{
 		ctx:      ctx,
 		cancel:   cancel,
 		endpoint: cfg.Endpoint,
 		withCert: cfg.CertFlag,
+		keys:     keys,
 		key:      key,
 	}, nil
 }

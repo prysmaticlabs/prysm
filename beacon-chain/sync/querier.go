@@ -50,7 +50,7 @@ type Querier struct {
 	db                        *db.BeaconDB
 	chainService              chainService
 	currentHeadSlot           uint64
-	currentHeadHash           []byte
+	currentStateRoot          []byte
 	currentFinalizedStateRoot [32]byte
 	responseBuf               chan p2p.Message
 	chainStartBuf             chan time.Time
@@ -120,7 +120,6 @@ func (q *Querier) Stop() error {
 }
 
 func (q *Querier) listenForStateInitialization() {
-
 	sub := q.chainService.StateInitializedFeed().Subscribe(q.chainStartBuf)
 	defer sub.Unsubscribe()
 	for {
@@ -140,9 +139,7 @@ func (q *Querier) listenForStateInitialization() {
 }
 
 func (q *Querier) run() {
-
 	responseSub := q.p2p.Subscribe(&pb.ChainHeadResponse{}, q.responseBuf)
-
 	// Ticker so that service will keep on requesting for chain head
 	// until they get a response.
 	ticker := time.NewTicker(1 * time.Second)
@@ -164,9 +161,12 @@ func (q *Querier) run() {
 			q.RequestLatestHead()
 		case msg := <-q.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
-			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
-			q.currentHeadSlot = response.Slot
-			q.currentHeadHash = response.Hash
+			queryLog.Infof(
+				"Latest chain head is at slot: %d and state root: %#x",
+				response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
+			)
+			q.currentHeadSlot = response.CanonicalSlot
+			q.currentStateRoot = response.CanonicalStateRootHash32
 			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
 
 			ticker.Stop()
@@ -183,7 +183,7 @@ func (q *Querier) RequestLatestHead() {
 	q.p2p.Broadcast(context.Background(), request)
 }
 
-// IsSynced checks if the node is cuurently synced with the
+// IsSynced checks if the node is currently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
 	if q.chainStarted && q.atGenesis {

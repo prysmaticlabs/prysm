@@ -21,9 +21,9 @@ http_archive(
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "afed91a52aa6ef069fa6abe80c88512a349b62aa4a617cbba3c93da4b642a123",
-    strip_prefix = "bazel-tools-986ed8f71dc910ac8766c920cef56e0e94db5bd0",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/986ed8f71dc910ac8766c920cef56e0e94db5bd0.tar.gz"],
+    sha256 = "87e1c493c1f91d101da5c654c8be01cddeea8ad6ef0c53be5fa1a2dfe75e2807",
+    strip_prefix = "bazel-tools-c7e0fd9070f04f88bf671e57f101aa0877a9b5c8",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/c7e0fd9070f04f88bf671e57f101aa0877a9b5c8.tar.gz"],
 )
 
 http_archive(
@@ -35,15 +35,15 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "fb87ed5965cef93188af9a7287511639403f4b0da418961ce6defb9dcf658f51",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.7/rules_nodejs-0.27.7.tar.gz"],
+    sha256 = "213dcf7e72f3acd4d1e369b7a356f3e5d9560f380bd655b13b7c0ea425d7c419",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.9/rules_nodejs-0.27.9.tar.gz"],
 )
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "c18619d129c5a22798e8a8149c29a55f11f3b1a79872f5ad5282624e5c845f4a",
-    strip_prefix = "rules_k8s-54e9742bd2b75facdcf30fe3a1307ca0fad17385",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/54e9742bd2b75facdcf30fe3a1307ca0fad17385.tar.gz",
+    sha256 = "fd10df16cc6bfdb3384b685073152696a81973dd59ef2bc7b543055d2cbd469f",
+    strip_prefix = "rules_k8s-e6259a4034c86053c27944bcce234f28db0c5e30",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/e6259a4034c86053c27944bcce234f28db0c5e30.tar.gz",
 )
 
 load(
@@ -124,9 +124,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "4985e8d2da96c9ec293897cc19573390c392e068e733b3d85972b43aac2f1309",
-    strip_prefix = "repo-infra-52d76ba3344e755f5a9ab595b94b21df49448ffb",
-    url = "https://github.com/kubernetes/repo-infra/archive/52d76ba3344e755f5a9ab595b94b21df49448ffb.tar.gz",
+    sha256 = "4a8384320fba401cbf21fef177aa113ed8fe35952ace98e00b796cac87ae7868",
+    strip_prefix = "repo-infra-df02ded38f9506e5bbcbf21702034b4fef815f2f",
+    url = "https://github.com/kubernetes/repo-infra/archive/df02ded38f9506e5bbcbf21702034b4fef815f2f.tar.gz",
 )
 
 go_repository(
@@ -182,7 +182,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "2308ba3c0036ddf8ac390c893b71d946c57a7328",  # v0.0.2
+    commit = "c184a55f180beb5018f3cf4a3970de8e432e59e4",  # v0.0.3
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -249,7 +249,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_connmgr",
-    commit = "8bddc198c80e6242d016361b3c5f02fb920e9faa",  # v0.0.1
+    commit = "e80dd2e9f839e44febfcb7e6b38ded8761332eb6",  # v0.0.3
     importpath = "github.com/libp2p/go-libp2p-interface-connmgr",
 )
 
@@ -634,7 +634,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "e742f5a8defa1f9f5d723dfa04c962e680dc33f0",  # v0.2.0
+    commit = "bce707a4d0ea3488942724b3bcc1c8338f38f991",  # v0.3.0
     importpath = "google.golang.org/api",
 )
 
@@ -750,13 +750,13 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "d1855272f4c0b93bd3cf4cf2fa27f1daf8880433",  # v0.0.5
+    commit = "da821d95c0f0268f0134841589c55efa9e8e5422",  # v0.0.6
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "1b371980cb3fe9edba40c0f0584042e5cb4477a4",  # v0.0.1
+    commit = "f3abe0ceeea5156a0873c09d3f3b36c38d881f93",  # v0.0.2
     importpath = "github.com/ipfs/go-datastore",
 )
 
@@ -941,7 +941,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "2fa99f4c25c422525316dcb1fd3d5b94e1944cfd",  # v0.37.1
+    commit = "458e1f376a2b44413160b5d301183b65debaa3f6",  # v0.37.2
     importpath = "cloud.google.com/go",
 )
 
@@ -1055,12 +1055,12 @@ go_repository(
 
 go_repository(
     name = "com_github_apache_thrift",
-    commit = "ddec431b4a402258c3b56b873908c98a15f22de4",
+    commit = "384647d290e2e4a55a14b1b7ef1b7e66293a2c33",  # v0.12.0
     importpath = "github.com/apache/thrift",
 )
 
 go_repository(
     name = "com_github_grpc_ecosystem_go_grpc_prometheus",
-    commit = "68e3a13e41175110a447e67246a59873d6aca902",
+    commit = "502116f1a0a0c1140aab04fd3787489209b357d3",  # v1.2.0
     importpath = "github.com/grpc-ecosystem/go-grpc-prometheus",
 )

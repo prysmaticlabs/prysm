@@ -34,6 +34,7 @@ var (
 )
 
 type chainService interface {
+	blockchain.BlockReceiver
 	blockchain.BlockProcessor
 	blockchain.ForkChoice
 	blockchain.ChainFeeds
@@ -85,6 +86,7 @@ type RegularSync struct {
 	highestObservedSlot          uint64
 	blocksAwaitingProcessing     map[[32]byte]p2p.Message
 	blocksAwaitingProcessingLock sync.RWMutex
+	blockAnnouncements           map[uint64][]byte
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -151,6 +153,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
 		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
+		blockAnnouncements:       make(map[uint64][]byte),
 	}
 }
 
@@ -236,6 +239,7 @@ func (rs *RegularSync) run() {
 			go rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
 		}
 	}
+
 	log.Info("Exiting regular sync run()")
 }
 
@@ -340,9 +344,14 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Debugf("Requested state root is different from locally stored state root %#x", req.FinalizedStateRootHash32S)
 		return err
 	}
-	log.WithField("beaconState", fmt.Sprintf("%#x", root)).Debug("Sending beacon state to peer")
+	log.WithField(
+		"beaconState", fmt.Sprintf("%#x", root),
+	).Debug("Sending finalized, justified, and canonical states to peer")
 	defer sentState.Inc()
-	if err := rs.p2p.Send(ctx, &pb.BeaconStateResponse{BeaconState: fState}, msg.Peer); err != nil {
+	resp := &pb.BeaconStateResponse{
+		FinalizedState: fState,
+	}
+	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -363,10 +372,15 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve chain head %v", err)
 		return err
 	}
-
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	currentState, err := rs.db.State(ctx)
 	if err != nil {
-		log.Errorf("Could not tree hash block %v", err)
+		log.Errorf("Could not retrieve current state %v", err)
+		return err
+	}
+
+	stateRoot, err := hashutil.HashProto(currentState)
+	if err != nil {
+		log.Errorf("Could not tree hash state %v", err)
 		return err
 	}
 
@@ -383,8 +397,8 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 	}
 
 	req := &pb.ChainHeadResponse{
-		Slot:                      block.Slot,
-		Hash:                      blockRoot[:],
+		CanonicalSlot:             block.Slot,
+		CanonicalStateRootHash32:  stateRoot[:],
 		FinalizedStateRootHash32S: finalizedRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
