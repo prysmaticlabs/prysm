@@ -74,7 +74,9 @@ func (ms *mockChainService) ApplyBlockStateTransition(
 }
 
 func (ms *mockChainService) VerifyBlockValidity(
-	block *pb.BeaconBlock, beaconState *pb.BeaconState,
+	ctx context.Context,
+	block *pb.BeaconBlock,
+	beaconState *pb.BeaconState,
 ) error {
 	return nil
 }
@@ -150,17 +152,9 @@ func TestSavingBlock_InSync(t *testing.T) {
 			BlockHash32: []byte{},
 		},
 	}
-	jState := &pb.BeaconState{
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
-		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
-		},
-	}
 
 	stateResponse := &pb.BeaconStateResponse{
 		FinalizedState: fState,
-		JustifiedState: jState,
-		CanonicalState: jState,
 	}
 
 	incorrectState := &pb.BeaconState{
@@ -176,8 +170,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 
 	incorrectStateResponse := &pb.BeaconStateResponse{
 		FinalizedState: incorrectState,
-		JustifiedState: incorrectState,
-		CanonicalState: incorrectState,
 	}
 
 	stateRoot, err := hashutil.HashProto(fState)
@@ -274,6 +266,16 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	ss.processBatchedBlocks(msg)
 
+	state, err := db.State(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := hashutil.HashProto(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ss.highestObservedRoot = stateRoot
+
 	if ss.currentSlot != expectedSlot {
 		t.Errorf("Expected slot %d equal to current slot %d", expectedSlot, ss.currentSlot)
 	}
@@ -299,9 +301,6 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	batchSize := 20
 	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
 	ss.highestObservedSlot = expectedSlot
-	ss.highestObservedCanonicalState = &pb.BeaconState{
-		Slot: expectedSlot,
-	}
 	blk, err := ss.db.BlockBySlot(params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
@@ -311,6 +310,15 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		t.Fatalf("Unable to hash block %v", err)
 	}
 	parentHash := h[:]
+	state, err := db.State(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := hashutil.HashProto(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ss.highestObservedRoot = stateRoot
 
 	for i := 1; i <= batchSize; i++ {
 		// skip slots
@@ -335,7 +343,15 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Could not hash block %v", err)
 		}
 		parentHash = hash[:]
-		ss.latestSyncedBlock = block
+		state, err := db.State(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		stateRoot, err := hashutil.HashProto(state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ss.highestObservedRoot = stateRoot
 	}
 
 	if ss.currentSlot != expectedSlot {

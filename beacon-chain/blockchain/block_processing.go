@@ -28,7 +28,7 @@ type BlockReceiver interface {
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
 // to beacon blocks and generating a new beacon state from the Ethereum 2.0 core primitives.
 type BlockProcessor interface {
-	VerifyBlockValidity(block *pb.BeaconBlock, beaconState *pb.BeaconState) error
+	VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error
 	ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error)
 	CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error
 }
@@ -43,14 +43,14 @@ type BlockProcessor interface {
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	beaconState, err := c.beaconDB.State(ctx)
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, block.Slot-1)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 	saveLatestBlock := beaconState.LatestBlock
 
 	// We first verify the block's basic validity conditions.
-	if err := c.VerifyBlockValidity(block, beaconState); err != nil {
+	if err := c.VerifyBlockValidity(ctx, block, beaconState); err != nil {
 		return beaconState, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
 	}
 
@@ -130,7 +130,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 	// Check for skipped slots.
 	numSkippedSlots := 0
 	for beaconState.Slot < block.Slot-1 {
-		beaconState, err = c.runStateTransition(headRoot, nil, beaconState)
+		beaconState, err = c.runStateTransition(ctx, headRoot, nil, beaconState)
 		if err != nil {
 			return beaconState, fmt.Errorf("could not execute state transition without block %v", err)
 		}
@@ -140,7 +140,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 		log.Warnf("Processed %d skipped slots", numSkippedSlots)
 	}
 
-	beaconState, err = c.runStateTransition(headRoot, block, beaconState)
+	beaconState, err = c.runStateTransition(ctx, headRoot, block, beaconState)
 	if err != nil {
 		return beaconState, fmt.Errorf("could not execute state transition with block %v", err)
 	}
@@ -153,13 +153,17 @@ func (c *ChainService) ApplyBlockStateTransition(
 //   The node has processed its state up to slot, block.slot - 1.
 //   The Ethereum 1.0 block pointed to by the state.processed_pow_receipt_root has been processed and accepted.
 //   The node's local clock time is greater than or equal to state.genesis_time + block.slot * SECONDS_PER_SLOT.
-func (c *ChainService) VerifyBlockValidity(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+func (c *ChainService) VerifyBlockValidity(
+	ctx context.Context,
+	block *pb.BeaconBlock,
+	beaconState *pb.BeaconState,
+) error {
 	if block.Slot == params.BeaconConfig().GenesisSlot {
 		return fmt.Errorf("cannot process a genesis block: received block with slot %d",
 			block.Slot-params.BeaconConfig().GenesisSlot)
 	}
 	powBlockFetcher := c.web3Service.Client().BlockByHash
-	if err := b.IsValidBlock(c.ctx, beaconState, block,
+	if err := b.IsValidBlock(ctx, beaconState, block,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
 	}
@@ -197,7 +201,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 
 	// Update attestation store with latest attestation target.
 	for _, att := range block.Body.Attestations {
-		if err := c.attsService.UpdateLatestAttestation(c.ctx, att); err != nil {
+		if err := c.attsService.UpdateLatestAttestation(ctx, att); err != nil {
 			return fmt.Errorf("failed to update latest attestation for store: %v", err)
 		}
 	}
@@ -213,10 +217,13 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 // updates important checkpoints and local persistent data during epoch transitions. It serves as a wrapper
 // around the more low-level, core state transition function primitive.
 func (c *ChainService) runStateTransition(
-	headRoot [32]byte, block *pb.BeaconBlock, beaconState *pb.BeaconState,
+	ctx context.Context,
+	headRoot [32]byte,
+	block *pb.BeaconBlock,
+	beaconState *pb.BeaconState,
 ) (*pb.BeaconState, error) {
 	newState, err := state.ExecuteStateTransition(
-		c.ctx,
+		ctx,
 		beaconState,
 		block,
 		headRoot,
@@ -236,6 +243,11 @@ func (c *ChainService) runStateTransition(
 		log.WithField(
 			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Block transition successfully processed")
+
+		// Save Historical States.
+		if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
+			return nil, fmt.Errorf("could not save historical state: %v", err)
+		}
 	}
 
 	if helpers.IsEpochEnd(newState.Slot) {
@@ -248,12 +260,8 @@ func (c *ChainService) runStateTransition(
 			return newState, fmt.Errorf("could not delete validator index: %v", err)
 		}
 		// Update FFG checkpoints in DB.
-		if err := c.updateFFGCheckPts(newState); err != nil {
+		if err := c.updateFFGCheckPts(ctx, newState); err != nil {
 			return newState, fmt.Errorf("could not update FFG checkpts: %v", err)
-		}
-		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(newState); err != nil {
-			return newState, fmt.Errorf("could not save historical state: %v", err)
 		}
 		log.WithField(
 			"SlotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,

@@ -15,8 +15,6 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	defer span.End()
 	data := msg.Data.(*pb.BeaconStateResponse)
 	finalizedState := data.FinalizedState
-	justifiedState := data.JustifiedState
-	canonicalState := data.CanonicalState
 	recState.Inc()
 
 	if err := s.db.SaveFinalizedState(finalizedState); err != nil {
@@ -39,22 +37,12 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.SaveJustifiedState(justifiedState); err != nil {
+	if err := s.db.SaveJustifiedState(finalizedState); err != nil {
 		log.Errorf("Could not set beacon state for initial sync %v", err)
 		return
 	}
 
-	if err := s.db.SaveHistoricalState(justifiedState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
-		return
-	}
-
-	if err := s.db.SaveJustifiedBlock(justifiedState.LatestBlock); err != nil {
-		log.Errorf("Could not save finalized block %v", err)
-		return
-	}
-
-	if err := s.db.SaveBlock(justifiedState.LatestBlock); err != nil {
+	if err := s.db.SaveJustifiedBlock(finalizedState.LatestBlock); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
 		return
 	}
@@ -71,17 +59,8 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	s.db.PrunePendingDeposits(ctx, blkNum)
 
-	if err := s.db.SaveBlock(canonicalState.LatestBlock); err != nil {
-		log.Errorf("Could not save block %v", err)
-		return
-	}
-
 	if err := s.db.UpdateChainHead(ctx, finalizedState.LatestBlock, finalizedState); err != nil {
-		log.Errorf("Could not update chain head %v", err)
-		return
-	}
-	if err := s.db.SaveHistoricalState(canonicalState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
+		log.Errorf("Could not update chain head: %v", err)
 		return
 	}
 
@@ -89,12 +68,9 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	// beacon state to begin our sync from.
 	s.currentSlot = finalizedState.Slot
 	s.stateReceived = true
-	s.highestObservedCanonicalState = canonicalState
-	s.highestObservedSlot = canonicalState.Slot
 	log.Debugf(
-		"Successfully saved beacon state with the last finalized slot: %d, canonical slot: %d",
+		"Successfully saved beacon state with the last finalized slot: %d",
 		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
-		canonicalState.Slot-params.BeaconConfig().GenesisSlot,
 	)
 	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 	s.lastRequestedSlot = s.highestObservedSlot
