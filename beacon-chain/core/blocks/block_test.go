@@ -4,42 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
-	stateHash := []byte{0}
-	b1 := NewGenesisBlock(stateHash)
-
-	if b1.ParentRootHash32 == nil {
-		t.Error("genesis block missing ParentHash field")
-	}
-
-	if !reflect.DeepEqual(b1.Body.Attestations, []*pb.Attestation{}) {
-		t.Errorf("genesis block should have 0 attestations")
-	}
-
-	if !bytes.Equal(b1.RandaoReveal, params.BeaconConfig().ZeroHash[:]) {
-		t.Error("genesis block missing RandaoReveal field")
-	}
-
-	if !bytes.Equal(b1.StateRootHash32, stateHash) {
-		t.Error("genesis block StateRootHash32 isn't initialized correctly")
-	}
-	expectedEth1 := &pb.Eth1Data{
-		DepositRootHash32: params.BeaconConfig().ZeroHash[:],
-		BlockHash32:       params.BeaconConfig().ZeroHash[:],
-	}
-	if !proto.Equal(b1.Eth1Data, expectedEth1) {
-		t.Error("genesis block Eth1Data isn't initialized correctly")
-	}
-}
 
 func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {

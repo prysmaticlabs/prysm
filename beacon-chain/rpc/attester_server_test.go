@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -42,7 +42,7 @@ func TestAttestationDataAtSlot_EpochBoundaryFailure(t *testing.T) {
 		LatestBlockRootHash32S: make([][]byte, 20),
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().GenesisEpoch,
 	}
-	block := blocks.NewGenesisBlock([]byte("stateroot"))
+	block := genesis.NewGenesisBlock([]byte("stateroot"))
 	block.Slot = params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().SlotsPerEpoch + 1
 	attesterServer := &AttesterServer{
 		beaconDB: db,
@@ -211,7 +211,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(10000 + params.BeaconConfig().GenesisSlot)),
 	}
 	justifiedBlock := &pbp2p.BeaconBlock{
-		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot)),
+		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500+params.BeaconConfig().GenesisSlot)) - 2, // Imagine two skip block
 	}
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
