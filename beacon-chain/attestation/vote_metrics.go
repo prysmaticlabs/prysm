@@ -23,6 +23,11 @@ var (
 )
 
 func reportVoteMetrics(index uint64, block *pb.BeaconBlock) {
+	// Don't update vote metrics if the incoming block is nil.
+	if block == nil {
+		return
+	}
+
 	e := params.BeaconConfig().GenesisEpoch
 	validatorLastVoteGauge.WithLabelValues(
 		"v" + strconv.Itoa(int(index))).Set(float64(block.Slot - e))
