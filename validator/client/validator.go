@@ -146,7 +146,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	req := &pb.CommitteeAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  [][]byte{v.key.PublicKey.Marshal()},
+		PublicKeys: [][]byte{v.key.PublicKey.Marshal()},
 	}
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)

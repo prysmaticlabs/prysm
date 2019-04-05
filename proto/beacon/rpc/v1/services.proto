@@ -130,7 +130,7 @@ message ValidatorIndexResponse {
 
 message CommitteeAssignmentsRequest {
     uint64 epoch_start = 1;
-    repeated bytes public_key = 2;
+    repeated bytes public_keys = 2;
 }
 
 message PendingDepositsResponse {
