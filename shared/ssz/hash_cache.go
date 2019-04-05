@@ -74,9 +74,8 @@ func (b *hashCacheS) RootByEncodedHash(h common.Hash) (bool, *root, error) {
 	if item == nil {
 		hashCacheMiss.Inc()
 		return false, nil, nil
-	} else {
-		hashCacheHit.Inc()
 	}
+	hashCacheHit.Inc()
 	hInfo, ok := item.Value().(*root)
 	if !ok {
 		return false, nil, ErrNotMerkleRoot
