@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
@@ -417,6 +418,7 @@ func ProcessBlockAttestations(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
+	beaconDB *db.BeaconDB,
 ) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockAttestations")
 	defer span.End()
@@ -431,7 +433,7 @@ func ProcessBlockAttestations(
 	}
 
 	for idx, attestation := range atts {
-		if err := verifyAttestation(beaconState, attestation, verifySignatures); err != nil {
+		if err := verifyAttestation(beaconState, attestation, verifySignatures, beaconDB); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
@@ -445,7 +447,7 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
-func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
+func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool, beaconDB *db.BeaconDB) error {
 	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) less than genesis slot (%d)",
@@ -493,13 +495,22 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 
 	// Verify that attestation.data.justified_block_root is equal to
 	// get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
-	blockRoot, err := BlockRoot(beaconState, helpers.StartSlot(att.Data.JustifiedEpoch))
+	justifiedSlot := helpers.StartSlot(att.Data.JustifiedEpoch)
+	var justifiedBlock *pb.BeaconBlock
+	var err error
+	for i := uint64(0); justifiedBlock == nil && i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		justifiedBlock, err = beaconDB.BlockBySlot(justifiedSlot - i)
+		if err != nil {
+			return fmt.Errorf("could not get justified block: %v", err)
+		}
+	}
+	blockRoot, err := hashutil.HashBeaconBlock(justifiedBlock)
 	if err != nil {
-		return fmt.Errorf("could not get block root for justified epoch: %v", err)
+		return fmt.Errorf("could not get justified block: %v", err)
 	}
 
 	justifiedBlockRoot := att.Data.JustifiedBlockRootHash32
-	if !bytes.Equal(justifiedBlockRoot, blockRoot) {
+	if !bytes.Equal(justifiedBlockRoot, blockRoot[:]) {
 		return fmt.Errorf(
 			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
 			justifiedBlockRoot,

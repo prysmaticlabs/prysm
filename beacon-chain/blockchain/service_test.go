@@ -15,7 +15,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -203,7 +203,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 }
 
 func setupGenesisBlock(t *testing.T, cs *ChainService, beaconState *pb.BeaconState) ([32]byte, *pb.BeaconBlock) {
-	genesis := b.NewGenesisBlock([]byte{})
+	genesis := genesis.NewGenesisBlock([]byte{})
 	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
