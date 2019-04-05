@@ -15,7 +15,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var queryLog = logrus.WithField("prefix", "syncQuerier")
+var (
+	queryLog = logrus.WithField("prefix", "syncQuerier")
+	chainHeadPollingInterval = 5*time.Second
+)
 
 type powChainService interface {
 	HasChainStartLogOccurred() (bool, uint64, error)
@@ -142,7 +145,7 @@ func (q *Querier) run() {
 	responseSub := q.p2p.Subscribe(&pb.ChainHeadResponse{}, q.responseBuf)
 	// Ticker so that service will keep on requesting for chain head
 	// until they get a response.
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(chainHeadPollingInterval)
 
 	defer func() {
 		responseSub.Unsubscribe()
