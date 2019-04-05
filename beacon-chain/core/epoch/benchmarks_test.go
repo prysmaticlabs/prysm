@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"testing"
 	"time"
 
+	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
+	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -15,9 +18,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var ValidatorCount = 256
+var ValidatorCount = 16000
 var RunAmount = 67108864 / ValidatorCount
 var conditions = "MAX"
+
+var deposits = setupBenchmarkInitialDeposits(ValidatorCount)
 
 func setBenchmarkConfig() {
 	c := params.BeaconConfig()
@@ -42,7 +47,6 @@ func setBenchmarkConfig() {
 }
 
 func BenchmarkProcessEth1Data(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
@@ -86,7 +90,6 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 }
 
 func BenchmarkProcessJustification(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
@@ -107,18 +110,13 @@ func BenchmarkProcessJustification(b *testing.B) {
 }
 
 func BenchmarkProcessCrosslinks(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 5*params.BeaconConfig().SlotsPerEpoch
 
-	byteLength := int(uint64(ValidatorCount) / params.BeaconConfig().TargetCommitteeSize / 8 * 2)
-	var participationBitfield []byte
-	for i := 0; i < byteLength; i++ {
-		participationBitfield = append(participationBitfield, byte(0xff))
-	}
+	byteLength := int(uint64(ValidatorCount) / params.BeaconConfig().TargetCommitteeSize * 2)
 
 	var attestations []*pb.PendingAttestation
 	for i := 0; i < 10; i++ {
@@ -128,7 +126,7 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 				CrosslinkDataRootHash32: []byte{'A'},
 			},
 			// All validators attested to the above roots.
-			AggregationBitfield: participationBitfield,
+			AggregationBitfield: bitutil.FillBitfield(byteLength),
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -148,8 +146,195 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 	}
 }
 
+func BenchmarkProcessRewards(b *testing.B) {
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+
+	var attestations []*pb.PendingAttestation
+	for i := uint64(0); i < params.BeaconConfig().MaxAttestations; i++ {
+		attestations = append(attestations, &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:                     i + params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+				Shard:                    1,
+				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
+				JustifiedBlockRootHash32: []byte{0},
+			},
+			InclusionSlot: i + params.BeaconConfig().SlotsPerEpoch + 1 + params.BeaconConfig().GenesisSlot,
+		})
+	}
+
+	var randaoHashes [][]byte
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		randaoHashes = append(randaoHashes, []byte{byte(i)})
+	}
+
+	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1
+	beaconState.LatestAttestations = attestations
+	beaconState.LatestRandaoMixes = randaoHashes
+
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+
+	activeValidatorIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, currentEpoch)
+	totalBalance := e.TotalBalance(context.Background(), beaconState, activeValidatorIndices)
+
+	prevEpochAttestations := e.PrevAttestations(context.Background(), beaconState)
+	prevEpochAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+	prevEpochAttestingBalance := e.TotalBalance(context.Background(), beaconState, prevEpochAttesterIndices)
+
+	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(context.Background(), beaconState, prevEpochAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochBoundaryAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+	prevEpochBoundaryAttestingBalances := e.TotalBalance(context.Background(), beaconState, prevEpochBoundaryAttesterIndices)
+
+	prevEpochHeadAttestations, err := e.PrevHeadAttestations(context.Background(), beaconState, prevEpochAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochHeadAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+	prevEpochHeadAttestingBalances := e.TotalBalance(context.Background(), beaconState, prevEpochHeadAttesterIndices)
+
+	b.N = RunAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = bal.ExpectedFFGSource(
+			context.Background(),
+			beaconState,
+			prevEpochAttesterIndices,
+			prevEpochAttestingBalance,
+			totalBalance)
+
+		_ = bal.ExpectedFFGTarget(
+			context.Background(),
+			beaconState,
+			prevEpochBoundaryAttesterIndices,
+			prevEpochBoundaryAttestingBalances,
+			totalBalance)
+
+		_ = bal.ExpectedBeaconChainHead(
+			context.Background(),
+			beaconState,
+			prevEpochHeadAttesterIndices,
+			prevEpochHeadAttestingBalances,
+			totalBalance)
+
+		_, err = bal.InclusionDistance(
+			context.Background(),
+			beaconState,
+			prevEpochAttesterIndices,
+			totalBalance)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkProcessLeak(b *testing.B) {
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+
+	var attestations []*pb.PendingAttestation
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2; i++ {
+		attestations = append(attestations, &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:                     i + params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+				Shard:                    1,
+				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
+				JustifiedBlockRootHash32: []byte{0},
+			},
+			InclusionSlot: i + params.BeaconConfig().SlotsPerEpoch + 1 + params.BeaconConfig().GenesisSlot,
+		})
+	}
+
+	var randaoHashes [][]byte
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		randaoHashes = append(randaoHashes, []byte{byte(i)})
+	}
+
+	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1
+	beaconState.LatestAttestations = attestations
+	beaconState.LatestRandaoMixes = randaoHashes
+
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+
+	activeValidatorIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, currentEpoch)
+	totalBalance := e.TotalBalance(context.Background(), beaconState, activeValidatorIndices)
+
+	prevEpochAttestations := e.PrevAttestations(context.Background(), beaconState)
+	prevEpochAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(context.Background(), beaconState, prevEpochAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochBoundaryAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	prevEpochHeadAttestations, err := e.PrevHeadAttestations(context.Background(), beaconState, prevEpochAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochHeadAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	var epochsSinceFinality uint64 = 4
+	b.N = RunAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = bal.InactivityFFGSource(
+			context.Background(),
+			beaconState,
+			prevEpochAttesterIndices,
+			totalBalance,
+			epochsSinceFinality)
+
+		_ = bal.InactivityFFGTarget(
+			context.Background(),
+			beaconState,
+			prevEpochBoundaryAttesterIndices,
+			totalBalance,
+			epochsSinceFinality)
+
+		_ = bal.InactivityChainHead(
+			context.Background(),
+			beaconState,
+			prevEpochHeadAttesterIndices,
+			totalBalance)
+
+		_ = bal.InactivityExitedPenalties(
+			context.Background(),
+			beaconState,
+			totalBalance,
+			epochsSinceFinality)
+
+		_, err = bal.InactivityInclusionDistance(
+			context.Background(),
+			beaconState,
+			prevEpochAttesterIndices,
+			totalBalance)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkProcessPenaltiesAndExits(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
@@ -171,7 +356,6 @@ func BenchmarkProcessPenaltiesAndExits(b *testing.B) {
 }
 
 func BenchmarkProcessEjections(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
@@ -195,7 +379,6 @@ func BenchmarkProcessEjections(b *testing.B) {
 }
 
 func BenchmarkUpdateRegistry(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
@@ -226,7 +409,6 @@ func BenchmarkUpdateRegistry(b *testing.B) {
 }
 
 func BenchmarkActiveValidatorIndices(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
@@ -253,7 +435,6 @@ func BenchmarkActiveValidatorIndices(b *testing.B) {
 }
 
 func BenchmarkValidatorIndexMap(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
@@ -274,7 +455,6 @@ func BenchmarkValidatorIndexMap(b *testing.B) {
 // state = v.ProcessPenaltiesAndExits(ctx, state)
 
 func BenchmarkUpdateLatestActiveIndexRoots(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
@@ -298,7 +478,6 @@ func BenchmarkUpdateLatestActiveIndexRoots(b *testing.B) {
 }
 
 func BenchmarkUpdateLatestSlashedBalances(b *testing.B) {
-	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
