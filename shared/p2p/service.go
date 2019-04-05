@@ -135,9 +135,9 @@ func (s *Server) Start() {
 		}
 		bcfg := kaddht.DefaultBootstrapConfig
 		bcfg.Period = time.Duration(30 * time.Second)
-		//if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
-		//	log.Errorf("Failed to bootstrap DHT: %v", err)
-		//}
+		if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
+			log.Errorf("Failed to bootstrap DHT: %v", err)
+		}
 	}
 
 	if s.relayNodeAddr != "" {
