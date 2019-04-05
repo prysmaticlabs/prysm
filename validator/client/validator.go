@@ -107,7 +107,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	}
 	for _, pk := range validatorActivatedRecords {
 		log.WithFields(logrus.Fields{
-			"public key": pk,
+			"public key": fmt.Sprintf("%#x", pk),
 		}).Info("Validator activated")
 	}
 
@@ -208,8 +208,9 @@ func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
 			} else {
 				role = pb.ValidatorRole_ATTESTER
 			}
+		} else {
+			role = pb.ValidatorRole_UNKNOWN
 		}
-		role = pb.ValidatorRole_UNKNOWN
 		rolesAt[hex.EncodeToString(assignment.PublicKey)] = role
 	}
 	return rolesAt
