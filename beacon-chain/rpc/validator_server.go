@@ -121,7 +121,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
-	for _, pk := range req.PublicKey {
+	for _, pk := range req.PublicKeys {
 		a, err := vs.assignment(ctx, pk, beaconState, req.EpochStart)
 		if err != nil {
 			return nil, err

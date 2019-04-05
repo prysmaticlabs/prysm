@@ -47,7 +47,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	req := &pb.CommitteeAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  [][]byte{pubKey},
+		PublicKeys: [][]byte{pubKey},
 	}
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
