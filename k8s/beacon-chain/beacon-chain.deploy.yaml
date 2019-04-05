@@ -82,7 +82,7 @@ spec:
               port: 9090
           livenessProbe:
             initialDelaySeconds: 60
-            failureThreshold: 12 # Fails consistently for 2 minutes
+            failureThreshold: 30 # Fails consistently for 5 minutes
             periodSeconds: 10
             httpGet:
               path: /healthz
