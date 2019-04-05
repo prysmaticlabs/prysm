@@ -86,8 +86,8 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, 
 	})
 }
 
-// State fetches the canonical beacon chain's state from the DB.
-func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
+// HeadState fetches the canonical beacon chain's head state from the DB.
+func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 
@@ -358,7 +358,7 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 
 // GenesisTime returns the genesis timestamp for the state.
 func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
-	state, err := db.State(ctx)
+	state, err := db.HeadState(ctx)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)
 	}

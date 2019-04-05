@@ -153,7 +153,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 		mockChain.sFeed.Send(time.Now())
 	}
 
-	state, err := beacondb.State(ctx)
+	state, err := beacondb.HeadState(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

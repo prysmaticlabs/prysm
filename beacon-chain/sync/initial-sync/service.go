@@ -189,7 +189,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	if s.nodeIsSynced {
 		return nil
 	}
-	state, err := s.db.State(ctx)
+	state, err := s.db.HeadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 		return err
 	}
 
-	canonicalState, err := s.db.State(ctx)
+	canonicalState, err := s.db.HeadState(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get state: %v", err)
 	}

@@ -55,7 +55,7 @@ func TestInitializeState_OK(t *testing.T) {
 		t.Fatalf("Expected block height to equal 1. Got %d", b.GetSlot())
 	}
 
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get state: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestInitializeState_OK(t *testing.T) {
 		t.Fatalf("Failed to encode state: %v", err)
 	}
 
-	statePrime, err := db.State(ctx)
+	statePrime, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get state: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestFinalizeState_OK(t *testing.T) {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
-	state, err := db.State(context.Background())
+	state, err := db.HeadState(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to retrieve state: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestCurrentAndFinalizeState_OK(t *testing.T) {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
-	state, err := db.State(context.Background())
+	state, err := db.HeadState(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to retrieve state: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestCurrentAndFinalizeState_OK(t *testing.T) {
 		t.Fatalf("Unable to retrieve finalized state")
 	}
 
-	cState, err := db.State(context.Background())
+	cState, err := db.HeadState(context.Background())
 	if err != nil {
 		t.Fatalf("Unable to retrieve state")
 	}
@@ -192,7 +192,7 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}
 
-	state, err := db.State(ctx)
+	state, err := db.HeadState(ctx)
 	if err != nil {
 		b.Fatalf("Could not read DV beacon state from DB: %v", err)
 	}
@@ -210,7 +210,7 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := db.State(ctx)
+		_, err := db.HeadState(ctx)
 		if err != nil {
 			b.Fatalf("Could not read beacon state from cache: %v", err)
 		}

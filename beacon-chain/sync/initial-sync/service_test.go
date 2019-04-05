@@ -96,7 +96,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	if err := beaconDB.InitializeState(unixTime, []*pb.Deposit{}, nil); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := beaconDB.State(ctx)
+	beaconState, err := beaconDB.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}
@@ -266,7 +266,7 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	ss.processBatchedBlocks(msg)
 
-	state, err := db.State(context.Background())
+	state, err := db.HeadState(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		t.Fatalf("Unable to hash block %v", err)
 	}
 	parentHash := h[:]
-	state, err := db.State(context.Background())
+	state, err := db.HeadState(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +343,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Could not hash block %v", err)
 		}
 		parentHash = hash[:]
-		state, err := db.State(context.Background())
+		state, err := db.HeadState(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
