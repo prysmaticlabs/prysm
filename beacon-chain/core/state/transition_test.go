@@ -87,7 +87,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := genesis.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	beaconState, err := genesis.BeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := genesis.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	beaconState, err := genesis.BeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := genesis.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	beaconState, err := genesis.BeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := genesis.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	beaconState, err := genesis.BeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +339,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := genesis.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	beaconState, err := genesis.BeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}

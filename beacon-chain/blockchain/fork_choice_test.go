@@ -30,7 +30,7 @@ var _ = ForkChoice(&ChainService{})
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	deposits, _ := setupInitialDeposits(t, 5)
-	beaconState, err := genesis.GenesisBeaconState(deposits, 0, nil)
+	beaconState, err := genesis.BeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}

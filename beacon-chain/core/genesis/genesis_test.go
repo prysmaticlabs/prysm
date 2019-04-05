@@ -110,7 +110,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		})
 	}
 
-	newState, err := genesis.GenesisBeaconState(
+	newState, err := genesis.BeaconState(
 		deposits,
 		genesisTime,
 		&pb.Eth1Data{
@@ -211,8 +211,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	state1, _ := genesis.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
-	state2, _ := genesis.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
+	state1, _ := genesis.BeaconState(nil, 0, &pb.Eth1Data{})
+	state2, _ := genesis.BeaconState(nil, 0, &pb.Eth1Data{})
 
 	root1, err1 := hashutil.HashProto(state1)
 	root2, err2 := hashutil.HashProto(state2)
@@ -227,7 +227,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	s, _ := genesis.GenesisBeaconState(nil, 0, nil)
+	s, _ := genesis.BeaconState(nil, 0, nil)
 	want, got := len(s.LatestBlockRootHash32S), int(params.BeaconConfig().LatestBlockRootsLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)

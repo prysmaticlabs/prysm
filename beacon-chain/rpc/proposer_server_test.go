@@ -49,7 +49,7 @@ func TestProposeBlock_OK(t *testing.T) {
 		}
 	}
 
-	beaconState, err := genesis.GenesisBeaconState(deposits, 0, nil)
+	beaconState, err := genesis.BeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		}
 	}
 
-	beaconState, err := genesis.GenesisBeaconState(deposits, 0, nil)
+	beaconState, err := genesis.BeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}

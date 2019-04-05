@@ -48,7 +48,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 
 func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := genesis.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	beaconState, err := genesis.BeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 
 func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := genesis.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	beaconState, err := genesis.BeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}

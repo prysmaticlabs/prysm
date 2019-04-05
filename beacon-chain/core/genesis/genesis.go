@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// NewGenesisBlock initializes an initial block for the Ethereum 2.0 beacon chain that is
+// fixed in all clients and embedded in the protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
 		Slot:             params.BeaconConfig().GenesisSlot,
@@ -35,9 +37,9 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	return block
 }
 
-// GenesisBeaconState gets called when DepositsForChainStart count of
+// BeaconState initializes a genesis beacon state - it gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
-func GenesisBeaconState(
+func BeaconState(
 	genesisValidatorDeposits []*pb.Deposit,
 	genesisTime uint64,
 	eth1Data *pb.Eth1Data,
