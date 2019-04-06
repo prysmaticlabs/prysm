@@ -471,6 +471,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
+	// and verify that `attestation.data.justified_root` is equal to `state.justified_root
 	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
@@ -481,6 +482,14 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 				beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
+
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.JustifiedRoot) {
+			return fmt.Errorf(
+				"expected attestation.JustifiedRoot == state.JustifiedRoot, received %#x == %#x",
+				att.Data.JustifiedBlockRootHash32,
+				beaconState.JustifiedRoot,
+			)
+		}
 	} else {
 		if att.Data.JustifiedEpoch != beaconState.PreviousJustifiedEpoch {
 			return fmt.Errorf(
@@ -489,24 +498,14 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 				beaconState.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.PreviousJustifiedRoot) {
+			return fmt.Errorf(
+				"expected attestation.JustifiedRoot == state.PreviousJustifiedRoot, received %#x == %#x",
+				att.Data.JustifiedBlockRootHash32,
+				beaconState.JustifiedRoot,
+			)
+		}
 	}
-
-	// Verify that attestation.data.justified_block_root is equal to
-	// get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
-	blockRoot, err := BlockRoot(beaconState, helpers.StartSlot(att.Data.JustifiedEpoch))
-	if err != nil {
-		return fmt.Errorf("could not get block root for justified epoch: %v", err)
-	}
-
-	justifiedBlockRoot := att.Data.JustifiedBlockRootHash32
-	if !bytes.Equal(justifiedBlockRoot, blockRoot) {
-		return fmt.Errorf(
-			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
-			justifiedBlockRoot,
-			blockRoot,
-		)
-	}
-
 	// Verify that either:
 	// 1.) Crosslink(shard_block_root=attestation.data.shard_block_root,
 	// 	epoch=slot_to_epoch(attestation.data.slot)) equals

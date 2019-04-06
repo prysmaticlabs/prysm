@@ -222,7 +222,7 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		JustifiedEpoch:        3,
 		JustificationBitfield: 4,
 	}
-	newState := ProcessJustification(
+	newState, err := ProcessJustificationAndFinalization(
 		context.Background(),
 		state,
 		1,
@@ -231,6 +231,9 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		1,
 		false, /* disable logging */
 	)
+	if err != nil {
+		t.Errorf("Could not process justification and finalization of state %v", err)
+	}
 
 	if newState.PreviousJustifiedEpoch != 3 {
 		t.Errorf("New state's prev justified slot %d != old state's justified slot %d",
@@ -249,7 +252,7 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 
 	// Assume for the case where only prev epoch got justified. Verify
 	// justified_epoch = slot_to_epoch(state.slot) -2.
-	newState = ProcessJustification(
+	newState, err = ProcessJustificationAndFinalization(
 		context.Background(),
 		state,
 		0,
@@ -258,6 +261,9 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		1,
 		false, /* disable logging */
 	)
+	if err != nil {
+		t.Errorf("Could not process justification and finalization of state %v", err)
+	}
 	if newState.JustifiedEpoch != helpers.CurrentEpoch(state)-1 {
 		t.Errorf("New state's justified epoch %d != state's epoch -2: %d",
 			newState.JustifiedEpoch, helpers.CurrentEpoch(state)-1)

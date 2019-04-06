@@ -103,9 +103,12 @@ func GenesisBeaconState(
 
 		// Finality.
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
+		JustifiedRoot:          params.BeaconConfig().ZeroHash[:],
 		JustificationBitfield:  0,
 		FinalizedEpoch:         params.BeaconConfig().GenesisEpoch,
+		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
 
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,

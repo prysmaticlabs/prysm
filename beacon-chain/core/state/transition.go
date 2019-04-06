@@ -260,7 +260,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	}
 
 	// Update justification and finality.
-	state = e.ProcessJustification(
+	state, err = e.ProcessJustificationAndFinalization(
 		ctx,
 		state,
 		currentBoundaryAttestingBalances,
@@ -269,6 +269,9 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 		totalBalance,
 		config.Logging,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("could not process justification and finalization of state: %v", err)
+	}
 
 	// Process crosslinks records.
 	// TODO(#2072): Include an optimized process crosslinks version.
