@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
@@ -177,7 +179,7 @@ func (vs *ValidatorServer) assignment(
 		}
 	}
 
-	status, err := vs.validatorStatus(pubkey, beaconState)
+	vStatus, err := vs.validatorStatus(pubkey, beaconState)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +200,7 @@ func (vs *ValidatorServer) assignment(
 						Slot:       slot,
 						IsProposer: isProposer,
 						PublicKey:  pubkey,
-						Status:     status,
+						Status:     vStatus,
 					}, nil
 				}
 			}
@@ -229,13 +231,12 @@ func (vs *ValidatorServer) assignment(
 				Slot:       slot,
 				IsProposer: isProposer,
 				PublicKey:  pubkey,
-				Status:     status,
+				Status:     vStatus,
 			}, nil
 		}
 	}
 
-	return nil, fmt.Errorf("could not find validator %d assignment starting epoch %d",
-		idx, epochStart-params.BeaconConfig().GenesisSlot)
+	return nil, status.Error(codes.NotFound, "validator not found found in assignments")
 }
 
 // ValidatorStatus returns the validator status of the current epoch.
