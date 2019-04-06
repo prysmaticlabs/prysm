@@ -433,7 +433,7 @@ func ProcessBlockAttestations(
 	}
 
 	for idx, attestation := range atts {
-		if err := verifyAttestation(beaconState, attestation, verifySignatures, beaconDB); err != nil {
+		if err := verifyAttestation(ctx, beaconState, attestation, verifySignatures, beaconDB); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
@@ -447,7 +447,7 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
-func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool, beaconDB *db.BeaconDB) error {
+func verifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool, beaconDB *db.BeaconDB) error {
 	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) less than genesis slot (%d)",
@@ -499,7 +499,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	var justifiedBlock *pb.BeaconBlock
 	var err error
 	for i := uint64(0); justifiedBlock == nil && i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		justifiedBlock, err = beaconDB.BlockBySlot(justifiedSlot - i)
+		justifiedBlock, err = beaconDB.BlockBySlot(ctx, justifiedSlot-i)
 		if err != nil {
 			return fmt.Errorf("could not get justified block: %v", err)
 		}
