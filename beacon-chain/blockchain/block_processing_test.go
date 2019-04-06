@@ -126,7 +126,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Errorf("Block failed processing: %v", err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Processed beacon block")
+	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
 func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
