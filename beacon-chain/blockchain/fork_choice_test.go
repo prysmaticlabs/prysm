@@ -289,7 +289,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
+	childrenBlock, err := chainService.blockChildren(ctx, block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -364,7 +364,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
+	childrenBlock, err := chainService.blockChildren(ctx, block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -430,7 +430,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
+	childrenBlock, err := chainService.blockChildren(ctx, block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -488,7 +488,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	voteTargets[0] = block2
 
 	// LMDGhost should pick block 2.
-	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	head, err := chainService.lmdGhost(ctx, block1, state, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -573,7 +573,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	voteTargets[2] = block4
 	voteTargets[3] = block4
 	// LMDGhost should pick block 4.
-	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	head, err := chainService.lmdGhost(ctx, block1, state, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -690,7 +690,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	voteTargets[1] = block5
 	voteTargets[2] = block5
 	// LMDGhost should pick block 5.
-	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	head, err := chainService.lmdGhost(ctx, block1, state, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -761,7 +761,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(ctx, genesis, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -832,7 +832,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(ctx, genesis, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -901,7 +901,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(ctx, genesis, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -970,7 +970,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(ctx, genesis, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
