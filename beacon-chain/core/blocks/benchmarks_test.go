@@ -3,24 +3,23 @@ package blocks_test
 import (
 	"bytes"
 	"context"
-	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	// "crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-var ValidatorCount = 16000
+var ValidatorCount = 300000
 var RunAmount = 134217728 / ValidatorCount
 var QuickRunAmount = 100000
 var conditions = "BIG"
