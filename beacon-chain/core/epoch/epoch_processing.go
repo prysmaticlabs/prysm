@@ -144,18 +144,12 @@ func ProcessJustificationAndFinalization(
 	if 3*prevEpochBoundaryAttestingBalance >= 2*prevTotalBalance {
 		state.JustificationBitfield |= 2
 		newJustifiedEpoch = prevEpoch
-		if enableLogging {
-			log.Infof("Previous epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 1
 		newJustifiedEpoch = currentEpoch
-		if enableLogging {
-			log.Infof("Current epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 
 	// Process finality.

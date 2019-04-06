@@ -193,7 +193,6 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	s.p2p.Broadcast(ctx, &pb.AttestationAnnounce{
 		Hash: hash[:],
 	})
-	log.Infof("Attestation %#x saved in DB and broadcasted to network", hash)
 	return nil
 }
 

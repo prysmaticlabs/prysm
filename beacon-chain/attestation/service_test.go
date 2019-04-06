@@ -11,9 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
@@ -72,7 +70,6 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 }
 
 func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
-	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -103,8 +100,6 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	if err := service.handleAttestation(context.Background(), attestation); err != nil {
 		t.Error(err)
 	}
-
-	testutil.AssertLogsContain(t, hook, "Updated attestation pool for attestation")
 }
 
 func TestLatestAttestation_ReturnsLatestAttestation(t *testing.T) {
