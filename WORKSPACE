@@ -139,7 +139,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "86c88456c94c6a58ac48f0e192f520dc9aeb14a4",
+    commit = "099afb3fd89784f9e3e594b7c2ed11335ca02a9b",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and

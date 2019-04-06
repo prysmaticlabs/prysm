@@ -223,6 +223,8 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 	ss := NewSyncService(context.Background(), cfg)
 
 	go ss.run()
+	ss.Querier.chainStarted = true
+	ss.Querier.atGenesis = false
 
 	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(simP2P.ctx, &pb.ChainHeadResponse{

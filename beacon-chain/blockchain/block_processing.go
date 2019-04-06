@@ -72,16 +72,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	log.WithFields(logrus.Fields{
-		"slotNumber":     block.Slot - params.BeaconConfig().GenesisSlot,
-		"justifiedEpoch": beaconState.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
-		"finalizedEpoch": beaconState.FinalizedEpoch - params.BeaconConfig().GenesisEpoch,
+		"slotNumber":   block.Slot - params.BeaconConfig().GenesisSlot,
+		"currentEpoch": helpers.SlotToEpoch(block.Slot) - params.BeaconConfig().GenesisEpoch,
 	}).Info("State transition complete")
-
-	// We process the block's contained deposits, attestations, and other operations
-	// and that may need to be stored or deleted from the beacon node's persistent storage.
-	if err := c.CleanupBlockOperations(ctx, block); err != nil {
-		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
-	}
 
 	// Check state root
 	if featureconfig.FeatureConfig().EnableCheckBlockStateRoot {
@@ -97,7 +90,13 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		}
 	}
 
-	log.WithField("slot", block.Slot-params.BeaconConfig().GenesisSlot).Info("Processed beacon block")
+	// We process the block's contained deposits, attestations, and other operations
+	// and that may need to be stored or deleted from the beacon node's persistent storage.
+	if err := c.CleanupBlockOperations(ctx, block); err != nil {
+		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
+	}
+
+	log.WithField("slot", block.Slot-params.BeaconConfig().GenesisSlot).Info("Finished processing beacon block")
 	return beaconState, nil
 }
 
@@ -227,6 +226,7 @@ func (c *ChainService) runStateTransition(
 		beaconState,
 		block,
 		headRoot,
+		c.beaconDB,
 		&state.TransitionConfig{
 			VerifySignatures: false, // We disable signature verification for now.
 			Logging:          true,  // We enable logging in this state transition call.

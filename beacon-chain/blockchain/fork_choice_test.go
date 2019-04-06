@@ -10,9 +10,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -31,7 +30,7 @@ var _ = ForkChoice(&ChainService{})
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	deposits, _ := setupInitialDeposits(t, 5)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	beaconState, err := genesis.BeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
@@ -39,7 +38,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	genesis := b.NewGenesisBlock(stateRoot[:])
+	genesis := genesis.NewGenesisBlock(stateRoot[:])
 	genesisRoot, err := hashutil.HashProto(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block root: %v", err)
@@ -128,7 +127,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
+	genesisBlock := genesis.NewGenesisBlock([]byte("stateroot"))
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +152,7 @@ func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
+	genesisBlock := genesis.NewGenesisBlock([]byte("stateroot"))
 	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
@@ -290,7 +289,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
+	childrenBlock, err := chainService.blockChildren(ctx, block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -365,7 +364,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
+	childrenBlock, err := chainService.blockChildren(ctx, block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -431,7 +430,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
+	childrenBlock, err := chainService.blockChildren(ctx, block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -489,7 +488,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	voteTargets[0] = block2
 
 	// LMDGhost should pick block 2.
-	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	head, err := chainService.lmdGhost(ctx, block1, state, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -574,7 +573,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	voteTargets[2] = block4
 	voteTargets[3] = block4
 	// LMDGhost should pick block 4.
-	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	head, err := chainService.lmdGhost(ctx, block1, state, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -691,7 +690,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	voteTargets[1] = block5
 	voteTargets[2] = block5
 	// LMDGhost should pick block 5.
-	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	head, err := chainService.lmdGhost(ctx, block1, state, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -762,7 +761,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(ctx, genesis, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -833,7 +832,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(ctx, genesis, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -902,7 +901,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(ctx, genesis, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}
@@ -971,7 +970,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		_, err := chainService.lmdGhost(ctx, genesis, state, voteTargets)
 		if err != nil {
 			b.Fatalf("Could not run LMD GHOST: %v", err)
 		}

@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -105,7 +105,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 		log.Errorf("unable to marshal the beacon state: %v", err)
 		return
 	}
-	genBlock := b.NewGenesisBlock(stateRoot[:])
+	genBlock := genesis.NewGenesisBlock(stateRoot[:])
 	if err := beaconDB.SaveBlock(genBlock); err != nil {
 		t.Fatalf("could not save genesis block to disk: %v", err)
 	}
@@ -289,6 +289,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	setUpGenesisStateAndBlock(db, t)
+	ctx := context.Background()
 
 	cfg := &Config{
 		P2P:          &mockP2P{},
@@ -301,7 +302,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	batchSize := 20
 	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
 	ss.highestObservedSlot = expectedSlot
-	blk, err := ss.db.BlockBySlot(params.BeaconConfig().GenesisSlot)
+	blk, err := ss.db.BlockBySlot(ctx, params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
