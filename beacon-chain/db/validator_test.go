@@ -70,7 +70,7 @@ func TestSaveAndRetrieveValidatorsIndexes_OK(t *testing.T) {
 		t.Fatalf("Could not delete validator index: %v", err)
 	}
 	indexes, err = db.ValidatorIndices(ids)
-	want := fmt.Sprintf("one or more of the validators\n%#x\ndoes not exist", ids)
+	want := fmt.Sprintf("one or more of the validators %#x does not exist", ids)
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Want: %v, got: %v", want, err.Error())
 	}

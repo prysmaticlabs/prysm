@@ -24,7 +24,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 	span.AddAttributes(
-		trace.StringAttribute("validator", fmt.Sprintf("%#x", v.key.PublicKey.Marshal())),
+		trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[idx].PublicKey.Marshal())),
 	)
 
 	v.waitToSlotMidpoint(ctx, slot)

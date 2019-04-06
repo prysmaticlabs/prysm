@@ -29,7 +29,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.key.PublicKey.Marshal())))
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[idx].PublicKey.Marshal())))
 	log.Info("Performing a beacon block proposal...")
 	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.
