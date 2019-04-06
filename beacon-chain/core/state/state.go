@@ -1,45 +1,24 @@
-// Package genesis defines the initial state and block for Ethereum 2.0's beacon chain.
-package genesis
+// Package state implements the whole state transition
+// function which consists of per slot, per-epoch transitions.
+// It also bootstraps the genesis beacon state for slot 0.
+package state
 
 import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// NewGenesisBlock initializes an initial block for the Ethereum 2.0 beacon chain that is
-// fixed in all clients and embedded in the protocol.
-func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
-	block := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot,
-		ParentRootHash32: params.BeaconConfig().ZeroHash[:],
-		StateRootHash32:  stateRoot,
-		RandaoReveal:     params.BeaconConfig().ZeroHash[:],
-		Signature:        params.BeaconConfig().EmptySignature[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: params.BeaconConfig().ZeroHash[:],
-			BlockHash32:       params.BeaconConfig().ZeroHash[:],
-		},
-		Body: &pb.BeaconBlockBody{
-			ProposerSlashings: []*pb.ProposerSlashing{},
-			AttesterSlashings: []*pb.AttesterSlashing{},
-			Attestations:      []*pb.Attestation{},
-			Deposits:          []*pb.Deposit{},
-			VoluntaryExits:    []*pb.VoluntaryExit{},
-		},
-	}
-	return block
-}
-
-// BeaconState initializes a genesis beacon state - it gets called when DepositsForChainStart count of
+// GenesisBeaconState gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
-func BeaconState(
+func GenesisBeaconState(
 	genesisValidatorDeposits []*pb.Deposit,
 	genesisTime uint64,
 	eth1Data *pb.Eth1Data,

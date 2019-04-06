@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -79,7 +80,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		DepositRootHash32: []byte{},
 		BlockHash32:       []byte{},
 	}
-	beaconState, err := genesis.BeaconState(deposits, 0, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -144,7 +145,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		DepositRootHash32: []byte{},
 		BlockHash32:       []byte{},
 	}
-	beaconState, err := genesis.BeaconState(deposits, 0, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -299,7 +300,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		DepositRootHash32: []byte{},
 		BlockHash32:       []byte{},
 	}
-	beaconState, err := genesis.BeaconState(deposits, 0, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -441,7 +442,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	genesis := genesis.NewGenesisBlock([]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("cannot save block: %v", err)
 	}

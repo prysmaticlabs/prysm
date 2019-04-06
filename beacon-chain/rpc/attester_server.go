@@ -59,7 +59,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 
 	for headState.Slot < req.Slot {
 		headState, err = state.ExecuteStateTransition(
-			ctx, headState, nil /* block */, headRoot, as.beaconDB, state.DefaultConfig(),
+			ctx, headState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
