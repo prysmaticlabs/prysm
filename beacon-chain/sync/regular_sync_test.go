@@ -167,7 +167,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -242,7 +242,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -654,7 +654,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -684,7 +684,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := db.InitializeState(unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(ctx)
