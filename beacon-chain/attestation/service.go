@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -153,12 +152,6 @@ func (a *Service) attestationPool() {
 
 func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) error {
 	attestation := msg.(*pb.Attestation)
-	enc, err := proto.Marshal(attestation)
-	if err != nil {
-		return fmt.Errorf("could not marshal incoming attestation to bytes: %v", err)
-	}
-	h := hashutil.Hash(enc)
-
 	if err := a.UpdateLatestAttestation(ctx, attestation); err != nil {
 		return fmt.Errorf("could not update attestation pool: %v", err)
 	}

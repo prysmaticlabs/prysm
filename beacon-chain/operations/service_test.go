@@ -105,7 +105,6 @@ func TestIncomingExits_Ok(t *testing.T) {
 }
 
 func TestIncomingAttestation_OK(t *testing.T) {
-	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	broadcaster := &mockBroadcaster{}
@@ -119,17 +118,9 @@ func TestIncomingAttestation_OK(t *testing.T) {
 		Data: &pb.AttestationData{
 			Slot: 100,
 		}}
-	hash, err := hashutil.HashProto(attestation)
-	if err != nil {
-		t.Fatalf("Could not hash exit proto: %v", err)
-	}
-
 	if err := service.HandleAttestations(context.Background(), attestation); err != nil {
 		t.Error(err)
 	}
-
-	want := fmt.Sprintf("Attestation %#x saved in DB", hash)
-	testutil.AssertLogsContain(t, hook, want)
 
 	if !broadcaster.broadcastCalled {
 		t.Error("Attestation was not broadcasted")
