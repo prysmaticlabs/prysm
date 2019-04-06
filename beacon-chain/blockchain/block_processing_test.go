@@ -347,7 +347,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 
 	// Common ancestor is block at slot 3
-	commonAncestor, err := db.BlockBySlot(genesisSlot + 3)
+	commonAncestor, err := db.BlockBySlot(ctx, genesisSlot+3)
 	if err != nil {
 		t.Fatal(err)
 	}
