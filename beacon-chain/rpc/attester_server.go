@@ -93,7 +93,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	if lastJustifiedSlot != headState.Slot {
 		var justifiedBlock *pbp2p.BeaconBlock
 		for i := uint64(0); justifiedBlock == nil && i < params.BeaconConfig().SlotsPerEpoch; i++ {
-			justifiedBlock, err = as.beaconDB.BlockBySlot(lastJustifiedSlot - i)
+			justifiedBlock, err = as.beaconDB.BlockBySlot(ctx, lastJustifiedSlot-i)
 			if err != nil {
 				return nil, fmt.Errorf("could not get justified block: %v", err)
 			}
