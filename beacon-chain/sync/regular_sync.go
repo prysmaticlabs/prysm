@@ -34,6 +34,7 @@ var (
 )
 
 type chainService interface {
+	blockchain.BlockReceiver
 	blockchain.BlockProcessor
 	blockchain.ForkChoice
 	blockchain.ChainFeeds
@@ -85,6 +86,7 @@ type RegularSync struct {
 	highestObservedSlot          uint64
 	blocksAwaitingProcessing     map[[32]byte]p2p.Message
 	blocksAwaitingProcessingLock sync.RWMutex
+	blockAnnouncements           map[uint64][]byte
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -151,6 +153,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
 		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
+		blockAnnouncements:       make(map[uint64][]byte),
 	}
 }
 
@@ -236,6 +239,7 @@ func (rs *RegularSync) run() {
 			go rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
 		}
 	}
+
 	log.Info("Exiting regular sync run()")
 }
 
@@ -292,9 +296,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) error {
 		return errors.New("incoming message is not type *pb.BeaconBlockRequestBySlotNumber")
 	}
 
-	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
-	block, err := rs.db.BlockBySlot(request.SlotNumber)
-	getBlockSpan.End()
+	block, err := rs.db.BlockBySlot(ctx, request.SlotNumber)
 	if err != nil || block == nil {
 		if block == nil {
 			log.Debugf("Block with slot %d does not exist", request.SlotNumber)
@@ -340,9 +342,14 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Debugf("Requested state root is different from locally stored state root %#x", req.FinalizedStateRootHash32S)
 		return err
 	}
-	log.WithField("beaconState", fmt.Sprintf("%#x", root)).Debug("Sending beacon state to peer")
+	log.WithField(
+		"beaconState", fmt.Sprintf("%#x", root),
+	).Debug("Sending finalized, justified, and canonical states to peer")
 	defer sentState.Inc()
-	if err := rs.p2p.Send(ctx, &pb.BeaconStateResponse{BeaconState: fState}, msg.Peer); err != nil {
+	resp := &pb.BeaconStateResponse{
+		FinalizedState: fState,
+	}
+	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -363,10 +370,15 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve chain head %v", err)
 		return err
 	}
-
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	currentState, err := rs.db.HeadState(ctx)
 	if err != nil {
-		log.Errorf("Could not tree hash block %v", err)
+		log.Errorf("Could not retrieve current state %v", err)
+		return err
+	}
+
+	stateRoot, err := hashutil.HashProto(currentState)
+	if err != nil {
+		log.Errorf("Could not tree hash state %v", err)
 		return err
 	}
 
@@ -383,8 +395,8 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 	}
 
 	req := &pb.ChainHeadResponse{
-		Slot:                      block.Slot,
-		Hash:                      blockRoot[:],
+		CanonicalSlot:             block.Slot,
+		CanonicalStateRootHash32:  stateRoot[:],
 		FinalizedStateRootHash32S: finalizedRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
@@ -426,7 +438,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	beaconState, err := rs.db.State(ctx)
+	beaconState, err := rs.db.HeadState(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return err
@@ -520,7 +532,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 		return err
 	}
 
-	bState, err := rs.db.State(ctx)
+	bState, err := rs.db.HeadState(ctx)
 	if err != nil {
 		log.Errorf("Could not retrieve last finalized slot %v", err)
 		return err
@@ -546,7 +558,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	response := make([]*pb.BeaconBlock, 0, blockRange)
 	for i := startSlot; i <= endSlot; i++ {
-		retBlock, err := rs.db.BlockBySlot(i)
+		retBlock, err := rs.db.BlockBySlot(ctx, i)
 		if err != nil {
 			log.Errorf("Unable to retrieve block from db %v", err)
 			continue

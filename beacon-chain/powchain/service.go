@@ -92,7 +92,6 @@ type Web3Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
-	chainStartDelay         uint64
 	lastRequestedBlock      *big.Int
 }
 
@@ -106,7 +105,6 @@ type Web3ServiceConfig struct {
 	BlockFetcher    POWBlockFetcher
 	ContractBackend bind.ContractBackend
 	BeaconDB        *db.BeaconDB
-	ChainStartDelay uint64
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -148,7 +146,6 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		chainStartDeposits:      [][]byte{},
 		beaconDB:                config.BeaconDB,
 		lastReceivedMerkleIndex: -1,
-		chainStartDelay:         config.ChainStartDelay,
 		lastRequestedBlock:      big.NewInt(0),
 	}, nil
 }
@@ -250,7 +247,7 @@ func (w *Web3Service) processSubscribedHeaders(header *gethTypes.Header) {
 	blockNumberGauge.Set(float64(header.Number.Int64()))
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
-	w.blockTime = time.Unix(header.Time.Int64(), 0)
+	w.blockTime = time.Unix(int64(header.Time), 0)
 	log.WithFields(logrus.Fields{
 		"blockNumber": w.blockHeight,
 		"blockHash":   w.blockHash.Hex(),
@@ -314,13 +311,10 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
 
-	// Only process logs if the chain start delay flag is not enabled.
-	if w.chainStartDelay == 0 {
-		if err := w.processPastLogs(); err != nil {
-			log.Errorf("Unable to process past logs %v", err)
-			w.runError = err
-			return
-		}
+	if err := w.processPastLogs(); err != nil {
+		log.Errorf("Unable to process past logs %v", err)
+		w.runError = err
+		return
 	}
 
 	ticker := time.NewTicker(1 * time.Second)

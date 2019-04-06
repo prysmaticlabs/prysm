@@ -6,6 +6,7 @@ metadata:
 spec:
   replicas: 3
   serviceName: beacon-chain
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       component: beacon-chain
@@ -42,7 +43,7 @@ spec:
         - name: beacon-chain
           image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
           args: 
-            - --web3provider=ws://public-rpc-nodes.pow.svc.cluster.local:8546
+            - --web3provider=wss://goerli.infura.io/ws/v3/be3fb7ed377c418087602876a40affa1
             #- --verbosity=debug
             - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
             - --rpc-port=4000
@@ -76,8 +77,17 @@ spec:
                   key: DEPOSIT_CONTRACT_ADDRESS
           readinessProbe:
             initialDelaySeconds: 60
-            tcpSocket:
-              port: 4000
+            httpGet:
+              path: /healthz
+              port: 9090
+          livenessProbe:
+            initialDelaySeconds: 60
+            failureThreshold: 30 # Fails consistently for 5 minutes
+            periodSeconds: 10
+            httpGet:
+              path: /healthz
+              port: 9090
+
   volumeClaimTemplates:
   - metadata:
       name: beacondb

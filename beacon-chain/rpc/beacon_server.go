@@ -24,7 +24,6 @@ type BeaconServer struct {
 	ctx                 context.Context
 	powChainService     powChainService
 	chainService        chainService
-	chainStartDelayFlag uint64
 	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -40,7 +39,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 	if err != nil {
 		return fmt.Errorf("could not determine if ChainStart log has occurred: %v", err)
 	}
-	if ok && bs.chainStartDelayFlag == 0 {
+	if ok {
 		res := &pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,
@@ -100,7 +99,7 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 
 // ForkData fetches the current fork information from the beacon state.
 func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Fork, error) {
-	state, err := bs.beaconDB.State(ctx)
+	state, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -113,7 +112,7 @@ func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.F
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
-	beaconState, err := bs.beaconDB.State(ctx)
+	beaconState, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
@@ -218,7 +217,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
-	beaconState, err := bs.beaconDB.State(ctx)
+	beaconState, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
@@ -244,13 +243,23 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	if err != nil {
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
+
 	for i := range pendingDeps {
+		// Don't construct merkle proof if the number of deposits is more than max allowed in block.
+		if uint64(i) == params.BeaconConfig().MaxDeposits {
+			break
+		}
 		pendingDeps[i], err = constructMerkleProof(depositTrie, pendingDeps[i])
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeps}, nil
+	// Limit the return of pending deposits to not be more than max deposits allowed in block.
+	var pendingDeposits []*pbp2p.Deposit
+	for i := 0; i < len(pendingDeps) && i < int(params.BeaconConfig().MaxDeposits); i++ {
+		pendingDeposits = append(pendingDeposits, pendingDeps[i])
+	}
+	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
 }
 
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {

@@ -6,9 +6,8 @@ import (
 	"testing"
 	"time"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -26,9 +25,10 @@ func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
+	ctx := context.Background()
 
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
+	gBlock := genesis.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(gBlock); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
@@ -49,12 +49,12 @@ func TestProposeBlock_OK(t *testing.T) {
 		}
 	}
 
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	beaconState, err := genesis.BeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, gBlock, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -78,11 +78,12 @@ func TestProposeBlock_OK(t *testing.T) {
 func TestComputeStateRoot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
 
 	mockChain := &mockChainService{}
 
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
+	gBlock := genesis.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(gBlock); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
@@ -103,14 +104,14 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		}
 	}
 
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	beaconState, err := genesis.BeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	beaconState.Slot = 10
 
-	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, gBlock, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -136,6 +137,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay + 100,
 	}
@@ -149,7 +152,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		},
 		beaconDB: db,
 	}
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -161,7 +164,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		t.Fatalf("failed to save block %v", err)
 	}
 
-	if err := db.UpdateChainHead(blk, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
@@ -179,6 +182,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
 
 	// Edge case: current slot is at the end of an epoch. The pending attestation
 	// for the next slot should come from currentSlot + 1.
@@ -214,7 +218,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		JustifiedEpoch:         expectedEpoch,
 		PreviousJustifiedEpoch: expectedEpoch,
 	}
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -226,7 +230,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		t.Fatalf("failed to save block %v", err)
 	}
 
-	if err := db.UpdateChainHead(blk, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
@@ -251,6 +255,8 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 func TestPendingAttestations_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{},
 		beaconDB:         db,
@@ -258,7 +264,7 @@ func TestPendingAttestations_OK(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay,
 	}
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -270,7 +276,7 @@ func TestPendingAttestations_OK(t *testing.T) {
 		t.Fatalf("failed to save block %v", err)
 	}
 
-	if err := db.UpdateChainHead(blk, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 

@@ -84,19 +84,11 @@ func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 
 }
 
-func TestStatus_Synced(t *testing.T) {
-	serviceSynced, db := setupTestSyncService(t, true)
-	defer internal.TeardownDB(t, db)
-	if serviceSynced.Status() != nil {
-		t.Errorf("Wanted nil, but got %v", serviceSynced.Status())
-	}
-}
-
 func TestStatus_NotSynced(t *testing.T) {
 	serviceNotSynced, db := setupTestSyncService(t, false)
 	defer internal.TeardownDB(t, db)
-	_, querierErr := serviceNotSynced.Querier.IsSynced()
-	if serviceNotSynced.Status() != querierErr {
-		t.Errorf("Wanted %v, but got %v", querierErr, serviceNotSynced.Status())
+	synced, _ := serviceNotSynced.InitialSync.NodeIsSynced()
+	if synced {
+		t.Error("Wanted false, but got true")
 	}
 }

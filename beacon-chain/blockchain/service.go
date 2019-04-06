@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "blockchain")
@@ -39,10 +39,8 @@ type ChainService struct {
 	attsService          *attestation.Service
 	opsPoolService       operations.OperationFeeds
 	chainStartChan       chan time.Time
-	canonicalBlockChan   chan *pb.BeaconBlock
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
-	enablePOWChain       bool
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
@@ -56,7 +54,6 @@ type Config struct {
 	BeaconDB       *db.BeaconDB
 	OpsPoolService operations.OperationFeeds
 	DevMode        bool
-	EnablePOWChain bool
 	P2p            p2p.Broadcaster
 }
 
@@ -72,17 +69,15 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
 		canonicalBlockFeed:   new(event.Feed),
-		canonicalBlockChan:   make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
-		enablePOWChain:       cfg.EnablePOWChain,
 		p2p:                  cfg.P2p,
 	}, nil
 }
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -135,13 +130,15 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
 func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
 	eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
+	defer span.End()
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
 		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
@@ -150,14 +147,14 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
-	genBlock := b.NewGenesisBlock(stateRoot[:])
+	genBlock := genesis.NewGenesisBlock(stateRoot[:])
 	// TODO(#2011): Remove this in state caching.
 	beaconState.LatestBlock = genBlock
 
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
-	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
+	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
 	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {

@@ -15,14 +15,13 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
@@ -204,7 +203,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 }
 
 func setupGenesisBlock(t *testing.T, cs *ChainService, beaconState *pb.BeaconState) ([32]byte, *pb.BeaconBlock) {
-	genesis := b.NewGenesisBlock([]byte{})
+	genesis := genesis.NewGenesisBlock([]byte{})
 	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
@@ -215,32 +214,19 @@ func setupGenesisBlock(t *testing.T, cs *ChainService, beaconState *pb.BeaconSta
 	return parentHash, genesis
 }
 
-func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB, enablePOWChain bool, attsService *attestation.Service) *ChainService {
+func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB, attsService *attestation.Service) *ChainService {
 	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Web3Service
 	var err error
-	if enablePOWChain {
-		if faultyPoWClient {
-			client := &faultyClient{}
-			web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
-				Endpoint:        endpoint,
-				DepositContract: common.Address{},
-				Reader:          client,
-				Client:          client,
-				Logger:          client,
-			})
-		} else {
-			client := &mockClient{}
-			web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
-				Endpoint:        endpoint,
-				DepositContract: common.Address{},
-				Reader:          client,
-				Client:          client,
-				Logger:          client,
-			})
-		}
-	}
+	client := &mockClient{}
+	web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: common.Address{},
+		Reader:          client,
+		Client:          client,
+		Logger:          client,
+	})
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
@@ -250,7 +236,6 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 		BeaconDB:       beaconDB,
 		Web3Service:    web3Service,
 		OpsPoolService: &mockOperationService{},
-		EnablePOWChain: enablePOWChain,
 		AttsService:    attsService,
 		P2p:            &mockBroadcaster{},
 	}
@@ -266,20 +251,20 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.State(context.Background())
+	bState, err := service.beaconDB.HeadState(context.Background())
 	if err != nil {
 		return err
 	}
 
 	bState.Slot = slot
-	return service.beaconDB.SaveState(bState)
+	return service.beaconDB.SaveState(context.Background(), bState)
 }
 
 func TestChainStartStop_Uninitialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db, true, nil)
+	chainService := setupBeaconChain(t, db, nil)
 
 	// Test the start function.
 	genesisChan := make(chan time.Time, 0)
@@ -296,7 +281,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 		)
 	}
 
-	beaconState, err := db.State(context.Background())
+	beaconState, err := db.HeadState(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,39 +299,20 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "ChainStart time reached, starting the beacon chain!")
 }
 
-func TestChainStartStop_UninitializedAndNoPOWChain(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db, false, nil)
-
-	origExitFunc := logrus.StandardLogger().ExitFunc
-	defer func() { logrus.StandardLogger().ExitFunc = origExitFunc }()
-	fatal := false
-	logrus.StandardLogger().ExitFunc = func(int) { fatal = true }
-	// Test the start function.
-	chainService.Start()
-
-	if !fatal {
-		t.Fatalf("Not exists fatal for init BeaconChain without POW chain")
-	}
-	testutil.AssertLogsContain(t, hook, "Not configured web3Service for POW chain")
-}
-
 func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, false, db, true, nil)
+	chainService := setupBeaconChain(t, db, nil)
 
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
 	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -363,35 +329,4 @@ func TestChainStartStop_Initialized(t *testing.T) {
 		t.Error("context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
-}
-
-func TestPOWBlockExists_UsingDepositRootHash(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
-
-	chainService := setupBeaconChain(t, true, db, true, nil)
-	unixTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
-	}
-	if err := db.InitializeState(unixTime, deposits, eth1Data); err != nil {
-		t.Fatalf("Could not initialize beacon state to disk: %v", err)
-	}
-
-	beaconState, err := chainService.beaconDB.State(ctx)
-	if err != nil {
-		t.Fatalf("Unable to retrieve beacon state %v", err)
-	}
-
-	// Using a faulty client should throw error.
-	powHash := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
-	exists := chainService.doesPoWBlockExist(powHash)
-	if exists {
-		t.Error("Block corresponding to nil powchain reference should not exist")
-	}
-	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
 }

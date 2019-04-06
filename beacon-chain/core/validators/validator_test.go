@@ -586,14 +586,15 @@ func TestUpdateRegistry_Exits(t *testing.T) {
 }
 
 func TestMaxBalanceChurn_OK(t *testing.T) {
+	maxDepositAmount := params.BeaconConfig().MaxDepositAmount
 	tests := []struct {
 		totalBalance    uint64
 		maxBalanceChurn uint64
 	}{
-		{totalBalance: 1e9, maxBalanceChurn: params.BeaconConfig().MaxDepositAmount},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount, maxBalanceChurn: 512 * 1e9},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount * 10, maxBalanceChurn: 512 * 1e10},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount * 1000, maxBalanceChurn: 512 * 1e12},
+		{totalBalance: 1e9, maxBalanceChurn: maxDepositAmount},
+		{totalBalance: maxDepositAmount, maxBalanceChurn: maxDepositAmount},
+		{totalBalance: maxDepositAmount * 10, maxBalanceChurn: maxDepositAmount},
+		{totalBalance: params.BeaconConfig().MaxDepositAmount * 1000, maxBalanceChurn: 5 * 1e11},
 	}
 
 	for _, tt := range tests {

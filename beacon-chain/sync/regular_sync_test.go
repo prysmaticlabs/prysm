@@ -72,7 +72,19 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 	return &pb.BeaconState{}, nil
 }
 
+func (ms *mockChainService) ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (ms *mockChainService) VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+	return nil
+}
+
 func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
+}
+
+func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
 	return nil
 }
 
@@ -372,10 +384,11 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}
+	ctx := context.Background()
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	if err := db.SaveState(&pb.BeaconState{
+	if err := db.SaveState(ctx, &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + 2,
 	}); err != nil {
 		t.Fatalf("Could not save state: %v", err)
@@ -413,11 +426,12 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}
+	ctx := context.Background()
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch}
-	if err := db.SaveState(state); err != nil {
+	if err := db.SaveState(ctx, state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
 	cfg := &RegularSyncConfig{
@@ -673,9 +687,15 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := db.InitializeState(unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
+	}
+	if err := db.SaveJustifiedState(beaconState); err != nil {
+		t.Fatalf("could not save justified state: %v", err)
+	}
+	if err := db.SaveFinalizedState(beaconState); err != nil {
+		t.Fatalf("could not save justified state: %v", err)
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
@@ -697,5 +717,5 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := ss.handleStateRequest(msg1); err != nil {
 		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Sending beacon state to peer")
+	testutil.AssertLogsContain(t, hook, "Sending finalized, justified, and canonical states to peer")
 }
