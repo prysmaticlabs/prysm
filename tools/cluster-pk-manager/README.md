@@ -13,13 +13,13 @@ pods.
 
 Workflow for bootstraping a validator pod
 
-1. Request a private key from the pk manager.
-1. If an unallocated private key exists (from previously terminated pod), assign
+1. Request `n` private keys from the pk manager.
+1. If unallocated private keys exist (from previously terminated pods), assign
    to the requesting pod.
-1. If all available private keys are in use, generate a new private key, and
-   make the deposit on behalf of this newly generated private key.
-1. Write the assignment to some persistent datastore and fulfill the request.
-1. The validator uses this private key to act as a deposited validator in the
+1. If there are not at least `n` keys not in use, generate new private keys, 
+   and make the deposits on behalf of these newly generated private keys.
+1. Write the key allocations to a persistent datastore and fulfill the request.
+1. The client uses these private keys to act as deposited validators in the
    system. 
 
 ## Server
