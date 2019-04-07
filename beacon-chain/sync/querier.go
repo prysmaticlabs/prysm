@@ -90,6 +90,7 @@ func (q *Querier) Start() {
 		return
 	}
 
+	q.chainStarted = hasChainStarted
 	q.atGenesis = !hasChainStarted
 
 	bState, err := q.db.HeadState(q.ctx)
@@ -186,10 +187,10 @@ func (q *Querier) RequestLatestHead() {
 // IsSynced checks if the node is currently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
-	if !q.chainStarted {
+	if q.atGenesis {
 		return true, nil
 	}
-	if q.atGenesis {
+	if !q.chainStarted {
 		return true, nil
 	}
 	block, err := q.db.ChainHead()
