@@ -221,34 +221,6 @@ func (db *BeaconDB) SaveHistoricalState(beaconState *pb.BeaconState) error {
 	})
 }
 
-// SaveCurrentAndFinalizedState saves the state as both the current and last finalized state.
-func (db *BeaconDB) SaveCurrentAndFinalizedState(ctx context.Context, beaconState *pb.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.SaveCurrentAndFinalizedState")
-	defer span.End()
-
-	if err := db.SaveState(ctx, beaconState); err != nil {
-		return err
-	}
-
-	// Delete historical states if we are saving a new finalized state.
-	if err := db.deleteHistoricalStates(beaconState.Slot); err != nil {
-		return err
-	}
-	return db.update(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		beaconStateEnc, err := proto.Marshal(beaconState)
-		if err != nil {
-			return err
-		}
-		// Putting in historical state.
-		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
-			return err
-		}
-
-		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
-	})
-}
-
 // JustifiedState retrieves the justified state from the db.
 func (db *BeaconDB) JustifiedState() (*pb.BeaconState, error) {
 	var beaconState *pb.BeaconState
