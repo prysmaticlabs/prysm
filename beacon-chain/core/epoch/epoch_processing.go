@@ -144,18 +144,12 @@ func ProcessJustificationAndFinalization(
 	if 3*prevEpochBoundaryAttestingBalance >= 2*prevTotalBalance {
 		state.JustificationBitfield |= 2
 		newJustifiedEpoch = prevEpoch
-		if enableLogging {
-			log.Infof("Previous epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 1
 		newJustifiedEpoch = currentEpoch
-		if enableLogging {
-			log.Infof("Current epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 
 	// Process finality.
@@ -164,36 +158,24 @@ func ProcessJustificationAndFinalization(
 	if state.PreviousJustifiedEpoch == prevEpoch-2 &&
 		(state.JustificationBitfield>>1)%8 == 7 {
 		newFinalizedEpoch = state.PreviousJustifiedEpoch
-		if enableLogging {
-			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	// When the 2nd and 3rd most epochs are all justified, the 2nd can finalize the 3rd epoch
 	// as a source.
 	if state.PreviousJustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>1)%4 == 3 {
 		newFinalizedEpoch = state.PreviousJustifiedEpoch
-		if enableLogging {
-			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	// When the 1st, 2nd and 3rd most epochs are all justified, the 1st can finalize the 3rd epoch
 	// as a source.
 	if state.JustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>0)%8 == 7 {
 		newFinalizedEpoch = state.JustifiedEpoch
-		if enableLogging {
-			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	// When the 1st and 2nd most epochs are all justified, the 1st can finalize the 2nd epoch
 	// as a source.
 	if state.JustifiedEpoch == prevEpoch &&
 		(state.JustificationBitfield>>0)%4 == 3 {
 		newFinalizedEpoch = state.JustifiedEpoch
-		if enableLogging {
-			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	state.PreviousJustifiedEpoch = state.JustifiedEpoch
 	state.PreviousJustifiedRoot = state.JustifiedRoot
