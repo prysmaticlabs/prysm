@@ -50,9 +50,6 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		return err
 	}
-	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
-		return err
-	}
 
 	return db.update(func(tx *bolt.Tx) error {
 		blockBkt := tx.Bucket(blockBucket)
