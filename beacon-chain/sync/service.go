@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -91,18 +90,16 @@ func (ss *Service) Stop() error {
 // Status checks the status of the node. It returns nil if it's synced
 // with the rest of the network and no errors occurred. Otherwise, it returns an error.
 func (ss *Service) Status() error {
-	if !ss.Querier.chainStarted {
-		return nil
+	synced, err := ss.Querier.IsSynced()
+	if err != nil {
+		return fmt.Errorf("unable to check sync status: %v", err)
 	}
-	if ss.Querier.atGenesis {
-		return nil
-	}
-	synced, currentSyncedSlot := ss.InitialSync.NodeIsSynced()
 	if !synced {
-		return fmt.Errorf(
-			"node not yet synced, currently at slot: %v",
-			currentSyncedSlot-params.BeaconConfig().GenesisSlot,
-		)
+		blk, err := ss.Querier.db.ChainHead()
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("node is not synced as the current chain head is at slot %d", blk.Slot)
 	}
 	return nil
 }
