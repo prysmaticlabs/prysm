@@ -120,7 +120,6 @@ proto_library(
   srcs = ["src/proto/faucet.proto"],
   visibility = ["//visibility:public"],
 )""",
-)""",
 )
 
 http_archive(
