@@ -7,6 +7,8 @@ matrix:
       go: 1.12.x
       env:
         - lint
+      before-install:
+        - sudo apt-get install binutils-2.26
       install:
         - go get ${gobuild_args} -t ./...
       script:
