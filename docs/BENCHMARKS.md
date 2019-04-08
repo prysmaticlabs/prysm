@@ -50,7 +50,7 @@ The epoch-processing benches are done with the following:
 #### Laptop
 
 | Benchmark             | 16K     |    300K    |   4M    |
-| --------------------- | ------- | ---------- | -------- |
+| --------------------- | ------- | ---------- | ------- |
 | ProcessEth1Data       | 240 ns  |         -   | 559 ns |
 | ProcessJustification  | 308 ns   |        -   | 478 ns  |
 | ProcessCrosslinks     | 208.19 ms |  4.575 s  |  -       |
@@ -61,6 +61,6 @@ The epoch-processing benches are done with the following:
 | UpdateRegistry             | 130.35 μs | 65.433 μs | 110.18 ms |
 | CleanupAttestations         |   398 ns  |  424 ns  |  838 ns  |
 | UpdateLatestActiveIndexRoots | 51.419 μs | 23.504 μs | 42.01 ms |
-| UpdateLatestSlashedBalances | 270 ns    |   271 ns  |  425 ns   |
+| UpdateLatestSlashedBalances |   270 ns  |   271 ns  |  425 ns   |
 | ActiveValidatorIndices      | 42.683 μs | 24.075 μs | 38.418 ms |
 | ValidatorIndexMap           | 2.558 ms  |  60.816 ms  | 1.4297 s |
