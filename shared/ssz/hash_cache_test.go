@@ -99,11 +99,11 @@ func TestObjCache_byHash(t *testing.T) {
 	if !exists {
 		t.Error("Expected blockInfo to exist")
 	}
-	if bytes.Compare(mr, fetchedInfo.MarkleRoot) != 0 {
+	if !bytes.Equal(mr, fetchedInfo.MerkleRoot) {
 		t.Errorf(
 			"Expected fetched info number to be %v, got %v",
 			mr,
-			fetchedInfo.MarkleRoot,
+			fetchedInfo.MerkleRoot,
 		)
 	}
 	if fetchedInfo.Hash != bytesutil.ToBytes32(hs) {
@@ -171,7 +171,7 @@ func TestBlockCache_maxSize(t *testing.T) {
 		maxCacheSize,
 		cache.hashCache.ItemCount(),
 	)
-	time.Sleep(time.Second)
+	time.Sleep(1 * time.Second)
 	if int64(cache.hashCache.ItemCount()) > maxCacheSize {
 		t.Errorf(
 			"Expected hash cache key size to be %d, got %d",

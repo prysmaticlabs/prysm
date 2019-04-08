@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	// ErrNotMerkleRoot will be returned when a cache object is not a merkle root
+	// ErrNotMerkleRoot will be returned when a cache object is not a merkle root.
 	ErrNotMerkleRoot = errors.New("object is not a merkle root")
 	// maxCacheSize is 2x of the follow distance for additional cache padding.
 	// Requests should be only accessing blocks within recent blocks within the
@@ -42,10 +42,10 @@ type hashCacheS struct {
 	hashCache *ccache.Cache
 }
 
-// markleRoot specifies the hash of data in a struct
+// root specifies the hash of data in a struct
 type root struct {
 	Hash       common.Hash
-	MarkleRoot []byte
+	MerkleRoot []byte
 }
 
 // hashKeyFn takes the  representation as the key for a hashInfo.
@@ -103,7 +103,7 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 	}
 	var paddedOutput [32]byte
 	if exists {
-		paddedOutput = bytesutil.ToBytes32(fetchedInfo.MarkleRoot)
+		paddedOutput = bytesutil.ToBytes32(fetchedInfo.MerkleRoot)
 	} else {
 		sszUtils, err := cachedSSZUtils(rval.Type())
 		if err != nil {
@@ -113,7 +113,7 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 		if err != nil {
 			return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 		}
-		// Right-pad with 0 to make 32 bytes long, if necessary
+		// Right-pad with 0 to make 32 bytes long, if necessary.
 		paddedOutput = bytesutil.ToBytes32(output)
 		err = b.AddRoot(bytesutil.ToBytes32(hs), paddedOutput[:])
 		if err != nil {
@@ -138,7 +138,7 @@ func (b *hashCacheS) MerkleHashCached(byteSlice [][]byte) ([]byte, error) {
 		return mh, newHashError(fmt.Sprint(err), reflect.TypeOf(byteSlice))
 	}
 	if exists {
-		mh = fetchedInfo.MarkleRoot
+		mh = fetchedInfo.MerkleRoot
 	} else {
 		mh, err = merkleHash(byteSlice)
 		if err != nil {
@@ -146,7 +146,7 @@ func (b *hashCacheS) MerkleHashCached(byteSlice [][]byte) ([]byte, error) {
 		}
 		mr := &root{
 			Hash:       bytesutil.ToBytes32(hs),
-			MarkleRoot: mh,
+			MerkleRoot: mh,
 		}
 		b.hashCache.Set(mr.Hash.Hex(), mr, time.Hour)
 		hashCacheSize.Set(float64(b.hashCache.ItemCount()))
@@ -162,7 +162,7 @@ func (b *hashCacheS) MerkleHashCached(byteSlice [][]byte) ([]byte, error) {
 func (b *hashCacheS) AddRoot(h common.Hash, rootB []byte) error {
 	mr := &root{
 		Hash:       h,
-		MarkleRoot: rootB,
+		MerkleRoot: rootB,
 	}
 	b.hashCache.Set(mr.Hash.Hex(), mr, time.Hour)
 	return nil
@@ -185,7 +185,7 @@ func makeSliceHasherCache(typ reflect.Type) (hasher, error) {
 		}
 		var output []byte
 		if exists {
-			output = fetchedInfo.MarkleRoot
+			output = fetchedInfo.MerkleRoot
 		} else {
 			var elemHashList [][]byte
 			for i := 0; i < val.Len(); i++ {
@@ -228,7 +228,7 @@ func makeStructHasherCache(typ reflect.Type) (hasher, error) {
 		}
 		var result [32]byte
 		if exists {
-			result = bytesutil.ToBytes32(fetchedInfo.MarkleRoot)
+			result = bytesutil.ToBytes32(fetchedInfo.MerkleRoot)
 		} else {
 			concatElemHash := make([]byte, 0)
 			for _, f := range fields {
