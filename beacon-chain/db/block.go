@@ -246,34 +246,6 @@ func (db *BeaconDB) BlockBySlot(ctx context.Context, slot uint64) (*pb.BeaconBlo
 	return block, err
 }
 
-// HasBlockBySlot returns a boolean, and if the block exists, it returns the block.
-func (db *BeaconDB) HasBlockBySlot(slot uint64) (bool, *pb.BeaconBlock, error) {
-	var block *pb.BeaconBlock
-	var exists bool
-	slotEnc := encodeSlotNumber(slot)
-
-	err := db.view(func(tx *bolt.Tx) error {
-		mainChain := tx.Bucket(mainChainBucket)
-		blockBkt := tx.Bucket(blockBucket)
-
-		blockRoot := mainChain.Get(slotEnc)
-		if blockRoot == nil {
-			return nil
-		}
-
-		enc := blockBkt.Get(blockRoot)
-		if enc == nil {
-			return nil
-		}
-		exists = true
-
-		var err error
-		block, err = createBlock(enc)
-		return err
-	})
-	return exists, block, err
-}
-
 // HighestBlockSlot returns the in-memory value for the highest block we've
 // seen in the database.
 func (db *BeaconDB) HighestBlockSlot() uint64 {

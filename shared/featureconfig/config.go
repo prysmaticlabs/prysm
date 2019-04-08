@@ -29,6 +29,7 @@ type FeatureFlagConfig struct {
 	EnableComputeStateRoot bool // EnableComputeStateRoot implementation on server side.
 	EnableCrosslinks       bool // EnableCrosslinks in epoch processing.
 	EnableCommitteesCache  bool // EnableCommitteesCache for RPC server.
+  EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updatifinalized states.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -62,6 +63,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableCommitteesCacheFlag.Name) {
 		log.Info("Enabled committees cache")
 		cfg.EnableCommitteesCache = true
+	}
+	if ctx.GlobalBool(EnableHistoricalStatePruningFlag.Name) {
+		log.Info("Enabled historical state pruning")
+		cfg.EnableHistoricalStatePruning = true
 	}
 	InitFeatureConfig(cfg)
 }
