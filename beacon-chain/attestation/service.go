@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -29,13 +28,11 @@ type attestationStore struct {
 // Service represents a service that handles the internal
 // logic of managing single and aggregated attestation.
 type Service struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	beaconDB      *db.BeaconDB
-	broadcastFeed *event.Feed
-	broadcastChan chan *pb.Attestation
-	incomingFeed  *event.Feed
-	incomingChan  chan *pb.Attestation
+	ctx          context.Context
+	cancel       context.CancelFunc
+	beaconDB     *db.BeaconDB
+	incomingFeed *event.Feed
+	incomingChan chan *pb.Attestation
 	// store is the mapping of individual
 	// validator's public key to it's latest attestation.
 	store attestationStore
@@ -51,14 +48,12 @@ type Config struct {
 func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:           ctx,
-		cancel:        cancel,
-		beaconDB:      cfg.BeaconDB,
-		broadcastFeed: new(event.Feed),
-		broadcastChan: make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
-		incomingFeed:  new(event.Feed),
-		incomingChan:  make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
-		store:         attestationStore{m: make(map[[48]byte]*pb.Attestation)},
+		ctx:          ctx,
+		cancel:       cancel,
+		beaconDB:     cfg.BeaconDB,
+		incomingFeed: new(event.Feed),
+		incomingChan: make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		store:        attestationStore{m: make(map[[48]byte]*pb.Attestation)},
 	}
 }
 
@@ -95,7 +90,7 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
 func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
-	state, err := a.beaconDB.State(ctx)
+	state, err := a.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -157,16 +152,9 @@ func (a *Service) attestationPool() {
 
 func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) error {
 	attestation := msg.(*pb.Attestation)
-	enc, err := proto.Marshal(attestation)
-	if err != nil {
-		return fmt.Errorf("could not marshal incoming attestation to bytes: %v", err)
-	}
-	h := hashutil.Hash(enc)
-
 	if err := a.UpdateLatestAttestation(ctx, attestation); err != nil {
 		return fmt.Errorf("could not update attestation pool: %v", err)
 	}
-	log.Infof("Updated attestation pool for attestation %#x", h)
 	return nil
 }
 
@@ -175,9 +163,10 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 // have been noted in the attestation pool. If not, it updates the
 // attestation pool with attester's public key to attestation.
 func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
+	totalAttestationSeen.Inc()
 	// Potential improvement, instead of getting the state,
 	// we could get a mapping of validator index to public key.
-	state, err := a.beaconDB.State(ctx)
+	state, err := a.beaconDB.HeadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -241,7 +230,14 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 					"attestationSlot": attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
 					"justifiedEpoch":  attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 				},
-			).Info("Attestation store updated")
+			).Debug("Attestation store updated")
+
+			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+			votedBlock, err := a.beaconDB.Block(blockRoot)
+			if err != nil {
+				return err
+			}
+			reportVoteMetrics(committee[i], votedBlock)
 		}
 	}
 	return nil

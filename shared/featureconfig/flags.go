@@ -24,6 +24,12 @@ var (
 		Name:  "enable-crosslinks",
 		Usage: "Enable crosslinks in epoch processing, default is disabled.",
 	}
+
+	// EnableHistoricalStatePruningFlag allows the database to prune old historical states.
+	EnableHistoricalStatePruningFlag = cli.BoolFlag{
+		Name:  "enable-historical-state-pruning",
+		Usage: "Enable database pruning of historical states after finalized epochs",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -33,4 +39,5 @@ var ValidatorFlags = []cli.Flag{}
 var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
+	EnableHistoricalStatePruningFlag,
 }

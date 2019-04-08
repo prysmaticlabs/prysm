@@ -122,4 +122,6 @@ func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, b *big.Int) {
 	if idx >= 0 {
 		db.pendingDeposits = db.pendingDeposits[idx+1:]
 	}
+
+	pendingDepositsCount.Set(float64(len(db.pendingDeposits)))
 }

@@ -77,8 +77,9 @@ func TestSaveBlock_OK(t *testing.T) {
 func TestBlockBySlotEmptyChain_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
-	block, _ := db.BlockBySlot(0)
+	block, _ := db.BlockBySlot(ctx, 0)
 	if block != nil {
 		t.Error("BlockBySlot should return nil for an empty chain")
 	}
@@ -95,7 +96,7 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -118,7 +119,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	block, err := db.BlockBySlot(0)
+	block, err := db.BlockBySlot(ctx, 0)
 	if err != nil {
 		t.Fatalf("failed to get genesis block: %v", err)
 	}
@@ -127,7 +128,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to get hash of b: %v", err)
 	}
 
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -147,7 +148,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to record the new head of the main chain: %v", err)
 	}
 
-	b2Prime, err := db.BlockBySlot(1)
+	b2Prime, err := db.BlockBySlot(ctx, 1)
 	if err != nil {
 		t.Fatalf("failed to retrieve slot 1: %v", err)
 	}
@@ -185,7 +186,7 @@ func TestChainProgress_OK(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get beacon state: %v", err)
 	}
@@ -235,46 +236,6 @@ func TestChainProgress_OK(t *testing.T) {
 	if heighestBlock.Slot != block3.Slot {
 		t.Fatalf("expected height to equal %d, got %d", block3.Slot, heighestBlock.Slot)
 	}
-}
-
-func TestHasBlockBySlot_OK(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-
-	blkSlot := uint64(10)
-	block1 := &pb.BeaconBlock{
-		Slot: blkSlot,
-	}
-
-	exists, _, err := db.HasBlockBySlot(blkSlot)
-	if err != nil {
-		t.Fatalf("failed to get block: %v", err)
-	}
-	if exists {
-		t.Error("Block exists despite being not being saved")
-	}
-
-	if err := db.SaveBlock(block1); err != nil {
-		t.Fatalf("save block failed: %v", err)
-	}
-
-	if err := db.UpdateChainHead(ctx, block1, &pb.BeaconState{}); err != nil {
-		t.Fatalf("Unable to save block and state in db %v", err)
-	}
-
-	exists, blk, err := db.HasBlockBySlot(blkSlot)
-	if err != nil {
-		t.Fatalf("failed to get block: %v", err)
-	}
-	if !exists {
-		t.Error("Block does not exist in db")
-	}
-
-	if blk.Slot != blkSlot {
-		t.Errorf("Saved block does not have the slot from which it was requested")
-	}
-
 }
 
 func TestJustifiedBlock_NoneExists(t *testing.T) {
@@ -341,4 +302,53 @@ func TestFinalizedBlock_CanSaveRetrieve(t *testing.T) {
 		t.Errorf("Saved block does not have the slot from which it was requested, wanted: %d, got: %d",
 			blkSlot, finalizedblk.Slot)
 	}
+}
+
+func TestHasBlock_returnsTrue(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	block := &pb.BeaconBlock{
+		Slot: uint64(44),
+	}
+
+	root, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	if !db.HasBlock(root) {
+		t.Fatal("db.HasBlock returned false for block just saved")
+	}
+}
+
+func TestHighestBlockSlot_UpdatedOnSaveBlock(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	block := &pb.BeaconBlock{
+		Slot: 23,
+	}
+
+	if err := db.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	if db.HighestBlockSlot() != block.Slot {
+		t.Errorf("Unexpected highest slot %d, wanted %d", db.HighestBlockSlot(), block.Slot)
+	}
+
+	block.Slot = 55
+	if err := db.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	if db.HighestBlockSlot() != block.Slot {
+		t.Errorf("Unexpected highest slot %d, wanted %d", db.HighestBlockSlot(), block.Slot)
+	}
+
 }

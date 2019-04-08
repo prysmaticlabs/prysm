@@ -713,11 +713,12 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 	committeesPerSlot := input.committeesPerEpoch / slotsPerEpoch
 	slotStartShard := (input.startShard + committeesPerSlot*offSet) %
 		params.BeaconConfig().ShardCount
+	requestedEpoch := SlotToEpoch(input.slot)
 
 	shuffledIndices, err := Shuffling(
 		bytesutil.ToBytes32(input.seed),
 		state.ValidatorRegistry,
-		input.shufflingEpoch)
+		requestedEpoch)
 	if err != nil {
 		return nil, err
 	}

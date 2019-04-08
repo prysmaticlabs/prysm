@@ -76,11 +76,15 @@ func (ms *mockChainService) ApplyBlockStateTransition(ctx context.Context, block
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) VerifyBlockValidity(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+func (ms *mockChainService) VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
 	return nil
 }
 
 func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
+}
+
+func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
 	return nil
 }
 
@@ -683,9 +687,15 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := db.InitializeState(unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
+	}
+	if err := db.SaveJustifiedState(beaconState); err != nil {
+		t.Fatalf("could not save justified state: %v", err)
+	}
+	if err := db.SaveFinalizedState(beaconState); err != nil {
+		t.Fatalf("could not save justified state: %v", err)
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
@@ -707,5 +717,5 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := ss.handleStateRequest(msg1); err != nil {
 		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Sending beacon state to peer")
+	testutil.AssertLogsContain(t, hook, "Sending finalized, justified, and canonical states to peer")
 }

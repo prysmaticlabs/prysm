@@ -25,7 +25,7 @@ var log = logrus.WithField("prefix", "stategenerator")
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.stategenerator.GenerateStateFromBlock")
 	defer span.End()
-	fState, err := db.HistoricalStateFromSlot(slot)
+	fState, err := db.HistoricalStateFromSlot(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	// from input slot, retrieve its corresponding block and call that the most recent block.
-	mostRecentBlock, err := db.BlockBySlot(slot)
+	mostRecentBlock, err := db.BlockBySlot(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	lastSlot := slot
 	for mostRecentBlock == nil {
 		lastSlot--
-		mostRecentBlock, err = db.BlockBySlot(lastSlot)
+		mostRecentBlock, err = db.BlockBySlot(ctx, lastSlot)
 		if err != nil {
 			return nil, err
 		}
@@ -97,6 +97,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 				postState,
 				nil,
 				root,
+				db,
 				&state.TransitionConfig{
 					VerifySignatures: false,
 					Logging:          false,
@@ -111,6 +112,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			postState,
 			block,
 			root,
+			db,
 			&state.TransitionConfig{
 				VerifySignatures: false,
 				Logging:          false,
@@ -135,6 +137,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			postState,
 			nil,
 			root,
+			db,
 			&state.TransitionConfig{
 				VerifySignatures: false,
 				Logging:          false,

@@ -10,6 +10,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -18,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -41,7 +41,6 @@ type ChainService struct {
 	attsService          *attestation.Service
 	opsPoolService       operations.OperationFeeds
 	chainStartChan       chan time.Time
-	canonicalBlockChan   chan *pb.BeaconBlock
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
 	finalizedEpoch       uint64
@@ -72,7 +71,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
 		canonicalBlockFeed:   new(event.Feed),
-		canonicalBlockChan:   make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
@@ -81,7 +79,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -142,7 +140,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
 		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
@@ -151,7 +149,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
-	genBlock := b.NewGenesisBlock(stateRoot[:])
+	genBlock := genesis.NewGenesisBlock(stateRoot[:])
 	// TODO(#2011): Remove this in state caching.
 	beaconState.LatestBlock = genBlock
 
@@ -218,15 +216,4 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
 	}
 	return root, nil
-}
-
-// doesPoWBlockExist checks if the referenced PoW block exists.
-func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
-	powBlock, err := c.web3Service.Client().BlockByHash(c.ctx, hash)
-	if err != nil {
-		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
-		return false
-	}
-
-	return powBlock != nil
 }

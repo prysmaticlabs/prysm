@@ -141,18 +141,12 @@ func ProcessJustification(
 	if 3*prevEpochBoundaryAttestingBalance >= 2*prevTotalBalance {
 		state.JustificationBitfield |= 2
 		newJustifiedEpoch = prevEpoch
-		if enableLogging {
-			log.Infof("Previous epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 1
 		newJustifiedEpoch = currentEpoch
-		if enableLogging {
-			log.Infof("Current epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 
 	// Process finality.
@@ -161,36 +155,24 @@ func ProcessJustification(
 	if state.PreviousJustifiedEpoch == prevEpoch-2 &&
 		(state.JustificationBitfield>>1)%8 == 7 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
-		if enableLogging {
-			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	// When the 2nd and 3rd most epochs are all justified, the 2nd can finalize the 3rd epoch
 	// as a source.
 	if state.PreviousJustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>1)%4 == 3 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
-		if enableLogging {
-			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	// When the 1st, 2nd and 3rd most epochs are all justified, the 1st can finalize the 3rd epoch
 	// as a source.
 	if state.JustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
-		if enableLogging {
-			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	// When the 1st and 2nd most epochs are all justified, the 1st can finalize the 2nd epoch
 	// as a source.
 	if state.JustifiedEpoch == prevEpoch &&
 		(state.JustificationBitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
-		if enableLogging {
-			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		}
 	}
 	state.PreviousJustifiedEpoch = state.JustifiedEpoch
 	state.JustifiedEpoch = newJustifiedEpoch
@@ -307,12 +289,9 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.CurrentShufflingStartShard = (state.CurrentShufflingStartShard +
 		helpers.CurrentEpochCommitteeCount(state)) % params.BeaconConfig().ShardCount
-	seed, err := helpers.GenerateSeed(state, state.CurrentShufflingEpoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not update current shuffling seed: %v", err)
-	}
+	// TODO(#2072)we have removed the generation of a new seed for the timebeing to get it stable for the testnet.
+	// this will be handled in Q2.
 	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
-	state.CurrentShufflingSeedHash32 = seed[:]
 	return state, nil
 }
 
@@ -337,11 +316,8 @@ func ProcessPartialValidatorRegistry(ctx context.Context, state *pb.BeaconState)
 	if epochsSinceLastRegistryChange > 1 &&
 		mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
 		state.CurrentShufflingEpoch = helpers.NextEpoch(state)
-		seed, err := helpers.GenerateSeed(state, state.CurrentShufflingEpoch)
-		if err != nil {
-			return nil, fmt.Errorf("could not generate seed: %v", err)
-		}
-		state.CurrentShufflingSeedHash32 = seed[:]
+		// TODO(#2072)we have removed the generation of a new seed for the timebeing to get it stable for the testnet.
+		// this will be handled in Q2.
 	}
 	return state, nil
 }
