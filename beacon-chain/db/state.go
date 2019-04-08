@@ -13,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
 )
@@ -331,6 +332,9 @@ func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
 }
 
 func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
+	if !featureconfig.FeatureConfig().EnableHistoricalStatePruning {
+		return nil
+	}
 	return db.update(func(tx *bolt.Tx) error {
 		histState := tx.Bucket(histStateBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
