@@ -3,7 +3,7 @@ package epoch_test
 import (
 	"context"
 	"fmt"
-	// "github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"testing"
 	"time"
 
@@ -16,11 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	// "github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var ValidatorCount = 4000000
+var ValidatorCount = 300000
 var RunAmount = 134217728 / ValidatorCount
 
 // var conditions = "MAX"
@@ -108,41 +108,41 @@ func BenchmarkProcessJustification(b *testing.B) {
 	}
 }
 
-// func BenchmarkProcessCrosslinks(b *testing.B) {
-// 	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
+func BenchmarkProcessCrosslinks(b *testing.B) {
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
 
-// 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 5*params.BeaconConfig().SlotsPerEpoch
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 5*params.BeaconConfig().SlotsPerEpoch
 
-// 	// 4 Mil 31230
-// 	byteLength := mathutil.CeilDiv8(31230)
+	// 4 Mil 31230
+	byteLength := mathutil.CeilDiv8(31230)
 
-// 	var attestations []*pb.PendingAttestation
-// 	for i := 0; i < 10; i++ {
-// 		attestation := &pb.PendingAttestation{
-// 			Data: &pb.AttestationData{
-// 				Slot:                    beaconState.Slot,
-// 				CrosslinkDataRootHash32: []byte{'A'},
-// 			},
-// 			// All validators attested to the above roots.
-// 			AggregationBitfield: bitutil.FillBitfield(byteLength),
-// 		}
-// 		attestations = append(attestations, attestation)
-// 	}
+	var attestations []*pb.PendingAttestation
+	for i := 0; i < 10; i++ {
+		attestation := &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:                    beaconState.Slot,
+				CrosslinkDataRootHash32: []byte{'A'},
+			},
+			// All validators attested to the above roots.
+			AggregationBitfield: bitutil.FillBitfield(byteLength),
+		}
+		attestations = append(attestations, attestation)
+	}
 
-// 	b.N = 20
-// 	b.ResetTimer()
-// 	for i := 0; i < b.N; i++ {
-// 		_, err := epoch.ProcessCrosslinks(
-// 			context.Background(),
-// 			beaconState,
-// 			attestations,
-// 			nil,
-// 		)
-// 		if err != nil {
-// 			b.Fatal(err)
-// 		}
-// 	}
-// }
+	b.N = 20
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := epoch.ProcessCrosslinks(
+			context.Background(),
+			beaconState,
+			attestations,
+			nil,
+		)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
 
 func BenchmarkProcessRewards(b *testing.B) {
 	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
