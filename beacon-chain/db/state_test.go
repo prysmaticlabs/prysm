@@ -88,35 +88,6 @@ func TestInitializeState_OK(t *testing.T) {
 	}
 }
 
-func TestGenesisTime_OK(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-
-	genesisTime, err := db.GenesisTime(ctx)
-	if err == nil {
-		t.Fatal("Expected GenesisTime to fail")
-	}
-
-	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits, &pb.Eth1Data{}); err != nil {
-		t.Fatalf("Failed to initialize state: %v", err)
-	}
-
-	time1, err := db.GenesisTime(ctx)
-	if err != nil {
-		t.Fatalf("GenesisTime failed on second attempt: %v", err)
-	}
-	time2, err := db.GenesisTime(ctx)
-	if err != nil {
-		t.Fatalf("GenesisTime failed on second attempt: %v", err)
-	}
-
-	if time1 != time2 {
-		t.Fatalf("Expected %v and %v to be equal", time1, time2)
-	}
-}
-
 func TestFinalizeState_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
