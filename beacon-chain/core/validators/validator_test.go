@@ -277,7 +277,7 @@ func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
 	if newState.ValidatorBalances[1] != 1050 {
-		t.Errorf("Expected balance at index 1 to be 1000, received %d", newState.ValidatorBalances[1])
+		t.Errorf("Expected balance at index 1 to be 1050, received %d", newState.ValidatorBalances[1])
 	}
 }
 
