@@ -182,7 +182,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "c184a55f180beb5018f3cf4a3970de8e432e59e4",  # v0.0.3
+    commit = "d179525e24b7d78531ca671cd5ec295587dbea79",  # v0.0.5
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -346,7 +346,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_tcp_transport",
-    commit = "69079ce9b2140ebe9e750c70ac30b94fef08f627",  # v0.0.1
+    commit = "280af4c75cb2f1f61355ed9dc327928705f6de89",  # v0.0.2
     importpath = "github.com/libp2p/go-tcp-transport",
 )
 
@@ -550,7 +550,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    commit = "2114e839891f0a824d9a36919165fed197522d87",  # v0.0.1
+    commit = "4b96e98ce72baa5da81813c7621490e83c6363c0",  # v0.0.2
     importpath = "github.com/libp2p/go-ws-transport",
 )
 
@@ -568,7 +568,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_reuseport_transport",
-    commit = "a38ecc623029c60063f999d16a7b62c1053adfc3",  # v0.0.1
+    commit = "613b9f8934b2fa21208fe052314c82d296577c37",  # v0.0.2
     importpath = "github.com/libp2p/go-reuseport-transport",
 )
 
@@ -750,7 +750,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "da821d95c0f0268f0134841589c55efa9e8e5422",  # v0.0.6
+    commit = "ec1ba23f0ba7fc028c848201e1763cca0b190dd9",  # v0.0.7
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -835,7 +835,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "16d66b2ad60fc6b6956b0c2bd332111a94db6dbb",  # v0.0.2
+    commit = "c6b40f96419660dc6a55e811d4e3299f2e3deffe",  # v0.0.3
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
