@@ -591,6 +591,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Send(
 		&pb.ValidatorActivationResponse{
 			ActivatedPublicKeys: pubKeys,
