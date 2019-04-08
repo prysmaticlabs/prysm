@@ -7,8 +7,6 @@ matrix:
       go: 1.12.x
       env:
         - lint
-      before-install:
-        - rm -rf /home/travis/.cache/go-build/*
       install:
         - go get ${gobuild_args} -t ./...
       script:
