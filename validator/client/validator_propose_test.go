@@ -368,7 +368,7 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
 	).Return(nil /*response*/, errors.New("something bad happened"))
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "something bad happened")
 }
 
@@ -424,7 +424,7 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 		nil, // err
 	)
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	if !bytes.Equal(broadcastedBlock.StateRootHash32, computedStateRoot) {
 		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRootHash32)

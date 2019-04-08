@@ -47,13 +47,13 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	}
 	// Set the attestation data's shard as the shard associated with the validator's
 	// committee as retrieved by CrosslinkCommitteesAtSlot.
-	attData.Shard = v.assignment.Assignment[0].Shard
+	attData.Shard = v.assignments.Assignment[0].Shard
 
 	// Fetch other necessary information from the beacon node in order to attest
 	// including the justified epoch, epoch boundary information, and more.
 	infoReq := &pb.AttestationDataRequest{
 		Slot:  slot,
-		Shard: v.assignment.Assignment[0].Shard,
+		Shard: v.assignments.Assignment[0].Shard,
 	}
 	infoRes, err := v.attesterClient.AttestationDataAtSlot(ctx, infoReq)
 	if err != nil {
@@ -98,7 +98,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	// Find the index in committee to be used for
 	// the aggregation bitfield
 	var indexInCommittee int
-	for i, vIndex := range v.assignment.Assignment[0].Committee {
+	for i, vIndex := range v.assignments.Assignment[0].Committee {
 		if vIndex == validatorIndexRes.Index {
 			indexInCommittee = i
 			break

@@ -193,7 +193,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
-// validator assignments are unknown. Otherwise returns a valid ValidatorRole.
+// validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
 	rolesAt := make(map[string]pb.ValidatorRole)
 	for _, assignment := range v.assignments.Assignment {

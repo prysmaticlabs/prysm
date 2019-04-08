@@ -588,6 +588,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		PublicKeys: pubKeys,
 	}
 	ctrl := gomock.NewController(t)
+
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
 	mockStream.EXPECT().Send(

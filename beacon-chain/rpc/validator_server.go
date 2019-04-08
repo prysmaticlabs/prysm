@@ -30,42 +30,12 @@ type ValidatorServer struct {
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-	if vs.beaconDB.HasValidator(req.Pubkey) {
-		beaconState, err := vs.beaconDB.HeadState(vs.ctx)
-=======
-	if vs.beaconDB.HasValidators(req.PublicKey) {
-<<<<<<< HEAD
-		beaconState, err := vs.beaconDB.State(vs.ctx)
->>>>>>> first logic version-broken
+	if vs.beaconDB.HasValidators(req.PublicKeys) {
+		beaconState, err := vs.beaconDB.HeadState(stream.Context())
 		if err != nil {
 			return fmt.Errorf("could not retrieve beacon state: %v", err)
 		}
-		activeVals, err := vs.retrieveActiveValidators(beaconState, req.PublicKey)
-=======
-		activeVals, err := vs.retrieveActiveValidators(req.PublicKey)
->>>>>>> remove unused var in function call
-=======
-	if vs.beaconDB.HasValidators(req.PublicKeys) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-		activeVals, err := vs.retrieveActiveValidators(req.PublicKeys)
->>>>>>> fix review remarks and tests
-=======
-=======
-	if ex, _ := vs.beaconDB.HasValidators(req.PublicKeys); ex {
->>>>>>> run over all public keys in hasvalidators
-=======
-	if vs.beaconDB.HasValidators(req.PublicKeys) {
->>>>>>> hasvalidators without missing publickeys list
-		activeVals, err := vs.retrieveActiveValidatorsPublicKeys(req.PublicKeys)
->>>>>>> merge and some of terenc3t remarks addressed
-=======
-		activeKeys, err := vs.filterActivePublicKeys(req.PublicKeys)
->>>>>>> fix some of prestone review remarks
+		activeKeys, err := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
 		if err != nil {
 			return fmt.Errorf("could not retrieve active validator from state: %v", err)
 		}
@@ -80,27 +50,11 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 			if !vs.beaconDB.HasValidators(req.PublicKeys) {
 				continue
 			}
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 			beaconState, err := vs.beaconDB.HeadState(vs.ctx)
 			if err != nil {
 				return fmt.Errorf("could not retrieve beacon state: %v", err)
 			}
-			activeVals, err := vs.retrieveActiveValidators(beaconState, req.PublicKey)
-=======
-			activeVals, err := vs.retrieveActiveValidators(req.PublicKey)
->>>>>>> remove unused var in function call
-=======
-			activeVals, err := vs.retrieveActiveValidators(req.PublicKeys)
->>>>>>> fix review remarks and tests
-=======
-			activeVals, err := vs.retrieveActiveValidatorsPublicKeys(req.PublicKeys)
->>>>>>> merge and some of terenc3t remarks addressed
-=======
-			activeKeys, err := vs.filterActivePublicKeys(req.PublicKeys)
->>>>>>> fix some of prestone review remarks
+			activeKeys, err := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
 			if err != nil {
 				return fmt.Errorf("could not retrieve active validator from state: %v", err)
 			}
@@ -300,14 +254,10 @@ func (vs *ValidatorServer) activeValidator(beaconState *pbp2p.BeaconState, pubke
 }
 
 // filterActivePublicKeys This method takes a list of validator public keys, filters the active ones, and returns the list of active public keys.
-func (vs *ValidatorServer) filterActivePublicKeys(pubkeys [][]byte) ([][]byte, error) {
+func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState, pubkeys [][]byte) ([][]byte, error) {
 	m, err := vs.beaconDB.ValidatorIndices(pubkeys)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve validators indexes: %v", err)
-	}
-	beaconState, err := vs.beaconDB.State(vs.ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, beaconState.Slot)
 	v := make([][]byte, 0, len(m))

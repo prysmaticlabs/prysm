@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"io/ioutil"
 	"strings"
@@ -322,35 +323,6 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
 
-// func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
-// 	ctrl := gomock.NewController(t)
-// 	defer ctrl.Finish()
-// 	client := internal.NewMockValidatorServiceClient(ctrl)
-
-// 	slot := uint64(1)
-// 	v := validator{
-// 		keys:            keyMap,
-// 		validatorClient: client,
-// 		assignments: &pb.CommitteeAssignmentResponse{
-// 			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-// 				&pb.CommitteeAssignmentResponse_CommitteeAssignment{
-// 					Committee: []uint64{},
-// 					Slot:      10,
-// 					Shard:     20,
-// 				},
-// 			},
-// 		},
-// 	}
-// 	client.EXPECT().CommitteeAssignment(
-// 		gomock.Any(),
-// 		gomock.Any(),
-// 	).Times(0)
-
-// 	if err := v.UpdateAssignments(context.Background(), slot); err != nil {
-// 		t.Errorf("Could not update assignments: %v", err)
-// 	}
-// }
-
 func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
 	// TODO(2167): Unskip this test.
 	t.Skip()
@@ -360,9 +332,9 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 
 	slot := uint64(1)
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
-		assignment: &pb.CommitteeAssignmentResponse{
+		assignments: &pb.CommitteeAssignmentResponse{
 			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 				{
 					Committee: []uint64{},
@@ -453,4 +425,41 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	if !v.assignments.Assignment[0].IsProposer {
 		t.Errorf("Unexpected validator assignments. want: proposer=true")
 	}
+}
+
+func TestRolesAt_OK(t *testing.T) {
+
+	v := validator{
+		assignments: &pb.CommitteeAssignmentResponse{
+			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				{
+					Shard:      1,
+					Slot:       1,
+					IsProposer: true,
+					PublicKey:  []byte("pk1"),
+				},
+				{
+					Shard:     2,
+					Slot:      1,
+					PublicKey: []byte("pk2"),
+				},
+				{
+					Shard:     1,
+					Slot:      2,
+					PublicKey: []byte("pk3"),
+				},
+			},
+		},
+	}
+	roleMap := v.RolesAt(1)
+	if roleMap[hex.EncodeToString([]byte("pk1"))] != pb.ValidatorRole_PROPOSER {
+		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
+	}
+	if roleMap[hex.EncodeToString([]byte("pk2"))] != pb.ValidatorRole_ATTESTER {
+		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
+	}
+	if roleMap[hex.EncodeToString([]byte("pk3"))] != pb.ValidatorRole_UNKNOWN {
+		t.Errorf("Unexpected validator role. want: UNKNOWN")
+	}
+
 }
