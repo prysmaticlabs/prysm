@@ -8,7 +8,7 @@ matrix:
       env:
         - lint
       before-install:
-        - sudo apt-get install binutils-2.30
+        - rm -rf /home/travis/.cache/go-build/*
       install:
         - go get ${gobuild_args} -t ./...
       script:
