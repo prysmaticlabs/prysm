@@ -95,33 +95,6 @@ func PrevAttestations(ctx context.Context, state *pb.BeaconState) []*pb.PendingA
 	return prevEpochAttestations
 }
 
-// PrevJustifiedAttestations returns the justified attestations
-// of the previous 2 epochs.
-//
-// Spec pseudocode definition:
-//   return [a for a in current_epoch_attestations + previous_epoch_attestations
-//   if a.data.justified_epoch  == state.previous_justified_epoch]
-func PrevJustifiedAttestations(
-	ctx context.Context,
-	state *pb.BeaconState,
-	currentEpochAttestations []*pb.PendingAttestation,
-	prevEpochAttestations []*pb.PendingAttestation,
-) []*pb.PendingAttestation {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.PrevJustifiedAttestations")
-	defer span.End()
-
-	var prevJustifiedAttestations []*pb.PendingAttestation
-	epochAttestations := append(currentEpochAttestations, prevEpochAttestations...)
-
-	for _, attestation := range epochAttestations {
-		if attestation.Data.JustifiedEpoch == state.PreviousJustifiedEpoch {
-			prevJustifiedAttestations = append(prevJustifiedAttestations, attestation)
-		}
-	}
-	return prevJustifiedAttestations
-}
-
 // PrevEpochBoundaryAttestations returns the boundary attestations
 // at the start of the previous epoch.
 //

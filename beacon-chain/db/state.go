@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -316,19 +315,6 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
 	}
 	return protoState, nil
-}
-
-// GenesisTime returns the genesis timestamp for the state.
-func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
-	state, err := db.HeadState(ctx)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)
-	}
-	if state == nil {
-		return time.Time{}, fmt.Errorf("state not found: %v", err)
-	}
-	genesisTime := time.Unix(int64(state.GenesisTime), int64(0))
-	return genesisTime, nil
 }
 
 func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
