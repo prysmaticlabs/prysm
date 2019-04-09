@@ -127,6 +127,11 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 		return
 	}
 
+	w.chainStartETH1Data = &pb.Eth1Data{
+		BlockHash32:       depositLog.BlockHash[:],
+		DepositRootHash32: chainStartDepositRoot[:],
+	}
+
 	timestamp := binary.LittleEndian.Uint64(timestampData)
 	w.chainStarted = true
 	w.depositRoot = chainStartDepositRoot[:]

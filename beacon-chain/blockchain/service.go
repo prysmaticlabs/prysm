@@ -110,13 +110,7 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 		initialDeposits[i] = &pb.Deposit{DepositData: initialDepositsData[i]}
 	}
 
-	depositRoot := c.web3Service.DepositRoot()
-	latestBlockHash := c.web3Service.LatestBlockHash()
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: depositRoot[:],
-		BlockHash32:       latestBlockHash[:],
-	}
-	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data)
+	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data())
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
