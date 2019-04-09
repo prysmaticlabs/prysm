@@ -69,7 +69,6 @@ func newHashCache() *hashCacheS {
 // RootByEncodedHash fetches Root by the encoded hash of the object. Returns true with a
 // reference to the root if exists. Otherwise returns false, nil.
 func (b *hashCacheS) RootByEncodedHash(h common.Hash) (bool, *root, error) {
-
 	item := b.hashCache.Get(h.Hex())
 	if item == nil {
 		hashCacheMiss.Inc()
