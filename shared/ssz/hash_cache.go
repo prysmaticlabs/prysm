@@ -168,7 +168,7 @@ func (b *hashCacheS) AddRoot(h common.Hash, rootB []byte) error {
 	return nil
 }
 
-// MakeSliceHasherCache add caching mechanism to slice hasher
+// MakeSliceHasherCache add caching mechanism to slice hasher.
 func makeSliceHasherCache(typ reflect.Type) (hasher, error) {
 	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
