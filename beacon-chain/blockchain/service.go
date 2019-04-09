@@ -212,14 +212,3 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 	}
 	return root, nil
 }
-
-// doesPoWBlockExist checks if the referenced PoW block exists.
-func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
-	powBlock, err := c.web3Service.Client().BlockByHash(c.ctx, hash)
-	if err != nil {
-		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
-		return false
-	}
-
-	return powBlock != nil
-}

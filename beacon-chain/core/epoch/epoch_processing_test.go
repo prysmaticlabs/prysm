@@ -229,7 +229,6 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		1,
 		1,
 		1,
-		false, /* disable logging */
 	)
 	if err != nil {
 		t.Errorf("Could not process justification and finalization of state %v", err)
@@ -259,7 +258,6 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		1,
 		1,
 		1,
-		false, /* disable logging */
 	)
 	if err != nil {
 		t.Errorf("Could not process justification and finalization of state %v", err)

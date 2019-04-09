@@ -127,9 +127,7 @@ func ProcessJustificationAndFinalization(
 	prevEpochBoundaryAttestingBalance uint64,
 	prevTotalBalance uint64,
 	totalBalance uint64,
-	enableLogging bool,
-) (*pb.BeaconState, error) {
-
+) *pb.BeaconState {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessJustificationAndFinalization")
 	defer span.End()
 

@@ -9,8 +9,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.1/rules_go-0.18.1.tar.gz",
-    sha256 = "77dfd303492f2634de7a660445ee2d3de2960cbd52f97d8c0dffa9362d3ddef9",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.2/rules_go-0.18.2.tar.gz",
+    sha256 = "31f959ecf3687f6e0bb9d01e1e7a7153367ecd82816c9c0ae149cd0e5a92bf8c",
 )
 
 http_archive(
@@ -35,15 +35,15 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "213dcf7e72f3acd4d1e369b7a356f3e5d9560f380bd655b13b7c0ea425d7c419",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.9/rules_nodejs-0.27.9.tar.gz"],
+    sha256 = "1fbea5f33a8cbf8fd798f4cf7973a9b09e53bda872c75b5665a92a6d28fbbb13",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.10/rules_nodejs-0.27.10.tar.gz"],
 )
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "fd10df16cc6bfdb3384b685073152696a81973dd59ef2bc7b543055d2cbd469f",
-    strip_prefix = "rules_k8s-e6259a4034c86053c27944bcce234f28db0c5e30",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/e6259a4034c86053c27944bcce234f28db0c5e30.tar.gz",
+    sha256 = "281eb0bfeb48acd12ffb7454aca3f5d9100639662785a76836a0e7f00205b5f9",
+    strip_prefix = "rules_k8s-8b2d62aef3f495cc7d8c14184b8ccc954dd915a8",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/8b2d62aef3f495cc7d8c14184b8ccc954dd915a8.tar.gz",
 )
 
 load(
@@ -111,9 +111,9 @@ _go_image_repos()
 
 http_archive(
     name = "prysm_testnet_site",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/ee6c0659223775395cd5e592a6c0e5c6d4abe7e1.tar.gz",
-    strip_prefix = "prysm-testnet-site-ee6c0659223775395cd5e592a6c0e5c6d4abe7e1",
-    sha256 = "c02fcf85202d184c6fa4e78fa16295729affbfd60e4827728ec189d7e3895d90",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/3d0a15deb03aeefe0c69d4400a1f9486383fde27.tar.gz",
+    strip_prefix = "prysm-testnet-site-3d0a15deb03aeefe0c69d4400a1f9486383fde27",
+    sha256 = "f56cb21ab184ab2bfa7e8503ef1d3ec189bd2004aac9681012e6a58a0ba3f3e3",
     build_file_content = """
 proto_library(
   name = "faucet_proto",
@@ -182,7 +182,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "c184a55f180beb5018f3cf4a3970de8e432e59e4",  # v0.0.3
+    commit = "d179525e24b7d78531ca671cd5ec295587dbea79",  # v0.0.5
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -346,7 +346,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_tcp_transport",
-    commit = "69079ce9b2140ebe9e750c70ac30b94fef08f627",  # v0.0.1
+    commit = "280af4c75cb2f1f61355ed9dc327928705f6de89",  # v0.0.2
     importpath = "github.com/libp2p/go-tcp-transport",
 )
 
@@ -550,7 +550,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    commit = "2114e839891f0a824d9a36919165fed197522d87",  # v0.0.1
+    commit = "4b96e98ce72baa5da81813c7621490e83c6363c0",  # v0.0.2
     importpath = "github.com/libp2p/go-ws-transport",
 )
 
@@ -568,7 +568,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_reuseport_transport",
-    commit = "a38ecc623029c60063f999d16a7b62c1053adfc3",  # v0.0.1
+    commit = "613b9f8934b2fa21208fe052314c82d296577c37",  # v0.0.2
     importpath = "github.com/libp2p/go-reuseport-transport",
 )
 
@@ -628,7 +628,7 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "3c9057dbd62b763d954b9fc4ad4618a22aa5dd2e",  # v0.19.2
+    commit = "c7872c57080a5e9808cccc5c3331d24b4a21f5e2",  # v0.20.0
     importpath = "go.opencensus.io",
 )
 
@@ -750,7 +750,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "da821d95c0f0268f0134841589c55efa9e8e5422",  # v0.0.6
+    commit = "ec1ba23f0ba7fc028c848201e1763cca0b190dd9",  # v0.0.7
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -835,7 +835,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "16d66b2ad60fc6b6956b0c2bd332111a94db6dbb",  # v0.0.2
+    commit = "c6b40f96419660dc6a55e811d4e3299f2e3deffe",  # v0.0.3
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 

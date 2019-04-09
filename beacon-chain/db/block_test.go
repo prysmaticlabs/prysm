@@ -238,46 +238,6 @@ func TestChainProgress_OK(t *testing.T) {
 	}
 }
 
-func TestHasBlockBySlot_OK(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-
-	blkSlot := uint64(10)
-	block1 := &pb.BeaconBlock{
-		Slot: blkSlot,
-	}
-
-	exists, _, err := db.HasBlockBySlot(blkSlot)
-	if err != nil {
-		t.Fatalf("failed to get block: %v", err)
-	}
-	if exists {
-		t.Error("Block exists despite being not being saved")
-	}
-
-	if err := db.SaveBlock(block1); err != nil {
-		t.Fatalf("save block failed: %v", err)
-	}
-
-	if err := db.UpdateChainHead(ctx, block1, &pb.BeaconState{}); err != nil {
-		t.Fatalf("Unable to save block and state in db %v", err)
-	}
-
-	exists, blk, err := db.HasBlockBySlot(blkSlot)
-	if err != nil {
-		t.Fatalf("failed to get block: %v", err)
-	}
-	if !exists {
-		t.Error("Block does not exist in db")
-	}
-
-	if blk.Slot != blkSlot {
-		t.Errorf("Saved block does not have the slot from which it was requested")
-	}
-
-}
-
 func TestJustifiedBlock_NoneExists(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)

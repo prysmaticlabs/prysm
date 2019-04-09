@@ -267,7 +267,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 		prevEpochAttestingBalance,
 		prevTotalBalance,
 		totalBalance,
-		config.Logging,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not process justification and finalization of state: %v", err)
