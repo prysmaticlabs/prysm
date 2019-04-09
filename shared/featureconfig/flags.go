@@ -28,6 +28,7 @@ var (
 	EnableCommitteesCacheFlag = cli.BoolFlag{
 		Name:  "enable-committees-cache",
 		Usage: "Enable crosslink committees cache for rpc server, default is disabled.",
+	}
 	// EnableHistoricalStatePruningFlag allows the database to prune old historical states.
 	EnableHistoricalStatePruningFlag = cli.BoolFlag{
 		Name:  "enable-historical-state-pruning",
