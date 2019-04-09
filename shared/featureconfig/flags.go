@@ -28,6 +28,10 @@ var (
 	EnableCheckBlockStateRootFlag = cli.BoolFlag{
 		Name:  "enable-check-block-state-root",
 		Usage: "Enable check block state root in block processing, default is disabled.",
+	// EnableHistoricalStatePruningFlag allows the database to prune old historical states.
+	EnableHistoricalStatePruningFlag = cli.BoolFlag{
+		Name:  "enable-historical-state-pruning",
+		Usage: "Enable database pruning of historical states after finalized epochs",
 	}
 )
 
@@ -39,4 +43,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
 	EnableCheckBlockStateRootFlag,
+	EnableHistoricalStatePruningFlag,
 }
