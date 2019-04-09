@@ -95,7 +95,7 @@ func ConfigureValidatorFeatures(ctx *cli.Context) {
 		cfg.VerifyAttestationSigs = true
 	}
 	if ctx.GlobalBool(CacheTreeHashFlag.Name) {
-		log.Info("Cache tree hashes for ssz.")
+		log.Info("Cache tree hashes for ssz")
 		cfg.CacheTreeHash = true
 	}
 
