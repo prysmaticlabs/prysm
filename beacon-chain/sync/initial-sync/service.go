@@ -180,6 +180,11 @@ func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
 }
 
+// HighestObservedSlot returns the highest observed slot.
+func (s *InitialSync) HighestObservedSlot() uint64 {
+	return s.highestObservedSlot
+}
+
 // NodeIsSynced checks that the node has been caught up with the network.
 func (s *InitialSync) NodeIsSynced() (bool, uint64) {
 	return s.nodeIsSynced, s.currentSlot

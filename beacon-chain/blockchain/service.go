@@ -110,13 +110,7 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 		initialDeposits[i] = &pb.Deposit{DepositData: initialDepositsData[i]}
 	}
 
-	depositRoot := c.web3Service.DepositRoot()
-	latestBlockHash := c.web3Service.LatestBlockHash()
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: depositRoot[:],
-		BlockHash32:       latestBlockHash[:],
-	}
-	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data)
+	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data())
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
@@ -211,15 +205,4 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
 	}
 	return root, nil
-}
-
-// doesPoWBlockExist checks if the referenced PoW block exists.
-func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
-	powBlock, err := c.web3Service.Client().BlockByHash(c.ctx, hash)
-	if err != nil {
-		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
-		return false
-	}
-
-	return powBlock != nil
 }

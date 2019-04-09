@@ -4,7 +4,6 @@
 package blocks
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -59,24 +58,4 @@ func ProcessBlockRoots(ctx context.Context, state *pb.BeaconState, parentRoot [3
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
 	}
 	return state
-}
-
-// BlockChildren obtains the blocks in a list of observed blocks which have the current
-// beacon block's hash as their parent root hash.
-//
-// Spec pseudocode definition:
-//	Let get_children(store: Store, block: BeaconBlock) ->
-//		List[BeaconBlock] returns the child blocks of the given block.
-func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
-	var children []*pb.BeaconBlock
-	root, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
-	}
-	for _, observed := range observedBlocks {
-		if bytes.Equal(observed.ParentRootHash32, root[:]) {
-			children = append(children, observed)
-		}
-	}
-	return children, nil
 }

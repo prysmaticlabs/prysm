@@ -97,12 +97,13 @@ func (ss *Service) Status() error {
 	if ss.Querier.atGenesis {
 		return nil
 	}
-	synced, currentSyncedSlot := ss.InitialSync.NodeIsSynced()
-	if !synced {
-		return fmt.Errorf(
-			"node not yet synced, currently at slot: %v",
-			currentSyncedSlot-params.BeaconConfig().GenesisSlot,
-		)
+
+	blk, err := ss.Querier.db.ChainHead()
+	if err != nil {
+		return fmt.Errorf("could not retrieve chain head %v", err)
+	}
+	if blk.Slot < ss.InitialSync.HighestObservedSlot() {
+		return fmt.Errorf("node is not synced as the current chain head is at slot %d", blk.Slot-params.BeaconConfig().GenesisSlot)
 	}
 	return nil
 }
@@ -114,15 +115,16 @@ func (ss *Service) run() {
 		slog.Fatalf("Unable to retrieve result from sync querier %v", err)
 	}
 
-	if synced {
-		ss.RegularSync.Start()
-		return
-	}
-
 	// Sets the highest observed slot from querier.
 	ss.InitialSync.InitializeObservedSlot(ss.Querier.currentHeadSlot)
 	ss.InitialSync.InitializeObservedStateRoot(bytesutil.ToBytes32(ss.Querier.currentStateRoot))
 	// Sets the state root of the highest observed slot.
 	ss.InitialSync.InitializeFinalizedStateRoot(ss.Querier.currentFinalizedStateRoot)
+
+	if synced {
+		ss.RegularSync.Start()
+		return
+	}
+
 	ss.InitialSync.Start()
 }
