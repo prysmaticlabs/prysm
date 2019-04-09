@@ -48,7 +48,7 @@ type root struct {
 	MerkleRoot []byte
 }
 
-// hashKeyFn takes the  representation as the key for a hashInfo.
+// hashKeyFn takes the representation as the key for a hashInfo.
 func hashKeyFn(obj interface{}) (string, error) {
 	mRoot, ok := obj.(*root)
 	if !ok {
