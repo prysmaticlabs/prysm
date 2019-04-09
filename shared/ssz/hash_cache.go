@@ -24,15 +24,15 @@ var (
 	maxCacheSize = params.BeaconConfig().HashCacheSize
 	// Metrics
 	hashCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_hash_cache_miss",
+		Name: "hash_cache_miss",
 		Help: "The number of hash requests that aren't present in the cache.",
 	})
 	hashCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_hash_cache_hit",
+		Name: "hash_cache_hit",
 		Help: "The number of hash requests that are present in the cache.",
 	})
 	hashCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "powchain_hash_cache_size",
+		Name: "hash_cache_size",
 		Help: "The number of hashes in the block cache",
 	})
 )
