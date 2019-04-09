@@ -28,6 +28,7 @@ var (
 	EnableCheckBlockStateRootFlag = cli.BoolFlag{
 		Name:  "enable-check-block-state-root",
 		Usage: "Enable check block state root in block processing, default is disabled.",
+	}
 	// EnableHistoricalStatePruningFlag allows the database to prune old historical states.
 	EnableHistoricalStatePruningFlag = cli.BoolFlag{
 		Name:  "enable-historical-state-pruning",
