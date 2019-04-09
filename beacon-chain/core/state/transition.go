@@ -270,7 +270,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 		prevEpochAttestingBalance,
 		prevTotalBalance,
 		totalBalance,
-		config.Logging,
 	)
 
 	// Process crosslinks records.
