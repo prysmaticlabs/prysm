@@ -78,7 +78,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	// Check state root
 	if featureconfig.FeatureConfig().EnableCheckBlockStateRoot {
-		// Calc state hash with previos block
+		// Calc state hash with previous block
 		beaconState.LatestBlock = saveLatestBlock
 		stateRoot, err := hashutil.HashProto(beaconState)
 		if err != nil {
