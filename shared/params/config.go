@@ -24,7 +24,7 @@ type BeaconChainConfig struct {
 	WithdrawalPrivkeyFileName    string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	BLSPubkeyLength              int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 	DefaultBufferSize            int    // DefaultBufferSize for channels across the Prysm repository.
-	HashCacheSize                int64  // HashCacheSize defines the size of object hashes that are cached
+	HashCacheSize                int64  // HashCacheSize defines the size of object hashes that are cached.
 
 	// BLS domain values.
 	DomainDeposit     uint64 // DomainDeposit defines the BLS signature domain for deposit verification.
