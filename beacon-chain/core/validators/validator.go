@@ -122,12 +122,13 @@ func ProcessDeposit(
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
 		newValidator := &pb.Validator{
-			Pubkey:          pubkey,
-			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
-			StatusFlags:     0,
+			Pubkey:                      pubkey,
+			ActivationEpoch:             params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
+			StatusFlags:                 0,
+			WithdrawalCredentialsHash32: withdrawalCredentials,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
