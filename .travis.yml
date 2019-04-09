@@ -4,6 +4,7 @@ sudo: false
 matrix:
   include:
     - os: linux
+      dist: xenial
       go: 1.11.x
       env:
         - lint
