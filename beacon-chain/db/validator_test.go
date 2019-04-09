@@ -70,9 +70,11 @@ func TestSaveAndRetrieveValidatorsIndexes_OK(t *testing.T) {
 		t.Fatalf("Could not delete validator index: %v", err)
 	}
 	indexes, err = db.ValidatorIndices(ids)
-	want := fmt.Sprintf("one or more of the validators %#x does not exist", ids)
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Want: %v, got: %v", want, err.Error())
+	if bytes.Equal(indexes[0], p1) {
+		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 1, indexes[0])
+	}
+	if len(indexes) > 1 {
+		t.Fatalf("Validator index wasn't deleted. length of map was expected to be: %v and found to be: %v", 1, len(indexes))
 	}
 }
 
