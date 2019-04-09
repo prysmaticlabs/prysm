@@ -71,7 +71,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		cfg.EnableCheckBlockStateRoot = true
 	}
 	if ctx.GlobalBool(CacheTreeHashFlag.Name) {
-		log.Info("Cache tree hashes for ssz.")
+		log.Info("Cache tree hashes for ssz")
 		cfg.CacheTreeHash = true
 	}
 	if ctx.GlobalBool(EnableHistoricalStatePruningFlag.Name) {
