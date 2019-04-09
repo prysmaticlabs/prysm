@@ -229,7 +229,6 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		1,
 		1,
 		1,
-		false, /* disable logging */
 	)
 
 	if newState.PreviousJustifiedEpoch != 3 {
@@ -256,7 +255,6 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		1,
 		1,
 		1,
-		false, /* disable logging */
 	)
 	if newState.JustifiedEpoch != helpers.CurrentEpoch(state)-1 {
 		t.Errorf("New state's justified epoch %d != state's epoch -2: %d",

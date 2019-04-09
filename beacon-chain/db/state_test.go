@@ -12,8 +12,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableHistoricalStatePruning: true,
+	})
+}
 
 func setupInitialDeposits(t testing.TB, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
 	privKeys := make([]*bls.SecretKey, numDeposits)
@@ -78,35 +85,6 @@ func TestInitializeState_OK(t *testing.T) {
 
 	if !bytes.Equal(beaconStateEnc, statePrimeEnc) {
 		t.Fatalf("Expected %#x and %#x to be equal", beaconStateEnc, statePrimeEnc)
-	}
-}
-
-func TestGenesisTime_OK(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-
-	genesisTime, err := db.GenesisTime(ctx)
-	if err == nil {
-		t.Fatal("Expected GenesisTime to fail")
-	}
-
-	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits, &pb.Eth1Data{}); err != nil {
-		t.Fatalf("Failed to initialize state: %v", err)
-	}
-
-	time1, err := db.GenesisTime(ctx)
-	if err != nil {
-		t.Fatalf("GenesisTime failed on second attempt: %v", err)
-	}
-	time2, err := db.GenesisTime(ctx)
-	if err != nil {
-		t.Fatalf("GenesisTime failed on second attempt: %v", err)
-	}
-
-	if time1 != time2 {
-		t.Fatalf("Expected %v and %v to be equal", time1, time2)
 	}
 }
 

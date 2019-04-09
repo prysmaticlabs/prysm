@@ -74,9 +74,11 @@ func (s *Service) healthzHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func (s *Service) goroutinezHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 	stack := debug.Stack()
+	// #nosec G104
 	w.Write(stack)
+	// #nosec G104
 	pprof.Lookup("goroutine").WriteTo(w, 2)
 }
 

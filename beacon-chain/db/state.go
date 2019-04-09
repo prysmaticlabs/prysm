@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -13,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
 )
@@ -317,20 +317,10 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 	return protoState, nil
 }
 
-// GenesisTime returns the genesis timestamp for the state.
-func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
-	state, err := db.HeadState(ctx)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)
-	}
-	if state == nil {
-		return time.Time{}, fmt.Errorf("state not found: %v", err)
-	}
-	genesisTime := time.Unix(int64(state.GenesisTime), int64(0))
-	return genesisTime, nil
-}
-
 func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
+	if !featureconfig.FeatureConfig().EnableHistoricalStatePruning {
+		return nil
+	}
 	return db.update(func(tx *bolt.Tx) error {
 		histState := tx.Bucket(histStateBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
