@@ -63,6 +63,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableCheckBlockStateRootFlag.Name) {
 		log.Info("Enabled check block state root")
 		cfg.EnableCheckBlockStateRoot = true
+	}
 	if ctx.GlobalBool(EnableHistoricalStatePruningFlag.Name) {
 		log.Info("Enabled historical state pruning")
 		cfg.EnableHistoricalStatePruning = true
