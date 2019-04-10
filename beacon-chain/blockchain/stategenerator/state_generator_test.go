@@ -176,7 +176,7 @@ func TestGenerateState_NilLatestFinalizedBlock(t *testing.T) {
 	if err := beaconDB.SaveFinalizedState(beaconState); err != nil {
 		t.Fatalf("Unable to save finalized state")
 	}
-	if err := beaconDB.SaveHistoricalState(beaconState); err != nil {
+	if err := beaconDB.SaveHistoricalState(context.Background(), beaconState); err != nil {
 		t.Fatalf("Unable to save finalized state")
 	}
 
