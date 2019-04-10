@@ -85,3 +85,26 @@ func TestBitSet(t *testing.T) {
 		}
 	}
 }
+
+func TestRoundtripBitSetAndCheck(t *testing.T) {
+	tests := []struct {
+		a int
+		b []byte
+	}{
+		{a: 300, b: []byte{128}},   //10000000
+		{a: 10000, b: []byte{64}},  //01000000
+		{a: 800, b: []byte{4}},     //00000100
+		{a: 809, b: []byte{0, 32}}, //00000000 00100000
+		{a: 100, b: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8}},
+	}
+	for _, tt := range tests {
+		bfield := SetBitfield(tt.a)
+		indexExists, err := CheckBit(bfield, tt.a)
+		if err != nil {
+			t.Errorf("checking bit for index %d leads to : %v", tt.a, err)
+		}
+		if !indexExists {
+			t.Errorf("Index %d has a malformed bitfield %v", tt.a, bfield)
+		}
+	}
+}

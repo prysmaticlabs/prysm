@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -60,6 +62,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 			slot-params.BeaconConfig().GenesisSlot, err)
 		return
 	}
+
+	lengthOfCommitte := mathutil.CeilDiv8(len(v.assignment.Assignment[0].Committee))
+
 	// Set the attestation data's slot to head_state.slot where the slot
 	// is the canonical head of the beacon chain.
 	attData.Slot = infoRes.HeadSlot
@@ -89,7 +94,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 
 	// We set the custody bitfield to an slice of zero values as a stub for phase 0
 	// of length len(committee)+7 // 8.
-	attestation.CustodyBitfield = make([]byte, (len(v.assignment.Assignment[0].Committee)+7)/8)
+	attestation.CustodyBitfield = make([]byte, lengthOfCommitte)
 
 	// Find the index in committee to be used for
 	// the aggregation bitfield
@@ -101,7 +106,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		}
 	}
 
-	aggregationBitfield := bitutil.SetBitfield(indexInCommittee)
+	aggregationBitfield := bitutil.SetBitfield(indexInCommittee, lengthOfCommitte)
 	attestation.AggregationBitfield = aggregationBitfield
 
 	// TODO(#1366): Use BLS to generate an aggregate signature.

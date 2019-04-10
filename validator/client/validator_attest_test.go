@@ -144,7 +144,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		CustodyBitfield:    make([]byte, (len(committee)+7)/8),
 		AggregateSignature: []byte("signed"),
 	}
-	aggregationBitfield := bitutil.SetBitfield(4)
+	aggregationBitfield := bitutil.SetBitfield(4, len(committee)+7/8)
 	expectedAttestation.AggregationBitfield = aggregationBitfield
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
@@ -230,4 +230,47 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 
 	delay = 0
 	validator.AttestToBlockHead(context.Background(), 0)
+}
+
+func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+	validatorIndex := uint64(2)
+	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.assignment = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
+			Shard:     5,
+			Committee: committee,
+		}}}
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{
+		Index: uint64(validatorIndex),
+	}, nil)
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
+	).Return(&pb.AttestationDataResponse{
+		HeadSlot:                 30,
+		BeaconBlockRootHash32:    []byte("A"),
+		EpochBoundaryRootHash32:  []byte("B"),
+		JustifiedBlockRootHash32: []byte("C"),
+		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
+		JustifiedEpoch:           3,
+	}, nil)
+
+	var generatedAttestation *pbp2p.Attestation
+	m.attesterClient.EXPECT().AttestHead(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
+	).Do(func(_ context.Context, att *pbp2p.Attestation) {
+		generatedAttestation = att
+	}).Return(&pb.AttestResponse{}, nil /* error */)
+
+	validator.AttestToBlockHead(context.Background(), 30)
+
+	if len(generatedAttestation.AggregationBitfield) != 2 {
+		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBitfield))
+	}
 }
