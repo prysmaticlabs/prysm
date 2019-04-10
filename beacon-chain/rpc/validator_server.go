@@ -11,12 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"go.opencensus.io/trace"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
@@ -28,7 +24,6 @@ type ValidatorServer struct {
 	beaconDB           *db.BeaconDB
 	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
-	committeesCache    *committeesCache
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -121,7 +116,6 @@ func (vs *ValidatorServer) ValidatorPerformance(
 func (vs *ValidatorServer) CommitteeAssignment(
 	ctx context.Context,
 	req *pb.CommitteeAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {
-
 	beaconState, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
@@ -146,9 +140,6 @@ func (vs *ValidatorServer) assignment(
 	epochStart uint64,
 ) (*pb.CommitteeAssignmentResponse_CommitteeAssignment, error) {
 
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.rpcservice.CommitteeAssignment.assignment")
-	defer span.End()
-
 	if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf(
 			"expected public key to have length %d, received %d",
@@ -159,9 +150,8 @@ func (vs *ValidatorServer) assignment(
 
 	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
-
 	chainHead, err := vs.beaconDB.ChainHead()
 	if err != nil {
 		return nil, fmt.Errorf("could not get chain head: %v", err)
@@ -179,64 +169,23 @@ func (vs *ValidatorServer) assignment(
 		}
 	}
 
-	vStatus, err := vs.validatorStatus(pubkey, beaconState)
+	committee, shard, slot, isProposer, err :=
+		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx), false)
 	if err != nil {
 		return nil, err
 	}
-
-	for slot := epochStart; slot < epochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		if featureconfig.FeatureConfig().EnableCommitteesCache {
-			if exists, committees, err := vs.committeesCache.CommitteesInfoBySlot(int(slot)); exists || err != nil {
-				if err != nil {
-					return nil, err
-				}
-				span.AddAttributes(trace.BoolAttribute("committeeCacheHit", true))
-				committee, shard, slot, isProposer, err :=
-					helpers.ValidatorAssignment(idx, slot, committees.committees)
-				if err == nil {
-					return &pb.CommitteeAssignmentResponse_CommitteeAssignment{
-						Committee:  committee,
-						Shard:      shard,
-						Slot:       slot,
-						IsProposer: isProposer,
-						PublicKey:  pubkey,
-						Status:     vStatus,
-					}, nil
-				}
-			}
-		}
-		committees, err := helpers.CrosslinkCommitteesAtSlot(
-			beaconState,
-			slot,
-			false /* registeryChange */)
-		if err != nil {
-			return nil, err
-		}
-		if featureconfig.FeatureConfig().EnableCommitteesCache {
-			committeesInfo := &committeesInfo{
-				slot:       int(slot),
-				committees: committees,
-			}
-			span.AddAttributes(trace.BoolAttribute("committeeCacheHit", false))
-			if err := vs.committeesCache.AddCommittees(committeesInfo); err != nil {
-				return nil, err
-			}
-		}
-		committee, shard, slot, isProposer, err :=
-			helpers.ValidatorAssignment(idx, slot, committees)
-		if err == nil {
-			return &pb.CommitteeAssignmentResponse_CommitteeAssignment{
-				Committee:  committee,
-				Shard:      shard,
-				Slot:       slot,
-				IsProposer: isProposer,
-				PublicKey:  pubkey,
-				Status:     vStatus,
-			}, nil
-		}
+	status, err := vs.validatorStatus(pubkey, beaconState)
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, status.Error(codes.NotFound, "validator not found found in assignments")
+	return &pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		Committee:  committee,
+		Shard:      shard,
+		Slot:       slot,
+		IsProposer: isProposer,
+		PublicKey:  pubkey,
+		Status:     status,
+	}, nil
 }
 
 // ValidatorStatus returns the validator status of the current epoch.
