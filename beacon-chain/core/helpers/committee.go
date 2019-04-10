@@ -13,7 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 )
+
+var committeeCache = cache.NewCommitteesCache()
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
 type CrosslinkCommittee struct {
@@ -256,9 +259,13 @@ func AttestationParticipants(
 	// RegistryChange is a no-op when requesting slot in current and previous epoch.
 	// AttestationParticipants is used to calculate justification and finality hence won't be used
 	// to request crosslink commitees of future epoch.
-	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, false /* registryChange */)
+
+	exists, committee, err := committeeCache.CommitteesInfoBySlot(int(attestationData.Slot))
 	if err != nil {
 		return nil, err
+	}
+	if !exists {
+		// Add committee to cache here
 	}
 
 	var committee []uint64
