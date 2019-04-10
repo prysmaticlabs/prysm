@@ -169,7 +169,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		DepositRootHash32: []byte{},
 		BlockHash32:       []byte{},
 	}
-	beaconState, err := genesis.BeaconState(deposits, 0, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -211,7 +211,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		DepositRootHash32: []byte{},
 		BlockHash32:       []byte{},
 	}
-	beaconState, err := genesis.BeaconState(deposits, 0, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
