@@ -217,10 +217,17 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
+	var latestBlockRoots [][]byte
+
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
+		latestBlockRoots = append(latestBlockRoots, []byte("a"))
+	}
+
 	state := &pb.BeaconState{
-		Slot:                  300 + params.BeaconConfig().GenesisSlot,
-		JustifiedEpoch:        3,
-		JustificationBitfield: 4,
+		Slot:                   300 + params.BeaconConfig().GenesisSlot,
+		JustifiedEpoch:         3,
+		JustificationBitfield:  4,
+		LatestBlockRootHash32S: latestBlockRoots,
 	}
 	newState, err := ProcessJustificationAndFinalization(
 		context.Background(),

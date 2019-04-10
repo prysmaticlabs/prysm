@@ -852,13 +852,19 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 		Slot:                   params.BeaconConfig().GenesisSlot + 64,
 		PreviousJustifiedEpoch: 1,
 		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks: []*pb.Crosslink{
+			&pb.Crosslink{},
+		},
 	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
 				Slot:                     params.BeaconConfig().GenesisSlot + 60,
+				Shard:                    0,
 				JustifiedBlockRootHash32: []byte{},
 				JustifiedEpoch:           1,
+				LatestCrosslink:          &pb.Crosslink{},
+				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 			},
 		},
 	}
