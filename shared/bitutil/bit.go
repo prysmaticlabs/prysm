@@ -8,7 +8,7 @@ import (
 )
 
 // SetBitfield takes an index and returns bitfield with the index flipped.
-func SetBitfield(index int, committeeSize int) []byte {
+func SetBitfield(index int, committeeLength int) []byte {
 	chunkLocation := index / 8
 	indexLocation := mathutil.PowerOf2(uint64(7 - (index % 8)))
 	var bitfield []byte
