@@ -37,9 +37,9 @@ var (
 )
 
 // committeesInfo species the committee information of a given slot.
-type committeesInfo struct {
-	slot       int
-	committees []*helpers.CrosslinkCommittee
+type CommitteesInfo struct {
+	Slot       int
+	Committees []*helpers.CrosslinkCommittee
 }
 
 // committeesCache struct with 1 queue for looking up crosslink committees by slot.
@@ -51,12 +51,12 @@ type committeesCache struct {
 // slotKeyFn takes the string representation of the slot number as the key
 // for a committeeInfo.
 func slotKeyFn(obj interface{}) (string, error) {
-	cInfo, ok := obj.(*committeesInfo)
+	cInfo, ok := obj.(*CommitteesInfo)
 	if !ok {
 		return "", ErrNotACommitteeInfo
 	}
 
-	return strconv.Itoa(cInfo.slot), nil
+	return strconv.Itoa(cInfo.Slot), nil
 }
 
 // newCommitteesCache creates a new committee cache for storing/accessing blockInfo from
@@ -69,33 +69,33 @@ func NewCommitteesCache() *committeesCache {
 
 // CommitteesInfoBySlot fetches committeesInfo by slot. Returns true with a
 // reference to the committees info, if exists. Otherwise returns false, nil.
-func (c *committeesCache) CommitteesInfoBySlot(slot int) (bool, *committeesInfo, error) {
+func (c *committeesCache) CommitteesInfoBySlot(slot int) (*CommitteesInfo, bool, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	obj, exists, err := c.committeesCache.GetByKey(strconv.Itoa(slot))
 	if err != nil {
-		return false, nil, err
+		return nil, false, err
 	}
 
 	if exists {
 		committeeCacheHit.Inc()
 	} else {
 		committeeCacheMiss.Inc()
-		return false, nil, nil
+		return nil, false, nil
 	}
 
-	cInfo, ok := obj.(*committeesInfo)
+	cInfo, ok := obj.(*CommitteesInfo)
 	if !ok {
-		return false, nil, ErrNotACommitteeInfo
+		return nil, false, ErrNotACommitteeInfo
 	}
 
-	return true, cInfo, nil
+	return cInfo, true, nil
 }
 
 // AddCommittees adds committeeInfo object to the cache. This method also trims the least
 // recently added committeeInfo object if the cache size has ready the max cache size limit.
-func (c *committeesCache) AddCommittees(committees *committeesInfo) error {
+func (c *committeesCache) AddCommittees(committees *CommitteesInfo) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

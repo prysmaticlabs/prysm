@@ -260,16 +260,18 @@ func AttestationParticipants(
 	// AttestationParticipants is used to calculate justification and finality hence won't be used
 	// to request crosslink commitees of future epoch.
 
-	exists, committee, err := committeeCache.CommitteesInfoBySlot(int(attestationData.Slot))
+	committees, exists, err := committeeCache.CommitteesInfoBySlot(int(attestationData.Slot))
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
+
 		// Add committee to cache here
+
 	}
 
 	var committee []uint64
-	for _, crosslinkCommittee := range crosslinkCommittees {
+	for _, crosslinkCommittee := range committees.Committees {
 		if crosslinkCommittee.Shard == attestationData.Shard {
 			committee = crosslinkCommittee.Committee
 			break
