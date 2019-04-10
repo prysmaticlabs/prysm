@@ -10,8 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{})
+}
 
 func TestGenerateState_OK(t *testing.T) {
 	b, err := backend.NewSimulatedBackend()
@@ -171,7 +176,7 @@ func TestGenerateState_NilLatestFinalizedBlock(t *testing.T) {
 	if err := beaconDB.SaveFinalizedState(beaconState); err != nil {
 		t.Fatalf("Unable to save finalized state")
 	}
-	if err := beaconDB.SaveHistoricalState(beaconState); err != nil {
+	if err := beaconDB.SaveHistoricalState(context.Background(), beaconState); err != nil {
 		t.Fatalf("Unable to save finalized state")
 	}
 

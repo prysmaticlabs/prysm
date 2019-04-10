@@ -4,7 +4,8 @@ sudo: false
 matrix:
   include:
     - os: linux
-      go: 1.11.x
+      dist: xenial
+      go: 1.12.x
       env:
         - lint
       install:

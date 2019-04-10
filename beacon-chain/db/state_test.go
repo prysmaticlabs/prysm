@@ -12,8 +12,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableHistoricalStatePruning: true,
+	})
+}
 
 func setupInitialDeposits(t testing.TB, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
 	privKeys := make([]*bls.SecretKey, numDeposits)
@@ -44,7 +51,7 @@ func TestInitializeState_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
@@ -81,42 +88,13 @@ func TestInitializeState_OK(t *testing.T) {
 	}
 }
 
-func TestGenesisTime_OK(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-
-	genesisTime, err := db.GenesisTime(ctx)
-	if err == nil {
-		t.Fatal("Expected GenesisTime to fail")
-	}
-
-	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits, &pb.Eth1Data{}); err != nil {
-		t.Fatalf("Failed to initialize state: %v", err)
-	}
-
-	time1, err := db.GenesisTime(ctx)
-	if err != nil {
-		t.Fatalf("GenesisTime failed on second attempt: %v", err)
-	}
-	time2, err := db.GenesisTime(ctx)
-	if err != nil {
-		t.Fatalf("GenesisTime failed on second attempt: %v", err)
-	}
-
-	if time1 != time2 {
-		t.Fatalf("Expected %v and %v to be equal", time1, time2)
-	}
-}
-
 func TestFinalizeState_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -139,48 +117,6 @@ func TestFinalizeState_OK(t *testing.T) {
 	}
 }
 
-func TestCurrentAndFinalizeState_OK(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-
-	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
-		t.Fatalf("Failed to initialize state: %v", err)
-	}
-
-	state, err := db.HeadState(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to retrieve state: %v", err)
-	}
-
-	state.FinalizedEpoch = 10000
-	state.BatchedBlockRootHash32S = [][]byte{[]byte("testing-prysm")}
-
-	if err := db.SaveCurrentAndFinalizedState(ctx, state); err != nil {
-		t.Fatalf("Unable to save state")
-	}
-
-	fState, err := db.FinalizedState()
-	if err != nil {
-		t.Fatalf("Unable to retrieve finalized state")
-	}
-
-	cState, err := db.HeadState(context.Background())
-	if err != nil {
-		t.Fatalf("Unable to retrieve state")
-	}
-
-	if !proto.Equal(fState, state) {
-		t.Error("Retrieved and saved finalized are unequal")
-	}
-
-	if !proto.Equal(cState, state) {
-		t.Error("Retrieved and saved current are unequal")
-	}
-}
-
 func BenchmarkState_ReadingFromCache(b *testing.B) {
 	db := setupDB(b)
 	defer teardownDB(b, db)
@@ -188,7 +124,7 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(b, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -327,7 +263,7 @@ func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 		if err := db.SaveFinalizedState(tt.state); err != nil {
 			t.Fatalf("could not save finalized state: %v", err)
 		}
-		if err := db.SaveHistoricalState(tt.state); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), tt.state); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 
@@ -407,10 +343,10 @@ func TestHistoricalState_Pruning(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if err := db.SaveHistoricalState(tt.histState1); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), tt.histState1); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
-		if err := db.SaveHistoricalState(tt.histState2); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), tt.histState2); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 
@@ -420,7 +356,7 @@ func TestHistoricalState_Pruning(t *testing.T) {
 		}
 
 		// Save a dummy genesis state so that db doesnt return an error.
-		if err := db.SaveHistoricalState(&pb.BeaconState{Slot: slotGen(0), FinalizedEpoch: 1}); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), &pb.BeaconState{Slot: slotGen(0), FinalizedEpoch: 1}); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 

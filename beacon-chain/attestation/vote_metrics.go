@@ -28,7 +28,7 @@ func reportVoteMetrics(index uint64, block *pb.BeaconBlock) {
 		return
 	}
 
-	e := params.BeaconConfig().GenesisEpoch
+	s := params.BeaconConfig().GenesisSlot
 	validatorLastVoteGauge.WithLabelValues(
-		"v" + strconv.Itoa(int(index))).Set(float64(block.Slot - e))
+		"v" + strconv.Itoa(int(index))).Set(float64(block.Slot - s))
 }

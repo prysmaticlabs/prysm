@@ -29,7 +29,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
@@ -126,7 +126,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Errorf("Block failed processing: %v", err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Processed beacon block")
+	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
 func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
@@ -189,7 +189,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	depositRoot := depositTrie.Root()
 	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
-	if err := db.SaveHistoricalState(beaconState); err != nil {
+	if err := db.SaveHistoricalState(context.Background(), beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -231,7 +231,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHistoricalState(beaconState); err != nil {
+	if err := db.SaveHistoricalState(context.Background(), beaconState); err != nil {
 		t.Fatal(err)
 	}
 	computedState, err := chainService.ReceiveBlock(context.Background(), block)
@@ -420,7 +420,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(ctx)

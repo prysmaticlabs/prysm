@@ -69,9 +69,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	log.WithFields(logrus.Fields{
-		"slotNumber":     block.Slot - params.BeaconConfig().GenesisSlot,
-		"justifiedEpoch": beaconState.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
-		"finalizedEpoch": beaconState.FinalizedEpoch - params.BeaconConfig().GenesisEpoch,
+		"slotNumber":   block.Slot - params.BeaconConfig().GenesisSlot,
+		"currentEpoch": helpers.SlotToEpoch(block.Slot) - params.BeaconConfig().GenesisEpoch,
 	}).Info("State transition complete")
 
 	// We process the block's contained deposits, attestations, and other operations
@@ -80,7 +79,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
 	}
 
-	log.WithField("slot", block.Slot-params.BeaconConfig().GenesisSlot).Info("Processed beacon block")
+	log.WithField("slot", block.Slot-params.BeaconConfig().GenesisSlot).Info("Finished processing beacon block")
 	return beaconState, nil
 }
 
@@ -229,7 +228,7 @@ func (c *ChainService) runStateTransition(
 		).Info("Block transition successfully processed")
 
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
+		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
 	}
