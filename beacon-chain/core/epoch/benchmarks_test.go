@@ -462,6 +462,127 @@ func BenchmarkUpdateLatestSlashedBalances(b *testing.B) {
 	}
 }
 
+func BenchmarkProcessEpoch(b *testing.B) {
+	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+
+	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod *
+		slotsPerEpoch
+	beaconState.Slot = params.BeaconConfig().Eth1FollowDistance * 2 * slotsPerEpoch
+	beaconState.LatestEth1Data = &pb.Eth1Data{
+		DepositRootHash32: nil,
+		BlockHash32:       nil,
+	}
+	beaconState.Eth1DataVotes = []*pb.Eth1DataVote{
+		{
+			Eth1Data: &pb.Eth1Data{
+				DepositRootHash32: []byte{'A'},
+				BlockHash32:       []byte{'B'},
+			},
+			VoteCount: 0,
+		},
+		{
+			Eth1Data: &pb.Eth1Data{
+				DepositRootHash32: []byte{'C'},
+				BlockHash32:       []byte{'D'},
+			},
+			VoteCount: requiredVoteCount/2 + 1,
+		},
+		{
+			Eth1Data: &pb.Eth1Data{
+				DepositRootHash32: []byte{'E'},
+				BlockHash32:       []byte{'F'},
+			},
+			VoteCount: requiredVoteCount / 2,
+		},
+	}
+
+	if slotsPerEpoch != 64 {
+		b.Errorf("SlotsPerEpoch should be 64 for this benchmark to run")
+	}
+
+	beaconState.JustifiedEpoch = 3
+	beaconState.JustificationBitfield = 4
+
+	// 4 Mil 31230
+	committeeSize := ValidatorCount / 128
+	byteLength := mathutil.CeilDiv8(committeeSize)
+
+	var attestations []*pb.PendingAttestation
+	for i := uint64(0); i < 10; i++ {
+		attestation := &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:                     i + slotsPerEpoch + params.BeaconConfig().GenesisSlot,
+				Shard:                    1,
+				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
+				CrosslinkDataRootHash32:  []byte{'A'},
+				JustifiedBlockRootHash32: []byte{0},
+			},
+			// All validators attested to the above roots.
+			AggregationBitfield: bitutil.FillBitfield(byteLength),
+		}
+		attestations = append(attestations, attestation)
+	}
+	beaconState.LatestAttestations = attestations
+
+	var randaoHashes [][]byte
+	for i := uint64(0); i < slotsPerEpoch; i++ {
+		randaoHashes = append(randaoHashes, []byte{byte(i)})
+	}
+	beaconState.LatestRandaoMixes = randaoHashes
+
+	latestSlashedExits := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
+	for i := 0; i < len(latestSlashedExits); i++ {
+		latestSlashedExits[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
+	}
+
+	// beaconState.Slot = params.BeaconConfig().LatestSlashedExitLength / 2 * slotsPerEpoch
+	beaconState.LatestSlashedBalances = latestSlashedExits
+
+	for index := range beaconState.ValidatorBalances {
+		if index%2^5-1 == 0 {
+			beaconState.ValidatorBalances[index] = params.BeaconConfig().EjectionBalance - 1
+		}
+	}
+
+	exitEpoch := helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState))
+	for index := range beaconState.ValidatorRegistry {
+		if index%2^6-5 == 0 {
+			beaconState.ValidatorRegistry[index].ExitEpoch = exitEpoch
+			beaconState.ValidatorRegistry[index].StatusFlags = pb.Validator_INITIATED_EXIT
+		} else if index%2^5-2 == 0 {
+			beaconState.ValidatorRegistry[index].ExitEpoch = params.BeaconConfig().ActivationExitDelay
+			beaconState.ValidatorRegistry[index].ActivationEpoch = 5 + params.BeaconConfig().ActivationExitDelay + 1
+		}
+	}
+
+	oldAttestations := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: beaconState.Slot + 1}},
+		{Data: &pb.AttestationData{Slot: beaconState.Slot + 10}},
+		{Data: &pb.AttestationData{Slot: beaconState.Slot}},
+		{Data: &pb.AttestationData{Slot: beaconState.Slot + 1}},
+		{Data: &pb.AttestationData{Slot: beaconState.Slot + 20}},
+		{Data: &pb.AttestationData{Slot: 32}},
+		{Data: &pb.AttestationData{Slot: 33}},
+		{Data: &pb.AttestationData{Slot: 2 * beaconState.Slot}},
+	}
+
+	beaconState.LatestAttestations = append(beaconState.LatestAttestations, oldAttestations...)
+
+	cfg := &state.TransitionConfig{
+		Logging:          false,
+		VerifySignatures: false,
+	}
+	b.N = RunAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := state.ProcessEpoch(context.Background(), beaconState, cfg)
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}
+
 func BenchmarkActiveValidatorIndices(b *testing.B) {
 	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
 
