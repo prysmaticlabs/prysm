@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -88,6 +89,7 @@ type Web3Service struct {
 	depositTrie             *trieutil.MerkleTrie
 	chainStartDeposits      [][]byte
 	chainStarted            bool
+	chainStartETH1Data      *pb.Eth1Data
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
@@ -147,6 +149,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		beaconDB:                config.BeaconDB,
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
+		chainStartETH1Data:      &pb.Eth1Data{},
 	}, nil
 }
 
@@ -180,6 +183,11 @@ func (w *Web3Service) ChainStartFeed() *event.Feed {
 // by the deposit contract and cached in the powchain service.
 func (w *Web3Service) ChainStartDeposits() [][]byte {
 	return w.chainStartDeposits
+}
+
+// ChainStartETH1Data returns the eth1 data at chainstart.
+func (w *Web3Service) ChainStartETH1Data() *pb.Eth1Data {
+	return w.chainStartETH1Data
 }
 
 // Status is service health checks. Return nil or error.

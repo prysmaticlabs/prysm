@@ -22,7 +22,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.SaveHistoricalState(finalizedState); err != nil {
+	if err := s.db.SaveHistoricalState(ctx, finalizedState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 		return
 	}

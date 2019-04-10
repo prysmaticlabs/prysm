@@ -93,7 +93,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := beaconDB.InitializeState(unixTime, []*pb.Deposit{}, nil); err != nil {
+	if err := beaconDB.InitializeState(context.Background(), unixTime, []*pb.Deposit{}, nil); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := beaconDB.HeadState(ctx)

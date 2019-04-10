@@ -227,7 +227,7 @@ func (c *ChainService) runStateTransition(
 		).Info("Block transition successfully processed")
 
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
+		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
 	}

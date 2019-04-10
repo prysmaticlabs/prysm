@@ -65,7 +65,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	}
 	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 
-	if err := ps.beaconDB.SaveHistoricalState(beaconState); err != nil {
+	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 	}
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil

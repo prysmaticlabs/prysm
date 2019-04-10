@@ -97,7 +97,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		}
 		unixTime := uint64(time.Now().Unix())
 		deposits, _ := setupInitialDeposits(t, 100)
-		if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
+		if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 

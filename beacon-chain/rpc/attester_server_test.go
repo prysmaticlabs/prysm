@@ -85,7 +85,7 @@ func TestAttestationDataAtSlot_JustifiedBlockFailure(t *testing.T) {
 	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.SaveHistoricalState(finalizedState); err != nil {
+	if err := attesterServer.beaconDB.SaveHistoricalState(context.Background(), finalizedState); err != nil {
 		t.Fatalf("Could not save historical state in test db: %v", err)
 	}
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
