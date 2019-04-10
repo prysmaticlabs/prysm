@@ -52,6 +52,7 @@ go_test(
         "//shared:go_default_library",
         "//shared/bitutil:go_default_library",
         "//shared/keystore:go_default_library",
+        "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//validator/accounts:go_default_library",
