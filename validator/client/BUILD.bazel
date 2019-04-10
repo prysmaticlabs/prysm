@@ -19,6 +19,7 @@ go_library(
         "//shared/forkutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/keystore:go_default_library",
+        "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slotutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

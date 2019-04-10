@@ -3,6 +3,8 @@ package bitutil
 import (
 	"bytes"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 func TestCheckBit(t *testing.T) {
@@ -80,31 +82,30 @@ func TestBitSet(t *testing.T) {
 		{a: 100, b: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8}},
 	}
 	for _, tt := range tests {
-		if !bytes.Equal(SetBitfield(tt.a), tt.b) {
-			t.Errorf("SetBitfield(%v) = %d, want = %v", tt.a, SetBitfield(tt.a), tt.b)
+		if !bytes.Equal(SetBitfield(tt.a, mathutil.CeilDiv8(len(tt.b))), tt.b) {
+			t.Errorf("SetBitfield(%v) = %d, want = %v", tt.a, SetBitfield(tt.a, mathutil.CeilDiv8(len(tt.b))), tt.b)
 		}
 	}
 }
 
-func TestRoundtripBitSetAndCheck(t *testing.T) {
+func TestSetBitfield_LargerCommitteesThanIndex(t *testing.T) {
 	tests := []struct {
 		a int
 		b []byte
+		c int
 	}{
-		{a: 300, b: []byte{128}},   //10000000
-		{a: 10000, b: []byte{64}},  //01000000
-		{a: 800, b: []byte{4}},     //00000100
-		{a: 809, b: []byte{0, 32}}, //00000000 00100000
-		{a: 100, b: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8}},
+		{a: 300, b: []byte{128}, c: 40},    //10000000
+		{a: 10000, b: []byte{64}, c: 2000}, //01000000
+		{a: 800, b: []byte{4}, c: 120},     //00000100
+		{a: 809, b: []byte{0, 32}, c: 130}, //00000000 00100000
+		{a: 100, b: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8}, c: 14},
 	}
 	for _, tt := range tests {
-		bfield := SetBitfield(tt.a)
-		indexExists, err := CheckBit(bfield, tt.a)
-		if err != nil {
-			t.Errorf("checking bit for index %d leads to : %v", tt.a, err)
+		bfield := SetBitfield(tt.a, tt.c)
+
+		if len(bfield) != tt.c {
+			t.Errorf("Length of bitfield doesnt match inputted committe size, got: %d but expected: %d", len(bfield), tt.c)
 		}
-		if !indexExists {
-			t.Errorf("Index %d has a malformed bitfield %v", tt.a, bfield)
-		}
+
 	}
 }
