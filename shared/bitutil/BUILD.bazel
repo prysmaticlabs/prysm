@@ -15,4 +15,5 @@ go_test(
     name = "go_default_test",
     srcs = ["bit_test.go"],
     embed = [":go_default_library"],
+    deps = ["//shared/mathutil:go_default_library"],
 )

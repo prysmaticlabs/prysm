@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
@@ -40,7 +40,8 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCrosslinks: true,
+		EnableCrosslinks:          true,
+		EnableCheckBlockStateRoot: true,
 	})
 }
 

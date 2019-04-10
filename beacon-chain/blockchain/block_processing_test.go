@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,27 @@ import (
 
 // Ensure ChainService implements interfaces.
 var _ = BlockProcessor(&ChainService{})
+
+func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
+	beaconState, err := chainService.beaconDB.HistoricalStateFromSlot(context.Background(), block.Slot-1)
+	if err != nil {
+		t.Fatalf("Unable to retrieve state %v", err)
+	}
+	saveLatestBlock := beaconState.LatestBlock
+
+	computedState, err := chainService.ApplyBlockStateTransition(context.Background(), block, beaconState)
+	if err != nil {
+		t.Fatalf("could not apply block state transition: %v", err)
+	}
+
+	computedState.LatestBlock = saveLatestBlock
+	stateRoot, err := hashutil.HashProto(computedState)
+	if err != nil {
+		t.Fatalf("could not tree hash state: %v", err)
+	}
+	block.StateRootHash32 = stateRoot[:]
+	t.Logf("state root after block: %#x", stateRoot)
+}
 
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	db := internal.SetupDB(t)
@@ -97,12 +119,11 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	currentSlot := params.BeaconConfig().GenesisSlot
 	beaconState.Slot++
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	block := &pb.BeaconBlock{
-		Slot:             currentSlot + 1,
+		Slot:             beaconState.Slot,
 		StateRootHash32:  stateRoot[:],
 		ParentRootHash32: parentHash[:],
 		RandaoReveal:     randaoReveal,
@@ -114,6 +135,9 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
+
+	initBlockStateRoot(t, block, chainService)
+
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -128,6 +152,92 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	}
 
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
+}
+
+func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	attsService := attestation.NewAttestationService(
+		context.Background(),
+		&attestation.Config{BeaconDB: db})
+	chainService := setupBeaconChain(t, db, attsService)
+	deposits, privKeys := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := genesis.BeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	beaconState.Slot++
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.Slot++
+	goodStateBlock := &pb.BeaconBlock{
+		Slot:             beaconState.Slot,
+		ParentRootHash32: parentHash[:],
+		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
+		Body:             &pb.BeaconBlockBody{},
+	}
+	beaconState.Slot--
+	initBlockStateRoot(t, goodStateBlock, chainService)
+
+	if err := chainService.beaconDB.SaveBlock(goodStateBlock); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = chainService.ReceiveBlock(context.Background(), goodStateBlock)
+	if err != nil {
+		t.Fatalf("error exists for good block %v", err)
+	}
+	testutil.AssertLogsContain(t, hook, "Executing state transition")
+}
+
+func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, privKeys := setupInitialDeposits(t, 100)
+	ctx := context.Background()
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := genesis.BeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	beaconState.Slot++
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.Slot++
+	invalidStateBlock := &pb.BeaconBlock{
+		Slot:             beaconState.Slot,
+		StateRootHash32:  []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
+		ParentRootHash32: parentHash[:],
+		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
+		Body:             &pb.BeaconBlockBody{},
+	}
+	beaconState.Slot--
+
+	_, err = chainService.ReceiveBlock(context.Background(), invalidStateBlock)
+	if err == nil {
+		t.Fatal("no error for wrong block state root")
+	}
+	if !strings.Contains(err.Error(), "beacon state root is not equal to block state root: ") {
+		t.Fatal(err)
+	}
 }
 
 func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
@@ -207,6 +317,12 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits: pendingDeposits,
 		},
 	}
+
+	beaconState.Slot--
+	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	initBlockStateRoot(t, block, chainService)
 
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
@@ -327,6 +443,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 			RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
 			Body:             &pb.BeaconBlockBody{},
 		}
+		initBlockStateRoot(t, block, chainService)
 		computedState, err := chainService.ReceiveBlock(ctx, block)
 		if err != nil {
 			t.Fatal(err)
@@ -374,6 +491,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
 		Body:             &pb.BeaconBlockBody{},
 	}
+	initBlockStateRoot(t, blockF, chainService)
 
 	computedState, err := chainService.ReceiveBlock(ctx, blockF)
 	if err != nil {
@@ -402,6 +520,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		RandaoReveal:     createRandaoReveal(t, computedState, privKeys),
 		Body:             &pb.BeaconBlockBody{},
 	}
+	initBlockStateRoot(t, blockG, chainService)
 
 	computedState, err = chainService.ReceiveBlock(ctx, blockG)
 	if err != nil {

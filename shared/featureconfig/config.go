@@ -28,6 +28,7 @@ type FeatureFlagConfig struct {
 	VerifyAttestationSigs        bool // VerifyAttestationSigs declares if the client will verify attestations.
 	EnableComputeStateRoot       bool // EnableComputeStateRoot implementation on server side.
 	EnableCrosslinks             bool // EnableCrosslinks in epoch processing.
+	EnableCheckBlockStateRoot    bool // EnableCheckBlockStateRoot in block processing.
 	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updatifinalized states.
 }
 
@@ -58,6 +59,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableCrosslinksFlag.Name) {
 		log.Info("Enabled crosslink computations")
 		cfg.EnableCrosslinks = true
+	}
+	if ctx.GlobalBool(EnableCheckBlockStateRootFlag.Name) {
+		log.Info("Enabled check block state root")
+		cfg.EnableCheckBlockStateRoot = true
 	}
 	if ctx.GlobalBool(EnableHistoricalStatePruningFlag.Name) {
 		log.Info("Enabled historical state pruning")
