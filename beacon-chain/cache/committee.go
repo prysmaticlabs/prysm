@@ -7,7 +7,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
@@ -36,10 +35,16 @@ var (
 	})
 )
 
-// committeesInfo species the committee information of a given slot.
-type CommitteesInfo struct {
+// CommitteeInfo defines the validator committee of slot and shard combinations.
+type CommitteeInfo struct {
+	Committee []uint64
+	Shard     uint64
+}
+
+// CommitteesInSlot species the committees of a given slot.
+type CommitteesInSlot struct {
 	Slot       int
-	Committees []*helpers.CrosslinkCommittee
+	Committees []*CommitteeInfo
 }
 
 // committeesCache struct with 1 queue for looking up crosslink committees by slot.
@@ -51,7 +56,7 @@ type committeesCache struct {
 // slotKeyFn takes the string representation of the slot number as the key
 // for a committeeInfo.
 func slotKeyFn(obj interface{}) (string, error) {
-	cInfo, ok := obj.(*CommitteesInfo)
+	cInfo, ok := obj.(*CommitteesInSlot)
 	if !ok {
 		return "", ErrNotACommitteeInfo
 	}
@@ -69,7 +74,7 @@ func NewCommitteesCache() *committeesCache {
 
 // CommitteesInfoBySlot fetches committeesInfo by slot. Returns true with a
 // reference to the committees info, if exists. Otherwise returns false, nil.
-func (c *committeesCache) CommitteesInfoBySlot(slot int) (*CommitteesInfo, error) {
+func (c *committeesCache) CommitteesInfoBySlot(slot int) (*CommitteesInSlot, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -85,7 +90,7 @@ func (c *committeesCache) CommitteesInfoBySlot(slot int) (*CommitteesInfo, error
 		return nil, nil
 	}
 
-	cInfo, ok := obj.(*CommitteesInfo)
+	cInfo, ok := obj.(*CommitteesInSlot)
 	if !ok {
 		return nil, ErrNotACommitteeInfo
 	}
@@ -95,7 +100,7 @@ func (c *committeesCache) CommitteesInfoBySlot(slot int) (*CommitteesInfo, error
 
 // AddCommittees adds committeeInfo object to the cache. This method also trims the least
 // recently added committeeInfo object if the cache size has ready the max cache size limit.
-func (c *committeesCache) AddCommittees(committees *CommitteesInfo) error {
+func (c *committeesCache) AddCommittees(committees *CommitteesInSlot) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

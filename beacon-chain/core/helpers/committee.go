@@ -255,7 +255,7 @@ func AttestationParticipants(
 	attestationData *pb.AttestationData,
 	bitfield []byte) ([]uint64, error) {
 
-	var committees *cache.CommitteesInfo
+	var committees *cache.CommitteesInSlot
 	var err error
 	committees, err = committeeCache.CommitteesInfoBySlot(int(attestationData.Slot))
 	if err != nil {
@@ -266,9 +266,16 @@ func AttestationParticipants(
 		if err != nil {
 			return nil, err
 		}
-		committees = &cache.CommitteesInfo{
+		var cacheCommittee []*cache.CommitteeInfo
+		for _, crosslinkCommittee := range crosslinkCommittees {
+			cacheCommittee = append(cacheCommittee, &cache.CommitteeInfo{
+				Committee: crosslinkCommittee.Committee,
+				Shard: crosslinkCommittee.Shard,
+			})
+		}
+		committees = &cache.CommitteesInSlot{
 			Slot: int(attestationData.Slot),
-			Committees: crosslinkCommittees,
+			Committees: cacheCommittee,
 		}
 		if err := committeeCache.AddCommittees(committees); err != nil {
 			return nil, err
