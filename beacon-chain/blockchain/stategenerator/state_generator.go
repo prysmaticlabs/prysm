@@ -97,7 +97,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 				postState,
 				nil,
 				root,
-				db,
 				&state.TransitionConfig{
 					VerifySignatures: false,
 					Logging:          false,
@@ -112,7 +111,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			postState,
 			block,
 			root,
-			db,
 			&state.TransitionConfig{
 				VerifySignatures: false,
 				Logging:          false,
@@ -137,7 +135,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			postState,
 			nil,
 			root,
-			db,
 			&state.TransitionConfig{
 				VerifySignatures: false,
 				Logging:          false,

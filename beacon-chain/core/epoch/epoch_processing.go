@@ -9,6 +9,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -97,7 +99,7 @@ func ProcessEth1Data(ctx context.Context, state *pb.BeaconState) *pb.BeaconState
 	return state
 }
 
-// ProcessJustification processes for justified slot by comparing
+// ProcessJustificationAndFinalization processes for justified slot by comparing
 // epoch boundary balance and total balance.
 //   First, update the justification bitfield:
 //     Let new_justified_epoch = state.justified_epoch.
@@ -118,19 +120,19 @@ func ProcessEth1Data(ctx context.Context, state *pb.BeaconState) *pb.BeaconState
 //   Finally, update the following:
 //     Set state.previous_justified_epoch = state.justified_epoch.
 //     Set state.justified_epoch = new_justified_epoch
-func ProcessJustification(
+func ProcessJustificationAndFinalization(
 	ctx context.Context,
 	state *pb.BeaconState,
 	thisEpochBoundaryAttestingBalance uint64,
 	prevEpochBoundaryAttestingBalance uint64,
 	prevTotalBalance uint64,
 	totalBalance uint64,
-) *pb.BeaconState {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessJustification")
+) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessJustificationAndFinalization")
 	defer span.End()
 
 	newJustifiedEpoch := state.JustifiedEpoch
+	newFinalizedEpoch := state.FinalizedEpoch
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
 	// Shifts all the bits over one to create a new bit for the recent epoch.
@@ -153,29 +155,45 @@ func ProcessJustification(
 	// as a source.
 	if state.PreviousJustifiedEpoch == prevEpoch-2 &&
 		(state.JustificationBitfield>>1)%8 == 7 {
-		state.FinalizedEpoch = state.PreviousJustifiedEpoch
+		newFinalizedEpoch = state.PreviousJustifiedEpoch
 	}
 	// When the 2nd and 3rd most epochs are all justified, the 2nd can finalize the 3rd epoch
 	// as a source.
 	if state.PreviousJustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>1)%4 == 3 {
-		state.FinalizedEpoch = state.PreviousJustifiedEpoch
+		newFinalizedEpoch = state.PreviousJustifiedEpoch
 	}
 	// When the 1st, 2nd and 3rd most epochs are all justified, the 1st can finalize the 3rd epoch
 	// as a source.
 	if state.JustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>0)%8 == 7 {
-		state.FinalizedEpoch = state.JustifiedEpoch
+		newFinalizedEpoch = state.JustifiedEpoch
 	}
 	// When the 1st and 2nd most epochs are all justified, the 1st can finalize the 2nd epoch
 	// as a source.
 	if state.JustifiedEpoch == prevEpoch &&
 		(state.JustificationBitfield>>0)%4 == 3 {
-		state.FinalizedEpoch = state.JustifiedEpoch
+		newFinalizedEpoch = state.JustifiedEpoch
 	}
 	state.PreviousJustifiedEpoch = state.JustifiedEpoch
-	state.JustifiedEpoch = newJustifiedEpoch
-	return state
+	state.PreviousJustifiedRoot = state.JustifiedRoot
+	if newJustifiedEpoch != state.JustifiedEpoch {
+		state.JustifiedEpoch = newJustifiedEpoch
+		newJustifedRoot, err := blocks.BlockRoot(state, helpers.StartSlot(newJustifiedEpoch))
+		if err != nil {
+			return state, err
+		}
+		state.JustifiedRoot = newJustifedRoot
+	}
+	if newFinalizedEpoch != state.FinalizedEpoch {
+		state.FinalizedEpoch = newFinalizedEpoch
+		newFinalizedRoot, err := blocks.BlockRoot(state, helpers.StartSlot(newFinalizedEpoch))
+		if err != nil {
+			return state, err
+		}
+		state.FinalizedRoot = newFinalizedRoot
+	}
+	return state, nil
 }
 
 // ProcessCrosslinks goes through each crosslink committee and check

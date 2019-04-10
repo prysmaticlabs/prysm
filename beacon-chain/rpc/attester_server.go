@@ -59,7 +59,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 
 	for headState.Slot < req.Slot {
 		headState, err = state.ExecuteStateTransition(
-			ctx, headState, nil /* block */, headRoot, as.beaconDB, state.DefaultConfig(),
+			ctx, headState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
@@ -88,28 +88,12 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
 	// If the last justified boundary slot is the same as state current slot (ex: slot 0),
 	// we set justified block root to an empty root.
-	lastJustifiedSlot := helpers.StartSlot(headState.JustifiedEpoch)
-	justifiedBlockRoot := make([]byte, 32)
-	if lastJustifiedSlot != headState.Slot {
-		var justifiedBlock *pbp2p.BeaconBlock
-		for i := uint64(0); justifiedBlock == nil && i < params.BeaconConfig().SlotsPerEpoch; i++ {
-			justifiedBlock, err = as.beaconDB.BlockBySlot(ctx, lastJustifiedSlot-i)
-			if err != nil {
-				return nil, fmt.Errorf("could not get justified block: %v", err)
-			}
-		}
+	justifiedBlockRoot := headState.JustifiedRoot
 
-		justifiedBlockRoot32, err := hashutil.HashBeaconBlock(justifiedBlock)
-		if err != nil {
-			return nil, fmt.Errorf("could not get justified block: %v", err)
-		}
-		justifiedBlockRoot = justifiedBlockRoot32[:]
-	}
-
-	// If an attester has to attest for gensis block.
+	// If an attester has to attest for genesis block.
 	if headState.Slot == params.BeaconConfig().GenesisSlot {
-		epochBoundaryRoot = headRoot[:]
-		justifiedBlockRoot = headRoot[:]
+		epochBoundaryRoot = params.BeaconConfig().ZeroHash[:]
+		justifiedBlockRoot = params.BeaconConfig().ZeroHash[:]
 	}
 
 	return &pb.AttestationDataResponse{

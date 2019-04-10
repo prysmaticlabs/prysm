@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -46,7 +47,7 @@ func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	return genesis.BeaconState(deposits, uint64(genesisTime), nil)
+	return state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 }
 
 func TestValidatorIndex_OK(t *testing.T) {
@@ -115,7 +116,7 @@ func TestCommitteeAssignment_CacheMissOk(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	genesis := genesis.NewGenesisBlock([]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -198,7 +199,7 @@ func TestCommitteeAssignment_MultipleKeys_CacheHitOk(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	genesis := genesis.NewGenesisBlock([]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}

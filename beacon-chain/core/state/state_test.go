@@ -1,4 +1,4 @@
-package genesis_test
+package state_test
 
 import (
 	"bytes"
@@ -8,41 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
-	stateHash := []byte{0}
-	b1 := genesis.NewGenesisBlock(stateHash)
-
-	if b1.ParentRootHash32 == nil {
-		t.Error("genesis block missing ParentHash field")
-	}
-
-	if !reflect.DeepEqual(b1.Body.Attestations, []*pb.Attestation{}) {
-		t.Errorf("genesis block should have 0 attestations")
-	}
-
-	if !bytes.Equal(b1.RandaoReveal, params.BeaconConfig().ZeroHash[:]) {
-		t.Error("genesis block missing RandaoReveal field")
-	}
-
-	if !bytes.Equal(b1.StateRootHash32, stateHash) {
-		t.Error("genesis block StateRootHash32 isn't initialized correctly")
-	}
-	expectedEth1 := &pb.Eth1Data{
-		DepositRootHash32: params.BeaconConfig().ZeroHash[:],
-		BlockHash32:       params.BeaconConfig().ZeroHash[:],
-	}
-	if !proto.Equal(b1.Eth1Data, expectedEth1) {
-		t.Error("genesis block Eth1Data isn't initialized correctly")
-	}
-}
 
 func TestGenesisBeaconState_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
@@ -110,7 +82,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		})
 	}
 
-	newState, err := genesis.BeaconState(
+	newState, err := state.GenesisBeaconState(
 		deposits,
 		genesisTime,
 		&pb.Eth1Data{
@@ -211,8 +183,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	state1, _ := genesis.BeaconState(nil, 0, &pb.Eth1Data{})
-	state2, _ := genesis.BeaconState(nil, 0, &pb.Eth1Data{})
+	state1, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
+	state2, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
 
 	root1, err1 := hashutil.HashProto(state1)
 	root2, err2 := hashutil.HashProto(state2)
@@ -227,7 +199,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	s, _ := genesis.BeaconState(nil, 0, nil)
+	s, _ := state.GenesisBeaconState(nil, 0, nil)
 	want, got := len(s.LatestBlockRootHash32S), int(params.BeaconConfig().LatestBlockRootsLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
