@@ -57,8 +57,20 @@ func newDB(dbPath string) *db {
 	}
 
 	if err := boltdb.View(func(tx *bolt.Tx) error {
-		keys := tx.Bucket(assignedPkBucket).Stats().KeyN
+		keys := 0
+
+		// Iterate over all of the pod assigned keys (one to many).
+		c := tx.Bucket(assignedPkBucket).Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			pks := &pb.PrivateKeys{}
+			if err := proto.Unmarshal(v, pks); err != nil {
+				return err
+			}
+			keys += len(pks.PrivateKeys)
+		}
 		assignedPkCount.Set(float64(keys))
+
+		// Add the unassigned keys count (one to one).
 		keys += tx.Bucket(unassignedPkBucket).Stats().KeyN
 		allocatedPkCount.Add(float64(keys))
 		return nil
@@ -134,17 +146,32 @@ func (d *db) RemovePKAssignment(_ context.Context, podName string) error {
 	})
 }
 
-// AssignExistingPK assigns a PK from the unassigned bucket to a given pod.
-func (d *db) AssignExistingPK(_ context.Context, pk []byte, podName string) error {
+// AssignExistingPKs assigns a PK from the unassigned bucket to a given pod.
+func (d *db) AssignExistingPKs(_ context.Context, pks *pb.PrivateKeys, podName string) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
-		if !bytes.Equal(tx.Bucket(unassignedPkBucket).Get(pk), dummyVal) {
-			return errors.New("private key not in unassigned bucket")
+		for _, pk := range pks.PrivateKeys {
+			if !bytes.Equal(tx.Bucket(unassignedPkBucket).Get(pk), dummyVal) {
+				return errors.New("private key not in unassigned bucket")
+			}
+			if err := tx.Bucket(unassignedPkBucket).Delete(pk); err != nil {
+				return err
+			}
 		}
-		if err := tx.Bucket(unassignedPkBucket).Delete(pk); err != nil {
+		assignedPkCount.Add(float64(len(pks.PrivateKeys)))
+
+		// If pod assignment exists, append to it.
+		if existing := tx.Bucket(assignedPkBucket).Get([]byte(podName)); existing != nil {
+			existingKeys := &pb.PrivateKeys{}
+			if err := proto.Unmarshal(existing, existingKeys); err != nil {
+				pks.PrivateKeys = append(pks.PrivateKeys, existingKeys.PrivateKeys...)
+			}
+		}
+
+		data, err := proto.Marshal(pks)
+		if err != nil {
 			return err
 		}
-		assignedPkCount.Inc()
-		return tx.Bucket(assignedPkBucket).Put([]byte(podName), pk)
+		return tx.Bucket(assignedPkBucket).Put([]byte(podName), data)
 	})
 
 	return nil
