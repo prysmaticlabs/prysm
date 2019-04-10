@@ -842,90 +842,6 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 	}
 }
 
-func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
-	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-
-	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 64,
-		PreviousJustifiedEpoch: 1,
-		LatestBlockRootHash32S: blockRoots,
-		LatestCrosslinks: []*pb.Crosslink{
-			&pb.Crosslink{},
-		},
-	}
-	attestations := []*pb.Attestation{
-		{
-			Data: &pb.AttestationData{
-				Slot:                     params.BeaconConfig().GenesisSlot + 60,
-				Shard:                    0,
-				JustifiedBlockRootHash32: []byte{},
-				JustifiedEpoch:           1,
-				LatestCrosslink:          &pb.Crosslink{},
-				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-
-	want := "could not get block root for justified epoch"
-	if _, err := blocks.ProcessBlockAttestations(
-		context.Background(),
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
-	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-
-	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 129,
-		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
-		LatestBlockRootHash32S: blockRoots,
-	}
-	attestations := []*pb.Attestation{
-		{
-			Data: &pb.AttestationData{
-				Slot:                     params.BeaconConfig().GenesisSlot + 80,
-				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
-				JustifiedBlockRootHash32: []byte{},
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-
-	want := fmt.Sprintf(
-		"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
-		[]byte{},
-		blockRoots[64],
-	)
-	if _, err := blocks.ProcessBlockAttestations(
-		context.Background(),
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	var blockRoots [][]byte
 	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
@@ -945,6 +861,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		Slot:                   params.BeaconConfig().GenesisSlot + 70,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
+		PreviousJustifiedRoot:  blockRoots[0],
 		LatestCrosslinks:       stateLatestCrosslinks,
 	}
 	attestations := []*pb.Attestation{
@@ -993,6 +910,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
+		PreviousJustifiedRoot:  blockRoots[0],
 	}
 	attestations := []*pb.Attestation{
 		{
@@ -1012,7 +930,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		},
 	}
 	want := fmt.Sprintf(
-		"expected attestation.ShardBlockRoot == %#x, received %#x instead",
+		"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
 		params.BeaconConfig().ZeroHash[:],
 		[]byte{1},
 	)
@@ -1041,6 +959,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
+		PreviousJustifiedRoot:  blockRoots[0],
 	}
 	att1 := &pb.Attestation{
 		Data: &pb.AttestationData{

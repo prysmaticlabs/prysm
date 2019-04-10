@@ -530,7 +530,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
 	if !bytes.Equal(att.Data.CrosslinkDataRootHash32, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
-			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
+			"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
 			params.BeaconConfig().ZeroHash[:],
 			att.Data.CrosslinkDataRootHash32,
 		)
