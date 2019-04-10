@@ -18,7 +18,7 @@ func SetBitfield(index int, committeeLength int) []byte {
 	}
 	bitfield = append(bitfield, byte(indexLocation))
 
-	for len(bitfield) < committeeSize {
+	for len(bitfield) < committeeLength {
 		bitfield = append(bitfield, byte(0))
 	}
 

@@ -93,7 +93,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 
 	// We set the custody bitfield to an slice of zero values as a stub for phase 0
 	// of length len(committee)+7 // 8.
-	attestation.CustodyBitfield = make([]byte, lengthOfCommitte)
+	attestation.CustodyBitfield = make([]byte, committeeLength)
 
 	// Find the index in committee to be used for
 	// the aggregation bitfield
@@ -105,7 +105,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		}
 	}
 
-	aggregationBitfield := bitutil.SetBitfield(indexInCommittee, lengthOfCommitte)
+	aggregationBitfield := bitutil.SetBitfield(indexInCommittee, committeeLength)
 	attestation.AggregationBitfield = aggregationBitfield
 
 	// TODO(#1366): Use BLS to generate an aggregate signature.
