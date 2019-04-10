@@ -8,6 +8,8 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var size = 1<<(params.BeaconConfig().RandBytes*8) - 1
@@ -496,11 +498,12 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 	}
 	index := uint64(10000)
-	want := fmt.Sprintf(
-		"unable to find assignment for validator %d at slot %d",
-		index, params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch)
 	_, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false)
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
+	statusErr, ok := status.FromError(err)
+	if !ok {
+		t.Fatal(err)
+	}
+	if statusErr.Code() != codes.NotFound {
+		t.Errorf("Unexpected error: %v", err)
 	}
 }
