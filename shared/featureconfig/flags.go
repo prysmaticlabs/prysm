@@ -28,6 +28,11 @@ var (
 	EnableCommitteesCacheFlag = cli.BoolFlag{
 		Name:  "enable-committees-cache",
 		Usage: "Enable crosslink committees cache for rpc server, default is disabled.",
+  }
+	// EnableCheckBlockStateRootFlag check block state root in block processing. It is disabled by default.
+	EnableCheckBlockStateRootFlag = cli.BoolFlag{
+		Name:  "enable-check-block-state-root",
+		Usage: "Enable check block state root in block processing, default is disabled.",
 	}
 	// EnableHistoricalStatePruningFlag allows the database to prune old historical states.
 	EnableHistoricalStatePruningFlag = cli.BoolFlag{
@@ -44,5 +49,6 @@ var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
 	EnableCommitteesCacheFlag,
+	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
 }
