@@ -271,7 +271,7 @@ func AttestationParticipants(
 		}
 	}
 
-	if isValidated, err := VerifyBitfield(bitfield, len(committee)); !isValidated || err != nil {
+	if isValidated, err := VerifyBitfield(bitfield, mathutil.CeilDiv8(len(committee))); !isValidated || err != nil {
 		if err != nil {
 			return nil, err
 		}
