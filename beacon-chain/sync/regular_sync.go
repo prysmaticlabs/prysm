@@ -296,9 +296,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) error {
 		return errors.New("incoming message is not type *pb.BeaconBlockRequestBySlotNumber")
 	}
 
-	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
-	block, err := rs.db.BlockBySlot(request.SlotNumber)
-	getBlockSpan.End()
+	block, err := rs.db.BlockBySlot(ctx, request.SlotNumber)
 	if err != nil || block == nil {
 		if block == nil {
 			log.Debugf("Block with slot %d does not exist", request.SlotNumber)
@@ -348,20 +346,8 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		"beaconState", fmt.Sprintf("%#x", root),
 	).Debug("Sending finalized, justified, and canonical states to peer")
 	defer sentState.Inc()
-	jState, err := rs.db.JustifiedState()
-	if err != nil {
-		log.Errorf("Unable to retrieve justified state, %v", err)
-		return err
-	}
-	canonicalState, err := rs.db.State(ctx)
-	if err != nil {
-		log.Errorf("Unable to retrieve canonical beacon state, %v", err)
-		return err
-	}
 	resp := &pb.BeaconStateResponse{
 		FinalizedState: fState,
-		JustifiedState: jState,
-		CanonicalState: canonicalState,
 	}
 	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)
@@ -384,10 +370,15 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve chain head %v", err)
 		return err
 	}
-
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	currentState, err := rs.db.HeadState(ctx)
 	if err != nil {
-		log.Errorf("Could not tree hash block %v", err)
+		log.Errorf("Could not retrieve current state %v", err)
+		return err
+	}
+
+	stateRoot, err := hashutil.HashProto(currentState)
+	if err != nil {
+		log.Errorf("Could not tree hash state %v", err)
 		return err
 	}
 
@@ -404,8 +395,8 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 	}
 
 	req := &pb.ChainHeadResponse{
-		Slot:                      block.Slot,
-		Hash:                      blockRoot[:],
+		CanonicalSlot:             block.Slot,
+		CanonicalStateRootHash32:  stateRoot[:],
 		FinalizedStateRootHash32S: finalizedRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
@@ -436,7 +427,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	log.WithFields(logrus.Fields{
 		"blockRoot":      fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
 		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
-	}).Info("Received an attestation")
+	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
 	hasAttestation := rs.db.HasAttestation(attestationRoot)
@@ -447,7 +438,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	beaconState, err := rs.db.State(ctx)
+	beaconState, err := rs.db.HeadState(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return err
@@ -464,7 +455,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 
 	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
-	log.Info("Sending newly received attestation to subscribers")
+	log.Debug("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
 	rs.attsService.IncomingAttestationFeed().Send(attestation)
 	sentAttestation.Inc()
@@ -541,7 +532,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 		return err
 	}
 
-	bState, err := rs.db.State(ctx)
+	bState, err := rs.db.HeadState(ctx)
 	if err != nil {
 		log.Errorf("Could not retrieve last finalized slot %v", err)
 		return err
@@ -567,7 +558,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	response := make([]*pb.BeaconBlock, 0, blockRange)
 	for i := startSlot; i <= endSlot; i++ {
-		retBlock, err := rs.db.BlockBySlot(i)
+		retBlock, err := rs.db.BlockBySlot(ctx, i)
 		if err != nil {
 			log.Errorf("Unable to retrieve block from db %v", err)
 			continue

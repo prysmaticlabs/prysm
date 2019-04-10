@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,8 +18,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: true,
+	})
+}
 
 func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 	genesisTime := time.Unix(0, 0).Unix()
@@ -71,7 +79,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 		beaconDB: db,
 	}
 	req := &pb.CommitteeAssignmentsRequest{
-		PublicKey:  [][]byte{{1}},
+		PublicKeys: [][]byte{{1}},
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
@@ -94,16 +102,16 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 
 	pubKey := make([]byte, 96)
 	req := &pb.CommitteeAssignmentsRequest{
-		PublicKey:  [][]byte{pubKey},
+		PublicKeys: [][]byte{pubKey},
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
-	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey[0])
+	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
 	if _, err := vs.CommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 
-func TestCommitteeAssignment_OK(t *testing.T) {
+func TestCommitteeAssignment_CacheMissOk(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -140,14 +148,15 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:        db,
+		committeesCache: newCommitteesCache(),
 	}
 
 	pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	binary.PutUvarint(pubKeyBuf, 0)
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
-		PublicKey:  [][]byte{pubKeyBuf},
+		PublicKeys: [][]byte{pubKeyBuf},
 		EpochStart: params.BeaconConfig().GenesisSlot,
 	}
 	res, err := vs.CommitteeAssignment(context.Background(), req)
@@ -168,7 +177,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	pubKeyBuf = make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
 	req = &pb.CommitteeAssignmentsRequest{
-		PublicKey:  [][]byte{pubKeyBuf},
+		PublicKeys: [][]byte{pubKeyBuf},
 		EpochStart: params.BeaconConfig().GenesisSlot,
 	}
 	res, err = vs.CommitteeAssignment(context.Background(), req)
@@ -182,6 +191,93 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if res.Assignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.Assignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+	}
+}
+
+func TestCommitteeAssignment_MultipleKeys_CacheHitOk(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
+	if err != nil {
+		t.Fatalf("Could not setup genesis state: %v", err)
+	}
+	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	var wg sync.WaitGroup
+	numOfValidators := int(params.BeaconConfig().DepositsForChainStart)
+	errs := make(chan error, numOfValidators)
+	for i := 0; i < numOfValidators; i++ {
+		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.PutUvarint(pubKeyBuf, uint64(i))
+		wg.Add(1)
+		go func(index int) {
+			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Could not save validator index: %v", err)
+		}
+	}
+
+	vs := &ValidatorServer{
+
+		beaconDB:        db,
+		committeesCache: newCommitteesCache(),
+	}
+
+	pubKeyBuf0 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.PutUvarint(pubKeyBuf0, 0)
+	pubKeyBuf1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.PutUvarint(pubKeyBuf1, 1)
+	// Test the first validator in registry.
+	req := &pb.CommitteeAssignmentsRequest{
+		PublicKeys: [][]byte{pubKeyBuf0, pubKeyBuf1},
+		EpochStart: params.BeaconConfig().GenesisSlot,
+	}
+	cInfo := &committeesInfo{
+		slot: int(params.BeaconConfig().GenesisSlot),
+		committees: []*helpers.CrosslinkCommittee{
+			{Shard: 123, Committee: []uint64{0, 10, 5}},
+			{Shard: 234, Committee: []uint64{1, 2, 3}},
+		}}
+	if err := vs.committeesCache.AddCommittees(cInfo); err != nil {
+		t.Fatal(err)
+	}
+	res, err := vs.CommitteeAssignment(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not call epoch committee assignment %v", err)
+	}
+
+	if res.Assignment[0].Shard != cInfo.committees[0].Shard {
+		t.Errorf("Assigned shard %d is not equal to %d",
+			res.Assignment[0].Shard, cInfo.committees[0].Shard)
+	}
+	if !reflect.DeepEqual(res.Assignment[0].Committee, cInfo.committees[0].Committee) {
+		t.Errorf("Expected committee to be %v, got %v",
+			cInfo.committees[0].Committee, res.Assignment[0].Committee)
+	}
+	if res.Assignment[1].Shard != cInfo.committees[1].Shard {
+		t.Errorf("Assigned shard %d is not equal to %d",
+			res.Assignment[1].Shard, cInfo.committees[1].Shard)
+	}
+	if !reflect.DeepEqual(res.Assignment[1].Committee, cInfo.committees[1].Committee) {
+		t.Errorf("Expected committee to be %v, got %v",
+			cInfo.committees[1].Committee, res.Assignment[1].Committee)
+	}
+
+	if len(res.Assignment) != 2 {
+		t.Fatalf("expected 2 assignments but got %d", len(res.Assignment))
 	}
 }
 

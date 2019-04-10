@@ -224,6 +224,42 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 		ValidatorBalances: balances,
 		ValidatorRegistry: registry,
 	}
+	pubkey := []byte{7, 8, 9}
+	deposit := uint64(1000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{2}
+
+	newState, err := ProcessDeposit(
+		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if newState.ValidatorBalances[2] != 1000 {
+		t.Errorf("Expected balance at index 1 to be 1000, received %d", newState.ValidatorBalances[2])
+	}
+}
+
+func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			Pubkey: []byte{1, 2, 3},
+		},
+		{
+			Pubkey:                      []byte{4, 5, 6},
+			WithdrawalCredentialsHash32: []byte{1},
+		},
+	}
+	balances := []uint64{0, 50}
+	beaconState := &pb.BeaconState{
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
 	pubkey := []byte{4, 5, 6}
 	deposit := uint64(1000)
 	proofOfPossession := []byte{}
@@ -240,8 +276,8 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if newState.ValidatorBalances[1] != 1000 {
-		t.Errorf("Expected balance at index 1 to be 1000, received %d", newState.ValidatorBalances[1])
+	if newState.ValidatorBalances[1] != 1050 {
+		t.Errorf("Expected balance at index 1 to be 1050, received %d", newState.ValidatorBalances[1])
 	}
 }
 

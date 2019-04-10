@@ -74,7 +74,9 @@ func (ms *mockChainService) ApplyBlockStateTransition(
 }
 
 func (ms *mockChainService) VerifyBlockValidity(
-	block *pb.BeaconBlock, beaconState *pb.BeaconState,
+	ctx context.Context,
+	block *pb.BeaconBlock,
+	beaconState *pb.BeaconState,
 ) error {
 	return nil
 }
@@ -91,10 +93,10 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := beaconDB.InitializeState(unixTime, []*pb.Deposit{}, nil); err != nil {
+	if err := beaconDB.InitializeState(context.Background(), unixTime, []*pb.Deposit{}, nil); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := beaconDB.State(ctx)
+	beaconState, err := beaconDB.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}
@@ -150,17 +152,9 @@ func TestSavingBlock_InSync(t *testing.T) {
 			BlockHash32: []byte{},
 		},
 	}
-	jState := &pb.BeaconState{
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
-		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
-		},
-	}
 
 	stateResponse := &pb.BeaconStateResponse{
 		FinalizedState: fState,
-		JustifiedState: jState,
-		CanonicalState: jState,
 	}
 
 	incorrectState := &pb.BeaconState{
@@ -176,8 +170,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 
 	incorrectStateResponse := &pb.BeaconStateResponse{
 		FinalizedState: incorrectState,
-		JustifiedState: incorrectState,
-		CanonicalState: incorrectState,
 	}
 
 	stateRoot, err := hashutil.HashProto(fState)
@@ -274,6 +266,16 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	ss.processBatchedBlocks(msg)
 
+	state, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := hashutil.HashProto(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ss.highestObservedRoot = stateRoot
+
 	if ss.currentSlot != expectedSlot {
 		t.Errorf("Expected slot %d equal to current slot %d", expectedSlot, ss.currentSlot)
 	}
@@ -287,6 +289,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	setUpGenesisStateAndBlock(db, t)
+	ctx := context.Background()
 
 	cfg := &Config{
 		P2P:          &mockP2P{},
@@ -299,10 +302,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	batchSize := 20
 	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
 	ss.highestObservedSlot = expectedSlot
-	ss.highestObservedCanonicalState = &pb.BeaconState{
-		Slot: expectedSlot,
-	}
-	blk, err := ss.db.BlockBySlot(params.BeaconConfig().GenesisSlot)
+	blk, err := ss.db.BlockBySlot(ctx, params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
@@ -311,6 +311,15 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		t.Fatalf("Unable to hash block %v", err)
 	}
 	parentHash := h[:]
+	state, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := hashutil.HashProto(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ss.highestObservedRoot = stateRoot
 
 	for i := 1; i <= batchSize; i++ {
 		// skip slots
@@ -335,7 +344,15 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Could not hash block %v", err)
 		}
 		parentHash = hash[:]
-		ss.latestSyncedBlock = block
+		state, err := db.HeadState(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		stateRoot, err := hashutil.HashProto(state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ss.highestObservedRoot = stateRoot
 	}
 
 	if ss.currentSlot != expectedSlot {

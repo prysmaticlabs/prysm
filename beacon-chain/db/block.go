@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 
 	"github.com/boltdb/bolt"
@@ -215,7 +216,11 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 
 // BlockBySlot accepts a slot number and returns the corresponding block in the main chain.
 // Returns nil if a block was not recorded for the given slot.
-func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
+func (db *BeaconDB) BlockBySlot(ctx context.Context, slot uint64) (*pb.BeaconBlock, error) {
+	_, span := trace.StartSpan(ctx, "BeaconDB.BlockBySlot")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)))
+
 	var block *pb.BeaconBlock
 	slotEnc := encodeSlotNumber(slot)
 
@@ -239,34 +244,6 @@ func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 	})
 
 	return block, err
-}
-
-// HasBlockBySlot returns a boolean, and if the block exists, it returns the block.
-func (db *BeaconDB) HasBlockBySlot(slot uint64) (bool, *pb.BeaconBlock, error) {
-	var block *pb.BeaconBlock
-	var exists bool
-	slotEnc := encodeSlotNumber(slot)
-
-	err := db.view(func(tx *bolt.Tx) error {
-		mainChain := tx.Bucket(mainChainBucket)
-		blockBkt := tx.Bucket(blockBucket)
-
-		blockRoot := mainChain.Get(slotEnc)
-		if blockRoot == nil {
-			return nil
-		}
-
-		enc := blockBkt.Get(blockRoot)
-		if enc == nil {
-			return nil
-		}
-		exists = true
-
-		var err error
-		block, err = createBlock(enc)
-		return err
-	})
-	return exists, block, err
 }
 
 // HighestBlockSlot returns the in-memory value for the highest block we've
