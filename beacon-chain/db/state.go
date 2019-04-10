@@ -31,7 +31,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InitializeState")
 	defer span.End()
 
-	beaconState, err := genesis.BeaconState(deposits, genesisTime, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
 	if err != nil {
 		return err
 	}
