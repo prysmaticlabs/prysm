@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -144,7 +146,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		CustodyBitfield:    make([]byte, (len(committee)+7)/8),
 		AggregateSignature: []byte("signed"),
 	}
-	aggregationBitfield := bitutil.SetBitfield(4, (len(committee)+7)/8)
+	aggregationBitfield := bitutil.SetBitfield(4, mathutil.CeilDiv8(len(committee)))
 	expectedAttestation.AggregationBitfield = aggregationBitfield
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
