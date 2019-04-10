@@ -104,7 +104,7 @@ func TestSetBitfield_LargerCommitteesThanIndex(t *testing.T) {
 		bfield := SetBitfield(tt.a, tt.c)
 
 		if len(bfield) != tt.c {
-			t.Errorf("Length of bitfield doesnt match inputted committe size, got: %d but expected: %d", len(bfield), tt.c)
+			t.Errorf("Length of bitfield doesnt match the inputted committee size, got: %d but expected: %d", len(bfield), tt.c)
 		}
 
 	}
