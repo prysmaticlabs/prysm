@@ -255,19 +255,24 @@ func AttestationParticipants(
 	attestationData *pb.AttestationData,
 	bitfield []byte) ([]uint64, error) {
 
-	// Find the relevant committee.
-	// RegistryChange is a no-op when requesting slot in current and previous epoch.
-	// AttestationParticipants is used to calculate justification and finality hence won't be used
-	// to request crosslink commitees of future epoch.
-
-	committees, exists, err := committeeCache.CommitteesInfoBySlot(int(attestationData.Slot))
+	var committees *cache.CommitteesInfo
+	var err error
+	committees, err = committeeCache.CommitteesInfoBySlot(int(attestationData.Slot))
 	if err != nil {
 		return nil, err
 	}
-	if !exists {
-
-		// Add committee to cache here
-
+	if committees == nil {
+		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, false /* registryChange */)
+		if err != nil {
+			return nil, err
+		}
+		committees = &cache.CommitteesInfo{
+			Slot: int(attestationData.Slot),
+			Committees: crosslinkCommittees,
+		}
+		if err := committeeCache.AddCommittees(committees); err != nil {
+			return nil, err
+		}
 	}
 
 	var committee []uint64

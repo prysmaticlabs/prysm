@@ -69,28 +69,28 @@ func NewCommitteesCache() *committeesCache {
 
 // CommitteesInfoBySlot fetches committeesInfo by slot. Returns true with a
 // reference to the committees info, if exists. Otherwise returns false, nil.
-func (c *committeesCache) CommitteesInfoBySlot(slot int) (*CommitteesInfo, bool, error) {
+func (c *committeesCache) CommitteesInfoBySlot(slot int) (*CommitteesInfo, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	obj, exists, err := c.committeesCache.GetByKey(strconv.Itoa(slot))
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	if exists {
 		committeeCacheHit.Inc()
 	} else {
 		committeeCacheMiss.Inc()
-		return nil, false, nil
+		return nil, nil
 	}
 
 	cInfo, ok := obj.(*CommitteesInfo)
 	if !ok {
-		return nil, false, ErrNotACommitteeInfo
+		return nil, ErrNotACommitteeInfo
 	}
 
-	return cInfo, true, nil
+	return cInfo, nil
 }
 
 // AddCommittees adds committeeInfo object to the cache. This method also trims the least
