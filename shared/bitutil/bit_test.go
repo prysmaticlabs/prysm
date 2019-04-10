@@ -101,7 +101,7 @@ func TestRoundtripBitSetAndCheck(t *testing.T) {
 		bfield := SetBitfield(tt.a)
 		indexExists, err := CheckBit(bfield, tt.a)
 		if err != nil {
-			t.Errorf("checking bit for index %d leads to : %v", tt.a, err)
+			t.Errorf("Checking bit for index %d leads to: %v", tt.a, err)
 		}
 		if !indexExists {
 			t.Errorf("Index %d has a malformed bitfield %v", tt.a, bfield)
