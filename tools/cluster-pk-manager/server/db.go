@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 )
 
@@ -190,4 +191,33 @@ func (d *db) AllocatedPodNames(_ context.Context) ([]string, error) {
 		return nil, err
 	}
 	return podNames, nil
+}
+
+func (d *db) Allocations() map[string][][]byte {
+	m := make(map[string][][]byte)
+	if err := d.db.View(func(tx *bolt.Tx) error {
+		tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {
+			pks := &pb.PrivateKeys{}
+			if err := proto.Unmarshal(v, pks); err != nil {
+				return err
+			}
+			pubkeys := make([][]byte, len(pks.PrivateKeys))
+			for _, pk := range pks.PrivateKeys {
+				k, err := bls.SecretKeyFromBytes(pk)
+				if err != nil {
+					return err
+				}
+
+				pubkeys = append(pubkeys, k.PublicKey().Marshal())
+			}
+			m[string(k)] = pubkeys
+
+			return nil
+		})
+		return nil
+	}); err != nil {
+		// do something
+	}
+
+	return m
 }

@@ -5,6 +5,7 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 go_library(
     name = "go_default_library",
     srcs = [
+        "allocations.go",
         "db.go",
         "logger.go",
         "main.go",
@@ -16,6 +17,7 @@ go_library(
     deps = [
         "//contracts/deposit-contract:go_default_library",
         "//proto/cluster:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/prometheus:go_default_library",
         "//shared/ssz:go_default_library",

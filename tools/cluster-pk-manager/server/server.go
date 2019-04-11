@@ -117,7 +117,7 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 	pks.PrivateKeys = append(pks.PrivateKeys, unallocated.PrivateKeys...)
 
 	if len(pks.PrivateKeys) < int(req.NumberOfKeys) {
-		c := len(pks.PrivateKeys) - int(req.NumberOfKeys)
+		c := int(req.NumberOfKeys) - len(pks.PrivateKeys)
 		newKeys, err := s.allocateNewKeys(ctx, req.PodName, c)
 		if err != nil {
 			return nil, err
