@@ -120,6 +120,7 @@ func GenesisBeaconState(
 		// Eth1 data.
 		LatestEth1Data: eth1Data,
 		Eth1DataVotes:  []*pb.Eth1DataVote{},
+		DepositIndex:   0,
 	}
 
 	// Process initial deposits.
@@ -146,6 +147,8 @@ func GenesisBeaconState(
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
 		}
+
+		state.DepositIndex++
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if helpers.EffectiveBalance(state, uint64(i)) >=

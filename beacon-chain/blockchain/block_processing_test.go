@@ -296,10 +296,11 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}
-		pendingDeposits[i].MerkleBranchHash32S = proof
+		pendingDeposits[i].MerkleProofHash32S = proof
 	}
 	depositRoot := depositTrie.Root()
 	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
+	beaconState.DepositIndex = 0
 	if err := db.SaveHistoricalState(context.Background(), beaconState); err != nil {
 		t.Fatal(err)
 	}

@@ -17,18 +17,18 @@ test_cases:
       num_slots: 64 # Testing advancing state to exactly slot == SlotsPerEpoch
       deposits:
         - slot: 9223372036854775809
-          amount: 32
-          merkle_index: 0
+          amount: 0
+          merkle_index: 64
           pubkey: !!binary |
             SlAAbShSkUg7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
         - slot: 9223372036854775823
-          amount: 32
-          merkle_index: 1
+          amount: 1
+          merkle_index: 65
           pubkey: !!binary |
             Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
         - slot: 9223372036854775863
-          amount: 32
-          merkle_index: 2
+          amount: 2
+          merkle_index: 66
           pubkey: !!binary |
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
       proposer_slashings:

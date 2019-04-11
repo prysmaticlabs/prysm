@@ -305,6 +305,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockHash32: []byte("0x0"),
 		},
+		DepositIndex: 4,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -368,6 +369,77 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	}
 }
 
+func TestPendingDeposits_CantReturnAboveStateDepositIndex(t *testing.T) {
+	ctx := context.Background()
+
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	p := &mockPOWChainService{
+		latestBlockNumber: height,
+		hashesByHeight: map[int][]byte{
+			int(height.Int64()): []byte("0x0"),
+		},
+	}
+	d := internal.SetupDB(t)
+
+	beaconState := &pbp2p.BeaconState{
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte("0x0"),
+		},
+		DepositIndex: 10,
+	}
+	if err := d.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	readyDeposits := []*pbp2p.Deposit{
+		{
+			MerkleTreeIndex: 0,
+			DepositData:     []byte("a"),
+		},
+		{
+			MerkleTreeIndex: 1,
+			DepositData:     []byte("b"),
+		},
+	}
+
+	var recentDeposits []*pbp2p.Deposit
+	for i := 2; i < 16; i++ {
+		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
+			MerkleTreeIndex: uint64(i),
+			DepositData:     []byte{byte(i)},
+		})
+	}
+
+	for _, dp := range append(readyDeposits, recentDeposits...) {
+		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+	}
+	for _, dp := range recentDeposits {
+		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+	}
+
+	bs := &BeaconServer{
+		beaconDB:        d,
+		powChainService: p,
+		chainService:    newMockChainService(),
+	}
+
+	// It should also return the recent deposits after their follow window.
+	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
+	allResp, err := bs.PendingDeposits(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedDeposits := 8
+	if len(allResp.PendingDeposits) != expectedDeposits {
+		t.Errorf(
+			"Received unexpected number of pending deposits: %d, wanted: %d",
+			len(allResp.PendingDeposits),
+			expectedDeposits,
+		)
+	}
+}
+
 func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	ctx := context.Background()
 
@@ -384,6 +456,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockHash32: []byte("0x0"),
 		},
+		DepositIndex: 22,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
