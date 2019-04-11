@@ -305,7 +305,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockHash32: []byte("0x0"),
 		},
-		DepositIndex: 3,
+		DepositIndex: 2,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -369,7 +369,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	}
 }
 
-func TestPendingDeposits_CantReturnAboveStateDepositIndex(t *testing.T) {
+func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -430,12 +430,19 @@ func TestPendingDeposits_CantReturnAboveStateDepositIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedDeposits := 8
+	expectedDeposits := 6
 	if len(allResp.PendingDeposits) != expectedDeposits {
 		t.Errorf(
 			"Received unexpected number of pending deposits: %d, wanted: %d",
 			len(allResp.PendingDeposits),
 			expectedDeposits,
+		)
+	}
+	if allResp.PendingDeposits[0].MerkleTreeIndex != beaconState.DepositIndex {
+		t.Errorf(
+			"Received unexpected merkle index: %d, wanted: %d",
+			allResp.PendingDeposits[0].MerkleTreeIndex,
+			beaconState.DepositIndex,
 		)
 	}
 }

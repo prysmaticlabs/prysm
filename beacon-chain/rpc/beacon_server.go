@@ -245,13 +245,16 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 
 	allPendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
 
+	// Deposits need to be received in order of merkle index root, so this has to make sure
+	// deposits are sorted from lowest to highest.
 	var pendingDeps []*pbp2p.Deposit
-	for idx := len(allPendingDeps) - 1; idx >= 0; idx-- {
-		if allPendingDeps[idx].MerkleTreeIndex <= beaconState.DepositIndex {
-			pendingDeps = allPendingDeps[:idx]
-			break
+	for _, dep := range allPendingDeps {
+		if dep.MerkleTreeIndex >= beaconState.DepositIndex {
+			pendingDeps = append(pendingDeps, dep)
 		}
 	}
+
+	fmt.Printf("pending deposits requested %d\n", len(pendingDeps))
 
 	for i := range pendingDeps {
 		// Don't construct merkle proof if the number of deposits is more than max allowed in block.
