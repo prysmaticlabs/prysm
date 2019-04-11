@@ -247,8 +247,8 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 
 	var pendingDeps []*pbp2p.Deposit
 	for idx := len(allPendingDeps) - 1; idx >= 0; idx-- {
-		if allPendingDeps[idx].MerkleTreeIndex < beaconState.DepositIndex {
-			pendingDeps = allPendingDeps[:idx+1]
+		if allPendingDeps[idx].MerkleTreeIndex <= beaconState.DepositIndex {
+			pendingDeps = allPendingDeps[:idx]
 			break
 		}
 	}
