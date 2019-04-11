@@ -305,7 +305,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockHash32: []byte("0x0"),
 		},
-		DepositIndex: 4,
+		DepositIndex: 3,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -360,11 +360,11 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(allResp.PendingDeposits) != len(readyDeposits) {
+	if len(allResp.PendingDeposits) != len(recentDeposits) {
 		t.Errorf(
 			"Received unexpected number of pending deposits: %d, wanted: %d",
 			len(allResp.PendingDeposits),
-			len(recentDeposits)+len(readyDeposits),
+			len(recentDeposits),
 		)
 	}
 }

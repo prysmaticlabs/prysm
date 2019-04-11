@@ -107,21 +107,13 @@ func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex ui
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
 
-	depositListSize := len(db.pendingDeposits)
-
-	// since list is sorted by block number it checks from the last
-	// added deposit and works backwards.
-	idx := -1
-	for i := depositListSize - 1; i >= 0; i-- {
-		if db.pendingDeposits[i].deposit.MerkleTreeIndex < merkleTreeIndex {
-			idx = i
-			break
+	var cleanDeposits []*depositContainer
+	for _, dp := range db.pendingDeposits {
+		if dp.deposit.MerkleTreeIndex >= merkleTreeIndex {
+			cleanDeposits = append(cleanDeposits, dp)
 		}
 	}
 
-	if idx >= 0 {
-		db.pendingDeposits = db.pendingDeposits[idx+1:]
-	}
-
+	db.pendingDeposits = cleanDeposits
 	pendingDepositsCount.Set(float64(len(db.pendingDeposits)))
 }
