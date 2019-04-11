@@ -24,11 +24,6 @@ var (
 		Name:  "enable-crosslinks",
 		Usage: "Enable crosslinks in epoch processing, default is disabled.",
 	}
-	// EnableCommitteesCacheFlag enables crosslink committees cache for rpc server. It is disabled by default.
-	EnableCommitteesCacheFlag = cli.BoolFlag{
-		Name:  "enable-committees-cache",
-		Usage: "Enable crosslink committees cache for rpc server, default is disabled.",
-	}
 	// EnableCheckBlockStateRootFlag check block state root in block processing. It is disabled by default.
 	EnableCheckBlockStateRootFlag = cli.BoolFlag{
 		Name:  "enable-check-block-state-root",
@@ -48,7 +43,6 @@ var ValidatorFlags = []cli.Flag{}
 var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
-	EnableCommitteesCacheFlag,
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
 }

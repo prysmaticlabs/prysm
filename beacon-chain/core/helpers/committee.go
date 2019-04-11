@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
@@ -377,6 +379,7 @@ func CommitteeAssignment(
 	slot uint64,
 	validatorIndex uint64,
 	registryChange bool) ([]uint64, uint64, uint64, bool, error) {
+	var selectedCommittees []*CrosslinkCommittee
 
 	wantedEpoch := slot / params.BeaconConfig().SlotsPerEpoch
 	prevEpoch := PrevEpoch(state)
@@ -391,36 +394,31 @@ func CommitteeAssignment(
 		)
 	}
 
-	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
-		state, slot, registryChange)
-	if err != nil {
-		return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
-	}
-	return ValidatorAssignment(validatorIndex, slot, crosslinkCommittees)
-}
+	startSlot := StartSlot(wantedEpoch)
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
+			state, slot, registryChange)
+		if err != nil {
+			return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
+		}
+		for _, committee := range crosslinkCommittees {
+			for _, idx := range committee.Committee {
+				if idx == validatorIndex {
+					selectedCommittees = append(selectedCommittees, committee)
+				}
 
-// ValidatorAssignment takes individual validator's index and returns its committee list,
-// assigned shard, slot and role.
-func ValidatorAssignment(vIndex uint64, slot uint64, committees []*CrosslinkCommittee) ([]uint64, uint64, uint64, bool, error) {
-	var selectedCommittees []*CrosslinkCommittee
-	for _, committee := range committees {
-		for _, idx := range committee.Committee {
-			if idx == vIndex {
-				selectedCommittees = append(selectedCommittees, committee)
-			}
-
-			if len(selectedCommittees) > 0 {
-				validators := selectedCommittees[0].Committee
-				shard := selectedCommittees[0].Shard
-				firstCommitteeAtSlot := committees[0].Committee
-				isProposer := firstCommitteeAtSlot[slot%
-					uint64(len(firstCommitteeAtSlot))] == vIndex
-				return validators, shard, slot, isProposer, nil
+				if len(selectedCommittees) > 0 {
+					validators := selectedCommittees[0].Committee
+					shard := selectedCommittees[0].Shard
+					firstCommitteeAtSlot := crosslinkCommittees[0].Committee
+					isProposer := firstCommitteeAtSlot[slot%
+						uint64(len(firstCommitteeAtSlot))] == validatorIndex
+					return validators, shard, slot, isProposer, nil
+				}
 			}
 		}
 	}
-	return []uint64{}, 0, 0, false, fmt.Errorf("unable to find assignment for "+
-		"validator %d at slot %d", vIndex, slot)
+	return []uint64{}, 0, 0, false, status.Error(codes.NotFound, "validator not found found in assignments")
 }
 
 // prevEpochCommitteesAtSlot returns a list of crosslink committees of the previous epoch.
