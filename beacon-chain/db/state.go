@@ -261,7 +261,8 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
-// HistoricalStateFromSlot retrieves the closest historical state to a slot.
+// HistoricalStateFromSlot retrieves the state that is closest to the input slot,
+// while being smaller than or equal to the input slot.
 func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.HistoricalStateFromSlot")
 	defer span.End()
@@ -286,7 +287,8 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 				break
 			}
 		}
-		// If no state exists send the closest state.
+
+		// If no historical state exists, retrieve and decode the finalized state.
 		if !stateExists {
 			for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 				slotNumber := decodeToSlotNumber(k)
@@ -303,7 +305,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 			}
 		}
 
-		// retrieve the stored historical state.
+		// If historical state exists, retrieve and decode it.
 		encState := chainInfo.Get(histStateKey)
 		if encState == nil {
 			return errors.New("no historical state saved")

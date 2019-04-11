@@ -11,7 +11,8 @@ var (
 		Usage: "Verify signatures for attestations.",
 	}
 	// EnableComputeStateRootFlag enables the implemenation for the proposer RPC
-	// method to compute the state root of a given block. This feature is not
+	// method to compute the state root of a given block.
+	// This feature is not
 	// necessary for the first iteration of the test network, but critical to
 	// future work. This flag can be removed once we are satisified that it works
 	// well without issue.
@@ -23,6 +24,11 @@ var (
 	EnableCrosslinksFlag = cli.BoolFlag{
 		Name:  "enable-crosslinks",
 		Usage: "Enable crosslinks in epoch processing, default is disabled.",
+	}
+	// EnableCommitteesCacheFlag enables crosslink committees cache for state transition. It is disabled by default.
+	EnableCommitteesCacheFlag = cli.BoolFlag{
+		Name:  "enable-committees-cache",
+		Usage: "Enable crosslink committees cache for state transition, default is disabled.",
 	}
 	// EnableCheckBlockStateRootFlag check block state root in block processing. It is disabled by default.
 	EnableCheckBlockStateRootFlag = cli.BoolFlag{
@@ -43,6 +49,7 @@ var ValidatorFlags = []cli.Flag{}
 var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
+	EnableCommitteesCacheFlag,
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
 }
