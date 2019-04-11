@@ -263,7 +263,7 @@ func AttestationParticipants(
 	slot := attestationData.Slot
 
 	// When enabling committee cache, we fetch the committees using slot.
-	// If it's not prev cached, we compute for the committees of slot and
+	// If it's not prev cached, we calculate the committees of slot then
 	// add it to the cache.
 	if featureconfig.FeatureConfig().EnableCommitteesCache {
 		committees, err = committeeCache.CommitteesInfoBySlot(slot)
