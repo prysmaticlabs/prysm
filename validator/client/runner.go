@@ -98,8 +98,8 @@ func run(ctx context.Context, v Validator) {
 func handleAssignmentError(err error, slot uint64) {
 	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.Warnf("Validator not yet assigned between slots %d - %d",
-			slot - params.BeaconConfig().GenesisSlot,
-			slot + params.BeaconConfig().SlotsPerEpoch - params.BeaconConfig().GenesisSlot)
+			slot-params.BeaconConfig().GenesisSlot,
+			slot+params.BeaconConfig().SlotsPerEpoch-params.BeaconConfig().GenesisSlot)
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")
 	}
