@@ -64,7 +64,7 @@ func slotKeyFn(obj interface{}) (string, error) {
 	return strconv.Itoa(cInfo.Slot), nil
 }
 
-// newCommitteesCache creates a new committee cache for storing/accessing blockInfo from
+// NewCommitteesCache creates a new committee cache for storing/accessing blockInfo from
 // memory.
 func NewCommitteesCache() *committeesCache {
 	return &committeesCache{

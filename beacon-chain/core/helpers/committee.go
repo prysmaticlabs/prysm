@@ -272,7 +272,7 @@ func AttestationParticipants(
 				return nil, err
 			}
 
-			cachedCommittee := toCacheCommittee(slot, crosslinkCommittees)
+			cachedCommittee := toCommitteeCache(slot, crosslinkCommittees)
 
 			if err := committeeCache.AddCommittees(cachedCommittee); err != nil {
 				return nil, err
@@ -285,7 +285,7 @@ func AttestationParticipants(
 			return nil, err
 		}
 
-		committees = toCacheCommittee(slot, crosslinkCommittees)
+		committees = toCommitteeCache(slot, crosslinkCommittees)
 	}
 
 	var committee []uint64
