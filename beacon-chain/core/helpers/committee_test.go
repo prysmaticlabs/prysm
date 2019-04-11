@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,6 +17,12 @@ var size = 1<<(params.BeaconConfig().RandBytes*8) - 1
 var validatorsUpperBound = make([]*pb.Validator, size)
 var validator = &pb.Validator{
 	ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+}
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: false,
+	})
 }
 
 func populateValidatorsMax() {
