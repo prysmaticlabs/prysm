@@ -39,18 +39,18 @@ func TestCommitteesCache_CommitteesInfoBySlot(t *testing.T) {
 		Committees: []*CommitteeInfo{{Shard: 456}},
 	}
 
-	cInfo, err := cache.CommitteesInfoBySlot(cInfo.Slot)
+	fetchedInfo, err := cache.CommitteesInfoBySlot(cInfo.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cInfo != nil {
+	if fetchedInfo != nil {
 		t.Error("Expected committees info not to exist in empty cache")
 	}
 
 	if err := cache.AddCommittees(cInfo); err != nil {
 		t.Fatal(err)
 	}
-	fetchedInfo, err := cache.CommitteesInfoBySlot(cInfo.Slot)
+	fetchedInfo, err = cache.CommitteesInfoBySlot(cInfo.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
