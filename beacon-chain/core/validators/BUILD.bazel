@@ -25,6 +25,7 @@ go_test(
         "//beacon-chain/core/state/stateutils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bitutil:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
     ],
 )
