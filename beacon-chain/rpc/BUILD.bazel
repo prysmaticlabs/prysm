@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "attester_server.go",
         "beacon_server.go",
-        "committees_cache.go",
         "proposer_server.go",
         "service.go",
         "validator_server.go",
@@ -32,17 +31,11 @@ go_library(
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//recovery:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_prometheus//:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
-        "@io_k8s_client_go//tools/cache:go_default_library",
         "@io_opencensus_go//plugin/ocgrpc:go_default_library",
-        "@io_opencensus_go//trace:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
-        "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//credentials:go_default_library",
         "@org_golang_google_grpc//reflection:go_default_library",
-        "@org_golang_google_grpc//status:go_default_library",
     ],
 )
 
@@ -51,7 +44,6 @@ go_test(
     srcs = [
         "attester_server_test.go",
         "beacon_server_test.go",
-        "committee_cache_test.go",
         "proposer_server_test.go",
         "service_test.go",
         "validator_server_test.go",
