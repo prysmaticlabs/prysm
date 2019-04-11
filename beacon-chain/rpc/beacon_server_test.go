@@ -463,7 +463,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockHash32: []byte("0x0"),
 		},
-		DepositIndex: 22,
+		DepositIndex: 2,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)

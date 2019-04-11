@@ -254,8 +254,6 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		}
 	}
 
-	fmt.Printf("pending deposits requested %d\n", len(pendingDeps))
-
 	for i := range pendingDeps {
 		// Don't construct merkle proof if the number of deposits is more than max allowed in block.
 		if uint64(i) == params.BeaconConfig().MaxDeposits {
