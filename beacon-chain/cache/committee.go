@@ -47,8 +47,8 @@ type CommitteesInSlot struct {
 	Committees []*CommitteeInfo
 }
 
-// committeesCache struct with 1 queue for looking up crosslink committees by slot.
-type committeesCache struct {
+// CommitteesCache struct with 1 queue for looking up crosslink committees by slot.
+type CommitteesCache struct {
 	committeesCache *cache.FIFO
 	lock            sync.RWMutex
 }
@@ -66,15 +66,15 @@ func slotKeyFn(obj interface{}) (string, error) {
 
 // NewCommitteesCache creates a new committee cache for storing/accessing blockInfo from
 // memory.
-func NewCommitteesCache() *committeesCache {
-	return &committeesCache{
+func NewCommitteesCache() *CommitteesCache {
+	return &CommitteesCache{
 		committeesCache: cache.NewFIFO(slotKeyFn),
 	}
 }
 
 // CommitteesInfoBySlot fetches committeesInfo by slot. Returns true with a
 // reference to the committees info, if exists. Otherwise returns false, nil.
-func (c *committeesCache) CommitteesInfoBySlot(slot int) (*CommitteesInSlot, error) {
+func (c *CommitteesCache) CommitteesInfoBySlot(slot int) (*CommitteesInSlot, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -100,7 +100,7 @@ func (c *committeesCache) CommitteesInfoBySlot(slot int) (*CommitteesInSlot, err
 
 // AddCommittees adds committeeInfo object to the cache. This method also trims the least
 // recently added committeeInfo object if the cache size has ready the max cache size limit.
-func (c *committeesCache) AddCommittees(committees *CommitteesInSlot) error {
+func (c *CommitteesCache) AddCommittees(committees *CommitteesInSlot) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
