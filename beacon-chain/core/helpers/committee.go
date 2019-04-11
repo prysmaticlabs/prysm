@@ -260,14 +260,14 @@ func AttestationParticipants(
 
 	var committees *cache.CommitteesInSlot
 	var err error
-	slot := int(attestationData.Slot)
+	slot := attestationData.Slot
 	if featureconfig.FeatureConfig().EnableCommitteesCache {
 		committees, err = committeeCache.CommitteesInfoBySlot(slot)
 		if err != nil {
 			return nil, err
 		}
 		if committees == nil {
-			crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, uint64(slot), false /* registryChange */)
+			crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
 			if err != nil {
 				return nil, err
 			}
@@ -280,7 +280,7 @@ func AttestationParticipants(
 			committees = cachedCommittee
 		}
 	} else {
-		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, uint64(slot), false /* registryChange */)
+		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
 		if err != nil {
 			return nil, err
 		}
@@ -633,7 +633,7 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 }
 
 // toCommitteeCache coverts crosslink committee into a cache format, to be saved in cache.
-func toCommitteeCache(slot int, crosslinkCommittees []*CrosslinkCommittee) *cache.CommitteesInSlot {
+func toCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *cache.CommitteesInSlot {
 	var cacheCommittee []*cache.CommitteeInfo
 	for _, crosslinkCommittee := range crosslinkCommittees {
 		cacheCommittee = append(cacheCommittee, &cache.CommitteeInfo{

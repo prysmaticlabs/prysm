@@ -43,7 +43,7 @@ type CommitteeInfo struct {
 
 // CommitteesInSlot species the committees of a given slot.
 type CommitteesInSlot struct {
-	Slot       int
+	Slot       uint64
 	Committees []*CommitteeInfo
 }
 
@@ -61,7 +61,7 @@ func slotKeyFn(obj interface{}) (string, error) {
 		return "", ErrNotACommitteeInfo
 	}
 
-	return strconv.Itoa(cInfo.Slot), nil
+	return strconv.Itoa(int(cInfo.Slot)), nil
 }
 
 // NewCommitteesCache creates a new committee cache for storing/accessing blockInfo from
@@ -74,11 +74,11 @@ func NewCommitteesCache() *CommitteesCache {
 
 // CommitteesInfoBySlot fetches committeesInfo by slot. Returns true with a
 // reference to the committees info, if exists. Otherwise returns false, nil.
-func (c *CommitteesCache) CommitteesInfoBySlot(slot int) (*CommitteesInSlot, error) {
+func (c *CommitteesCache) CommitteesInfoBySlot(slot uint64) (*CommitteesInSlot, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	obj, exists, err := c.committeesCache.GetByKey(strconv.Itoa(slot))
+	obj, exists, err := c.committeesCache.GetByKey(strconv.Itoa(int(slot)))
 	if err != nil {
 		return nil, err
 	}

@@ -19,8 +19,9 @@ func TestSlotKeyFn_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if key != strconv.Itoa(cInfo.Slot) {
-		t.Errorf("Incorrect hash key: %s, expected %s", key, strconv.Itoa(cInfo.Slot))
+	strSlot := strconv.Itoa(int(cInfo.Slot))
+	if key != strSlot {
+		t.Errorf("Incorrect hash key: %s, expected %s", key, strSlot)
 	}
 }
 
@@ -78,7 +79,7 @@ func TestBlockCache_maxSize(t *testing.T) {
 
 	for i := 0; i < maxCacheSize+10; i++ {
 		cInfo := &CommitteesInSlot{
-			Slot: i,
+			Slot: uint64(i),
 		}
 		if err := cache.AddCommittees(cInfo); err != nil {
 			t.Fatal(err)

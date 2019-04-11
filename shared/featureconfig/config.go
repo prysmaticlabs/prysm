@@ -30,7 +30,7 @@ type FeatureFlagConfig struct {
 	EnableCrosslinks             bool // EnableCrosslinks in epoch processing.
 	EnableCheckBlockStateRoot    bool // EnableCheckBlockStateRoot in block processing.
 	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updatifinalized states.
-	EnableCommitteesCache        bool // EnableCommitteesCache for RPC server.
+	EnableCommitteesCache        bool // EnableCommitteesCache for state transition.
 }
 
 var featureConfig *FeatureFlagConfig
