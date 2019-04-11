@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -43,6 +44,16 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if err := s.db.SaveJustifiedBlock(finalizedState.LatestBlock); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
+		return
+	}
+
+	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
+	if err != nil {
+		log.Errorf("Unable to get powchain block %v", err)
+	}
+
+	if !exists {
+		log.Error("Latest ETH1 block doesn't exist in the pow chain")
 		return
 	}
 

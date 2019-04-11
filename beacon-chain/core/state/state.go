@@ -147,8 +147,6 @@ func GenesisBeaconState(
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
 		}
-
-		state.DepositIndex++
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if helpers.EffectiveBalance(state, uint64(i)) >=

@@ -280,7 +280,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	pendingDeposits := []*pb.Deposit{
-		createPreChainStartDeposit(t, []byte{'F'}),
+		createPreChainStartDeposit(t, []byte{'F'}, beaconState.DepositIndex),
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
@@ -300,7 +300,6 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	depositRoot := depositTrie.Root()
 	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
-	beaconState.DepositIndex = 0
 	if err := db.SaveHistoricalState(context.Background(), beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -320,6 +319,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	beaconState.Slot--
+	beaconState.DepositIndex = 0
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}

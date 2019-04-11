@@ -621,8 +621,6 @@ func ProcessValidatorDeposits(
 		if err != nil {
 			return nil, fmt.Errorf("could not process deposit into beacon state: %v", err)
 		}
-
-		beaconState.DepositIndex++
 	}
 	return beaconState, nil
 }
@@ -631,7 +629,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Deposits must be processed in order
 	if deposit.MerkleTreeIndex != beaconState.DepositIndex {
 		return fmt.Errorf(
-			"expected deposit merkle branch index to match beacon state deposit index, wanted: %d, received: %d",
+			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
 			beaconState.DepositIndex,
 			deposit.MerkleTreeIndex,
 		)

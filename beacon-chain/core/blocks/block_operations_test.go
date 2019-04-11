@@ -1264,7 +1264,7 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 		GenesisTime:       uint64(genesisTime),
 	}
 
-	want := "expected deposit merkle branch index to match beacon state deposit index"
+	want := "expected deposit merkle tree index to match beacon state deposit index"
 	if _, err := blocks.ProcessValidatorDeposits(
 		context.Background(),
 		beaconState,
