@@ -239,7 +239,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(2)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignment = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
 			Shard:     5,
 			Committee: committee,
@@ -270,7 +270,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	if len(generatedAttestation.AggregationBitfield) != 2 {
 		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBitfield))
