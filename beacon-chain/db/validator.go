@@ -64,7 +64,7 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 // ValidatorIndices accepts a slice of public keys and returns the corresponding map of validators indexes and public keys.
 func (db *BeaconDB) ValidatorIndices(pubKeys [][]byte) (map[uint64][]byte, error) {
 	m := make(map[uint64][]byte)
-	if !db.HasValidators(pubKeys) {
+	if !db.HasAllValidators(pubKeys) {
 		return m, fmt.Errorf("validators %#x does not exist. make sure that all validators in keystore made a deposit before you run the validator client", pubKeys)
 	}
 
@@ -97,8 +97,8 @@ func (db *BeaconDB) DeleteValidatorIndex(pubKey []byte) error {
 	})
 }
 
-// HasValidators returns true if one or more validator in a list of public keys are in the bucket.
-func (db *BeaconDB) HasValidators(pubKeys [][]byte) bool {
+// HasAllValidators returns true if all validators in a list of public keys are in the bucket.
+func (db *BeaconDB) HasAllValidators(pubKeys [][]byte) bool {
 	exists := false
 	// #nosec G104, similar to HasBlock, HasAttestation... etc
 	db.view(func(tx *bolt.Tx) error {
