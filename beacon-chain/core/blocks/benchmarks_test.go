@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -19,14 +18,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-var ValidatorCount = 16000
-var RunAmount = 134217728 / ValidatorCount
-var QuickRunAmount = 100000
-var conditions = "BIG"
+var quickRunAmount = 20000
+var genesisState16K = createGenesisState(16000)
+var genesisState300K = createGenesisState(300000)
 
-var genesisState = createGenesisState(ValidatorCount)
-
-func setBenchmarkConfig() {
+func setBenchmarkConfig(conditions string) {
 	c := params.BeaconConfig()
 	// From Danny Ryan's "Minimal Config"
 	// c.SlotsPerEpoch = 8
@@ -53,29 +49,44 @@ func setBenchmarkConfig() {
 }
 
 func BenchmarkProcessBlockRandao(b *testing.B) {
-	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
-
 	block := &pb.BeaconBlock{
 		RandaoReveal: []byte{2, 3, 4},
 	}
 
-	b.N = QuickRunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = blocks.ProcessBlockRandao(
-			context.Background(),
-			beaconState,
-			block,
-			false, /* verify signatures */
-			false, /* disable logging */
-		)
-	}
+	b.Run("16K Validators", func(b *testing.B) {
+		b.N = quickRunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _ = blocks.ProcessBlockRandao(
+				context.Background(),
+				genesisState16K,
+				block,
+				false, /* verify signatures */
+				false, /* disable logging */
+			)
+		}
+	})
+
+	b.Run("300K Validators", func(b *testing.B) {
+		b.N = quickRunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _ = blocks.ProcessBlockRandao(
+				context.Background(),
+				genesisState300K,
+				block,
+				false, /* verify signatures */
+				false, /* disable logging */
+			)
+		}
+	})
 }
 
 func BenchmarkProcessEth1Data(b *testing.B) {
-	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
+	defer resetBeaconState(genesisState16K)
+	defer resetBeaconState(genesisState300K)
 
-	beaconState.Eth1DataVotes = []*pb.Eth1DataVote{
+	eth1DataVotes := []*pb.Eth1DataVote{
 		{
 			Eth1Data: &pb.Eth1Data{
 				DepositRootHash32: []byte{0},
@@ -91,6 +102,8 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 		},
 	}
 
+	genesisState16K.Eth1DataVotes = eth1DataVotes
+
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
@@ -98,140 +111,254 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 		},
 	}
 
-	b.N = QuickRunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = blocks.ProcessEth1DataInBlock(context.Background(), beaconState, block)
-	}
+	b.Run("16K Validators", func(b *testing.B) {
+		b.N = quickRunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = blocks.ProcessEth1DataInBlock(context.Background(), genesisState16K, block)
+		}
+	})
+
+	genesisState300K.Eth1DataVotes = eth1DataVotes
+
+	b.Run("300K Validators", func(b *testing.B) {
+		b.N = quickRunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = blocks.ProcessEth1DataInBlock(context.Background(), genesisState300K, block)
+		}
+	})
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
-	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
+	defer resetBeaconState(genesisState16K)
+	defer resetBeaconState(genesisState300K)
 
 	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
-	beaconState.Slot = currentSlot
 
-	block, _ := createFullBlock(b, beaconState.Slot)
+	genesisState16K.Slot = currentSlot
 
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = blocks.ProcessProposerSlashings(
-			context.Background(),
-			beaconState,
-			block,
-			false,
-		)
-	}
+	block, _ := createFullBlock(b, currentSlot)
+
+	b.Run("16K Validators", func(b *testing.B) {
+		b.N = runAmount(16000)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _ = blocks.ProcessProposerSlashings(
+				context.Background(),
+				genesisState16K,
+				block,
+				false,
+			)
+		}
+	})
+
+	genesisState300K.Slot = currentSlot
+
+	b.Run("300K Validators", func(b *testing.B) {
+		b.N = runAmount(300000)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _ = blocks.ProcessProposerSlashings(
+				context.Background(),
+				genesisState300K,
+				block,
+				false,
+			)
+		}
+	})
 }
 
 func BenchmarkProcessAttesterSlashings(b *testing.B) {
-	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
+	defer resetBeaconState(genesisState16K)
+	defer resetBeaconState(genesisState300K)
 
 	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
-	beaconState.Slot = currentSlot
+	genesisState16K.Slot = currentSlot
 
-	block, _ := createFullBlock(b, beaconState.Slot)
+	block, _ := createFullBlock(b, currentSlot)
 
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessAttesterSlashings(
-			context.Background(),
-			beaconState,
-			block,
-			false,
-		)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("16K Validators", func(b *testing.B) {
+		b.N = runAmount(16000)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := blocks.ProcessAttesterSlashings(
+				context.Background(),
+				genesisState16K,
+				block,
+				false,
+			)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
-	}
+	})
+
+	genesisState300K.Slot = currentSlot
+
+	b.Run("300K Validators", func(b *testing.B) {
+		b.N = runAmount(300000)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := blocks.ProcessAttesterSlashings(
+				context.Background(),
+				genesisState300K,
+				block,
+				false,
+			)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func BenchmarkProcessBlockAttestations(b *testing.B) {
-	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
+	defer resetBeaconState(genesisState16K)
+	defer resetBeaconState(genesisState300K)
 
-	beaconState.LatestCrosslinks = []*pb.Crosslink{
-		{
-			CrosslinkDataRootHash32: []byte{1},
-		},
-	}
+	genesisState16K.LatestCrosslinks = []*pb.Crosslink{{CrosslinkDataRootHash32: []byte{1}}}
+	genesisState16K.Slot = params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 3
 
-	beaconState.Slot = params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 3
-	beaconState.PreviousJustifiedEpoch = params.BeaconConfig().GenesisEpoch
+	block, _ := createFullBlock(b, genesisState16K.Slot)
 
-	block, _ := createFullBlock(b, beaconState.Slot)
-
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessBlockAttestations(
-			context.Background(),
-			beaconState,
-			block,
-			false,
-		)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("16K Validators", func(b *testing.B) {
+		b.N = runAmount(16000)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := blocks.ProcessBlockAttestations(
+				context.Background(),
+				genesisState16K,
+				block,
+				false,
+			)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
-	}
+	})
+
+	genesisState300K.LatestCrosslinks = []*pb.Crosslink{{CrosslinkDataRootHash32: []byte{1}}}
+	genesisState300K.Slot = params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 3
+
+	b.Run("300K Validators", func(b *testing.B) {
+		b.N = runAmount(300000)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := blocks.ProcessBlockAttestations(
+				context.Background(),
+				genesisState300K,
+				block,
+				false,
+			)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func BenchmarkProcessValidatorDeposits(b *testing.B) {
-	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
+	defer resetBeaconState(genesisState16K)
+	defer resetBeaconState(genesisState300K)
 
 	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
-	beaconState.Slot = currentSlot
+	block, root := createFullBlock(b, currentSlot)
 
-	block, _ := createFullBlock(b, beaconState.Slot)
-
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessValidatorDeposits(
-			context.Background(),
-			beaconState,
-			block,
-		)
-		if err != nil {
-			b.Fatalf("Expected block deposits to process correctly, received: %v", err)
-		}
-	}
-}
-
-func BenchmarkProcessValidatorExits(b *testing.B) {
-	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
-	beaconState.Slot = 4
-
-	block, root := createFullBlock(b, beaconState.Slot)
-	beaconState.LatestEth1Data = &pb.Eth1Data{
+	genesisState16K.Slot = currentSlot
+	genesisState16K.LatestEth1Data = &pb.Eth1Data{
 		BlockHash32:       root,
 		DepositRootHash32: root,
 	}
 
-	b.N = QuickRunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessValidatorExits(context.Background(), beaconState, block, false)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("16K Validators", func(b *testing.B) {
+		b.N = runAmount(16000)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := blocks.ProcessValidatorDeposits(
+				context.Background(),
+				genesisState16K,
+				block,
+			)
+			if err != nil {
+				b.Fatalf("Expected block deposits to process correctly, received: %v", err)
+			}
 		}
+	})
+
+	genesisState300K.Slot = currentSlot
+	genesisState300K.LatestEth1Data = &pb.Eth1Data{
+		BlockHash32:       root,
+		DepositRootHash32: root,
 	}
+
+	b.Run("300K Validators", func(b *testing.B) {
+		b.N = runAmount(300000)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := blocks.ProcessValidatorDeposits(
+				context.Background(),
+				genesisState300K,
+				block,
+			)
+			if err != nil {
+				b.Fatalf("Expected block deposits to process correctly, received: %v", err)
+			}
+		}
+	})
+}
+
+func BenchmarkProcessValidatorExits(b *testing.B) {
+	defer resetBeaconState(genesisState16K)
+	defer resetBeaconState(genesisState300K)
+
+	genesisState16K.Slot = 4
+	block, root := createFullBlock(b, genesisState16K.Slot)
+	genesisState16K.LatestEth1Data = &pb.Eth1Data{
+		BlockHash32:       root,
+		DepositRootHash32: root,
+	}
+
+	b.Run("16K Validators", func(b *testing.B) {
+		b.N = quickRunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := blocks.ProcessValidatorExits(context.Background(), genesisState16K, block, false)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	genesisState300K.Slot = 4
+	genesisState300K.LatestEth1Data = &pb.Eth1Data{
+		BlockHash32:       root,
+		DepositRootHash32: root,
+	}
+
+	b.Run("300K Validators", func(b *testing.B) {
+		b.N = quickRunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := blocks.ProcessValidatorExits(context.Background(), genesisState300K, block, false)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func BenchmarkProcessBlock(b *testing.B) {
-	beaconState := proto.Clone(genesisState).(*pb.BeaconState)
+	defer resetBeaconState(genesisState16K)
+	defer resetBeaconState(genesisState300K)
 
 	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch + 6
-	beaconState.Slot = currentSlot
-	beaconState.LatestCrosslinks = []*pb.Crosslink{
-		{
-			CrosslinkDataRootHash32: []byte{1},
-		},
-	}
+	genesisState16K.Slot = currentSlot
 
-	block, root := createFullBlock(b, beaconState.Slot)
-	beaconState.LatestEth1Data = &pb.Eth1Data{
+	block, root := createFullBlock(b, currentSlot)
+
+	genesisState16K.LatestCrosslinks = []*pb.Crosslink{{CrosslinkDataRootHash32: []byte{1}}}
+	genesisState16K.LatestEth1Data = &pb.Eth1Data{
 		BlockHash32:       root,
 		DepositRootHash32: root,
 	}
@@ -240,13 +367,32 @@ func BenchmarkProcessBlock(b *testing.B) {
 		VerifySignatures: false,
 		Logging:          false,
 	}
-	b.N = 100
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		if _, err := state.ProcessBlock(context.Background(), beaconState, block, cfg); err != nil {
-			b.Fatal(err)
+	b.Run("16K Validators", func(b *testing.B) {
+		b.N = 100
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			if _, err := state.ProcessBlock(context.Background(), genesisState16K, block, cfg); err != nil {
+				b.Fatal(err)
+			}
 		}
+	})
+
+	genesisState300K.Slot = currentSlot
+	genesisState300K.LatestCrosslinks = []*pb.Crosslink{{CrosslinkDataRootHash32: []byte{1}}}
+	genesisState300K.LatestEth1Data = &pb.Eth1Data{
+		BlockHash32:       root,
+		DepositRootHash32: root,
 	}
+
+	b.Run("300K Validators", func(b *testing.B) {
+		b.N = 50
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			if _, err := state.ProcessBlock(context.Background(), genesisState300K, block, cfg); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func createFullBlock(b *testing.B, currentSlot uint64) (*pb.BeaconBlock, []byte) {
@@ -402,7 +548,7 @@ func createFullBlock(b *testing.B, currentSlot uint64) (*pb.BeaconBlock, []byte)
 }
 
 func createGenesisState(numDeposits int) *pb.BeaconState {
-	setBenchmarkConfig()
+	setBenchmarkConfig("MAX")
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
@@ -424,4 +570,23 @@ func createGenesisState(numDeposits int) *pb.BeaconState {
 	}
 
 	return genesisState
+}
+
+func resetBeaconState(beaconState *pb.BeaconState) {
+	beaconState.LatestEth1Data = &pb.Eth1Data{}
+	beaconState.Slot = params.BeaconConfig().GenesisSlot
+	beaconState.Eth1DataVotes = []*pb.Eth1DataVote{}
+
+	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := 0; i < len(latestCrosslinks); i++ {
+		latestCrosslinks[i] = &pb.Crosslink{
+			Epoch:                   params.BeaconConfig().GenesisEpoch,
+			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+		}
+	}
+	beaconState.LatestCrosslinks = latestCrosslinks
+}
+
+func runAmount(validatorCount int) int {
+	return 33554432 / validatorCount
 }
