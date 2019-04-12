@@ -2,7 +2,6 @@ package epoch
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -73,11 +72,11 @@ func TestEpochAttestations_AttestationSlotValid(t *testing.T) {
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 
-		if CurrentAttestations(context.Background(), state)[0].Data.Slot != tt.firstAttestationSlot {
+		if CurrentAttestations(state)[0].Data.Slot != tt.firstAttestationSlot {
 			t.Errorf(
 				"Result slot was an unexpected value. Wanted %d, got %d",
 				tt.firstAttestationSlot,
-				CurrentAttestations(context.Background(), state)[0].Data.Slot,
+				CurrentAttestations(state)[0].Data.Slot,
 			)
 		}
 	}
@@ -126,12 +125,12 @@ func TestEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 	}
 
-	if _, err := CurrentEpochBoundaryAttestations(context.Background(), state, epochAttestations); err == nil {
+	if _, err := CurrentEpochBoundaryAttestations(state, epochAttestations); err == nil {
 		t.Fatal("CurrentEpochBoundaryAttestations should have failed with empty block root hash")
 	}
 
 	state.Slot = params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1
-	epochBoundaryAttestation, err := CurrentEpochBoundaryAttestations(context.Background(), state, epochAttestations)
+	epochBoundaryAttestation, err := CurrentEpochBoundaryAttestations(state, epochAttestations)
 	if err != nil {
 		t.Fatalf("CurrentEpochBoundaryAttestations failed: %v", err)
 	}
@@ -202,45 +201,12 @@ func TestPrevEpochAttestations_AccurateAttestationSlots(t *testing.T) {
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 
-		if PrevAttestations(context.Background(), state)[0].Data.Slot != tt.firstAttestationSlot {
+		if PrevAttestations(state)[0].Data.Slot != tt.firstAttestationSlot {
 			t.Errorf(
 				"Result slot was an unexpected value. Wanted %d, got %d",
 				tt.firstAttestationSlot,
-				PrevAttestations(context.Background(), state)[0].Data.Slot,
+				PrevAttestations(state)[0].Data.Slot,
 			)
-		}
-	}
-}
-
-func TestPrevJustifiedAttestations_AccurateShardsAndEpoch(t *testing.T) {
-	prevEpochAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
-		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
-		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
-		{Data: &pb.AttestationData{Shard: 2, JustifiedEpoch: 1}},
-		{Data: &pb.AttestationData{Shard: 3, JustifiedEpoch: 1}},
-		{Data: &pb.AttestationData{JustifiedEpoch: 15}},
-	}
-
-	thisEpochAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
-		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
-		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
-		{Data: &pb.AttestationData{JustifiedEpoch: 1}},
-		{Data: &pb.AttestationData{Shard: 1, JustifiedEpoch: 1}},
-		{Data: &pb.AttestationData{JustifiedEpoch: 13}},
-	}
-
-	state := &pb.BeaconState{PreviousJustifiedEpoch: 1}
-
-	prevJustifiedAttestations := PrevJustifiedAttestations(context.Background(), state, thisEpochAttestations, prevEpochAttestations)
-
-	for i, attestation := range prevJustifiedAttestations {
-		if attestation.Data.Shard != uint64(i) {
-			t.Errorf("Wanted shard %d, got %d", i, attestation.Data.Shard)
-		}
-		if attestation.Data.JustifiedEpoch != 1 {
-			t.Errorf("Wanted justified epoch 0, got %d", attestation.Data.JustifiedEpoch)
 		}
 	}
 }
@@ -269,7 +235,7 @@ func TestPrevEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 	}
 
-	prevEpochBoundaryAttestation, err := PrevEpochBoundaryAttestations(context.Background(), state, epochAttestations)
+	prevEpochBoundaryAttestation, err := PrevEpochBoundaryAttestations(state, epochAttestations)
 	if err != nil {
 		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
 	}
@@ -307,7 +273,7 @@ func TestHeadAttestations_AccurateHeadData(t *testing.T) {
 		LatestBlockRootHash32S: latestBlockRootHash,
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch}
 
-	headAttestations, err := PrevHeadAttestations(context.Background(), state, prevAttestations)
+	headAttestations, err := PrevHeadAttestations(state, prevAttestations)
 	if err != nil {
 		t.Fatalf("PrevHeadAttestations failed with %v", err)
 	}
@@ -337,7 +303,7 @@ func TestHeadAttestations_InvalidRange(t *testing.T) {
 
 	state := &pb.BeaconState{Slot: 0}
 
-	if _, err := PrevHeadAttestations(context.Background(), state, prevAttestations); err == nil {
+	if _, err := PrevHeadAttestations(state, prevAttestations); err == nil {
 		t.Fatal("PrevHeadAttestations should have failed with invalid range")
 	}
 }
@@ -363,7 +329,6 @@ func TestWinningRoot_AccurateRoot(t *testing.T) {
 	// Since all 10 roots have the balance of 64 ETHs
 	// winningRoot chooses the lowest hash: []byte{100}
 	winnerRoot, err := winningRoot(
-		context.Background(),
 		state,
 		0,
 		attestations,
@@ -389,7 +354,7 @@ func TestWinningRoot_EmptyParticipantBitfield(t *testing.T) {
 	}
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
-	if _, err := winningRoot(context.Background(), state, 0, attestations, nil); !strings.Contains(err.Error(), want) {
+	if _, err := winningRoot(state, 0, attestations, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -410,7 +375,6 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 	}
 
 	attestedValidators, err := AttestingValidators(
-		context.Background(),
 		state,
 		0,
 		attestations,
@@ -437,7 +401,7 @@ func TestAttestingValidators_EmptyWinningRoot(t *testing.T) {
 	}
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
-	if _, err := AttestingValidators(context.Background(), state, 0, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
+	if _, err := AttestingValidators(state, 0, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -461,7 +425,6 @@ func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 	}
 
 	attestedBalance, err := TotalAttestingBalance(
-		context.Background(),
 		state,
 		0,
 		attestations,
@@ -487,7 +450,7 @@ func TestTotalAttestingBalance_EmptyWinningRoot(t *testing.T) {
 	}
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
-	if _, err := TotalAttestingBalance(context.Background(), state, 0, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
+	if _, err := TotalAttestingBalance(state, 0, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -501,7 +464,7 @@ func TestTotalBalance_CorrectBalance(t *testing.T) {
 	}
 
 	// 20 + 25 + 30 + 30 + 32 + 32 + 32 + 32 = 233
-	totalBalance := TotalBalance(context.Background(), state, []uint64{0, 1, 2, 3, 4, 5, 6, 7})
+	totalBalance := TotalBalance(state, []uint64{0, 1, 2, 3, 4, 5, 6, 7})
 	if totalBalance != 233*1e9 {
 		t.Errorf("Incorrect total balance. Wanted: 233*1e9, got: %d", totalBalance)
 	}

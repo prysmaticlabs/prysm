@@ -59,11 +59,11 @@ bazel build //...
 
 ## Deploying a Validator Deposit Contract
 
-If you want to run our system locally, you'll need to have a **Validator Deposit Contract** deployed on the Goerli Ethereum 1.0 [testnet](https://github.com/goerli/testnet). You'll need to acquire some Goerli ETH first and then you can easily deploy our deposit contract with Bazel: 
+If you want to run our system locally, you'll need to have a **Validator Deposit Contract** deployed on the Goerli Ethereum 1.0 [testnet](https://github.com/goerli/testnet). You'll need to acquire some Goerli ETH first and then you can easily deploy our deposit contract with Bazel:
 
 ```
-bazel run //contracts/deposit-contract/deployContract -- --httpPath=https://goerli.prylabs.net 
- --privKey=${YOUR_GOERLI_PRIV_KEY} 
+bazel run //contracts/deposit-contract/deployContract -- --httpPath=https://goerli.prylabs.net
+ --privKey=${YOUR_GOERLI_PRIV_KEY}
 ```
 
 You'll see the deposit contract address printed out, which we'll use when running our Eth 2.0 beacon nodes below:
@@ -80,8 +80,7 @@ Copy the address, you'll need it in the next step:
 To start your beacon node with bazel:
 
 ```
-bazel run //beacon-chain \ 
-  --deposit-contract DEPOSIT_CONTRACT_ADDRESS
+bazel run //beacon-chain -- --deposit-contract=DEPOSIT_CONTRACT_ADDRESS
 ```
 
 The chain will then be waiting for the **Validator Deposit Contract** to reach a deposit threshold before it begins! Now, you'll need to spin up enough validator clients that can reach the threshold with the following next steps:
@@ -118,7 +117,7 @@ bazel run //validator --\
   --keystore-path /path/to/validator/keystore/dir
 ```
 
-This will connect you to your running beacon node and listen for validator assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks. To then run the validator, use the command: 
+This will connect you to your running beacon node and listen for validator assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks. To then run the validator, use the command:
 
 Given this is a local network, you'll need to create and run enough validators to reach the deposit contract threshold so your chain can begin.
 

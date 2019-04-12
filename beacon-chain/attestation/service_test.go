@@ -11,9 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
@@ -34,7 +32,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		})
 	}
 
-	if err := beaconDB.SaveState(&pb.BeaconState{
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: validators,
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -72,9 +70,9 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 }
 
 func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
-	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
 
 	var validators []*pb.Validator
 	for i := 0; i < 64; i++ {
@@ -84,7 +82,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 			ExitEpoch:       10,
 		})
 	}
-	if err := beaconDB.SaveState(&pb.BeaconState{
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: validators,
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -102,8 +100,6 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	if err := service.handleAttestation(context.Background(), attestation); err != nil {
 		t.Error(err)
 	}
-
-	testutil.AssertLogsContain(t, hook, "Updated attestation pool for attestation")
 }
 
 func TestLatestAttestation_ReturnsLatestAttestation(t *testing.T) {
@@ -112,7 +108,7 @@ func TestLatestAttestation_ReturnsLatestAttestation(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := beaconDB.SaveState(&pb.BeaconState{
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -137,7 +133,7 @@ func TestLatestAttestation_InvalidIndex(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	if err := beaconDB.SaveState(&pb.BeaconState{
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -156,7 +152,7 @@ func TestLatestAttestation_NoAttestation(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	if err := beaconDB.SaveState(&pb.BeaconState{
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -178,7 +174,7 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	if err := beaconDB.SaveState(&pb.BeaconState{
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -198,7 +194,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := beaconDB.SaveState(&pb.BeaconState{
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)

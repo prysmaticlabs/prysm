@@ -21,9 +21,13 @@ message BeaconState {
 
   // Finality [2001-3000]
   uint64 previous_justified_epoch = 2001;
-  uint64 justified_epoch = 2002;
-  uint64 justification_bitfield = 2003;
-  uint64 finalized_epoch = 2004;
+  bytes previous_justified_root = 2002;
+  uint64 justified_epoch = 2003;
+  bytes justified_root = 2004;
+  uint64 justification_bitfield = 2005;
+  uint64 finalized_epoch = 2006;
+  bytes finalized_root = 2007;
+
 
   // Recent state [3001-4000]
   repeated Crosslink latest_crosslinks = 3001;

@@ -62,6 +62,8 @@ func setupBlocksMissingParent(parents []*pb.BeaconBlock, parentRoots [][32]byte)
 func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	rsCfg := DefaultRegularSyncConfig()
 	rsCfg.ChainService = &mockChainService{
 		db: db,
@@ -83,7 +85,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	if err := db.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(genesisState); err != nil {
+	if err := db.SaveState(ctx, genesisState); err != nil {
 		t.Fatal(err)
 	}
 

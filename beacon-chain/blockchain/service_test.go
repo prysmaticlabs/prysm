@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
@@ -40,7 +40,8 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCrosslinks: true,
+		EnableCrosslinks:          true,
+		EnableCheckBlockStateRoot: true,
 	})
 }
 
@@ -251,13 +252,13 @@ func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB, attsService *attestat
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.State(context.Background())
+	bState, err := service.beaconDB.HeadState(context.Background())
 	if err != nil {
 		return err
 	}
 
 	bState.Slot = slot
-	return service.beaconDB.SaveState(bState)
+	return service.beaconDB.SaveState(context.Background(), bState)
 }
 
 func TestChainStartStop_Uninitialized(t *testing.T) {
@@ -281,7 +282,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 		)
 	}
 
-	beaconState, err := db.State(context.Background())
+	beaconState, err := db.HeadState(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,10 +310,10 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Could not fetch beacon state: %v", err)
 	}

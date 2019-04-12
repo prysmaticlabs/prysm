@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "blockchain")
@@ -39,7 +39,6 @@ type ChainService struct {
 	attsService          *attestation.Service
 	opsPoolService       operations.OperationFeeds
 	chainStartChan       chan time.Time
-	canonicalBlockChan   chan *pb.BeaconBlock
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
 	finalizedEpoch       uint64
@@ -70,7 +69,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
 		canonicalBlockFeed:   new(event.Feed),
-		canonicalBlockChan:   make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
@@ -79,7 +77,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -112,13 +110,7 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 		initialDeposits[i] = &pb.Deposit{DepositData: initialDepositsData[i]}
 	}
 
-	depositRoot := c.web3Service.DepositRoot()
-	latestBlockHash := c.web3Service.LatestBlockHash()
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: depositRoot[:],
-		BlockHash32:       latestBlockHash[:],
-	}
-	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data)
+	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data())
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
@@ -132,13 +124,15 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
 func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
 	eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
+	defer span.End()
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
-	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
+	if err := c.beaconDB.InitializeState(c.ctx, unixTime, deposits, eth1data); err != nil {
 		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
@@ -154,7 +148,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
-	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
+	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
 	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {
@@ -211,15 +205,4 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
 	}
 	return root, nil
-}
-
-// doesPoWBlockExist checks if the referenced PoW block exists.
-func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
-	powBlock, err := c.web3Service.Client().BlockByHash(c.ctx, hash)
-	if err != nil {
-		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
-		return false
-	}
-
-	return powBlock != nil
 }
