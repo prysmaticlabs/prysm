@@ -56,7 +56,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	defer span.End()
 	recBlock.Inc()
 
-	isValid, blockRoot, err := rs.validateAndProcessBlock(ctx, msg)
+	blockRoot, isValid, err := rs.validateAndProcessBlock(ctx, msg)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	return nil
 }
 
-func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p.Message) (bool, [32]byte, error) {
+func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p.Message) ([32]byte, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.validateAndProcessBlock")
 	defer span.End()
 
@@ -88,7 +88,7 @@ func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
-		return false, [32]byte{}, err
+		return [32]byte{}, false, err
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockRoot)
@@ -96,13 +96,13 @@ func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 	if hasBlock {
 		log.Debug("Received a block that already exists. Exiting...")
-		return false, [32]byte{}, nil
+		return [32]byte{}, false, nil
 	}
 
 	beaconState, err := rs.db.HeadState(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
-		return false, [32]byte{}, err
+		return [32]byte{}, false, err
 	}
 
 	span.AddAttributes(
@@ -111,7 +111,7 @@ func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p
 	)
 	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
-		return false, [32]byte{}, nil
+		return [32]byte{}, false, nil
 	}
 
 	// We check if we have the block's parents saved locally.
@@ -126,7 +126,7 @@ func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p
 		if block.Slot > rs.highestObservedSlot {
 			rs.highestObservedSlot = block.Slot
 		}
-		return false, [32]byte{}, nil
+		return [32]byte{}, false, nil
 	}
 
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
@@ -135,11 +135,11 @@ func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
 		log.Errorf("Could not process beacon block: %v", err)
-		return false, [32]byte{}, err
+		return [32]byte{}, false, err
 	}
 	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
 		log.Errorf("could not apply fork choice rule: %v", err)
-		return false, [32]byte{}, err
+		return [32]byte{}, false, err
 	}
 
 	sentBlocks.Inc()
@@ -149,7 +149,7 @@ func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p
 	}
 	span.AddAttributes(trace.Int64Attribute("highestObservedSlot", int64(rs.highestObservedSlot)))
 
-	return true, blockRoot, nil
+	return blockRoot, true, nil
 }
 
 func (rs *RegularSync) insertPendingBlock(ctx context.Context, blockRoot [32]byte, blockMsg p2p.Message) {
