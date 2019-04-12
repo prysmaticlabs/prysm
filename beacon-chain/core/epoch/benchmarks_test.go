@@ -86,7 +86,7 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 	b.ResetTimer()
 	b.N = RunAmount
 	for i := 0; i < b.N; i++ {
-		_ = epoch.ProcessEth1Data(context.Background(), beaconState)
+		_ = epoch.ProcessEth1Data(beaconState)
 	}
 }
 
@@ -104,7 +104,10 @@ func BenchmarkProcessJustification(b *testing.B) {
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = epoch.ProcessJustification(context.Background(), beaconState, 1, 1, 1, 1, false)
+		_, err := epoch.ProcessJustificationAndFinalization(beaconState, 1, 1, 1, 1)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -132,12 +135,7 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 	b.N = 20
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := epoch.ProcessCrosslinks(
-			context.Background(),
-			beaconState,
-			attestations,
-			nil,
-		)
+		_, err := epoch.ProcessCrosslinks(beaconState, attestations, nil)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -172,62 +170,58 @@ func BenchmarkProcessRewards(b *testing.B) {
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 
 	activeValidatorIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, currentEpoch)
-	totalBalance := e.TotalBalance(context.Background(), beaconState, activeValidatorIndices)
+	totalBalance := e.TotalBalance(beaconState, activeValidatorIndices)
 
-	prevEpochAttestations := e.PrevAttestations(context.Background(), beaconState)
-	prevEpochAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochAttestations)
+	prevEpochAttestations := e.PrevAttestations(beaconState)
+	prevEpochAttesterIndices, err := v.ValidatorIndices(beaconState, prevEpochAttestations)
 	if err != nil {
 		b.Fatal(err)
 	}
-	prevEpochAttestingBalance := e.TotalBalance(context.Background(), beaconState, prevEpochAttesterIndices)
+	prevEpochAttestingBalance := e.TotalBalance(beaconState, prevEpochAttesterIndices)
 
-	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(context.Background(), beaconState, prevEpochAttestations)
+	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(beaconState, prevEpochAttestations)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochBoundaryAttestations)
+	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(beaconState, prevEpochBoundaryAttestations)
 	if err != nil {
 		b.Fatal(err)
 	}
-	prevEpochBoundaryAttestingBalances := e.TotalBalance(context.Background(), beaconState, prevEpochBoundaryAttesterIndices)
+	prevEpochBoundaryAttestingBalances := e.TotalBalance(beaconState, prevEpochBoundaryAttesterIndices)
 
-	prevEpochHeadAttestations, err := e.PrevHeadAttestations(context.Background(), beaconState, prevEpochAttestations)
+	prevEpochHeadAttestations, err := e.PrevHeadAttestations(beaconState, prevEpochAttestations)
 	if err != nil {
 		b.Fatal(err)
 	}
-	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochHeadAttestations)
+	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(beaconState, prevEpochHeadAttestations)
 	if err != nil {
 		b.Fatal(err)
 	}
-	prevEpochHeadAttestingBalances := e.TotalBalance(context.Background(), beaconState, prevEpochHeadAttesterIndices)
+	prevEpochHeadAttestingBalances := e.TotalBalance(beaconState, prevEpochHeadAttesterIndices)
 
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = bal.ExpectedFFGSource(
-			context.Background(),
 			beaconState,
 			prevEpochAttesterIndices,
 			prevEpochAttestingBalance,
 			totalBalance)
 
 		_ = bal.ExpectedFFGTarget(
-			context.Background(),
 			beaconState,
 			prevEpochBoundaryAttesterIndices,
 			prevEpochBoundaryAttestingBalances,
 			totalBalance)
 
 		_ = bal.ExpectedBeaconChainHead(
-			context.Background(),
 			beaconState,
 			prevEpochHeadAttesterIndices,
 			prevEpochHeadAttestingBalances,
 			totalBalance)
 
 		_, err = bal.InclusionDistance(
-			context.Background(),
 			beaconState,
 			prevEpochAttesterIndices,
 			totalBalance)
@@ -265,28 +259,28 @@ func BenchmarkProcessLeak(b *testing.B) {
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 
 	activeValidatorIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, currentEpoch)
-	totalBalance := e.TotalBalance(context.Background(), beaconState, activeValidatorIndices)
+	totalBalance := e.TotalBalance(beaconState, activeValidatorIndices)
 
-	prevEpochAttestations := e.PrevAttestations(context.Background(), beaconState)
-	prevEpochAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochAttestations)
+	prevEpochAttestations := e.PrevAttestations(beaconState)
+	prevEpochAttesterIndices, err := v.ValidatorIndices(beaconState, prevEpochAttestations)
 	if err != nil {
 		b.Fatal(err)
 	}
-	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(context.Background(), beaconState, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochBoundaryAttestations)
+	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(beaconState, prevEpochAttestations)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	prevEpochHeadAttestations, err := e.PrevHeadAttestations(context.Background(), beaconState, prevEpochAttestations)
+	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(beaconState, prevEpochBoundaryAttestations)
 	if err != nil {
 		b.Fatal(err)
 	}
-	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(context.Background(), beaconState, prevEpochHeadAttestations)
+
+	prevEpochHeadAttestations, err := e.PrevHeadAttestations(beaconState, prevEpochAttestations)
+	if err != nil {
+		b.Fatal(err)
+	}
+	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(beaconState, prevEpochHeadAttestations)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -296,33 +290,28 @@ func BenchmarkProcessLeak(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = bal.InactivityFFGSource(
-			context.Background(),
 			beaconState,
 			prevEpochAttesterIndices,
 			totalBalance,
 			epochsSinceFinality)
 
 		_ = bal.InactivityFFGTarget(
-			context.Background(),
 			beaconState,
 			prevEpochBoundaryAttesterIndices,
 			totalBalance,
 			epochsSinceFinality)
 
 		_ = bal.InactivityChainHead(
-			context.Background(),
 			beaconState,
 			prevEpochHeadAttesterIndices,
 			totalBalance)
 
 		_ = bal.InactivityExitedPenalties(
-			context.Background(),
 			beaconState,
 			totalBalance,
 			epochsSinceFinality)
 
 		_, err = bal.InactivityInclusionDistance(
-			context.Background(),
 			beaconState,
 			prevEpochAttesterIndices,
 			totalBalance)
