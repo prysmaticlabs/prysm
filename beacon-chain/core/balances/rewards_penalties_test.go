@@ -43,7 +43,6 @@ func TestFFGSrcRewardsPenalties_AccurateBalances(t *testing.T) {
 			ValidatorBalances: validatorBalances,
 		}
 		state = ExpectedFFGSource(
-			context.Background(),
 			state,
 			tt.voted,
 			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositAmount,
@@ -83,7 +82,6 @@ func TestFFGTargetRewardsPenalties_AccurateBalances(t *testing.T) {
 			ValidatorBalances: validatorBalances,
 		}
 		state = ExpectedFFGTarget(
-			context.Background(),
 			state,
 			tt.voted,
 			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositAmount,
@@ -123,7 +121,6 @@ func TestChainHeadRewardsPenalties_AccuratePenalties(t *testing.T) {
 			ValidatorBalances: validatorBalances,
 		}
 		state = ExpectedBeaconChainHead(
-			context.Background(),
 			state,
 			tt.voted,
 			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositAmount,
@@ -251,7 +248,6 @@ func TestInactivityFFGSrcPenalty_AccuratePenalties(t *testing.T) {
 			ValidatorBalances: validatorBalances,
 		}
 		state = InactivityFFGSource(
-			context.Background(),
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount,
@@ -291,7 +287,6 @@ func TestInactivityFFGTargetPenalty_AccuratePenalties(t *testing.T) {
 			ValidatorBalances: validatorBalances,
 		}
 		state = InactivityFFGTarget(
-			context.Background(),
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount,
@@ -328,7 +323,6 @@ func TestInactivityHeadPenalty_AccuratePenalties(t *testing.T) {
 			ValidatorBalances: validatorBalances,
 		}
 		state = InactivityChainHead(
-			context.Background(),
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount)
@@ -363,7 +357,6 @@ func TestInactivityExitedPenality_AccuratePenalties(t *testing.T) {
 			ValidatorBalances: validatorBalances,
 		}
 		state = InactivityExitedPenalties(
-			context.Background(),
 			state,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount,
 			tt.epochsSinceFinality,
@@ -413,7 +406,6 @@ func TestInactivityInclusionPenalty_AccuratePenalties(t *testing.T) {
 			LatestAttestations: attestation,
 		}
 		state, err := InactivityInclusionDistance(
-			context.Background(),
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount)
@@ -455,7 +447,7 @@ func TestInactivityInclusionPenalty_OutOfBounds(t *testing.T) {
 			ValidatorRegistry:  validators,
 			LatestAttestations: attestation,
 		}
-		_, err := InactivityInclusionDistance(context.Background(), state, tt.voted, 0)
+		_, err := InactivityInclusionDistance(state, tt.voted, 0)
 		if err == nil {
 			t.Fatal("InclusionDistRewards should have failed")
 		}
@@ -499,7 +491,6 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 			LatestAttestations: attestation,
 		}
 		state, err := AttestationInclusion(
-			context.Background(),
 			state,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount,
 			tt.voted)
@@ -541,7 +532,7 @@ func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
 			ValidatorRegistry: validators,
 			ValidatorBalances: validatorBalances,
 		}
-		if _, err := AttestationInclusion(context.Background(), state, 0, tt.voted); err == nil {
+		if _, err := AttestationInclusion(state, 0, tt.voted); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no inclusion slot")
 		}
 	}
@@ -577,7 +568,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 			ValidatorBalances:  validatorBalances,
 			LatestAttestations: attestation,
 		}
-		if _, err := AttestationInclusion(context.Background(), state, 0, tt.voted); err == nil {
+		if _, err := AttestationInclusion(state, 0, tt.voted); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no proposer index")
 		}
 	}
@@ -620,7 +611,6 @@ func TestCrosslinksRewardsPenalties_AccurateBalances(t *testing.T) {
 			LatestAttestations: attestation,
 		}
 		state, err := Crosslinks(
-			context.Background(),
 			state,
 			attestation,
 			nil)
