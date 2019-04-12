@@ -65,7 +65,7 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 func (db *BeaconDB) ValidatorIndices(pubKeys [][]byte) (map[uint64][]byte, error) {
 	m := make(map[uint64][]byte)
 	if !db.HasValidators(pubKeys) {
-		return m, fmt.Errorf("validators %#x does not exist", pubKeys)
+		return m, fmt.Errorf("validators %#x does not exist. make sure that all validators in keystore made a deposit before you run the validator client", pubKeys)
 	}
 
 	err := db.view(func(tx *bolt.Tx) error {
@@ -106,7 +106,7 @@ func (db *BeaconDB) HasValidators(pubKeys [][]byte) bool {
 		for _, pk := range pubKeys {
 			h := hashutil.Hash(pk)
 			exists = a.Get(h[:]) != nil
-			if exists {
+			if !exists {
 				break
 			}
 		}
