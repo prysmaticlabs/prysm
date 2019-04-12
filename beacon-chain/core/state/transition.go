@@ -322,7 +322,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 		// Apply rewards for to validators for including attestations
 		// based on inclusion distance.
 		state, err = bal.InclusionDistance(
-			ctx,
 			state,
 			prevEpochAttesterIndices,
 			totalBalance)
