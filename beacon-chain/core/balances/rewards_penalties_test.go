@@ -1,7 +1,6 @@
 package balances
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -171,7 +170,6 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 			LatestAttestations: attestation,
 		}
 		state, err := InclusionDistance(
-			context.Background(),
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount)
@@ -214,7 +212,7 @@ func TestInclusionDistRewards_OutOfBounds(t *testing.T) {
 			ValidatorRegistry:  validators,
 			LatestAttestations: attestation,
 		}
-		_, err := InclusionDistance(context.Background(), state, tt.voted, 0)
+		_, err := InclusionDistance(state, tt.voted, 0)
 		if err == nil {
 			t.Fatal("InclusionDistRewards should have failed")
 		}
