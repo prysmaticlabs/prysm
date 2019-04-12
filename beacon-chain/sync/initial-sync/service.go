@@ -225,11 +225,18 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
-		log.Fatalf(
-			"Canonical state root %#x does not match highest observed root from peer %#x",
-			stateRoot,
-			s.highestObservedRoot,
-		)
+
+	//  blacklist peer
+
+
+
+
+
+		// log.Fatalf(
+		// 	"Canonical state root %#x does not match highest observed root from peer %#x",
+		// 	stateRoot,
+		// 	s.highestObservedRoot,
+		// )
 	}
 	log.Infof("Canonical state slot: %d", canonicalState.Slot-params.BeaconConfig().GenesisSlot)
 	log.Info("Exiting initial sync and starting normal sync")
