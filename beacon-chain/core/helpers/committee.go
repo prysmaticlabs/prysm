@@ -285,9 +285,9 @@ func AttestationParticipants(
 		} else {
 			crosslinkCommittees = toCrosslinkCommittee(cachedCommittees)
 		}
+	} else {
 		// When the committee cache is disabled, we calculate crosslink committees
 		// every time when AttestationParticipants gets called.
-	} else {
 		crosslinkCommittees, err = CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
 		if err != nil {
 			return nil, err
