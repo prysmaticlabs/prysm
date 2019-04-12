@@ -12,7 +12,6 @@ go_library(
     deps = [
         "//beacon-chain/attestation:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/genesis:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
@@ -22,6 +21,7 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/params:go_default_library",
@@ -42,8 +42,9 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/attestation:go_default_library",
-        "//beacon-chain/core/genesis:go_default_library",
+        "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/internal:go_default_library",

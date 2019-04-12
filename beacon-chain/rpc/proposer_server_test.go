@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -27,8 +28,8 @@ func TestProposeBlock_OK(t *testing.T) {
 	mockChain := &mockChainService{}
 	ctx := context.Background()
 
-	gBlock := genesis.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(gBlock); err != nil {
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
@@ -49,12 +50,12 @@ func TestProposeBlock_OK(t *testing.T) {
 		}
 	}
 
-	beaconState, err := genesis.BeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(ctx, gBlock, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -82,8 +83,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	mockChain := &mockChainService{}
 
-	gBlock := genesis.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(gBlock); err != nil {
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
@@ -104,14 +105,14 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		}
 	}
 
-	beaconState, err := genesis.BeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	beaconState.Slot = 10
 
-	if err := db.UpdateChainHead(ctx, gBlock, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 

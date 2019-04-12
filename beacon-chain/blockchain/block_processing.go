@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -45,6 +47,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
+	saveLatestBlock := beaconState.LatestBlock
 
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(ctx, block, beaconState); err != nil {
@@ -72,6 +75,20 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		"slotNumber":   block.Slot - params.BeaconConfig().GenesisSlot,
 		"currentEpoch": helpers.SlotToEpoch(block.Slot) - params.BeaconConfig().GenesisEpoch,
 	}).Info("State transition complete")
+
+	// Check state root
+	if featureconfig.FeatureConfig().EnableCheckBlockStateRoot {
+		// Calc state hash with previous block
+		beaconState.LatestBlock = saveLatestBlock
+		stateRoot, err := hashutil.HashProto(beaconState)
+		if err != nil {
+			return nil, fmt.Errorf("could not hash beacon state: %v", err)
+		}
+		beaconState.LatestBlock = block
+		if !bytes.Equal(block.StateRootHash32, stateRoot[:]) {
+			return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRootHash32)
+		}
+	}
 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
@@ -209,7 +226,6 @@ func (c *ChainService) runStateTransition(
 		beaconState,
 		block,
 		headRoot,
-		c.beaconDB,
 		&state.TransitionConfig{
 			VerifySignatures: false, // We disable signature verification for now.
 			Logging:          true,  // We enable logging in this state transition call.

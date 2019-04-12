@@ -10,7 +10,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -30,7 +31,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InitializeState")
 	defer span.End()
 
-	beaconState, err := genesis.BeaconState(deposits, genesisTime, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
 	if err != nil {
 		return err
 	}
@@ -38,7 +39,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	// #nosec G104
 	stateEnc, _ := proto.Marshal(beaconState)
 	stateHash := hashutil.Hash(stateEnc)
-	genesisBlock := genesis.NewGenesisBlock(stateHash[:])
+	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
 	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
@@ -260,7 +261,8 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
-// HistoricalStateFromSlot retrieves the closest historical state to a slot.
+// HistoricalStateFromSlot retrieves the state that is closest to the input slot,
+// while being smaller than or equal to the input slot.
 func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.HistoricalStateFromSlot")
 	defer span.End()
@@ -285,7 +287,8 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 				break
 			}
 		}
-		// If no state exists send the closest state.
+
+		// If no historical state exists, retrieve and decode the finalized state.
 		if !stateExists {
 			for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 				slotNumber := decodeToSlotNumber(k)
@@ -302,7 +305,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 			}
 		}
 
-		// retrieve the stored historical state.
+		// If historical state exists, retrieve and decode it.
 		encState := chainInfo.Get(histStateKey)
 		if encState == nil {
 			return errors.New("no historical state saved")

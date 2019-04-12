@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -40,7 +40,8 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCrosslinks: true,
+		EnableCrosslinks:          true,
+		EnableCheckBlockStateRoot: true,
 	})
 }
 
@@ -203,7 +204,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 }
 
 func setupGenesisBlock(t *testing.T, cs *ChainService, beaconState *pb.BeaconState) ([32]byte, *pb.BeaconBlock) {
-	genesis := genesis.NewGenesisBlock([]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}

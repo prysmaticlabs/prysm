@@ -162,7 +162,7 @@ func (vs *ValidatorServer) assignment(
 	}
 	for beaconState.Slot < epochStart {
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, vs.beaconDB, state.DefaultConfig(),
+			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
