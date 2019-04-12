@@ -62,7 +62,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		return
 	}
 
-	committeeLength := mathutil.CeilDiv8(len(v.assignment.Assignment[0].Committee))
+	committeeLength := mathutil.CeilDiv8(len(v.assignments.Assignment[0].Committee))
 
 	// Set the attestation data's slot to head_state.slot where the slot
 	// is the canonical head of the beacon chain.
