@@ -176,14 +176,14 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		} else {
 			attesterSlot = assignment.Slot
 		}
-		ap := hex.EncodeToString(assignment.PublicKey)
-		ap = ap[:12]
-		lFields[ap+"_attesterSlot"] = attesterSlot - params.BeaconConfig().GenesisSlot
-		lFields[ap+"_proposerSlot"] = "Not proposing"
-		lFields[ap+"_shard"] = assignment.Shard
+		assignmentKey := hex.EncodeToString(assignment.PublicKey)
+		assignmentKey = assignmentKey[:12]
+		lFields[assignmentKey+"_attesterSlot"] = attesterSlot - params.BeaconConfig().GenesisSlot
+		lFields[assignmentKey+"_proposerSlot"] = "Not proposing"
+		lFields[assignmentKey+"_shard"] = assignment.Shard
 
 		if assignment.IsProposer {
-			lFields[ap+"_proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
+			lFields[assignmentKey+"_proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
 		}
 
 	}
