@@ -54,71 +54,14 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	defer span.End()
 	recBlock.Inc()
 
-	response := msg.Data.(*pb.BeaconBlockResponse)
-	block := response.Block
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	isValid, blockRoot, err := rs.validateAndProcessBlock(ctx, msg)
 	if err != nil {
-		log.Errorf("Could not hash received block: %v", err)
 		return err
 	}
 
-	log.Debugf("Processing response to block request: %#x", blockRoot)
-	hasBlock := rs.db.HasBlock(blockRoot)
-	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
-	if hasBlock {
-		log.Debug("Received a block that already exists. Exiting...")
+	if !isValid {
 		return nil
 	}
-
-	beaconState, err := rs.db.HeadState(ctx)
-	if err != nil {
-		log.Errorf("Failed to get beacon state: %v", err)
-		return err
-	}
-
-	span.AddAttributes(
-		trace.Int64Attribute("block.Slot", int64(block.Slot)),
-		trace.Int64Attribute("finalized slot", int64(beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)),
-	)
-	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
-		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
-		return nil
-	}
-
-	// We check if we have the block's parents saved locally.
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-	hasParent := rs.db.HasBlock(parentRoot)
-	span.AddAttributes(trace.BoolAttribute("hasParent", hasParent))
-
-	if !hasParent {
-		// If we do not have the parent, we insert it into a pending block's map.
-		rs.insertPendingBlock(ctx, parentRoot, msg)
-		// We update the last observed slot to the received canonical block's slot.
-		if block.Slot > rs.highestObservedSlot {
-			rs.highestObservedSlot = block.Slot
-		}
-		return nil
-	}
-
-	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
-	// We then process the block by passing it through the ChainService and running
-	// a fork choice rule.
-	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
-	if err != nil {
-		log.Errorf("Could not process beacon block: %v", err)
-	}
-	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
-		log.Errorf("could not apply fork choice rule: %v", err)
-		return err
-	}
-
-	sentBlocks.Inc()
-
-	// We update the last observed slot to the received canonical block's slot.
-	if block.Slot > rs.highestObservedSlot {
-		rs.highestObservedSlot = block.Slot
-	}
-	span.AddAttributes(trace.Int64Attribute("highestObservedSlot", int64(rs.highestObservedSlot)))
 
 	// If the block has a child, we then clear it from the blocks pending processing
 	// and call receiveBlock recursively. The recursive function call will stop once
@@ -129,6 +72,82 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 		return rs.receiveBlock(child)
 	}
 	return nil
+}
+
+func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p.Message) (bool, [32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.validateAndProcessBlock")
+	defer span.End()
+
+	rs.blockProcessingLock.Lock()
+	defer rs.blockProcessingLock.Unlock()
+
+	response := blockMsg.Data.(*pb.BeaconBlockResponse)
+	block := response.Block
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		log.Errorf("Could not hash received block: %v", err)
+		return false, [32]byte{}, err
+	}
+
+	log.Debugf("Processing response to block request: %#x", blockRoot)
+	hasBlock := rs.db.HasBlock(blockRoot)
+	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
+	if hasBlock {
+		log.Debug("Received a block that already exists. Exiting...")
+		return false, [32]byte{}, nil
+	}
+
+	beaconState, err := rs.db.HeadState(ctx)
+	if err != nil {
+		log.Errorf("Failed to get beacon state: %v", err)
+		return false, [32]byte{}, err
+	}
+
+	span.AddAttributes(
+		trace.Int64Attribute("block.Slot", int64(block.Slot)),
+		trace.Int64Attribute("finalized slot", int64(beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)),
+	)
+	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
+		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
+		return false, [32]byte{}, nil
+	}
+
+	// We check if we have the block's parents saved locally.
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	hasParent := rs.db.HasBlock(parentRoot)
+	span.AddAttributes(trace.BoolAttribute("hasParent", hasParent))
+
+	if !hasParent {
+		// If we do not have the parent, we insert it into a pending block's map.
+		rs.insertPendingBlock(ctx, parentRoot, blockMsg)
+		// We update the last observed slot to the received canonical block's slot.
+		if block.Slot > rs.highestObservedSlot {
+			rs.highestObservedSlot = block.Slot
+		}
+		return false, [32]byte{}, nil
+	}
+
+	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
+	// We then process the block by passing it through the ChainService and running
+	// a fork choice rule.
+	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
+	if err != nil {
+		log.Errorf("Could not process beacon block: %v", err)
+		return false, [32]byte{}, err
+	}
+	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+		log.Errorf("could not apply fork choice rule: %v", err)
+		return false, [32]byte{}, err
+	}
+
+	sentBlocks.Inc()
+	// We update the last observed slot to the received canonical block's slot.
+	if block.Slot > rs.highestObservedSlot {
+		rs.highestObservedSlot = block.Slot
+	}
+	span.AddAttributes(trace.Int64Attribute("highestObservedSlot", int64(rs.highestObservedSlot)))
+
+	return true, blockRoot, nil
 }
 
 func (rs *RegularSync) insertPendingBlock(ctx context.Context, blockRoot [32]byte, blockMsg p2p.Message) {

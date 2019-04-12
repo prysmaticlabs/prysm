@@ -86,6 +86,7 @@ type RegularSync struct {
 	highestObservedSlot          uint64
 	blocksAwaitingProcessing     map[[32]byte]p2p.Message
 	blocksAwaitingProcessingLock sync.RWMutex
+	blockProcessingLock          sync.RWMutex
 	blockAnnouncements           map[uint64][]byte
 }
 
