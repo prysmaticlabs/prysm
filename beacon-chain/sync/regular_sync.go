@@ -88,6 +88,7 @@ type RegularSync struct {
 	blocksAwaitingProcessingLock sync.RWMutex
 	blockProcessingLock          sync.RWMutex
 	blockAnnouncements           map[uint64][]byte
+	blockAnnouncementsLock       sync.RWMutex
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.

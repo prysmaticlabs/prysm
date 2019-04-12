@@ -24,6 +24,8 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 
 	// This prevents us from processing a block announcement we have already received.
 	// TODO(#2072): If the peer failed to give the block, broadcast request to the whole network.
+	rs.blockAnnouncementsLock.Lock()
+	defer rs.blockAnnouncementsLock.Unlock()
 	if _, ok := rs.blockAnnouncements[data.SlotNumber]; ok {
 		return nil
 	}
