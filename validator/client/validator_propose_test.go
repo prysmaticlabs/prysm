@@ -124,6 +124,13 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(&pb.StateRootResponse{
+		StateRoot: []byte{'F'},
+	}, nil /*err*/)
+
 	var broadcastedBlock *pbp2p.BeaconBlock
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // context
@@ -199,6 +206,13 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(&pb.StateRootResponse{
+		StateRoot: []byte{'F'},
+	}, nil /*err*/)
+
 	var broadcastedBlock *pbp2p.BeaconBlock
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -252,6 +266,13 @@ func TestProposeBlock_PendingAttestations_UsesCurrentSlot(t *testing.T) {
 		req = r
 		return &pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil
 	})
+
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(&pb.StateRootResponse{
+		StateRoot: []byte{'F'},
+	}, nil /*err*/)
 
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // context
@@ -308,6 +329,108 @@ func TestProposeBlock_PendingAttestationsFailure(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Failed to fetch pending attestations")
 }
 
+func TestProposeBlock_ComputeStateFailure(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
+
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(nil /*response*/, errors.New("something bad happened"))
+
+	validator.ProposeBlock(context.Background(), 55)
+	testutil.AssertLogsContain(t, hook, "something bad happened")
+}
+
+func TestProposeBlock_UsesComputedState(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
+
+	var broadcastedBlock *pbp2p.BeaconBlock
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
+		broadcastedBlock = blk
+	}).Return(&pb.ProposeResponse{}, nil /*error*/)
+
+	computedStateRoot := []byte{'T', 'E', 'S', 'T'}
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(
+		&pb.StateRootResponse{
+			StateRoot: computedStateRoot,
+		},
+		nil, // err
+	)
+
+	validator.ProposeBlock(context.Background(), 55)
+
+	if !bytes.Equal(broadcastedBlock.StateRootHash32, computedStateRoot) {
+		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRootHash32)
+	}
+}
+
 func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
@@ -340,6 +463,13 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
+
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(&pb.StateRootResponse{
+		StateRoot: []byte{'F'},
+	}, nil /*err*/)
 
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx

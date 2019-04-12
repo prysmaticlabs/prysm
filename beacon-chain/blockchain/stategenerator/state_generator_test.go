@@ -10,8 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{})
+}
 
 func TestGenerateState_OK(t *testing.T) {
 	b, err := backend.NewSimulatedBackend()
@@ -25,6 +30,7 @@ func TestGenerateState_OK(t *testing.T) {
 	beaconDb := b.DB()
 	defer b.Shutdown()
 	defer db.TeardownDB(beaconDb)
+	ctx := context.Background()
 
 	slotLimit := uint64(30)
 
@@ -37,7 +43,7 @@ func TestGenerateState_OK(t *testing.T) {
 		if err := beaconDb.SaveBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
+		if err := beaconDb.UpdateChainHead(ctx, inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
 		if err := beaconDb.SaveFinalizedBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
@@ -58,7 +64,7 @@ func TestGenerateState_OK(t *testing.T) {
 		if err := beaconDb.SaveBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
+		if err := beaconDb.UpdateChainHead(ctx, inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
 	}
@@ -92,6 +98,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 	beaconDb := b.DB()
 	defer b.Shutdown()
 	defer db.TeardownDB(beaconDb)
+	ctx := context.Background()
 
 	slotLimit := uint64(30)
 
@@ -104,7 +111,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 		if err := beaconDb.SaveBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
+		if err := beaconDb.UpdateChainHead(ctx, inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
 		if err := beaconDb.SaveFinalizedBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
@@ -133,7 +140,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 		if err := beaconDb.SaveBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
+		if err := beaconDb.UpdateChainHead(ctx, inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
 	}
@@ -169,7 +176,7 @@ func TestGenerateState_NilLatestFinalizedBlock(t *testing.T) {
 	if err := beaconDB.SaveFinalizedState(beaconState); err != nil {
 		t.Fatalf("Unable to save finalized state")
 	}
-	if err := beaconDB.SaveHistoricalState(beaconState); err != nil {
+	if err := beaconDB.SaveHistoricalState(context.Background(), beaconState); err != nil {
 		t.Fatalf("Unable to save finalized state")
 	}
 

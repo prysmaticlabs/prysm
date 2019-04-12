@@ -22,6 +22,14 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	h := bytesutil.ToBytes32(data.Hash[:32])
 
+	// This prevents us from processing a block announcement we have already received.
+	// TODO(#2072): If the peer failed to give the block, broadcast request to the whole network.
+	rs.blockAnnouncementsLock.Lock()
+	defer rs.blockAnnouncementsLock.Unlock()
+	if _, ok := rs.blockAnnouncements[data.SlotNumber]; ok {
+		return nil
+	}
+
 	hasBlock := rs.db.HasBlock(h)
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 
@@ -36,6 +44,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 		log.Error(err)
 		return err
 	}
+	rs.blockAnnouncements[data.SlotNumber] = data.Hash
 	sentBlockReq.Inc()
 	return nil
 }
@@ -47,12 +56,39 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	defer span.End()
 	recBlock.Inc()
 
-	response := msg.Data.(*pb.BeaconBlockResponse)
+	blockRoot, isValid, err := rs.validateAndProcessBlock(ctx, msg)
+	if err != nil {
+		return err
+	}
+
+	if !isValid {
+		return nil
+	}
+
+	// If the block has a child, we then clear it from the blocks pending processing
+	// and call receiveBlock recursively. The recursive function call will stop once
+	// the block we process no longer has children.
+	if child, ok := rs.hasChild(blockRoot); ok {
+		// We clear the block root from the pending processing map.
+		rs.clearPendingBlock(blockRoot)
+		return rs.receiveBlock(child)
+	}
+	return nil
+}
+
+func (rs *RegularSync) validateAndProcessBlock(ctx context.Context, blockMsg p2p.Message) ([32]byte, bool, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.validateAndProcessBlock")
+	defer span.End()
+
+	rs.blockProcessingLock.Lock()
+	defer rs.blockProcessingLock.Unlock()
+
+	response := blockMsg.Data.(*pb.BeaconBlockResponse)
 	block := response.Block
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
-		return err
+		return [32]byte{}, false, err
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockRoot)
@@ -60,13 +96,13 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 	if hasBlock {
 		log.Debug("Received a block that already exists. Exiting...")
-		return nil
+		return [32]byte{}, false, nil
 	}
 
-	beaconState, err := rs.db.State(ctx)
+	beaconState, err := rs.db.HeadState(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
-		return err
+		return [32]byte{}, false, err
 	}
 
 	span.AddAttributes(
@@ -75,7 +111,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	)
 	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
-		return nil
+		return [32]byte{}, false, nil
 	}
 
 	// We check if we have the block's parents saved locally.
@@ -85,12 +121,12 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 
 	if !hasParent {
 		// If we do not have the parent, we insert it into a pending block's map.
-		rs.insertPendingBlock(ctx, parentRoot, msg)
+		rs.insertPendingBlock(ctx, parentRoot, blockMsg)
 		// We update the last observed slot to the received canonical block's slot.
 		if block.Slot > rs.highestObservedSlot {
 			rs.highestObservedSlot = block.Slot
 		}
-		return nil
+		return [32]byte{}, false, nil
 	}
 
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
@@ -99,30 +135,21 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
 		log.Errorf("Could not process beacon block: %v", err)
-		return err
+		return [32]byte{}, false, err
 	}
 	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
 		log.Errorf("could not apply fork choice rule: %v", err)
-		return err
+		return [32]byte{}, false, err
 	}
 
-	// We clear the block root from the pending processing map.
-	rs.clearPendingBlock(blockRoot)
 	sentBlocks.Inc()
-
 	// We update the last observed slot to the received canonical block's slot.
 	if block.Slot > rs.highestObservedSlot {
 		rs.highestObservedSlot = block.Slot
 	}
 	span.AddAttributes(trace.Int64Attribute("highestObservedSlot", int64(rs.highestObservedSlot)))
 
-	// If the block has a child, we then clear it from the blocks pending processing
-	// and call receiveBlock recursively. The recursive function call will stop once
-	// the block we process no longer has children.
-	if child, ok := rs.hasChild(blockRoot); ok {
-		return rs.receiveBlock(child)
-	}
-	return nil
+	return blockRoot, true, nil
 }
 
 func (rs *RegularSync) insertPendingBlock(ctx context.Context, blockRoot [32]byte, blockMsg p2p.Message) {

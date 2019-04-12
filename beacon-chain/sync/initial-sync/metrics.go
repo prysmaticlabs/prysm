@@ -15,10 +15,6 @@ var (
 		Name: "initsync_batched_block_req",
 		Help: "The number of received batch blocks responses",
 	})
-	blockReqSlot = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "initsync_block_req_by_slot",
-		Help: "The number of sent block requests by slot",
-	})
 	recBlock = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "initsync_received_blocks",
 		Help: "The number of received blocks",

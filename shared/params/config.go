@@ -169,9 +169,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Prysm constants.
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
-	SyncPollingInterval:   6 * 1,  // Query nodes over the network every slot for sync status.
 	BatchBlockLimit:       64 * 4, // Process blocks in batches of 4 epochs of blocks (threshold before casper penalties).
-	SyncEpochLimit:        4,
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
 }
@@ -211,6 +209,10 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.EpochsPerEth1VotingPeriod = 1
+	demoConfig.LatestRandaoMixesLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestActiveIndexRootsLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestSlashedExitLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestBlockRootsLength = 5 * demoConfig.SlotsPerEpoch
 
 	return &demoConfig
 }

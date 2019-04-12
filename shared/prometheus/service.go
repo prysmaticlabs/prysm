@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"runtime/debug"
+	"runtime/pprof"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -30,6 +32,7 @@ func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry) *Ser
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/healthz", s.healthzHandler)
+	mux.HandleFunc("/goroutinez", s.goroutinezHandler)
 
 	s.server = &http.Server{Addr: addr, Handler: mux}
 
@@ -69,6 +72,14 @@ func (s *Service) healthzHandler(w http.ResponseWriter, _ *http.Request) {
 	if _, err := w.Write(buf.Bytes()); err != nil {
 		log.Errorf("Could not write healthz body %v", err)
 	}
+}
+
+func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
+	stack := debug.Stack()
+	// #nosec G104
+	w.Write(stack)
+	// #nosec G104
+	pprof.Lookup("goroutine").WriteTo(w, 2)
 }
 
 // Start the prometheus service.

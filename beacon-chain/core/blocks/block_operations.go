@@ -5,7 +5,6 @@ package blocks
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -22,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // VerifyProposerSignature uses BLS signature verification to ensure
@@ -31,11 +29,8 @@ import (
 //
 // WIP - this is stubbed out until BLS is integrated into Prysm.
 func VerifyProposerSignature(
-	ctx context.Context,
 	_ *pb.BeaconBlock,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.VerifyProposerSignature")
-	defer span.End()
 
 	return nil
 }
@@ -48,10 +43,7 @@ func VerifyProposerSignature(
 //   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
 //   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
 //   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
-func ProcessEth1DataInBlock(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessEth1DataInBlock")
-	defer span.End()
-
+func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
 	var eth1DataVoteAdded bool
 
 	for idx := range beaconState.Eth1DataVotes {
@@ -86,14 +78,11 @@ func ProcessEth1DataInBlock(ctx context.Context, beaconState *pb.BeaconState, bl
 //   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
 //     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
 func ProcessBlockRandao(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockRandao")
-	defer span.End()
 
 	if verifySignatures {
 		proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
@@ -166,13 +155,10 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 //       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_2.slot), DOMAIN_PROPOSAL)).
 //     Run slash_validator(state, proposer_slashing.proposer_index).
 func ProcessProposerSlashings(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessProposerSlashings")
-	defer span.End()
 
 	body := block.Body
 	registry := beaconState.ValidatorRegistry
@@ -256,14 +242,10 @@ func verifyProposerSlashing(
 //     Verify that len(slashable_indices) >= 1.
 //     Run slash_validator(state, index) for each index in slashable_indices.
 func ProcessAttesterSlashings(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessAttesterSlashings")
-	defer span.End()
-
 	body := block.Body
 	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
 		return nil, fmt.Errorf(
@@ -414,14 +396,10 @@ func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 //     Append PendingAttestation(data=attestation.data, aggregation_bitfield=attestation.aggregation_bitfield,
 //       custody_bitfield=attestation.custody_bitfield, inclusion_slot=state.slot) to state.latest_attestations
 func ProcessBlockAttestations(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockAttestations")
-	defer span.End()
-
 	atts := block.Body.Attestations
 	if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
 		return nil, fmt.Errorf(
@@ -472,6 +450,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
+	// and verify that `attestation.data.justified_root` is equal to `state.justified_root
 	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
@@ -482,6 +461,14 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 				beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
+
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.JustifiedRoot) {
+			return fmt.Errorf(
+				"expected attestation.JustifiedRoot == state.JustifiedRoot, received %#x == %#x",
+				att.Data.JustifiedBlockRootHash32,
+				beaconState.JustifiedRoot,
+			)
+		}
 	} else {
 		if att.Data.JustifiedEpoch != beaconState.PreviousJustifiedEpoch {
 			return fmt.Errorf(
@@ -490,24 +477,14 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 				beaconState.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.PreviousJustifiedRoot) {
+			return fmt.Errorf(
+				"expected attestation.JustifiedRoot == state.PreviousJustifiedRoot, received %#x == %#x",
+				att.Data.JustifiedBlockRootHash32,
+				beaconState.JustifiedRoot,
+			)
+		}
 	}
-
-	// Verify that attestation.data.justified_block_root is equal to
-	// get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
-	blockRoot, err := BlockRoot(beaconState, helpers.StartSlot(att.Data.JustifiedEpoch))
-	if err != nil {
-		return fmt.Errorf("could not get block root for justified epoch: %v", err)
-	}
-
-	justifiedBlockRoot := att.Data.JustifiedBlockRootHash32
-	if !bytes.Equal(justifiedBlockRoot, blockRoot) {
-		return fmt.Errorf(
-			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
-			justifiedBlockRoot,
-			blockRoot,
-		)
-	}
-
 	// Verify that either:
 	// 1.) Crosslink(shard_block_root=attestation.data.shard_block_root,
 	// 	epoch=slot_to_epoch(attestation.data.slot)) equals
@@ -534,7 +511,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
 	if !bytes.Equal(att.Data.CrosslinkDataRootHash32, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
-			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
+			"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
 			params.BeaconConfig().ZeroHash[:],
 			att.Data.CrosslinkDataRootHash32,
 		)
@@ -583,12 +560,9 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 //       withdrawal_credentials=deposit.deposit_data.deposit_input.withdrawal_credentials,
 //     )
 func ProcessValidatorDeposits(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessValidatorDeposits")
-	defer span.End()
 
 	deposits := block.Body.Deposits
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
@@ -666,13 +640,10 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 //       signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
 //     Run initiate_validator_exit(state, exit.validator_index).
 func ProcessValidatorExits(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessValidatorExits")
-	defer span.End()
 
 	exits := block.Body.VoluntaryExits
 	if uint64(len(exits)) > params.BeaconConfig().MaxVoluntaryExits {
