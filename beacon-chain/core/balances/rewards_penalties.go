@@ -5,7 +5,6 @@
 package balances
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -132,7 +131,6 @@ func ExpectedBeaconChainHead(
 //    base_reward(state, index) * MIN_ATTESTATION_INCLUSION_DELAY //
 //    inclusion_distance(state, index)
 func InclusionDistance(
-	ctx context.Context,
 	state *pb.BeaconState,
 	attesterIndices []uint64,
 	totalBalance uint64) (*pb.BeaconState, error) {
