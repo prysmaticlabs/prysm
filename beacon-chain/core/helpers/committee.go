@@ -258,7 +258,7 @@ func AttestationParticipants(
 	attestationData *pb.AttestationData,
 	bitfield []byte) ([]uint64, error) {
 
-	var committees *cache.CommitteesInSlot
+	var cachedCommittees *cache.CommitteesInSlot
 	var err error
 	slot := attestationData.Slot
 
@@ -266,52 +266,53 @@ func AttestationParticipants(
 	// If it's not prev cached, we compute for the committees of slot and
 	// add it to the cache.
 	if featureconfig.FeatureConfig().EnableCommitteesCache {
-		committees, err = committeeCache.CommitteesInfoBySlot(slot)
+		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
 		if err != nil {
 			return nil, err
 		}
-		if committees == nil {
+
+		if cachedCommittees == nil {
 			crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
 			if err != nil {
 				return nil, err
 			}
 
-			cachedCommittee := toCommitteeCache(slot, crosslinkCommittees)
+			cachedCommittees = toCommitteeCache(slot, crosslinkCommittees)
 
-			if err := committeeCache.AddCommittees(cachedCommittee); err != nil {
+			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
 				return nil, err
 			}
-			committees = cachedCommittee
 		}
 		// When the committee cache is disabled, we calculate crosslink committees
 		// every time when AttestationParticipants gets called.
 	} else {
+		// When the committee cache is disabled, we calculate crosslink committees
+		// every time when AttestationParticipants gets called.
 		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
 		if err != nil {
 			return nil, err
 		}
-		committees = toCommitteeCache(slot, crosslinkCommittees)
+		cachedCommittees = toCommitteeCache(slot, crosslinkCommittees)
 	}
 
-	var committee []uint64
-	for _, crosslinkCommittee := range committees.Committees {
-		if crosslinkCommittee.Shard == attestationData.Shard {
-			committee = crosslinkCommittee.Committee
+	var selectedCommittee []uint64
+	for _, committee := range cachedCommittees.Committees {
+		if committee.Shard == attestationData.Shard {
+			selectedCommittee = committee.Committee
 			break
 		}
 	}
 
-	if isValidated, err := VerifyBitfield(bitfield, len(committee)); !isValidated || err != nil {
+	if isValidated, err := VerifyBitfield(bitfield, len(selectedCommittee)); !isValidated || err != nil {
 		if err != nil {
 			return nil, err
 		}
-
 		return nil, errors.New("bitfield is unable to be verified")
 	}
 
 	// Find the participating validators in the committee.
 	var participants []uint64
-	for i, validatorIndex := range committee {
+	for i, validatorIndex := range selectedCommittee {
 		bitSet, err := bitutil.CheckBit(bitfield, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get participant bitfield: %v", err)
@@ -409,7 +410,7 @@ func CommitteeAssignment(
 	slot uint64,
 	validatorIndex uint64,
 	registryChange bool) ([]uint64, uint64, uint64, bool, error) {
-	var selectedCommittees []*CrosslinkCommittee
+	var selectedCommittees []*cache.CommitteeInfo
 
 	wantedEpoch := slot / params.BeaconConfig().SlotsPerEpoch
 	prevEpoch := PrevEpoch(state)
@@ -424,14 +425,36 @@ func CommitteeAssignment(
 		)
 	}
 
+	var cachedCommittees *cache.CommitteesInSlot
+	var err error
 	startSlot := StartSlot(wantedEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
-			state, slot, registryChange)
-		if err != nil {
-			return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
+
+		if featureconfig.FeatureConfig().EnableCommitteesCache {
+			cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
+			if err != nil {
+				return []uint64{}, 0, 0, false, err
+			}
+			if cachedCommittees == nil {
+				crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
+					state, slot, registryChange)
+				if err != nil {
+					return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
+				}
+				cachedCommittees = toCommitteeCache(slot, crosslinkCommittees)
+				if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
+					return []uint64{}, 0, 0, false, err
+				}
+			}
+		} else {
+			crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
+				state, slot, registryChange)
+			if err != nil {
+				return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
+			}
+			cachedCommittees = toCommitteeCache(slot, crosslinkCommittees)
 		}
-		for _, committee := range crosslinkCommittees {
+		for _, committee := range cachedCommittees.Committees {
 			for _, idx := range committee.Committee {
 				if idx == validatorIndex {
 					selectedCommittees = append(selectedCommittees, committee)
@@ -440,7 +463,7 @@ func CommitteeAssignment(
 				if len(selectedCommittees) > 0 {
 					validators := selectedCommittees[0].Committee
 					shard := selectedCommittees[0].Shard
-					firstCommitteeAtSlot := crosslinkCommittees[0].Committee
+					firstCommitteeAtSlot := cachedCommittees.Committees[0].Committee
 					isProposer := firstCommitteeAtSlot[slot%
 						uint64(len(firstCommitteeAtSlot))] == validatorIndex
 					return validators, shard, slot, isProposer, nil
