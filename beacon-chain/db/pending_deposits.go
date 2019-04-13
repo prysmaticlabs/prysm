@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sort"
 
@@ -107,6 +108,7 @@ func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex ui
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
 
+	fmt.Printf("pendingDeposits length before: %d", len(db.pendingDeposits))
 	var cleanDeposits []*depositContainer
 	for _, dp := range db.pendingDeposits {
 		if dp.deposit.MerkleTreeIndex >= merkleTreeIndex {
@@ -115,5 +117,7 @@ func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex ui
 	}
 
 	db.pendingDeposits = cleanDeposits
+	fmt.Printf("pendingDeposits length after: %d", len(db.pendingDeposits))
+
 	pendingDepositsCount.Set(float64(len(db.pendingDeposits)))
 }
