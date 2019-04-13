@@ -14,7 +14,9 @@ func (s *server) serveAllocationsHTTPPage() {
 		a, err := s.db.Allocations()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			io.WriteString(w, err.Error())
+			if _, err := io.WriteString(w, err.Error()); err != nil {
+				log.Error(err)
+			}
 			return
 		}
 		for podName, pubkeys := range a {
@@ -24,7 +26,9 @@ func (s *server) serveAllocationsHTTPPage() {
 		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, res)
+		if _, err := io.WriteString(w, res); err != nil {
+			log.Error(err)
+		}
 	})
 
 	srv := &http.Server{Addr: ":8080", Handler: mux}

@@ -91,7 +91,7 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 	// amount is ready to return.
 	// - PKs already assigned to the pod
 	// - PKs that have not yet been allocated
-	// - PKs that are newly initalized with deposits
+	// - PKs that are newly initialized with deposits
 
 	pks, err := s.db.PodPKs(ctx, req.PodName)
 	if err != nil {
