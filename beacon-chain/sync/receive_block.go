@@ -142,10 +142,6 @@ func (rs *RegularSync) validateAndProcessBlock(
 		log.Errorf("Could not process beacon block: %v", err)
 		return nil, nil, false, err
 	}
-	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
-		log.Errorf("Could not apply fork choice rule: %v", err)
-		return nil, nil, false, err
-	}
 	if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)
 		return nil, nil, false, err
