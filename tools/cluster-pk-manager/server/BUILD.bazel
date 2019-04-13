@@ -55,6 +55,7 @@ go_test(
 go_image(
     name = "image",
     srcs = [
+        "allocations.go",
         "db.go",
         "logger.go",
         "main.go",
@@ -66,12 +67,14 @@ go_image(
     deps = [
         "//contracts/deposit-contract:go_default_library",
         "//proto/cluster:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/prometheus:go_default_library",
         "//shared/ssz:go_default_library",
         "@com_github_boltdb_bolt//:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_ethereum_go_ethereum//crypto:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
