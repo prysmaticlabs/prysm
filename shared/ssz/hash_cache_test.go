@@ -7,25 +7,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
-type JunkObject struct {
+type junkObject struct {
 	D2Int64Slice [][]uint64
 	Uint         uint64
 	Int64Slice   []uint64
 }
 
 type tree struct {
-	First  []*JunkObject
-	Second []*JunkObject
+	First  []*junkObject
+	Second []*junkObject
 }
 
-// GenerateJunkObject generates junk object.
-func GenerateJunkObject(size uint64) []*JunkObject {
-	object := make([]*JunkObject, size)
+func generateJunkObject(size uint64) []*junkObject {
+	object := make([]*junkObject, size)
 	for i := uint64(0); i < uint64(len(object)); i++ {
 		d2Int64Slice := make([][]uint64, size)
 		is := make([]uint64, size)
@@ -35,7 +33,7 @@ func GenerateJunkObject(size uint64) []*JunkObject {
 		for j := uint64(0); j < uint64(len(object)); j++ {
 			d2Int64Slice[i][j] = i + j
 		}
-		object[i] = &JunkObject{
+		object[i] = &junkObject{
 			D2Int64Slice: d2Int64Slice,
 			Uint:         uInt,
 			Int64Slice:   is,
@@ -43,27 +41,6 @@ func GenerateJunkObject(size uint64) []*JunkObject {
 
 	}
 	return object
-}
-
-func TestHashKeyFn_OK(t *testing.T) {
-	mRoot := &root{
-		Hash: common.HexToHash("0x0123456"),
-	}
-
-	key, err := hashKeyFn(mRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if key != mRoot.Hash.Hex() {
-		t.Errorf("Incorrect hash key: %s, expected %s", key, mRoot.Hash.Hex())
-	}
-}
-
-func TestHashKeyFn_InvalidObj(t *testing.T) {
-	_, err := hashKeyFn("bad")
-	if err != ErrNotMerkleRoot {
-		t.Errorf("Expected error %v, got %v", ErrNotMerkleRoot, err)
-	}
 }
 
 func TestObjCache_byHash(t *testing.T) {
@@ -137,7 +114,7 @@ func TestMerkleHashWithCache(t *testing.T) {
 
 func BenchmarkHashWithoutCache(b *testing.B) {
 	featureconfig.FeatureConfig().CacheTreeHash = false
-	First := GenerateJunkObject(100)
+	First := generateJunkObject(100)
 	TreeHash(&tree{First: First, Second: First})
 	for n := 0; n < b.N; n++ {
 		TreeHash(&tree{First: First, Second: First})
@@ -146,10 +123,10 @@ func BenchmarkHashWithoutCache(b *testing.B) {
 
 func BenchmarkHashWithCache(b *testing.B) {
 	featureconfig.FeatureConfig().CacheTreeHash = true
-	First := GenerateJunkObject(100)
+	First := generateJunkObject(100)
 	type tree struct {
-		First  []*JunkObject
-		Second []*JunkObject
+		First  []*junkObject
+		Second []*junkObject
 	}
 	TreeHash(&tree{First: First, Second: First})
 	for n := 0; n < b.N; n++ {

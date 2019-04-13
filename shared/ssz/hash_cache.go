@@ -48,16 +48,6 @@ type root struct {
 	MerkleRoot []byte
 }
 
-// hashKeyFn takes the representation as the key for a hashInfo.
-func hashKeyFn(obj interface{}) (string, error) {
-	mRoot, ok := obj.(*root)
-	if !ok {
-		return "", ErrNotMerkleRoot
-	}
-
-	return mRoot.Hash.Hex(), nil
-}
-
 // newHashCache creates a new hash cache for storing/accessing root hashes from
 // memory.
 func newHashCache() *hashCacheS {
@@ -119,11 +109,10 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 			return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 		}
 	}
-
 	return paddedOutput, nil
 }
 
-// MerkleHashCached adds a mrakle object to the cache. This method also trims the
+// MerkleHashCached adds a merkle object to the cache. This method also trims the
 // least recently added root info if the cache size has reached the max cache
 // size limit.
 func (b *hashCacheS) MerkleHashCached(byteSlice [][]byte) ([]byte, error) {
@@ -240,7 +229,6 @@ func makeStructHasherCache(typ reflect.Type) (hasher, error) {
 			result = hashutil.Hash(concatElemHash)
 
 		}
-
 		return result[:], nil
 	}
 	return hasher, nil
