@@ -191,7 +191,7 @@ func (d *db) AllocatedPodNames(_ context.Context) ([]string, error) {
 	return podNames, nil
 }
 
-func (d *db) Allocations() map[string][][]byte {
+func (d *db) Allocations() (map[string][][]byte, error) {
 	m := make(map[string][][]byte)
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {
@@ -215,7 +215,8 @@ func (d *db) Allocations() map[string][][]byte {
 		return nil
 	}); err != nil {
 		// do something
+		return nil, err
 	}
 
-	return m
+	return m, nil
 }
