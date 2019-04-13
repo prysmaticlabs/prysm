@@ -54,7 +54,7 @@ func main() {
 			SecretKey: pk,
 		}
 
-		validatorKeyFile := *keystoreDir + params.BeaconConfig().ValidatorPrivkeyFileName + "-" + string(i)
+		validatorKeyFile := *keystoreDir + params.BeaconConfig().ValidatorPrivkeyFileName + "-" + fmt.Sprintf("%d", i)
 		if err := store.StoreKey(validatorKeyFile, k, *password); err != nil {
 			panic(err)
 		}

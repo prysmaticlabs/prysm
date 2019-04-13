@@ -87,7 +87,7 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 		req.NumberOfKeys = 1
 	}
 
-	// TODO: build the list of PKs in the following order, until the requested
+	// build the list of PKs in the following order, until the requested
 	// amount is ready to return.
 	// - PKs already assigned to the pod
 	// - PKs that have not yet been allocated
@@ -161,7 +161,7 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 			return nil, err
 		}
 		secret := key.SecretKey.Marshal()
-		pks = append(pks, secret)
+		pks[i] = secret
 	}
 
 	return &pb.PrivateKeys{PrivateKeys: pks}, nil

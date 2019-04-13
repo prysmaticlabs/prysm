@@ -40,6 +40,7 @@ func main() {
 	pb.RegisterPrivateKeyServiceServer(s, srv)
 
 	go prometheus.RunSimpleServerOrDie(fmt.Sprintf(":%d", *metricsPort))
+	srv.serveAllocationsHTTPPage()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {

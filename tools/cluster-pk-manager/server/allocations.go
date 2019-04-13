@@ -13,14 +13,16 @@ func (s *server) serveAllocationsHTTPPage() {
 		res := ""
 		a := s.db.Allocations()
 		for podName, pubkeys := range a {
-			res += podName + "=["
 			for _, pk := range pubkeys {
-				res += fmt.Sprintf("%#x,", pk)
+				res += fmt.Sprintf("%s=%#x\n", podName, pk)
 			}
-			res += "]\n"
 		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		io.WriteString(w, res)
 	})
+
+	srv := &http.Server{Addr: ":8080", Handler: mux}
+	go srv.ListenAndServe()
+	log.Info("Serving allocations page at :8080/allocations")
 }

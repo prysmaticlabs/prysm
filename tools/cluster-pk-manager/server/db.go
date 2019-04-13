@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"path"
 	"time"
 
@@ -151,11 +150,10 @@ func (d *db) RemovePKAssignment(_ context.Context, podName string) error {
 func (d *db) AssignExistingPKs(_ context.Context, pks *pb.PrivateKeys, podName string) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		for _, pk := range pks.PrivateKeys {
-			if !bytes.Equal(tx.Bucket(unassignedPkBucket).Get(pk), dummyVal) {
-				return errors.New("private key not in unassigned bucket")
-			}
-			if err := tx.Bucket(unassignedPkBucket).Delete(pk); err != nil {
-				return err
+			if bytes.Equal(tx.Bucket(unassignedPkBucket).Get(pk), dummyVal) {
+				if err := tx.Bucket(unassignedPkBucket).Delete(pk); err != nil {
+					return err
+				}
 			}
 		}
 		assignedPkCount.Add(float64(len(pks.PrivateKeys)))
@@ -202,13 +200,13 @@ func (d *db) Allocations() map[string][][]byte {
 				return err
 			}
 			pubkeys := make([][]byte, len(pks.PrivateKeys))
-			for _, pk := range pks.PrivateKeys {
+			for i, pk := range pks.PrivateKeys {
 				k, err := bls.SecretKeyFromBytes(pk)
 				if err != nil {
 					return err
 				}
 
-				pubkeys = append(pubkeys, k.PublicKey().Marshal())
+				pubkeys[i] = k.PublicKey().Marshal()
 			}
 			m[string(k)] = pubkeys
 
