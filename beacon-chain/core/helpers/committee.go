@@ -263,7 +263,7 @@ func AttestationParticipants(
 	slot := attestationData.Slot
 
 	// When enabling committee cache, we fetch the committees using slot.
-	// If it's not prev cached, we calculate the committees of slot then
+	// If it's not prev cached, we compute for the committees of slot and
 	// add it to the cache.
 	if featureconfig.FeatureConfig().EnableCommitteesCache {
 		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
@@ -283,6 +283,8 @@ func AttestationParticipants(
 				return nil, err
 			}
 		}
+		// When the committee cache is disabled, we calculate crosslink committees
+		// every time when AttestationParticipants gets called.
 	} else {
 		// When the committee cache is disabled, we calculate crosslink committees
 		// every time when AttestationParticipants gets called.
@@ -290,7 +292,6 @@ func AttestationParticipants(
 		if err != nil {
 			return nil, err
 		}
-
 		cachedCommittees = toCommitteeCache(slot, crosslinkCommittees)
 	}
 
