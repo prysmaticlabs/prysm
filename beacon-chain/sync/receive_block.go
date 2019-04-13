@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -91,6 +93,8 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2
 func (rs *RegularSync) validateAndProcessBlock(
 	ctx context.Context, blockMsg p2p.Message,
 ) (*pb.BeaconBlock, *pb.BeaconState, bool, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.validateAndProcessBlock")
+	defer span.End()
 	rs.blockProcessingLock.Lock()
 	defer rs.blockProcessingLock.Unlock()
 
@@ -99,6 +103,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
+		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
 
@@ -106,6 +111,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	hasBlock := rs.db.HasBlock(blockRoot)
 	if hasBlock {
 		log.Debug("Received a block that already exists. Exiting...")
+		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
 
@@ -115,14 +121,22 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
+	finalizedSlot := helpers.StartSlot(beaconState.FinalizedEpoch) - params.BeaconConfig().GenesisSlot
+	slot := block.Slot - params.BeaconConfig().GenesisSlot
+	span.AddAttributes(
+		trace.Int64Attribute("block.Slot", int64(slot)),
+		trace.Int64Attribute("finalized slot", int64(finalizedSlot)),
+	)
 	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
+		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
 
 	// We check if we have the block's parents saved locally.
 	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
 	hasParent := rs.db.HasBlock(parentRoot)
+	span.AddAttributes(trace.BoolAttribute("hasParent", hasParent))
 
 	if !hasParent {
 		// If we do not have the parent, we insert it into a pending block's map.
@@ -140,10 +154,12 @@ func (rs *RegularSync) validateAndProcessBlock(
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
 		log.Errorf("Could not process beacon block: %v", err)
+		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
 	if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)
+		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
 
@@ -152,6 +168,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	if block.Slot > rs.highestObservedSlot {
 		rs.highestObservedSlot = block.Slot
 	}
+	span.AddAttributes(trace.Int64Attribute("highestObservedSlot", int64(rs.highestObservedSlot)))
 	return block, beaconState, true, nil
 }
 
