@@ -1,7 +1,6 @@
 package validators
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -79,7 +78,7 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 			AggregationBitfield: []byte{0xC0}}, // returns indices 237,224,2
 	}
 
-	attesterIndices, err := ValidatorIndices(context.Background(), state, boundaryAttestations)
+	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
 	if err != nil {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
@@ -469,11 +468,11 @@ func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	}
-	if ProcessPenaltiesAndExits(context.Background(), state).ValidatorBalances[0] !=
+	if ProcessPenaltiesAndExits(state).ValidatorBalances[0] !=
 		params.BeaconConfig().MaxDepositAmount {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount,
-			ProcessPenaltiesAndExits(context.Background(), state).ValidatorBalances[0])
+			ProcessPenaltiesAndExits(state).ValidatorBalances[0])
 	}
 }
 
@@ -497,7 +496,7 @@ func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 		helpers.EffectiveBalance(state, 0) /
 		params.BeaconConfig().MaxDepositAmount
 
-	newState := ProcessPenaltiesAndExits(context.Background(), state)
+	newState := ProcessPenaltiesAndExits(state)
 	if newState.ValidatorBalances[0] != params.BeaconConfig().MaxDepositAmount-penalty {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount-penalty,
@@ -546,7 +545,7 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(context.Background(), state)
+	newState, err := UpdateRegistry(state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
@@ -576,7 +575,7 @@ func TestUpdateRegistry_Activations(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(context.Background(), state)
+	newState, err := UpdateRegistry(state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
@@ -610,7 +609,7 @@ func TestUpdateRegistry_Exits(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(context.Background(), state)
+	newState, err := UpdateRegistry(state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
