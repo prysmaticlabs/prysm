@@ -6,11 +6,12 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"math/big"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"

@@ -3,10 +3,11 @@ package powchain
 import (
 	"bytes"
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
