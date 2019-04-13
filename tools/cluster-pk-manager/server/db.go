@@ -194,7 +194,7 @@ func (d *db) AllocatedPodNames(_ context.Context) ([]string, error) {
 func (d *db) Allocations() (map[string][][]byte, error) {
 	m := make(map[string][][]byte)
 	if err := d.db.View(func(tx *bolt.Tx) error {
-		tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {
+		return tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {
 			pks := &pb.PrivateKeys{}
 			if err := proto.Unmarshal(v, pks); err != nil {
 				return err
@@ -212,7 +212,6 @@ func (d *db) Allocations() (map[string][][]byte, error) {
 
 			return nil
 		})
-		return nil
 	}); err != nil {
 		// do something
 		return nil, err
