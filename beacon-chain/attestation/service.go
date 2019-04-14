@@ -194,13 +194,13 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
 				return err
 			}
-		} else {
-			crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
-			if err != nil {
-				return err
-			}
-			cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
 		}
+	} else {
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
+		if err != nil {
+			return err
+		}
+		cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
 	}
 
 	// Find committee for shard.
