@@ -41,6 +41,7 @@ message BeaconState {
   // Ethereum 1.0 chain data [4001-5000]
   Eth1Data latest_eth1_data = 4001;
   repeated Eth1DataVote eth1_data_votes = 4002;
+  uint64 deposit_index = 4003;
 
   // Miscellaneous [5001-6000]
   uint64 genesis_time = 5001;
@@ -173,7 +174,7 @@ message AttesterSlashing {
 }
 
 message Deposit {
-  repeated bytes merkle_branch_hash32s = 1;
+  repeated bytes merkle_proof_hash32s = 1;
   uint64 merkle_tree_index = 2;
   bytes deposit_data = 3;
 }
