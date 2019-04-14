@@ -98,36 +98,6 @@ func (db *BeaconDB) DeleteValidatorIndex(pubKey []byte) error {
 	})
 }
 
-// HasAllValidators returns true if all validators in a list of public keys are in the bucket.
-func (db *BeaconDB) HasAllValidators(pubKeys [][]byte) bool {
-	return db.hasValidators(pubKeys, true /* requireAll */)
-}
-
-// HasAnyValidators returns true if any validator in a list of public keys are in the bucket.
-func (db *BeaconDB) HasAnyValidators(pubKeys [][]byte) bool {
-	return db.hasValidators(pubKeys, false /* requireAll */)
-}
-
-func (db *BeaconDB) hasValidators(pubKeys [][]byte, requireAll bool) bool {
-	exists := false
-	// #nosec G104, similar to HasBlock, HasAttestation... etc
-	db.view(func(tx *bolt.Tx) error {
-		a := tx.Bucket(validatorBucket)
-		for _, pk := range pubKeys {
-			h := hashutil.Hash(pk)
-			exists = a.Get(h[:]) != nil
-			if !exists && requireAll {
-				break
-			} else if exists && !requireAll {
-				break
-			}
-		}
-		return nil
-	})
-
-	return exists
-}
-
 // HasValidator checks if a validator index map exists.
 func (db *BeaconDB) HasValidator(pubKey []byte) bool {
 	exists := false
