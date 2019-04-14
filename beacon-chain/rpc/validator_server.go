@@ -244,27 +244,21 @@ func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.Bea
 	return status, nil
 }
 
-func (vs *ValidatorServer) activeValidator(beaconState *pbp2p.BeaconState, pubkey []byte) (*pbp2p.Validator, error) {
-	validatorIdx, err := vs.beaconDB.ValidatorIndex(pubkey)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve validator index: %v", err)
-	}
-	return beaconState.ValidatorRegistry[validatorIdx], nil
-}
-
 // filterActivePublicKeys This method takes a list of validator public keys, filters the active ones, and returns the list of active public keys.
 func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState, pubkeys [][]byte) ([][]byte, error) {
-	m, err := vs.beaconDB.ValidatorIndices(pubkeys)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve validators indexes: %v", err)
+	// Generate a map for O(1) lookup of existence of pub keys in request.
+	pkMap := make(map[string]bool)
+	for _, pk := range pubkeys {
+		pkMap[string(pk)] = true
 	}
-	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, beaconState.Slot)
-	v := make([][]byte, 0, len(m))
-	for _, ai := range activeIndices {
-		if val, ok := m[ai]; ok {
-			v = append(v, val)
-		}
 
+	var activeKeys [][]byte
+	currentEpoch := helpers.SlotToEpoch(beaconState.Slot)
+	for _, v := range beaconState.ValidatorRegistry {
+		if pkMap[string(v.Pubkey)] && helpers.IsActiveValidator(v, currentEpoch) {
+			activeKeys = append(activeKeys, v.Pubkey)
+		}
 	}
-	return v, nil
+
+	return activeKeys, nil
 }
