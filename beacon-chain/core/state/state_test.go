@@ -76,9 +76,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 			t.Fatalf("Could not encode deposit data: %v", err)
 		}
 		deposits = append(deposits, &pb.Deposit{
-			MerkleBranchHash32S: [][]byte{{1}, {2}, {3}},
-			MerkleTreeIndex:     0,
-			DepositData:         depositData,
+			MerkleProofHash32S: [][]byte{{1}, {2}, {3}},
+			MerkleTreeIndex:    0,
+			DepositData:        depositData,
 		})
 	}
 

@@ -87,7 +87,7 @@ func TestPendingDeposits_OK(t *testing.T) {
 	}
 }
 
-func TestPrunePendingDeposits_NilBlock(t *testing.T) {
+func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 	db := BeaconDB{}
 
 	db.pendingDeposits = []*depositContainer{
@@ -99,7 +99,7 @@ func TestPrunePendingDeposits_NilBlock(t *testing.T) {
 		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
 	}
 
-	db.PrunePendingDeposits(context.Background(), nil)
+	db.PrunePendingDeposits(context.Background(), 0)
 	expected := []*depositContainer{
 		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
 		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
@@ -126,7 +126,7 @@ func TestPrunePendingDeposits_OK(t *testing.T) {
 		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
 	}
 
-	db.PrunePendingDeposits(context.Background(), big.NewInt(6))
+	db.PrunePendingDeposits(context.Background(), 6)
 	expected := []*depositContainer{
 		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
 		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
@@ -147,7 +147,7 @@ func TestPrunePendingDeposits_OK(t *testing.T) {
 		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
 	}
 
-	db.PrunePendingDeposits(context.Background(), big.NewInt(10))
+	db.PrunePendingDeposits(context.Background(), 10)
 	expected = []*depositContainer{
 		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
 		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},

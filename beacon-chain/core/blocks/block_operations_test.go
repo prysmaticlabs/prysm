@@ -1078,9 +1078,9 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 
 	deposit := &pb.Deposit{
-		DepositData:         data,
-		MerkleBranchHash32S: proof,
-		MerkleTreeIndex:     0,
+		DepositData:        data,
+		MerkleProofHash32S: proof,
+		MerkleTreeIndex:    0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1151,9 +1151,9 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		t.Fatalf("Could not generate proof: %v", err)
 	}
 	deposit := &pb.Deposit{
-		DepositData:         data,
-		MerkleBranchHash32S: proof,
-		MerkleTreeIndex:     0,
+		DepositData:        data,
+		MerkleProofHash32S: proof,
+		MerkleTreeIndex:    0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1183,6 +1183,75 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	want := "expected withdrawal credentials to match"
 	if _, err := blocks.ProcessValidatorDeposits(
 
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
+func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
+	depositInput := &pb.DepositInput{
+		Pubkey:                      []byte{1},
+		WithdrawalCredentialsHash32: []byte{1, 2, 3},
+		ProofOfPossession:           []byte{},
+	}
+	wBuf := new(bytes.Buffer)
+	if err := ssz.Encode(wBuf, depositInput); err != nil {
+		t.Fatalf("failed to encode deposit input: %v", err)
+	}
+	encodedInput := wBuf.Bytes()
+	data := []byte{}
+
+	// We set a deposit value of 1000.
+	value := make([]byte, 8)
+	depositValue := uint64(1000)
+	binary.LittleEndian.PutUint64(value, depositValue)
+
+	// We then serialize a unix time into the timestamp []byte slice
+	// and ensure it has size of 8 bytes.
+	timestamp := make([]byte, 8)
+
+	// Set deposit time to 1000 seconds since unix time 0.
+	depositTime := time.Unix(1000, 0).Unix()
+	// Set genesis time to unix time 0.
+	genesisTime := time.Unix(0, 0).Unix()
+
+	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
+	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
+
+	// We then create a serialized deposit data slice of type []byte
+	// by appending all 3 items above together.
+	data = append(data, value...)
+	data = append(data, timestamp...)
+	data = append(data, encodedInput...)
+
+	deposit := &pb.Deposit{
+		DepositData:        data,
+		MerkleProofHash32S: [][]byte{{0}},
+		MerkleTreeIndex:    1,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Deposits: []*pb.Deposit{deposit},
+		},
+	}
+	registry := []*pb.Validator{
+		{
+			Pubkey:                      []byte{1},
+			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		ValidatorBalances: balances,
+		Slot:              currentSlot,
+		GenesisTime:       uint64(genesisTime),
+	}
+
+	want := "expected deposit merkle tree index to match beacon state deposit index"
+	if _, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1237,9 +1306,9 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 
 	deposit := &pb.Deposit{
-		DepositData:         data,
-		MerkleBranchHash32S: proof,
-		MerkleTreeIndex:     0,
+		DepositData:        data,
+		MerkleProofHash32S: proof,
+		MerkleTreeIndex:    0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{

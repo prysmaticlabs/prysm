@@ -280,7 +280,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	pendingDeposits := []*pb.Deposit{
-		createPreChainStartDeposit(t, []byte{'F'}),
+		createPreChainStartDeposit(t, []byte{'F'}, beaconState.DepositIndex),
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
@@ -296,7 +296,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}
-		pendingDeposits[i].MerkleBranchHash32S = proof
+		pendingDeposits[i].MerkleProofHash32S = proof
 	}
 	depositRoot := depositTrie.Root()
 	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
@@ -319,6 +319,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	beaconState.Slot--
+	beaconState.DepositIndex = 0
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
