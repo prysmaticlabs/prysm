@@ -3,7 +3,6 @@ package epoch_test
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"testing"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -335,7 +335,7 @@ func BenchmarkProcessPenaltiesAndExits(b *testing.B) {
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = v.ProcessPenaltiesAndExits(context.Background(), beaconState)
+		_ = v.ProcessPenaltiesAndExits(beaconState)
 	}
 }
 
@@ -352,7 +352,7 @@ func BenchmarkProcessEjections(b *testing.B) {
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := epoch.ProcessEjections(context.Background(), beaconState, false /* disable logging */)
+		_, err := epoch.ProcessEjections(beaconState, false /* disable logging */)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -382,7 +382,7 @@ func BenchmarkCleanupAttestations(b *testing.B) {
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = epoch.CleanupAttestations(context.Background(), beaconState)
+		_ = epoch.CleanupAttestations(beaconState)
 	}
 }
 
@@ -406,7 +406,7 @@ func BenchmarkUpdateRegistry(b *testing.B) {
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := v.UpdateRegistry(context.Background(), beaconState)
+		_, err := v.UpdateRegistry(beaconState)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -426,7 +426,7 @@ func BenchmarkUpdateLatestActiveIndexRoots(b *testing.B) {
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := epoch.UpdateLatestActiveIndexRoots(context.Background(), beaconState)
+		_, err := epoch.UpdateLatestActiveIndexRoots(beaconState)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -447,7 +447,7 @@ func BenchmarkUpdateLatestSlashedBalances(b *testing.B) {
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = epoch.UpdateLatestSlashedBalances(context.Background(), beaconState)
+		_ = epoch.UpdateLatestSlashedBalances(beaconState)
 	}
 }
 
