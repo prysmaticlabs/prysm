@@ -93,9 +93,9 @@ func (db *BeaconDB) DeleteValidatorIndex(pubKey []byte) error {
 	h := hashutil.Hash(pubKey)
 
 	return db.update(func(tx *bolt.Tx) error {
-		a := tx.Bucket(validatorBucket)
+		bkt := tx.Bucket(validatorBucket)
 
-		return a.Delete(h[:])
+		return bkt.Delete(h[:])
 	})
 }
 
@@ -105,10 +105,42 @@ func (db *BeaconDB) HasValidator(pubKey []byte) bool {
 	h := hashutil.Hash(pubKey)
 	// #nosec G104, similar to HasBlock, HasAttestation... etc
 	db.view(func(tx *bolt.Tx) error {
-		a := tx.Bucket(validatorBucket)
+		bkt := tx.Bucket(validatorBucket)
 
-		exists = a.Get(h[:]) != nil
+		exists = bkt.Get(h[:]) != nil
 		return nil
 	})
+	return exists
+}
+
+// HasAllValidators returns true if all validators in a list of public keys
+// are in the bucket.
+func (db *BeaconDB) HasAllValidators(pubKeys [][]byte) bool {
+	return db.hasValidators(pubKeys, true /* requireAll */)
+}
+
+// HasAnyValidators returns true if any validator in a list of public keys
+// are in the bucket.
+func (db *BeaconDB) HasAnyValidators(pubKeys [][]byte) bool {
+	return db.hasValidators(pubKeys, false /* requireAll */)
+}
+
+func (db *BeaconDB) hasValidators(pubKeys [][]byte, requireAll bool) bool {
+	exists := false
+	// #nosec G104, similar to HasBlock, HasAttestation... etc
+	db.view(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorBucket)
+		for _, pk := range pubKeys {
+			h := hashutil.Hash(pk)
+			exists = bkt.Get(h[:]) != nil
+			if !exists && requireAll {
+				break
+			} else if exists && !requireAll {
+				break
+			}
+		}
+		return nil
+	})
+
 	return exists
 }
