@@ -10,12 +10,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: false,
+	})
 }
 
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
