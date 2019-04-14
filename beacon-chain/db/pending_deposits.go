@@ -94,34 +94,26 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 	}
 }
 
-// PrunePendingDeposits removes any deposit which is older than the given block number.
-func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, b *big.Int) {
+// PrunePendingDeposits removes any deposit which is older than the given deposit merkle tree index.
+func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex uint64) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.PrunePendingDeposits")
 	defer span.End()
 
-	if b == nil {
-		log.Debug("Ignoring nil deposit removal")
+	if merkleTreeIndex == 0 {
+		log.Debug("Ignoring 0 deposit removal")
 		return
 	}
 
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
 
-	depositListSize := len(db.pendingDeposits)
-
-	// since list is sorted by block number it checks from the last
-	// added deposit and works backwards.
-	idx := -1
-	for i := depositListSize - 1; i >= 0; i-- {
-		if db.pendingDeposits[i].block.Cmp(b) == -1 {
-			idx = i
-			break
+	var cleanDeposits []*depositContainer
+	for _, dp := range db.pendingDeposits {
+		if dp.deposit.MerkleTreeIndex >= merkleTreeIndex {
+			cleanDeposits = append(cleanDeposits, dp)
 		}
 	}
 
-	if idx >= 0 {
-		db.pendingDeposits = db.pendingDeposits[idx+1:]
-	}
-
+	db.pendingDeposits = cleanDeposits
 	pendingDepositsCount.Set(float64(len(db.pendingDeposits)))
 }

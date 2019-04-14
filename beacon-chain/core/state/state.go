@@ -120,6 +120,7 @@ func GenesisBeaconState(
 		// Eth1 data.
 		LatestEth1Data: eth1Data,
 		Eth1DataVotes:  []*pb.Eth1DataVote{},
+		DepositIndex:   0,
 	}
 
 	// Process initial deposits.

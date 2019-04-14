@@ -47,7 +47,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	exists, blkNum, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
+	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
 	if err != nil {
 		log.Errorf("Unable to get powchain block %v", err)
 	}
@@ -57,7 +57,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	s.db.PrunePendingDeposits(ctx, blkNum)
+	s.db.PrunePendingDeposits(ctx, finalizedState.DepositIndex)
 
 	if err := s.db.UpdateChainHead(ctx, finalizedState.LatestBlock, finalizedState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)
