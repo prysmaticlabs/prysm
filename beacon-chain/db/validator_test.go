@@ -35,6 +35,14 @@ func TestSaveAndRetrieveValidatorIndex_OK(t *testing.T) {
 	if index2 != 2 {
 		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 2, index2)
 	}
+
+	m, err := db.ValidatorIndices([][]byte{p1, p2, []byte("bogus")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m) != 2 {
+		t.Error("Expected 2 entries in the map of indices")
+	}
 }
 
 func TestSaveAndDeleteValidatorIndex_OK(t *testing.T) {

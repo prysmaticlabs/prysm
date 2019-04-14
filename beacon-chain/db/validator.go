@@ -61,6 +61,33 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 	return index, err
 }
 
+// ValidatorIndices accepts a slice of public keys and returns the
+// corresponding map of validators indexes and public keys.
+func (db *BeaconDB) ValidatorIndices(pubKeys [][]byte) (map[uint64][]byte, error) {
+	m := make(map[uint64][]byte)
+
+	err := db.view(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorBucket)
+		for _, pk := range pubKeys {
+			h := hashutil.Hash(pk)
+			enc := bkt.Get(h[:])
+			if enc == nil || len(enc) == 0 {
+				// No validator exists in db with this public key.
+				continue
+			}
+			buf := bytes.NewBuffer(enc)
+			index, err := binary.ReadUvarint(buf)
+			if err != nil {
+				return err
+			}
+			m[index] = pk
+		}
+		return nil
+	})
+
+	return m, err
+}
+
 // DeleteValidatorIndex deletes the validator index map record.
 func (db *BeaconDB) DeleteValidatorIndex(pubKey []byte) error {
 	h := hashutil.Hash(pubKey)
