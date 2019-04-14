@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -588,4 +589,37 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err := vs.WaitForActivation(req, mockStream); err != nil {
 		t.Fatalf("Could not setup wait for activation stream: %v", err)
 	}
+}
+
+func TestFilterActivePublicKeys(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	beaconState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			Pubkey:          pubKey},
+		},
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+
+	active, err := vs.filterActivePublicKeys(beaconState, [][]byte{pubKey, []byte("bogus")})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(active) != 1 || !bytes.Equal(active[0], pubKey) {
+		t.Error("active keys does not equal expected key")
+	}
+
 }

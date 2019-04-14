@@ -252,3 +252,25 @@ func (vs *ValidatorServer) retrieveActiveValidator(beaconState *pbp2p.BeaconStat
 	}
 	return beaconState.ValidatorRegistry[validatorIdx], nil
 }
+
+// filterActivePublicKeys takes a list of validator public keys and returns
+// the list of active public keys.
+func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState, pubkeys [][]byte) ([][]byte, error) {
+	if beaconState == nil {
+		return nil, errors.New("cannot determine active validators; state is nil")
+	}
+
+	m, err := vs.beaconDB.ValidatorIndices(pubkeys)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve validators indexes: %v", err)
+	}
+	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, beaconState.Slot)
+	v := make([][]byte, 0, len(m))
+	for _, ai := range activeIndices {
+		if val, ok := m[ai]; ok {
+			v = append(v, val)
+		}
+
+	}
+	return v, nil
+}
