@@ -1,9 +1,11 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -67,6 +69,14 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
+	beaconState, err := genesisState(8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), beaconState); err != nil {
+		t.Fatal(err)
+	}
+
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
@@ -75,7 +85,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
-	if _, err := validatorServer.CommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
+	if _, err := validatorServer.CommitteeAssignment(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
@@ -98,7 +108,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
-	if _, err := vs.CommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
+	if _, err := vs.CommitteeAssignment(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
@@ -600,5 +610,46 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 
 	if err := vs.WaitForActivation(req, mockStream); err != nil {
 		t.Fatalf("Could not setup wait for activation stream: %v", err)
+	}
+}
+
+func TestFilterActivePublicKeys(t *testing.T) {
+	currentEpoch := uint64(15)
+	beaconState := &pbp2p.BeaconState{
+		Slot: helpers.StartSlot(currentEpoch),
+		ValidatorRegistry: []*pbp2p.Validator{
+			// Active validiators in our request
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk1"),
+				ActivationEpoch: currentEpoch - 1,
+				ExitEpoch:       math.MaxUint64,
+			},
+			// Inactive validators in our request
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk2"),
+				ActivationEpoch: currentEpoch - 2,
+				ExitEpoch:       currentEpoch - 1,
+			},
+			// Other active validators in the registry
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk3"),
+				ActivationEpoch: 0,
+				ExitEpoch:       math.MaxUint64,
+			},
+		},
+	}
+
+	vs := &ValidatorServer{}
+
+	activeKeys := vs.filterActivePublicKeys(
+		beaconState,
+		[][]byte{
+			[]byte("pk1"),
+			[]byte("pk2"),
+		},
+	)
+
+	if len(activeKeys) != 1 || !bytes.Equal(activeKeys[0], []byte("pk1")) {
+		t.Error("Wrong active keys returned")
 	}
 }

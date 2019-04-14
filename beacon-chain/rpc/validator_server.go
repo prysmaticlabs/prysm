@@ -36,10 +36,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 		if err != nil {
 			return fmt.Errorf("could not retrieve beacon state: %v", err)
 		}
-		activeKeys, err := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
-		if err != nil {
-			return fmt.Errorf("could not retrieve active validator from state: %v", err)
-		}
+		activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
 		res := &pb.ValidatorActivationResponse{
 			ActivatedPublicKeys: activeKeys,
 		}
@@ -116,10 +113,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
-	activeKeys, err := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
-	if err != nil {
-		return nil, err
-	}
+	activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
 	for _, pk := range activeKeys {
 		a, err := vs.assignment(ctx, pk, beaconState, req.EpochStart)
 		if err != nil {
@@ -244,8 +238,9 @@ func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.Bea
 	return status, nil
 }
 
-// filterActivePublicKeys This method takes a list of validator public keys, filters the active ones, and returns the list of active public keys.
-func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState, pubkeys [][]byte) ([][]byte, error) {
+// filterActivePublicKeys takes a list of validator public keys and returns
+// the list of active public keys from the given state.
+func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState, pubkeys [][]byte) [][]byte {
 	// Generate a map for O(1) lookup of existence of pub keys in request.
 	pkMap := make(map[string]bool)
 	for _, pk := range pubkeys {
@@ -260,5 +255,5 @@ func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState
 		}
 	}
 
-	return activeKeys, nil
+	return activeKeys
 }
