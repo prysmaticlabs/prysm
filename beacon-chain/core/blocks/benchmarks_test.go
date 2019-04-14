@@ -18,9 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-var quickRunAmount = 20000
+var quickRunAmount = 10000
 var genesisState16K = createGenesisState(16000)
 var genesisState300K = createGenesisState(300000)
+var genesisState4M = createGenesisState(4000000)
 
 func setBenchmarkConfig(conditions string) {
 	c := params.BeaconConfig()
@@ -58,7 +59,6 @@ func BenchmarkProcessBlockRandao(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, _ = blocks.ProcessBlockRandao(
-				context.Background(),
 				genesisState16K,
 				block,
 				false, /* verify signatures */
@@ -72,8 +72,20 @@ func BenchmarkProcessBlockRandao(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, _ = blocks.ProcessBlockRandao(
-				context.Background(),
 				genesisState300K,
+				block,
+				false, /* verify signatures */
+				false, /* disable logging */
+			)
+		}
+	})
+
+	b.Run("4M Validators", func(b *testing.B) {
+		b.N = quickRunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _ = blocks.ProcessBlockRandao(
+				genesisState4M,
 				block,
 				false, /* verify signatures */
 				false, /* disable logging */
@@ -115,7 +127,7 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 		b.N = quickRunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = blocks.ProcessEth1DataInBlock(context.Background(), genesisState16K, block)
+			_ = blocks.ProcessEth1DataInBlock(genesisState16K, block)
 		}
 	})
 
@@ -125,9 +137,23 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 		b.N = quickRunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = blocks.ProcessEth1DataInBlock(context.Background(), genesisState300K, block)
+			_ = blocks.ProcessEth1DataInBlock(genesisState300K, block)
 		}
 	})
+
+	genesisState4M.Eth1DataVotes = eth1DataVotes
+
+	b.Run("4M Validators", func(b *testing.B) {
+		b.N = quickRunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = blocks.ProcessEth1DataInBlock(genesisState4M, block)
+		}
+	})
+
+	resetBeaconState(genesisState16K)
+	resetBeaconState(genesisState300K)
+	resetBeaconState(genesisState4M)
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
@@ -145,7 +171,6 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, _ = blocks.ProcessProposerSlashings(
-				context.Background(),
 				genesisState16K,
 				block,
 				false,
@@ -160,7 +185,6 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, _ = blocks.ProcessProposerSlashings(
-				context.Background(),
 				genesisState300K,
 				block,
 				false,
@@ -183,7 +207,6 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := blocks.ProcessAttesterSlashings(
-				context.Background(),
 				genesisState16K,
 				block,
 				false,
@@ -201,7 +224,6 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := blocks.ProcessAttesterSlashings(
-				context.Background(),
 				genesisState300K,
 				block,
 				false,
@@ -227,7 +249,6 @@ func BenchmarkProcessBlockAttestations(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := blocks.ProcessBlockAttestations(
-				context.Background(),
 				genesisState16K,
 				block,
 				false,
@@ -246,7 +267,6 @@ func BenchmarkProcessBlockAttestations(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := blocks.ProcessBlockAttestations(
-				context.Background(),
 				genesisState300K,
 				block,
 				false,
@@ -276,7 +296,6 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := blocks.ProcessValidatorDeposits(
-				context.Background(),
 				genesisState16K,
 				block,
 			)
@@ -297,7 +316,6 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := blocks.ProcessValidatorDeposits(
-				context.Background(),
 				genesisState300K,
 				block,
 			)
@@ -323,7 +341,7 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 		b.N = quickRunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err := blocks.ProcessValidatorExits(context.Background(), genesisState16K, block, false)
+			_, err := blocks.ProcessValidatorExits(genesisState16K, block, false)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -340,7 +358,7 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 		b.N = quickRunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err := blocks.ProcessValidatorExits(context.Background(), genesisState300K, block, false)
+			_, err := blocks.ProcessValidatorExits(genesisState300K, block, false)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -462,7 +480,7 @@ func createFullBlock(b *testing.B, currentSlot uint64) (*pb.BeaconBlock, []byte)
 				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
-			AggregationBitfield: bitutil.SetBitfield(int(i)),
+			AggregationBitfield: bitutil.SetBitfield(int(i), 128),
 			CustodyBitfield:     []byte{1},
 		}
 		attestations[i] = att1
@@ -588,5 +606,6 @@ func resetBeaconState(beaconState *pb.BeaconState) {
 }
 
 func runAmount(validatorCount int) int {
-	return 33554432 / validatorCount
+	// 33554432
+	return 16777216 / validatorCount
 }
