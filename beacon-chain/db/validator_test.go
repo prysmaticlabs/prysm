@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/boltdb/bolt"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestSaveAndRetrieveValidatorIndex_OK(t *testing.T) {
@@ -61,5 +64,103 @@ func TestSaveAndDeleteValidatorIndex_OK(t *testing.T) {
 	want := fmt.Sprintf("validator %#x does not exist", p1)
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Want: %v, got: %v", want, err.Error())
+	}
+}
+
+func TestHasValidator(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	pk := []byte("pk")
+
+	// Populate the db with some public key
+	if err := db.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorBucket)
+		h := hashutil.Hash(pk)
+		return bkt.Put(h[:], []byte("data"))
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !db.HasValidator(pk) {
+		t.Error("Database did not have expected validator")
+	}
+
+	if db.HasValidator([]byte("bogus")) {
+		t.Error("Database returned true for validator that did not exist")
+	}
+}
+
+func TestHasAllValidators(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	knownPubKeys := [][]byte{
+		[]byte("pk1"),
+		[]byte("pk2"),
+	}
+	unknownPubKeys := [][]byte{
+		[]byte("pk3"),
+		[]byte("pk4"),
+	}
+
+	// Populate the db with some public key
+	if err := db.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorBucket)
+		for _, pk := range knownPubKeys {
+			h := hashutil.Hash(pk)
+			if err := bkt.Put(h[:], []byte("data")); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !db.HasAllValidators(knownPubKeys) {
+		t.Error("Database did not have expected validators")
+	}
+
+	if db.HasAllValidators(append(knownPubKeys, unknownPubKeys...)) {
+		t.Error("Database returned true when there are pubkeys that did not exist")
+	}
+}
+
+func TestHasAnyValidator(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	knownPubKeys := [][]byte{
+		[]byte("pk1"),
+		[]byte("pk2"),
+	}
+	unknownPubKeys := [][]byte{
+		[]byte("pk3"),
+		[]byte("pk4"),
+	}
+
+	// Populate the db with some public key
+	if err := db.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorBucket)
+		for _, pk := range knownPubKeys {
+			h := hashutil.Hash(pk)
+			if err := bkt.Put(h[:], []byte("data")); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !db.HasAnyValidators(append(knownPubKeys, unknownPubKeys...)) {
+		t.Error("Database did not have expected validators")
+	}
+
+	if db.HasAnyValidators(unknownPubKeys) {
+		t.Error("Database returned true when there are only pubkeys that did not exist")
 	}
 }
