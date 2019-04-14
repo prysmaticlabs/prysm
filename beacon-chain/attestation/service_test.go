@@ -230,3 +230,72 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 		t.Errorf("Wanted: %v, got: %v", block, latestAttestedBlock)
 	}
 }
+
+func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: true,
+	})
+
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
+		})
+	}
+
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+
+	attestation := &pb.Attestation{
+		AggregationBitfield: []byte{0x80},
+		Data: &pb.AttestationData{
+			Slot:  1,
+			Shard: 1,
+		},
+	}
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	pubkey := bytesutil.ToBytes48([]byte{byte(35)})
+	if service.store.m[pubkey].Data.Slot !=
+		attestation.Data.Slot {
+		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	}
+
+	attestation.Data.Slot = 36
+	attestation.Data.Shard = 36
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	if service.store.m[pubkey].Data.Slot !=
+		attestation.Data.Slot {
+		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	}
+
+	// Verify the committee for attestation's data slot was cached.
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedCommittee := []uint64{20}
+	if !reflect.DeepEqual(wantedCommittee, fetchedCommittees.Committees[0].Committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wantedCommittee,
+			fetchedCommittees.Committees[0].Committee,
+		)
+	}
+}
