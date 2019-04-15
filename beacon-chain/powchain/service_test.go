@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
@@ -201,6 +203,11 @@ func TestStart_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+
+	beaconDB, err := db.SetupDB()
+	if err != nil {
+		t.Fatalf("Could not set up simulated beacon DB: %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
@@ -208,6 +215,7 @@ func TestStart_OK(t *testing.T) {
 		Logger:          &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)

@@ -172,20 +172,23 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
 		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+		deposits[i] = &pb.Deposit{
+			DepositData:     depositData,
+			MerkleTreeIndex: uint64(i),
+		}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys
 }
 
-func createPreChainStartDeposit(t *testing.T, pk []byte) *pb.Deposit {
+func createPreChainStartDeposit(t *testing.T, pk []byte, index uint64) *pb.Deposit {
 	depositInput := &pb.DepositInput{Pubkey: pk}
 	balance := params.BeaconConfig().MaxDepositAmount
 	depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
 	if err != nil {
 		t.Fatalf("Cannot encode data: %v", err)
 	}
-	return &pb.Deposit{DepositData: depositData}
+	return &pb.Deposit{DepositData: depositData, MerkleTreeIndex: index}
 }
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
