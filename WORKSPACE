@@ -664,7 +664,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "2daed26f633ce23fab5efc02fb3f2e803b3526c3",
+    commit = "ac0d4da0b001139583d0dfb84d614a0f907ea0a9",  # v0.9.2
     importpath = "github.com/prometheus/client_golang",
 )
 
