@@ -39,7 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Info("Checking historical genesis state")
+	log.Info("Checking historical genesis state...")
 	genesisState, err := readOnlyDB.HistoricalStateFromSlot(ctx, params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		log.Fatal(err)
@@ -60,16 +60,16 @@ func main() {
 			log.Fatal(err)
 		}
 		if newBlock == nil {
-			log.Warnf("no block at slot %d", currentSlot)
+			log.Warnf("No block at slot %d", currentSlot-params.BeaconConfig().GenesisSlot)
 			continue
 		}
 
 		newState, err := chainService.ApplyBlockStateTransition(ctx, newBlock, currentState)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Could not apply state transition: %v", err)
 		}
 		if err := beaconDB.UpdateChainHead(ctx, newBlock, newState); err != nil {
-			log.Fatal(err)
+			log.Fatalf("Could not update chain head: %v", err)
 		}
 
 		currentState = newState
