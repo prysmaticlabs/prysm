@@ -67,9 +67,6 @@ func newServer(
 }
 
 func (s *server) makeDeposit(data []byte) error {
-	s.clientLock.Lock()
-	defer s.clientLock.Unlock()
-
 	txOps := bind.NewKeyedTransactor(s.txPk)
 	txOps.Value = s.depositAmount
 	txOps.GasLimit = gasLimit
@@ -83,57 +80,89 @@ func (s *server) makeDeposit(data []byte) error {
 }
 
 func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.PrivateKeyResponse, error) {
-	pk, err := s.db.PodPK(ctx, req.PodName)
-	if err != nil {
-		return nil, err
-	}
-	if pk != nil {
-		log.WithField("pod", req.PodName).Debug("Returning existing assignment")
-		return &pb.PrivateKeyResponse{PrivateKey: pk}, nil
+	s.clientLock.Lock()
+	defer s.clientLock.Unlock()
+
+	if req.NumberOfKeys == 0 {
+		req.NumberOfKeys = 1
 	}
 
-	pk, err = s.db.UnallocatedPK(ctx)
+	// build the list of PKs in the following order, until the requested
+	// amount is ready to return.
+	// - PKs already assigned to the pod
+	// - PKs that have not yet been allocated
+	// - PKs that are newly initialized with deposits
+
+	pks, err := s.db.PodPKs(ctx, req.PodName)
 	if err != nil {
 		return nil, err
 	}
-	if pk != nil {
-		log.WithField("pod", req.PodName).Debug("Recycling existing private key")
-		if err := s.db.AssignExistingPK(ctx, pk, req.PodName); err != nil {
+	if pks != nil && len(pks.PrivateKeys) > 0 {
+		log.WithField("pod", req.PodName).Debug("Returning existing assignment(s)")
+		return &pb.PrivateKeyResponse{
+			PrivateKeys: pks,
+		}, nil
+	}
+
+	unallocated, err := s.db.UnallocatedPKs(ctx, req.NumberOfKeys)
+	if err != nil {
+		return nil, err
+	}
+	log.WithField(
+		"pod", req.PodName,
+	).WithField(
+		"keys", len(unallocated.PrivateKeys),
+	).Debug("Recycling existing private key(s)")
+
+	pks.PrivateKeys = append(pks.PrivateKeys, unallocated.PrivateKeys...)
+
+	if len(pks.PrivateKeys) < int(req.NumberOfKeys) {
+		c := int(req.NumberOfKeys) - len(pks.PrivateKeys)
+		newKeys, err := s.allocateNewKeys(ctx, req.PodName, c)
+		if err != nil {
 			return nil, err
 		}
-		return &pb.PrivateKeyResponse{PrivateKey: pk}, nil
+		pks.PrivateKeys = append(pks.PrivateKeys, newKeys.PrivateKeys...)
 	}
 
-	log.WithField("pod", req.PodName).Debug("Allocating a new private key")
-	return s.allocateNewKey(ctx, req.PodName)
+	if err := s.db.AssignExistingPKs(ctx, pks, req.PodName); err != nil {
+		return nil, err
+	}
+
+	return &pb.PrivateKeyResponse{PrivateKeys: pks}, nil
 }
 
-func (s *server) allocateNewKey(ctx context.Context, podName string) (*pb.PrivateKeyResponse, error) {
-	key, err := keystore.NewKey(rand.Reader)
-	if err != nil {
-		return nil, err
+func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys int) (*pb.PrivateKeys, error) {
+	pks := make([][]byte, numKeys)
+
+	for i := 0; i < numKeys; i++ {
+		key, err := keystore.NewKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+
+		// Make the validator deposit
+		// NOTE: This uses the validator key as the withdrawal key
+		di, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/)
+		if err != nil {
+			return nil, err
+		}
+		serializedData := new(bytes.Buffer)
+		if err := ssz.Encode(serializedData, di); err != nil {
+			return nil, fmt.Errorf("could not serialize deposit data: %v", err)
+		}
+
+		// Do the actual deposit
+		if err := s.makeDeposit(serializedData.Bytes()); err != nil {
+			return nil, err
+		}
+		// Store in database
+		if err := s.db.AllocateNewPkToPod(ctx, key, podName); err != nil {
+			return nil, err
+		}
+		secret := key.SecretKey.Marshal()
+		pks[i] = secret
 	}
 
-	// Make the validator deposit
-	// NOTE: This uses the validator key as the withdrawal key
-	di, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/)
-	if err != nil {
-		return nil, err
-	}
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, di); err != nil {
-		return nil, fmt.Errorf("could not serialize deposit data: %v", err)
-	}
-
-	// Do the actual deposit
-	if err := s.makeDeposit(serializedData.Bytes()); err != nil {
-		return nil, err
-	}
-	// Store in database
-	if err := s.db.AllocateNewPkToPod(ctx, key, podName); err != nil {
-		return nil, err
-	}
-
-	return &pb.PrivateKeyResponse{PrivateKey: key.SecretKey.Marshal()}, nil
-
+	return &pb.PrivateKeys{PrivateKeys: pks}, nil
 }
