@@ -26,7 +26,8 @@ type validator struct {
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
 	keys            map[string]*keystore.Key
-	prevBalance     uint64
+
+	prevBalance uint64
 }
 
 // Done cleans up the validator.
