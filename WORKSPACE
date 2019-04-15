@@ -628,7 +628,7 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "c7872c57080a5e9808cccc5c3331d24b4a21f5e2",  # v0.20.0
+    commit = "bd64e5eff7498c1c67eba74dc87ad96aa525bf28",  # v0.20.2
     importpath = "go.opencensus.io",
 )
 
