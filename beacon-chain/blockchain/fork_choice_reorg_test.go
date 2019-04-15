@@ -19,7 +19,97 @@ type assignment struct {
 	committee []uint64
 }
 
-func advanceChain(t *testing.T, chainService *ChainService) ([]*pb.BeaconBlock, []*pb.BeaconState) {
+func createBlock(
+	t *testing.T, slot uint64, blocks []*pb.BeaconBlock, states []*pb.BeaconState, assignments map[uint64]*assignment,
+) *pb.BeaconBlock {
+	if slot % params.BeaconConfig().SlotsPerEpoch == 0 {
+		for idx := range states[slot-1].ValidatorRegistry {
+			committee, shard, slot, _, err :=
+				helpers.CommitteeAssignment(states[slot-1], params.BeaconConfig().GenesisSlot+slot, uint64(idx), false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assignments[slot] = &assignment{
+				shard,
+				uint64(idx),
+				committee,
+			}
+		}
+	}
+	parent := blocks[slot-1]
+	prevBlockRoot, err := hashutil.HashBeaconBlock(parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := &pb.BeaconBlock{
+		Slot:             params.BeaconConfig().GenesisSlot + slot,
+		RandaoReveal:     []byte{},
+		ParentRootHash32: prevBlockRoot[:],
+		StateRootHash32:  []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{},
+			BlockHash32:       []byte{},
+		},
+		Body: &pb.BeaconBlockBody{
+			Attestations:      []*pb.Attestation{},
+		},
+	}
+
+	// We generate attestation using the previous slot due to the MIN_ATTESTATION_INCLUSION_DELAY.
+	prevSlot := params.BeaconConfig().GenesisSlot + slot-1
+	committee := assignments[prevSlot].committee
+	shard := assignments[prevSlot].shard
+	attestation := &pb.Attestation{
+		Data: &pb.AttestationData{},
+	}
+	attestation.CustodyBitfield = make([]byte, len(committee))
+	// Find the index in committee to be used for the aggregation bitfield.
+	var indexInCommittee int
+	for j, vIndex := range committee {
+		if vIndex == assignments[prevSlot].validatorIndex {
+			indexInCommittee = j
+			break
+		}
+	}
+	aggregationBitfield := bitutil.SetBitfield(indexInCommittee, len(committee))
+	attestation.AggregationBitfield = aggregationBitfield
+	attestation.AggregateSignature = []byte("signed")
+
+	epochBoundaryRoot := make([]byte, 32)
+	epochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(prevSlot))
+	if epochStartSlot == prevSlot {
+		epochBoundaryRoot = prevBlockRoot[:]
+	} else {
+		epochBoundaryRoot, err = b.BlockRoot(states[slot-1], epochStartSlot)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	// epoch_start_slot = get_epoch_start_slot(slot_to_epoch(head.slot))
+	// Fetch the justified block root = hash_tree_root(justified_block) where
+	// justified_block is the block at state.justified_epoch in the chain defined by head.
+	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
+	// If the last justified boundary slot is the same as state current slot (ex: slot 0),
+	// we set justified block root to an empty root.
+	justifiedBlockRoot := states[slot-1].JustifiedRoot
+
+	// If an attester has to attest for genesis block.
+	if states[slot-1].Slot == params.BeaconConfig().GenesisSlot {
+		epochBoundaryRoot = params.BeaconConfig().ZeroHash[:]
+		justifiedBlockRoot = params.BeaconConfig().ZeroHash[:]
+	}
+	attestation.Data.Slot = prevSlot
+	attestation.Data.Shard = shard
+	attestation.Data.EpochBoundaryRootHash32 = epochBoundaryRoot
+	attestation.Data.JustifiedBlockRootHash32 = justifiedBlockRoot
+	attestation.Data.JustifiedEpoch = states[slot-1].JustifiedEpoch
+	attestation.Data.LatestCrosslink = states[slot-1].LatestCrosslinks[shard]
+	attestation.Data.CrosslinkDataRootHash32 = params.BeaconConfig().ZeroHash[:]
+	block.Body.Attestations = []*pb.Attestation{attestation}
+	return block
+}
+
+func advanceChain(t *testing.T, chainService *ChainService, numBlocks int) ([]*pb.BeaconBlock, []*pb.BeaconState) {
 	unixTime := time.Unix(0, 0)
 	deposits, _ := setupInitialDeposits(t, 8)
 	genesisState, err := chainService.initializeBeaconChain(unixTime, deposits, &pb.Eth1Data{})
@@ -32,10 +122,10 @@ func advanceChain(t *testing.T, chainService *ChainService) ([]*pb.BeaconBlock, 
 	}
 	genesisBlock := b.NewGenesisBlock(stateRoot[:])
 
-	// Then, we create the chain up to slot 10 in both.
-	blocks := make([]*pb.BeaconBlock, 11)
+	// Then, we create the chain up to slot 100 in both.
+	blocks := make([]*pb.BeaconBlock, numBlocks+1)
 	blocks[0] = genesisBlock
-	states := make([]*pb.BeaconState, 11)
+	states := make([]*pb.BeaconState, numBlocks+1)
 	states[0] = genesisState
 	assignments := make(map[uint64]*assignment)
 	for idx := range genesisState.ValidatorRegistry {
@@ -50,92 +140,8 @@ func advanceChain(t *testing.T, chainService *ChainService) ([]*pb.BeaconBlock, 
 			committee,
 		}
 	}
-	for i := uint64(1); i <= 10; i++ {
-		if i % params.BeaconConfig().SlotsPerEpoch == 0 {
-			for idx := range genesisState.ValidatorRegistry {
-				committee, shard, slot, _, err :=
-					helpers.CommitteeAssignment(states[i-1], i+params.BeaconConfig().GenesisSlot, uint64(idx), false)
-				if err != nil {
-					t.Fatal(err)
-				}
-				assignments[slot] = &assignment{
-					shard,
-					uint64(idx),
-					committee,
-				}
-			}
-		}
-		parent := blocks[i-1]
-		prevBlockRoot, err := hashutil.HashBeaconBlock(parent)
-		if err != nil {
-			t.Fatal(err)
-		}
-		block := &pb.BeaconBlock{
-			Slot:             params.BeaconConfig().GenesisSlot + i,
-			RandaoReveal:     []byte{},
-			ParentRootHash32: prevBlockRoot[:],
-			StateRootHash32:  []byte{},
-			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte{},
-				BlockHash32:       []byte{},
-			},
-			Body: &pb.BeaconBlockBody{
-				Attestations:      []*pb.Attestation{},
-			},
-		}
-
-		// We generate attestation using the previous slot due to the MIN_ATTESTATION_INCLUSION_DELAY.
-		prevSlot := params.BeaconConfig().GenesisSlot + i-1
-		committee := assignments[prevSlot].committee
-		shard := assignments[prevSlot].shard
-		attestation := &pb.Attestation{
-			Data: &pb.AttestationData{},
-		}
-		attestation.CustodyBitfield = make([]byte, len(committee))
-		// Find the index in committee to be used for the aggregation bitfield.
-		var indexInCommittee int
-		for j, vIndex := range committee {
-			if vIndex == assignments[prevSlot].validatorIndex {
-				indexInCommittee = j
-				break
-			}
-		}
-		aggregationBitfield := bitutil.SetBitfield(indexInCommittee, len(committee))
-		attestation.AggregationBitfield = aggregationBitfield
-		attestation.AggregateSignature = []byte("signed")
-
-		epochBoundaryRoot := make([]byte, 32)
-		epochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(prevSlot))
-		if epochStartSlot == prevSlot {
-			epochBoundaryRoot = prevBlockRoot[:]
-		} else {
-			epochBoundaryRoot, err = b.BlockRoot(states[i-1], epochStartSlot)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-		// epoch_start_slot = get_epoch_start_slot(slot_to_epoch(head.slot))
-		// Fetch the justified block root = hash_tree_root(justified_block) where
-		// justified_block is the block at state.justified_epoch in the chain defined by head.
-		// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
-		// If the last justified boundary slot is the same as state current slot (ex: slot 0),
-		// we set justified block root to an empty root.
-		justifiedBlockRoot := states[i-1].JustifiedRoot
-
-		// If an attester has to attest for genesis block.
-		if states[i-1].Slot == params.BeaconConfig().GenesisSlot {
-			epochBoundaryRoot = params.BeaconConfig().ZeroHash[:]
-			justifiedBlockRoot = params.BeaconConfig().ZeroHash[:]
-		}
-		attestation.Data.Slot = prevSlot
-		attestation.Data.Shard = shard
-		attestation.Data.EpochBoundaryRootHash32 = epochBoundaryRoot
-		attestation.Data.JustifiedBlockRootHash32 = justifiedBlockRoot
-		attestation.Data.JustifiedEpoch = states[i-1].JustifiedEpoch
-		attestation.Data.LatestCrosslink = states[i-1].LatestCrosslinks[shard]
-		attestation.Data.CrosslinkDataRootHash32 = params.BeaconConfig().ZeroHash[:]
-
-		block.Body.Attestations = []*pb.Attestation{attestation}
+	for i := uint64(1); i <= uint64(numBlocks); i++ {
+		block := createBlock(t, i, blocks, states, assignments)
 		beaconState, err := chainService.ApplyBlockStateTransition(context.Background(), block, states[i-1])
 		if err != nil {
 			t.Fatal(err)
@@ -166,8 +172,8 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 
 	chainService1 := setupBeaconChain(t, beaconDB1, nil)
 	chainService2 := setupBeaconChain(t, beaconDB2, nil)
-	_, states1 := advanceChain(t, chainService1)
-	_, states2 := advanceChain(t, chainService2)
+	_, states1 := advanceChain(t, chainService1, 34)
+	_, states2 := advanceChain(t, chainService2, 34)
 
 	lastState1 := states1[len(states1)-1]
 	lastState2 := states2[len(states2)-1]
@@ -186,6 +192,12 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 			)
 		}
 	}
+	t.Logf("Validator balances node A: %v", balancesNodeA)
+	t.Logf("Finalized epoch node A: %v", lastState1.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+	t.Logf("Justified epoch node A: %v", lastState1.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
+	t.Logf("Validator balances node B: %v", balancesNodeB)
+	t.Logf("Finalized epoch node B: %v", lastState2.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+	t.Logf("Justified epoch node B: %v", lastState2.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 
 	// We update attestation targets for node A such that validators point to the block
 	// at slot 7 as canonical - then, a reorg to that slot will occur.
