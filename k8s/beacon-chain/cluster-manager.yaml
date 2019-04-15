@@ -64,6 +64,8 @@ spec:
         ports:
         - containerPort: 8000
           name: grpc-service
+        - containerPort: 8080
+          name: allocations
         - containerPort: 9090
           name: prometheus
         volumeMounts:

@@ -18,7 +18,7 @@ var (
 
 	// maxCacheSize is 4x of the epoch length for additional cache padding.
 	// Requests should be only accessing committees within defined epoch length.
-	maxCacheSize = int(2 * params.BeaconConfig().SlotsPerEpoch)
+	maxCacheSize = int(4 * params.BeaconConfig().SlotsPerEpoch)
 
 	// Metrics
 	committeeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -41,20 +41,20 @@ type CommitteeInfo struct {
 	Shard     uint64
 }
 
-// CommitteesInSlot species the committees of a given slot.
+// CommitteesInSlot specifies how many CommitteeInfos are in a given slot.
 type CommitteesInSlot struct {
 	Slot       uint64
 	Committees []*CommitteeInfo
 }
 
-// CommitteesCache struct with 1 queue for looking up crosslink committees by slot.
+// CommitteesCache structs with 1 queue for looking up committees by slot.
 type CommitteesCache struct {
 	committeesCache *cache.FIFO
 	lock            sync.RWMutex
 }
 
 // slotKeyFn takes the string representation of the slot number as the key
-// for a committeeInfo.
+// for the committees of a given slot (CommitteesInSlot).
 func slotKeyFn(obj interface{}) (string, error) {
 	cInfo, ok := obj.(*CommitteesInSlot)
 	if !ok {
@@ -72,7 +72,7 @@ func NewCommitteesCache() *CommitteesCache {
 	}
 }
 
-// CommitteesInfoBySlot fetches committeesInfo by slot. Returns true with a
+// CommitteesInfoBySlot fetches CommitteesInSlot by slot. Returns true with a
 // reference to the committees info, if exists. Otherwise returns false, nil.
 func (c *CommitteesCache) CommitteesInfoBySlot(slot uint64) (*CommitteesInSlot, error) {
 	c.lock.RLock()
@@ -98,7 +98,7 @@ func (c *CommitteesCache) CommitteesInfoBySlot(slot uint64) (*CommitteesInSlot, 
 	return cInfo, nil
 }
 
-// AddCommittees adds committeeInfo object to the cache. This method also trims the least
+// AddCommittees adds CommitteesInSlot object to the cache. This method also trims the least
 // recently added committeeInfo object if the cache size has ready the max cache size limit.
 func (c *CommitteesCache) AddCommittees(committees *CommitteesInSlot) error {
 	c.lock.Lock()

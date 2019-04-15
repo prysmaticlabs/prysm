@@ -600,3 +600,104 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 		)
 	}
 }
+
+func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: true,
+	})
+	slotOffset := uint64(1111)
+	csInSlot := &cache.CommitteesInSlot{
+		Slot: params.BeaconConfig().GenesisSlot + slotOffset,
+		Committees: []*cache.CommitteeInfo{
+			{Shard: 123, Committee: []uint64{55, 105}},
+			{Shard: 234, Committee: []uint64{11, 14}},
+		}}
+
+	if err := committeeCache.AddCommittees(csInSlot); err != nil {
+		t.Fatal(err)
+	}
+
+	committee, shard, _, isProposer, err :=
+		CommitteeAssignment(&pb.BeaconState{Slot: csInSlot.Slot}, csInSlot.Slot, 105, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := []uint64{55, 105}
+	if !reflect.DeepEqual(wanted, committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wanted,
+			committee,
+		)
+	}
+	if shard != csInSlot.Committees[0].Shard {
+		t.Errorf(
+			"Result shard was an expected value. Wanted %d, got %d",
+			csInSlot.Committees[0].Shard,
+			shard,
+		)
+	}
+	if !isProposer {
+		t.Error("Wanted proposer true")
+	}
+}
+
+func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: true,
+	})
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	slotOffset := uint64(10)
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + slotOffset,
+		ValidatorRegistry: validators,
+	}
+
+	committee, shard, _, isProposer, err :=
+		CommitteeAssignment(state, params.BeaconConfig().GenesisSlot+slotOffset, 105, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantedCommittee := []uint64{55, 105}
+	if !reflect.DeepEqual(wantedCommittee, committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wantedCommittee,
+			committee,
+		)
+	}
+
+	wantedShard := uint64(10)
+	if shard != wantedShard {
+		t.Errorf(
+			"Result shard was an expected value. Wanted %d, got %d",
+			wantedShard,
+			shard,
+		)
+	}
+	if isProposer {
+		t.Error("Wanted proposer false")
+	}
+
+	// Verify the committee for offset slot was cached.
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(params.BeaconConfig().GenesisSlot + slotOffset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(wantedCommittee, fetchedCommittees.Committees[0].Committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wantedCommittee,
+			fetchedCommittees.Committees[0].Committee,
+		)
+	}
+}
