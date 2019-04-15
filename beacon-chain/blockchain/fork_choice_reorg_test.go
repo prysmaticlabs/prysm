@@ -24,6 +24,7 @@ type assignment struct {
 // once the nodes catch up a few blocks later, we expect their state and validator
 // balances to remain the same. That is, we expect no deviation in validator balances.
 func TestEpochReorg_MatchingStates(t *testing.T) {
+	params.UseDemoBeaconConfig()
 	// First we setup two independent db's for node A and B.
 	ctx := context.Background()
 	beaconDB1 := internal.SetupDB(t)
@@ -42,14 +43,15 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
-	genesisBlock, err := beaconDB1.BlockBySlot(ctx, params.BeaconConfig().GenesisSlot)
-	if err != nil {
-		t.Fatal(err)
-	}
 	genesisState, err := beaconDB1.HeadState(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	stateRoot, err := hashutil.HashProto(genesisState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisBlock := b.NewGenesisBlock(stateRoot[:])
 
 	// Then, we create the chain up to slot 10 in both.
     blocks := []*pb.BeaconBlock{genesisBlock}
@@ -61,20 +63,34 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 		if err != nil {
             t.Fatal(err)
 		}
-		assignments[slot-params.BeaconConfig().GenesisSlot] = &assignment{
+		assignments[slot] = &assignment{
 			shard,
 			uint64(idx),
 			committee,
 		}
 	}
-	for i := 1; i <= 10; i++ {
+	for i := uint64(1); i <= uint64(10); i++ {
+		if i % params.BeaconConfig().SlotsPerEpoch == 0 {
+			for idx := range genesisState.ValidatorRegistry {
+				committee, shard, slot, _, err :=
+					helpers.CommitteeAssignment(genesisState, i, uint64(idx), false)
+				if err != nil {
+					t.Fatal(err)
+				}
+				assignments[slot] = &assignment{
+					shard,
+					uint64(idx),
+					committee,
+				}
+			}
+		}
 		parent := blocks[i-1]
 		prevBlockRoot, err := hashutil.HashBeaconBlock(parent)
 		if err != nil {
 			t.Fatal(err)
 		}
 		block := &pb.BeaconBlock{
-			Slot:             uint64(i),
+			Slot:             params.BeaconConfig().GenesisSlot + i,
 			RandaoReveal:     []byte{},
 			ParentRootHash32: prevBlockRoot[:],
 			StateRootHash32:  []byte{},
@@ -88,10 +104,12 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 		}
 
 		// We generate attestation using the previous slot due to the MIN_ATTESTATION_INCLUSION_DELAY.
-		prevSlot := uint64(i-1)
+		prevSlot := params.BeaconConfig().GenesisSlot + i-1
 		committee := assignments[prevSlot].committee
 		shard := assignments[prevSlot].shard
-		attestation := &pb.Attestation{}
+		attestation := &pb.Attestation{
+			Data: &pb.AttestationData{},
+		}
 		attestation.CustodyBitfield = make([]byte, len(committee))
 		// Find the index in committee to be used for the aggregation bitfield.
 		var indexInCommittee int
@@ -134,10 +152,14 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 		attestation.Data.JustifiedBlockRootHash32 = justifiedBlockRoot
 		attestation.Data.JustifiedEpoch = states[i-1].JustifiedEpoch
 		attestation.Data.LatestCrosslink = states[i-1].LatestCrosslinks[shard]
+		attestation.Data.CrosslinkDataRootHash32 = params.BeaconConfig().ZeroHash[:]
 
 		block.Body.Attestations = []*pb.Attestation{attestation}
 		beaconState, err := chainService1.ApplyBlockStateTransition(ctx, block, states[i-1])
 		if err != nil {
+			t.Fatal(err)
+		}
+		if err := beaconDB1.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
 		if err := beaconDB1.UpdateChainHead(ctx, block, beaconState); err != nil {
