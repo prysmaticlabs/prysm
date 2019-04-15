@@ -87,6 +87,19 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	return db, err
 }
 
+// NewReadOnlyDB opens a boltDB file with read only privileges.
+func NewReadOnlyDB(dirPath string) (*BeaconDB, error) {
+	datafile := path.Join(dirPath, "beaconchain.db")
+	boltDB, err := bolt.Open(datafile, 0666, &bolt.Options{ReadOnly: true, Timeout: 1 * time.Second})
+	if err != nil {
+		if err == bolt.ErrTimeout {
+			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
+		}
+		return nil, err
+	}
+	return &BeaconDB{db: boltDB, DatabasePath: dirPath}, nil
+}
+
 // ClearDB removes the previously stored directory at the data directory.
 func ClearDB(dirPath string) error {
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
