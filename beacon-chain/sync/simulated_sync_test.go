@@ -288,39 +288,3 @@ loop:
 		}
 	}
 }
-
-// This function tests the following: when two nodes A and B are running at slot 10
-// and node A reorgs back to slot 7 (an epoch boundary), while node B remains the same,
-// once the nodes catch up a few blocks later, we expect their state and validator
-// balances to remain the same. That is, we expect no deviation in validator balances.
-func TestEpochReorg_MatchingStates(t *testing.T) {
-	// First we setup two independent db's for node A and B.
-	numOfBlocks := 9
-	ctx := context.Background()
-	newP2P := &simulatedP2P{
-		subsChannels: make(map[reflect.Type]*event.Feed),
-		mutex:        new(sync.RWMutex),
-		ctx:          ctx,
-	}
-
-	// Sets up a synced service which has its head at the current
-	// numOfBlocks from genesis. The blocks are generated through
-	// simulated backend.
-	ssA, dbNodeA, _ := setUpSyncedService(numOfBlocks, newP2P, t)
-	defer ssA.Stop()
-	defer db.TeardownDB(dbNodeA)
-
-	ssB, dbNodeB, _ := setUpSyncedService(numOfBlocks, newP2P, t)
-	defer ssB.Stop()
-	defer db.TeardownDB(dbNodeB)
-
-	// Then, we create the chain up to slot 10 in both.
-
-	// We update attestation targets for node A such that validators point to the block
-	// at slot 7 as canonical - then, a reorg to that slot will occur.
-
-	// We then proceed in both nodes normally through several blocks.
-
-	// At this point, once the two nodes are fully caught up, we expect their state,
-	// in particular their balances, to be equal.
-}

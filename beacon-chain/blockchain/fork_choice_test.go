@@ -700,8 +700,6 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	}
 }
 
-
-
 // This benchmarks LMD GHOST fork choice using 8 blocks in a row.
 // 8 validators and all validators voted on the last block.
 // Ex:
