@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -99,6 +100,7 @@ func createBlock(
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Printf("Parent slot: %d, parent root %#x\n", slot-1, prevBlockRoot)
 	block := &pb.BeaconBlock{
 		Slot:             params.BeaconConfig().GenesisSlot + slot,
 		RandaoReveal:     []byte{},
@@ -167,19 +169,14 @@ func createBlock(
 	return block
 }
 
-func advanceChain(t *testing.T, chainService *ChainService, assignments map[uint64]*assignment, numBlocks int) ([]*pb.BeaconBlock, []*pb.BeaconState) {
-	unixTime := time.Unix(0, 0)
-	deposits, _ := setupInitialDeposits(t, 8)
-	genesisState, err := chainService.initializeBeaconChain(unixTime, deposits, &pb.Eth1Data{})
-	if err != nil {
-		t.Fatalf("Could not initialize beacon state to disk: %v", err)
-	}
-	stateRoot, err := hashutil.HashProto(genesisState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	genesisBlock := b.NewGenesisBlock(stateRoot[:])
-
+func advanceChain(
+	t *testing.T,
+	chainService *ChainService,
+	genesisBlock *pb.BeaconBlock,
+	genesisState *pb.BeaconState,
+	assignments map[uint64]*assignment,
+	numBlocks int,
+) ([]*pb.BeaconBlock, []*pb.BeaconState) {
 	// Then, we create the chain up to slot 100 in both.
 	blocks := make([]*pb.BeaconBlock, numBlocks+1)
 	blocks[0] = genesisBlock
@@ -240,8 +237,35 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 	chainService2 := setupBeaconChain(t, beaconDB2, attService2)
 	assignments1 := make(map[uint64]*assignment)
 	assignments2 := make(map[uint64]*assignment)
-	blocks1, states1 := advanceChain(t, chainService1, assignments1, 34)
-	blocks2, states2 := advanceChain(t, chainService2, assignments2, 34)
+
+	unixTime := time.Unix(0, 0)
+	deposits, _ := setupInitialDeposits(t, 8)
+	genesisState1, err := chainService1.initializeBeaconChain(unixTime, deposits, &pb.Eth1Data{})
+	if err != nil {
+		t.Fatalf("Could not initialize beacon state to disk: %v", err)
+	}
+	genesisState2, err := chainService2.initializeBeaconChain(unixTime, deposits, &pb.Eth1Data{})
+	if err != nil {
+		t.Fatalf("Could not initialize beacon state to disk: %v", err)
+	}
+	stateRoot1, err := hashutil.HashProto(genesisState1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot2, err := hashutil.HashProto(genesisState2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisBlock1 := b.NewGenesisBlock(stateRoot1[:])
+	genesisBlock2 := b.NewGenesisBlock(stateRoot2[:])
+
+	if !proto.Equal(genesisBlock1, genesisBlock2) {
+		t.Errorf("Expected genesis blocks to match, got %v = %v", genesisBlock1, genesisBlock2)
+	}
+
+	// We then advance the chain.
+	blocks1, states1 := advanceChain(t, chainService1, genesisBlock1, genesisState1,assignments1, 34)
+	blocks2, states2 := advanceChain(t, chainService2, genesisBlock2, genesisState2, assignments2, 34)
 
 	lastState1 := states1[len(states1)-1]
 	lastState2 := states2[len(states2)-1]
@@ -343,4 +367,37 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 
 	// At this point, once the two nodes are fully caught up, we expect their state,
 	// in particular their balances, to be equal.
+	// We look at chain heads.
+	nodeAHead, err = chainService1.beaconDB.ChainHead()
+	if err != nil {
+		t.Fatal(err)
+	}
+	nodeBHead, err = chainService2.beaconDB.ChainHead()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Node A head slot: %v", nodeAHead.Slot-params.BeaconConfig().GenesisSlot)
+	t.Logf("Node B head slot: %v", nodeBHead.Slot-params.BeaconConfig().GenesisSlot)
+
+	// We then compare their balances.
+	finalState1, err := chainService1.beaconDB.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalState2, err := chainService2.beaconDB.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	balancesNodeA = finalState1.ValidatorBalances
+	balancesNodeB = finalState2.ValidatorBalances
+	for i := range balancesNodeA {
+		if balancesNodeA[i] != balancesNodeB[i] {
+			t.Errorf(
+				"Expected balance to match at index %d, received %v = %v",
+				i,
+				balancesNodeA[i],
+				balancesNodeB[i],
+			)
+		}
+	}
 }

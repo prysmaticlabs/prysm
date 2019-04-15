@@ -129,6 +129,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 	// Check for skipped slots.
 	numSkippedSlots := 0
 	for beaconState.Slot < block.Slot-1 {
+		fmt.Printf("SKIP SLOT: %d\n", beaconState.Slot-params.BeaconConfig().GenesisSlot)
 		beaconState, err = c.runStateTransition(ctx, headRoot, nil, beaconState)
 		if err != nil {
 			return beaconState, fmt.Errorf("could not execute state transition without block %v", err)
@@ -138,7 +139,6 @@ func (c *ChainService) ApplyBlockStateTransition(
 	if numSkippedSlots > 0 {
 		log.Warnf("Processed %d skipped slots", numSkippedSlots)
 	}
-
 	beaconState, err = c.runStateTransition(ctx, headRoot, block, beaconState)
 	if err != nil {
 		return beaconState, fmt.Errorf("could not execute state transition with block %v", err)
