@@ -23,10 +23,10 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		v.prevBalance = params.BeaconConfig().MaxDepositAmount
 	}
 	var totalPrevBalance uint64
-	for idx := range v.keys {
+	for _, pkey := range v.activatedKeys {
 		req := &pb.ValidatorPerformanceRequest{
 			Slot:      slot,
-			PublicKey: v.keys[idx].PublicKey.Marshal(),
+			PublicKey: pkey,
 		}
 		resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
 		if err != nil {
