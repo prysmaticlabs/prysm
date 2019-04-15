@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -297,5 +298,67 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 			wantedCommittee,
 			fetchedCommittees.Committees[0].Committee,
 		)
+	}
+}
+
+func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: true,
+	})
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
+		})
+	}
+
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+
+	slot := uint64(2)
+	shard := uint64(3)
+	index := uint64(4)
+	attestation := &pb.Attestation{
+		AggregationBitfield: []byte{0x80},
+		Data: &pb.AttestationData{
+			Slot:  slot,
+			Shard: shard,
+		},
+	}
+
+	csInSlot := &cache.CommitteesInSlot{
+		Slot: slot,
+		Committees: []*cache.CommitteeInfo{
+			{Shard: shard, Committee: []uint64{index, 999}},
+		}}
+
+	if err := committeeCache.AddCommittees(csInSlot); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	pubkey := bytesutil.ToBytes48([]byte{byte(index)})
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+
+	if service.store.m[pubkey].Data.Slot !=
+		attestation.Data.Slot {
+		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
 }
