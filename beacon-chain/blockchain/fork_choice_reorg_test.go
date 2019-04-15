@@ -167,7 +167,7 @@ func createBlock(
 	return block
 }
 
-func advanceChain(t *testing.T, chainService *ChainService, numBlocks int) ([]*pb.BeaconBlock, []*pb.BeaconState) {
+func advanceChain(t *testing.T, chainService *ChainService, assignments map[uint64]*assignment, numBlocks int) ([]*pb.BeaconBlock, []*pb.BeaconState) {
 	unixTime := time.Unix(0, 0)
 	deposits, _ := setupInitialDeposits(t, 8)
 	genesisState, err := chainService.initializeBeaconChain(unixTime, deposits, &pb.Eth1Data{})
@@ -185,7 +185,6 @@ func advanceChain(t *testing.T, chainService *ChainService, numBlocks int) ([]*p
 	blocks[0] = genesisBlock
 	states := make([]*pb.BeaconState, numBlocks+1)
 	states[0] = genesisState
-	assignments := make(map[uint64]*assignment)
 	for idx := range genesisState.ValidatorRegistry {
 		committee, shard, slot, _, err :=
 			helpers.CommitteeAssignment(genesisState, genesisBlock.Slot, uint64(idx), false)
@@ -238,8 +237,10 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 	}
 	chainService1 := setupBeaconChain(t, beaconDB1, attService1)
 	chainService2 := setupBeaconChain(t, beaconDB2, attService2)
-	_, states1 := advanceChain(t, chainService1, 34)
-	_, states2 := advanceChain(t, chainService2, 34)
+	assignments1 := make(map[uint64]*assignment)
+	assignments2 := make(map[uint64]*assignment)
+	blocks1, states1 := advanceChain(t, chainService1, assignments1, 34)
+	blocks2, states2 := advanceChain(t, chainService2, assignments2, 34)
 
 	lastState1 := states1[len(states1)-1]
 	lastState2 := states2[len(states2)-1]
@@ -266,7 +267,48 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 	t.Logf("Justified epoch node B: %v", lastState2.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 
 	// We update attestation targets for node A such that validators point to the block
-	// at slot 32 as canonical - then, a reorg to that slot will occur.
+	// at slot 31 as canonical - then, a reorg to that slot will occur.
+	for idx := range lastState1.ValidatorRegistry {
+        attService1.targets[uint64(idx)] = blocks1[31]
+	}
+
+	newBlock1 := createBlock(t, 35, blocks1, states1, assignments1)
+	newBlock2 := createBlock(t, 35, blocks2, states2, assignments2)
+
+	// We force node A to go through a reorg.
+	beaconState1, err := chainService1.ApplyBlockStateTransition(context.Background(), newBlock1, states1[34])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService1.beaconDB.SaveBlock(newBlock1); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService1.ApplyForkChoiceRule(context.Background(), newBlock1, beaconState1); err != nil {
+		t.Fatal(err)
+	}
+
+	// Node B does not go through a reorg.
+	beaconState2, err := chainService2.ApplyBlockStateTransition(context.Background(), newBlock2, states2[34])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService2.beaconDB.SaveBlock(newBlock2); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService2.beaconDB.UpdateChainHead(context.Background(), newBlock2, beaconState2); err != nil {
+		t.Fatal(err)
+	}
+
+	nodeAHead, err := chainService1.beaconDB.ChainHead()
+	if err != nil {
+		t.Fatal(err)
+	}
+	nodeBHead, err := chainService2.beaconDB.ChainHead()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Node A head slot: %v", nodeAHead.Slot-params.BeaconConfig().GenesisSlot)
+	t.Logf("Node B head slot: %v", nodeBHead.Slot-params.BeaconConfig().GenesisSlot)
 
 	// We then proceed in both nodes normally through several blocks.
 

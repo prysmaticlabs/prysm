@@ -134,10 +134,15 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
+	for idx, target := range attestationTargets {
+		fmt.Printf("Index: %d, target slot: %d\n", idx, target.Slot-params.BeaconConfig().GenesisSlot)
+	}
 	justifiedHead, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified head: %v", err)
 	}
+	fmt.Printf("Justified head: %v\n", justifiedHead.Slot-params.BeaconConfig().GenesisSlot)
+	fmt.Printf("Justified state: %v\n", justifiedState.Slot-params.BeaconConfig().GenesisSlot)
 	head, err := c.lmdGhost(ctx, justifiedHead, justifiedState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
