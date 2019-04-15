@@ -26,8 +26,8 @@ type validator struct {
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
 	keys            map[string]*keystore.Key
-
-	prevBalance uint64
+	activatedKeys   [][]byte
+	prevBalance     uint64
 }
 
 // Done cleans up the validator.
@@ -107,6 +107,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		break
 	}
 	for _, pk := range validatorActivatedRecords {
+		v.activatedKeys = append(v.activatedKeys, pk)
 		log.WithFields(logrus.Fields{
 			"public key": fmt.Sprintf("%#x", pk),
 		}).Info("Validator activated")
@@ -151,13 +152,10 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
-	pks := [][]byte{}
-	for i := range v.keys {
-		pks = append(pks, v.keys[i].PublicKey.Marshal())
-	}
+
 	req := &pb.CommitteeAssignmentsRequest{
 		EpochStart: slot,
-		PublicKeys: pks,
+		PublicKeys: v.activatedKeys,
 	}
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)

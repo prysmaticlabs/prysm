@@ -95,6 +95,7 @@ func (v *ValidatorService) Start() {
 		attesterClient:  pb.NewAttesterServiceClient(v.conn),
 		proposerClient:  pb.NewProposerServiceClient(v.conn),
 		keys:            v.keys,
+		activatedKeys:   make([][]byte, 0),
 	}
 	go run(v.ctx, v.validator)
 }
