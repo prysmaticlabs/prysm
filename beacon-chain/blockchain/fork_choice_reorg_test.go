@@ -221,6 +221,7 @@ func advanceChain(t *testing.T, chainService *ChainService, assignments map[uint
 // balances to remain the same. That is, we expect no deviation in validator balances.
 func TestEpochReorg_MatchingStates(t *testing.T) {
 	params.UseDemoBeaconConfig()
+	ctx := context.Background()
 	// First we setup two independent db's for node A and B.
 	beaconDB1 := internal.SetupDB(t)
 	beaconDB2 := internal.SetupDB(t)
@@ -269,36 +270,43 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 	// We update attestation targets for node A such that validators point to the block
 	// at slot 31 as canonical - then, a reorg to that slot will occur.
 	for idx := range lastState1.ValidatorRegistry {
-        attService1.targets[uint64(idx)] = blocks1[31]
+        attService1.targets[uint64(idx)] = blocks1[30]
 	}
 
 	newBlock1 := createBlock(t, 35, blocks1, states1, assignments1)
 	newBlock2 := createBlock(t, 35, blocks2, states2, assignments2)
+	blocks1 = append(blocks1, newBlock1)
+	blocks2 = append(blocks2, newBlock2)
 
 	// We force node A to go through a reorg.
-	beaconState1, err := chainService1.ApplyBlockStateTransition(context.Background(), newBlock1, states1[34])
-	if err != nil {
+	if _, err := chainService1.ApplyBlockStateTransition(ctx, newBlock1, states1[34]); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainService1.beaconDB.SaveBlock(newBlock1); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService1.ApplyForkChoiceRule(context.Background(), newBlock1, beaconState1); err != nil {
+	oldState, err := chainService1.beaconDB.HistoricalStateFromSlot(ctx, blocks1[30].Slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService1.beaconDB.UpdateChainHead(ctx, blocks1[30], oldState); err != nil {
 		t.Fatal(err)
 	}
 
 	// Node B does not go through a reorg.
-	beaconState2, err := chainService2.ApplyBlockStateTransition(context.Background(), newBlock2, states2[34])
+	beaconState2, err := chainService2.ApplyBlockStateTransition(ctx, newBlock2, states2[34])
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := chainService2.beaconDB.SaveBlock(newBlock2); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService2.beaconDB.UpdateChainHead(context.Background(), newBlock2, beaconState2); err != nil {
+	if err := chainService2.beaconDB.UpdateChainHead(ctx, newBlock2, beaconState2); err != nil {
 		t.Fatal(err)
 	}
+	states2 = append(states2, beaconState2)
 
+	// We look at chain heads.
 	nodeAHead, err := chainService1.beaconDB.ChainHead()
 	if err != nil {
 		t.Fatal(err)
@@ -310,7 +318,28 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 	t.Logf("Node A head slot: %v", nodeAHead.Slot-params.BeaconConfig().GenesisSlot)
 	t.Logf("Node B head slot: %v", nodeBHead.Slot-params.BeaconConfig().GenesisSlot)
 
-	// We then proceed in both nodes normally through several blocks.
+	// Now we generate block with slot 36 and force both nodes to go through the block transition.
+	newBlock := createBlock(t, 36, blocks2, states2, assignments2)
+	beaconState1, err := chainService1.ApplyBlockStateTransition(ctx, newBlock, oldState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService1.beaconDB.SaveBlock(newBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService1.beaconDB.UpdateChainHead(ctx, newBlock, beaconState1); err != nil {
+		t.Fatal(err)
+	}
+	beaconState2, err = chainService2.ApplyBlockStateTransition(ctx, newBlock, states2[35])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService2.beaconDB.SaveBlock(newBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService2.beaconDB.UpdateChainHead(ctx, newBlock, beaconState2); err != nil {
+		t.Fatal(err)
+	}
 
 	// At this point, once the two nodes are fully caught up, we expect their state,
 	// in particular their balances, to be equal.
