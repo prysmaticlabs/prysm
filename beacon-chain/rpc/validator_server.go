@@ -50,7 +50,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-			if !vs.beaconDB.HasAllValidators(req.PublicKeys) {
+			if !vs.beaconDB.HasAnyValidators(req.PublicKeys) {
 				continue
 			}
 			return reply()
