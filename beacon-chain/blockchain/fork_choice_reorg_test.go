@@ -4,7 +4,6 @@ import (
 	"context"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -18,15 +17,6 @@ type assignment struct {
 	shard uint64
 	validatorIndex uint64
 	committee []uint64
-}
-
-func generateBlocksWithAttestations(t *testing.T, ctx context.Context, beaconDB *db.BeaconDB) []*pb.BeaconBlock {
-	beaconState, err := beaconDB.HeadState(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("State: %v", beaconState)
-	return nil
 }
 
 // This function tests the following: when two nodes A and B are running at slot 10
@@ -62,8 +52,8 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 	}
 
 	// Then, we create the chain up to slot 10 in both.
-	beaconState := genesisState
     blocks := []*pb.BeaconBlock{genesisBlock}
+	states := []*pb.BeaconState{genesisState}
     assignments := make(map[uint64]*assignment)
     for idx := range genesisState.ValidatorRegistry {
 		committee, shard, slot, _, err :=
@@ -120,7 +110,7 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 		if epochStartSlot == prevSlot {
 			epochBoundaryRoot = prevBlockRoot[:]
 		} else {
-			epochBoundaryRoot, err = b.BlockRoot(beaconState, epochStartSlot)
+			epochBoundaryRoot, err = b.BlockRoot(states[i-1], epochStartSlot)
 			if err != nil {
 			   t.Fatal(err)
 			}
@@ -131,10 +121,10 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 		// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
 		// If the last justified boundary slot is the same as state current slot (ex: slot 0),
 		// we set justified block root to an empty root.
-		justifiedBlockRoot := beaconState.JustifiedRoot
+		justifiedBlockRoot := states[i-1].JustifiedRoot
 
 		// If an attester has to attest for genesis block.
-		if beaconState.Slot == params.BeaconConfig().GenesisSlot {
+		if states[i-1].Slot == params.BeaconConfig().GenesisSlot {
 			epochBoundaryRoot = params.BeaconConfig().ZeroHash[:]
 			justifiedBlockRoot = params.BeaconConfig().ZeroHash[:]
 		}
@@ -142,16 +132,22 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 		attestation.Data.Shard = shard
 		attestation.Data.EpochBoundaryRootHash32 = epochBoundaryRoot
 		attestation.Data.JustifiedBlockRootHash32 = justifiedBlockRoot
-		attestation.Data.JustifiedEpoch = beaconState.JustifiedEpoch
-		attestation.Data.LatestCrosslink = beaconState.LatestCrosslinks[shard]
+		attestation.Data.JustifiedEpoch = states[i-1].JustifiedEpoch
+		attestation.Data.LatestCrosslink = states[i-1].LatestCrosslinks[shard]
 
 		block.Body.Attestations = []*pb.Attestation{attestation}
-		blocks[i] = block
-		beaconState, err = chainService1.ApplyBlockStateTransition(ctx, block, beaconState)
+		beaconState, err := chainService1.ApplyBlockStateTransition(ctx, block, states[i-1])
 		if err != nil {
 			t.Fatal(err)
 		}
+		if err := beaconDB1.UpdateChainHead(ctx, block, beaconState); err != nil {
+			t.Fatal(err)
+		}
+		blocks[i] = block
+		states[i] = beaconState
 	}
+
+	t.Log(blocks)
 
 	// We update attestation targets for node A such that validators point to the block
 	// at slot 7 as canonical - then, a reorg to that slot will occur.
