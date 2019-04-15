@@ -14,6 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var _ = LatestAttestationManager(&Service{})
+
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }

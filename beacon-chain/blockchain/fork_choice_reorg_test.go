@@ -2,16 +2,74 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 	"time"
 )
+
+type mockAttestationManager struct {
+	targets map[uint64]*pb.BeaconBlock
+	beaconDB *db.BeaconDB
+}
+
+func (m *mockAttestationManager) LatestAttestationTarget(ctx context.Context, validatorIndex uint64) (*pb.BeaconBlock, error) {
+	return m.targets[validatorIndex], nil
+}
+func (m *mockAttestationManager) UpdateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
+	state, err := m.beaconDB.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	var committee []uint64
+	// We find the crosslink committee for the shard and slot by the attestation.
+	committees, err := helpers.CrosslinkCommitteesAtSlot(state, attestation.Data.Slot, false /* registryChange */)
+	if err != nil {
+		return err
+	}
+
+	// Find committee for shard.
+	for _, v := range committees {
+		if v.Shard == attestation.Data.Shard {
+			committee = v.Committee
+			break
+		}
+	}
+	// The participation bitfield from attestation is represented in bytes,
+	// here we multiply by 8 to get an accurate validator count in bits.
+	bitfield := attestation.AggregationBitfield
+	totalBits := len(bitfield) * 8
+
+	// Check each bit of participation bitfield to find out which
+	// attester has submitted new attestation.
+	// This is has O(n) run time and could be optimized down the line.
+	for i := 0; i < totalBits; i++ {
+		bitSet, err := bitutil.CheckBit(bitfield, i)
+		if err != nil {
+			return err
+		}
+		if !bitSet {
+			continue
+		}
+
+		root := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+		targetBlock, err := m.beaconDB.Block(root)
+		if err != nil {
+			return fmt.Errorf("could not get target block: %v", err)
+		}
+		m.targets[committee[i]] = targetBlock
+		return nil
+	}
+	return nil
+}
 
 type assignment struct {
 	shard uint64
@@ -170,8 +228,16 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB1)
 	defer internal.TeardownDB(t, beaconDB2)
 
-	chainService1 := setupBeaconChain(t, beaconDB1, nil)
-	chainService2 := setupBeaconChain(t, beaconDB2, nil)
+	attService1 := &mockAttestationManager{
+		beaconDB: beaconDB1,
+		targets: make(map[uint64]*pb.BeaconBlock),
+	}
+	attService2 := &mockAttestationManager{
+		beaconDB: beaconDB2,
+		targets: make(map[uint64]*pb.BeaconBlock),
+	}
+	chainService1 := setupBeaconChain(t, beaconDB1, attService1)
+	chainService2 := setupBeaconChain(t, beaconDB2, attService2)
 	_, states1 := advanceChain(t, chainService1, 34)
 	_, states2 := advanceChain(t, chainService2, 34)
 
@@ -200,7 +266,7 @@ func TestEpochReorg_MatchingStates(t *testing.T) {
 	t.Logf("Justified epoch node B: %v", lastState2.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 
 	// We update attestation targets for node A such that validators point to the block
-	// at slot 7 as canonical - then, a reorg to that slot will occur.
+	// at slot 32 as canonical - then, a reorg to that slot will occur.
 
 	// We then proceed in both nodes normally through several blocks.
 

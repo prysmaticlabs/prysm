@@ -218,7 +218,7 @@ func setupGenesisBlock(t *testing.T, cs *ChainService, beaconState *pb.BeaconSta
 	return parentHash, genesis
 }
 
-func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB, attsService *attestation.Service) *ChainService {
+func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB, attsService attestation.LatestAttestationManager) *ChainService {
 	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Web3Service

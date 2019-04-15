@@ -20,6 +20,13 @@ import (
 
 var log = logrus.WithField("prefix", "attestation")
 
+// LatestAttestationManager defines an interface which can update and fetch
+// the latest attestations by validator index and their corresponding block targets.
+type LatestAttestationManager interface {
+	LatestAttestationTarget(ctx context.Context, validatorIndex uint64) (*pb.BeaconBlock, error)
+	UpdateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error
+}
+
 type attestationStore struct {
 	sync.RWMutex
 	m map[[48]byte]*pb.Attestation
