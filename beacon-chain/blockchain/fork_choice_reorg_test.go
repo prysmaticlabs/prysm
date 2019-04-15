@@ -100,7 +100,6 @@ func createBlock(
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("Parent slot: %d, parent root %#x\n", slot-1, prevBlockRoot)
 	block := &pb.BeaconBlock{
 		Slot:             params.BeaconConfig().GenesisSlot + slot,
 		RandaoReveal:     []byte{},
