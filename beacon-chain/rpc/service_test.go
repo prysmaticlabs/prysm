@@ -99,6 +99,10 @@ func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error
 	return nil
 }
 
+func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
+	return true
+}
+
 func newMockChainService() *mockChainService {
 	return &mockChainService{
 		blockFeed:            new(event.Feed),
