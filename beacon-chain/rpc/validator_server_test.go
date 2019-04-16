@@ -3,7 +3,6 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -227,7 +226,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		binary.PutUvarint(pubKeyBuf, uint64(i))
+		copy(pubKeyBuf[:], []byte(strconv.Itoa(i)))
 		wg.Add(1)
 		go func(index int) {
 			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
@@ -247,9 +246,9 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	}
 
 	pubKeyBuf0 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.PutUvarint(pubKeyBuf0, 0)
+	copy(pubKeyBuf0[:], []byte(strconv.Itoa(0)))
 	pubKeyBuf1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.PutUvarint(pubKeyBuf1, 0)
+	copy(pubKeyBuf1[:], []byte(strconv.Itoa(1)))
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf0, pubKeyBuf1},
@@ -581,11 +580,11 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			ActivationEpoch: params.BeaconConfig().GenesisSlot,
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKeys[0]},
 			{
-				ActivationEpoch: params.BeaconConfig().GenesisSlot,
+				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				Pubkey:          pubKeys[1]},
 		},
