@@ -142,6 +142,12 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return fmt.Errorf("could not hash head block: %v", err)
+	}
+	c.canonicalBlocks[head.Slot] = headRoot[:]
+
 	newState := postState
 	if head.Slot != block.Slot {
 		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
@@ -158,6 +164,9 @@ func (c *ChainService) ApplyForkChoiceRule(
 				postState.Slot-params.BeaconConfig().GenesisSlot, newState.Slot-params.BeaconConfig().GenesisSlot)
 		}
 
+		for revertedSlot := block.Slot; revertedSlot > head.Slot; revertedSlot-- {
+			delete(c.canonicalBlocks, revertedSlot)
+		}
 		reorgCount.Inc()
 	}
 

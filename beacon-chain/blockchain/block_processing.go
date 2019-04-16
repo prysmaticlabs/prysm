@@ -23,6 +23,7 @@ import (
 type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	IsCanonical(slot uint64, hash []byte) bool
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions

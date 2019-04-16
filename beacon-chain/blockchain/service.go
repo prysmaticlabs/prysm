@@ -4,6 +4,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -44,6 +45,7 @@ type ChainService struct {
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
+	canonicalBlocks      map[uint64][]byte
 }
 
 // Config options for the service.
@@ -205,4 +207,13 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
 	}
 	return root, nil
+}
+
+// IsCanonical returns true if the input block hash of the corresponding slot
+// is part of the canonical chain. False otherwise.
+func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
+	if canonicalHash, ok := c.canonicalBlocks[slot]; ok {
+		return bytes.Equal(canonicalHash, hash)
+	}
+	return false
 }
