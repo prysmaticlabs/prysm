@@ -84,6 +84,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	})
 }
 
+// DeleteBlock deletes a block using the slot and its root as keys in their respective buckets.
 func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
 	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
