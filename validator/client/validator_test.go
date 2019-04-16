@@ -303,8 +303,10 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 
 	v := validator{
 		keys:            keyMapThreeValidators,
+		activatedKeys:   make([][]byte, 0),
 		validatorClient: client,
 	}
+	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
