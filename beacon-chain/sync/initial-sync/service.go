@@ -227,6 +227,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
 
 	//  blacklist peer
+	p2p.AddNewBlacklistedPeer(peer.ID)
 
 
 

@@ -1,13 +1,12 @@
 package p2p
 
 
-
 type BlacklistedPeer struct {
 	Peer string
 }
 
 type BlacklistedPeers struct {
-	Peers []*BlacklistedPeer
+	Peers []BlacklistedPeer
 }
 
 
@@ -18,11 +17,15 @@ func AddNewBlacklistedPeer(peerID string)  {
 }
 
 
-func IsPeerBlackListed(peerId string) bool  {
+func IsPeerBlacklisted(peerID string) bool {
 	bps := new(BlacklistedPeers)
 	for i := 0 ; i < len(bps.Peers), i++ {
-		if bps.Peers[i].Peer
+		if bps.Peers[i].Peer == peerID {
+			return true
+		}
 	}
+	return false
+}
 	
     
 }
