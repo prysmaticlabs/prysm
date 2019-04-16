@@ -90,7 +90,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	}
 }
 
-func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
+func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -132,7 +132,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
-			Attestations: nil,
+			Attestations: make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1),
 		},
 	}
 
@@ -152,6 +152,68 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	}
 
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
+}
+
+func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, _ := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("Could not tree hash state: %v", err)
+	}
+	if err := db.SaveFinalizedState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.Slot++
+
+	block := &pb.BeaconBlock{
+		Slot:             beaconState.Slot,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		RandaoReveal:     []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
+		Body: &pb.BeaconBlockBody{
+			Attestations: nil,
+		},
+	}
+
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
+        t.Error("Expected block to fail processing, received nil")
+	}
+
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	savedBlock, err := db.Block(blockRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if savedBlock != nil {
+		t.Errorf("Expected bad block to have been deleted, received: %v", err)
+	}
 }
 
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {

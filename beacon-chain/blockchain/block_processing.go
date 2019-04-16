@@ -39,7 +39,7 @@ type BlockFailedProcessingErr struct {
 }
 
 func (b *BlockFailedProcessingErr) Error() string {
-	return fmt.Sprintf("block failed processing: %v", b.err).
+	return fmt.Sprintf("block failed processing: %v", b.err)
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
@@ -80,7 +80,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		switch err.(type) {
 		case *BlockFailedProcessingErr:
             // If the block fails processing, we delete it from our DB.
-            if err := c.beaconDB.DeleteBlock(ctx, block); err != nil {
+            if err := c.beaconDB.DeleteBlock(block); err != nil {
             	return nil, fmt.Errorf("could not delete bad block from db: %v", err)
 			}
 		default:
