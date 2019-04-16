@@ -4,6 +4,7 @@ package client
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -243,7 +244,7 @@ func (v *validator) listenForValidators(ctx context.Context) error {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
-			break
+			return errors.New("stream has been closed, so we are shutting down the loop")
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
