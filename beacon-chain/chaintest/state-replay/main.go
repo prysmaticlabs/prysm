@@ -6,17 +6,24 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"os"
 	"time"
 )
 
 var log = logrus.WithField("prefix", "state-replay")
+
+type mockP2P struct{}
+
+func (m *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {}
 
 func main() {
 	var dbPath = flag.String("db-dir", "", "path to bolt.db dir")
@@ -25,10 +32,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	beaconDB, err := db.NewDB("/tmp/state-replay-dir-0")
+	beaconDB, err := db.NewDB("/tmp/state-replay-dir")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer os.RemoveAll("/tmp/state-replay-dir")
 	ctx := context.Background()
 	params.UseDemoBeaconConfig()
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{})
@@ -56,8 +64,13 @@ func main() {
 	attService := attestation.NewAttestationService(ctx, &attestation.Config{
 		BeaconDB: beaconDB,
 	})
+	opsService := operations.NewOpsPoolService(ctx, &operations.Config{
+		BeaconDB: beaconDB,
+	})
 	chainService, err := blockchain.NewChainService(ctx, &blockchain.Config{
 		BeaconDB:    beaconDB,
+		P2p: &mockP2P{},
+		OpsPoolService: opsService,
 		AttsService: attService,
 		Web3Service: web3Service,
 	})
@@ -71,6 +84,8 @@ func main() {
 
 	chainService.Start()
 	defer chainService.Stop()
+	opsService.Start()
+	defer opsService.Stop()
 	attService.Start()
 	defer attService.Stop()
 	web3Service.Start()
@@ -108,13 +123,15 @@ func main() {
 		if err != nil {
 			log.Fatalf("Could not apply state transition: %v", err)
 		}
+		if err := chainService.CleanupBlockOperations(ctx, newBlock); err != nil {
+            log.Fatal(err)
+		}
 		if err := beaconDB.SaveBlock(newBlock); err != nil {
 			log.Fatal(err)
 		}
 		if err := beaconDB.UpdateChainHead(ctx, newBlock, newState); err != nil {
 			log.Fatalf("Could not update chain head: %v", err)
 		}
-
 		currentState = newState
 	}
 	log.Info(currentState.Slot)
