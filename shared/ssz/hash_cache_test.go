@@ -45,7 +45,6 @@ func generateJunkObject(size uint64) []*junkObject {
 
 func TestObjCache_byHash(t *testing.T) {
 	cache := newHashCache()
-
 	byteSl := [][]byte{{0, 0}, {1, 1}}
 	mr, err := merkleHash(byteSl)
 	if err != nil {
@@ -56,20 +55,16 @@ func TestObjCache_byHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	exists, _, err := cache.RootByEncodedHash(bytesutil.ToBytes32(hs))
-
 	if err != nil {
 		t.Fatal(err)
 	}
 	if exists {
 		t.Error("Expected block info not to exist in empty cache")
 	}
-
 	if _, err := cache.MerkleHashCached(byteSl); err != nil {
 		t.Fatal(err)
 	}
-
 	exists, fetchedInfo, err := cache.RootByEncodedHash(bytesutil.ToBytes32(hs))
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,21 +90,15 @@ func TestObjCache_byHash(t *testing.T) {
 func TestMerkleHashWithCache(t *testing.T) {
 	cache := newHashCache()
 	for i := 0; i < 200; i++ {
-
 		runMerkleHashTests(t, func(val [][]byte) ([]byte, error) {
 			return merkleHash(val)
 		})
-
 	}
-
 	for i := 0; i < 200; i++ {
-
 		runMerkleHashTests(t, func(val [][]byte) ([]byte, error) {
 			return cache.MerkleHashCached(val)
 		})
-
 	}
-
 }
 
 func BenchmarkHashWithoutCache(b *testing.B) {

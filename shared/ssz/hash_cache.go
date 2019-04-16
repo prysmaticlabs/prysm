@@ -217,18 +217,17 @@ func makeStructHasherCache(typ reflect.Type) (hasher, error) {
 		var result [32]byte
 		if exists {
 			result = bytesutil.ToBytes32(fetchedInfo.MerkleRoot)
-		} else {
-			concatElemHash := make([]byte, 0)
-			for _, f := range fields {
-				elemHash, err := f.sszUtils.hasher(val.Field(f.index))
-				if err != nil {
-					return nil, fmt.Errorf("failed to hash field of struct: %v", err)
-				}
-				concatElemHash = append(concatElemHash, elemHash...)
-			}
-			result = hashutil.Hash(concatElemHash)
-
+			return result[:], nil
 		}
+		concatElemHash := make([]byte, 0)
+		for _, f := range fields {
+			elemHash, err := f.sszUtils.hasher(val.Field(f.index))
+			if err != nil {
+				return nil, fmt.Errorf("failed to hash field of struct: %v", err)
+			}
+			concatElemHash = append(concatElemHash, elemHash...)
+		}
+		result = hashutil.Hash(concatElemHash)
 		return result[:], nil
 	}
 	return hasher, nil
