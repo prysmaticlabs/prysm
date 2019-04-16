@@ -154,8 +154,10 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 
 	v := validator{
 		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
 		validatorClient: client,
 	}
+	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 
 	client.EXPECT().WaitForActivation(
@@ -186,8 +188,10 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 
 	v := validator{
 		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
 		validatorClient: client,
 	}
+	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
@@ -209,8 +213,10 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 
 	v := validator{
 		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
 		validatorClient: client,
 	}
+	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
@@ -237,8 +243,10 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 
 	v := validator{
 		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
 		validatorClient: client,
 	}
+	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
