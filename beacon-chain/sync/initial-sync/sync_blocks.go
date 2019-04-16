@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
