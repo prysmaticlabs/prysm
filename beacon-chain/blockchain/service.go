@@ -76,6 +76,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
+		canonicalBlocks:      make(map[uint64][]byte),
 	}, nil
 }
 
