@@ -166,7 +166,6 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 // have been noted in the attestation pool. If not, it updates the
 // attestation pool with attester's public key to attestation.
 func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
-	var err error
 	totalAttestationSeen.Inc()
 
 	// Potential improvement, instead of getting the state,
