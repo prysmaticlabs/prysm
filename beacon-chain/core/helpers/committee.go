@@ -658,7 +658,7 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 	return crosslinkCommittees, nil
 }
 
-// ToCommitteeCache coverts crosslink committee object
+// ToCommitteeCache converts crosslink committee object
 // into a cache format, to be saved in cache.
 func ToCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *cache.CommitteesInSlot {
 	var cacheCommittee []*cache.CommitteeInfo
