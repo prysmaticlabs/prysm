@@ -145,7 +145,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		binary.PutUvarint(pubKeyBuf, uint64(i))
+		copy(pubKeyBuf[:], []byte(strconv.Itoa(i)))
 		wg.Add(1)
 		go func(index int) {
 			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
@@ -165,7 +165,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.PutUvarint(pubKeyBuf, 0)
+	copy(pubKeyBuf[:], []byte(strconv.FormatUint(0, 10)))
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf},
@@ -187,7 +187,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	// Test the last validator in registry.
 	lastValidatorIndex := params.BeaconConfig().DepositsForChainStart - 1
 	pubKeyBuf = make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
+	copy(pubKeyBuf[:], []byte(strconv.FormatUint(lastValidatorIndex, 10)))
 	req = &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf},
 		EpochStart: params.BeaconConfig().GenesisSlot,
