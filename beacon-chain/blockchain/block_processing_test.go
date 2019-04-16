@@ -90,7 +90,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	}
 }
 
-func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
+func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -132,7 +132,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
-			Attestations: make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1),
+			Attestations: nil,
 		},
 	}
 
@@ -154,7 +154,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
-func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
+func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -194,12 +194,14 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
-			Attestations: nil,
+			Attestations: []*pb.Attestation{
+				{
+					Data: &pb.AttestationData{
+						JustifiedEpoch: params.BeaconConfig().GenesisSlot * 100,
+					},
+				},
+			},
 		},
-	}
-
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
-        t.Error("Expected block to fail processing, received nil")
 	}
 
 	blockRoot, err := hashutil.HashBeaconBlock(block)
@@ -207,12 +209,16 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
+		t.Error("Expected block to fail processing, received nil")
+	}
+
 	savedBlock, err := db.Block(blockRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if savedBlock != nil {
-		t.Errorf("Expected bad block to have been deleted, received: %v", err)
+		t.Errorf("Expected bad block to have been deleted, received: %v", savedBlock)
 	}
 }
 

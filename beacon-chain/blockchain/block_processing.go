@@ -79,9 +79,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err != nil {
 		switch err.(type) {
 		case *BlockFailedProcessingErr:
-            // If the block fails processing, we delete it from our DB.
-            if err := c.beaconDB.DeleteBlock(block); err != nil {
-            	return nil, fmt.Errorf("could not delete bad block from db: %v", err)
+			// If the block fails processing, we delete it from our DB.
+			if err := c.beaconDB.DeleteBlock(block); err != nil {
+				return nil, fmt.Errorf("could not delete bad block from db: %v", err)
 			}
 		default:
 			return beaconState, fmt.Errorf("could not apply block state transition: %v", err)
