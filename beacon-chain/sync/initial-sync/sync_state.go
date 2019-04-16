@@ -100,6 +100,9 @@ func (s *InitialSync) requestStateFromPeer(ctx context.Context, lastFinalizedRoo
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
 	defer span.End()
 	stateReq.Inc()
+	if p2p.IsPeerBlacklisted(p2p.AnyPeer)  {
+		return errors.New("Peer %s is blacklisted", p2p.AnyPeer)
+	}
 	return s.p2p.Send(ctx, &pb.BeaconStateRequest{
 		FinalizedStateRootHash32S: lastFinalizedRoot[:],
 	}, s.bestPeer)
