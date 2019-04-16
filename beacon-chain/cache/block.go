@@ -62,7 +62,7 @@ func NewBlockAncestorCache() *AncestorBlockCache {
 
 // AncestorBySlot fetches block's ancestor by height. Returns true with a
 // reference to the ancestor block, if exists. Otherwise returns false, nil.
-func (a *AncestorBlockCache) AncestorBySlot(blockHash []byte, height uint64) (*CommitteesInSlot, error) {
+func (a *AncestorBlockCache) AncestorBySlot(blockHash []byte, height uint64) (*AncestorInfo, error) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 
@@ -78,12 +78,12 @@ func (a *AncestorBlockCache) AncestorBySlot(blockHash []byte, height uint64) (*C
 		return nil, nil
 	}
 
-	cInfo, ok := obj.(*CommitteesInSlot)
+	aInfo, ok := obj.(*AncestorInfo)
 	if !ok {
 		return nil, ErrNotACommitteeInfo
 	}
 
-	return cInfo, nil
+	return aInfo, nil
 }
 
 // AddBlockAncestor adds block ancestor object to the cache. This method also trims the least
