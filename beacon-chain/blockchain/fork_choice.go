@@ -146,6 +146,8 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not hash head block: %v", err)
 	}
+	c.canonicalBlocksLock.Lock()
+	defer c.canonicalBlocksLock.Unlock()
 	c.canonicalBlocks[head.Slot] = headRoot[:]
 
 	newState := postState

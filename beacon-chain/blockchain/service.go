@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
@@ -46,6 +47,7 @@ type ChainService struct {
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
 	canonicalBlocks      map[uint64][]byte
+	canonicalBlocksLock sync.RWMutex
 }
 
 // Config options for the service.
@@ -212,6 +214,8 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 // IsCanonical returns true if the input block hash of the corresponding slot
 // is part of the canonical chain. False otherwise.
 func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
+	c.canonicalBlocksLock.RLock()
+	defer c.canonicalBlocksLock.RUnlock()
 	if canonicalHash, ok := c.canonicalBlocks[slot]; ok {
 		return bytes.Equal(canonicalHash, hash)
 	}
