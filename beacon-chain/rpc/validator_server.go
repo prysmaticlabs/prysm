@@ -134,7 +134,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
 	activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
 	for _, pk := range activeKeys {
-		a, err := vs.assignment(ctx, pk, beaconState, req.EpochStart)
+		a, err := vs.assignment(pk, beaconState, req.EpochStart)
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +146,6 @@ func (vs *ValidatorServer) CommitteeAssignment(
 }
 
 func (vs *ValidatorServer) assignment(
-	ctx context.Context,
 	pubkey []byte,
 	beaconState *pbp2p.BeaconState,
 	epochStart uint64,
