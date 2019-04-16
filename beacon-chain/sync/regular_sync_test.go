@@ -88,6 +88,10 @@ func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *p
 	return nil
 }
 
+func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
+	return true
+}
+
 type mockOperationService struct{}
 
 func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {

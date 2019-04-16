@@ -151,7 +151,8 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 				}},
 			},
 		},
-		beaconDB: db,
+		chainService: &mockChainService{},
+		beaconDB:     db,
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -212,6 +213,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	expectedNumberOfAttestations := 3
 	proposerServer := &ProposerServer{
 		operationService: opService,
+		chainService:     &mockChainService{},
 		beaconDB:         db,
 	}
 	beaconState := &pbp2p.BeaconState{
@@ -260,6 +262,7 @@ func TestPendingAttestations_OK(t *testing.T) {
 
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{},
+		chainService:     &mockChainService{},
 		beaconDB:         db,
 	}
 	beaconState := &pbp2p.BeaconState{

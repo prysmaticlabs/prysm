@@ -47,7 +47,7 @@ type ChainService struct {
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
 	canonicalBlocks      map[uint64][]byte
-	canonicalBlocksLock sync.RWMutex
+	canonicalBlocksLock  sync.RWMutex
 }
 
 // Config options for the service.
