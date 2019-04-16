@@ -12,6 +12,8 @@ import (
 )
 
 var (
+	// ErrNotAncestorCacheObj will be returned when a cache object is not a pointer to
+	// block ancestor cache obj.
 	ErrNotAncestorCacheObj = errors.New("object is not an ancestor object for cache")
 	// Metrics
 	ancestorBlockCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
