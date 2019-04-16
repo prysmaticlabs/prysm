@@ -222,3 +222,11 @@ func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
 	}
 	return false
 }
+
+// InsertsCanonical inserts a canonical block hash to its corresponding slot.
+// This is used for testing purpose.
+func (c *ChainService) InsertsCanonical(slot uint64, hash []byte) {
+	c.canonicalBlocksLock.Lock()
+	defer c.canonicalBlocksLock.Unlock()
+	c.canonicalBlocks[slot] = hash
+}
