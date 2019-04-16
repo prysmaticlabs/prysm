@@ -109,11 +109,9 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 			"public key": fmt.Sprintf("%#x", pk),
 		}).Info("Validator activated")
 	}
-
 	if len(v.activatedKeys) != len(v.pubkeys) {
 		go v.listenForValidators(ctx)
 	}
-
 	return nil
 }
 

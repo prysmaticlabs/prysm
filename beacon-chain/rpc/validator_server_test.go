@@ -67,8 +67,8 @@ func TestValidatorIndex_OK(t *testing.T) {
 
 func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
+	ctx := context.Background()
 	defer internal.TeardownDB(t, db)
-
 	beaconState, err := genesisState(8)
 	if err != nil {
 		t.Fatal(err)
@@ -76,7 +76,13 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	if err := db.SaveState(context.Background(), beaconState); err != nil {
 		t.Fatal(err)
 	}
-
+	block := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(block); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err := db.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatalf("Could not update head: %v", err)
+	}
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
@@ -94,10 +100,15 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
-
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{ValidatorRegistry: []*pbp2p.Validator{}}); err != nil {
-		t.Fatalf("could not save state: %v", err)
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
 	}
+	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
+	if err != nil {
+		t.Fatalf("Could not setup genesis state: %v", err)
+	}
+	db.UpdateChainHead(ctx, genesis, state)
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
@@ -108,7 +119,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
-	if _, err := vs.CommitteeAssignment(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
+	if _, err := vs.CommitteeAssignment(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
