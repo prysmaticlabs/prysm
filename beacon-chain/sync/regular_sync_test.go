@@ -93,8 +93,8 @@ func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return true
 }
 
-func (m mockChainService) InsertsCanonical(slot uint64, hash []byte) {
-	m.canonicalBlocks[slot] = hash
+func (ms mockChainService) InsertsCanonical(slot uint64, hash []byte) {
+	ms.canonicalBlocks[slot] = hash
 }
 
 type mockOperationService struct{}
