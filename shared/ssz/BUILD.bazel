@@ -38,6 +38,5 @@ go_test(
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
-        "@com_github_ethereum_go_ethereum//common:go_default_library",
     ],
 )
