@@ -51,7 +51,7 @@ spec:
       serviceAccountName: cluster-pk-manager
       containers:
       - name: server
-        image: gcr.io/prysmaticlabs/prysm/cluster-pk-manager/server@sha256:650284c11fd74a13f77a8522bd57c5f95de880df33291cef563a54df6d926f91
+        image: gcr.io/prysmaticlabs/prysm/cluster-pk-manager/server:latest
         args: 
         - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
         - --private-key=$(PRIVATE_KEY)
