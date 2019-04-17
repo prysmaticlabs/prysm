@@ -447,7 +447,7 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 
 // InitializeValidatorStore sets the current active validators from the current
 // state.
-func InitializeValidatoreStore(bState *pb.BeaconState) {
+func InitializeValidatorStore(bState *pb.BeaconState) {
 	vStore.Lock()
 	defer vStore.Unlock()
 

@@ -671,7 +671,7 @@ func TestInitializeValidatoreStore(t *testing.T) {
 		t.Fatalf("Validator store already has indices saved in this epoch")
 	}
 
-	InitializeValidatoreStore(bState)
+	InitializeValidatorStore(bState)
 	retrievedIndices := vStore.activatedValidators[helpers.CurrentEpoch(bState)]
 
 	if !reflect.DeepEqual(retrievedIndices, indices) {

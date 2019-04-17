@@ -66,7 +66,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	validators.InitializeValidatoreStore(finalizedState)
+	validators.InitializeValidatoreStor(finalizedState)
 
 	// sets the current slot to the last finalized slot of the
 	// beacon state to begin our sync from.
