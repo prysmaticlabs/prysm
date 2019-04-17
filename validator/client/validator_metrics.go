@@ -23,6 +23,26 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		v.prevBalance = params.BeaconConfig().MaxDepositAmount
 	}
 	var totalPrevBalance uint64
+	if len(v.activatedKeys) > 0 {
+		req := &pb.ValidatorPerformanceRequest{
+			Slot:      slot,
+			PublicKey: v.activatedKeys[0],
+		}
+		resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
+		if err != nil {
+			return err
+		}
+		log.WithFields(logrus.Fields{
+			"slot":  slot - params.BeaconConfig().GenesisSlot,
+			"epoch": (slot / params.BeaconConfig().SlotsPerEpoch) - params.BeaconConfig().GenesisEpoch,
+		}).Info("Start of a new epoch!")
+		log.WithFields(logrus.Fields{
+			"totalValidators":     resp.TotalValidators,
+			"numActiveValidators": resp.TotalActiveValidators,
+		}).Infof("Validator registry information")
+		log.Info("Generating validator performance report from the previous epoch...")
+	}
+
 	for _, pkey := range v.activatedKeys {
 		req := &pb.ValidatorPerformanceRequest{
 			Slot:      slot,
@@ -33,15 +53,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			return err
 		}
 		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
-		log.WithFields(logrus.Fields{
-			"slot":  slot - params.BeaconConfig().GenesisSlot,
-			"epoch": (slot / params.BeaconConfig().SlotsPerEpoch) - params.BeaconConfig().GenesisEpoch,
-		}).Info("Start of a new epoch!")
-		log.WithFields(logrus.Fields{
-			"totalValidators":     resp.TotalValidators,
-			"numActiveValidators": resp.TotalActiveValidators,
-		}).Infof("Validator registry information")
-		log.Info("Generating validator performance report from the previous epoch...")
 		log.WithFields(logrus.Fields{
 			"ethBalance": newBalance,
 		}).Info("New validator balance")
