@@ -112,7 +112,8 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 
 	// Remove any attestation from the list if their slot is before the start of
 	// the previous epoch or does not match the current state previous justified
-	// epoch. This should be handled in the operationService cleanup but we
+	// epoch or attestation is not voting on the canonical chain.
+	// This should be handled in the operationService cleanup but we
 	// should filter here in case it wasn't yet processed.
 	boundary := currentSlot - params.BeaconConfig().SlotsPerEpoch
 	attsWithinBoundary := make([]*pbp2p.Attestation, 0, len(atts))
@@ -125,7 +126,9 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			expectedJustifedEpoch = beaconState.PreviousJustifiedEpoch
 		}
 
-		if att.Data.Slot > boundary && att.Data.JustifiedEpoch == expectedJustifedEpoch {
+		if att.Data.Slot > boundary &&
+			att.Data.JustifiedEpoch == expectedJustifedEpoch &&
+			ps.chainService.IsCanonical(att.Data.Slot, att.Data.BeaconBlockRootHash32) {
 			attsWithinBoundary = append(attsWithinBoundary, att)
 		}
 	}

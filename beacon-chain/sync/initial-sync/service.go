@@ -206,7 +206,15 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}
 	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
-		return err
+		switch err.(type) {
+		case *blockchain.BlockFailedProcessingErr:
+			// If the block fails processing, we delete it from our DB.
+			if err := s.db.DeleteBlock(block); err != nil {
+				return fmt.Errorf("could not delete bad block from db: %v", err)
+			}
+		default:
+			return fmt.Errorf("could not apply block state transition: %v", err)
+		}
 	}
 	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
 		return err

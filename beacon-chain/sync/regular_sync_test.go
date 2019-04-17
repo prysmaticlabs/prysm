@@ -45,10 +45,11 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 }
 
 type mockChainService struct {
-	bFeed *event.Feed
-	sFeed *event.Feed
-	cFeed *event.Feed
-	db    *db.BeaconDB
+	bFeed           *event.Feed
+	sFeed           *event.Feed
+	cFeed           *event.Feed
+	db              *db.BeaconDB
+	canonicalBlocks map[uint64][]byte
 }
 
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
@@ -86,6 +87,14 @@ func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.B
 
 func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
 	return nil
+}
+
+func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
+	return true
+}
+
+func (ms mockChainService) InsertsCanonical(slot uint64, hash []byte) {
+	ms.canonicalBlocks[slot] = hash
 }
 
 type mockOperationService struct{}

@@ -154,6 +154,74 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
+func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, _ := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("Could not tree hash state: %v", err)
+	}
+	if err := db.SaveFinalizedState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.Slot++
+
+	block := &pb.BeaconBlock{
+		Slot:             beaconState.Slot,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		RandaoReveal:     []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{
+				{
+					Data: &pb.AttestationData{
+						JustifiedEpoch: params.BeaconConfig().GenesisSlot * 100,
+					},
+				},
+			},
+		},
+	}
+
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
+		t.Error("Expected block to fail processing, received nil")
+	}
+
+	savedBlock, err := db.Block(blockRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if savedBlock != nil {
+		t.Errorf("Expected bad block to have been deleted, received: %v", savedBlock)
+	}
+}
+
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
@@ -280,7 +348,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	pendingDeposits := []*pb.Deposit{
-		createPreChainStartDeposit(t, []byte{'F'}),
+		createPreChainStartDeposit(t, []byte{'F'}, beaconState.DepositIndex),
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
@@ -296,7 +364,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}
-		pendingDeposits[i].MerkleBranchHash32S = proof
+		pendingDeposits[i].MerkleProofHash32S = proof
 	}
 	depositRoot := depositTrie.Root()
 	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
@@ -319,6 +387,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	beaconState.Slot--
+	beaconState.DepositIndex = 0
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}

@@ -328,10 +328,19 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 // Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
 // this method will act as a broadcast.
 func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
-	if peerID == AnyPeer {
+	isPeer := false
+	for _, p := range s.host.Network().Peers() {
+		if p == peerID {
+			isPeer = true
+			break
+		}
+	}
+
+	if peerID == AnyPeer || s.host.Network().Connectedness(peerID) == libp2pnet.CannotConnect || !isPeer {
 		s.Broadcast(ctx, msg)
 		return nil
 	}
+
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
 	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
