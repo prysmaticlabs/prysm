@@ -7,18 +7,21 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "attestation")
+var committeeCache = cache.NewCommitteesCache()
 
 type attestationStore struct {
 	sync.RWMutex
@@ -164,6 +167,7 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 // attestation pool with attester's public key to attestation.
 func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
+
 	// Potential improvement, instead of getting the state,
 	// we could get a mapping of validator index to public key.
 	state, err := a.beaconDB.HeadState(ctx)
@@ -172,14 +176,34 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	}
 
 	var committee []uint64
-	// We find the crosslink committee for the shard and slot by the attestation.
-	committees, err := helpers.CrosslinkCommitteesAtSlot(state, attestation.Data.Slot, false /* registryChange */)
-	if err != nil {
-		return err
+	var cachedCommittees *cache.CommitteesInSlot
+	slot := attestation.Data.Slot
+
+	if featureconfig.FeatureConfig().EnableCommitteesCache {
+		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
+		if err != nil {
+			return err
+		}
+		if cachedCommittees == nil {
+			crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
+			if err != nil {
+				return err
+			}
+			cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
+			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
+				return err
+			}
+		}
+	} else {
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
+		if err != nil {
+			return err
+		}
+		cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
 	}
 
 	// Find committee for shard.
-	for _, v := range committees {
+	for _, v := range cachedCommittees.Committees {
 		if v.Shard == attestation.Data.Shard {
 			committee = v.Committee
 			break
@@ -189,9 +213,9 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	log.WithFields(logrus.Fields{
 		"attestation slot":     attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
 		"attestation shard":    attestation.Data.Shard,
-		"committees shard":     committees[0].Shard,
-		"committees list":      committees[0].Committee,
-		"length of committees": len(committees),
+		"committees shard":     cachedCommittees.Committees[0].Shard,
+		"committees list":      cachedCommittees.Committees[0].Committee,
+		"length of committees": len(cachedCommittees.Committees),
 	}).Debug("Updating latest attestation")
 
 	// The participation bitfield from attestation is represented in bytes,

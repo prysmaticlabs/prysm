@@ -277,14 +277,12 @@ func AttestationParticipants(
 				return nil, err
 			}
 
-			cachedCommittees = toCommitteeCache(slot, crosslinkCommittees)
+			cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
 
 			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
 				return nil, err
 			}
 		}
-		// When the committee cache is disabled, we calculate crosslink committees
-		// every time when AttestationParticipants gets called.
 	} else {
 		// When the committee cache is disabled, we calculate crosslink committees
 		// every time when AttestationParticipants gets called.
@@ -292,7 +290,7 @@ func AttestationParticipants(
 		if err != nil {
 			return nil, err
 		}
-		cachedCommittees = toCommitteeCache(slot, crosslinkCommittees)
+		cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
 	}
 
 	var selectedCommittee []uint64
@@ -441,7 +439,7 @@ func CommitteeAssignment(
 				if err != nil {
 					return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
 				}
-				cachedCommittees = toCommitteeCache(slot, crosslinkCommittees)
+				cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
 				if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
 					return []uint64{}, 0, 0, false, err
 				}
@@ -452,7 +450,7 @@ func CommitteeAssignment(
 			if err != nil {
 				return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
 			}
-			cachedCommittees = toCommitteeCache(slot, crosslinkCommittees)
+			cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
 		}
 		for _, committee := range cachedCommittees.Committees {
 			for _, idx := range committee.Committee {
@@ -660,9 +658,9 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 	return crosslinkCommittees, nil
 }
 
-// toCommitteeCache coverts crosslink committee object
+// ToCommitteeCache converts crosslink committee object
 // into a cache format, to be saved in cache.
-func toCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *cache.CommitteesInSlot {
+func ToCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *cache.CommitteesInSlot {
 	var cacheCommittee []*cache.CommitteeInfo
 	for _, crosslinkCommittee := range crosslinkCommittees {
 		cacheCommittee = append(cacheCommittee, &cache.CommitteeInfo{

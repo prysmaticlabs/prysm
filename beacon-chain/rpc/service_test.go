@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -77,6 +78,7 @@ type mockChainService struct {
 	stateFeed            *event.Feed
 	attestationFeed      *event.Feed
 	stateInitializedFeed *event.Feed
+	canonicalBlocks      map[uint64][]byte
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
@@ -97,6 +99,14 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 
 func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
 	return nil
+}
+
+func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
+	return bytes.Equal(m.canonicalBlocks[slot], hash)
+}
+
+func (m mockChainService) InsertsCanonical(slot uint64, hash []byte) {
+	m.canonicalBlocks[slot] = hash
 }
 
 func newMockChainService() *mockChainService {

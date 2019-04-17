@@ -7,15 +7,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: false,
+	})
 }
 
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
@@ -224,5 +229,136 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	}
 	if !reflect.DeepEqual(block, latestAttestedBlock) {
 		t.Errorf("Wanted: %v, got: %v", block, latestAttestedBlock)
+	}
+}
+
+func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: true,
+	})
+
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
+		})
+	}
+
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+
+	attestation := &pb.Attestation{
+		AggregationBitfield: []byte{0x80},
+		Data: &pb.AttestationData{
+			Slot:  1,
+			Shard: 1,
+		},
+	}
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	pubkey := bytesutil.ToBytes48([]byte{byte(35)})
+	if service.store.m[pubkey].Data.Slot !=
+		attestation.Data.Slot {
+		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	}
+
+	attestation.Data.Slot = 36
+	attestation.Data.Shard = 36
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	if service.store.m[pubkey].Data.Slot !=
+		attestation.Data.Slot {
+		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	}
+
+	// Verify the committee for attestation's data slot was cached.
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedCommittee := []uint64{20}
+	if !reflect.DeepEqual(wantedCommittee, fetchedCommittees.Committees[0].Committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wantedCommittee,
+			fetchedCommittees.Committees[0].Committee,
+		)
+	}
+}
+
+func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: true,
+	})
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
+		})
+	}
+
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+
+	slot := uint64(2)
+	shard := uint64(3)
+	index := uint64(4)
+	attestation := &pb.Attestation{
+		AggregationBitfield: []byte{0x80},
+		Data: &pb.AttestationData{
+			Slot:  slot,
+			Shard: shard,
+		},
+	}
+
+	csInSlot := &cache.CommitteesInSlot{
+		Slot: slot,
+		Committees: []*cache.CommitteeInfo{
+			{Shard: shard, Committee: []uint64{index, 999}},
+		}}
+
+	if err := committeeCache.AddCommittees(csInSlot); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	pubkey := bytesutil.ToBytes48([]byte{byte(index)})
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+
+	if service.store.m[pubkey].Data.Slot !=
+		attestation.Data.Slot {
+		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
 }
