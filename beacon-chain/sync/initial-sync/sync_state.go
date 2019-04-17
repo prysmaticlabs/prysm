@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"github.com/libp2p/go-libp2p-peer"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -77,11 +78,11 @@ func (s *InitialSync) processState(msg p2p.Message) {
 }
 
 // requestStateFromPeer requests for the canonical state, finalized state, and justified state from a peer.
-func (s *InitialSync) requestStateFromPeer(ctx context.Context, lastFinalizedRoot [32]byte) error {
+func (s *InitialSync) requestStateFromPeer(ctx context.Context, lastFinalizedRoot [32]byte, peerID peer.ID) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
 	defer span.End()
 	stateReq.Inc()
 	return s.p2p.Send(ctx, &pb.BeaconStateRequest{
 		FinalizedStateRootHash32S: lastFinalizedRoot[:],
-	}, p2p.AnyPeer)
+	}, peerID)
 }

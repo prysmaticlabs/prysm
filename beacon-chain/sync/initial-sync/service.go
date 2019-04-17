@@ -13,6 +13,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"github.com/libp2p/go-libp2p-peer"
 	"math/big"
 	"sync"
 	"time"
@@ -64,6 +65,7 @@ func DefaultConfig() *Config {
 type p2pAPI interface {
 	p2p.Broadcaster
 	p2p.Sender
+    Peers() peer.IDSlice
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
 }
 
@@ -154,7 +156,6 @@ func (s *InitialSync) Start() {
 	}
 	s.currentSlot = cHead.Slot
 	go s.run()
-	go s.listenForNewBlocks()
 	go s.checkInMemoryBlocks()
 }
 
@@ -268,24 +269,6 @@ func (s *InitialSync) checkInMemoryBlocks() {
 	}
 }
 
-// listenForNewBlocks listens for block announcements beyond the canonical head slot that may
-// be received during initial sync - we must process these blocks to catch up with peers.
-func (s *InitialSync) listenForNewBlocks() {
-	blockAnnounceSub := s.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, s.blockAnnounceBuf)
-	defer func() {
-		blockAnnounceSub.Unsubscribe()
-		close(s.blockAnnounceBuf)
-	}()
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case msg := <-s.blockAnnounceBuf:
-			safelyHandleMessage(s.processBlockAnnounce, msg)
-		}
-	}
-}
-
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
@@ -302,8 +285,14 @@ func (s *InitialSync) run() {
 		close(s.stateBuf)
 	}()
 
-	if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot); err != nil {
-		log.Errorf("Could not request state from peer %v", err)
+	// We send out a state request to all peers.
+	peers := s.p2p.Peers()
+	stateResponses := 0
+	highestObservedFinalizedSlot := params.BeaconConfig().GenesisSlot
+	for _, p := range peers {
+		if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot, p); err != nil {
+			log.Errorf("Could not request state from peer %v", err)
+		}
 	}
 
 	for {
@@ -317,6 +306,14 @@ func (s *InitialSync) run() {
 				s.processBlock(message.Ctx, data.Block)
 			}, msg)
 		case msg := <-s.stateBuf:
+			data := msg.Data.(*pb.BeaconStateResponse)
+			if stateResponses != len(peers) {
+				if data.FinalizedState.Slot > highestObservedFinalizedSlot {
+					highestObservedFinalizedSlot = data.FinalizedState.Slot
+				}
+				stateResponses++
+				continue
+			}
 			safelyHandleMessage(s.processState, msg)
 		case msg := <-s.batchedBlockBuf:
 			safelyHandleMessage(s.processBatchedBlocks, msg)
