@@ -301,8 +301,6 @@ func AttestationParticipants(
 		}
 	}
 
-	// fmt.Printf("Selected committee length: %d\n", len(selectedCommittee))
-
 	if isValidated, err := VerifyBitfield(bitfield, len(selectedCommittee)); !isValidated || err != nil {
 		if err != nil {
 			return nil, err

@@ -501,10 +501,8 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	if !(reflect.DeepEqual(crosslinkFromState, crosslink) ||
 		reflect.DeepEqual(crosslinkFromState, crosslinkFromAttestation)) {
 		return fmt.Errorf(
-			"incoming attestation does not match crosslink in state for shard %d, wanted: %x, received: %x",
+			"incoming attestation does not match crosslink in state for shard %d",
 			shard,
-			crosslinkFromState,
-			crosslinkFromAttestation,
 		)
 	}
 
