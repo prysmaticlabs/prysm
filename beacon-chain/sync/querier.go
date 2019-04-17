@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"github.com/libp2p/go-libp2p-peer"
 	"math/big"
 	"time"
 
@@ -57,6 +58,7 @@ type Querier struct {
 	powchain                  powChainService
 	chainStarted              bool
 	atGenesis                 bool
+	bestPeer peer.ID
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -151,17 +153,32 @@ func (q *Querier) run() {
 		ticker.Stop()
 	}()
 
-	q.RequestLatestHead()
-
+	peerResponses := 0
 	for {
 		select {
 		case <-q.ctx.Done():
 			queryLog.Info("Exiting goroutine")
 			return
 		case <-ticker.C:
-			q.RequestLatestHead()
+			peers := q.p2p.Peers()
+			for _, p := range peers {
+				if err := q.RequestLatestHead(p); err != nil {
+					log.Errorf("Could not request head from peer: %v", err)
+				}
+			}
 		case msg := <-q.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
+			peers := q.p2p.Peers()
+			peerResponses++
+            if peerResponses != len(peers) {
+            	if response.CanonicalSlot > q.currentHeadSlot {
+            		q.currentHeadSlot = response.CanonicalSlot
+				}
+            	continue
+			}
+			if response.CanonicalSlot > q.currentHeadSlot {
+				q.currentHeadSlot = response.CanonicalSlot
+			}
 			queryLog.Infof(
 				"Latest chain head is at slot: %d and state root: %#x",
 				response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
@@ -169,6 +186,7 @@ func (q *Querier) run() {
 			q.currentHeadSlot = response.CanonicalSlot
 			q.currentStateRoot = response.CanonicalStateRootHash32
 			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
+			q.bestPeer = msg.Peer
 
 			ticker.Stop()
 			responseSub.Unsubscribe()
@@ -177,11 +195,11 @@ func (q *Querier) run() {
 	}
 }
 
-// RequestLatestHead broadcasts out a request for all
-// the latest chain heads from the node's peers.
-func (q *Querier) RequestLatestHead() {
+// RequestLatestHead sends a request for all
+// the latest chain head slot and state root to a peer.
+func (q *Querier) RequestLatestHead(p peer.ID) error {
 	request := &pb.ChainHeadRequest{}
-	q.p2p.Broadcast(context.Background(), request)
+	return q.p2p.Send(context.Background(), request, p)
 }
 
 // IsSynced checks if the node is currently synced with the

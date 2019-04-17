@@ -65,7 +65,6 @@ func DefaultConfig() *Config {
 type p2pAPI interface {
 	p2p.Broadcaster
 	p2p.Sender
-    Peers() peer.IDSlice
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
 }
 
@@ -111,6 +110,7 @@ type InitialSync struct {
 	finalizedStateRoot  [32]byte
 	mutex               *sync.Mutex
 	nodeIsSynced        bool
+	bestPeer peer.ID
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -179,6 +179,11 @@ func (s *InitialSync) InitializeObservedStateRoot(root [32]byte) {
 // InitializeFinalizedStateRoot sets the state root of the last finalized state.
 func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
+}
+
+// InitializeBestPeer sets the peer ID of the highest observed peer.
+func (s *InitialSync) InitializeBestPeer(p peer.ID) {
+    s.bestPeer = p
 }
 
 // HighestObservedSlot returns the highest observed slot.
@@ -286,13 +291,8 @@ func (s *InitialSync) run() {
 	}()
 
 	// We send out a state request to all peers.
-	peers := s.p2p.Peers()
-	stateResponses := 0
-	highestObservedFinalizedSlot := params.BeaconConfig().GenesisSlot
-	for _, p := range peers {
-		if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot, p); err != nil {
-			log.Errorf("Could not request state from peer %v", err)
-		}
+	if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot, s.bestPeer); err != nil {
+		log.Errorf("Could not request state from peer %v", err)
 	}
 
 	for {
@@ -306,14 +306,6 @@ func (s *InitialSync) run() {
 				s.processBlock(message.Ctx, data.Block)
 			}, msg)
 		case msg := <-s.stateBuf:
-			data := msg.Data.(*pb.BeaconStateResponse)
-			if stateResponses != len(peers) {
-				if data.FinalizedState.Slot > highestObservedFinalizedSlot {
-					highestObservedFinalizedSlot = data.FinalizedState.Slot
-				}
-				stateResponses++
-				continue
-			}
 			safelyHandleMessage(s.processState, msg)
 		case msg := <-s.batchedBlockBuf:
 			safelyHandleMessage(s.processBatchedBlocks, msg)

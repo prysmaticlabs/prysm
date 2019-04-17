@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/libp2p/go-libp2p-peer"
 	"runtime/debug"
 	"sync"
 
@@ -48,6 +49,7 @@ type p2pAPI interface {
 	p2p.Broadcaster
 	p2p.Sender
 	p2p.Subscriber
+	Peers() peer.IDSlice
 }
 
 // RegularSync is the gateway and the bridge between the p2p network and the local beacon chain.
