@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -37,6 +38,12 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
 	pubKey := v.keys[idx].PublicKey.Marshal()
+	var pubKeyIdx int
+	for i, v := range v.pubkeys {
+        if bytes.Equal(pubKey, v) {
+        	pubKeyIdx = i
+		}
+	}
 	idxReq := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
@@ -45,16 +52,15 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		log.Errorf("Could not fetch validator index: %v", err)
 		return
 	}
-	valIdx := validatorIndexRes.Index
 	// Set the attestation data's shard as the shard associated with the validator's
 	// committee as retrieved by CrosslinkCommitteesAtSlot.
-	attData.Shard = v.assignments.Assignment[valIdx].Shard
+	attData.Shard = v.assignments.Assignment[pubKeyIdx].Shard
 
 	// Fetch other necessary information from the beacon node in order to attest
 	// including the justified epoch, epoch boundary information, and more.
 	infoReq := &pb.AttestationDataRequest{
 		Slot:  slot,
-		Shard: v.assignments.Assignment[valIdx].Shard,
+		Shard: v.assignments.Assignment[pubKeyIdx].Shard,
 	}
 	infoRes, err := v.attesterClient.AttestationDataAtSlot(ctx, infoReq)
 	if err != nil {
@@ -63,7 +69,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		return
 	}
 
-	committeeLength := mathutil.CeilDiv8(len(v.assignments.Assignment[valIdx].Committee))
+	committeeLength := mathutil.CeilDiv8(len(v.assignments.Assignment[pubKeyIdx].Committee))
 
 	// Set the attestation data's slot to head_state.slot where the slot
 	// is the canonical head of the beacon chain.
@@ -99,7 +105,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	// Find the index in committee to be used for
 	// the aggregation bitfield
 	var indexInCommittee int
-	for i, vIndex := range v.assignments.Assignment[valIdx].Committee {
+	for i, vIndex := range v.assignments.Assignment[pubKeyIdx].Committee {
 		if vIndex == validatorIndexRes.Index {
 			indexInCommittee = i
 			break
