@@ -31,7 +31,7 @@ var (
 		Usage: "Enable crosslink committees cache for state transition, default is disabled.",
 	}
 	// EnableBlockAncestorCacheFlag enables block ancestor cache for LMD GHOST fork choice optimization. I
-	// itt is disabled by default.
+	// it is disabled by default.
 	EnableBlockAncestorCacheFlag = cli.BoolFlag{
 		Name:  "enable-block-ancestor-cache",
 		Usage: "Enable block ancestor cache for fork choice optimization, default is disabled.",

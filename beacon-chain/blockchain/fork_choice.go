@@ -324,7 +324,7 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 
 	for validatorIndex, targetBlock := range targets {
 		if featureconfig.FeatureConfig().EnableBlockAncestorCache {
-			// if block ancestor cache is enabled, use target block hash + ancestor block height as cache key.
+			// if block ancestor cache was enabled, use target block hash + ancestor block height as cache key.
 			targetHash, err := hashutil.HashBeaconBlock(targetBlock)
 			if err != nil {
 				return 0, err
@@ -351,7 +351,7 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 				ancestor = cachedAncestorBlock.Block
 			}
 		} else {
-			// if block ancestor cache is not enabled, retrieve the ancestor recursively.
+			// if block ancestor cache was not enabled, retrieve the ancestor recursively.
 			ancestor, err = BlockAncestor(targetBlock, block.Slot, beaconDB)
 			if err != nil {
 				return 0, err
