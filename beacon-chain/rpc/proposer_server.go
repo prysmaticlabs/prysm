@@ -121,7 +121,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	for _, att := range atts {
 
 		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
-			log.WithField("headRoot", att.Data.Slot -
+			log.WithField("headRoot", att.Data.Slot-
 				params.BeaconConfig().GenesisSlot).Warn("Skipping, pending attestation failed verification")
 			continue
 		}
@@ -133,7 +133,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			expectedJustifedEpoch = beaconState.PreviousJustifiedEpoch
 		}
 
-		if att.Data.Slot > boundary && att.Data.JustifiedEpoch == expectedJustifedEpoch  {
+		if att.Data.Slot > boundary && att.Data.JustifiedEpoch == expectedJustifedEpoch {
 			attsWithinBoundary = append(attsWithinBoundary, att)
 		}
 	}
