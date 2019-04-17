@@ -25,6 +25,7 @@ var (
 
 	mainChainHeightKey      = []byte("chain-height")
 	stateLookupKey          = []byte("state")
+	canonicalLookupKey      = []byte("state")
 	finalizedStateLookupKey = []byte("finalized-state")
 	justifiedStateLookupKey = []byte("justified-state")
 	finalizedBlockLookupKey = []byte("finalized-block")

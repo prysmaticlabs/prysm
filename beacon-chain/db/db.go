@@ -25,6 +25,10 @@ type BeaconDB struct {
 	db           *bolt.DB
 	DatabasePath string
 
+	// Canonical Map in memory
+	canonicalMap     *pb.CanonicalMap
+	canonicalMapLock sync.RWMutex
+
 	// Beacon block info in memory
 	highestBlockSlot uint64
 

@@ -125,6 +125,46 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
+// CanonicalMap fetches the canonical map saved in the db.
+func (db *BeaconDB) CanonicalMap(ctx context.Context) (*pb.CanonicalMap, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CanonicalMap")
+	defer span.End()
+
+	var canonicalMap *pb.CanonicalMap
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		enc := chainInfo.Get(canonicalLookupKey)
+		if enc == nil {
+			return errors.New("no canonical map saved in the db")
+		}
+		return proto.Unmarshal(enc, canonicalMap)
+	})
+	return canonicalMap, err
+}
+
+// SaveCanonicalMap saves the canonical map in the db.
+func (db *BeaconDB) SaveCanonicalMap(ctx context.Context, canonicalMap *pb.CanonicalMap) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveCanonicalMap")
+	defer span.End()
+
+	db.canonicalMapLock.Lock()
+	newMap, ok := proto.Clone(canonicalMap).(*pb.CanonicalMap)
+	if !ok {
+		return errors.New("could not clone beacon state")
+	}
+	db.canonicalMap = newMap
+	db.canonicalMapLock.Unlock()
+
+	return db.update(func(tx *bolt.Tx) error {
+		enc, err := proto.Marshal(canonicalMap)
+		if err != nil {
+			return err
+		}
+		chainInfo := tx.Bucket(chainInfoBucket)
+		return chainInfo.Put(canonicalLookupKey, enc)
+	})
+}
+
 // SaveState updates the beacon chain state.
 func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
