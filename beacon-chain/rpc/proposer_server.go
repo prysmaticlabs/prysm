@@ -111,33 +111,17 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 		currentSlot = beaconState.Slot
 	}
 
-	// Remove any attestation from the list if their slot is before the start of
-	// the previous epoch or does not match the current state previous justified
-	// epoch or attestation is not voting on the canonical chain.
-	// This should be handled in the operationService cleanup but we
-	// should filter here in case it wasn't yet processed.
-	boundary := currentSlot - params.BeaconConfig().SlotsPerEpoch
-	attsWithinBoundary := make([]*pbp2p.Attestation, 0, len(atts))
+	validAtts := make([]*pbp2p.Attestation, 0, len(atts))
 	for _, att := range atts {
-
 		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
-			log.WithField("headRoot", att.Data.Slot-
+			log.WithField("slot", att.Data.Slot-
 				params.BeaconConfig().GenesisSlot).Warn("Skipping, pending attestation failed verification")
 			continue
 		}
+		validAtts = append(validAtts, att)
 
-		var expectedJustifedEpoch uint64
-		if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.SlotToEpoch(currentSlot) {
-			expectedJustifedEpoch = beaconState.JustifiedEpoch
-		} else {
-			expectedJustifedEpoch = beaconState.PreviousJustifiedEpoch
-		}
-
-		if att.Data.Slot > boundary && att.Data.JustifiedEpoch == expectedJustifedEpoch {
-			attsWithinBoundary = append(attsWithinBoundary, att)
-		}
 	}
-	atts = attsWithinBoundary
+	atts = validAtts
 
 	if req.FilterReadyForInclusion {
 		var attsReadyForInclusion []*pbp2p.Attestation
