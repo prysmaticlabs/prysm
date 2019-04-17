@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -119,6 +120,12 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	attsWithinBoundary := make([]*pbp2p.Attestation, 0, len(atts))
 	for _, att := range atts {
 
+		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
+			log.WithField("headRoot", att.Data.Slot -
+				params.BeaconConfig().GenesisSlot).Warn("Skipping, pending attestation failed verification")
+			continue
+		}
+
 		var expectedJustifedEpoch uint64
 		if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.SlotToEpoch(currentSlot) {
 			expectedJustifedEpoch = beaconState.JustifiedEpoch
@@ -126,9 +133,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			expectedJustifedEpoch = beaconState.PreviousJustifiedEpoch
 		}
 
-		if att.Data.Slot > boundary &&
-			att.Data.JustifiedEpoch == expectedJustifedEpoch &&
-			ps.chainService.IsCanonical(att.Data.Slot, att.Data.BeaconBlockRootHash32) {
+		if att.Data.Slot > boundary && att.Data.JustifiedEpoch == expectedJustifedEpoch  {
 			attsWithinBoundary = append(attsWithinBoundary, att)
 		}
 	}
