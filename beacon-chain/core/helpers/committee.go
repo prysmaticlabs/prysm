@@ -302,6 +302,8 @@ func AttestationParticipants(
 		}
 	}
 
+	// fmt.Printf("Selected committee length: %d\n", len(selectedCommittee))
+
 	if isValidated, err := VerifyBitfield(bitfield, len(selectedCommittee)); !isValidated || err != nil {
 		if err != nil {
 			return nil, err
@@ -521,7 +523,7 @@ func prevEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 //    )
 func currEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*CrosslinkCommittee, error) {
 	committeesPerEpoch := CurrentEpochCommitteeCount(state)
-	return crosslinkCommittees(
+	committees, err := crosslinkCommittees(
 		state, &shufflingInput{
 			seed:               state.CurrentShufflingSeedHash32,
 			shufflingEpoch:     state.CurrentShufflingEpoch,
@@ -529,6 +531,7 @@ func currEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 			startShard:         state.CurrentShufflingStartShard,
 			committeesPerEpoch: committeesPerEpoch,
 		})
+	return committees, err
 }
 
 // nextEpochCommitteesAtSlot returns a list of crosslink committees of the next epoch.
