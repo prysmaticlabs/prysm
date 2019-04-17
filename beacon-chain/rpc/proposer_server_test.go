@@ -151,7 +151,8 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 				}},
 			},
 		},
-		beaconDB: db,
+		chainService: &mockChainService{},
+		beaconDB:     db,
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -212,6 +213,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	expectedNumberOfAttestations := 3
 	proposerServer := &ProposerServer{
 		operationService: opService,
+		chainService:     &mockChainService{},
 		beaconDB:         db,
 	}
 	beaconState := &pbp2p.BeaconState{
@@ -260,6 +262,7 @@ func TestPendingAttestations_OK(t *testing.T) {
 
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{},
+		chainService:     &mockChainService{},
 		beaconDB:         db,
 	}
 	beaconState := &pbp2p.BeaconState{
@@ -287,5 +290,78 @@ func TestPendingAttestations_OK(t *testing.T) {
 	}
 	if len(res.PendingAttestations) == 0 {
 		t.Error("Expected pending attestations list to be non-empty")
+	}
+}
+
+func TestPendingAttestations_FiltersCanonicalAttestations(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	// Edge case: current slot is at the end of an epoch. The pending attestation
+	// for the next slot should come from currentSlot + 1.
+	currentSlot := helpers.StartSlot(
+		params.BeaconConfig().GenesisEpoch+10,
+	) - 1
+
+	expectedEpoch := uint64(100)
+
+	opService := &mockOperationService{
+		pendingAttestations: []*pbp2p.Attestation{
+			// Canonical attestations
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch, BeaconBlockRootHash32: []byte{'A'}}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 2, JustifiedEpoch: expectedEpoch, BeaconBlockRootHash32: []byte{'B'}}},
+			// Non canonical attestations
+			{Data: &pbp2p.AttestationData{Slot: currentSlot, JustifiedEpoch: expectedEpoch, BeaconBlockRootHash32: []byte{'C'}}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot, JustifiedEpoch: expectedEpoch, BeaconBlockRootHash32: []byte{'D'}}},
+			// Canonical attestation
+			{Data: &pbp2p.AttestationData{Slot: currentSlot, JustifiedEpoch: expectedEpoch, BeaconBlockRootHash32: []byte{'E'}}},
+		},
+	}
+	expectedNumberOfAttestations := 3
+	proposerServer := &ProposerServer{
+		operationService: opService,
+		chainService:     &mockChainService{canonicalBlocks: make(map[uint64][]byte)},
+		beaconDB:         db,
+	}
+	beaconState := &pbp2p.BeaconState{
+		Slot:                   currentSlot,
+		JustifiedEpoch:         expectedEpoch,
+		PreviousJustifiedEpoch: expectedEpoch,
+	}
+	if err := db.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	blk := &pbp2p.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+
+	if err := db.SaveBlock(blk); err != nil {
+		t.Fatalf("failed to save block %v", err)
+	}
+
+	if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
+		t.Fatalf("couldnt update chainhead: %v", err)
+	}
+	for _, atts := range opService.pendingAttestations {
+		proposerServer.chainService.InsertsCanonical(atts.Data.Slot, atts.Data.BeaconBlockRootHash32)
+	}
+
+	res, err := proposerServer.PendingAttestations(
+		context.Background(),
+		&pb.PendingAttestationsRequest{
+			ProposalBlockSlot: currentSlot,
+		},
+	)
+	if err != nil {
+		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
+	}
+	if len(res.PendingAttestations) != expectedNumberOfAttestations {
+		t.Errorf(
+			"Expected pending attestations list length %d, but was %d",
+			expectedNumberOfAttestations,
+			len(res.PendingAttestations),
+		)
 	}
 }

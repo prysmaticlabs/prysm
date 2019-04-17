@@ -84,6 +84,24 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	})
 }
 
+// DeleteBlock deletes a block using the slot and its root as keys in their respective buckets.
+func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
+	root, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return fmt.Errorf("failed to tree hash block: %v", err)
+	}
+	slotBinary := encodeSlotNumber(block.Slot)
+
+	return db.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(blockBucket)
+		mainChain := tx.Bucket(mainChainBucket)
+		if err := mainChain.Delete(slotBinary); err != nil {
+			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
+		}
+		return bucket.Delete(root[:])
+	})
+}
+
 // SaveJustifiedBlock saves the last justified block from canonical chain to DB.
 func (db *BeaconDB) SaveJustifiedBlock(block *pb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
