@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
+	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -12,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -26,13 +29,21 @@ func init() {
 
 var _ = Validator(&validator{})
 
+func publicKeys(keys map[string]*keystore.Key) [][]byte {
+	pks := make([][]byte, 0, len(keys))
+	for _, value := range keys {
+		pks = append(pks, value.PublicKey.Marshal())
+	}
+	return pks
+}
+
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -65,7 +76,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -96,7 +107,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
@@ -117,7 +128,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
@@ -142,21 +153,22 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
 		validatorClient: client,
 	}
+	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
+
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			Pubkey: v.key.PublicKey.Marshal(),
+			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&pb.ValidatorActivationResponse{
-			Validator: &pbp2p.Validator{
-				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			},
+			ActivatedPublicKeys: publicKeys(v.keys),
 		},
 		nil,
 	)
@@ -175,14 +187,16 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
 		validatorClient: client,
 	}
+	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			Pubkey: v.key.PublicKey.Marshal(),
+			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, errors.New("failed stream"))
 	err := v.WaitForActivation(context.Background())
@@ -198,14 +212,16 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
 		validatorClient: client,
 	}
+	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			Pubkey: v.key.PublicKey.Marshal(),
+			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -226,21 +242,21 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
 		validatorClient: client,
 	}
+	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			Pubkey: v.key.PublicKey.Marshal(),
+			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&pb.ValidatorActivationResponse{
-			Validator: &pbp2p.Validator{
-				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			},
+			ActivatedPublicKeys: publicKeys(v.keys),
 		},
 		nil,
 	)
@@ -255,7 +271,7 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	client.EXPECT().CanonicalHead(
@@ -272,7 +288,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	client.EXPECT().CanonicalHead(
@@ -287,6 +303,72 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 		t.Errorf("Mismatch slots, wanted: %v, received: %v", params.BeaconConfig().GenesisSlot, headSlot)
 	}
 }
+func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+
+	v := validator{
+		keys:            keyMapThreeValidators,
+		activatedKeys:   make([][]byte, 0),
+		validatorClient: client,
+	}
+	v.pubkeys = publicKeys(v.keys)
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		&pb.ValidatorActivationRequest{
+			PublicKeys: publicKeys(v.keys),
+		},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: publicKeys(v.keys),
+		},
+		nil,
+	)
+	if err := v.WaitForActivation(context.Background()); err != nil {
+		t.Errorf("Could not wait for activation: %v", err)
+	}
+	testutil.AssertLogsContain(t, hook, "Validator activated")
+}
+func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+
+	v := validator{
+		keys:            keyMapThreeValidators,
+		validatorClient: client,
+		activatedKeys:   make([][]byte, 0),
+	}
+	v.pubkeys = publicKeys(v.keys)
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(clientStream, nil).Times(2)
+	clientStream.EXPECT().Recv().Return(
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: make([][]byte, 0),
+		},
+		nil,
+	)
+	clientStream.EXPECT().Recv().Return(
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: publicKeys(v.keys),
+		},
+		nil,
+	)
+	if err := v.WaitForActivation(context.Background()); err != nil {
+		t.Errorf("Could not wait for activation: %v", err)
+	}
+	// wait for other validators to be activated
+	for len(v.pubkeys) != len(v.activatedKeys) {
+
+	}
+}
 
 func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
 	// TODO(2167): Unskip this test.
@@ -297,9 +379,9 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 
 	slot := uint64(1)
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
-		assignment: &pb.CommitteeAssignmentResponse{
+		assignments: &pb.CommitteeAssignmentResponse{
 			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 				{
 					Committee: []uint64{},
@@ -325,9 +407,9 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
-		assignment: &pb.CommitteeAssignmentResponse{
+		assignments: &pb.CommitteeAssignmentResponse{
 			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 				{
 					Shard: 1,
@@ -346,7 +428,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
 	}
-	if v.assignment != nil {
+	if v.assignments != nil {
 		t.Error("Assignments should have been cleared on failure")
 	}
 }
@@ -364,11 +446,12 @@ func TestUpdateAssignments_OK(t *testing.T) {
 				Shard:      100,
 				Committee:  []uint64{0, 1, 2, 3},
 				IsProposer: true,
+				PublicKey:  []byte("testPubKey_1"),
 			},
 		},
 	}
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
 	}
 	client.EXPECT().CommitteeAssignment(
@@ -380,13 +463,128 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
 
-	if v.assignment.Assignment[0].Slot != params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignment.Assignment[0].Slot)
+	if v.assignments.Assignment[0].Slot != params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignments.Assignment[0].Slot)
 	}
-	if v.assignment.Assignment[0].Shard != resp.Assignment[0].Shard {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.Assignment[0].Shard, v.assignment.Assignment[0].Slot)
+	if v.assignments.Assignment[0].Shard != resp.Assignment[0].Shard {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.Assignment[0].Shard, v.assignments.Assignment[0].Slot)
 	}
-	if !v.assignment.Assignment[0].IsProposer {
+	if !v.assignments.Assignment[0].IsProposer {
 		t.Errorf("Unexpected validator assignments. want: proposer=true")
+	}
+}
+
+func TestRolesAt_OK(t *testing.T) {
+
+	v := validator{
+		assignments: &pb.CommitteeAssignmentResponse{
+			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				{
+					Shard:      1,
+					Slot:       1,
+					IsProposer: true,
+					PublicKey:  []byte("pk1"),
+				},
+				{
+					Shard:     2,
+					Slot:      1,
+					PublicKey: []byte("pk2"),
+				},
+				{
+					Shard:     1,
+					Slot:      2,
+					PublicKey: []byte("pk3"),
+				},
+			},
+		},
+	}
+	roleMap := v.RolesAt(1)
+	if roleMap[hex.EncodeToString([]byte("pk1"))] != pb.ValidatorRole_PROPOSER {
+		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
+	}
+	if roleMap[hex.EncodeToString([]byte("pk2"))] != pb.ValidatorRole_ATTESTER {
+		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
+	}
+	if roleMap[hex.EncodeToString([]byte("pk3"))] != pb.ValidatorRole_UNKNOWN {
+		t.Errorf("Unexpected validator role. want: UNKNOWN")
+	}
+
+}
+
+func TestListenForValidators_OK(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+
+	v := validator{
+		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
+		validatorClient: client,
+	}
+	v.pubkeys = publicKeys(v.keys)
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: publicKeys(v.keys),
+		},
+		nil,
+	)
+	if err := v.listenForValidators(context.Background()); err != nil {
+		t.Errorf("Could not wait for activation: %v", err)
+	}
+	if len(v.activatedKeys) != len(v.pubkeys) {
+		t.Errorf("all keys arent activated despite the rpc response indicating so, expected length %d got %d",
+			len(v.pubkeys), len(v.activatedKeys))
+	}
+	testutil.AssertLogsContain(t, hook, "Validator activated")
+}
+
+func TestListenForValidators_Fail(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+
+	v := validator{
+		keys:            keyMap,
+		activatedKeys:   make([][]byte, 0),
+		validatorClient: client,
+	}
+	v.pubkeys = publicKeys(v.keys)
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: make([][]byte, 0),
+		},
+		nil,
+	)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: make([][]byte, 0),
+		},
+		io.EOF,
+	)
+	err := v.listenForValidators(context.Background())
+	if err == nil {
+		t.Error("error is nil, when its not supposed to be")
+	}
+	if err.Error() != "stream has been closed, so we are shutting down the loop" {
+		t.Errorf("error is not of the correct type, :%v", err)
+	}
+	if len(v.activatedKeys) != 0 {
+		t.Errorf("all keys are activated despite the rpc response indicating not so, expected length %d got %d",
+			0, len(v.activatedKeys))
 	}
 }

@@ -3,12 +3,13 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -20,12 +21,14 @@ import (
 type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
-	assignment      *pb.CommitteeAssignmentResponse
+	assignments     *pb.CommitteeAssignmentResponse
 	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
-	key             *keystore.Key
+	keys            map[string]*keystore.Key
+	activatedKeys   [][]byte
+	pubkeys         [][]byte
 	prevBalance     uint64
 }
 
@@ -77,13 +80,13 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 	req := &pb.ValidatorActivationRequest{
-		Pubkey: v.key.PublicKey.Marshal(),
+		PublicKeys: v.pubkeys,
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
 	if err != nil {
 		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
 	}
-	var validatorActivatedRecord *pbp2p.Validator
+	var validatorActivatedRecords [][]byte
 	for {
 		log.Info("Waiting for validator to be activated in the beacon chain")
 		res, err := stream.Recv()
@@ -98,12 +101,18 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not receive validator activation from stream: %v", err)
 		}
-		validatorActivatedRecord = res.Validator
+		validatorActivatedRecords = res.ActivatedPublicKeys
 		break
 	}
-	log.WithFields(logrus.Fields{
-		"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
-	}).Info("Validator activated")
+	for _, pk := range validatorActivatedRecords {
+		v.activatedKeys = append(v.activatedKeys, pk)
+		log.WithFields(logrus.Fields{
+			"public key": fmt.Sprintf("%#x", pk),
+		}).Info("Validator activated")
+	}
+	if len(v.activatedKeys) != len(v.pubkeys) {
+		go v.listenForValidators(ctx)
+	}
 	return nil
 }
 
@@ -136,7 +145,7 @@ func (v *validator) SlotDeadline(slot uint64) time.Time {
 func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	// Testing run time for fetching every slot. This is not meant for production!
 	// https://github.com/prysmaticlabs/prysm/issues/2167
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil && false {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignments != nil && false {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
@@ -146,43 +155,124 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	req := &pb.CommitteeAssignmentsRequest{
 		EpochStart: slot,
-		PublicKeys: [][]byte{v.key.PublicKey.Marshal()},
+		PublicKeys: v.activatedKeys,
 	}
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
-		v.assignment = nil // Clear assignments so we know to retry the request.
+		v.assignments = nil // Clear assignments so we know to retry the request.
 		return err
 	}
 
-	v.assignment = resp
+	v.assignments = resp
+	lFields := logrus.Fields{}
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		for _, assignment := range v.assignments.Assignment {
+			var proposerSlot uint64
+			var attesterSlot uint64
+			lFields := logrus.Fields{}
+			assignmentKey := hex.EncodeToString(assignment.PublicKey)
+			assignmentKey = assignmentKey[:12]
+			if assignment.Status != pb.ValidatorStatus_ACTIVE {
+				log.WithFields(lFields).Infof("Validator %v Status: %v", assignmentKey, assignment.Status)
+				continue
+			} else if assignment.IsProposer {
+				proposerSlot = assignment.Slot
+				attesterSlot = assignment.Slot
+			} else {
+				attesterSlot = assignment.Slot
+			}
+			lFields["attesterSlot"] = attesterSlot - params.BeaconConfig().GenesisSlot
+			lFields["proposerSlot"] = "Not proposing"
+			lFields["shard"] = assignment.Shard
 
-	lFields := logrus.Fields{
-		"attesterSlot": resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot,
-		"proposerSlot": "Not proposing",
-		"shard":        resp.Assignment[0].Shard,
-	}
-	if v.assignment.Assignment[0].IsProposer {
-		lFields["proposerSlot"] = resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot
-	}
+			if assignment.IsProposer {
+				lFields["proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
+			}
+			log.WithFields(lFields).Infof("Validator %v Status: %v assignment", assignmentKey, assignment.Status)
 
+		}
+	}
 	log.WithFields(lFields).Info("Updated validator assignments")
 	return nil
 }
 
-// RoleAt slot returns the validator role at the given slot. Returns nil if the
-// validator is known to not have a role at the at slot. Returns UNKNOWN if the
-// validator assignments are unknown. Otherwise returns a valid ValidatorRole.
-func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignment == nil {
-		return pb.ValidatorRole_UNKNOWN
-	}
-	if v.assignment.Assignment[0].Slot == slot {
-		if v.assignment.Assignment[0].IsProposer {
-			// Note: A proposer also attests to the slot.
-			return pb.ValidatorRole_PROPOSER
+// RolesAt slot returns the validator roles at the given slot. Returns nil if the
+// validator is known to not have a roles at the at slot. Returns UNKNOWN if the
+// validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
+func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
+	rolesAt := make(map[string]pb.ValidatorRole)
+	for _, assignment := range v.assignments.Assignment {
+		var role pb.ValidatorRole
+		if assignment == nil {
+			role = pb.ValidatorRole_UNKNOWN
 		}
-		return pb.ValidatorRole_ATTESTER
+		if assignment.Slot == slot {
+			// Note: A proposer also attests to the slot.
+			if assignment.IsProposer {
+				role = pb.ValidatorRole_PROPOSER
+			} else {
+				role = pb.ValidatorRole_ATTESTER
+			}
+		} else {
+			role = pb.ValidatorRole_UNKNOWN
+		}
+		rolesAt[hex.EncodeToString(assignment.PublicKey)] = role
 	}
-	return pb.ValidatorRole_UNKNOWN
+	return rolesAt
+}
+
+// recursive method to wait for each validator until all validators in the set have
+// been activated.
+func (v *validator) listenForValidators(ctx context.Context) error {
+	keysToWatch := make([][]byte, 0)
+	pkMap := make(map[string]bool)
+	for _, pk := range v.activatedKeys {
+		pkMap[string(pk)] = true
+	}
+
+	// filter for unactivated validators
+	for _, pk := range v.pubkeys {
+		if !pkMap[string(pk)] {
+			keysToWatch = append(keysToWatch, pk)
+		}
+	}
+
+	req := &pb.ValidatorActivationRequest{
+		PublicKeys: keysToWatch,
+	}
+	stream, err := v.validatorClient.WaitForActivation(ctx, req)
+	if err != nil {
+		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
+	}
+	var validatorActivatedRecords [][]byte
+	for {
+		log.Info("Waiting for validator to be activated in the beacon chain")
+		res, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			return errors.New("stream has been closed, so we are shutting down the loop")
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+		}
+		if err != nil {
+			return fmt.Errorf("could not receive validator activation from stream: %v", err)
+		}
+		validatorActivatedRecords = res.ActivatedPublicKeys
+		break
+	}
+	for _, pk := range validatorActivatedRecords {
+		v.activatedKeys = append(v.activatedKeys, pk)
+		log.WithFields(logrus.Fields{
+			"public key": fmt.Sprintf("%#x", pk),
+		}).Info("Validator activated")
+	}
+
+	if len(v.activatedKeys) != len(v.pubkeys) {
+		return v.listenForValidators(ctx)
+	}
+
+	return nil
 }

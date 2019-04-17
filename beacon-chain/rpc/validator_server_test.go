@@ -1,9 +1,10 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -65,8 +66,22 @@ func TestValidatorIndex_OK(t *testing.T) {
 
 func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
+	ctx := context.Background()
 	defer internal.TeardownDB(t, db)
-
+	beaconState, err := genesisState(8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), beaconState); err != nil {
+		t.Fatal(err)
+	}
+	block := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(block); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err := db.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatalf("Could not update head: %v", err)
+	}
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
@@ -75,7 +90,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
-	if _, err := validatorServer.CommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
+	if _, err := validatorServer.CommitteeAssignment(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
@@ -84,10 +99,15 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
-
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{ValidatorRegistry: []*pbp2p.Validator{}}); err != nil {
-		t.Fatalf("could not save state: %v", err)
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
 	}
+	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
+	if err != nil {
+		t.Fatalf("Could not setup genesis state: %v", err)
+	}
+	db.UpdateChainHead(ctx, genesis, state)
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
@@ -98,7 +118,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
-	if _, err := vs.CommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
+	if _, err := vs.CommitteeAssignment(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
@@ -124,7 +144,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		binary.PutUvarint(pubKeyBuf, uint64(i))
+		copy(pubKeyBuf[:], []byte(strconv.Itoa(i)))
 		wg.Add(1)
 		go func(index int) {
 			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
@@ -144,7 +164,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.PutUvarint(pubKeyBuf, 0)
+	copy(pubKeyBuf[:], []byte(strconv.FormatUint(0, 10)))
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf},
@@ -166,7 +186,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	// Test the last validator in registry.
 	lastValidatorIndex := params.BeaconConfig().DepositsForChainStart - 1
 	pubKeyBuf = make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
+	copy(pubKeyBuf[:], []byte(strconv.FormatUint(lastValidatorIndex, 10)))
 	req = &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf},
 		EpochStart: params.BeaconConfig().GenesisSlot,
@@ -206,7 +226,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		binary.PutUvarint(pubKeyBuf, uint64(i))
+		copy(pubKeyBuf[:], []byte(strconv.Itoa(i)))
 		wg.Add(1)
 		go func(index int) {
 			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
@@ -226,9 +246,9 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	}
 
 	pubKeyBuf0 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.PutUvarint(pubKeyBuf0, 0)
+	copy(pubKeyBuf0[:], []byte(strconv.Itoa(0)))
 	pubKeyBuf1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.PutUvarint(pubKeyBuf1, 0)
+	copy(pubKeyBuf1[:], []byte(strconv.Itoa(1)))
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf0, pubKeyBuf1},
@@ -526,7 +546,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
 	req := &pb.ValidatorActivationRequest{
-		Pubkey: []byte("A"),
+		PublicKeys: [][]byte{[]byte("A")},
 	}
 
 	ctrl := gomock.NewController(t)
@@ -549,23 +569,35 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	pubKeys := [][]byte{{'A'}, {'B'}}
+	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+	if err := db.SaveValidatorIndex(pubKeys[1], 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			ActivationEpoch: params.BeaconConfig().GenesisSlot,
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			Pubkey:          pubKey},
+			Pubkey:          pubKeys[0]},
+			{
+				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+				Pubkey:          pubKeys[1]},
 		},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-
+	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
+		t.Fatalf("could not save validator index: %v", err)
+	}
+	if err := db.SaveValidatorIndex(pubKeys[1], 1); err != nil {
+		t.Fatalf("could not save validator index: %v", err)
+	}
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                context.Background(),
@@ -573,19 +605,103 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
 	req := &pb.ValidatorActivationRequest{
-		Pubkey: pubKey,
+		PublicKeys: pubKeys,
 	}
-
 	ctrl := gomock.NewController(t)
+
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Send(
 		&pb.ValidatorActivationResponse{
-			Validator: beaconState.ValidatorRegistry[0],
+			ActivatedPublicKeys: pubKeys,
 		},
 	).Return(nil)
 
 	if err := vs.WaitForActivation(req, mockStream); err != nil {
 		t.Fatalf("Could not setup wait for activation stream: %v", err)
+	}
+}
+
+func TestFilterActivePublicKeys(t *testing.T) {
+	currentEpoch := uint64(15)
+	beaconState := &pbp2p.BeaconState{
+		Slot: helpers.StartSlot(currentEpoch),
+		ValidatorRegistry: []*pbp2p.Validator{
+			// Active validiators in our request
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk1"),
+				ActivationEpoch: currentEpoch - 1,
+				ExitEpoch:       math.MaxUint64,
+			},
+			// Inactive validators in our request
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk2"),
+				ActivationEpoch: currentEpoch - 2,
+				ExitEpoch:       currentEpoch - 1,
+			},
+			// Other active validators in the registry
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk3"),
+				ActivationEpoch: 0,
+				ExitEpoch:       math.MaxUint64,
+			},
+		},
+	}
+
+	vs := &ValidatorServer{}
+
+	activeKeys := vs.filterActivePublicKeys(
+		beaconState,
+		[][]byte{
+			[]byte("pk1"),
+			[]byte("pk2"),
+		},
+	)
+
+	if len(activeKeys) != 1 || !bytes.Equal(activeKeys[0], []byte("pk1")) {
+		t.Error("Wrong active keys returned")
+	}
+}
+
+func TestAddNonActivePublicKeysAssignmentStatus(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	currentEpoch := uint64(15)
+	beaconState := &pbp2p.BeaconState{
+		Slot: helpers.StartSlot(currentEpoch),
+		ValidatorRegistry: []*pbp2p.Validator{
+			// Active validiators in our request
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk1"),
+				ActivationEpoch: currentEpoch - 1,
+				ExitEpoch:       math.MaxUint64,
+			},
+			// Inactive validators in our request
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk2"),
+				ActivationEpoch: currentEpoch - 2,
+				ExitEpoch:       currentEpoch - 1,
+			},
+			// Other active validators in the registry
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk3"),
+				ActivationEpoch: 0,
+				ExitEpoch:       math.MaxUint64,
+			},
+		},
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
+	assignments = vs.addNonActivePublicKeysAssignmentStatus(beaconState,
+		[][]byte{
+			[]byte("pk1"),
+			[]byte("pk4"),
+		}, assignments)
+	if len(assignments) != 1 || assignments[0].Status != pb.ValidatorStatus_UNKNOWN_STATUS || !bytes.Equal(assignments[0].PublicKey, []byte("pk4")) {
+		t.Errorf("Unknown public key status wasn't returned: %v", assignments)
 	}
 }

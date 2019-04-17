@@ -18,7 +18,7 @@ bazel build //validator
 bazel build //contracts/deposit-contract/sendDepositTx
 
 START_INDEX=1
-END_INDEX=8
+END_INDEX=9
 
 while test $# -gt 0; do
     case "$1" in
@@ -49,11 +49,11 @@ while test $# -gt 0; do
     esac
 done
 
+KEYSTORE=$DATA_PATH/keystore
+
 for i in `seq $START_INDEX $END_INDEX`;
 do
-  echo "Generating validator $i"
-
-  KEYSTORE=$DATA_PATH/keystore$i
+  echo "Generating validator key $i"
 
   ACCOUNTCMD="bazel-bin/validator/${UNAME}_amd64_pure_stripped/validator accounts create --password $(cat $PASSWORD_PATH) --keystore-path $KEYSTORE"
 
@@ -62,39 +62,27 @@ do
   $ACCOUNTCMD
 done
 
-for i in `seq $START_INDEX $END_INDEX`;
-do
-  KEYSTORE=$DATA_PATH/keystore$i
 
-  CMD="bazel-bin/validator/${UNAME}_amd64_pure_stripped/validator --password $(cat $PASSWORD_PATH) --keystore-path $KEYSTORE"
+CMD="bazel-bin/validator/${UNAME}_amd64_pure_stripped/validator --password $(cat $PASSWORD_PATH) --keystore-path $KEYSTORE"
 
-  echo $CMD
+echo $CMD
+nohup $CMD $> /tmp/validator.log &
 
-  nohup $CMD $> /tmp/validator$i.log &
-done
+echo "Sending TX for validator key $i"
 
-echo "Started $END_INDEX validators"
+HTTPFLAG="--httpPath=https://goerli.prylabs.net"
+PASSFLAG="--passwordFile=$PASSWORD_PATH"
+CONTRACTFLAG="--depositContract=$DEPOSIT_CONTRACT"
+PRIVFLAG="--privKey=$(cat $PRIVATE_KEY_PATH)"
+KEYFLAG="--prysm-keystore=$KEYSTORE"
+AMOUNTFLAG="--depositAmount=3200000"
 
-for i in `seq $START_INDEX $END_INDEX`;
-do
-  echo "Sending TX for validator $i"
+CMD="bazel-bin/contracts/deposit-contract/sendDepositTx/${UNAME}_amd64_stripped/sendDepositTx"
 
-  KEYSTORE=$DATA_PATH/keystore$i
+DEPOSITCMD="$CMD $HTTPFLAG $PASSFLAG $CONTRACTFLAG $PRIVFLAG $KEYFLAG $AMOUNTFLAG"
 
-  HTTPFLAG="--httpPath=https://goerli.prylabs.net"
-  PASSFLAG="--passwordFile=$PASSWORD_PATH"
-  CONTRACTFLAG="--depositContract=$DEPOSIT_CONTRACT"
-  PRIVFLAG="--privKey=$(cat $PRIVATE_KEY_PATH)"
-  KEYFLAG="--prysm-keystore=$KEYSTORE"
-  AMOUNTFLAG="--depositAmount=3200000"
+$DEPOSITCMD
 
-  CMD="bazel-bin/contracts/deposit-contract/sendDepositTx/${UNAME}_amd64_stripped/sendDepositTx"
-
-  DEPOSITCMD="$CMD $HTTPFLAG $PASSFLAG $CONTRACTFLAG $PRIVFLAG $KEYFLAG $AMOUNTFLAG"
-
-  $DEPOSITCMD
-done
-
-echo "$END_INDEX validators are running in the background. You can follow their logs at /tmp/validator#.log where # is replaced by the validator index of $START_INDEX through $END_INDEX."
+echo "A validator is running in the background. You can follow the logs at /tmp/validator.log."
 
 echo "To stop the processes, use 'pkill validator'"

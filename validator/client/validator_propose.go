@@ -22,15 +22,19 @@ import (
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
+func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	if slot == params.BeaconConfig().GenesisSlot {
 		log.Info("Assigned to genesis slot, skipping proposal")
 		return
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.key.PublicKey.Marshal())))
-	log.Info("Performing a beacon block proposal...")
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[idx].PublicKey.Marshal())))
+	truncatedPk := idx
+	if len(idx) > 12 {
+		truncatedPk = idx[:12]
+	}
+	log.Infof("%v Performing a beacon block proposal...", truncatedPk)
 	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.
 	headBlock, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
@@ -79,7 +83,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
-	epochSignature := v.key.SecretKey.Sign(buf, domain)
+	epochSignature := v.keys[idx].SecretKey.Sign(buf, domain)
 
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
