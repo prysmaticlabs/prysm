@@ -6,10 +6,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -21,6 +23,7 @@ var (
 		Help: "The number of chain reorganization events that have happened in the fork choice rule",
 	})
 )
+var blkAncestorCache = cache.NewBlockAncestorCache()
 
 // ForkChoice interface defines the methods for applying fork choice rule
 // operations to the blockchain.
@@ -316,10 +319,39 @@ func (c *ChainService) attestationTargets(ctx context.Context, state *pb.BeaconS
 //        )
 func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]*pb.BeaconBlock, beaconDB *db.BeaconDB) (int, error) {
 	balances := 0
+	var ancestor *pb.BeaconBlock
+	var err error
+
 	for validatorIndex, targetBlock := range targets {
-		ancestor, err := BlockAncestor(targetBlock, block.Slot, beaconDB)
-		if err != nil {
-			return 0, err
+		if featureconfig.FeatureConfig().EnableBlockAncestorCache {
+			targetHash, err := hashutil.HashBeaconBlock(targetBlock)
+			if err != nil {
+				return 0, err
+			}
+			cachedAncestorBlock, err := blkAncestorCache.AncestorBySlot(targetHash[:], block.Slot)
+			if err != nil {
+				return 0, nil
+			}
+			if cachedAncestorBlock == nil {
+				ancestor, err = BlockAncestor(targetBlock, block.Slot, beaconDB)
+				if err != nil {
+					return 0, err
+				}
+				if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
+					Hash:   targetHash[:],
+					Height: block.Slot,
+					Block:  ancestor,
+				}); err != nil {
+					return 0, err
+				}
+			} else {
+				ancestor = cachedAncestorBlock.Block
+			}
+		} else {
+			ancestor, err = BlockAncestor(targetBlock, block.Slot, beaconDB)
+			if err != nil {
+				return 0, err
+			}
 		}
 		// This covers the following case, we start at B5, and want to process B6 and B7
 		// B6 can be processed, B7 can not be processed because it's pointed to the

@@ -46,7 +46,6 @@ var (
 		Name:  "enable-historical-state-pruning",
 		Usage: "Enable database pruning of historical states after finalized epochs",
 	}
-
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
