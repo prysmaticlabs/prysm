@@ -84,9 +84,14 @@ func run(ctx context.Context, v Validator) {
 						v.ProposeBlock(slotCtx, slot, id)
 						v.AttestToBlockHead(slotCtx, slot, id)
 					case pb.ValidatorRole_UNKNOWN:
+						pk12Char := id
+						if len(id) > 12 {
+							pk12Char = id[:12]
+						}
 						log.WithFields(logrus.Fields{
-							"slot": slot - params.BeaconConfig().GenesisSlot,
-							"role": role,
+							"public_key": pk12Char,
+							"slot":       slot - params.BeaconConfig().GenesisSlot,
+							"role":       role,
 						}).Info("No active assignment, doing nothing")
 					default:
 						// Do nothing :)

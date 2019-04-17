@@ -169,21 +169,26 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	for _, assignment := range v.assignments.Assignment {
 		var proposerSlot uint64
 		var attesterSlot uint64
-		if assignment.IsProposer {
+		lFields := logrus.Fields{}
+		assignmentKey := hex.EncodeToString(assignment.PublicKey)
+		assignmentKey = assignmentKey[:12]
+		if assignment.Status != pb.ValidatorStatus_ACTIVE {
+			log.WithFields(lFields).Infof("Validator %v Status: %v", assignmentKey, assignment.Status)
+			continue
+		} else if assignment.IsProposer {
 			proposerSlot = assignment.Slot
 			attesterSlot = assignment.Slot
 		} else {
 			attesterSlot = assignment.Slot
 		}
-		assignmentKey := hex.EncodeToString(assignment.PublicKey)
-		assignmentKey = assignmentKey[:12]
-		lFields[assignmentKey+"_attesterSlot"] = attesterSlot - params.BeaconConfig().GenesisSlot
-		lFields[assignmentKey+"_proposerSlot"] = "Not proposing"
-		lFields[assignmentKey+"_shard"] = assignment.Shard
+		lFields["attesterSlot"] = attesterSlot - params.BeaconConfig().GenesisSlot
+		lFields["proposerSlot"] = "Not proposing"
+		lFields["shard"] = assignment.Shard
 
 		if assignment.IsProposer {
-			lFields[assignmentKey+"_proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
+			lFields["proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
 		}
+		log.WithFields(lFields).Infof("Validator %v Status: %v assignment", assignmentKey, assignment.Status)
 
 	}
 	log.WithFields(lFields).Info("Updated validator assignments")
