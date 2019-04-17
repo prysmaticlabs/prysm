@@ -445,6 +445,19 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
+// InitializeValidatorStore sets the current active validators from the current
+// state.
+func InitializeValidatoreStore(bState *pb.BeaconState) {
+	vStore.Lock()
+	defer vStore.Unlock()
+
+	currentEpoch := helpers.CurrentEpoch(bState)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(
+		bState.ValidatorRegistry, currentEpoch)
+	vStore.activatedValidators[currentEpoch] = activeValidatorIndices
+
+}
+
 // InsertActivatedVal locks the validator store, inserts the activated validator
 // indices, then unlocks the store again. This method may be used by
 // external services in testing to populate the validator store.
