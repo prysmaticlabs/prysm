@@ -115,8 +115,8 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	for _, att := range atts {
 		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
 			log.WithError(err).WithField(
-				"slot", att.Data.Slot- params.BeaconConfig().GenesisSlot).Warn(
-					"Skipping, pending attestation failed verification")
+				"slot", att.Data.Slot-params.BeaconConfig().GenesisSlot).Warn(
+				"Skipping, pending attestation failed verification")
 			continue
 		}
 		validAtts = append(validAtts, att)
