@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -154,7 +153,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 
 	v := validator{
 		keys:            keyMap,
-		activatedKeys:   make([][]byte, 0),
+		pubkeys:         make([][]byte, 0),
 		validatorClient: client,
 	}
 	v.pubkeys = publicKeys(v.keys)
@@ -188,7 +187,7 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 
 	v := validator{
 		keys:            keyMap,
-		activatedKeys:   make([][]byte, 0),
+		pubkeys:         make([][]byte, 0),
 		validatorClient: client,
 	}
 	v.pubkeys = publicKeys(v.keys)
@@ -213,7 +212,7 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 
 	v := validator{
 		keys:            keyMap,
-		activatedKeys:   make([][]byte, 0),
+		pubkeys:         make([][]byte, 0),
 		validatorClient: client,
 	}
 	v.pubkeys = publicKeys(v.keys)
@@ -243,7 +242,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 
 	v := validator{
 		keys:            keyMap,
-		activatedKeys:   make([][]byte, 0),
+		pubkeys:         make([][]byte, 0),
 		validatorClient: client,
 	}
 	v.pubkeys = publicKeys(v.keys)
@@ -311,7 +310,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 
 	v := validator{
 		keys:            keyMapThreeValidators,
-		activatedKeys:   make([][]byte, 0),
+		pubkeys:         make([][]byte, 0),
 		validatorClient: client,
 	}
 	v.pubkeys = publicKeys(v.keys)
@@ -341,7 +340,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	v := validator{
 		keys:            keyMapThreeValidators,
 		validatorClient: client,
-		activatedKeys:   make([][]byte, 0),
+		pubkeys:         make([][]byte, 0),
 	}
 	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
@@ -363,10 +362,6 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	)
 	if err := v.WaitForActivation(context.Background()); err != nil {
 		t.Errorf("Could not wait for activation: %v", err)
-	}
-	// wait for other validators to be activated
-	for len(v.pubkeys) != len(v.activatedKeys) {
-
 	}
 }
 
@@ -509,82 +504,4 @@ func TestRolesAt_OK(t *testing.T) {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
 	}
 
-}
-
-func TestListenForValidators_OK(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := internal.NewMockValidatorServiceClient(ctrl)
-
-	v := validator{
-		keys:            keyMap,
-		activatedKeys:   make([][]byte, 0),
-		validatorClient: client,
-	}
-	v.pubkeys = publicKeys(v.keys)
-	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
-	client.EXPECT().WaitForActivation(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&pb.ValidatorActivationResponse{
-			ActivatedPublicKeys: publicKeys(v.keys),
-		},
-		nil,
-	)
-	if err := v.listenForValidators(context.Background()); err != nil {
-		t.Errorf("Could not wait for activation: %v", err)
-	}
-	if len(v.activatedKeys) != len(v.pubkeys) {
-		t.Errorf("all keys arent activated despite the rpc response indicating so, expected length %d got %d",
-			len(v.pubkeys), len(v.activatedKeys))
-	}
-	testutil.AssertLogsContain(t, hook, "Validator activated")
-}
-
-func TestListenForValidators_Fail(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := internal.NewMockValidatorServiceClient(ctrl)
-
-	v := validator{
-		keys:            keyMap,
-		activatedKeys:   make([][]byte, 0),
-		validatorClient: client,
-	}
-	v.pubkeys = publicKeys(v.keys)
-	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
-	client.EXPECT().WaitForActivation(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&pb.ValidatorActivationResponse{
-			ActivatedPublicKeys: make([][]byte, 0),
-		},
-		nil,
-	)
-	client.EXPECT().WaitForActivation(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&pb.ValidatorActivationResponse{
-			ActivatedPublicKeys: make([][]byte, 0),
-		},
-		io.EOF,
-	)
-	err := v.listenForValidators(context.Background())
-	if err == nil {
-		t.Error("error is nil, when its not supposed to be")
-	}
-	if err.Error() != "stream has been closed, so we are shutting down the loop" {
-		t.Errorf("error is not of the correct type, :%v", err)
-	}
-	if len(v.activatedKeys) != 0 {
-		t.Errorf("all keys are activated despite the rpc response indicating not so, expected length %d got %d",
-			0, len(v.activatedKeys))
-	}
 }

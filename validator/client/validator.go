@@ -4,7 +4,6 @@ package client
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -27,7 +26,6 @@ type validator struct {
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
 	keys            map[string]*keystore.Key
-	activatedKeys   [][]byte
 	pubkeys         [][]byte
 	prevBalance     uint64
 }
@@ -105,13 +103,9 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		break
 	}
 	for _, pk := range validatorActivatedRecords {
-		v.activatedKeys = append(v.activatedKeys, pk)
 		log.WithFields(logrus.Fields{
 			"public key": fmt.Sprintf("%#x", pk),
 		}).Info("Validator activated")
-	}
-	if len(v.activatedKeys) != len(v.pubkeys) {
-		go v.listenForValidators(ctx)
 	}
 	return nil
 }
@@ -155,7 +149,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	req := &pb.CommitteeAssignmentsRequest{
 		EpochStart: slot,
-		PublicKeys: v.activatedKeys,
+		PublicKeys: v.pubkeys,
 	}
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
@@ -220,59 +214,4 @@ func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
 		rolesAt[hex.EncodeToString(assignment.PublicKey)] = role
 	}
 	return rolesAt
-}
-
-// recursive method to wait for each validator until all validators in the set have
-// been activated.
-func (v *validator) listenForValidators(ctx context.Context) error {
-	keysToWatch := make([][]byte, 0)
-	pkMap := make(map[string]bool)
-	for _, pk := range v.activatedKeys {
-		pkMap[string(pk)] = true
-	}
-
-	// filter for unactivated validators
-	for _, pk := range v.pubkeys {
-		if !pkMap[string(pk)] {
-			keysToWatch = append(keysToWatch, pk)
-		}
-	}
-
-	req := &pb.ValidatorActivationRequest{
-		PublicKeys: keysToWatch,
-	}
-	stream, err := v.validatorClient.WaitForActivation(ctx, req)
-	if err != nil {
-		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
-	}
-	var validatorActivatedRecords [][]byte
-	for {
-		log.Info("Waiting for validator to be activated in the beacon chain")
-		res, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
-			return errors.New("stream has been closed, so we are shutting down the loop")
-		}
-		// If context is canceled we stop the loop.
-		if ctx.Err() == context.Canceled {
-			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
-		}
-		if err != nil {
-			return fmt.Errorf("could not receive validator activation from stream: %v", err)
-		}
-		validatorActivatedRecords = res.ActivatedPublicKeys
-		break
-	}
-	for _, pk := range validatorActivatedRecords {
-		v.activatedKeys = append(v.activatedKeys, pk)
-		log.WithFields(logrus.Fields{
-			"public key": fmt.Sprintf("%#x", pk),
-		}).Info("Validator activated")
-	}
-
-	if len(v.activatedKeys) != len(v.pubkeys) {
-		return v.listenForValidators(ctx)
-	}
-
-	return nil
 }

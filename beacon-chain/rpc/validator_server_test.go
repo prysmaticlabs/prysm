@@ -629,19 +629,19 @@ func TestFilterActivePublicKeys(t *testing.T) {
 		Slot: helpers.StartSlot(currentEpoch),
 		ValidatorRegistry: []*pbp2p.Validator{
 			// Active validiators in our request
-			&pbp2p.Validator{
+			{
 				Pubkey:          []byte("pk1"),
 				ActivationEpoch: currentEpoch - 1,
 				ExitEpoch:       math.MaxUint64,
 			},
 			// Inactive validators in our request
-			&pbp2p.Validator{
+			{
 				Pubkey:          []byte("pk2"),
 				ActivationEpoch: currentEpoch - 2,
 				ExitEpoch:       currentEpoch - 1,
 			},
 			// Other active validators in the registry
-			&pbp2p.Validator{
+			{
 				Pubkey:          []byte("pk3"),
 				ActivationEpoch: 0,
 				ExitEpoch:       math.MaxUint64,
@@ -672,19 +672,19 @@ func TestAddNonActivePublicKeysAssignmentStatus(t *testing.T) {
 		Slot: helpers.StartSlot(currentEpoch),
 		ValidatorRegistry: []*pbp2p.Validator{
 			// Active validiators in our request
-			&pbp2p.Validator{
+			{
 				Pubkey:          []byte("pk1"),
 				ActivationEpoch: currentEpoch - 1,
 				ExitEpoch:       math.MaxUint64,
 			},
 			// Inactive validators in our request
-			&pbp2p.Validator{
+			{
 				Pubkey:          []byte("pk2"),
 				ActivationEpoch: currentEpoch - 2,
 				ExitEpoch:       currentEpoch - 1,
 			},
 			// Other active validators in the registry
-			&pbp2p.Validator{
+			{
 				Pubkey:          []byte("pk3"),
 				ActivationEpoch: 0,
 				ExitEpoch:       math.MaxUint64,
