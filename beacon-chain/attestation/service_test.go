@@ -362,4 +362,3 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
 }
-
