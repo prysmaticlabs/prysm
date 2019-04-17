@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -253,6 +254,15 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 			len(res.PendingAttestations),
 		)
 	}
+
+	expectedAtts := []*pbp2p.Attestation{
+		{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch}},
+		{Data: &pbp2p.AttestationData{Slot: currentSlot - 2, JustifiedEpoch: expectedEpoch}},
+		{Data: &pbp2p.AttestationData{Slot: currentSlot, JustifiedEpoch: expectedEpoch}},
+	}
+	if !reflect.DeepEqual(res.PendingAttestations, expectedAtts) {
+		t.Error("Did not receive expected attestations")
+	}
 }
 
 func TestPendingAttestations_OK(t *testing.T) {
@@ -345,6 +355,8 @@ func TestPendingAttestations_FiltersCanonicalAttestations(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 	for _, atts := range opService.pendingAttestations {
+		// Insert all of the attestations, since last 3 attestations are same slot number
+		// the last 2 get overridden, and only the last 1 is canonical.
 		proposerServer.chainService.InsertsCanonical(atts.Data.Slot, atts.Data.BeaconBlockRootHash32)
 	}
 
@@ -363,5 +375,14 @@ func TestPendingAttestations_FiltersCanonicalAttestations(t *testing.T) {
 			expectedNumberOfAttestations,
 			len(res.PendingAttestations),
 		)
+	}
+
+	expectedAtts := []*pbp2p.Attestation{
+		{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pbp2p.AttestationData{Slot: currentSlot - 2, JustifiedEpoch: expectedEpoch, BeaconBlockRootHash32: []byte{'B'}}},
+		{Data: &pbp2p.AttestationData{Slot: currentSlot, JustifiedEpoch: expectedEpoch, BeaconBlockRootHash32: []byte{'E'}}},
+	}
+	if !reflect.DeepEqual(res.PendingAttestations, expectedAtts) {
+		t.Error("Did not receive expected attestations")
 	}
 }
