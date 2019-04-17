@@ -92,7 +92,7 @@ func run(ctx context.Context, v Validator) {
 							"public_key": pk12Char,
 							"slot":       slot - params.BeaconConfig().GenesisSlot,
 							"role":       role,
-						}).Info("No active assignment, doing nothing")
+						}).Debug("No active assignment, doing nothing")
 					default:
 						// Do nothing :)
 					}
