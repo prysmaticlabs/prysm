@@ -663,3 +663,45 @@ func TestFilterActivePublicKeys(t *testing.T) {
 		t.Error("Wrong active keys returned")
 	}
 }
+
+func TestAddNonActivePublicKeysAssignmentStatus(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	currentEpoch := uint64(15)
+	beaconState := &pbp2p.BeaconState{
+		Slot: helpers.StartSlot(currentEpoch),
+		ValidatorRegistry: []*pbp2p.Validator{
+			// Active validiators in our request
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk1"),
+				ActivationEpoch: currentEpoch - 1,
+				ExitEpoch:       math.MaxUint64,
+			},
+			// Inactive validators in our request
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk2"),
+				ActivationEpoch: currentEpoch - 2,
+				ExitEpoch:       currentEpoch - 1,
+			},
+			// Other active validators in the registry
+			&pbp2p.Validator{
+				Pubkey:          []byte("pk3"),
+				ActivationEpoch: 0,
+				ExitEpoch:       math.MaxUint64,
+			},
+		},
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
+	assignments = vs.addNonActivePublicKeysAssignmentStatus(beaconState,
+		[][]byte{
+			[]byte("pk1"),
+			[]byte("pk4"),
+		}, assignments)
+	if len(assignments) != 1 || assignments[0].Status != pb.ValidatorStatus_UNKNOWN_STATUS || !bytes.Equal(assignments[0].PublicKey, []byte("pk4")) {
+		t.Errorf("Unknown public key status wasn't returned: %v", assignments)
+	}
+}

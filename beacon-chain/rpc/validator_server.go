@@ -140,6 +140,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		}
 		assignments = append(assignments, a)
 	}
+	assignments = vs.addNonActivePublicKeysAssignmentStatus(beaconState, req.PublicKeys, assignments)
 	return &pb.CommitteeAssignmentResponse{
 		Assignment: assignments,
 	}, nil
@@ -258,4 +259,25 @@ func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState
 	}
 
 	return activeKeys
+}
+
+func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(beaconState *pbp2p.BeaconState, pubkeys [][]byte, assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment) []*pb.CommitteeAssignmentResponse_CommitteeAssignment {
+	// Generate a map for O(1) lookup of existence of pub keys in request.
+	validatorMap := make(map[string]*pbp2p.Validator)
+	for _, v := range beaconState.ValidatorRegistry {
+		validatorMap[hex.EncodeToString(v.Pubkey)] = v
+	}
+	currentEpoch := helpers.SlotToEpoch(beaconState.Slot)
+	for _, pk := range pubkeys {
+		hexPk := hex.EncodeToString(pk)
+		if _, ok := validatorMap[hexPk]; !ok || !helpers.IsActiveValidator(validatorMap[hexPk], currentEpoch) {
+			status, _ := vs.validatorStatus(pk, beaconState)
+			a := &pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				PublicKey: pk,
+				Status:    status,
+			}
+			assignments = append(assignments, a)
+		}
+	}
+	return assignments
 }
