@@ -130,6 +130,16 @@ func (db *BeaconDB) CanonicalMap(ctx context.Context) (*pb.CanonicalMap, error) 
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CanonicalMap")
 	defer span.End()
 
+	if db.canonicalMap != nil {
+		db.canonicalMapLock.Lock()
+		defer db.canonicalMapLock.Unlock()
+		newMap, ok := proto.Clone(db.canonicalMap).(*pb.CanonicalMap)
+		if !ok {
+			return newMap, errors.New("could not clone beacon state")
+		}
+		return db.canonicalMap, nil
+	}
+
 	var canonicalMap *pb.CanonicalMap
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
