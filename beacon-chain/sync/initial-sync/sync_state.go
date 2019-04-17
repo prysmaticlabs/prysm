@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -63,6 +64,8 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		log.Errorf("Could not update chain head: %v", err)
 		return
 	}
+
+	validators.InitializeValidatorStore(finalizedState)
 
 	// sets the current slot to the last finalized slot of the
 	// beacon state to begin our sync from.
