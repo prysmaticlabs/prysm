@@ -2,17 +2,17 @@ package rpc
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -246,13 +246,13 @@ func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState
 	// Generate a map for O(1) lookup of existence of pub keys in request.
 	pkMap := make(map[string]bool)
 	for _, pk := range pubkeys {
-		pkMap[string(pk)] = true
+		pkMap[hex.EncodeToString(pk)] = true
 	}
 
 	var activeKeys [][]byte
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot)
 	for _, v := range beaconState.ValidatorRegistry {
-		if pkMap[string(v.Pubkey)] && helpers.IsActiveValidator(v, currentEpoch) {
+		if pkMap[hex.EncodeToString(v.Pubkey)] && helpers.IsActiveValidator(v, currentEpoch) {
 			activeKeys = append(activeKeys, v.Pubkey)
 		}
 	}
