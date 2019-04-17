@@ -166,10 +166,10 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 
 	state.ValidatorRegistry[idx] = validator
 
-	log.WithFields(logrus.Fields{
-		"index":           idx,
-		"activationEpoch": validator.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
-	}).Info("Validator activated")
+	// log.WithFields(logrus.Fields{
+	// 	"index":           idx,
+	// 	"activationEpoch": validator.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+	// }).Info("Validator activated")
 
 	return state, nil
 }
