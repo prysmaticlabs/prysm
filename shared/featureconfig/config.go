@@ -32,7 +32,6 @@ type FeatureFlagConfig struct {
 	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updating finalized states.
 	EnableCommitteesCache        bool // EnableCommitteesCache for state transition.
 	EnableBlockAncestorCache     bool //EnableBlockAncestorCache for fork choice optimization.
-	EnableBlock                  bool // EnableCommitteesCache for state transition.
 }
 
 var featureConfig *FeatureFlagConfig
