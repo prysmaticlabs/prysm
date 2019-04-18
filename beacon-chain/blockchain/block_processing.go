@@ -60,6 +60,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get parent block: %v", err)
 	}
+	if parent == nil {
+		return nil, fmt.Error("parent does not exist in DB")
+	}
 	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
