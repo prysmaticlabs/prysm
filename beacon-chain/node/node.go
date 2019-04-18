@@ -259,7 +259,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	}
 	powClient := ethclient.NewClient(rpcClient)
 
-	logRPCClient, err := gethRPC.Dial("https://goerli.prylabs.net")
+	logRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.HTTPWeb3ProviderFlag.Name))
 	if err != nil {
 		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
 	}
