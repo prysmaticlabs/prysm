@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -1373,5 +1374,55 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	h, _ = hashutil.HashBeaconBlock(cachedInfo.Block)
 	if h != genesisRoot {
 		t.Error("could not retrieve the correct ancestor block")
+	}
+}
+
+func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableBlockAncestorCache: true,
+	})
+
+	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	potentialHead := &pb.BeaconBlock{
+		Slot:             params.BeaconConfig().GenesisSlot + 5,
+		ParentRootHash32: genesisRoot[:],
+	}
+	pHeadHash, _ := hashutil.HashBeaconBlock(potentialHead)
+	potentialHead2 := &pb.BeaconBlock{
+		Slot:             params.BeaconConfig().GenesisSlot + 6,
+		ParentRootHash32: genesisRoot[:],
+	}
+	pHeadHash2, _ := hashutil.HashBeaconBlock(potentialHead2)
+
+	beaconState := &pb.BeaconState{ValidatorBalances: []uint64{1e9, 1e9}}
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	voteTargets[0] = potentialHead
+	voteTargets[1] = potentialHead2
+
+	aInfo := &cache.AncestorInfo{
+		Height: genesisBlock.Slot,
+		Hash:   pHeadHash[:],
+		Block:  genesisBlock,
+	}
+	// Presave cached ancestor blocks before running vote count.
+	if err := blkAncestorCache.AddBlockAncestor(aInfo); err != nil {
+		t.Fatal(err)
+	}
+	aInfo.Hash = pHeadHash2[:]
+	if err := blkAncestorCache.AddBlockAncestor(aInfo); err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := VoteCount(genesisBlock, beaconState, voteTargets, nil)
+	if err != nil {
+		t.Fatalf("Could not fetch vote balances: %v", err)
+	}
+	if count != 2e9 {
+		t.Errorf("Expected total balances 2e9, received %d", count)
 	}
 }
