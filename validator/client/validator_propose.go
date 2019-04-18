@@ -113,10 +113,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	// 3. Compute state root transition from parent block to the new block.
 	resp, err := v.proposerClient.ComputeStateRoot(ctx, block)
 	if err != nil {
-		log.WithField(
+		log.WithFields(logrus.Fields{
 			"block", proto.MarshalTextString(block),
 			"validator": truncatedPk,
-		).WithError(err).Error("Not proposing! Unable to compute state root")
+		}).WithError(err).Error("Not proposing! Unable to compute state root")
 		return
 	}
 	block.StateRootHash32 = resp.GetStateRoot()
