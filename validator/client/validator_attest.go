@@ -27,7 +27,11 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	span.AddAttributes(
 		trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[idx].PublicKey.Marshal())),
 	)
-
+	truncatedPk := idx
+	if len(idx) > 12 {
+		truncatedPk = idx[:12]
+	}
+	log.Infof("%v Performing a beacon block attestation...", truncatedPk)
 	v.waitToSlotMidpoint(ctx, slot)
 
 	// First the validator should construct attestation_data, an AttestationData
