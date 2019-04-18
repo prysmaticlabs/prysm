@@ -17,7 +17,7 @@ import (
 
 var (
 	badBlockCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "bad_block_counter",
+		Name: "bad_blocks",
 		Help: "Number of bad, blacklisted blocks received",
 	})
 )
