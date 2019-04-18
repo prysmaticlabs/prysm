@@ -58,7 +58,7 @@ func (db *BeaconDB) HasBlock(root [32]byte) bool {
 	return hasBlock
 }
 
-// IsEvilBlockhash determines if a certain block root has been blacklisted
+// IsEvilBlockHash determines if a certain block root has been blacklisted
 // due to failing to process core state transitions.
 func (db *BeaconDB) IsEvilBlockHash(root [32]byte) bool {
 	db.badBlocksLock.Lock()

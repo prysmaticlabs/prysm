@@ -29,7 +29,7 @@ type BeaconDB struct {
 	highestBlockSlot uint64
 	// We keep a map of hashes of blocks which failed processing for blacklisting.
 	badBlockHashes map[[32]byte]bool
-	badBlocksLock sync.RWMutex
+	badBlocksLock  sync.RWMutex
 
 	// Beacon chain deposits in memory.
 	pendingDeposits       []*depositContainer
