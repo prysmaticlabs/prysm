@@ -41,7 +41,6 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 	if !db.HasValidator(pubKey) {
 		return 0, fmt.Errorf("validator %#x does not exist", pubKey)
 	}
-
 	var index uint64
 	h := hashutil.Hash(pubKey)
 
