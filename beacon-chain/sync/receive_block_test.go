@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -86,7 +85,7 @@ func TestReceiveBlockAnnounce_SkipsBlacklistedBlock(t *testing.T) {
 	if err := rs.receiveBlockAnnounce(msg); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Received a blacklisted block hash: %#x", blockRoot))
+	testutil.AssertLogsContain(t, hook, "Received a blacklisted block hash")
 	hook.Reset()
 }
 
