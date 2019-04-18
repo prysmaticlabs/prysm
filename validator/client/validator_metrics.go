@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,24 +24,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		v.prevBalance = params.BeaconConfig().MaxDepositAmount
 	}
 	var totalPrevBalance uint64
-	req := &pb.ValidatorPerformanceRequest{
-		Slot:      slot,
-		PublicKey: v.pubkeys[0],
-	}
-	resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
-	if err != nil {
-		return err
-	}
-	log.WithFields(logrus.Fields{
-		"slot":  slot - params.BeaconConfig().GenesisSlot,
-		"epoch": (slot / params.BeaconConfig().SlotsPerEpoch) - params.BeaconConfig().GenesisEpoch,
-	}).Info("Start of a new epoch!")
-	log.WithFields(logrus.Fields{
-		"totalValidators":     resp.TotalValidators,
-		"numActiveValidators": resp.TotalActiveValidators,
-	}).Infof("Validator registry information")
-	log.Info("Generating validator performance report from the previous epoch...")
-
+	reported := false
 	for _, pkey := range v.pubkeys {
 		req := &pb.ValidatorPerformanceRequest{
 			Slot:      slot,
@@ -48,7 +32,22 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 		resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
 		if err != nil {
+			if strings.Contains(err.Error(), "could not get validator index") {
+				continue
+			}
 			return err
+		}
+		if !reported {
+			log.WithFields(logrus.Fields{
+				"slot":  slot - params.BeaconConfig().GenesisSlot,
+				"epoch": (slot / params.BeaconConfig().SlotsPerEpoch) - params.BeaconConfig().GenesisEpoch,
+			}).Info("Start of a new epoch!")
+			log.WithFields(logrus.Fields{
+				"totalValidators":     resp.TotalValidators,
+				"numActiveValidators": resp.TotalActiveValidators,
+			}).Infof("Validator registry information")
+			log.Info("Generating validator performance report from the previous epoch...")
+			reported = true
 		}
 		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
 		log.WithFields(logrus.Fields{
