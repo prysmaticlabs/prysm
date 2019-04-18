@@ -25,10 +25,14 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
 	entries := hook.AllEntries()
 	match := false
 	for _, e := range entries {
-		if strings.Contains(e.Message, want) {
+		msg, err := e.String()
+		if err != nil {
+			t.Fatalf("Failed to format log entry to string: %v", err)
+		}
+		if strings.Contains(msg, want) {
 			match = true
 		}
-		t.Logf("log: %s", e.Message)
+		t.Logf("log: %s", msg)
 	}
 
 	if flag && !match {
