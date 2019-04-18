@@ -25,8 +25,11 @@ type BeaconDB struct {
 	db           *bolt.DB
 	DatabasePath string
 
-	// Beacon block info in memory
+	// Beacon block info in memory.
 	highestBlockSlot uint64
+	// We keep a map of hashes of blocks which failed processing for blacklisting.
+	badBlockHashes map[[32]byte]bool
+	badBlocksLock sync.RWMutex
 
 	// Beacon chain deposits in memory.
 	pendingDeposits       []*depositContainer

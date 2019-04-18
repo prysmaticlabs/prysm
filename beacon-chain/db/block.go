@@ -58,6 +58,22 @@ func (db *BeaconDB) HasBlock(root [32]byte) bool {
 	return hasBlock
 }
 
+// IsEvilBlockhash determines if a certain block root has been blacklisted
+// due to failing to process core state transitions.
+func (db *BeaconDB) IsEvilBlockHash(root [32]byte) bool {
+	db.badBlocksLock.Lock()
+	defer db.badBlocksLock.Unlock()
+	return db.badBlockHashes[root]
+}
+
+// MarkEvilBlockHash makes a block hash as tainted because it corresponds
+// to a block which fails core state transition processing.
+func (db *BeaconDB) MarkEvilBlockHash(root [32]byte) {
+	db.badBlocksLock.Lock()
+	defer db.badBlocksLock.Unlock()
+	db.badBlockHashes[root] = true
+}
+
 // SaveBlock accepts a block and writes it to disk.
 func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	root, err := hashutil.HashBeaconBlock(block)
