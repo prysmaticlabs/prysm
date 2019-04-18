@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -54,7 +56,15 @@ func (b *BlockFailedProcessingErr) Error() string {
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, block.Slot-1)
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parent, err := c.beaconDB.Block(parentRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get parent block: %v", err)
+	}
+	if parent == nil {
+		return nil, errors.New("parent does not exist in DB")
+	}
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}

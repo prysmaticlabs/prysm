@@ -22,46 +22,50 @@ import (
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
+func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	if slot == params.BeaconConfig().GenesisSlot {
 		log.Info("Assigned to genesis slot, skipping proposal")
 		return
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.key.PublicKey.Marshal())))
-	log.Info("Performing a beacon block proposal...")
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[idx].PublicKey.Marshal())))
+	truncatedPk := idx
+	if len(idx) > 12 {
+		truncatedPk = idx[:12]
+	}
+	log.WithFields(logrus.Fields{"validator": truncatedPk}).Info("Performing a beacon block proposal...")
 	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.
 	headBlock, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		log.Errorf("Failed to fetch CanonicalHead: %v", err)
+		log.WithError(err).Error("Failed to fetch CanonicalHead")
 		return
 	}
 	parentTreeRoot, err := hashutil.HashBeaconBlock(headBlock)
 	if err != nil {
-		log.Errorf("Failed to hash parent block: %v", err)
+		log.WithError(err).Error("Failed to hash parent block")
 		return
 	}
 
 	// Get validator ETH1 deposits which have not been included in the beacon chain.
 	pDepResp, err := v.beaconClient.PendingDeposits(ctx, &ptypes.Empty{})
 	if err != nil {
-		log.Errorf("Failed to get pending pendings: %v", err)
+		log.WithError(err).Error("Failed to get pendings deposits")
 		return
 	}
 
 	// Get ETH1 data.
 	eth1DataResp, err := v.beaconClient.Eth1Data(ctx, &ptypes.Empty{})
 	if err != nil {
-		log.Errorf("Failed to get ETH1 data: %v", err)
+		log.WithError(err).Error("Failed to get ETH1 data")
 		return
 	}
 
 	// Retrieve the current fork data from the beacon node.
 	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
 	if err != nil {
-		log.Errorf("Failed to get fork data from beacon node's state: %v", err)
+		log.WithError(err).Error("Failed to get fork data from beacon node's state")
 		return
 	}
 	// Then, we generate a RandaoReveal by signing the block's slot information using
@@ -79,7 +83,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
-	epochSignature := v.key.SecretKey.Sign(buf, domain)
+	epochSignature := v.keys[idx].SecretKey.Sign(buf, domain)
 
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
@@ -87,7 +91,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		ProposalBlockSlot:       slot,
 	})
 	if err != nil {
-		log.Errorf("Failed to fetch pending attestations from the beacon node: %v", err)
+		log.WithError(err).Error("Failed to fetch pending attestations from the beacon node")
 		return
 	}
 
@@ -109,9 +113,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// 3. Compute state root transition from parent block to the new block.
 	resp, err := v.proposerClient.ComputeStateRoot(ctx, block)
 	if err != nil {
-		log.WithField(
-			"block", proto.MarshalTextString(block),
-		).Errorf("Not proposing! Unable to compute state root: %v", err)
+		log.WithFields(logrus.Fields{
+			"block":     proto.MarshalTextString(block),
+			"validator": truncatedPk,
+		}).WithError(err).Error("Not proposing! Unable to compute state root")
 		return
 	}
 	block.StateRootHash32 = resp.GetStateRoot()
@@ -123,7 +128,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// 5. Broadcast to the network via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
 	if err != nil {
-		log.WithError(err).Error("Failed to propose block")
+		log.WithError(err).WithFields(logrus.Fields{
+			"validator": truncatedPk,
+		}).Error("Failed to propose block")
 		return
 	}
 	span.AddAttributes(
@@ -132,10 +139,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		trace.Int64Attribute("numAttestations", int64(len(block.Body.Attestations))),
 	)
 	log.WithFields(logrus.Fields{
-		"blockRoot": fmt.Sprintf("%#x", blkResp.BlockRootHash32),
-	}).Info("Proposed new beacon block")
-	log.WithFields(logrus.Fields{
+		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRootHash32),
+		"validator":       truncatedPk,
 		"numAttestations": len(block.Body.Attestations),
 		"numDeposits":     len(block.Body.Deposits),
-	}).Info("Items included in block")
+	}).Info("Proposed new beacon block")
 }
