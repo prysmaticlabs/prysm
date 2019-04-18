@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script creates 8 private keys with 8 deposits and runs a single 
+# validator process.
+
 PRIVATE_KEY_PATH=~/priv
 
 echo "clearing data"
@@ -18,7 +21,7 @@ bazel build //validator
 bazel build //contracts/deposit-contract/sendDepositTx
 
 START_INDEX=1
-END_INDEX=9
+END_INDEX=8
 
 while test $# -gt 0; do
     case "$1" in
