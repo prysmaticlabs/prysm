@@ -70,6 +70,10 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 	saveLatestBlock := beaconState.LatestBlock
 
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash beacon block")
+	}
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(ctx, block, beaconState); err != nil {
 		return beaconState, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
@@ -91,7 +95,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err != nil {
 		switch err.(type) {
 		case *BlockFailedProcessingErr:
-			// If the block fails processing, we delete it from our DB.
+			// If the block fails processing, we mark it as blacklisted and delete it from our DB.
+			c.beaconDB.MarkEvilBlockHash(blockRoot)
 			if err := c.beaconDB.DeleteBlock(block); err != nil {
 				return nil, fmt.Errorf("could not delete bad block from db: %v", err)
 			}

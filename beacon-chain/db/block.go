@@ -5,13 +5,21 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+)
 
-	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+var (
+	badBlockCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "bad_blocks",
+		Help: "Number of bad, blacklisted blocks received",
+	})
 )
 
 func createBlock(enc []byte) (*pb.BeaconBlock, error) {
@@ -56,6 +64,30 @@ func (db *BeaconDB) HasBlock(root [32]byte) bool {
 	})
 
 	return hasBlock
+}
+
+// IsEvilBlockHash determines if a certain block root has been blacklisted
+// due to failing to process core state transitions.
+func (db *BeaconDB) IsEvilBlockHash(root [32]byte) bool {
+	db.badBlocksLock.Lock()
+	defer db.badBlocksLock.Unlock()
+	if db.badBlockHashes != nil {
+		return db.badBlockHashes[root]
+	}
+	db.badBlockHashes = make(map[[32]byte]bool)
+	return false
+}
+
+// MarkEvilBlockHash makes a block hash as tainted because it corresponds
+// to a block which fails core state transition processing.
+func (db *BeaconDB) MarkEvilBlockHash(root [32]byte) {
+	db.badBlocksLock.Lock()
+	defer db.badBlocksLock.Unlock()
+	if db.badBlockHashes == nil {
+		db.badBlockHashes = make(map[[32]byte]bool)
+	}
+	db.badBlockHashes[root] = true
+	badBlockCount.Inc()
 }
 
 // SaveBlock accepts a block and writes it to disk.
