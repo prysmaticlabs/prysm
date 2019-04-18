@@ -99,8 +99,10 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not receive validator activation from stream: %v", err)
 		}
-		validatorActivatedRecords = res.ActivatedPublicKeys
-		break
+		if len(res.ActivatedPublicKeys) > 0 {
+			validatorActivatedRecords = res.ActivatedPublicKeys
+			break
+		}
 	}
 	for _, pk := range validatorActivatedRecords {
 		log.WithFields(logrus.Fields{

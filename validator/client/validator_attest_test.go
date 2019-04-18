@@ -21,8 +21,8 @@ import (
 
 func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-
 	validator, m, finish := setup(t)
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{}}
 	defer finish()
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -40,7 +40,8 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 	defer finish()
 	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
-			Shard: 5,
+			PublicKey: validatorKey.PublicKey.Marshal(),
+			Shard:     5,
 		},
 	}}
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -63,6 +64,7 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 	defer finish()
 	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
 			Committee: make([]uint64, 111),
 		}}}
@@ -100,6 +102,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
 			Committee: committee,
 		}}}
@@ -199,6 +202,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
 			Committee: committee,
 		}}}
@@ -241,6 +245,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
 			Committee: committee,
 		}}}

@@ -340,14 +340,13 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	v := validator{
 		keys:            keyMapThreeValidators,
 		validatorClient: client,
-		pubkeys:         make([][]byte, 0),
+		pubkeys:         publicKeys(keyMapThreeValidators),
 	}
-	v.pubkeys = publicKeys(v.keys)
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(clientStream, nil).Times(2)
+	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&pb.ValidatorActivationResponse{
 			ActivatedPublicKeys: make([][]byte, 0),
