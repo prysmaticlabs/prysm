@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -57,6 +58,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	defer span.End()
 	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
 	parent, err := c.beaconDB.Block(parentRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get parent block: %v", err)
+	}
+	if parent == nil {
+		return nil, errors.New("parent does not exist in DB")
+	}
 	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
