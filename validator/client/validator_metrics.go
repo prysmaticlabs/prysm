@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -37,6 +38,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			}
 			return err
 		}
+		tpk := hex.EncodeToString(pkey)[:12]
 		if !reported {
 			log.WithFields(logrus.Fields{
 				"slot":  slot - params.BeaconConfig().GenesisSlot,
@@ -47,25 +49,26 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"numActiveValidators": resp.TotalActiveValidators,
 			}).Infof("Validator registry information")
 			log.Info("Generating validator performance report from the previous epoch...")
+			avgBalance := resp.AverageValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
+			log.WithField(
+				"averageEthBalance", fmt.Sprintf("%f", avgBalance),
+			).Info("Average eth balance per validator in the beacon chain")
 			reported = true
 		}
 		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
 		log.WithFields(logrus.Fields{
 			"ethBalance": newBalance,
-		}).Info("New validator balance")
-		avgBalance := resp.AverageValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
+		}).Infof("%v New validator balance", tpk)
+
 		if v.prevBalance > 0 {
 			prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
-			log.WithField("prevEthBalance", prevBalance).Info("Previous validator balance")
+			log.WithField("prevEthBalance", prevBalance).Infof("%v Previous validator balance", tpk)
 			log.WithFields(logrus.Fields{
 				"eth":           fmt.Sprintf("%f", newBalance-prevBalance),
 				"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
-			}).Info("Net gains/losses in eth")
+			}).Infof("%v Net gains/losses in eth", tpk)
 		}
-		log.WithField(
-			"averageEthBalance", fmt.Sprintf("%f", avgBalance),
-		).Info("Average eth balance per validator in the beacon chain")
 		totalPrevBalance += resp.Balance
 	}
 

@@ -51,7 +51,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	// Get validator ETH1 deposits which have not been included in the beacon chain.
 	pDepResp, err := v.beaconClient.PendingDeposits(ctx, &ptypes.Empty{})
 	if err != nil {
-		log.Errorf("Failed to get pending pendings: %v", err)
+		log.Errorf("Failed to get pendings deposits: %v", err)
 		return
 	}
 
@@ -127,7 +127,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	// 5. Broadcast to the network via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
 	if err != nil {
-		log.WithError(err).Error("Failed to propose block")
+		log.WithError(err).Errorf("%v Failed to propose block", truncatedPk)
 		return
 	}
 	span.AddAttributes(
@@ -137,7 +137,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	)
 	log.WithFields(logrus.Fields{
 		"blockRoot": fmt.Sprintf("%#x", blkResp.BlockRootHash32),
-	}).Info("Proposed new beacon block")
+	}).Infof("%v Proposed new beacon block", truncatedPk)
 	log.WithFields(logrus.Fields{
 		"numAttestations": len(block.Body.Attestations),
 		"numDeposits":     len(block.Body.Deposits),

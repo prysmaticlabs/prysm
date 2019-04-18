@@ -133,7 +133,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		"justifiedEpoch": attData.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 		"shard":          attData.Shard,
 		"slot":           slot - params.BeaconConfig().GenesisSlot,
-	}).Info("Attesting to beacon chain head...")
+	}).Infof("%v Attesting to beacon chain head...", truncatedPk)
 
 	log.Infof("Produced attestation with block root: %#x", attestation.Data.BeaconBlockRootHash32)
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
@@ -145,7 +145,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		"attestationHash": fmt.Sprintf("%#x", attResp.AttestationHash),
 		"shard":           attData.Shard,
 		"slot":            slot - params.BeaconConfig().GenesisSlot,
-	}).Info("Beacon node processed attestation successfully")
+	}).Infof("%v successfully attested", truncatedPk)
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationHash)),
