@@ -57,6 +57,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	defer span.End()
 	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
 	parent, err := c.beaconDB.Block(parentRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get parent block: %v", err)
+	}
 	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
