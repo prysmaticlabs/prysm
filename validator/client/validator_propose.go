@@ -114,7 +114,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	resp, err := v.proposerClient.ComputeStateRoot(ctx, block)
 	if err != nil {
 		log.WithFields(logrus.Fields{
-			"block", proto.MarshalTextString(block),
+			"block":     proto.MarshalTextString(block),
 			"validator": truncatedPk,
 		}).WithError(err).Error("Not proposing! Unable to compute state root")
 		return
@@ -129,7 +129,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
-			"validator": truncatedPk, 	
+			"validator": truncatedPk,
 		}).Error("Failed to propose block")
 		return
 	}
@@ -140,7 +140,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	)
 	log.WithFields(logrus.Fields{
 		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRootHash32),
-		"validator":       truncatedPk, 
+		"validator":       truncatedPk,
 		"numAttestations": len(block.Body.Attestations),
 		"numDeposits":     len(block.Body.Deposits),
 	}).Info("Proposed new beacon block")
