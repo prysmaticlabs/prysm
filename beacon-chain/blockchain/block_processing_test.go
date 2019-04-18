@@ -26,7 +26,12 @@ import (
 var _ = BlockProcessor(&ChainService{})
 
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
-	beaconState, err := chainService.beaconDB.HistoricalStateFromSlot(context.Background(), block.Slot-1)
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parent, err := chainService.beaconDB.Block(parentRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState, err := chainService.beaconDB.HistoricalStateFromSlot(context.Background(), parent.Slot)
 	if err != nil {
 		t.Fatalf("Unable to retrieve state %v", err)
 	}
@@ -110,12 +115,19 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	if err := db.SaveFinalizedState(beaconState); err != nil {
+	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save block to db: %v", err)
+	}
+	parentHash, err := hashutil.HashBeaconBlock(genesis)
+	if err != nil {
+		t.Fatalf("Unable to get tree hash root of canonical head: %v", err)
+	}
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -154,6 +166,59 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
+func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, _ := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("Could not tree hash state: %v", err)
+	}
+
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
+	block := &pb.BeaconBlock{
+		Slot:             beaconState.Slot + 4,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		RandaoReveal:     []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
+		Body: &pb.BeaconBlockBody{
+			Attestations: nil,
+		},
+	}
+	initBlockStateRoot(t, block, chainService)
+	if err := chainService.beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
+		t.Errorf("Block failed processing: %v", err)
+	}
+	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
+}
+
 func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -173,7 +238,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	if err := db.SaveFinalizedState(beaconState); err != nil {
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -241,7 +306,9 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
 	beaconState.Slot++
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
@@ -282,6 +349,9 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		t.Fatal(err)
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
 	beaconState.Slot++

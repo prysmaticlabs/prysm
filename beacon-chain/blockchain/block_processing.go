@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -54,7 +55,9 @@ func (b *BlockFailedProcessingErr) Error() string {
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, block.Slot-1)
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parent, err := c.beaconDB.Block(parentRoot)
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
