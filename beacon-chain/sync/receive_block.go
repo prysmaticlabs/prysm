@@ -23,6 +23,14 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	h := bytesutil.ToBytes32(data.Hash[:32])
 
+	isEvilBlock := rs.db.IsEvilBlockHash(h)
+	span.AddAttributes(trace.BoolAttribute("isEvilBlock", isEvilBlock))
+
+	if isEvilBlock {
+		log.Debugf("Received a blacklisted block hash: %#x", h)
+		return nil
+	}
+
 	// This prevents us from processing a block announcement we have already received.
 	// TODO(#2072): If the peer failed to give the block, broadcast request to the whole network.
 	rs.blockAnnouncementsLock.Lock()
@@ -76,6 +84,11 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return err
+	}
+
+	if rs.db.IsEvilBlockHash(blockRoot) {
+		log.WithField("blockHash", blockRoot).Debug("Skipping blacklisted block")
+		return nil
 	}
 
 	// If the block has a child, we then clear it from the blocks pending processing
@@ -174,6 +187,10 @@ func (rs *RegularSync) validateAndProcessBlock(
 func (rs *RegularSync) insertPendingBlock(ctx context.Context, blockRoot [32]byte, blockMsg p2p.Message) {
 	rs.blocksAwaitingProcessingLock.Lock()
 	defer rs.blocksAwaitingProcessingLock.Unlock()
+	// Do not reinsert into the map if block root was previously added.
+	if _, ok := rs.blocksAwaitingProcessing[blockRoot]; ok {
+		return
+	}
 	rs.blocksAwaitingProcessing[blockRoot] = blockMsg
 	blocksAwaitingProcessingGauge.Inc()
 	rs.p2p.Broadcast(ctx, &pb.BeaconBlockRequest{Hash: blockRoot[:]})
