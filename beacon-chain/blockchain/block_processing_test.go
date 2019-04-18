@@ -285,6 +285,10 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if savedBlock != nil {
 		t.Errorf("Expected bad block to have been deleted, received: %v", savedBlock)
 	}
+	// We also verify the block has been blacklisted.
+	if !db.IsEvilBlockHash(blockRoot) {
+		t.Error("Expected block root to have been blacklisted")
+	}
 }
 
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {

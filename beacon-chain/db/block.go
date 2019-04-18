@@ -63,7 +63,11 @@ func (db *BeaconDB) HasBlock(root [32]byte) bool {
 func (db *BeaconDB) IsEvilBlockHash(root [32]byte) bool {
 	db.badBlocksLock.Lock()
 	defer db.badBlocksLock.Unlock()
-	return db.badBlockHashes[root]
+	if db.badBlockHashes != nil {
+		return db.badBlockHashes[root]
+	}
+	db.badBlockHashes = make(map[[32]byte]bool)
+	return false
 }
 
 // MarkEvilBlockHash makes a block hash as tainted because it corresponds
@@ -71,6 +75,9 @@ func (db *BeaconDB) IsEvilBlockHash(root [32]byte) bool {
 func (db *BeaconDB) MarkEvilBlockHash(root [32]byte) {
 	db.badBlocksLock.Lock()
 	defer db.badBlocksLock.Unlock()
+	if db.badBlockHashes == nil {
+		db.badBlockHashes = make(map[[32]byte]bool)
+	}
 	db.badBlockHashes[root] = true
 }
 
