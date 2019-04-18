@@ -161,6 +161,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 
 	v.assignments = resp
+	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		for _, assignment := range v.assignments.Assignment {
 			var proposerSlot uint64
@@ -191,7 +192,11 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 		}
 	}
-	log.Info("Updated validator assignments")
+	
+	log.WithFields(logrus.Fields{
+		"assignments": len(v.assignments.Assignment),
+	}).Info("Updated validator assignments")
+	
 	return nil
 }
 
