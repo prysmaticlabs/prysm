@@ -161,16 +161,18 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 
 	v.assignments = resp
-	lFields := logrus.Fields{}
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		for _, assignment := range v.assignments.Assignment {
 			var proposerSlot uint64
 			var attesterSlot uint64
-			lFields := logrus.Fields{}
 			assignmentKey := hex.EncodeToString(assignment.PublicKey)
 			assignmentKey = assignmentKey[:12]
+			lFields := logrus.Fields{
+				"validator": assignmentKey,
+				"status": assignment.Status,
+			}
 			if assignment.Status != pb.ValidatorStatus_ACTIVE {
-				log.WithFields(lFields).Infof("Validator %v Status: %v", assignmentKey, assignment.Status)
+				log.WithFields(lFields).Info("New assignment")
 				continue
 			} else if assignment.IsProposer {
 				proposerSlot = assignment.Slot
@@ -185,11 +187,11 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 			if assignment.IsProposer {
 				lFields["proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
 			}
-			log.WithFields(lFields).Infof("Validator %v Status: %v assignment", assignmentKey, assignment.Status)
+			log.WithFields(lFields).Info("New assignment")
 
 		}
 	}
-	log.WithFields(lFields).Info("Updated validator assignments")
+	log.Info("Updated validator assignments")
 	return nil
 }
 
