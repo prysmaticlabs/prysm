@@ -79,6 +79,7 @@ type Web3Service struct {
 	chainStartFeed          *event.Feed
 	reader                  Reader
 	logger                  bind.ContractFilterer
+	httpLogger              bind.ContractFilterer
 	blockFetcher            POWBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
@@ -104,6 +105,7 @@ type Web3ServiceConfig struct {
 	Client          Client
 	Reader          Reader
 	Logger          bind.ContractFilterer
+	HTTPLogger      bind.ContractFilterer
 	BlockFetcher    POWBlockFetcher
 	ContractBackend bind.ContractBackend
 	BeaconDB        *db.BeaconDB
@@ -143,6 +145,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		depositTrie:             depositTrie,
 		reader:                  config.Reader,
 		logger:                  config.Logger,
+		httpLogger:              config.HTTPLogger,
 		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      [][]byte{},
