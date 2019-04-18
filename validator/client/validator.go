@@ -170,7 +170,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 			assignmentKey = assignmentKey[:12]
 			lFields := logrus.Fields{
 				"validator": assignmentKey,
-				"status": assignment.Status,
+				"status":    assignment.Status,
 			}
 			if assignment.Status != pb.ValidatorStatus_ACTIVE {
 				log.WithFields(lFields).Info("New assignment")
@@ -192,11 +192,11 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 		}
 	}
-	
+
 	log.WithFields(logrus.Fields{
 		"assignments": len(v.assignments.Assignment),
 	}).Info("Updated validator assignments")
-	
+
 	return nil
 }
 
