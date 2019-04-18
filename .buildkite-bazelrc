@@ -11,6 +11,10 @@ build:remote-cache --strategy=Javac=standalone
 build:remote-cache --strategy=Closure=standalone
 build:remote-cache --strategy=Genrule=standalone
 
+# Prysm specific remote-cache properties.
+build:remote-cache --host_platform_remote_properties_override='properties:{name:\"cache-silo-key\" value:\"prysm\"}' 
+build:remote-cache --remote_instance_name=projects/prysmaticlabs/instances/default_instance
+
 build --experimental_strict_action_env
 build --disk_cache=/tmp/bazelbuilds
 build --experimental_multi_threaded_digest
