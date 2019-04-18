@@ -87,7 +87,7 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2
 	}
 
 	if rs.db.IsEvilBlockHash(blockRoot) {
-		log.Debugf("Skipping blacklisted block hash: %#x", blockRoot)
+		log.WithField("blockHash", blockRoot).Debug("Skipping blacklisted block")
 		return nil
 	}
 
