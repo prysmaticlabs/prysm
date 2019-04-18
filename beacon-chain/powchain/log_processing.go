@@ -127,6 +127,11 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 		return
 	}
 
+	w.chainStartETH1Data = &pb.Eth1Data{
+		BlockHash32:       depositLog.BlockHash[:],
+		DepositRootHash32: chainStartDepositRoot[:],
+	}
+
 	timestamp := binary.LittleEndian.Uint64(timestampData)
 	w.chainStarted = true
 	w.depositRoot = chainStartDepositRoot[:]
@@ -168,6 +173,15 @@ func (w *Web3Service) processPastLogs() error {
 		w.ProcessLog(log)
 	}
 	w.lastRequestedBlock.Set(w.blockHeight)
+
+	currentState, err := w.beaconDB.HeadState(w.ctx)
+	if err != nil {
+		return fmt.Errorf("could not get head state: %v", err)
+	}
+	if currentState != nil && currentState.DepositIndex > 0 {
+		w.beaconDB.PrunePendingDeposits(w.ctx, currentState.DepositIndex)
+	}
+
 	return nil
 }
 

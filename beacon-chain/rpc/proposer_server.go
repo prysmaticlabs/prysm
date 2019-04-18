@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -30,7 +31,7 @@ type ProposerServer struct {
 // are shuffled and assigned slots to attest/propose to. This method will look for the validator that is assigned
 // to propose a beacon block at the given slot.
 func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerIndexRequest) (*pb.ProposerIndexResponse, error) {
-	beaconState, err := ps.beaconDB.State(ctx)
+	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -65,7 +66,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	}
 	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 
-	if err := ps.beaconDB.SaveHistoricalState(beaconState); err != nil {
+	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 	}
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
@@ -77,7 +78,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
 func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.PendingAttestationsRequest) (*pb.PendingAttestationsResponse, error) {
-	beaconState, err := ps.beaconDB.State(ctx)
+	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -110,26 +111,18 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 		currentSlot = beaconState.Slot
 	}
 
-	// Remove any attestation from the list if their slot is before the start of
-	// the previous epoch or does not match the current state previous justified
-	// epoch. This should be handled in the operationService cleanup but we
-	// should filter here in case it wasn't yet processed.
-	boundary := currentSlot - params.BeaconConfig().SlotsPerEpoch
-	attsWithinBoundary := make([]*pbp2p.Attestation, 0, len(atts))
+	validAtts := make([]*pbp2p.Attestation, 0, len(atts))
 	for _, att := range atts {
-
-		var expectedJustifedEpoch uint64
-		if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.SlotToEpoch(currentSlot) {
-			expectedJustifedEpoch = beaconState.JustifiedEpoch
-		} else {
-			expectedJustifedEpoch = beaconState.PreviousJustifiedEpoch
+		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
+			log.WithError(err).WithField(
+				"slot", att.Data.Slot-params.BeaconConfig().GenesisSlot).Warn(
+				"Skipping, pending attestation failed verification")
+			continue
 		}
+		validAtts = append(validAtts, att)
 
-		if att.Data.Slot > boundary && att.Data.JustifiedEpoch == expectedJustifedEpoch {
-			attsWithinBoundary = append(attsWithinBoundary, att)
-		}
 	}
-	atts = attsWithinBoundary
+	atts = validAtts
 
 	if req.FilterReadyForInclusion {
 		var attsReadyForInclusion []*pbp2p.Attestation
@@ -155,7 +148,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return &pb.StateRootResponse{StateRoot: []byte("no-op")}, nil
 	}
 
-	beaconState, err := ps.beaconDB.State(ctx)
+	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}

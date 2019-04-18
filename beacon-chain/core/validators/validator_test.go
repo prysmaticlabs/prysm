@@ -1,9 +1,9 @@
 package validators
 
 import (
-	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -11,8 +11,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCommitteesCache: false,
+	})
+}
 
 func TestHasVoted_OK(t *testing.T) {
 	// Setting bit field to 11111111.
@@ -72,7 +79,7 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 			AggregationBitfield: []byte{0xC0}}, // returns indices 237,224,2
 	}
 
-	attesterIndices, err := ValidatorIndices(context.Background(), state, boundaryAttestations)
+	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
 	if err != nil {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
@@ -224,6 +231,42 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 		ValidatorBalances: balances,
 		ValidatorRegistry: registry,
 	}
+	pubkey := []byte{7, 8, 9}
+	deposit := uint64(1000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{2}
+
+	newState, err := ProcessDeposit(
+		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if newState.ValidatorBalances[2] != 1000 {
+		t.Errorf("Expected balance at index 1 to be 1000, received %d", newState.ValidatorBalances[2])
+	}
+}
+
+func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			Pubkey: []byte{1, 2, 3},
+		},
+		{
+			Pubkey:                      []byte{4, 5, 6},
+			WithdrawalCredentialsHash32: []byte{1},
+		},
+	}
+	balances := []uint64{0, 50}
+	beaconState := &pb.BeaconState{
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
 	pubkey := []byte{4, 5, 6}
 	deposit := uint64(1000)
 	proofOfPossession := []byte{}
@@ -240,8 +283,8 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if newState.ValidatorBalances[1] != 1000 {
-		t.Errorf("Expected balance at index 1 to be 1000, received %d", newState.ValidatorBalances[1])
+	if newState.ValidatorBalances[1] != 1050 {
+		t.Errorf("Expected balance at index 1 to be 1050, received %d", newState.ValidatorBalances[1])
 	}
 }
 
@@ -426,11 +469,11 @@ func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	}
-	if ProcessPenaltiesAndExits(context.Background(), state).ValidatorBalances[0] !=
+	if ProcessPenaltiesAndExits(state).ValidatorBalances[0] !=
 		params.BeaconConfig().MaxDepositAmount {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount,
-			ProcessPenaltiesAndExits(context.Background(), state).ValidatorBalances[0])
+			ProcessPenaltiesAndExits(state).ValidatorBalances[0])
 	}
 }
 
@@ -454,7 +497,7 @@ func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 		helpers.EffectiveBalance(state, 0) /
 		params.BeaconConfig().MaxDepositAmount
 
-	newState := ProcessPenaltiesAndExits(context.Background(), state)
+	newState := ProcessPenaltiesAndExits(state)
 	if newState.ValidatorBalances[0] != params.BeaconConfig().MaxDepositAmount-penalty {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount-penalty,
@@ -503,7 +546,7 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(context.Background(), state)
+	newState, err := UpdateRegistry(state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
@@ -533,7 +576,7 @@ func TestUpdateRegistry_Activations(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(context.Background(), state)
+	newState, err := UpdateRegistry(state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
@@ -567,7 +610,7 @@ func TestUpdateRegistry_Exits(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(context.Background(), state)
+	newState, err := UpdateRegistry(state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
@@ -603,5 +646,35 @@ func TestMaxBalanceChurn_OK(t *testing.T) {
 			t.Errorf("MaxBalanceChurn was not an expected value. Wanted: %d, got: %d",
 				tt.maxBalanceChurn, churn)
 		}
+	}
+}
+
+func TestInitializeValidatoreStore(t *testing.T) {
+	registry := make([]*pb.Validator, 0)
+	indices := make([]uint64, 0)
+	validatorsLimit := 100
+	for i := 0; i < validatorsLimit; i++ {
+		registry = append(registry, &pb.Validator{
+			Pubkey:          []byte(strconv.Itoa(i)),
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		})
+		indices = append(indices, uint64(i))
+	}
+
+	bState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              params.BeaconConfig().GenesisSlot,
+	}
+
+	if _, ok := vStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {
+		t.Fatalf("Validator store already has indices saved in this epoch")
+	}
+
+	InitializeValidatorStore(bState)
+	retrievedIndices := vStore.activatedValidators[helpers.CurrentEpoch(bState)]
+
+	if !reflect.DeepEqual(retrievedIndices, indices) {
+		t.Errorf("Saved active indices are not the same as the one in the validator store, got %v but expected %v", retrievedIndices, indices)
 	}
 }

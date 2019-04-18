@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-// setupDB instantiates and returns a BeaconDB instance.
-func setupDB(t testing.TB) *BeaconDB {
+// setupDB instantiates and returns a ValidatorDB instance.
+func setupDB(t testing.TB) *ValidatorDB {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -30,7 +30,7 @@ func setupDB(t testing.TB) *BeaconDB {
 }
 
 // teardownDB cleans up a test BeaconDB instance.
-func teardownDB(t testing.TB, db *BeaconDB) {
+func teardownDB(t testing.TB, db *ValidatorDB) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}

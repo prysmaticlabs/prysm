@@ -6,7 +6,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -32,7 +31,7 @@ type ForkChoice interface {
 // updateFFGCheckPts checks whether the existing FFG check points saved in DB
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
-func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
+func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconState) error {
 	lastJustifiedSlot := helpers.StartSlot(state.JustifiedEpoch)
 	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
@@ -42,7 +41,7 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 	// the slot of justified block saved in DB.
 	if lastJustifiedSlot > savedJustifiedBlock.Slot {
 		// Retrieve the new justified block from DB using the new justified slot and save it.
-		newJustifiedBlock, err := c.beaconDB.BlockBySlot(lastJustifiedSlot)
+		newJustifiedBlock, err := c.beaconDB.BlockBySlot(ctx, lastJustifiedSlot)
 		if err != nil {
 			return err
 		}
@@ -53,17 +52,17 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 			log.Debugf("Saving new justified block, no block with slot %d in db, trying slot %d",
 				lastAvailBlkSlot, lastAvailBlkSlot-1)
 			lastAvailBlkSlot--
-			newJustifiedBlock, err = c.beaconDB.BlockBySlot(lastAvailBlkSlot)
+			newJustifiedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
 				return err
 			}
 		}
-		// Generate the new justified state with using new justified block and save it.
-		newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastJustifiedSlot)
+
+		// Fetch justified state from historical states db.
+		newJustifiedState, err := c.beaconDB.HistoricalStateFromSlot(ctx, newJustifiedBlock.Slot)
 		if err != nil {
 			return err
 		}
-
 		if err := c.beaconDB.SaveJustifiedBlock(newJustifiedBlock); err != nil {
 			return err
 		}
@@ -81,7 +80,7 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 	}
 	if lastFinalizedSlot > savedFinalizedBlock.Slot {
 		// Retrieve the new finalized block from DB using the new finalized slot and save it.
-		newFinalizedBlock, err := c.beaconDB.BlockBySlot(lastFinalizedSlot)
+		newFinalizedBlock, err := c.beaconDB.BlockBySlot(ctx, lastFinalizedSlot)
 		if err != nil {
 			return err
 		}
@@ -92,14 +91,15 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 			log.Debugf("Saving new finalized block, no block with slot %d in db, trying slot %d",
 				lastAvailBlkSlot, lastAvailBlkSlot-1)
 			lastAvailBlkSlot--
-			newFinalizedBlock, err = c.beaconDB.BlockBySlot(lastAvailBlkSlot)
+			newFinalizedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
 				return err
 			}
 		}
 
-		// Generate the new finalized state with using new finalized block and save it.
-		newFinalizedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastFinalizedSlot)
+		// Generate the new finalized state with using new finalized block and
+		// save it.
+		newFinalizedState, err := c.beaconDB.HistoricalStateFromSlot(ctx, lastFinalizedSlot)
 		if err != nil {
 			return err
 		}
@@ -113,9 +113,15 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 	return nil
 }
 
-// ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
-// weighted function to select a canonical head in Ethereum Serenity.
-func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, postState *pb.BeaconState) error {
+// ApplyForkChoiceRule determines the current beacon chain head using LMD
+// GHOST as a block-vote weighted function to select a canonical head in
+// Ethereum Serenity. The inputs are the the recently processed block and its
+// associated state.
+func (c *ChainService) ApplyForkChoiceRule(
+	ctx context.Context,
+	block *pb.BeaconBlock,
+	postState *pb.BeaconState,
+) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
 	defer span.End()
 	log.Info("Applying LMD-GHOST Fork Choice Rule")
@@ -124,25 +130,33 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified state: %v", err)
 	}
-	attestationTargets, err := c.attestationTargets(justifiedState)
+	attestationTargets, err := c.attestationTargets(ctx, justifiedState)
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
 	justifiedHead, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not retrieve justified head: %v", err)
 	}
-	head, err := c.lmdGhost(justifiedHead, justifiedState, postState, attestationTargets)
+	head, err := c.lmdGhost(ctx, justifiedHead, justifiedState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return fmt.Errorf("could not hash head block: %v", err)
+	}
+	c.canonicalBlocksLock.Lock()
+	defer c.canonicalBlocksLock.Unlock()
+	c.canonicalBlocks[head.Slot] = headRoot[:]
+
 	newState := postState
 	if head.Slot != block.Slot {
 		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
 			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
 
 		// Only regenerate head state if there was a reorg.
-		newState, err = stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, head.Slot)
+		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, head.Slot)
 		if err != nil {
 			return fmt.Errorf("could not gen state: %v", err)
 		}
@@ -152,6 +166,9 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 				postState.Slot-params.BeaconConfig().GenesisSlot, newState.Slot-params.BeaconConfig().GenesisSlot)
 		}
 
+		for revertedSlot := block.Slot; revertedSlot > head.Slot; revertedSlot-- {
+			delete(c.canonicalBlocks, revertedSlot)
+		}
 		reorgCount.Inc()
 	}
 
@@ -195,14 +212,16 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 //            return head
 //        head = max(children, key=get_vote_count)
 func (c *ChainService) lmdGhost(
+	ctx context.Context,
 	startBlock *pb.BeaconBlock,
 	startState *pb.BeaconState,
-	currState *pb.BeaconState,
 	voteTargets map[uint64]*pb.BeaconBlock,
 ) (*pb.BeaconBlock, error) {
+	highestSlot := c.beaconDB.HighestBlockSlot()
+
 	head := startBlock
 	for {
-		children, err := c.blockChildren(head, currState.Slot)
+		children, err := c.blockChildren(ctx, head, highestSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
@@ -228,7 +247,9 @@ func (c *ChainService) lmdGhost(
 	}
 }
 
-// blockChildren returns the child blocks of the given block.
+// blockChildren returns the child blocks of the given block up to a given
+// highest slot.
+//
 // ex:
 //       /- C - E
 // A - B - D - F
@@ -238,7 +259,7 @@ func (c *ChainService) lmdGhost(
 // Spec pseudocode definition:
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
-func (c *ChainService) blockChildren(block *pb.BeaconBlock, stateSlot uint64) ([]*pb.BeaconBlock, error) {
+func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
 
 	currentRoot, err := hashutil.HashBeaconBlock(block)
@@ -246,9 +267,8 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, stateSlot uint64) ([
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
 	startSlot := block.Slot + 1
-	currentSlot := stateSlot
-	for i := startSlot; i <= currentSlot; i++ {
-		block, err := c.beaconDB.BlockBySlot(i)
+	for i := startSlot; i <= highestSlot; i++ {
+		block, err := c.beaconDB.BlockBySlot(ctx, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block by slot: %v", err)
 		}
@@ -268,11 +288,11 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, stateSlot uint64) ([
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
-func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
+func (c *ChainService) attestationTargets(ctx context.Context, state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
 	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	attestationTargets := make(map[uint64]*pb.BeaconBlock)
 	for i, index := range indices {
-		block, err := c.attsService.LatestAttestationTarget(c.ctx, index)
+		block, err := c.attsService.LatestAttestationTarget(ctx, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
 		}

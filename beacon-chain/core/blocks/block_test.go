@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -150,7 +149,7 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 
 	testRoot := [32]byte{'a'}
 
-	newState := ProcessBlockRoots(context.Background(), state, testRoot)
+	newState := ProcessBlockRoots(state, testRoot)
 	if !bytes.Equal(newState.LatestBlockRootHash32S[0], testRoot[:]) {
 		t.Fatalf("Latest Block root hash not saved."+
 			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRootHash32S[0])
@@ -158,7 +157,7 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 
 	newState.Slot = newState.Slot - 1
 
-	newState = ProcessBlockRoots(context.Background(), newState, testRoot)
+	newState = ProcessBlockRoots(newState, testRoot)
 	expectedHashes := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	expectedHashes[0] = testRoot[:]
 	expectedHashes[params.BeaconConfig().LatestBlockRootsLength-1] = testRoot[:]

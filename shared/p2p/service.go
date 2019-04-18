@@ -164,8 +164,8 @@ func (s *Server) Stop() error {
 
 // Status returns an error if the p2p service does not have sufficient peers.
 func (s *Server) Status() error {
-	if peerCount(s.host) < 5 {
-		return errors.New("less than 5 peers")
+	if peerCount(s.host) < 3 {
+		return errors.New("less than 3 peers")
 	}
 	return nil
 }
@@ -315,6 +315,9 @@ func (s *Server) emit(msg Message, feed Feed) {
 		"msgType": fmt.Sprintf("%T", msg.Data),
 		"msgName": proto.MessageName(msg.Data),
 	}).Debug("Emit p2p message to feed subscribers")
+	if span := trace.FromContext(msg.Ctx); span != nil {
+		span.AddAttributes(trace.Int64Attribute("feedSubscribers", int64(i)))
+	}
 }
 
 // Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.
@@ -325,10 +328,19 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 // Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
 // this method will act as a broadcast.
 func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
-	if peerID == AnyPeer {
+	isPeer := false
+	for _, p := range s.host.Network().Peers() {
+		if p == peerID {
+			isPeer = true
+			break
+		}
+	}
+
+	if peerID == AnyPeer || s.host.Network().Connectedness(peerID) == libp2pnet.CannotConnect || !isPeer {
 		s.Broadcast(ctx, msg)
 		return nil
 	}
+
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
 	ctx, _ = context.WithTimeout(ctx, 30*time.Second)

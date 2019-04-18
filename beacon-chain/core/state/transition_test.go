@@ -156,6 +156,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
@@ -224,6 +225,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
@@ -277,7 +279,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			JustifiedBlockRootHash32: blockRoots[0],
+			JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},
@@ -316,6 +318,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
@@ -369,7 +372,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			JustifiedBlockRootHash32: blockRoots[0],
+			JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},

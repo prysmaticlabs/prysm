@@ -4,8 +4,10 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
@@ -17,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -40,12 +41,13 @@ type ChainService struct {
 	attsService          *attestation.Service
 	opsPoolService       operations.OperationFeeds
 	chainStartChan       chan time.Time
-	canonicalBlockChan   chan *pb.BeaconBlock
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
+	canonicalBlocks      map[uint64][]byte
+	canonicalBlocksLock  sync.RWMutex
 }
 
 // Config options for the service.
@@ -71,16 +73,16 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
 		canonicalBlockFeed:   new(event.Feed),
-		canonicalBlockChan:   make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
+		canonicalBlocks:      make(map[uint64][]byte),
 	}, nil
 }
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -113,13 +115,7 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 		initialDeposits[i] = &pb.Deposit{DepositData: initialDepositsData[i]}
 	}
 
-	depositRoot := c.web3Service.DepositRoot()
-	latestBlockHash := c.web3Service.LatestBlockHash()
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: depositRoot[:],
-		BlockHash32:       latestBlockHash[:],
-	}
-	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data)
+	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data())
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
@@ -138,10 +134,10 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
-	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
+	if err := c.beaconDB.InitializeState(c.ctx, unixTime, deposits, eth1data); err != nil {
 		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := c.beaconDB.State(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
@@ -216,13 +212,21 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 	return root, nil
 }
 
-// doesPoWBlockExist checks if the referenced PoW block exists.
-func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
-	powBlock, err := c.web3Service.Client().BlockByHash(c.ctx, hash)
-	if err != nil {
-		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
-		return false
+// IsCanonical returns true if the input block hash of the corresponding slot
+// is part of the canonical chain. False otherwise.
+func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
+	c.canonicalBlocksLock.RLock()
+	defer c.canonicalBlocksLock.RUnlock()
+	if canonicalHash, ok := c.canonicalBlocks[slot]; ok {
+		return bytes.Equal(canonicalHash, hash)
 	}
+	return false
+}
 
-	return powBlock != nil
+// InsertsCanonical inserts a canonical block hash to its corresponding slot.
+// This is used for testing purpose.
+func (c *ChainService) InsertsCanonical(slot uint64, hash []byte) {
+	c.canonicalBlocksLock.Lock()
+	defer c.canonicalBlocksLock.Unlock()
+	c.canonicalBlocks[slot] = hash
 }

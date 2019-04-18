@@ -275,6 +275,7 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state: %v", err)
 	}
+	sb.historicalDeposits = initialDeposits
 
 	// We do not expect hashing initial beacon state and genesis block to
 	// fail, so we can safely ignore the error below.

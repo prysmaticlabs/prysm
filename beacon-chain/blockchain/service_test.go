@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
@@ -40,7 +40,8 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCrosslinks: true,
+		EnableCrosslinks:          true,
+		EnableCheckBlockStateRoot: true,
 	})
 }
 
@@ -171,20 +172,23 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
 		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+		deposits[i] = &pb.Deposit{
+			DepositData:     depositData,
+			MerkleTreeIndex: uint64(i),
+		}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys
 }
 
-func createPreChainStartDeposit(t *testing.T, pk []byte) *pb.Deposit {
+func createPreChainStartDeposit(t *testing.T, pk []byte, index uint64) *pb.Deposit {
 	depositInput := &pb.DepositInput{Pubkey: pk}
 	balance := params.BeaconConfig().MaxDepositAmount
 	depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
 	if err != nil {
 		t.Fatalf("Cannot encode data: %v", err)
 	}
-	return &pb.Deposit{DepositData: depositData}
+	return &pb.Deposit{DepositData: depositData, MerkleTreeIndex: index}
 }
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
@@ -251,7 +255,7 @@ func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB, attsService *attestat
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.State(context.Background())
+	bState, err := service.beaconDB.HeadState(context.Background())
 	if err != nil {
 		return err
 	}
@@ -281,7 +285,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 		)
 	}
 
-	beaconState, err := db.State(context.Background())
+	beaconState, err := db.HeadState(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,10 +313,10 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Could not fetch beacon state: %v", err)
 	}

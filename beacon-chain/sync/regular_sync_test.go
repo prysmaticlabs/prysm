@@ -45,10 +45,11 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 }
 
 type mockChainService struct {
-	bFeed *event.Feed
-	sFeed *event.Feed
-	cFeed *event.Feed
-	db    *db.BeaconDB
+	bFeed           *event.Feed
+	sFeed           *event.Feed
+	cFeed           *event.Feed
+	db              *db.BeaconDB
+	canonicalBlocks map[uint64][]byte
 }
 
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
@@ -76,12 +77,24 @@ func (ms *mockChainService) ApplyBlockStateTransition(ctx context.Context, block
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) VerifyBlockValidity(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+func (ms *mockChainService) VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
 	return nil
 }
 
 func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
+}
+
+func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
+	return nil
+}
+
+func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
+	return true
+}
+
+func (ms mockChainService) InsertsCanonical(slot uint64, hash []byte) {
+	ms.canonicalBlocks[slot] = hash
 }
 
 type mockOperationService struct{}
@@ -163,7 +176,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -238,7 +251,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -650,7 +663,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -680,12 +693,18 @@ func TestHandleStateReq_OK(t *testing.T) {
 
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := db.InitializeState(unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State(ctx)
+	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
+	}
+	if err := db.SaveJustifiedState(beaconState); err != nil {
+		t.Fatalf("could not save justified state: %v", err)
+	}
+	if err := db.SaveFinalizedState(beaconState); err != nil {
+		t.Fatalf("could not save justified state: %v", err)
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
@@ -707,5 +726,5 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := ss.handleStateRequest(msg1); err != nil {
 		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Sending beacon state to peer")
+	testutil.AssertLogsContain(t, hook, "Sending finalized, justified, and canonical states to peer")
 }

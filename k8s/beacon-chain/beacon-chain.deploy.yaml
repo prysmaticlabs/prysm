@@ -55,6 +55,7 @@ spec:
             - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
             - --trace-sample-fraction=1.0
             - --datadir=/data
+            - --enable-committees-cache 
           resources:
             requests:
               memory: "100Mi"
@@ -77,8 +78,17 @@ spec:
                   key: DEPOSIT_CONTRACT_ADDRESS
           readinessProbe:
             initialDelaySeconds: 60
-            tcpSocket:
-              port: 4000
+            httpGet:
+              path: /healthz
+              port: 9090
+          livenessProbe:
+            initialDelaySeconds: 60
+            failureThreshold: 30 # Fails consistently for 5 minutes
+            periodSeconds: 10
+            httpGet:
+              path: /healthz
+              port: 9090
+
   volumeClaimTemplates:
   - metadata:
       name: beacondb
