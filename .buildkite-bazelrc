@@ -11,6 +11,9 @@ build:remote-cache --strategy=Javac=standalone
 build:remote-cache --strategy=Closure=standalone
 build:remote-cache --strategy=Genrule=standalone
 
+# Use the credentials on the machine for auth.
+build:remote-cache --google_default_credentials
+
 build --experimental_strict_action_env
 build --disk_cache=/tmp/bazelbuilds
 build --experimental_multi_threaded_digest
