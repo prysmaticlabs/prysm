@@ -87,32 +87,19 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
 
-	head, err := ps.beaconDB.ChainHead()
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
-	}
-	blockRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash beacon block: %v", err)
-	}
-	for beaconState.Slot < req.ProposalBlockSlot {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
+	// Use the optional proposal block slot parameter as the current slot for
+	// determining the validity window for attestations.
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+
+	var attsReadyForInclusion []*pbp2p.Attestation
+	for _, val := range atts {
+		if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
+			attsReadyForInclusion = append(attsReadyForInclusion, val)
 		}
 	}
 
-	// Use the optional proposal block slot parameter as the current slot for
-	// determining the validity window for attestations.
-	currentSlot := req.ProposalBlockSlot
-	if currentSlot == 0 {
-		currentSlot = beaconState.Slot
-	}
-
-	validAtts := make([]*pbp2p.Attestation, 0, len(atts))
-	for _, att := range atts {
+	validAtts := make([]*pbp2p.Attestation, 0, len(attsReadyForInclusion))
+	for _, att := range attsReadyForInclusion {
 		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
 			log.WithError(err).WithField(
 				"slot", att.Data.Slot-params.BeaconConfig().GenesisSlot).Warn(
@@ -120,23 +107,10 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			continue
 		}
 		validAtts = append(validAtts, att)
-
 	}
-	atts = validAtts
 
-	if req.FilterReadyForInclusion {
-		var attsReadyForInclusion []*pbp2p.Attestation
-		for _, val := range atts {
-			if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= currentSlot {
-				attsReadyForInclusion = append(attsReadyForInclusion, val)
-			}
-		}
-		return &pb.PendingAttestationsResponse{
-			PendingAttestations: attsReadyForInclusion,
-		}, nil
-	}
 	return &pb.PendingAttestationsResponse{
-		PendingAttestations: atts,
+		PendingAttestations: validAtts,
 	}, nil
 }
 
