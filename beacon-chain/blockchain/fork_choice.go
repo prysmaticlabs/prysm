@@ -324,31 +324,9 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 
 	for validatorIndex, targetBlock := range targets {
 		if featureconfig.FeatureConfig().EnableBlockAncestorCache {
-			// if block ancestor cache was enabled, use target block hash + ancestor block height as cache key.
-			targetHash, err := hashutil.HashBeaconBlock(targetBlock)
+			ancestor, err = cachedAncestorBlock(targetBlock, block.Slot, beaconDB)
 			if err != nil {
 				return 0, err
-			}
-			// check if the ancestor block of from a given block height was already cached.
-			cachedAncestorBlock, err := blkAncestorCache.AncestorBySlot(targetHash[:], block.Slot)
-			if err != nil {
-				return 0, nil
-			}
-			// add it to the cache if it was not cached.
-			if cachedAncestorBlock == nil {
-				ancestor, err = BlockAncestor(targetBlock, block.Slot, beaconDB)
-				if err != nil {
-					return 0, err
-				}
-				if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
-					Hash:   targetHash[:],
-					Height: block.Slot,
-					Block:  ancestor,
-				}); err != nil {
-					return 0, err
-				}
-			} else {
-				ancestor = cachedAncestorBlock.Block
 			}
 		} else {
 			// if block ancestor cache was not enabled, retrieve the ancestor recursively.
@@ -409,4 +387,37 @@ func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*
 		return nil, fmt.Errorf("parent block does not exist: %v", err)
 	}
 	return BlockAncestor(parent, slot, beaconDB)
+}
+
+// cachedAncestorBlock retrieves the cached ancestor block from block ancestor cache,
+// if it's not there it looks up the block tree get it and cache it.
+func cachedAncestorBlock(targetBlk *pb.BeaconBlock, height uint64, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
+	var ancestor *pb.BeaconBlock
+
+	// check if the ancestor block of from a given block height was cached.
+	targetHash, err := hashutil.HashBeaconBlock(targetBlk)
+	if err != nil {
+		return nil, err
+	}
+	cachedAncestorBlock, err := blkAncestorCache.AncestorBySlot(targetHash[:], height)
+	if err != nil {
+		return nil, nil
+	}
+	if cachedAncestorBlock != nil {
+		return cachedAncestorBlock.Block, nil
+	}
+
+	// add the ancestor to the cache if it was not cached.
+	ancestor, err = BlockAncestor(targetBlk, height, beaconDB)
+	if err != nil {
+		return nil, err
+	}
+	if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
+		Hash:   targetHash[:],
+		Height: height,
+		Block:  ancestor,
+	}); err != nil {
+		return nil, err
+	}
+	return ancestor, nil
 }
