@@ -52,8 +52,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		// until we can get a block.
 		lastAvailBlkSlot := lastJustifiedSlot
 		for newJustifiedBlock == nil {
-			log.Debugf("Saving new justified block, no block with slot %d in db, trying slot %d",
-				lastAvailBlkSlot, lastAvailBlkSlot-1)
+			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
 			newJustifiedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
@@ -91,8 +90,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		// until we can get a block.
 		lastAvailBlkSlot := lastFinalizedSlot
 		for newFinalizedBlock == nil {
-			log.Debugf("Saving new finalized block, no block with slot %d in db, trying slot %d",
-				lastAvailBlkSlot, lastAvailBlkSlot-1)
+			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
 			newFinalizedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {

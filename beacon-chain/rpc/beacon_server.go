@@ -139,7 +139,8 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
 		if err != nil {
-			log.Debugf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
+			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", eth1Hash)).
+				Debug("Could not verify block with hash in ETH1 chain")
 			continue
 		}
 		if !blockExists {
