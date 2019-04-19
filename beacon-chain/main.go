@@ -48,6 +48,7 @@ func main() {
 		utils.NoCustomConfigFlag,
 		utils.DepositContractFlag,
 		utils.Web3ProviderFlag,
+		utils.HTTPWeb3ProviderFlag,
 		utils.RPCPort,
 		utils.CertFlag,
 		utils.KeyFlag,
