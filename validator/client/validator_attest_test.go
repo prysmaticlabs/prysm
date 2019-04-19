@@ -154,7 +154,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
-	testutil.AssertLogsContain(t, hook, "successfully attested")
+	testutil.AssertLogsContain(t, hook, "Attested latest head")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
