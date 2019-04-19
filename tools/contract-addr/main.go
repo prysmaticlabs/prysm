@@ -1,3 +1,7 @@
+/**
+ * This tool exists to serve currently configured contract address in k8s.
+ * It reads the contract address from a plain text file as provided by etcd.
+ */
 package main
 
 import (
