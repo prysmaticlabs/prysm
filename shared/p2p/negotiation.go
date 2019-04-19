@@ -22,35 +22,39 @@ type negotiator struct {
 func (n *negotiator) Notifee() inet.Notifiee {
 	return &inet.NotifyBundle{
 		ConnectedF: func(net inet.Network, conn inet.Conn) {
-			go func() {
-				log.Debug("Checking connection to peer")
+			log.Debug("Checking connection to peer")
 
-				s, err := net.NewStream(context.Background(), conn.RemotePeer())
-				if err != nil {
-					log.WithError(err).Error("Failed to open stream with newly connected peer")
-					return
-				}
-				defer s.Close()
-				s.SetProtocol(handshakeProtocol)
+			// TODO Not sure whether or not to use net.NewStream w/ peer or
+			// conn.NewStream.
+			//			s, err := net.NewStream(context.Background(), conn.RemotePeer())
+			s, err := conn.NewStream()
+			if err != nil {
+				log.WithError(err).Error("Failed to open stream with newly connected peer")
+				return
+			}
+			defer s.Close()
+			s.SetProtocol(handshakeProtocol)
 
-				w := ggio.NewDelimitedWriter(s)
-				defer w.Close()
+			w := ggio.NewDelimitedWriter(s)
+			defer w.Close()
 
-				hs := &pb.Handshake{DepositContractAddress: n.contractAddress}
-				if err := w.WriteMsg(hs); err != nil {
-					log.WithError(err).Error("Failed to write handshake to peer")
-					return
-				}
+			hs := &pb.Handshake{DepositContractAddress: n.contractAddress}
+			if err := w.WriteMsg(hs); err != nil {
+				log.WithError(err).Error("Failed to write handshake to peer")
+				return
+			}
 
-				r := ggio.NewDelimitedReader(s, maxMessageSize)
-				resp := &pb.Handshake{}
-				if err := r.ReadMsg(resp); err != nil {
-					log.WithError(err).Error("Failed to read message")
-					return
-				}
+			// TODO This read is currently blocking, it seems that the peer never
+			// receives the on their handler for this protocol ID. Stepping through
+			// with debugger confirms that the stream handler is never called.
+			r := ggio.NewDelimitedReader(s, maxMessageSize)
+			resp := &pb.Handshake{}
+			if err := r.ReadMsg(resp); err != nil {
+				log.WithError(err).Error("Failed to read message")
+				return
+			}
 
-				log.Printf("Handshake received: %v", resp)
-			}()
+			log.Printf("Handshake received: %v", resp)
 		},
 	}
 }
