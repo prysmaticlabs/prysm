@@ -38,6 +38,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	_, err = io.WriteString(w, string(dat))
 	if err != nil {
-		fmt.Errorf("Failed to write response: %v", err)
+		fmt.Printf("Failed to write response: %v", err)
 	}
 }
