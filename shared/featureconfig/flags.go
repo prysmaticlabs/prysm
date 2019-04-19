@@ -30,6 +30,12 @@ var (
 		Name:  "enable-committees-cache",
 		Usage: "Enable crosslink committees cache for state transition, default is disabled.",
 	}
+	// EnableBlockAncestorCacheFlag enables block ancestor cache for LMD GHOST fork choice optimization. I
+	// it is disabled by default.
+	EnableBlockAncestorCacheFlag = cli.BoolFlag{
+		Name:  "enable-block-ancestor-cache",
+		Usage: "Enable block ancestor cache for fork choice optimization, default is disabled.",
+	}
 	// EnableCheckBlockStateRootFlag check block state root in block processing. It is disabled by default.
 	EnableCheckBlockStateRootFlag = cli.BoolFlag{
 		Name:  "enable-check-block-state-root",
@@ -52,4 +58,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableCommitteesCacheFlag,
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
+	EnableBlockAncestorCacheFlag,
 }
