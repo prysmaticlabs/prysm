@@ -127,9 +127,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	attestation.AggregateSignature = []byte("signed")
 
 	log.WithFields(logrus.Fields{
-		"shard": attData.Shard,
-		"slot":  slot - params.BeaconConfig().GenesisSlot,
-	}).Infof("%v Attesting to beacon chain head...", truncatedPk)
+		"shard":     attData.Shard,
+		"slot":      slot - params.BeaconConfig().GenesisSlot,
+		"validator": truncatedPk,
+	}).Info("Attesting to beacon chain head...")
 
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
