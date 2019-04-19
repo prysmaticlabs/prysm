@@ -91,6 +91,8 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
+	setHandshakeHandler(h, "todo")
+
 	return &Server{
 		ctx:           ctx,
 		cancel:        cancel,
