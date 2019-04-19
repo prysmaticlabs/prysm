@@ -239,7 +239,7 @@ func ProcessCrosslinks(
 }
 
 // ProcessEjections iterates through every validator and find the ones below
-// ejection balance and eject them.
+// ejection balance and ejects them.
 //
 // Spec pseudocode definition:
 //	def process_ejections(state: BeaconState) -> None:

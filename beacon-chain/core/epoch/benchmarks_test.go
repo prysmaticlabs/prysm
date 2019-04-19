@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"math"
 	"testing"
 	"time"
 
@@ -26,8 +25,8 @@ var RunAmount = 1000
 // var conditions = "MAX"
 
 var beaconState16K = createFullState(16000)
+var beaconState300K = createFullState(300000)
 
-// var beaconState300K = createFullState(300000)
 var cfg = &state.TransitionConfig{
 	Logging:          false,
 	VerifySignatures: false,
@@ -48,7 +47,7 @@ func setBenchmarkConfig() {
 	// 	c.MaxDeposits = 16
 	// 	c.MaxVoluntaryExits = 16
 	// } else if conditions == "MIN" {
-	c.MaxAttestations = 1
+	c.MaxAttestations = 2
 	// 	c.MaxDeposits = 2
 	// 	c.MaxVoluntaryExits = 2
 	// }
@@ -61,20 +60,21 @@ func setBenchmarkConfig() {
 }
 
 func BenchmarkProcessEth1Data(b *testing.B) {
-	b.Run("16K Validators", func(b *testing.B) {
+	b.Run("16K", func(b *testing.B) {
 		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_ = epoch.ProcessEth1Data(beaconState16K)
 		}
 	})
-	// b.Run("300K Validators", func(b *testing.B) {
-	// 	b.N = RunAmount
-	// 	b.ResetTimer()
-	// 	for i := 0; i < b.N; i++ {
-	// 		_ = epoch.ProcessEth1Data(beaconState300K)
-	// 	}
-	// })
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = epoch.ProcessEth1Data(beaconState300K)
+		}
+	})
 }
 
 func BenchmarkProcessJustification(b *testing.B) {
@@ -106,34 +106,52 @@ func BenchmarkProcessJustification(b *testing.B) {
 	}
 	prevEpochAttestingBalance := e.TotalBalance(beaconState16K, prevEpochAttesterIndices)
 
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := e.ProcessJustificationAndFinalization(
-			beaconState16K,
-			currentBoundaryAttestingBalances,
-			prevEpochAttestingBalance,
-			prevTotalBalance,
-			totalBalance,
-		)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := e.ProcessJustificationAndFinalization(
+				beaconState16K,
+				currentBoundaryAttestingBalances,
+				prevEpochAttestingBalance,
+				prevTotalBalance,
+				totalBalance,
+			)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
-	}
+	})
 }
 
 func BenchmarkProcessCrosslinks(b *testing.B) {
 	currentEpochAttestations := e.CurrentAttestations(beaconState16K)
 	prevEpochAttestations := e.PrevAttestations(beaconState16K)
 
-	b.N = 10
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := epoch.ProcessCrosslinks(beaconState16K, currentEpochAttestations, prevEpochAttestations)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("16K", func(b *testing.B) {
+		b.N = 10
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := epoch.ProcessCrosslinks(beaconState16K, currentEpochAttestations, prevEpochAttestations)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
-	}
+	})
+
+	currentEpochAttestations = e.CurrentAttestations(beaconState300K)
+	prevEpochAttestations = e.PrevAttestations(beaconState300K)
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = 10
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := epoch.ProcessCrosslinks(beaconState300K, currentEpochAttestations, prevEpochAttestations)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func BenchmarkProcessRewards(b *testing.B) {
@@ -268,22 +286,45 @@ func BenchmarkProcessLeak(b *testing.B) {
 }
 
 func BenchmarkProcessPenaltiesAndExits(b *testing.B) {
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = v.ProcessPenaltiesAndExits(beaconState16K)
-	}
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = v.ProcessPenaltiesAndExits(beaconState16K)
+		}
+	})
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = v.ProcessPenaltiesAndExits(beaconState300K)
+		}
+	})
 }
 
 func BenchmarkProcessEjections(b *testing.B) {
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := epoch.ProcessEjections(beaconState16K, false /* disable logging */)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := epoch.ProcessEjections(beaconState16K, false /* disable logging */)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
-	}
+	})
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := epoch.ProcessEjections(beaconState300K, false /* disable logging */)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func BenchmarkAttestationInclusion(b *testing.B) {
@@ -298,87 +339,188 @@ func BenchmarkAttestationInclusion(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := bal.AttestationInclusion(beaconState16K, totalBalance, prevEpochAttesterIndices)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := bal.AttestationInclusion(beaconState16K, totalBalance, prevEpochAttesterIndices)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
+	})
+
+	currentEpoch = helpers.CurrentEpoch(beaconState300K)
+	activeValidatorIndices = helpers.ActiveValidatorIndices(beaconState300K.ValidatorRegistry, currentEpoch)
+
+	totalBalance = e.TotalBalance(beaconState300K, activeValidatorIndices)
+	prevEpochAttestations = e.PrevAttestations(beaconState300K)
+
+	prevEpochAttesterIndices, err = v.ValidatorIndices(beaconState300K, prevEpochAttestations)
+	if err != nil {
+		b.Fatal(err)
 	}
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := bal.AttestationInclusion(beaconState300K, totalBalance, prevEpochAttesterIndices)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func BenchmarkCleanupAttestations(b *testing.B) {
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = epoch.CleanupAttestations(beaconState16K)
-	}
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = epoch.CleanupAttestations(beaconState16K)
+		}
+	})
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = epoch.CleanupAttestations(beaconState300K)
+		}
+	})
 }
 
 func BenchmarkUpdateRegistry(b *testing.B) {
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := v.UpdateRegistry(beaconState16K)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := v.UpdateRegistry(beaconState16K)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
-	}
+	})
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := v.UpdateRegistry(beaconState300K)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func BenchmarkUpdateLatestActiveIndexRoots(b *testing.B) {
-	latestActiveIndexRoots := make([][]byte,
-		params.BeaconConfig().LatestActiveIndexRootsLength)
-	beaconState16K.LatestIndexRootHash32S = latestActiveIndexRoots
-
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := epoch.UpdateLatestActiveIndexRoots(beaconState16K)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := epoch.UpdateLatestActiveIndexRoots(beaconState16K)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
-	}
+	})
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := epoch.UpdateLatestActiveIndexRoots(beaconState300K)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func BenchmarkUpdateLatestSlashedBalances(b *testing.B) {
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = epoch.UpdateLatestSlashedBalances(beaconState16K)
-	}
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = epoch.UpdateLatestSlashedBalances(beaconState16K)
+		}
+	})
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = epoch.UpdateLatestSlashedBalances(beaconState300K)
+		}
+	})
 }
 
 func BenchmarkProcessEpoch(b *testing.B) {
-	b.N = 10
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := state.ProcessEpoch(context.Background(), beaconState16K, cfg)
-		if err != nil {
-			b.Error(err)
+	b.Run("16K", func(b *testing.B) {
+		b.N = 10
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := state.ProcessEpoch(context.Background(), beaconState16K, cfg)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
-	}
+	})
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = 10
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := state.ProcessEpoch(context.Background(), beaconState300K, cfg)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
 }
 
 func BenchmarkActiveValidatorIndices(b *testing.B) {
 	currentEpoch := helpers.CurrentEpoch(beaconState16K)
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = helpers.ActiveValidatorIndices(beaconState16K.ValidatorRegistry, currentEpoch)
-	}
+
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = helpers.ActiveValidatorIndices(beaconState16K.ValidatorRegistry, currentEpoch)
+		}
+	})
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = helpers.ActiveValidatorIndices(beaconState300K.ValidatorRegistry, currentEpoch)
+		}
+	})
 }
 
 func BenchmarkValidatorIndexMap(b *testing.B) {
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = stateutils.ValidatorIndexMap(beaconState16K)
-	}
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = stateutils.ValidatorIndexMap(beaconState16K)
+		}
+	})
+
+	b.Run("300K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = stateutils.ValidatorIndexMap(beaconState300K)
+		}
+	})
 }
 
-func createFullState(validatorCount int) *pb.BeaconState {
+func createFullState(validatorCount uint64) *pb.BeaconState {
 	bState := createGenesisState(validatorCount)
 
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
@@ -393,8 +535,7 @@ func createFullState(validatorCount int) *pb.BeaconState {
 	prevEpoch := helpers.PrevEpoch(bState)
 	currentEpoch := helpers.CurrentEpoch(bState)
 
-	committeeSize := math.Ceil(float64(validatorCount) /
-		float64(params.BeaconConfig().ShardCount) / float64(slotsPerEpoch))
+	committeeSize := validatorCount / helpers.EpochCommitteeCount(validatorCount)
 	byteLength := mathutil.CeilDiv8(int(committeeSize))
 
 	attestationsPerEpoch := slotsPerEpoch * params.BeaconConfig().MaxAttestations
@@ -417,6 +558,8 @@ func createFullState(validatorCount int) *pb.BeaconState {
 		attestations = append(attestations, attestation)
 	}
 
+	fmt.Println("prev attestations created")
+
 	// Current epoch attestations
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
 		attestationSlot := (currentEpoch * slotsPerEpoch) + (i % slotsPerEpoch)
@@ -433,6 +576,7 @@ func createFullState(validatorCount int) *pb.BeaconState {
 		}
 		attestations = append(attestations, attestation)
 	}
+	fmt.Println("cur attestations created")
 	bState.LatestAttestations = attestations
 
 	// Eth1DataVotes
@@ -475,22 +619,23 @@ func createFullState(validatorCount int) *pb.BeaconState {
 	bState.LatestSlashedBalances = latestSlashedBalances
 
 	// Ejections
-	ejectionCount := 30
+	ejectionCount := uint64(30)
 	for index := range bState.ValidatorBalances {
-		if index%(validatorCount/ejectionCount)-1 == 0 {
+		if uint64(index)%(validatorCount/ejectionCount)-1 == 0 {
 			bState.ValidatorBalances[index] = params.BeaconConfig().EjectionBalance - 1
 		}
 	}
+	fmt.Println("ejections created")
 
 	// Exits and Activations
-	exitCount := 30
-	activationCount := 30
+	exitCount := uint64(30)
+	activationCount := uint64(30)
 	exitEpoch := helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(bState))
 	for index := range bState.ValidatorRegistry {
-		if index%(validatorCount/exitCount)-3 == 0 {
+		if uint64(index)%(validatorCount/exitCount)-3 == 0 {
 			bState.ValidatorRegistry[index].ExitEpoch = exitEpoch
 			bState.ValidatorRegistry[index].StatusFlags = pb.Validator_INITIATED_EXIT
-		} else if index%(validatorCount/activationCount)-4 == 0 {
+		} else if uint64(index)%(validatorCount/activationCount)-4 == 0 {
 			bState.ValidatorRegistry[index].ExitEpoch = params.BeaconConfig().ActivationExitDelay
 			bState.ValidatorRegistry[index].ActivationEpoch = 5 + params.BeaconConfig().ActivationExitDelay + 1
 		}
@@ -498,7 +643,7 @@ func createFullState(validatorCount int) *pb.BeaconState {
 	return bState
 }
 
-func createGenesisState(numDeposits int) *pb.BeaconState {
+func createGenesisState(numDeposits uint64) *pb.BeaconState {
 	setBenchmarkConfig()
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
