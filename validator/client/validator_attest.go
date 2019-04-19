@@ -126,26 +126,25 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.AggregateSignature = []byte("signed")
 
-	log.WithField(
-		"blockRoot", fmt.Sprintf("%#x", attData.BeaconBlockRootHash32),
-	).Info("Current beacon chain head block")
 	log.WithFields(logrus.Fields{
-		"justifiedEpoch": attData.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
-		"shard":          attData.Shard,
-		"slot":           slot - params.BeaconConfig().GenesisSlot,
+		"shard": attData.Shard,
+		"slot":  slot - params.BeaconConfig().GenesisSlot,
 	}).Infof("%v Attesting to beacon chain head...", truncatedPk)
 
-	log.Infof("%v Produced attestation with head root: %#x", truncatedPk, attestation.Data.BeaconBlockRootHash32)
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"attestationHash": fmt.Sprintf("%#x", attResp.AttestationHash),
+		"headHash":        fmt.Sprintf("%#x", attData.BeaconBlockRootHash32),
+		"sourceHash":      fmt.Sprintf("%#x", attData.JustifiedBlockRootHash32),
+		"targetHash":      fmt.Sprintf("%#x", attData.EpochBoundaryRootHash32),
+		"slot":            attData.Slot - params.BeaconConfig().GenesisSlot,
 		"shard":           attData.Shard,
-		"slot":            slot - params.BeaconConfig().GenesisSlot,
-	}).Infof("%v successfully attested", truncatedPk)
+		"attestationHash": fmt.Sprintf("%#x", attResp.AttestationHash),
+		"validator":       truncatedPk,
+	}).Info("%v Attested latest head")
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationHash)),

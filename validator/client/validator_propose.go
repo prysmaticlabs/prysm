@@ -140,8 +140,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	)
 	log.WithFields(logrus.Fields{
 		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRootHash32),
-		"validator":       truncatedPk,
 		"numAttestations": len(block.Body.Attestations),
 		"numDeposits":     len(block.Body.Deposits),
+		"validator":       truncatedPk,
 	}).Info("Proposed new beacon block")
 }
