@@ -6,10 +6,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -21,6 +23,7 @@ var (
 		Help: "The number of chain reorganization events that have happened in the fork choice rule",
 	})
 )
+var blkAncestorCache = cache.NewBlockAncestorCache()
 
 // ForkChoice interface defines the methods for applying fork choice rule
 // operations to the blockchain.
@@ -142,6 +145,14 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return fmt.Errorf("could not hash head block: %v", err)
+	}
+	c.canonicalBlocksLock.Lock()
+	defer c.canonicalBlocksLock.Unlock()
+	c.canonicalBlocks[head.Slot] = headRoot[:]
+
 	newState := postState
 	if head.Slot != block.Slot {
 		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
@@ -158,6 +169,9 @@ func (c *ChainService) ApplyForkChoiceRule(
 				postState.Slot-params.BeaconConfig().GenesisSlot, newState.Slot-params.BeaconConfig().GenesisSlot)
 		}
 
+		for revertedSlot := block.Slot; revertedSlot > head.Slot; revertedSlot-- {
+			delete(c.canonicalBlocks, revertedSlot)
+		}
 		reorgCount.Inc()
 	}
 
@@ -305,10 +319,21 @@ func (c *ChainService) attestationTargets(ctx context.Context, state *pb.BeaconS
 //        )
 func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]*pb.BeaconBlock, beaconDB *db.BeaconDB) (int, error) {
 	balances := 0
+	var ancestor *pb.BeaconBlock
+	var err error
+
 	for validatorIndex, targetBlock := range targets {
-		ancestor, err := BlockAncestor(targetBlock, block.Slot, beaconDB)
-		if err != nil {
-			return 0, err
+		if featureconfig.FeatureConfig().EnableBlockAncestorCache {
+			ancestor, err = cachedAncestorBlock(targetBlock, block.Slot, beaconDB)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			// if block ancestor cache was not enabled, retrieve the ancestor recursively.
+			ancestor, err = BlockAncestor(targetBlock, block.Slot, beaconDB)
+			if err != nil {
+				return 0, err
+			}
 		}
 		// This covers the following case, we start at B5, and want to process B6 and B7
 		// B6 can be processed, B7 can not be processed because it's pointed to the
@@ -362,4 +387,37 @@ func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*
 		return nil, fmt.Errorf("parent block does not exist: %v", err)
 	}
 	return BlockAncestor(parent, slot, beaconDB)
+}
+
+// cachedAncestorBlock retrieves the cached ancestor block from block ancestor cache,
+// if it's not there it looks up the block tree get it and cache it.
+func cachedAncestorBlock(targetBlk *pb.BeaconBlock, height uint64, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
+	var ancestor *pb.BeaconBlock
+
+	// check if the ancestor block of from a given block height was cached.
+	targetHash, err := hashutil.HashBeaconBlock(targetBlk)
+	if err != nil {
+		return nil, err
+	}
+	cachedAncestorBlock, err := blkAncestorCache.AncestorBySlot(targetHash[:], height)
+	if err != nil {
+		return nil, nil
+	}
+	if cachedAncestorBlock != nil {
+		return cachedAncestorBlock.Block, nil
+	}
+
+	// add the ancestor to the cache if it was not cached.
+	ancestor, err = BlockAncestor(targetBlk, height, beaconDB)
+	if err != nil {
+		return nil, err
+	}
+	if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
+		Hash:   targetHash[:],
+		Height: height,
+		Block:  ancestor,
+	}); err != nil {
+		return nil, err
+	}
+	return ancestor, nil
 }

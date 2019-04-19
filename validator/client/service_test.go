@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/rand"
+	"encoding/hex"
 	"os"
 	"strings"
 	"testing"
@@ -17,12 +18,22 @@ import (
 
 var _ = shared.Service(&ValidatorService{})
 var validatorKey *keystore.Key
+var keyMap map[string]*keystore.Key
+var keyMapThreeValidators map[string]*keystore.Key
 
 func TestMain(m *testing.M) {
+	keyMap = make(map[string]*keystore.Key)
+	keyMapThreeValidators = make(map[string]*keystore.Key)
 	dir := testutil.TempDir() + "/keystore1"
 	defer os.RemoveAll(dir)
 	accounts.NewValidatorAccount(dir, "1234")
 	validatorKey, _ = keystore.NewKey(rand.Reader)
+	keyMap[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
+	keyMapThreeValidators[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
+	validatorKey2, _ := keystore.NewKey(rand.Reader)
+	keyMapThreeValidators[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey2
+	validatorKey3, _ := keystore.NewKey(rand.Reader)
+	keyMapThreeValidators[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey3
 	os.Exit(m.Run())
 }
 
@@ -54,7 +65,7 @@ func TestLifecycle(t *testing.T) {
 		cancel:   cancel,
 		endpoint: "merkle tries",
 		withCert: "alice.crt",
-		key:      validatorKey,
+		keys:     keyMap,
 	}
 	validatorService.Start()
 	if err := validatorService.Stop(); err != nil {
@@ -72,7 +83,7 @@ func TestLifecycle_Insecure(t *testing.T) {
 		ctx:      ctx,
 		cancel:   cancel,
 		endpoint: "merkle tries",
-		key:      validatorKey,
+		keys:     keyMap,
 	}
 	validatorService.Start()
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")

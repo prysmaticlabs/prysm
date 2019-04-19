@@ -409,7 +409,7 @@ func ProcessBlockAttestations(
 	}
 
 	for idx, attestation := range atts {
-		if err := verifyAttestation(beaconState, attestation, verifySignatures); err != nil {
+		if err := VerifyAttestation(beaconState, attestation, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
@@ -423,7 +423,8 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
-func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
+// VerifyAttestation verifies an input attestation can pass through processing using the given beacon state.
+func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
 	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) less than genesis slot (%d)",

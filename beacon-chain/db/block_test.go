@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -71,6 +72,37 @@ func TestSaveBlock_OK(t *testing.T) {
 	h2Prime, _ := hashutil.HashBeaconBlock(b2Prime)
 	if b2Prime == nil || h2 != h2Prime {
 		t.Fatalf("get should return b2: %x", h2)
+	}
+}
+
+func TestDeleteBlock_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
+	h, _ := hashutil.HashBeaconBlock(block)
+
+	err := db.SaveBlock(block)
+	if err != nil {
+		t.Fatalf("save block failed: %v", err)
+	}
+
+	savedBlock, err := db.Block(h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, savedBlock) {
+		t.Fatal(err)
+	}
+	if err := db.DeleteBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	savedBlock, err = db.Block(h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if savedBlock != nil {
+		t.Errorf("Expected block to have been deleted, received: %v", savedBlock)
 	}
 }
 

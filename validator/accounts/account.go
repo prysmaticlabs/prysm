@@ -21,14 +21,16 @@ func VerifyAccountNotExists(directory string, password string) error {
 	if directory == "" || password == "" {
 		return errors.New("expected a path to the validator keystore and password to be provided, received nil")
 	}
+	shardWithdrawalKeyFile := params.BeaconConfig().WithdrawalPrivkeyFileName
+	validatorKeyFile := params.BeaconConfig().ValidatorPrivkeyFileName
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
 	ks := keystore.NewKeystore(directory)
-	if _, err := ks.GetKeys(directory, params.BeaconConfig().WithdrawalPrivkeyFileName, password); err == nil {
-		return fmt.Errorf("keystore at path already exists: %s", directory)
+	if _, err := ks.GetKeys(directory, shardWithdrawalKeyFile, password); err == nil {
+		return fmt.Errorf("keystore at path already exists: %s", shardWithdrawalKeyFile)
 	}
-	if _, err := ks.GetKeys(directory, params.BeaconConfig().ValidatorPrivkeyFileName, password); err == nil {
-		return fmt.Errorf("keystore at path already exists: %s", directory)
+	if _, err := ks.GetKeys(directory, validatorKeyFile, password); err == nil {
+		return fmt.Errorf("keystore at path already exists: %s", validatorKeyFile)
 	}
 	return nil
 }
