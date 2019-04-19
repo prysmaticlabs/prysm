@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"github.com/x-cray/logrus-prefixed-formatter"
 	"os"
 	"time"
 )
@@ -28,6 +29,12 @@ func (m *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {}
 func main() {
 	var dbPath = flag.String("db-dir", "", "path to bolt.db dir")
 	flag.Parse()
+
+	customFormatter := new(prefixed.TextFormatter)
+	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
+	customFormatter.FullTimestamp = true
+	logrus.SetFormatter(customFormatter)
+
 	readOnlyDB, err := db.NewReadOnlyDB(*dbPath)
 	if err != nil {
 		log.Fatal(err)
@@ -46,13 +53,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
 	}
+	httpRPCClient, err := gethRPC.Dial("https://goerli.prylabs.net")
+	if err != nil {
+		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+	}
 	powClient := ethclient.NewClient(rpcClient)
+	httpClient := ethclient.NewClient(httpRPCClient)
 	cfg := &powchain.Web3ServiceConfig{
 		Endpoint:        "wss://goerli.prylabs.net/websocket",
-		DepositContract: common.HexToAddress("0x10312bc0Cd24Ad27971f741F265818aA523db27b"),
+		DepositContract: common.HexToAddress("0x2348E5Db47B910DDC4478CA202DB280AC5790D2A"),
 		Client:          powClient,
 		Reader:          powClient,
 		Logger:          powClient,
+		HTTPLogger: httpClient,
 		BlockFetcher:    powClient,
 		ContractBackend: powClient,
 		BeaconDB:        beaconDB,
