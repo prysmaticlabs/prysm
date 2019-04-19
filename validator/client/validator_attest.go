@@ -145,7 +145,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		"shard":           attData.Shard,
 		"attestationHash": fmt.Sprintf("%#x", attResp.AttestationHash),
 		"validator":       truncatedPk,
-	}).Info("%v Attested latest head")
+	}).Info("Attested latest head")
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationHash)),
