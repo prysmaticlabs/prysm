@@ -21,6 +21,11 @@ type AttesterServer struct {
 	operationService operationService
 }
 
+// NewAttesterServer --
+func NewAttesterServer(beaconDB *db.BeaconDB) *AttesterServer {
+	return &AttesterServer{beaconDB:beaconDB}
+}
+
 // AttestHead is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation) (*pb.AttestResponse, error) {

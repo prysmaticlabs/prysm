@@ -3,21 +3,26 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/x-cray/logrus-prefixed-formatter"
-	"os"
-	"time"
 )
 
 var log = logrus.WithField("prefix", "state-replay")
@@ -34,6 +39,7 @@ func main() {
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	customFormatter.FullTimestamp = true
 	logrus.SetFormatter(customFormatter)
+	//logrus.SetLevel(logrus.DebugLevel)
 
 	readOnlyDB, err := db.NewReadOnlyDB(*dbPath)
 	if err != nil {
@@ -91,6 +97,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	attesterServer := rpc.NewAttesterServer(beaconDB)
+
 	stateInit := make(chan time.Time)
 	stateInitFeed := chainService.StateInitializedFeed()
 	stateInitFeed.Subscribe(stateInit)
@@ -115,12 +123,18 @@ func main() {
 	}
 	log.Infof("Highest state: %d, current state: %d", highestState.Slot-params.BeaconConfig().GenesisSlot, 0)
 
-	genesisState, err := beaconDB.HeadState(ctx)
+	lastFinalizedState, err := readOnlyDB.HistoricalStateFromSlot(ctx, helpers.StartSlot(params.BeaconConfig().GenesisEpoch+263))
 	if err != nil {
 		log.Fatal(err)
 	}
+	if err := beaconDB.SaveBlock(lastFinalizedState.LatestBlock); err != nil {
+		log.Fatal(err)
+	}
+	if err := beaconDB.UpdateChainHead(ctx, lastFinalizedState.LatestBlock, lastFinalizedState); err != nil {
+		log.Fatal(err)
+	}
 
-	currentState := genesisState
+	currentState := lastFinalizedState
 	for currentSlot := currentState.Slot + 1; currentSlot <= highestState.Slot; currentSlot++ {
 		log.Infof("Slot %d", currentSlot-params.BeaconConfig().GenesisSlot)
 		newBlock, err := readOnlyDB.BlockBySlot(ctx, currentSlot)
@@ -131,9 +145,18 @@ func main() {
 			log.Warnf("No block at slot %d", currentSlot-params.BeaconConfig().GenesisSlot)
 			continue
 		}
+		if newBlock.Slot == params.BeaconConfig().GenesisSlot+47 {
+			continue
+		}
 
 		newState, err := chainService.ApplyBlockStateTransition(ctx, newBlock, currentState)
 		if err != nil {
+			att := newBlock.Body.Attestations[0]
+			log.Infof("Slot: %v", att.Data.Slot-params.BeaconConfig().GenesisSlot)
+			log.Infof("Justified epoch: %v", att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
+			log.Infof("Block root: %#x", att.Data.BeaconBlockRootHash32)
+			log.Infof("Epoch boundary root: %#x", att.Data.EpochBoundaryRootHash32)
+			log.Infof("Justified block root: %#x", att.Data.JustifiedBlockRootHash32)
 			log.Fatalf("Could not apply state transition: %v", err)
 		}
 		if err := chainService.CleanupBlockOperations(ctx, newBlock); err != nil {
@@ -145,6 +168,25 @@ func main() {
 		if err := beaconDB.UpdateChainHead(ctx, newBlock, newState); err != nil {
 			log.Fatalf("Could not update chain head: %v", err)
 		}
+		root, err := hashutil.HashBeaconBlock(newBlock)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Infof("Saved block with root: %#x", root)
+		attInfo, err := attesterServer.AttestationDataAtSlot(ctx, &pb.AttestationDataRequest{
+			Slot: newBlock.Slot,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Info("")
+		log.Info("----Attestation Data At Slot----")
+		log.Infof("Head state slot: %v", attInfo.HeadSlot-params.BeaconConfig().GenesisSlot)
+		log.Infof("Justified epoch: %v", attInfo.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
+		log.Infof("Justified root hash: %#x", attInfo.JustifiedBlockRootHash32)
+		log.Infof("Epoch boundary root hash: %#x", attInfo.EpochBoundaryRootHash32)
+		log.Info("---------------------------------")
+		log.Info("")
 		currentState = newState
 	}
 	log.Info(currentState.Slot)
