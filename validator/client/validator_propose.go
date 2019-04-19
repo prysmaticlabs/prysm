@@ -139,9 +139,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 		trace.Int64Attribute("numAttestations", int64(len(block.Body.Attestations))),
 	)
 	log.WithFields(logrus.Fields{
+		"slot":            block.Slot - params.BeaconConfig().GenesisSlot,
 		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRootHash32),
-		"validator":       truncatedPk,
 		"numAttestations": len(block.Body.Attestations),
 		"numDeposits":     len(block.Body.Deposits),
+		"validator":       truncatedPk,
 	}).Info("Proposed new beacon block")
 }
