@@ -89,7 +89,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 
 	// Use the optional proposal block slot parameter as the current slot for
 	// determining the validity window for attestations.
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.Slot = req.ProposalBlockSlot
 
 	var attsReadyForInclusion []*pbp2p.Attestation
 	for _, val := range atts {
