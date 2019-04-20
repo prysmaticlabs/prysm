@@ -86,10 +86,24 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
+	head, err := ps.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
+	}
+	blockRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash beacon block: %v", err)
+	}
 
-	// Use the optional proposal block slot parameter as the current slot for
-	// determining the validity window for attestations.
-	beaconState.Slot = req.ProposalBlockSlot
+	for beaconState.Slot < req.ProposalBlockSlot-1{
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
+	}
+	beaconState.Slot++
 
 	var attsReadyForInclusion []*pbp2p.Attestation
 	for _, val := range atts {
