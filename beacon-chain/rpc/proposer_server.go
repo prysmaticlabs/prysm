@@ -36,6 +36,23 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
+	head, err := ps.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not get chain head: %v", err)
+	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+	for beaconState.Slot < req.SlotNumber {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
+	}
+
 	proposerIndex, err := helpers.BeaconProposerIndex(
 		beaconState,
 		req.SlotNumber,
