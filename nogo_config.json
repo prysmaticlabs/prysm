@@ -40,5 +40,11 @@
     "exclude_files": {
       "external/*": "Third party code"
     }
+  },
+  "structtag": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
+
   }
 }
