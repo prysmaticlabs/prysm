@@ -40,6 +40,8 @@ func NewGoEthereumInstance(t *testing.T) *GoEthereumInstance {
 		WSHost:      "127.0.0.1",
 		WSPort:      9000,
 		WSExposeAll: true,
+		HTTPHost:    "127.0.0.1",
+		HTTPPort:    9001,
 	}
 	node, err := node.New(cfg)
 	if err != nil {
