@@ -235,7 +235,7 @@ func (c *ChainService) lmdGhost(
 		if err != nil {
 			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 		}
-		for i := 0; i < len(children); i++ {
+		for i := 1; i < len(children); i++ {
 			candidateChildVotes, err := VoteCount(children[i], startState, voteTargets, c.beaconDB)
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
