@@ -333,7 +333,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 		}
 
 	case epochsSinceFinality > 4:
-		log.Infof("Applying more penalties. Epochs since finality %d greater than 4", epochsSinceFinality)
+		log.WithField("epochSinceFinality", epochsSinceFinality).Info("Applying quadratic leak penalties")
 		// Apply penalties for long inactive FFG source participants.
 		state = bal.InactivityFFGSource(
 			state,

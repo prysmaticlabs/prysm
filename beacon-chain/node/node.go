@@ -179,7 +179,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 
-	log.Infof("Checking db at %s", dbPath)
+	log.WithField("path", dbPath).Info("Checking db")
 	b.db = db
 	return nil
 }
