@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -235,7 +236,7 @@ func (c *ChainService) lmdGhost(
 		if err != nil {
 			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 		}
-		for i := 0; i < len(children); i++ {
+		for i := 1; i < len(children); i++ {
 			candidateChildVotes, err := VoteCount(children[i], startState, voteTargets, c.beaconDB)
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
@@ -341,15 +342,8 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		if ancestor == nil {
 			continue
 		}
-		ancestorRoot, err := hashutil.HashBeaconBlock(ancestor)
-		if err != nil {
-			return 0, err
-		}
-		blockRoot, err := hashutil.HashBeaconBlock(block)
-		if err != nil {
-			return 0, err
-		}
-		if blockRoot == ancestorRoot {
+
+		if proto.Equal(ancestor, block) {
 			balances += int(helpers.EffectiveBalance(state, validatorIndex))
 		}
 	}
