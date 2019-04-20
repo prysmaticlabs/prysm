@@ -241,8 +241,6 @@ func (rs *RegularSync) run() {
 			go rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
 		}
 	}
-
-	log.Info("Exiting regular sync run()")
 }
 
 // safelyHandleMessage will recover and log any panic that occurs from the
@@ -301,14 +299,15 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) error {
 	block, err := rs.db.BlockBySlot(ctx, request.SlotNumber)
 	if err != nil || block == nil {
 		if block == nil {
-			log.Debugf("Block with slot %d does not exist", request.SlotNumber)
+			log.WithField("slot", request.SlotNumber-params.BeaconConfig().GenesisSlot).Debug(
+				"block does not exist")
 			return errors.New("block does not exist")
 		}
 		log.Errorf("Error retrieving block from db: %v", err)
 		return err
 	}
 
-	log.WithField("slotNumber",
+	log.WithField("slot",
 		fmt.Sprintf("%d", request.SlotNumber-params.BeaconConfig().GenesisSlot)).Debug("Sending requested block to peer")
 
 	defer sentBlocks.Inc()
@@ -341,7 +340,10 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		return err
 	}
 	if root != bytesutil.ToBytes32(req.FinalizedStateRootHash32S) {
-		log.Debugf("Requested state root is different from locally stored state root %#x", req.FinalizedStateRootHash32S)
+		log.WithFields(logrus.Fields{
+			"requested": fmt.Sprintf("%#x", req.FinalizedStateRootHash32S),
+			"local":     fmt.Sprintf("%#x", root)},
+		).Debug("Requested state root is diff than local state root")
 		return err
 	}
 	log.WithField(
@@ -427,7 +429,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"blockRoot":      fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
+		"headRoot":       fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
 		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 	}).Debug("Received an attestation")
 
@@ -435,7 +437,8 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	hasAttestation := rs.db.HasAttestation(attestationRoot)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		log.Debugf("Received, skipping attestation #%x", attestationRoot)
+		log.WithField("attestationRoot", fmt.Sprintf("%#x", attestationRoot)).
+			Debug("Received, skipping attestation")
 		return nil
 	}
 
@@ -451,8 +454,10 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		trace.Int64Attribute("finalized state slot", int64(beaconState.Slot-params.BeaconConfig().SlotsPerEpoch)),
 	)
 	if attestation.Data.Slot < beaconState.Slot-params.BeaconConfig().SlotsPerEpoch {
-		log.Debugf("Skipping received attestation with slot smaller than one epoch ago, %d < %d",
-			attestation.Data.Slot, beaconState.Slot-params.BeaconConfig().SlotsPerEpoch)
+		log.WithFields(logrus.Fields{
+			"receivedSlot": attestation.Data.Slot,
+			"epochSlot":    beaconState.Slot - params.BeaconConfig().SlotsPerEpoch},
+		).Debug("Skipping received attestation with slot smaller than one epoch ago")
 		return nil
 	}
 
@@ -482,7 +487,8 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) error {
 	hasExit := rs.db.HasExit(h)
 	span.AddAttributes(trace.BoolAttribute("hasExit", hasExit))
 	if hasExit {
-		log.Debugf("Received, skipping exit request #%x", h)
+		log.WithField("exitRoot", fmt.Sprintf("%#x", h)).
+			Debug("Received, skipping exit request")
 		return nil
 	}
 	log.WithField("exitReqHash", fmt.Sprintf("%#x", h)).
@@ -505,7 +511,6 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) error {
 		return err
 	}
 	if block == nil {
-		log.Debug("Block does not exist")
 		return errors.New("block does not exist")
 	}
 
@@ -544,9 +549,12 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	currentSlot := block.Slot
 	if currentSlot < startSlot || finalizedSlot > endSlot {
-		log.Debugf(
-			"invalid batch request: current slot < start slot || finalized slot > end slot."+
-				"currentSlot %d startSlot %d endSlot %d finalizedSlot %d", currentSlot, startSlot, endSlot, finalizedSlot)
+		log.WithFields(logrus.Fields{
+			"currentSlot":   currentSlot,
+			"startSlot":     startSlot,
+			"endSlot":       endSlot,
+			"finalizedSlot": finalizedSlot},
+		).Debug("invalid batch request: current slot < start slot || finalized slot > end slot")
 		return err
 	}
 
@@ -554,7 +562,10 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 	// Handle overflows
 	if startSlot > endSlot {
 		// Do not process requests with invalid slot ranges
-		log.Debugf("Batched block range is invalid, start slot %d , end slot %d", startSlot, endSlot)
+		log.WithFields(logrus.Fields{
+			"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
+			"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+		).Debug("Invalid batched block range")
 		return err
 	}
 
@@ -572,7 +583,9 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 		response = append(response, retBlock)
 	}
 
-	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)
+	log.WithField("peer", msg.Peer).
+		Debug("Sending response for batch blocks")
+
 	defer sentBatchedBlocks.Inc()
 	if err := rs.p2p.Send(ctx, &pb.BatchedBeaconBlockResponse{
 		BatchedBlocks: response,
@@ -597,11 +610,15 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) error {
 	}
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", att == nil))
 	if att == nil {
-		log.Debugf("Attestation %#x is not in db", root)
+		log.WithField("attestationRoot", fmt.Sprintf("%#x", root)).
+			Debug("Attestation not in db")
 		return nil
 	}
 
-	log.Debugf("Sending attestation %#x to peer %v", root, msg.Peer)
+	log.WithFields(logrus.Fields{
+		"attestationRoot": fmt.Sprintf("%#x", root),
+		"peer":            msg.Peer},
+	).Debug("Sending attestation to peer")
 	if err := rs.p2p.Send(ctx, &pb.AttestationResponse{
 		Attestation: att,
 	}, msg.Peer); err != nil {
@@ -632,7 +649,8 @@ func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) error {
 		return nil
 	}
 
-	log.Debugf("Sending request for attestation to peer %v", msg.Peer)
+	log.WithField("peer", msg.Peer).
+		Debug("Sending request for attestation")
 	if err := rs.p2p.Send(ctx, &pb.AttestationRequest{
 		Hash: data.Hash,
 	}, msg.Peer); err != nil {
@@ -645,7 +663,8 @@ func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) error {
 func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb.BeaconBlockAnnounce) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
 	defer span.End()
-	log.Debugf("Announcing canonical block %#x", announce.Hash)
+	log.WithField("blockRoot", fmt.Sprintf("%#x", announce.Hash)).
+		Debug("Announcing canonical block")
 	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()
 }

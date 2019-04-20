@@ -27,7 +27,8 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("isEvilBlock", isEvilBlock))
 
 	if isEvilBlock {
-		log.Debugf("Received a blacklisted block hash: %#x", h)
+		log.WithField("blockRoot", fmt.Sprintf("%#x", h)).
+			Debug("Received blacklisted block")
 		return nil
 	}
 
@@ -43,7 +44,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 
 	if hasBlock {
-		log.Debugf("Received a root for a block that has already been processed: %#x", h)
+		log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debug("Already processed")
 		return nil
 	}
 
@@ -119,7 +120,8 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	log.Debugf("Processing response to block request: %#x", blockRoot)
+	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).
+		Debug("Processing response to block request")
 	hasBlock := rs.db.HasBlock(blockRoot)
 	if hasBlock {
 		log.Debug("Received a block that already exists. Exiting...")
