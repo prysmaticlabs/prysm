@@ -331,6 +331,7 @@ func BenchmarkProcessBlock(b *testing.B) {
 			if _, err := state.ProcessBlock(context.Background(), genesisState16K, block, cfg); err != nil {
 				b.Fatal(err)
 			}
+			genesisState16K.DepositIndex = 16000
 		}
 	})
 
@@ -348,6 +349,7 @@ func BenchmarkProcessBlock(b *testing.B) {
 			if _, err := state.ProcessBlock(context.Background(), genesisState300K, block, cfg); err != nil {
 				b.Fatal(err)
 			}
+			genesisState300K.DepositIndex = 300000
 		}
 	})
 }
@@ -514,7 +516,7 @@ func createFullBlock(b *testing.B, bState *pb.BeaconState, previousDeposits []*p
 }
 
 func createGenesisState(numDeposits int) (*pb.BeaconState, []*pb.Deposit) {
-	setBenchmarkConfig("BIG")
+	setBenchmarkConfig("SML")
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{

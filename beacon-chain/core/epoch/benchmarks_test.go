@@ -21,6 +21,7 @@ import (
 )
 
 var RunAmount = 1000
+var SmallRunAmount = 50
 
 // var conditions = "MAX"
 
@@ -188,7 +189,7 @@ func BenchmarkProcessRewards(b *testing.B) {
 	}
 	prevEpochHeadAttestingBalances := e.TotalBalance(beaconState16K, prevEpochHeadAttesterIndices)
 
-	b.N = RunAmount
+	b.N = SmallRunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = bal.ExpectedFFGSource(
@@ -250,7 +251,7 @@ func BenchmarkProcessLeak(b *testing.B) {
 	}
 
 	var epochsSinceFinality uint64 = 4
-	b.N = RunAmount
+	b.N = SmallRunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = bal.InactivityFFGSource(
@@ -287,7 +288,7 @@ func BenchmarkProcessLeak(b *testing.B) {
 
 func BenchmarkProcessPenaltiesAndExits(b *testing.B) {
 	b.Run("16K", func(b *testing.B) {
-		b.N = RunAmount
+		b.N = SmallRunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_ = v.ProcessPenaltiesAndExits(beaconState16K)
@@ -295,7 +296,7 @@ func BenchmarkProcessPenaltiesAndExits(b *testing.B) {
 	})
 
 	b.Run("300K", func(b *testing.B) {
-		b.N = RunAmount
+		b.N = SmallRunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_ = v.ProcessPenaltiesAndExits(beaconState300K)
