@@ -32,16 +32,29 @@ service ProposerService {
 service ValidatorService {
     rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse);
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
-    rpc CommitteeAssignment(ValidatorEpochAssignmentsRequest) returns (CommitteeAssignmentResponse);
+    rpc CommitteeAssignment(CommitteeAssignmentsRequest) returns (CommitteeAssignmentResponse);
     rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
+    rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
+}
+
+message ValidatorPerformanceRequest {
+   uint64 slot = 1;
+   bytes public_key = 2;
+}
+
+message ValidatorPerformanceResponse {
+    uint64 balance = 1;
+    uint64 total_validators = 2;
+    uint64 total_active_validators = 3;
+    float average_validator_balance = 4;
 }
 
 message ValidatorActivationRequest {
-    bytes pubkey = 1;
+    repeated bytes public_keys = 1;
 }
 
 message ValidatorActivationResponse {
-    ethereum.beacon.p2p.v1.Validator validator = 1;
+    repeated bytes activated_public_keys = 1;
 }
 
 message AttestationDataRequest {
@@ -55,6 +68,7 @@ message AttestationDataResponse {
     uint64 justified_epoch = 3;
     bytes justified_block_root_hash32 = 4;
     ethereum.beacon.p2p.v1.Crosslink latest_crosslink = 5;
+    uint64 head_slot = 6;
 }
 
 message PendingAttestationsRequest {
@@ -81,7 +95,7 @@ message ProposeRequest {
 }
 
 message ProposeResponse {
-    bytes block_hash = 1;
+    bytes block_root_hash32 = 1;
 }
 
 message ProposerIndexRequest {
@@ -104,7 +118,6 @@ enum ValidatorRole {
     UNKNOWN = 0;
     ATTESTER = 1;
     PROPOSER = 2;
-    BOTH = 3;
 }
 
 message ValidatorIndexRequest {
@@ -115,9 +128,9 @@ message ValidatorIndexResponse {
     uint64 index = 1;
 }
 
-message ValidatorEpochAssignmentsRequest {
+message CommitteeAssignmentsRequest {
     uint64 epoch_start = 1;
-    bytes public_key = 2;
+    repeated bytes public_keys = 2;
 }
 
 message PendingDepositsResponse {
@@ -125,10 +138,16 @@ message PendingDepositsResponse {
 }
 
 message CommitteeAssignmentResponse {
-    repeated uint64 committee = 1;
-    uint64 shard = 2;
-    uint64 slot = 3;
-    bool is_proposer = 4;
+    
+    repeated CommitteeAssignment assignment = 1;
+    message CommitteeAssignment {
+        repeated uint64 committee = 1;
+        uint64 shard = 2;
+        uint64 slot = 3;
+        bool is_proposer = 4;
+        bytes public_key = 5;
+        ValidatorStatus status = 6;
+    }
 }
 
 message ValidatorStatusResponse {

@@ -17,6 +17,7 @@ import (
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -76,7 +77,7 @@ func TestBroadcast_OK(t *testing.T) {
 	}
 
 	msg := &shardpb.CollationBodyRequest{}
-	s.Broadcast(msg)
+	s.Broadcast(context.Background(), msg)
 
 	// TODO(543): test that topic was published
 }
@@ -175,7 +176,7 @@ func TestSubscribeToTopic_directMessaging_OK(t *testing.T) {
 	}
 	w := ggio.NewDelimitedWriter(stream)
 	defer w.Close()
-	w.WriteMsg(pbMsg)
+	w.WriteMsg(createEnvelope(t, pbMsg))
 
 	// Wait for our message assertion to complete.
 	select {
@@ -239,11 +240,7 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *pubsub.Pub
 		done <- true
 	}()
 
-	b, err := proto.Marshal(pbMsg)
-	if err != nil {
-		t.Errorf("Failed to marshal service %v", err)
-	}
-	if err = gsub.Publish(topic.String(), b); err != nil {
+	if err := gsub.Publish(topic.String(), createEnvelopeBytes(t, pbMsg)); err != nil {
 		t.Errorf("Failed to publish message: %v", err)
 	}
 
@@ -288,11 +285,7 @@ func TestRegisterTopic_InvalidProtobufs(t *testing.T) {
 		t.Errorf("Failed to publish message: %v", err)
 	}
 	pbMsg := &shardpb.CollationBodyRequest{ShardId: 5}
-	b, err := proto.Marshal(pbMsg)
-	if err != nil {
-		t.Errorf("Failed to marshal service %v", err)
-	}
-	if err = gsub.Publish(topic.String(), b); err != nil {
+	if err = gsub.Publish(topic.String(), createEnvelopeBytes(t, pbMsg)); err != nil {
 		t.Errorf("Failed to publish message: %v", err)
 	}
 
@@ -425,14 +418,14 @@ func TestRegisterTopic_HandlesPanic(t *testing.T) {
 }
 
 func TestStatus_MinimumPeers(t *testing.T) {
-	minPeers := 5
+	minPeers := 3
 
 	ctx := context.Background()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 	s := Server{host: h}
 
 	err := s.Status()
-	if err == nil || err.Error() != "less than 5 peers" {
+	if err == nil || err.Error() != "less than 3 peers" {
 		t.Errorf("p2p server did not return expected status, instead returned %v", err)
 	}
 
@@ -465,12 +458,31 @@ func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Me
 	// Short timeout to allow libp2p to handle peer connection.
 	time.Sleep(time.Millisecond * 100)
 
-	b, err := proto.Marshal(msg)
+	return gsub.Publish(topic, createEnvelopeBytes(t, msg))
+}
+
+func createEnvelope(t *testing.T, msg proto.Message) *pb.Envelope {
+	payload, err := proto.Marshal(msg)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 
-	return gsub.Publish(topic, b)
+	// span context test data from
+	// https://github.com/census-instrumentation/opencensus-go/blob/3b8e2721f2c3c01fa1bf4a2e455874e7b8319cd7/trace/propagation/propagation_test.go#L69
+	envelope := &pb.Envelope{
+		SpanContext: []byte{0, 0, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 1, 97, 98, 99, 100, 101, 102, 103, 104, 2, 1},
+		Payload:     payload,
+	}
+
+	return envelope
+}
+
+func createEnvelopeBytes(t *testing.T, msg proto.Message) []byte {
+	b, err := proto.Marshal(createEnvelope(t, msg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }
 
 func logContains(t *testing.T, hook *logTest.Hook, message string, level logrus.Level) {

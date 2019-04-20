@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -29,7 +31,7 @@ type ProposerServer struct {
 // are shuffled and assigned slots to attest/propose to. This method will look for the validator that is assigned
 // to propose a beacon block at the given slot.
 func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerIndexRequest) (*pb.ProposerIndexResponse, error) {
-	beaconState, err := ps.beaconDB.State(ctx)
+	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -47,17 +49,27 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 	}, nil
 }
 
-// ProposeBlock is called by a proposer in a sharding validator and a full beacon node
-// sends the request into a beacon block that can then be included in a canonical chain.
+// ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
+// to get it processed by the beacon node as the canonical head.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
 	h, err := hashutil.HashBeaconBlock(blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
-	// We relay the received block from the proposer to the chain service for processing.
-	ps.chainService.IncomingBlockFeed().Send(blk)
-	return &pb.ProposeResponse{BlockHash: h[:]}, nil
+	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
+	if err != nil {
+		return nil, fmt.Errorf("could not process beacon block: %v", err)
+	}
+	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
+		return nil, fmt.Errorf("failed to update chain: %v", err)
+	}
+	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
+
+	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
+	}
+	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
 // PendingAttestations retrieves attestations kept in the beacon node's operations pool which have
@@ -66,13 +78,30 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
 func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.PendingAttestationsRequest) (*pb.PendingAttestationsResponse, error) {
-	beaconState, err := ps.beaconDB.State(ctx)
+	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 	atts, err := ps.operationService.PendingAttestations()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
+	}
+
+	head, err := ps.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
+	}
+	blockRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash beacon block: %v", err)
+	}
+	for beaconState.Slot < req.ProposalBlockSlot {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
 	}
 
 	// Use the optional proposal block slot parameter as the current slot for
@@ -82,17 +111,18 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 		currentSlot = beaconState.Slot
 	}
 
-	// Remove any attestation from the list if their slot is before the start of
-	// the previous epoch. This should be handled in the operationService cleanup
-	// method, but we should filter here in case it wasn't yet processed.
-	boundary := currentSlot - params.BeaconConfig().SlotsPerEpoch
-	attsWithinBoundary := make([]*pbp2p.Attestation, 0, len(atts))
+	validAtts := make([]*pbp2p.Attestation, 0, len(atts))
 	for _, att := range atts {
-		if att.Data.Slot > boundary {
-			attsWithinBoundary = append(attsWithinBoundary, att)
+		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
+			log.WithError(err).WithField(
+				"slot", att.Data.Slot-params.BeaconConfig().GenesisSlot).Warn(
+				"Skipping, pending attestation failed verification")
+			continue
 		}
+		validAtts = append(validAtts, att)
+
 	}
-	atts = attsWithinBoundary
+	atts = validAtts
 
 	if req.FilterReadyForInclusion {
 		var attsReadyForInclusion []*pbp2p.Attestation
@@ -113,7 +143,12 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 // ComputeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) (*pb.StateRootResponse, error) {
-	beaconState, err := ps.beaconDB.State(ctx)
+	if !featureconfig.FeatureConfig().EnableComputeStateRoot {
+		log.Debug("Compute state root disabled, returning no-op result")
+		return &pb.StateRootResponse{StateRoot: []byte("no-op")}, nil
+	}
+
+	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -126,7 +161,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 			beaconState,
 			nil,
 			parentHash,
-			false, /* no sig verify */
+			state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
@@ -137,7 +172,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		beaconState,
 		req,
 		parentHash,
-		false, /* no sig verification */
+		state.DefaultConfig(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)

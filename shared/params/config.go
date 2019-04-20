@@ -22,6 +22,7 @@ type BeaconChainConfig struct {
 	ValidatorPrivkeyFileName     string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName    string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	BLSPubkeyLength              int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
+	DefaultBufferSize            int    // DefaultBufferSize for channels across the Prysm repository.
 
 	// BLS domain values.
 	DomainDeposit     uint64 // DomainDeposit defines the BLS signature domain for deposit verification.
@@ -66,6 +67,7 @@ type BeaconChainConfig struct {
 	WhistlerBlowerRewardQuotient       uint64 // WhistlerBlowerRewardQuotient is used to calculate whistler blower reward.
 	AttestationInclusionRewardQuotient uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
 	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
+	GweiPerEth                         uint64 // GweiPerEth is the amount of gwei corresponding to 1 eth.
 
 	// Max operations per block constants.
 	MaxVoluntaryExits    uint64 // MaxVoluntaryExits determines the maximum number of validator exits in a block.
@@ -88,7 +90,7 @@ type BeaconChainConfig struct {
 type DepositContractConfig struct {
 	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
-	MaxDepositAmount      *big.Int // // MaxDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
+	MaxDepositAmount      *big.Int // MaxDepositAmount defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -112,6 +114,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ValidatorPrivkeyFileName:     "/validatorprivatekey",
 	WithdrawalPrivkeyFileName:    "/shardwithdrawalkey",
 	BLSPubkeyLength:              96,
+	DefaultBufferSize:            10000,
 
 	// BLS domain values.
 	DomainDeposit:     0,
@@ -154,6 +157,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WhistlerBlowerRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
 	InactivityPenaltyQuotient:          1 << 24,
+	GweiPerEth:                         1000000000,
 
 	// Max operations per block constants.
 	MaxVoluntaryExits:    16,
@@ -165,9 +169,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Prysm constants.
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
-	SyncPollingInterval:   6 * 1, // Query nodes over the network every slot for sync status.
-	BatchBlockLimit:       50,
-	SyncEpochLimit:        4,
+	BatchBlockLimit:       64 * 4, // Process blocks in batches of 4 epochs of blocks (threshold before casper penalties).
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
 }
@@ -207,6 +209,10 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.EpochsPerEth1VotingPeriod = 1
+	demoConfig.LatestRandaoMixesLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestActiveIndexRootsLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestSlashedExitLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestBlockRootsLength = 5 * demoConfig.SlotsPerEpoch
 
 	return &demoConfig
 }

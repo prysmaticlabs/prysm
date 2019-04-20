@@ -8,6 +8,7 @@ import (
 	"net"
 	"reflect"
 	"sync"
+	"time"
 
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
@@ -21,14 +22,19 @@ import (
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"go.opencensus.io/trace/propagation"
 )
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
-const maxMessageSize = 1 << 20
+
+// We accommodate p2p message sizes as large as ~17Mb as we are transmitting
+// full beacon states over the wire for our current implementation.
+const maxMessageSize = 1 << 24
 
 // Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
@@ -62,7 +68,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := buildOptions(cfg.Port)
 	if cfg.RelayNodeAddr != "" {
-		opts = append(opts, libp2p.AddrsFactory(relayAddrsOnly(cfg.RelayNodeAddr)))
+		opts = append(opts, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
 	}
 	if !checkAvailablePort(cfg.Port) {
 		cancel()
@@ -79,7 +85,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	// distributed hash table by their peer ID.
 	h = rhost.Wrap(h, dht)
 
-	gsub, err := pubsub.NewGossipSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -127,7 +133,9 @@ func (s *Server) Start() {
 		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
-		if err := s.dht.Bootstrap(ctx); err != nil {
+		bcfg := kaddht.DefaultBootstrapConfig
+		bcfg.Period = time.Duration(30 * time.Second)
+		if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
 			log.Errorf("Failed to bootstrap DHT: %v", err)
 		}
 	}
@@ -143,7 +151,7 @@ func (s *Server) Start() {
 		return
 	}
 
-	startPeerWatcher(ctx, s.host)
+	startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
 }
 
 // Stop the main p2p loop.
@@ -156,8 +164,8 @@ func (s *Server) Stop() error {
 
 // Status returns an error if the p2p service does not have sufficient peers.
 func (s *Server) Status() error {
-	if peerCount(s.host) < 5 {
-		return errors.New("less than 5 peers")
+	if peerCount(s.host) < 3 {
+		return errors.New("less than 3 peers")
 	}
 	return nil
 }
@@ -189,13 +197,31 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 		adapters[i], adapters[opp] = adapters[opp], adapters[i]
 	}
 
-	handler := func(msg proto.Message, peerID peer.ID) {
+	handler := func(msg *pb.Envelope, peerID peer.ID) {
 		log.WithField("topic", topic).Debug("Processing incoming message")
 		var h Handler = func(pMsg Message) {
 			s.emit(pMsg, feed)
 		}
 
-		pMsg := Message{Ctx: s.ctx, Data: msg, Peer: peerID}
+		ctx := context.Background()
+
+		spanCtx, ok := propagation.FromBinary(msg.SpanContext)
+		if !ok {
+			log.Error("Invalid span context from p2p message")
+			return
+		}
+		ctx, span := trace.StartSpanWithRemoteParent(ctx, "beacon-chain.p2p.receiveMessage", spanCtx)
+		defer span.End()
+		span.AddAttributes(
+			trace.StringAttribute("topic", topic),
+			trace.StringAttribute("peerID", peerID.String()),
+		)
+
+		data := proto.Clone(message)
+		if err := proto.Unmarshal(msg.Payload, data); err != nil {
+			log.Error("Could not unmarshal payload")
+		}
+		pMsg := Message{Ctx: ctx, Data: data, Peer: peerID}
 		for _, adapter := range adapters {
 			h = adapter(h)
 		}
@@ -205,9 +231,11 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 
 	s.host.SetStreamHandler(protocol.ID(prysmProtocolPrefix+"/"+topic), func(stream libp2pnet.Stream) {
 		log.WithField("topic", topic).Debug("Received new stream")
+		defer stream.Close()
 		r := ggio.NewDelimitedReader(stream, maxMessageSize)
+		defer r.Close()
 
-		msg := proto.Clone(message)
+		msg := &pb.Envelope{}
 		for {
 			err := r.ReadMsg(msg)
 			if err == io.EOF {
@@ -254,7 +282,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 				continue
 			}
 
-			d := proto.Clone(message)
+			d := &pb.Envelope{}
 			if err := proto.Unmarshal(msg.Data, d); err != nil {
 				log.WithError(err).Error("Failed to decode data")
 				continue
@@ -287,6 +315,9 @@ func (s *Server) emit(msg Message, feed Feed) {
 		"msgType": fmt.Sprintf("%T", msg.Data),
 		"msgName": proto.MessageName(msg.Data),
 	}).Debug("Emit p2p message to feed subscribers")
+	if span := trace.FromContext(msg.Ctx); span != nil {
+		span.AddAttributes(trace.Int64Attribute("feedSubscribers", int64(i)))
+	}
 }
 
 // Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.
@@ -297,12 +328,22 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 // Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
 // this method will act as a broadcast.
 func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
-	ctx, span := trace.StartSpan(ctx, "p2p.Send")
-	defer span.End()
-	if peerID == AnyPeer {
-		s.Broadcast(msg)
+	isPeer := false
+	for _, p := range s.host.Network().Peers() {
+		if p == peerID {
+			isPeer = true
+			break
+		}
+	}
+
+	if peerID == AnyPeer || s.host.Network().Connectedness(peerID) == libp2pnet.CannotConnect || !isPeer {
+		s.Broadcast(ctx, msg)
 		return nil
 	}
+
+	ctx, span := trace.StartSpan(ctx, "p2p.Send")
+	defer span.End()
+	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 
 	topic := s.topicMapping[messageType(msg)]
 	pid := protocol.ID(prysmProtocolPrefix + "/" + topic)
@@ -310,10 +351,22 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 	if err != nil {
 		return err
 	}
+	defer stream.Close()
 
 	w := ggio.NewDelimitedWriter(stream)
 	defer w.Close()
-	return w.WriteMsg(msg)
+
+	b, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	envelope := &pb.Envelope{
+		SpanContext: propagation.Binary(span.SpanContext()),
+		Payload:     b,
+	}
+
+	return w.WriteMsg(envelope)
 }
 
 // Broadcast publishes a message to all localized peers using gossipsub.
@@ -328,13 +381,18 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 //   msg := make(chan p2p.Message, 100) // Choose a reasonable buffer size!
 //   ps.RegisterTopic("message_topic_here", msg)
 //   ps.Broadcast(msg)
-func (s *Server) Broadcast(msg proto.Message) {
+func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.WithField("r", r).Error("Panicked when broadcasting!")
 		}
 	}()
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.p2p.Broadcast")
+	defer span.End()
+
 	topic := s.topicMapping[messageType(msg)]
+	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	// Shorten message if it is too long to avoid
 	// polluting the logs.
@@ -367,7 +425,19 @@ func (s *Server) Broadcast(msg proto.Message) {
 		log.Errorf("Failed to marshal data for broadcast: %v", err)
 		return
 	}
-	if err := s.gsub.Publish(topic, b); err != nil {
+
+	envelope := &pb.Envelope{
+		SpanContext: propagation.Binary(span.SpanContext()),
+		Payload:     b,
+	}
+
+	data, err := proto.Marshal(envelope)
+	if err != nil {
+		log.Errorf("Failed to marshal data for broadcast: %v", err)
+		return
+	}
+
+	if err := s.gsub.Publish(topic, data); err != nil {
 		log.Errorf("Failed to publish to gossipsub topic: %v", err)
 	}
 }

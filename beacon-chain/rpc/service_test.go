@@ -1,12 +1,14 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,6 +43,10 @@ func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Message) error {
+	return nil
+}
+
 func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
@@ -49,19 +55,22 @@ func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error)
 		{
 			AggregationBitfield: []byte("A"),
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
 			AggregationBitfield: []byte("B"),
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
 			AggregationBitfield: []byte("C"),
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 	}, nil
@@ -72,22 +81,35 @@ type mockChainService struct {
 	stateFeed            *event.Feed
 	attestationFeed      *event.Feed
 	stateInitializedFeed *event.Feed
-}
-
-func (m *mockChainService) IncomingBlockFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
-	return m.blockFeed
-}
-
-func (m *mockChainService) CanonicalStateFeed() *event.Feed {
-	return m.stateFeed
+	canonicalBlocks      map[uint64][]byte
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
 	return m.stateInitializedFeed
+}
+
+func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
+}
+
+func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
+	return nil
+}
+
+func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
+	return bytes.Equal(m.canonicalBlocks[slot], hash)
+}
+
+func (m mockChainService) InsertsCanonical(slot uint64, hash []byte) {
+	m.canonicalBlocks[slot] = hash
 }
 
 func newMockChainService() *mockChainService {
@@ -131,8 +153,8 @@ func TestRPC_BadEndpoint(t *testing.T) {
 		Port: "ralph merkle!!!",
 	})
 
-	if _, ok := log.(*TestLogger).testMap["error"]; ok {
-		t.Fatal("Error in Start() occurred before expected")
+	if val, ok := log.(*TestLogger).testMap["error"]; ok {
+		t.Fatalf("Error in Start() occurred before expected: %v", val)
 	}
 
 	rpcService.Start()

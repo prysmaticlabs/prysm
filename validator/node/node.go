@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -52,11 +53,13 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		stop:     make(chan struct{}),
 	}
 
-	// Use demo config values if demo config flag is set.
-	if ctx.GlobalBool(types.DemoConfigFlag.Name) {
+	// Use custom config values if the --no-custom-config flag is set.
+	if !ctx.GlobalBool(types.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
+
+	featureconfig.ConfigureBeaconFeatures(ctx)
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err

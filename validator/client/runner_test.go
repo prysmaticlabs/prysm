@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -119,9 +120,9 @@ func TestAttests_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-
+	timer := time.NewTimer(time.Duration(200 * time.Millisecond))
 	run(ctx, v)
-
+	<-timer.C
 	if !v.AttestToBlockHeadCalled {
 		t.Fatalf("AttestToBlockHead(%d) was not called", slot)
 	}
@@ -143,9 +144,9 @@ func TestProposes_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-
+	timer := time.NewTimer(time.Duration(200 * time.Millisecond))
 	run(ctx, v)
-
+	<-timer.C
 	if !v.ProposeBlockCalled {
 		t.Fatalf("ProposeBlock(%d) was not called", slot)
 	}
@@ -161,15 +162,15 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RoleAtRet = pb.ValidatorRole_BOTH
+	v.RoleAtRet = pb.ValidatorRole_PROPOSER
 	go func() {
 		ticker <- slot
 
 		cancel()
 	}()
-
+	timer := time.NewTimer(time.Duration(200 * time.Millisecond))
 	run(ctx, v)
-
+	<-timer.C
 	if !v.AttestToBlockHeadCalled {
 		t.Fatalf("AttestToBlockHead(%d) was not called", slot)
 	}

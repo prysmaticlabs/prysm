@@ -8,6 +8,12 @@ spec:
   selector:
     matchLabels:
       component: validator
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: '5%'
+  minReadySeconds: 20
   template:
     metadata:
       labels:
@@ -22,7 +28,6 @@ spec:
         - --password=nopass
         - --datadir=/data  
         - --beacon-rpc-provider=beacon-chain:4000 
-        - --demo-config
         - --enable-tracing
         - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
         - --trace-sample-fraction=1.0

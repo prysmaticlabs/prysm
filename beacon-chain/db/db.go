@@ -25,10 +25,18 @@ type BeaconDB struct {
 	db           *bolt.DB
 	DatabasePath string
 
+	// Beacon block info in memory.
+	highestBlockSlot uint64
+	// We keep a map of hashes of blocks which failed processing for blacklisting.
+	badBlockHashes map[[32]byte]bool
+	badBlocksLock  sync.RWMutex
+
 	// Beacon chain deposits in memory.
-	pendingDeposits []*depositContainer
-	deposits        []*depositContainer
-	depositsLock    sync.RWMutex
+	pendingDeposits       []*depositContainer
+	deposits              []*depositContainer
+	depositsLock          sync.RWMutex
+	chainstartPubkeys     map[string]bool
+	chainstartPubkeysLock sync.RWMutex
 }
 
 // Close closes the underlying boltdb database.
@@ -73,12 +81,19 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
 
 	if err := db.update(func(tx *bolt.Tx) error {
-		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket,
+		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket, histStateBucket,
 			chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
-
 	}); err != nil {
 		return nil, err
 	}
 
 	return db, err
+}
+
+// ClearDB removes the previously stored directory at the data directory.
+func ClearDB(dirPath string) error {
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		return nil
+	}
+	return os.RemoveAll(dirPath)
 }

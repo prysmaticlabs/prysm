@@ -3,6 +3,8 @@ package bitutil
 import (
 	"bytes"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 func TestCheckBit(t *testing.T) {
@@ -11,9 +13,9 @@ func TestCheckBit(t *testing.T) {
 		b int
 		c bool
 	}{
-		{a: []byte{200}, b: 3, c: true},   //11001000
-		{a: []byte{148}, b: 2, c: true},   //10010100
-		{a: []byte{146}, b: 3, c: false},  //10010010
+		{a: []byte{200}, b: 4, c: true},   //11001000
+		{a: []byte{148}, b: 3, c: true},   //10010100
+		{a: []byte{146}, b: 7, c: false},  //10010010
 		{a: []byte{179}, b: 0, c: true},   //10110011
 		{a: []byte{49}, b: 1, c: false},   //00110001
 		{a: []byte{49}, b: 100, c: false}, //00110001
@@ -80,8 +82,30 @@ func TestBitSet(t *testing.T) {
 		{a: 100, b: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8}},
 	}
 	for _, tt := range tests {
-		if !bytes.Equal(SetBitfield(tt.a), tt.b) {
-			t.Errorf("SetBitfield(%v) = %d, want = %v", tt.a, SetBitfield(tt.a), tt.b)
+		if !bytes.Equal(SetBitfield(tt.a, mathutil.CeilDiv8(len(tt.b))), tt.b) {
+			t.Errorf("SetBitfield(%v) = %d, want = %v", tt.a, SetBitfield(tt.a, mathutil.CeilDiv8(len(tt.b))), tt.b)
 		}
+	}
+}
+
+func TestSetBitfield_LargerCommitteesThanIndex(t *testing.T) {
+	tests := []struct {
+		a int
+		b []byte
+		c int
+	}{
+		{a: 300, b: []byte{128}, c: 40},    //10000000
+		{a: 10000, b: []byte{64}, c: 2000}, //01000000
+		{a: 800, b: []byte{4}, c: 120},     //00000100
+		{a: 809, b: []byte{0, 32}, c: 130}, //00000000 00100000
+		{a: 100, b: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8}, c: 14},
+	}
+	for _, tt := range tests {
+		bfield := SetBitfield(tt.a, tt.c)
+
+		if len(bfield) != tt.c {
+			t.Errorf("Length of bitfield doesnt match the inputted committee size, got: %d but expected: %d", len(bfield), tt.c)
+		}
+
 	}
 }
