@@ -35,5 +35,10 @@
     "exclude_files": {
       "external/*": "Third party code"
     } 
+  },
+  "assign": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
   }
 }
