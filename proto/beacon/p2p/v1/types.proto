@@ -72,17 +72,17 @@ message Attestation {
 message AttestationData {
   // LMD GHOST vote
   uint64 slot = 1;
-  bytes beacon_block_root_hash32 = 2;
+  bytes beacon_block_root = 2;
 
   // FFG vote
   uint64 source_epoch = 3;
-  uint64 source_root_hash32 = 4;
-  uint64 target_root_hash32 = 5;
+  uint64 source_root = 4;
+  uint64 target_root = 5;
 
   // Crosslink vote
   uint64 shard = 6;
-  bytes previous_crosslink_root_hash32 = 7;
-  bytes crosslink_data_root_hash32 = 8;
+  bytes previous_crosslink_root = 7;
+  bytes crosslink_data_root = 8;
 
   // Deprecated
   bytes epoch_boundary_root_hash32 = 1000 [deprecated=true];
@@ -134,7 +134,7 @@ message ShardReassignmentRecord {
 
 message Crosslink {
   uint64 epoch = 1;
-  bytes crosslink_data_root_hash32 = 2;
+  bytes crosslink_data_root = 2;
 }
 
 message BeaconBlock {
@@ -210,11 +210,11 @@ message VoluntaryExit {
 
 message Eth1Data {
   // Root of the deposit tree
-  bytes deposit_root_hash32 = 1;
+  bytes deposit_root = 1;
   // Total number of deposits
   uint64 deposit_count = 2;
   // Block hash
-  bytes block_hash32 = 3;
+  bytes block_hash = 3;
 }
 
 message Eth1DataVote {
