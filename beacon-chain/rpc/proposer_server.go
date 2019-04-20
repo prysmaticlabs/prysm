@@ -95,7 +95,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 		return nil, fmt.Errorf("could not hash beacon block: %v", err)
 	}
 
-	for beaconState.Slot < req.ProposalBlockSlot-1{
+	for beaconState.Slot < req.ProposalBlockSlot-1 {
 		beaconState, err = state.ExecuteStateTransition(
 			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
 		)
