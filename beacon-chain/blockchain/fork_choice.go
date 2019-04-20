@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -341,15 +342,8 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		if ancestor == nil {
 			continue
 		}
-		ancestorRoot, err := hashutil.HashBeaconBlock(ancestor)
-		if err != nil {
-			return 0, err
-		}
-		blockRoot, err := hashutil.HashBeaconBlock(block)
-		if err != nil {
-			return 0, err
-		}
-		if blockRoot == ancestorRoot {
+
+		if proto.Equal(ancestor, block) {
 			balances += int(helpers.EffectiveBalance(state, validatorIndex))
 		}
 	}
