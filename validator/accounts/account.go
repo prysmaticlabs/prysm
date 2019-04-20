@@ -39,7 +39,7 @@ func VerifyAccountNotExists(directory string, password string) error {
 // parameters needed to deposit into the deposit contract on the ETH1.0 chain. Specifically, this
 // generates a BLS private and public key, and then logs the serialized deposit input hex string
 // to be used in an ETH1.0 transaction by the validator.
-func NewValidatorAccount(directory string, password string) error {
+func NewValidatorAccount(directory string, password string) ([]byte, error) {
 	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
 	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)

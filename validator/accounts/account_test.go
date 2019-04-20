@@ -22,7 +22,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	if err := ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, ""); err != nil {
 		t.Fatalf("Unable to store key %v", err)
 	}
-	if err := NewValidatorAccount(directory, ""); err != nil {
+	if _, err := NewValidatorAccount(directory, ""); err != nil {
 		t.Errorf("Should support multiple keys: %v", err)
 	}
 	files, _ := ioutil.ReadDir(directory)
