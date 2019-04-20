@@ -186,8 +186,12 @@ message VoluntaryExit {
 }
 
 message Eth1Data {
+  // Root of the deposit tree
   bytes deposit_root_hash32 = 1;
-  bytes block_hash32 = 2;
+  // Total number of deposits
+  uint64 deposit_count = 2;
+  // Block hash
+  bytes block_hash32 = 3;
 }
 
 message Eth1DataVote {
