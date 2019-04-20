@@ -86,13 +86,23 @@ message AttestationDataAndCustodyBit {
 }
 
 message Validator {
-  bytes pubkey = 1;
-  // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
-  bytes withdrawal_credentials_hash32 = 2;
-  uint64 activation_epoch = 5;
-  uint64 exit_epoch = 6;
-  uint64 withdrawal_epoch = 7;
-  uint64 slashed_epoch = 8;
+  // BLS public key
+  bytes pubkey = 1; // bytes48
+  // Withdrawal credentials
+  bytes withdrawal_credentials = 2; //bytes32
+  // Epoch when became eligible for activation
+  uint64 activation_eligibility_epoch = 3;
+  // Epoch when validator activated
+  uint64 activation_epoch = 4;
+  // Epoch when validator exited
+  uint64 exit_epoch = 5;
+  // Was the validator slashed
+  bool slashed = 6;
+  // Rounded balance
+  uint64 high_balance = 7;
+  // Deprecated
+  uint64 withdrawal_epoch = 1001 [deprecated=true];
+  uint64 slashed_epoch = 1002 [deprecated=true];
   // Possible validator status code:
   // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
   enum StatusFlags {
@@ -100,7 +110,8 @@ message Validator {
     INITIATED_EXIT = 1; // validator initiated exit.
     WITHDRAWABLE = 2; // validator deposit is withdrawable.
   }
-  StatusFlags status_flags = 9;
+  StatusFlags status_flags = 1003 [deprecated=true];
+  bytes withdrawal_credentials_hash32 = 1004 [deprecated=true];
 }
 
 message ShardReassignmentRecord {
@@ -155,9 +166,17 @@ message SlashableAttestation {
 }
 
 message DepositData {
-  DepositInput deposit_input = 1;
-  uint64 amount = 2; // Amount in Gwei
-  uint64 timestamp = 3;
+  // BLS public key
+  bytes pubkey = 1; // bytes48
+  // Withdrawal credentials
+  bytes withdrawal_credentials = 2; // bytes32
+  // Amount in Gwei
+  uint64 amount = 3;
+  // Container self-signature
+  bytes signature = 4; //bytes96
+  // Deprecated
+  DepositInput deposit_input = 1001 [deprecated=true];
+  uint64 timestamp = 1002 [deprecated=true];
 }
 
 message ProposerSlashing {
