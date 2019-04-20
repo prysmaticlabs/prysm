@@ -1,0 +1,39 @@
+{
+  "unsafeptr": {
+    "exclude_files": {
+      "external/com_github_gxed_hashland/murmur3/*": "Unsafe third party code",
+      "external/io_k8s_apimachinery/vendor/github.com/modern-go/reflect2/reflect/*": "Unsafe third party code"
+    }
+  },
+  "unreachable": {
+    "exclude_files": {
+      "shared/messagehandler/messagehandler_test.go": "Necessary panic before return for test",
+      "external/*": "Unreachable third party code"
+    }
+  },
+  "nilness": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
+  },
+  "stdmethods": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
+  }, 
+  "copylocks": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
+  },
+  "composites": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    } 
+  }, 
+  "cgocall": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    } 
+  }
+}
