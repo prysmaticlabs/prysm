@@ -1064,3 +1064,39 @@ go_repository(
     commit = "502116f1a0a0c1140aab04fd3787489209b357d3",  # v1.2.0
     importpath = "github.com/grpc-ecosystem/go-grpc-prometheus",
 )
+
+go_repository(
+    name = "com_github_davecgh_go_spew",
+    commit = "d8f796af33cc11cb798c1aaeb27a4ebc5099927d",
+    importpath = "github.com/davecgh/go-spew",
+)
+
+go_repository(
+    name = "in_gopkg_olebedev_go_duktape_v3",
+    commit = "ec84240a7772c7a122b1c58a13398210659f7c40",
+    importpath = "gopkg.in/olebedev/go-duktape.v3",
+)
+
+go_repository(
+    name = "com_github_influxdata_influxdb",
+    commit = "75ce049571996fca062539c57fe328d6193ce44f",
+    importpath = "github.com/influxdata/influxdb",
+)
+
+go_repository(
+    name = "com_github_influxdata_platform",
+    commit = "d500d3cf55899337bc03259b46c58bae9c06f1eb",
+    importpath = "github.com/influxdata/platform",
+)
+
+go_repository(
+    name = "com_github_elastic_gosigar",
+    commit = "7bed2391b1d10309feac210aee9df44e8db2d060",
+    importpath = "github.com/elastic/gosigar",
+)
+
+go_repository(
+    name = "com_github_mohae_deepcopy",
+    commit = "c48cc78d482608239f6c4c92a4abd87eb8761c90",
+    importpath = "github.com/mohae/deepcopy",
+)
