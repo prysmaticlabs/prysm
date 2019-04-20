@@ -318,12 +318,12 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(v.keys),
+			PublicKeys: v.pubkeys,
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&pb.ValidatorActivationResponse{
-			ActivatedPublicKeys: publicKeys(v.keys),
+			ActivatedPublicKeys: v.pubkeys,
 		},
 		nil,
 	)

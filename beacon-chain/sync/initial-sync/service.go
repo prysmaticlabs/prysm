@@ -239,8 +239,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 			s.highestObservedRoot,
 		)
 	}
-	log.Infof("Canonical state slot: %d", canonicalState.Slot-params.BeaconConfig().GenesisSlot)
-	log.Info("Exiting initial sync and starting normal sync")
+	log.WithField("canonicalStateSlot", canonicalState.Slot-params.BeaconConfig().GenesisSlot).Info("Exiting init sync and starting regular sync")
 	s.syncService.ResumeSync()
 	s.cancel()
 	s.nodeIsSynced = true

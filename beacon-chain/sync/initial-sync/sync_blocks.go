@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -107,20 +108,20 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 	defer span.End()
 	sentBatchedBlockReq.Inc()
 	if startSlot > endSlot {
-		log.Debugf(
-			"Invalid batched request from slot %d to %d",
-			startSlot-params.BeaconConfig().GenesisSlot, endSlot-params.BeaconConfig().GenesisSlot,
-		)
+		log.WithFields(logrus.Fields{
+			"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
+			"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+		).Debug("Invalid batched block request")
 		return
 	}
 	blockLimit := params.BeaconConfig().BatchBlockLimit
 	if startSlot+blockLimit < endSlot {
 		endSlot = startSlot + blockLimit
 	}
-	log.Debugf(
-		"Requesting batched blocks from slot %d to %d",
-		startSlot-params.BeaconConfig().GenesisSlot, endSlot-params.BeaconConfig().GenesisSlot,
-	)
+	log.WithFields(logrus.Fields{
+		"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
+		"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+	).Debug("Requesting batched blocks")
 	s.p2p.Broadcast(ctx, &pb.BatchedBeaconBlockRequest{
 		StartSlot: startSlot,
 		EndSlot:   endSlot,
@@ -142,7 +143,10 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err := s.checkBlockValidity(ctx, block); err != nil {
 		return err
 	}
-	log.Infof("Saving block with root %#x and slot %d for initial sync", root, block.Slot-params.BeaconConfig().GenesisSlot)
+	log.WithFields(logrus.Fields{
+		"root": fmt.Sprintf("%#x", root),
+		"slot": block.Slot - params.BeaconConfig().GenesisSlot,
+	}).Info("Saving block")
 	s.currentSlot = block.Slot
 
 	s.mutex.Lock()

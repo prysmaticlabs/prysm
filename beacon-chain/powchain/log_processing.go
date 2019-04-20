@@ -52,7 +52,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 		w.ProcessChainStartLog(depositLog)
 		return
 	}
-	log.Debugf("Log is not of a valid event signature %#x", depositLog.Topics[0])
+	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid signature")
 }
 
 // ProcessDepositLog processes the log which had been received from
