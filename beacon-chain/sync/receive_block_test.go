@@ -118,6 +118,9 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	if err := db.SaveState(ctx, genesisState); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.UpdateChainHead(ctx, genesisBlock, genesisState); err != nil {
+		t.Fatal(err)
+	}
 
 	parents, parentRoots := setupBlockParents(t, genesisRoot)
 	blocksMissingParent := setupBlocksMissingParent(parents, parentRoots)

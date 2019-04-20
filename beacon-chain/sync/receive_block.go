@@ -171,10 +171,26 @@ func (rs *RegularSync) validateAndProcessBlock(
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
-	if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
-		log.Errorf("Could not update chain head: %v", err)
-		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
+
+	head, err := rs.db.ChainHead()
+	if err != nil {
+		log.Errorf("Could not retrieve chainhead %v", err)
 		return nil, nil, false, err
+	}
+
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		log.Errorf("Could not hash head block: %v", err)
+		return nil, nil, false, err
+	}
+
+	// only update head of chain if block is a child of the chainhead.
+	if headRoot == bytesutil.ToBytes32(block.ParentRootHash32) {
+		if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
+			log.Errorf("Could not update chain head: %v", err)
+			span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
+			return nil, nil, false, err
+		}
 	}
 
 	sentBlocks.Inc()
