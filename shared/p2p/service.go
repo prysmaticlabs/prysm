@@ -343,7 +343,8 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
-	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
 	topic := s.topicMapping[messageType(msg)]
 	pid := protocol.ID(prysmProtocolPrefix + "/" + topic)

@@ -62,7 +62,7 @@ func run(ctx context.Context, v Validator) {
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
-			slotCtx, _ := context.WithDeadline(ctx, v.SlotDeadline(slot))
+			slotCtx, cancel := context.WithDeadline(ctx, v.SlotDeadline(slot))
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v",
@@ -73,6 +73,7 @@ func run(ctx context.Context, v Validator) {
 			// epoch transition in the beacon node's state.
 			if err := v.UpdateAssignments(slotCtx, slot); err != nil {
 				handleAssignmentError(err, slot)
+				cancel()
 				continue
 			}
 			for id, role := range v.RolesAt(slot) {
@@ -99,6 +100,7 @@ func run(ctx context.Context, v Validator) {
 
 				}(role, id)
 			}
+			cancel()
 		}
 	}
 }
