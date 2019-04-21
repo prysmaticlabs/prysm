@@ -32,6 +32,7 @@ type FeatureFlagConfig struct {
 	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updating finalized states.
 	EnableCommitteesCache        bool // EnableCommitteesCache for state transition.
 	EnableBlockAncestorCache     bool //EnableBlockAncestorCache for fork choice optimization.
+	EnableGossipSub              bool // EnableGossipSub in p2p messaging.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -77,6 +78,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableBlockAncestorCacheFlag.Name) {
 		log.Info("Enabled block ancestor cache")
 		cfg.EnableBlockAncestorCache = true
+	}
+	if ctx.GlobalBool(EnableGossipSubFlag.Name) {
+		log.Info("Enabled gossip sub")
+		cfg.EnableGossipSub = true
 	}
 
 	InitFeatureConfig(cfg)
