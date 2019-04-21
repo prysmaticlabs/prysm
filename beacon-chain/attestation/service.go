@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -179,27 +178,19 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	var cachedCommittees *cache.CommitteesInSlot
 	slot := attestation.Data.Slot
 
-	if !featureconfig.FeatureConfig().DisableCommitteesCache {
-		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
-		if err != nil {
-			return err
-		}
-		if cachedCommittees == nil {
-			crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
-			if err != nil {
-				return err
-			}
-			cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
-			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-				return err
-			}
-		}
-	} else {
+	cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
+	if err != nil {
+		return err
+	}
+	if cachedCommittees == nil {
 		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
 		if err != nil {
 			return err
 		}
 		cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
+		if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
+			return err
+		}
 	}
 
 	// Find committee for shard.
