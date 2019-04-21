@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"encoding/binary"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"math/big"
 	"strings"
 	"testing"
@@ -220,6 +221,9 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 }
 
 func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: false,
+	})
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -289,6 +293,9 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if !db.IsEvilBlockHash(blockRoot) {
 		t.Error("Expected block root to have been blacklisted")
 	}
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: false,
+	})
 }
 
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
