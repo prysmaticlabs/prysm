@@ -22,7 +22,7 @@ var validator = &pb.Validator{
 
 func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: false,
+		DisableCommitteesCache: true,
 	})
 }
 
@@ -518,7 +518,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 
 func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
+		DisableCommitteesCache: false,
 	})
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
@@ -553,7 +553,7 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 
 func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
+		DisableCommitteesCache: false,
 	})
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -603,7 +603,7 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 
 func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
+		DisableCommitteesCache: false,
 	})
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
@@ -645,7 +645,7 @@ func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 
 func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
+        DisableCommitteesCache: false,
 	})
 
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)

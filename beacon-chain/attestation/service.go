@@ -179,7 +179,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	var cachedCommittees *cache.CommitteesInSlot
 	slot := attestation.Data.Slot
 
-	if featureconfig.FeatureConfig().EnableCommitteesCache {
+	if !featureconfig.FeatureConfig().DisableCommitteesCache {
 		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
 		if err != nil {
 			return err

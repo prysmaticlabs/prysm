@@ -11,7 +11,7 @@ import (
 
 func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: false,
+		DisableCommitteesCache: true,
 	})
 }
 

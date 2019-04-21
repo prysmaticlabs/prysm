@@ -25,10 +25,11 @@ var (
 		Name:  "enable-crosslinks",
 		Usage: "Enable crosslinks in epoch processing, default is disabled.",
 	}
-	// EnableCommitteesCacheFlag enables crosslink committees cache for state transition. It is disabled by default.
-	EnableCommitteesCacheFlag = cli.BoolFlag{
-		Name:  "enable-committees-cache",
-		Usage: "Enable crosslink committees cache for state transition, default is disabled.",
+	// DisableCommitteesCacheFlag disabled crosslink committees cache for state transition. Committee cache is
+	// enabled by default.
+	DisableCommitteesCacheFlag = cli.BoolFlag{
+		Name:  "disable-committees-cache",
+		Usage: "Disable crosslink committees cache for state transition, cache is enabled by default.",
 	}
 	// EnableBlockAncestorCacheFlag enables block ancestor cache for LMD GHOST fork choice optimization. I
 	// it is disabled by default.
@@ -55,7 +56,7 @@ var ValidatorFlags = []cli.Flag{}
 var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
-	EnableCommitteesCacheFlag,
+	DisableCommitteesCacheFlag,
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
 	EnableBlockAncestorCacheFlag,

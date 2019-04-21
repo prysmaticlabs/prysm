@@ -19,7 +19,7 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: false,
+		DisableCommitteesCache: true,
 	})
 }
 
@@ -234,7 +234,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
+		DisableCommitteesCache: false,
 	})
 
 	beaconDB := internal.SetupDB(t)
@@ -303,7 +303,7 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 
 func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
+		DisableCommitteesCache: false,
 	})
 
 	var validators []*pb.Validator

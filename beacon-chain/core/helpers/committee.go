@@ -265,7 +265,7 @@ func AttestationParticipants(
 	// When enabling committee cache, we fetch the committees using slot.
 	// If it's not prev cached, we compute for the committees of slot and
 	// add it to the cache.
-	if featureconfig.FeatureConfig().EnableCommitteesCache {
+	if !featureconfig.FeatureConfig().DisableCommitteesCache {
 		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
 		if err != nil {
 			return nil, err
@@ -428,7 +428,7 @@ func CommitteeAssignment(
 	startSlot := StartSlot(wantedEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 
-		if featureconfig.FeatureConfig().EnableCommitteesCache {
+		if !featureconfig.FeatureConfig().DisableCommitteesCache {
 			cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
 			if err != nil {
 				return []uint64{}, 0, 0, false, err
