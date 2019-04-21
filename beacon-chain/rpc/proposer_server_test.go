@@ -178,7 +178,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	}
 
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
-		FilterReadyForInclusion: true,
+		ProposalBlockSlot: blk.Slot + 1,
 	})
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
@@ -356,7 +356,9 @@ func TestPendingAttestations_OK(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
-	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
+	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
+		ProposalBlockSlot: blk.Slot + 1,
+	})
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}
