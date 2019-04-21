@@ -457,7 +457,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
-	_, err := state.ProcessEpoch(context.Background(), newState, state.DefaultConfig())
+	_, err := state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, state.DefaultConfig())
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
@@ -517,7 +517,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
-	_, err := state.ProcessEpoch(context.Background(), newState, state.DefaultConfig())
+	_, err := state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, state.DefaultConfig())
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
@@ -536,7 +536,7 @@ func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 		0,
 		newState.Slot-params.BeaconConfig().GenesisSlot,
 	)
-	if _, err := state.ProcessEpoch(context.Background(), newState, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
 	}
 }
@@ -566,7 +566,7 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	}
 
 	wanted := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 0, 1)
-	if _, err := state.ProcessEpoch(context.Background(), newState, state.DefaultConfig()); !strings.Contains(err.Error(), wanted) {
+	if _, err := state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, state.DefaultConfig()); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %v", wanted, err)
 	}
 }
