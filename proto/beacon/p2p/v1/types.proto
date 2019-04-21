@@ -86,9 +86,7 @@ message AttestationDataAndCustodyBit {
 }
 
 message Validator {
-  // BLS public key
   bytes pubkey = 1; // bytes48
-  // Withdrawal credentials
   bytes withdrawal_credentials = 2; //bytes32
   // Epoch when became eligible for activation
   uint64 activation_eligibility_epoch = 3;
@@ -100,15 +98,15 @@ message Validator {
   bool slashed = 6;
   // Rounded balance
   uint64 high_balance = 7;
+
   // Deprecated
+  // TODO(2307): Remove deprecated fields
   uint64 withdrawal_epoch = 1001 [deprecated=true];
   uint64 slashed_epoch = 1002 [deprecated=true];
-  // Possible validator status code:
-  // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
   enum StatusFlags {
-    INITIAL = 0; // validator status initial value.
-    INITIATED_EXIT = 1; // validator initiated exit.
-    WITHDRAWABLE = 2; // validator deposit is withdrawable.
+    INITIAL = 0 [deprecated=true]; // validator status initial value.
+    INITIATED_EXIT = 1 [deprecated=true]; // validator initiated exit.
+    WITHDRAWABLE = 2 [deprecated=true]; // validator deposit is withdrawable.
   }
   StatusFlags status_flags = 1003 [deprecated=true];
   bytes withdrawal_credentials_hash32 = 1004 [deprecated=true];
@@ -166,13 +164,10 @@ message SlashableAttestation {
 }
 
 message DepositData {
-  // BLS public key
   bytes pubkey = 1; // bytes48
-  // Withdrawal credentials
   bytes withdrawal_credentials = 2; // bytes32
   // Amount in Gwei
   uint64 amount = 3;
-  // Container self-signature
   bytes signature = 4; //bytes96
   // Deprecated
   DepositInput deposit_input = 1001 [deprecated=true];
