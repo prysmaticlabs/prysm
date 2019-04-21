@@ -541,6 +541,53 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 	}
 }
 
+func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	slotOffset := uint64(10)
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + slotOffset,
+		ValidatorRegistry: validators,
+	}
+
+	attestationData := &pb.AttestationData{
+		Shard: 10,
+		Slot:  params.BeaconConfig().GenesisSlot + slotOffset,
+	}
+
+	result, err := AttestationParticipants(state, attestationData, []byte{0xC0})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := []uint64{55, 105}
+	if !reflect.DeepEqual(wanted, result) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wanted,
+			result,
+		)
+	}
+
+	// Verify the committee for offset slot was cached.
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(params.BeaconConfig().GenesisSlot + slotOffset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(wanted, fetchedCommittees.Committees[0].Committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wanted,
+			fetchedCommittees.Committees[0].Committee,
+		)
+	}
+}
+
 func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
