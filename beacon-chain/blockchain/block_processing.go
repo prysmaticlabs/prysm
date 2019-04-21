@@ -322,7 +322,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 // validators were exited from current epoch. After it deletes, current epoch key
 // is deleted from ExitedValidators mapping.
 func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
-	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state))
+	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range exitedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
