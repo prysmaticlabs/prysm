@@ -46,10 +46,10 @@ var (
 		Name:  "enable-historical-state-pruning",
 		Usage: "Enable database pruning of historical states after finalized epochs",
 	}
-	// EnableGossipSubFlag uses gossip sub in the pubsub system for p2p.
-	EnableGossipSubFlag = cli.BoolFlag{
-		Name:  "enable-gossip-sub",
-		Usage: "Enable gossip sub messaging instead of floodsub messaging",
+	// DisableGossipSubFlag uses floodsub in place of gossipsub.
+	DisableGossipSubFlag = cli.BoolFlag{
+		Name:  "disable-gossip-sub",
+		Usage: "Disable gossip sub messaging and use floodsub messaging",
 	}
 )
 
@@ -64,5 +64,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
 	EnableBlockAncestorCacheFlag,
-	EnableGossipSubFlag,
+	DisableGossipSubFlag,
 }

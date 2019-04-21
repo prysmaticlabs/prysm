@@ -87,10 +87,10 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	h = rhost.Wrap(h, dht)
 
 	var gsub *pubsub.PubSub
-	if featureconfig.FeatureConfig().EnableGossipSub {
-		gsub, err = pubsub.NewGossipSub(ctx, h)
-	} else {
+	if featureconfig.FeatureConfig().DisableGossipSub {
 		gsub, err = pubsub.NewFloodSub(ctx, h)
+	} else {
+		gsub, err = pubsub.NewGossipSub(ctx, h)
 	}
 	if err != nil {
 		cancel()
