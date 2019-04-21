@@ -100,7 +100,6 @@ func run(ctx context.Context, v Validator) {
 
 				}(role, id)
 			}
-			cancel()
 		}
 	}
 }
