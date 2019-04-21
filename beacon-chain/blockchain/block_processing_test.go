@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -220,6 +221,9 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 }
 
 func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: false,
+	})
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -274,8 +278,12 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
-		t.Error("Expected block to fail processing, received nil")
+	_, err = chainService.ReceiveBlock(context.Background(), block)
+	switch err.(type) {
+	case *BlockFailedProcessingErr:
+		t.Log("Block failed processing as expected")
+	default:
+		t.Errorf("Unexpected block processing error: %v", err)
 	}
 
 	savedBlock, err := db.Block(blockRoot)
@@ -289,6 +297,9 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if !db.IsEvilBlockHash(blockRoot) {
 		t.Error("Expected block root to have been blacklisted")
 	}
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: true,
+	})
 }
 
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
