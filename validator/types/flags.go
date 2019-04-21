@@ -32,7 +32,7 @@ var (
 		Usage: "string value of the password for your validator private keys",
 	}
 	// DisablePenaltyRewardLogFlag defines the ability to not log reward/penalty information during deployment
-	DisablePenaltyRewardLogFlag = cli.StringFlag{
+	DisablePenaltyRewardLogFlag = cli.BoolFlag{
 		Name:  "disable-rewards-penalties-logging",
 		Usage: "Disable reward/penalty logging during cluster deployment",
 	}

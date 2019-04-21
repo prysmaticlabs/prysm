@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 )
 
 // LogValidatorGainsAndLosses logs important metrics related to this validator client's
@@ -15,6 +16,10 @@ import (
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
 func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
+	type LogInfo struct {
+		v                   validator
+		LogPenaltiesRewards bool
+	}
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 {
 		// Do nothing if we are not at the start of a new epoch.
 		return nil
@@ -49,7 +54,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
 		percentNet := (newBalance - prevBalance) / prevBalance
 		log.WithField("prevEthBalance", prevBalance).Info("Previous validator balance")
-		if types.DisablePenaltyRewardLogFlag.Value != "on" {
+		if !LogInfo.LogPenaltiesRewards {
 			log.WithFields(logrus.Fields{
 				"eth":           fmt.Sprintf("%f", newBalance-prevBalance),
 				"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
