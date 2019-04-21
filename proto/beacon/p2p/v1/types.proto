@@ -89,6 +89,8 @@ message AttestationData {
   Crosslink latest_crosslink = 1001 [deprecated=true];
   uint64 justified_epoch = 1002 [deprecated=true];
   bytes justified_block_root_hash32 = 1003 [deprecated=true];
+  bytes beacon_block_root_hash32 = 1004 [deprecated=true];
+  bytes crosslink_data_root_hash32 = 1005 [deprecated=true];
 }
 
 message AttestationDataAndCustodyBit {
@@ -134,7 +136,7 @@ message ShardReassignmentRecord {
 
 message Crosslink {
   uint64 epoch = 1;
-  bytes crosslink_data_root = 2;
+  bytes crosslink_data_root_hash32 = 2;
 }
 
 message BeaconBlock {
@@ -209,12 +211,8 @@ message VoluntaryExit {
 }
 
 message Eth1Data {
-  // Root of the deposit tree
-  bytes deposit_root = 1;
-  // Total number of deposits
-  uint64 deposit_count = 2;
-  // Block hash
-  bytes block_hash = 3;
+  bytes deposit_root_hash32 = 1;
+  bytes block_hash32 = 2;
 }
 
 message Eth1DataVote {
