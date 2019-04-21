@@ -21,6 +21,7 @@ import (
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -34,6 +35,7 @@ var _ = Sender(&Server{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{})
 }
 
 func TestStartDialRelayNode_InvalidMultiaddress(t *testing.T) {
