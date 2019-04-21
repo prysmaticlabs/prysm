@@ -279,13 +279,11 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	}
 
 	_, err = chainService.ReceiveBlock(context.Background(), block)
-	if err != nil {
-		switch err.(type) {
-		case *BlockFailedProcessingErr:
-			t.Log("Block failed processing as expected")
-		default:
-			t.Errorf("Unexpected block processing error: %v", err)
-		}
+	switch err.(type) {
+	case *BlockFailedProcessingErr:
+		t.Log("Block failed processing as expected")
+	default:
+		t.Errorf("Unexpected block processing error: %v", err)
 	}
 
 	savedBlock, err := db.Block(blockRoot)
