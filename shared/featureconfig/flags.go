@@ -46,6 +46,11 @@ var (
 		Name:  "enable-historical-state-pruning",
 		Usage: "Enable database pruning of historical states after finalized epochs",
 	}
+	// DisableGossipSubFlag uses floodsub in place of gossipsub.
+	DisableGossipSubFlag = cli.BoolFlag{
+		Name:  "disable-gossip-sub",
+		Usage: "Disable gossip sub messaging and use floodsub messaging",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -59,4 +64,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
 	EnableBlockAncestorCacheFlag,
+	DisableGossipSubFlag,
 }
