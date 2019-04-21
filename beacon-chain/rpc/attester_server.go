@@ -72,8 +72,8 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	// If the epoch boundary slot is the same as state current slot,
 	// we set epoch boundary root to an empty root.
 	epochBoundaryRoot := make([]byte, 32)
-	epochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(head.Slot))
-	if epochStartSlot == head.Slot {
+	epochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(headState.Slot))
+	if epochStartSlot == headState.Slot {
 		epochBoundaryRoot = headRoot[:]
 	} else {
 		epochBoundaryRoot, err = blocks.BlockRoot(headState, epochStartSlot)

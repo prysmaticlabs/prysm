@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -169,15 +167,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
-		switch err.(type) {
-		case *blockchain.BlockFailedProcessingErr:
-			// If the block fails processing, we delete it from our DB.
-			if err := s.db.DeleteBlock(block); err != nil {
-				return fmt.Errorf("could not delete bad block from db: %v", err)
-			}
-		default:
-			return fmt.Errorf("could not apply block state transition: %v", err)
-		}
+		return fmt.Errorf("could not apply block state transition: %v", err)
 	}
 	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
 		return err
