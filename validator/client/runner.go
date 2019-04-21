@@ -62,7 +62,7 @@ func run(ctx context.Context, v Validator) {
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
-			slotCtx, cancel := context.WithDeadline(ctx, v.SlotDeadline(slot))
+			slotCtx, cancel := context.WithDeadline(context.Background(), v.SlotDeadline(slot))
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v",
@@ -100,7 +100,6 @@ func run(ctx context.Context, v Validator) {
 
 				}(role, id)
 			}
-			cancel()
 		}
 	}
 }
