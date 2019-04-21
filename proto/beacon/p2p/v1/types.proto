@@ -144,7 +144,7 @@ message DepositInput {
 message ProposalSignedData {
   uint64 slot = 1;
   uint64 shard = 2;
-  bytes block_root_hash32 = 3;
+  bytes block_root = 3;
 }
 
 message SlashableAttestation {
