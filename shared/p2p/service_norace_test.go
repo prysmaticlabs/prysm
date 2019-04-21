@@ -3,13 +3,8 @@ package p2p
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{})
-}
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()

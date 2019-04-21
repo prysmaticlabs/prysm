@@ -39,6 +39,9 @@ var featureConfig *FeatureFlagConfig
 
 // FeatureConfig retrieves feature config.
 func FeatureConfig() *FeatureFlagConfig {
+	if featureConfig == nil {
+		return &FeatureFlagConfig{}
+	}
 	return featureConfig
 }
 
