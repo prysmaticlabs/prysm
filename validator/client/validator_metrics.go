@@ -49,9 +49,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
 		percentNet := (newBalance - prevBalance) / prevBalance
 		log.WithField("prevEthBalance", prevBalance).Info("Previous validator balance")
-		if types.DisablePenaltyRewardLogFlag {
-			continue
-		} else {
+		disableFlag := types.DisablePenaltyRewardLogFlag.Value
+		if disableFlag != "on" {
 			log.WithFields(logrus.Fields{
 				"eth":           fmt.Sprintf("%f", newBalance-prevBalance),
 				"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
