@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -170,7 +173,15 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 
 	// Potential improvement, instead of getting the state,
 	// we could get a mapping of validator index to public key.
-	state, err := a.beaconDB.HeadState(ctx)
+	beaconState, err := a.beaconDB.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	head, err := a.beaconDB.ChainHead()
+	if err != nil {
+		return err
+	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
 	if err != nil {
 		return err
 	}
@@ -179,13 +190,22 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	var cachedCommittees *cache.CommitteesInSlot
 	slot := attestation.Data.Slot
 
+	for beaconState.Slot < slot {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, headRoot, &state.TransitionConfig{},
+		)
+		if err != nil {
+			return fmt.Errorf("could not execute head transition: %v", err)
+		}
+	}
+
 	if featureconfig.FeatureConfig().EnableCommitteesCache {
 		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
 		if err != nil {
 			return err
 		}
 		if cachedCommittees == nil {
-			crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
+			crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false /* registryChange */)
 			if err != nil {
 				return err
 			}
@@ -195,7 +215,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 			}
 		}
 	} else {
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false /* registryChange */)
 		if err != nil {
 			return err
 		}
@@ -237,7 +257,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
-		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[committee[i]].Pubkey)
+		pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[committee[i]].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
