@@ -516,7 +516,7 @@ func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
 		LatestSlashedBalances: make([]uint64,
 			params.BeaconConfig().LatestSlashedExitLength),
 		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
-		FinalizedEpoch: params.BeaconConfig().GenesisEpoch+1,
+		FinalizedEpoch:               params.BeaconConfig().GenesisEpoch + 1,
 	}
 
 	newState, err := state.ProcessEpoch(context.Background(), newState, nil, state.DefaultConfig())
