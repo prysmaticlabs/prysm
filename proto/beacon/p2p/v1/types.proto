@@ -110,12 +110,8 @@ message ShardReassignmentRecord {
 }
 
 message Crosslink {
-  // Epoch number
   uint64 epoch = 1;
-  // Root of the previous crosslink
-  bytes previous_crosslink_root_hash32 = 2;
-  // Root of the shard data since the previous crosslink
-  bytes crosslink_data_root_hash32 = 3;
+  bytes crosslink_data_root_hash32 = 2;
 }
 
 message BeaconBlock {
@@ -148,7 +144,7 @@ message DepositInput {
 message ProposalSignedData {
   uint64 slot = 1;
   uint64 shard = 2;
-  bytes block_root = 3;
+  bytes block_root_hash32 = 3;
 }
 
 message SlashableAttestation {
@@ -195,7 +191,7 @@ message Eth1Data {
   // Total number of deposits
   uint64 deposit_count = 2;
   // Block hash
-  bytes block_hash32 = 3;
+  bytes block_root = 3;
 }
 
 message Eth1DataVote {
