@@ -110,8 +110,12 @@ message ShardReassignmentRecord {
 }
 
 message Crosslink {
+  // Epoch number
   uint64 epoch = 1;
-  bytes crosslink_data_root_hash32 = 2;
+  // Root of the previous crosslink
+  bytes previous_crosslink_root_hash32 = 2;
+  // Root of the shard data since the previous crosslink
+  bytes crosslink_data_root_hash32 = 3;
 }
 
 message BeaconBlock {

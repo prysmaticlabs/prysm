@@ -851,11 +851,12 @@ func (m *ShardReassignmentRecord) GetSlot() uint64 {
 }
 
 type Crosslink struct {
-	Epoch                   uint64   `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty"`
-	CrosslinkDataRootHash32 []byte   `protobuf:"bytes,2,opt,name=crosslink_data_root_hash32,json=crosslinkDataRootHash32,proto3" json:"crosslink_data_root_hash32,omitempty"`
-	XXX_NoUnkeyedLiteral    struct{} `json:"-"`
-	XXX_unrecognized        []byte   `json:"-"`
-	XXX_sizecache           int32    `json:"-"`
+	Epoch                       uint64   `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	PreviousCrosslinkRootHash32 []byte   `protobuf:"bytes,2,opt,name=previous_crosslink_root_hash32,json=previousCrosslinkRootHash32,proto3" json:"previous_crosslink_root_hash32,omitempty"`
+	CrosslinkDataRootHash32     []byte   `protobuf:"bytes,3,opt,name=crosslink_data_root_hash32,json=crosslinkDataRootHash32,proto3" json:"crosslink_data_root_hash32,omitempty"`
+	XXX_NoUnkeyedLiteral        struct{} `json:"-"`
+	XXX_unrecognized            []byte   `json:"-"`
+	XXX_sizecache               int32    `json:"-"`
 }
 
 func (m *Crosslink) Reset()         { *m = Crosslink{} }
@@ -896,6 +897,13 @@ func (m *Crosslink) GetEpoch() uint64 {
 		return m.Epoch
 	}
 	return 0
+}
+
+func (m *Crosslink) GetPreviousCrosslinkRootHash32() []byte {
+	if m != nil {
+		return m.PreviousCrosslinkRootHash32
+	}
+	return nil
 }
 
 func (m *Crosslink) GetCrosslinkDataRootHash32() []byte {
@@ -2568,8 +2576,14 @@ func (m *Crosslink) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintTypes(dAtA, i, uint64(m.Epoch))
 	}
-	if len(m.CrosslinkDataRootHash32) > 0 {
+	if len(m.PreviousCrosslinkRootHash32) > 0 {
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.PreviousCrosslinkRootHash32)))
+		i += copy(dAtA[i:], m.PreviousCrosslinkRootHash32)
+	}
+	if len(m.CrosslinkDataRootHash32) > 0 {
+		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintTypes(dAtA, i, uint64(len(m.CrosslinkDataRootHash32)))
 		i += copy(dAtA[i:], m.CrosslinkDataRootHash32)
@@ -3509,6 +3523,10 @@ func (m *Crosslink) Size() (n int) {
 	_ = l
 	if m.Epoch != 0 {
 		n += 1 + sovTypes(uint64(m.Epoch))
+	}
+	l = len(m.PreviousCrosslinkRootHash32)
+	if l > 0 {
+		n += 1 + l + sovTypes(uint64(l))
 	}
 	l = len(m.CrosslinkDataRootHash32)
 	if l > 0 {
@@ -6079,6 +6097,40 @@ func (m *Crosslink) Unmarshal(dAtA []byte) error {
 				}
 			}
 		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PreviousCrosslinkRootHash32", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTypes
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PreviousCrosslinkRootHash32 = append(m.PreviousCrosslinkRootHash32[:0], dAtA[iNdEx:postIndex]...)
+			if m.PreviousCrosslinkRootHash32 == nil {
+				m.PreviousCrosslinkRootHash32 = []byte{}
+			}
+			iNdEx = postIndex
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CrosslinkDataRootHash32", wireType)
 			}
