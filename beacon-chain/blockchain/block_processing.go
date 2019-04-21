@@ -307,7 +307,7 @@ func (c *ChainService) runStateTransition(
 // validators were activated from current epoch. After it saves, current epoch key
 // is deleted from ActivatedValidators mapping.
 func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
-	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state))
+	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range activatedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
