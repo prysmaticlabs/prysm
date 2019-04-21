@@ -3,12 +3,12 @@ package blockchain
 import (
 	"context"
 	"encoding/binary"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"math/big"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -278,8 +278,14 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
-		t.Error("Expected block to fail processing, received nil")
+	_, err = chainService.ReceiveBlock(context.Background(), block)
+	if err != nil {
+		switch err.(type) {
+		case *BlockFailedProcessingErr:
+			t.Log("Block failed processing as expected")
+		default:
+			t.Errorf("Unexpected block processing error: %v", err)
+		}
 	}
 
 	savedBlock, err := db.Block(blockRoot)
