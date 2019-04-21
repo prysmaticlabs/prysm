@@ -298,7 +298,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		t.Error("Expected block root to have been blacklisted")
 	}
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCheckBlockStateRoot: false,
+		EnableCheckBlockStateRoot: true,
 	})
 }
 
