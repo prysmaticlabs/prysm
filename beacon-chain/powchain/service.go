@@ -129,6 +129,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	ctx, cancel := context.WithCancel(ctx)
 	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{{}}, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("could not setup deposit trie: %v", err)
 	}
 	return &Web3Service{
