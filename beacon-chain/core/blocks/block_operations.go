@@ -754,16 +754,22 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 
 // AttsInclusionSlot returns the slot of when an attestator's attestation last gets included
 // in the beacon chain by a proposer.
-func AttsInclusionSlot(index uint64) uint64 {
+func AttsInclusionSlot(index uint64) (uint64, error) {
 	attsInclStore.RLock()
 	attsInclStore.RUnlock()
-	return attsInclStore.attesterInclusionSlot[index]
+	if slot, ok := attsInclStore.attesterInclusionSlot[index]; ok {
+		return slot, nil
+	}
+	return 0, fmt.Errorf("no inclusion slot for attestor %d", index)
 }
 
 // AttsInclusionDistance returns diff in slot of when an attestator's attestation gets submitted
 // and included.
-func AttsInclusionDistance(index uint64) uint64 {
+func AttsInclusionDistance(index uint64) (uint64, error) {
 	attsInclStore.RLock()
 	attsInclStore.RUnlock()
-	return attsInclStore.attesterInclusionDist[index]
+	if slot, ok := attsInclStore.attesterInclusionDist[index]; ok {
+		return slot, nil
+	}
+	return 0, fmt.Errorf("no inclusion distance for attestor %d", index)
 }

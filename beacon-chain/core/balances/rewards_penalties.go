@@ -294,13 +294,11 @@ func AttestationInclusion(
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	for _, index := range prevEpochAttesterIndices {
-		//slot, err := epoch.InclusionSlot(state, index)
-		//if err != nil {
-		//	return nil, fmt.Errorf("could not get inclusion slot: %v", err)
-		//}
-
 		// Get the attestation's inclusion slot using the attestor's index.
-		slot := blocks.AttsInclusionSlot(index)
+		slot, err := blocks.AttsInclusionSlot(index)
+		if err != nil {
+			return nil, fmt.Errorf("could not get inclusion slot: %v", err)
+		}
 		proposerIndex, err := helpers.BeaconProposerIndex(state, slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get propoer index: %v", err)
