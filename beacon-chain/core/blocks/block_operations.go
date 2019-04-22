@@ -27,15 +27,16 @@ import (
 
 var committeeCache = cache.NewCommitteesCache()
 
-type attestorInclusionStore struct {
+type attesterInclusionStore struct {
 	sync.RWMutex
-	// attestorInclusion is a mapping that tracks when an attestor's attestation
+	// attesterInclusion is a mapping that tracks when an attester's attestation
 	// last get included in beacon chain.
-	attestorInclusion map[uint64]uint64
+	attesterInclusion     map[uint64]uint64
+	attesterInclusionDist map[uint64]uint64
 }
 
-var attsInclStore = attestorInclusionStore{
-	attestorInclusion: make(map[uint64]uint64),
+var attsInclStore = attesterInclusionStore{
+	attesterInclusion: make(map[uint64]uint64),
 }
 
 // VerifyProposerSignature uses BLS signature verification to ensure
@@ -454,7 +455,7 @@ func ProcessBlockAttestations(
 		attsInclStore.Lock()
 		defer attsInclStore.Unlock()
 		for _, index := range IndicesInCommittee {
-			attsInclStore.attestorInclusion[index] = beaconState.Slot
+			attsInclStore.attesterInclusion[index] = beaconState.Slot
 		}
 
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
@@ -752,5 +753,5 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 func AttsInclusionSlot(index uint64) uint64 {
 	attsInclStore.RLock()
 	attsInclStore.RUnlock()
-	return attsInclStore.attestorInclusion[index]
+	return attsInclStore.attesterInclusion[index]
 }
