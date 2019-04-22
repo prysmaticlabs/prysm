@@ -3,8 +3,6 @@ package slotutil
 import (
 	"testing"
 	"time"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestSlotTicker(t *testing.T) {
@@ -98,7 +96,7 @@ func TestSlotTickerGenesis(t *testing.T) {
 	// Tick twice.
 	tick <- time.Now()
 	slot = <-ticker.C()
-	if slot != 1+params.BeaconConfig().GenesisSlot {
-		t.Fatalf("Expected %d, got %d", params.BeaconConfig().GenesisSlot+1, slot)
+	if slot != 1+0 {
+		t.Fatalf("Expected %d, got %d", 0+1, slot)
 	}
 }

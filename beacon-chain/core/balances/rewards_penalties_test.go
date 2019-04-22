@@ -461,11 +461,11 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 	}
 	atts := []*pb.Attestation{
 		{Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot,
+			Slot:                    0,
 			LatestCrosslink:         &pb.Crosslink{},
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}
 	pendingAtts := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       0},
 	}
@@ -482,7 +482,7 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
 		state := &pb.BeaconState{
-			Slot:               params.BeaconConfig().GenesisSlot + 10,
+			Slot:               0 + 10,
 			ValidatorRegistry:  validators,
 			ValidatorBalances:  validatorBalances,
 			LatestAttestations: pendingAtts,

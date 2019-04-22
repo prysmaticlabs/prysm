@@ -37,8 +37,6 @@ type BeaconChainConfig struct {
 	//Deprecated: Do not use.
 
 	// Initial value constants.
-	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields.
-	GenesisEpoch            uint64   // GenesisEpoch is used to initialize epoch.
 	FarFutureEpoch          uint64   // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
@@ -149,8 +147,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ForkChoiceBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
-	GenesisSlot:             1 << 63,
-	GenesisEpoch:            1 << 63 / 64,
 	FarFutureEpoch:          1<<64 - 1,
 	ZeroHash:                [32]byte{},
 	BLSWithdrawalPrefixByte: byte(0),
