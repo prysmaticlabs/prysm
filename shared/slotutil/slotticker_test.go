@@ -102,20 +102,3 @@ func TestSlotTickerGenesis(t *testing.T) {
 		t.Fatalf("Expected %d, got %d", 1, slot)
 	}
 }
-
-func TestCurrentSlot(t *testing.T) {
-	// Test genesis slot
-	genesisTime := time.Now()
-	secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
-	slot := CurrentSlot(genesisTime, params.BeaconConfig().SecondsPerSlot, time.Since)
-	if slot != 0 {
-		t.Errorf("Expected %d, got: %d", 0, slot)
-	}
-
-	// Test slot 3 after genesis.
-	genesisTime = genesisTime.Add(secondsPerSlot * 3)
-	slot = CurrentSlot(genesisTime, params.BeaconConfig().SecondsPerSlot, time.Since)
-	if slot != 3 {
-		t.Errorf("Expected %d, got: %d", 3, slot)
-	}
-}
