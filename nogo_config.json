@@ -1,18 +1,14 @@
 {
   "unsafeptr": {
     "exclude_files": {
-      "external/*": "Unsafe third party code"
+      "external/com_github_gxed_hashland/murmur3/*": "Unsafe third party code",
+      "external/io_k8s_apimachinery/vendor/github.com/modern-go/reflect2/reflect/*": "Unsafe third party code",
     }
   },
   "unreachable": {
     "exclude_files": {
       "shared/messagehandler/messagehandler_test.go": "Necessary panic before return for test",
       "external/*": "Unreachable third party code"
-    }
-  },
-  "lostcancel": {
-    "exclude_files": {
-      "validator/client/runner.go": "No need to cancel right when goroutines begin"
     }
   },
   "nilness": {
