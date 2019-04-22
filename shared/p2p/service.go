@@ -24,6 +24,7 @@ import (
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -85,7 +86,12 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	// distributed hash table by their peer ID.
 	h = rhost.Wrap(h, dht)
 
-	gsub, err := pubsub.NewFloodSub(ctx, h)
+	var gsub *pubsub.PubSub
+	if featureconfig.FeatureConfig().DisableGossipSub {
+		gsub, err = pubsub.NewFloodSub(ctx, h)
+	} else {
+		gsub, err = pubsub.NewGossipSub(ctx, h)
+	}
 	if err != nil {
 		cancel()
 		return nil, err

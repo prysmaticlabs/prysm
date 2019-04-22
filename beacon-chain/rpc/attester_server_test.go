@@ -2,11 +2,9 @@ package rpc
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -29,34 +27,6 @@ func TestAttestHead_OK(t *testing.T) {
 	}
 	if _, err := attesterServer.AttestHead(context.Background(), req); err != nil {
 		t.Errorf("Could not attest head correctly: %v", err)
-	}
-}
-
-func TestAttestationDataAtSlot_EpochBoundaryFailure(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
-
-	beaconState := &pbp2p.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().SlotsPerEpoch,
-		LatestBlockRootHash32S: make([][]byte, 20),
-		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().GenesisEpoch,
-	}
-	block := blocks.NewGenesisBlock([]byte("stateroot"))
-	block.Slot = params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().SlotsPerEpoch + 1
-	attesterServer := &AttesterServer{
-		beaconDB: db,
-	}
-	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
-	want := "could not get epoch boundary block"
-	req := &pb.AttestationDataRequest{}
-	if _, err := attesterServer.AttestationDataAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 

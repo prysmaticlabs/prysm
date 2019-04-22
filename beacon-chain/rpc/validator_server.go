@@ -267,7 +267,7 @@ func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(beaconState *p
 	for _, v := range beaconState.ValidatorRegistry {
 		validatorMap[hex.EncodeToString(v.Pubkey)] = v
 	}
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot)
+	currentEpoch := helpers.CurrentEpoch(beaconState)
 	for _, pk := range pubkeys {
 		hexPk := hex.EncodeToString(pk)
 		if _, ok := validatorMap[hexPk]; !ok || !helpers.IsActiveValidator(validatorMap[hexPk], currentEpoch) {
