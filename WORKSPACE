@@ -182,7 +182,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "f106bf7f74f573d33505b7173ef2f7f0596b5d67",  # v0.0.13
+    commit = "5bce62bbecc0c07087af4cae2490b764afe1c594",  # v0.0.15
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -213,7 +213,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    commit = "6b439b7c6e3c44c112171540500be697ba235235",  # v0.0.1
+    commit = "922cbd7915f407488e3f4413ada76400a1b29b49",  # v0.0.3
     importpath = "github.com/multiformats/go-multihash",
 )
 
@@ -376,7 +376,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_nat",
-    commit = "3efa307896b71a07705d8d0cf7f19a4595c62d4f",  # v0.0.2
+    commit = "7790752804f5e7c2356fed9352686f1e45939459",  # v0.0.4
     importpath = "github.com/libp2p/go-libp2p-nat",
 )
 
@@ -750,13 +750,13 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "b99a6ee931a8331ccfb8292bee6d3e5c03edf5e1",  # v0.0.8
+    commit = "b220ac23e82c0df788178e806b1fefa92e936766",  # v0.0.9
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "80940bb93587a19603a74ea07f9e5c921bae3b07",  # v0.0.4
+    commit = "f8bd98feaffb64c335ac5e74f0a3d3aedbfd13ba",  # v0.0.5
     importpath = "github.com/ipfs/go-datastore",
 )
 
@@ -829,7 +829,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "d4ef632c52ff995d94eaed926529eede8faa3965",  # v0.0.1
+    commit = "4cb4193d603389a75bccd07336de74d54bea6b00",  # v0.0.2
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
