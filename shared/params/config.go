@@ -32,7 +32,7 @@ type BeaconChainConfig struct {
 	MinDepositAmount           uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
 	MaxDepositAmount           uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
 	EjectionBalance            uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
-	HighBalanceIncrement       uint64 // HighBalanceIncrement
+	HighBalanceIncrement       uint64 // HighBalanceIncrement is used for converting the high balance into the low balance for validators.
 	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
 	//Deprecated: Do not use.
 
@@ -57,9 +57,9 @@ type BeaconChainConfig struct {
 	ActivationExitDelay          uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
 	SlotsPerEth1VotingPeriod     uint64 // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	SlotsPerHistoricalRoot       uint64 // SlotsPerHistoricalRoot defines how often the historical root is saved.
-	MinValidatorWithdrawalDelay  uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator can get the deposit out.
-	PersistentCommitteePeriod    uint64 //
-	MaxCrosslinkEpochs           uint64
+	MinValidatorWithdrawalDelay  uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator has to wait to withdraw.
+	PersistentCommitteePeriod    uint64 // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
+	MaxCrosslinkEpochs           uint64 // MaxCrosslinkEpochs defines the max epoch from current a crosslink can be formed at.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	EpochsPerEth1VotingPeriod    uint64 // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	// Deprecated: Do not use.
@@ -74,19 +74,19 @@ type BeaconChainConfig struct {
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient                 uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
 	WhistleBlowingRewardQuotient       uint64 // WhistleBlowingRewardQuotient is used to calculate whistler blower reward.
-	ProposerRewardQuotient             uint64
-	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
-	MinPenaltyQuotient                 uint64
-	AttestationInclusionRewardQuotient uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
+	ProposerRewardQuotient             uint64 // ProposerRewardQuotient is used to calculate the reward for proposers.
+	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
+	MinPenaltyQuotient                 uint64 // MinPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
+	AttestationInclusionRewardQuotient uint64 // AttestationInclusionRewardQuotient defines the reward quotient of proposer for including attestations.
 	// Deprecated: Do not use.
 
 	// Max operations per block constants.
 	MaxProposerSlashings uint64 // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
 	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
 	MaxAttestations      uint64 // MaxAttestations defines the maximum allowed attestations in a beacon block.
-	MaxDeposits          uint64 // MaxVoluntaryExits determines the maximum number of validator deposits in a block.
-	MaxVoluntaryExits    uint64 // MaxVoluntaryExits determines the maximum number of validator exits in a block.
-	MaxTransfers         uint64
+	MaxDeposits          uint64 // MaxVoluntaryExits defines the maximum number of validator deposits in a block.
+	MaxVoluntaryExits    uint64 // MaxVoluntaryExits defines the maximum number of validator exits in a block.
+	MaxTransfers         uint64 // MaxTransfers defines the maximum number of balance transfers in a block.
 
 	// BLS domain values.
 	DomainBeaconProposer uint64 // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
