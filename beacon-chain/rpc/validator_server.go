@@ -87,7 +87,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	}
 	validatorBalances, err := vs.beaconDB.ValidatorBalances(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Could not retrieve validator balances %v", err)
+		return nil, fmt.Errorf("could not retrieve validator balances %v", err)
 	}
 	totalBalance := float32(0)
 	for _, val := range validatorBalances {
