@@ -29,14 +29,19 @@ type FeatureFlagConfig struct {
 	EnableComputeStateRoot       bool // EnableComputeStateRoot implementation on server side.
 	EnableCrosslinks             bool // EnableCrosslinks in epoch processing.
 	EnableCheckBlockStateRoot    bool // EnableCheckBlockStateRoot in block processing.
-	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updatifinalized states.
+	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updating finalized states.
 	EnableCommitteesCache        bool // EnableCommitteesCache for state transition.
+	EnableBlockAncestorCache     bool //EnableBlockAncestorCache for fork choice optimization.
+	DisableGossipSub             bool // DisableGossipSub in p2p messaging.
 }
 
 var featureConfig *FeatureFlagConfig
 
 // FeatureConfig retrieves feature config.
 func FeatureConfig() *FeatureFlagConfig {
+	if featureConfig == nil {
+		return &FeatureFlagConfig{}
+	}
 	return featureConfig
 }
 
@@ -72,6 +77,14 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableCommitteesCacheFlag.Name) {
 		log.Info("Enabled committees cache")
 		cfg.EnableCommitteesCache = true
+	}
+	if ctx.GlobalBool(EnableBlockAncestorCacheFlag.Name) {
+		log.Info("Enabled block ancestor cache")
+		cfg.EnableBlockAncestorCache = true
+	}
+	if ctx.GlobalBool(DisableGossipSubFlag.Name) {
+		log.Info("Disabled gossipsub, using floodsub")
+		cfg.DisableGossipSub = true
 	}
 
 	InitFeatureConfig(cfg)

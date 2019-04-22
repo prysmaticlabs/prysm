@@ -31,6 +31,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -93,6 +94,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -154,6 +156,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -237,6 +240,7 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -322,6 +326,7 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -406,6 +411,7 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -474,6 +480,7 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          testAcc.backend,
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -534,6 +541,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          testAcc.backend,
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})

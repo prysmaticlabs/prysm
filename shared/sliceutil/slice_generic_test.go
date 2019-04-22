@@ -27,7 +27,7 @@ func TestGenericIntersection(t *testing.T) {
 		result, err := GenericIntersection(tt.setA, tt.setB)
 		if err != nil {
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %d", result, tt.out)
 			}
 		}
 
@@ -61,7 +61,7 @@ func TestGenericIntersectionWithSSZ(t *testing.T) {
 			result, err := GenericIntersection(b1.Bytes(), b2.Bytes())
 			if err != nil {
 				if !reflect.DeepEqual(result, tt.out) {
-					t.Errorf("got %d, want %d", result, tt.out)
+					t.Errorf("got %v, want %d", result, tt.out)
 				}
 			}
 		}
@@ -90,7 +90,7 @@ func TestFloatGenericIntersection(t *testing.T) {
 		if err != nil {
 
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %v", result, tt.out)
 			}
 		}
 
@@ -112,7 +112,7 @@ func TestStringGenericIntersection(t *testing.T) {
 		if err != nil {
 
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %v", result, tt.out)
 			}
 		}
 
@@ -140,7 +140,7 @@ func TestIntGenericIntersection(t *testing.T) {
 		if err != nil {
 
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %d", result, tt.out)
 			}
 		}
 
@@ -167,7 +167,7 @@ func TestGenericNot(t *testing.T) {
 		if err != nil {
 
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %d", result, tt.out)
 			}
 		}
 
@@ -193,7 +193,7 @@ func TestFloatGenericNot(t *testing.T) {
 		if err != nil {
 
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %v", result, tt.out)
 			}
 		}
 
@@ -214,7 +214,7 @@ func TestStringGenericNot(t *testing.T) {
 		if err != nil {
 
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %v", result, tt.out)
 			}
 		}
 
@@ -240,7 +240,7 @@ func TestIntGenericNot(t *testing.T) {
 		if err != nil {
 
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %d", result, tt.out)
 			}
 		}
 
@@ -266,7 +266,7 @@ func TestGenericUnion(t *testing.T) {
 		if err != nil {
 
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %d", result, tt.out)
 			}
 		}
 
@@ -292,7 +292,7 @@ func TestFloatGenericUnion(t *testing.T) {
 		result, err := GenericUnion(tt.setA, tt.setB)
 		if err != nil {
 			if !reflect.DeepEqual(result, tt.out) {
-				t.Errorf("got %d, want %d", result, tt.out)
+				t.Errorf("got %v, want %v", result, tt.out)
 			}
 		}
 

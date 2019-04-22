@@ -72,7 +72,7 @@ func ExecuteStateTransition(
 
 	// Execute per epoch transition.
 	if e.CanProcessEpoch(state) {
-		state, err = ProcessEpoch(ctx, state, config)
+		state, err = ProcessEpoch(ctx, state, block, config)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not process epoch: %v", err)
@@ -195,7 +195,7 @@ func ProcessBlock(
 // 	 process_crosslink_reward_penalties(state)
 // 	 update_validator_registry(state)
 // 	 final_book_keeping(state)
-func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *TransitionConfig) (*pb.BeaconState, error) {
+func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBlock, config *TransitionConfig) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 
@@ -333,7 +333,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 		}
 
 	case epochsSinceFinality > 4:
-		log.Infof("Applying more penalties. Epochs since finality %d greater than 4", epochsSinceFinality)
+		log.WithField("epochSinceFinality", epochsSinceFinality).Info("Applying quadratic leak penalties")
 		// Apply penalties for long inactive FFG source participants.
 		state = bal.InactivityFFGSource(
 			state,
@@ -400,9 +400,11 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	state = e.ProcessPrevSlotShardSeed(state)
 	state = v.ProcessPenaltiesAndExits(state)
 	if e.CanProcessValidatorRegistry(state) {
-		state, err = v.UpdateRegistry(state)
-		if err != nil {
-			return nil, fmt.Errorf("could not update validator registry: %v", err)
+		if block != nil {
+			state, err = v.UpdateRegistry(state)
+			if err != nil {
+				return nil, fmt.Errorf("could not update validator registry: %v", err)
+			}
 		}
 		state, err = e.ProcessCurrSlotShardSeed(state)
 		if err != nil {
