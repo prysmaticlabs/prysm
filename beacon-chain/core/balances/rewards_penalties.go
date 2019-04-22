@@ -268,7 +268,7 @@ func InactivityInclusionDistance(
 	for _, index := range attesterIndices {
 		inclusionDistance, err := blocks.AttsInclusionDistance(index)
 		if err != nil {
-			return nil, errors.New("could not get inclusion distance")
+			return nil, err
 		}
 		baseReward := helpers.BaseReward(state, index, baseRewardQuotient)
 		state.ValidatorBalances[index] -= baseReward -
