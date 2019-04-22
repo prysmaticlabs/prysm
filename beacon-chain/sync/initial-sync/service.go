@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -224,14 +223,8 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 		return err
 	}
 
-	canonicalState, err := s.db.HeadState(ctx)
-	if err != nil {
-		return fmt.Errorf("could not get state: %v", err)
-	}
-	stateRoot, err := hashutil.HashProto(canonicalState)
-	if err != nil {
-		return fmt.Errorf("could not hash state: %v", err)
-	}
+	stateRoot := s.db.HeadStateRoot()
+
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
 		log.Fatalf(
@@ -240,7 +233,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 			s.highestObservedRoot,
 		)
 	}
-	log.WithField("canonicalStateSlot", canonicalState.Slot-params.BeaconConfig().GenesisSlot).Info("Exiting init sync and starting regular sync")
+	log.WithField("canonicalStateSlot", state.Slot-params.BeaconConfig().GenesisSlot).Info("Exiting init sync and starting regular sync")
 	s.syncService.ResumeSync()
 	s.cancel()
 	s.nodeIsSynced = true
