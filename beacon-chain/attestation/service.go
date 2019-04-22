@@ -96,7 +96,7 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
 func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
-	state, err := a.beaconDB.HeadState(ctx)
+	state, err := a.beaconDB.RiskyHeadState(ctx)
 	if err != nil {
 		return nil, err
 	}
