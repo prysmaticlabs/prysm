@@ -32,9 +32,7 @@ var (
 
 // AncestorInfo defines the cached ancestor block object for height.
 type AncestorInfo struct {
-	Hash   []byte
-	Height uint64
-	Block  *pb.BeaconBlock
+	Target *pb.AttestationTarget
 }
 
 // AncestorBlockCache structs with 1 queue for looking up block ancestor by height.
@@ -51,7 +49,7 @@ func heightKeyFn(obj interface{}) (string, error) {
 		return "", ErrNotAncestorCacheObj
 	}
 
-	return string(aInfo.Hash) + strconv.Itoa(int(aInfo.Height)), nil
+	return string(aInfo.Target.BlockRoot) + strconv.Itoa(int(aInfo.Target.Slot)), nil
 }
 
 // NewBlockAncestorCache creates a new block ancestor cache for storing/accessing block ancestor
