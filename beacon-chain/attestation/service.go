@@ -94,16 +94,16 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
 func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
-	state, err := a.beaconDB.RiskyHeadState(ctx)
+	validatorRegistry, err := a.beaconDB.ValidatorRegistry(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// return error if it's an invalid validator index.
-	if index >= uint64(len(state.ValidatorRegistry)) {
+	if index >= uint64(len(validatorRegistry)) {
 		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
-	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
+	pubKey := bytesutil.ToBytes48(validatorRegistry[index].Pubkey)
 
 	a.store.RLock()
 	defer a.store.RUnlock()
