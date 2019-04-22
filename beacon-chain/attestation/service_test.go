@@ -1,6 +1,7 @@
 package attestation
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -248,12 +249,12 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	service.store.m[pubKey48] = attestation
 
-	latestAttestedBlock, err := service.LatestAttestationTarget(ctx, 0)
+	latestAttestedTarget, err := service.LatestAttestationTarget(ctx, 0)
 	if err != nil {
 		t.Fatalf("Could not get latest attestation: %v", err)
 	}
-	if !reflect.DeepEqual(block, latestAttestedBlock) {
-		t.Errorf("Wanted: %v, got: %v", block, latestAttestedBlock)
+	if !bytes.Equal(blockRoot[:], latestAttestedTarget.BlockRoot) {
+		t.Errorf("Wanted: %v, got: %v", blockRoot[:], latestAttestedTarget.BlockRoot)
 	}
 }
 

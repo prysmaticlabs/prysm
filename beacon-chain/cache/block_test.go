@@ -12,6 +12,8 @@ func TestHeightHeightFn_OK(t *testing.T) {
 	height := uint64(999)
 	hash := []byte{'A'}
 	aInfo := &AncestorInfo{
+		Height: height,
+		Hash:   hash,
 		Target: &pb.AttestationTarget{
 			Slot:      height,
 			BlockRoot: hash,
@@ -42,6 +44,8 @@ func TestAncestorCache_AncestorInfoByHeight(t *testing.T) {
 	height := uint64(123)
 	hash := []byte{'B'}
 	aInfo := &AncestorInfo{
+		Height: height,
+		Hash:   hash,
 		Target: &pb.AttestationTarget{
 			Slot:      height,
 			BlockRoot: hash,
@@ -66,7 +70,7 @@ func TestAncestorCache_AncestorInfoByHeight(t *testing.T) {
 	if fetchedInfo == nil {
 		t.Error("Expected ancestor info to exist")
 	}
-	if fetchedInfo.Target.Slot != height {
+	if fetchedInfo.Height != height {
 		t.Errorf(
 			"Expected fetched slot number to be %d, got %d",
 			aInfo.Target.Slot,
@@ -87,6 +91,7 @@ func TestBlockAncestor_maxSize(t *testing.T) {
 
 	for i := 0; i < maxCacheSize+10; i++ {
 		aInfo := &AncestorInfo{
+			Height: uint64(i),
 			Target: &pb.AttestationTarget{
 				Slot: uint64(i),
 			},
