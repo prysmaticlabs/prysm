@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -128,6 +130,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	defer span.End()
 	log.Info("Applying LMD-GHOST Fork Choice Rule")
 
+	startTime := time.Now()
 	justifiedState, err := c.beaconDB.JustifiedState()
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified state: %v", err)
@@ -181,7 +184,11 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not hash head: %v", err)
 	}
-	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
+	endTime := time.Now()
+	log.WithFields(logrus.Fields{
+		"headRoot": fmt.Sprintf("0x%x", h),
+		"time": fmt.Sprintf("%v", endTime.Sub(startTime)),
+	}).Info("Chain head block and state updated")
 	return nil
 }
 
@@ -410,6 +417,9 @@ func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.Be
 	ancestor, err := beaconDB.Block(bytesutil.ToBytes32(ancestorRoot))
 	if err != nil {
 		return nil, err
+	}
+	if ancestor == nil {
+		return nil, nil
 	}
 	ancestorTarget := &pb.AttestationTarget{
 		Slot:       ancestor.Slot,
