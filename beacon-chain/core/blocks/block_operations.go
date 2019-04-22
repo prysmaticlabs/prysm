@@ -9,8 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -22,6 +24,19 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
+
+var committeeCache = cache.NewCommitteesCache()
+
+type attestorInclusionStore struct {
+	sync.RWMutex
+	// attestorInclusion is a mapping that tracks when an attestor's attestation
+	// last get included in beacon chain.
+	attestorInclusion map[uint64]uint64
+}
+
+var attsInclStore = attestorInclusionStore{
+	attestorInclusion: make(map[uint64]uint64),
+}
 
 // VerifyProposerSignature uses BLS signature verification to ensure
 // the correct proposer created an incoming beacon block during state
@@ -412,6 +427,36 @@ func ProcessBlockAttestations(
 		if err := VerifyAttestation(beaconState, attestation, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
+
+		var IndicesInCommittee []uint64
+		// get the validator indices from the attestation using committees info cache.
+		cachedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Slot)
+		if err != nil {
+			return nil, err
+		}
+		if cachedCommittees == nil {
+			crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, attestation.Data.Slot, false /* registryChange */)
+			if err != nil {
+				return nil, err
+			}
+			cachedCommittees = helpers.ToCommitteeCache(attestation.Data.Slot, crosslinkCommittees)
+			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
+				return nil, err
+			}
+		}
+		for _, v := range cachedCommittees.Committees {
+			if v.Shard == attestation.Data.Shard {
+				IndicesInCommittee = v.Committee
+				break
+			}
+		}
+
+		attsInclStore.Lock()
+		defer attsInclStore.Unlock()
+		for _, index := range IndicesInCommittee {
+			attsInclStore.attestorInclusion[index] = beaconState.Slot
+		}
+
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
@@ -700,4 +745,12 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 		return nil
 	}
 	return nil
+}
+
+// AttsInclusionSlot returns the slot of when an attestator's attestation last gets included
+// in the beacon chain by a proposer.
+func AttsInclusionSlot(index uint64) uint64 {
+	attsInclStore.RLock()
+	attsInclStore.RUnlock()
+	return attsInclStore.attestorInclusion[index]
 }
