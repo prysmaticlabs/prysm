@@ -186,9 +186,9 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 		return err
 	}
 
+	slot := attestation.Data.Slot
 	var committee []uint64
 	var cachedCommittees *cache.CommitteesInSlot
-	slot := attestation.Data.Slot
 
 	for beaconState.Slot < slot {
 		beaconState, err = state.ExecuteStateTransition(
