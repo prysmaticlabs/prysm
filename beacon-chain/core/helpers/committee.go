@@ -274,7 +274,7 @@ func AttestationParticipants(
 		if err != nil {
 			return nil, err
 		}
-
+		fmt.Println(crosslinkCommittees)
 		cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
 
 		if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
@@ -636,6 +636,11 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 		})
 	}
 	return crosslinkCommittees, nil
+}
+
+// RestartCommitteeCache restarts the committee cache from scratch.
+func RestartCommitteeCache() {
+	committeeCache = cache.NewCommitteesCache()
 }
 
 // ToCommitteeCache converts crosslink committee object

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -353,6 +355,8 @@ func TestWinningRoot_EmptyParticipantBitfield(t *testing.T) {
 		},
 	}
 
+	helpers.RestartCommitteeCache()
+
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
 	if _, err := winningRoot(state, 0, attestations, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -373,6 +377,8 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 		}
 		attestations = append(attestations, attestation)
 	}
+
+	helpers.RestartCommitteeCache()
 
 	attestedValidators, err := AttestingValidators(
 		state,
@@ -400,6 +406,8 @@ func TestAttestingValidators_EmptyWinningRoot(t *testing.T) {
 		AggregationBitfield: []byte{},
 	}
 
+	helpers.RestartCommitteeCache()
+
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
 	if _, err := AttestingValidators(state, 0, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -423,6 +431,8 @@ func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 		}
 		attestations = append(attestations, attestation)
 	}
+
+	helpers.RestartCommitteeCache()
 
 	attestedBalance, err := TotalAttestingBalance(
 		state,
@@ -448,6 +458,8 @@ func TestTotalAttestingBalance_EmptyWinningRoot(t *testing.T) {
 		},
 		AggregationBitfield: []byte{},
 	}
+
+	helpers.RestartCommitteeCache()
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
 	if _, err := TotalAttestingBalance(state, 0, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
