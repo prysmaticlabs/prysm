@@ -12,7 +12,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -265,32 +264,21 @@ func AttestationParticipants(
 	// When enabling committee cache, we fetch the committees using slot.
 	// If it's not prev cached, we compute for the committees of slot and
 	// add it to the cache.
-	if featureconfig.FeatureConfig().EnableCommitteesCache {
-		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
-		if err != nil {
-			return nil, err
-		}
+	cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
+	if err != nil {
+		return nil, err
+	}
 
-		if cachedCommittees == nil {
-			crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
-			if err != nil {
-				return nil, err
-			}
-
-			cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
-
-			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		// When the committee cache is disabled, we calculate crosslink committees
-		// every time when AttestationParticipants gets called.
+	if cachedCommittees == nil {
 		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
 		if err != nil {
 			return nil, err
 		}
 		cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
+
+		if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
+			return nil, err
+		}
 	}
 
 	var selectedCommittee []uint64
@@ -428,29 +416,20 @@ func CommitteeAssignment(
 	startSlot := StartSlot(wantedEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 
-		if featureconfig.FeatureConfig().EnableCommitteesCache {
-			cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
-			if err != nil {
-				return []uint64{}, 0, 0, false, err
-			}
-			if cachedCommittees == nil {
-				crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
-					state, slot, registryChange)
-				if err != nil {
-					return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
-				}
-				cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
-				if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-					return []uint64{}, 0, 0, false, err
-				}
-			}
-		} else {
+		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
+		if err != nil {
+			return []uint64{}, 0, 0, false, err
+		}
+		if cachedCommittees == nil {
 			crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
 				state, slot, registryChange)
 			if err != nil {
 				return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
 			}
 			cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
+			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
+				return []uint64{}, 0, 0, false, err
+			}
 		}
 		for _, committee := range cachedCommittees.Committees {
 			for _, idx := range committee.Committee {
@@ -656,6 +635,11 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 		})
 	}
 	return crosslinkCommittees, nil
+}
+
+// RestartCommitteeCache restarts the committee cache from scratch.
+func RestartCommitteeCache() {
+	committeeCache = cache.NewCommitteesCache()
 }
 
 // ToCommitteeCache converts crosslink committee object
