@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -494,7 +493,7 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 			Body: &pb.BeaconBlockBody{
 				Attestations: atts,
 			},
-		}, false)
+		}, false /* sig verification */)
 		if err != nil {
 			t.Fatal(err)
 		}

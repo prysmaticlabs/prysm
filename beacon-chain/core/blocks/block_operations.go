@@ -28,7 +28,8 @@ import (
 var committeeCache = cache.NewCommitteesCache()
 
 type attesterInclusionStore struct {
-	sync.RWMutex
+	slotLock sync.RWMutex
+	distLock sync.RWMutex
 	// attesterInclusion is a mapping that tracks when an attester's attestation
 	// last get included in beacon chain.
 	attesterInclusionSlot map[uint64]uint64
@@ -455,8 +456,10 @@ func ProcessBlockAttestations(
 			}
 		}
 
-		attsInclStore.Lock()
-		defer attsInclStore.Unlock()
+		attsInclStore.slotLock.Lock()
+		attsInclStore.distLock.Lock()
+		defer attsInclStore.slotLock.Unlock()
+		defer attsInclStore.distLock.Unlock()
 		for _, index := range IndicesInCommittee {
 			attsInclStore.attesterInclusionSlot[index] = beaconState.Slot
 			attsInclStore.attesterInclusionDist[index] = beaconState.Slot - attestation.Data.Slot
@@ -755,8 +758,8 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 // AttsInclusionSlot returns the slot of when an attestator's attestation last gets included
 // in the beacon chain by a proposer.
 func AttsInclusionSlot(index uint64) (uint64, error) {
-	attsInclStore.RLock()
-	attsInclStore.RUnlock()
+	attsInclStore.slotLock.RLock()
+	attsInclStore.slotLock.RUnlock()
 	if slot, ok := attsInclStore.attesterInclusionSlot[index]; ok {
 		return slot, nil
 	}
@@ -766,8 +769,8 @@ func AttsInclusionSlot(index uint64) (uint64, error) {
 // AttsInclusionDistance returns diff in slot of when an attestator's attestation gets submitted
 // and included.
 func AttsInclusionDistance(index uint64) (uint64, error) {
-	attsInclStore.RLock()
-	attsInclStore.RUnlock()
+	attsInclStore.distLock.RLock()
+	attsInclStore.distLock.RUnlock()
 	if slot, ok := attsInclStore.attesterInclusionDist[index]; ok {
 		return slot, nil
 	}

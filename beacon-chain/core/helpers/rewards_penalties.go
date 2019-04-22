@@ -1,8 +1,6 @@
 package helpers
 
 import (
-	"fmt"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -19,7 +17,6 @@ import (
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT)
 func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
-	fmt.Println(idx)
 	if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
 		return params.BeaconConfig().MaxDepositAmount
 	}
