@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -19,9 +18,6 @@ import (
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: false,
-	})
 }
 
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
@@ -258,9 +254,6 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 }
 
 func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
-	})
 
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -344,9 +337,6 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 }
 
 func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
-	})
 
 	var validators []*pb.Validator
 	for i := 0; i < 64; i++ {

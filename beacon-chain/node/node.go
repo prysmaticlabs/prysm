@@ -137,6 +137,7 @@ func (b *BeaconNode) Start() {
 		defer signal.Stop(sigc)
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
+		debug.Exit(b.ctx) // Ensure trace and CPU profile data are flushed.
 		go b.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
@@ -144,7 +145,6 @@ func (b *BeaconNode) Start() {
 				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
 			}
 		}
-		debug.Exit(b.ctx) // Ensure trace and CPU profile data are flushed.
 		panic("Panic closing the beacon node")
 	}()
 
