@@ -254,4 +254,3 @@ func TestInclusionSlot_SlotNotFound(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
-

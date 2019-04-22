@@ -142,10 +142,10 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 
 	attestations := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{
-			Slot: params.BeaconConfig().GenesisSlot,
+			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedBlockRootHash32: []byte{},
-			Shard: 0,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+			Shard:                    0,
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       params.BeaconConfig().GenesisSlot + 5,
@@ -164,23 +164,23 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
 		state := &pb.BeaconState{
-			Slot:               params.BeaconConfig().GenesisSlot+5,
-			ValidatorRegistry:  validators,
-			ValidatorBalances:  validatorBalances,
-			LatestAttestations: attestations,
+			Slot:                  params.BeaconConfig().GenesisSlot + 5,
+			ValidatorRegistry:     validators,
+			ValidatorBalances:     validatorBalances,
+			LatestAttestations:    attestations,
 			PreviousJustifiedRoot: []byte{},
 			LatestCrosslinks: []*pb.Crosslink{
 				{
 					CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-					Epoch: params.BeaconConfig().GenesisEpoch,
+					Epoch:                   params.BeaconConfig().GenesisEpoch,
 				},
 			},
 		}
 		block := &pb.BeaconBlock{
 			Body: &pb.BeaconBlockBody{
 				Attestations: []*pb.Attestation{
-                    {
-                    	Data: attestations[0].Data,
+					{
+						Data: attestations[0].Data,
 					},
 				},
 			},
