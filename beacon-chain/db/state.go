@@ -126,8 +126,8 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
-// StateHash returns the hash of the current state from the db.
-func (db *BeaconDB) StateHash() [32]byte {
+// HeadStateRoot returns the root of the current state from the db.
+func (db *BeaconDB) HeadStateRoot() [32]byte {
 	return db.stateHash
 }
 

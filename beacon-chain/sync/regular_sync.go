@@ -375,7 +375,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		return err
 	}
 
-	stateRoot := rs.db.StateHash()
+	stateRoot := rs.db.HeadStateRoot()
 	finalizedState, err := rs.db.FinalizedState()
 	if err != nil {
 		log.Errorf("Could not retrieve finalized state %v", err)

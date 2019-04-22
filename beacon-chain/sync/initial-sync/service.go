@@ -223,7 +223,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 		return err
 	}
 
-	stateRoot := s.db.StateHash()
+	stateRoot := s.db.HeadStateRoot()
 
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
