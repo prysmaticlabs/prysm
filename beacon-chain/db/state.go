@@ -89,37 +89,6 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	})
 }
 
-// RiskyHeadState accesses the underlying cached state without cloning it. It is dangerous to call this
-// method if you are doing any write operations to the beacon state.
-func (db *BeaconDB) RiskyHeadState(ctx context.Context) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.RiskyHeadState")
-	defer span.End()
-	ctx, lockSpan := trace.StartSpan(ctx, "BeaconDB.stateLock.Lock")
-	db.stateLock.RLock()
-	defer db.stateLock.RUnlock()
-	lockSpan.End()
-	if db.currentState != nil {
-		return db.currentState, nil
-	}
-	var beaconState *pb.BeaconState
-	err := db.view(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		enc := chainInfo.Get(stateLookupKey)
-		if enc == nil {
-			return nil
-		}
-
-		var err error
-		beaconState, err = createState(enc)
-		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
-			db.highestBlockSlot = beaconState.Slot
-		}
-		return err
-	})
-
-	return beaconState, err
-}
-
 // HeadState fetches the canonical beacon chain's head state from the DB.
 func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
