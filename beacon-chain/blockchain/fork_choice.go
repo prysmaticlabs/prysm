@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -187,7 +187,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	endTime := time.Now()
 	log.WithFields(logrus.Fields{
 		"headRoot": fmt.Sprintf("0x%x", h),
-		"time": fmt.Sprintf("%v", endTime.Sub(startTime)),
+		"time":     fmt.Sprintf("%v", endTime.Sub(startTime)),
 	}).Info("Chain head block and state updated")
 	return nil
 }
@@ -400,7 +400,6 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 // cachedAncestorCached retrieves the cached ancestor target from block ancestor cache,
 // if it's not there it looks up the block tree get it and cache it.
 func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.BeaconDB) ([]byte, error) {
-
 	// check if the ancestor block of from a given block height was cached.
 	cachedAncestorInfo, err := blkAncestorCache.AncestorBySlot(target.BlockRoot, height)
 	if err != nil {
@@ -427,6 +426,8 @@ func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.Be
 		ParentRoot: ancestor.ParentRootHash32,
 	}
 	if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
+		Height: height,
+		Hash:   target.BlockRoot,
 		Target: ancestorTarget,
 	}); err != nil {
 		return nil, err
