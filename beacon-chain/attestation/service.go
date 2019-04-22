@@ -9,11 +9,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -92,16 +94,16 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
 func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
-	state, err := a.beaconDB.HeadState(ctx)
+	validatorRegistry, err := a.beaconDB.ValidatorRegistry(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// return error if it's an invalid validator index.
-	if index >= uint64(len(state.ValidatorRegistry)) {
+	if index >= uint64(len(validatorRegistry)) {
 		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
-	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
+	pubKey := bytesutil.ToBytes48(validatorRegistry[index].Pubkey)
 
 	a.store.RLock()
 	defer a.store.RUnlock()
@@ -169,21 +171,38 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 
 	// Potential improvement, instead of getting the state,
 	// we could get a mapping of validator index to public key.
-	state, err := a.beaconDB.HeadState(ctx)
+	beaconState, err := a.beaconDB.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	head, err := a.beaconDB.ChainHead()
+	if err != nil {
+		return err
+	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
 	if err != nil {
 		return err
 	}
 
+	slot := attestation.Data.Slot
 	var committee []uint64
 	var cachedCommittees *cache.CommitteesInSlot
-	slot := attestation.Data.Slot
+
+	for beaconState.Slot < slot {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, headRoot, &state.TransitionConfig{},
+		)
+		if err != nil {
+			return fmt.Errorf("could not execute head transition: %v", err)
+		}
+	}
 
 	cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
 	if err != nil {
 		return err
 	}
 	if cachedCommittees == nil {
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false /* registryChange */)
 		if err != nil {
 			return err
 		}
@@ -228,7 +247,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
-		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[committee[i]].Pubkey)
+		pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[committee[i]].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()

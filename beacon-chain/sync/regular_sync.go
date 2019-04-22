@@ -374,18 +374,8 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve chain head %v", err)
 		return err
 	}
-	currentState, err := rs.db.HeadState(ctx)
-	if err != nil {
-		log.Errorf("Could not retrieve current state %v", err)
-		return err
-	}
 
-	stateRoot, err := hashutil.HashProto(currentState)
-	if err != nil {
-		log.Errorf("Could not tree hash state %v", err)
-		return err
-	}
-
+	stateRoot := rs.db.HeadStateRoot()
 	finalizedState, err := rs.db.FinalizedState()
 	if err != nil {
 		log.Errorf("Could not retrieve finalized state %v", err)

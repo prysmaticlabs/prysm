@@ -248,7 +248,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 		return nil, fmt.Errorf("could not get proposer idx: %v", err)
 	}
 	whistleblowerReward := helpers.EffectiveBalance(state, idx) /
-		params.BeaconConfig().WhistlerBlowerRewardQuotient
+		params.BeaconConfig().WhistleBlowingRewardQuotient
 
 	state.ValidatorBalances[whistleblowerIdx] += whistleblowerReward
 	state.ValidatorBalances[idx] -= whistleblowerReward
