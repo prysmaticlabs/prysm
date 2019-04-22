@@ -212,6 +212,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 			if err := s.db.DeleteBlock(block); err != nil {
 				return fmt.Errorf("could not delete bad block from db: %v", err)
 			}
+			return fmt.Errorf("could not apply block state transition: %v", err)
 		default:
 			return fmt.Errorf("could not apply block state transition: %v", err)
 		}
