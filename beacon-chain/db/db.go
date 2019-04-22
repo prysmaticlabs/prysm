@@ -22,6 +22,7 @@ var log = logrus.WithField("prefix", "beacondb")
 type BeaconDB struct {
 	stateLock    sync.RWMutex
 	currentState *pb.BeaconState
+	stateHash    [32]byte
 	db           *bolt.DB
 	DatabasePath string
 
