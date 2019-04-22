@@ -1,8 +1,7 @@
 {
   "unsafeptr": {
     "exclude_files": {
-      "external/com_github_gxed_hashland/murmur3/*": "Unsafe third party code",
-      "external/io_k8s_apimachinery/vendor/github.com/modern-go/reflect2/reflect/*": "Unsafe third party code",
+      "external/*": "Unsafe third party code"
     }
   },
   "unreachable": {
