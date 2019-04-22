@@ -167,22 +167,13 @@ message DepositData {
 message ProposerSlashing {
   uint64 proposer_index = 1;
   BeaconBlockHeader header_1 = 2;
-
+  BeaconBlockHeader header_2 = 3;
 
   // Deprecated
-  ProposalSignedData proposal_data_1 = 2;
-  bytes proposal_signature_1 = 3; // bytes96
-  ProposalSignedData proposal_data_2 = 4;
-  bytes proposal_signature_2 = 5;
-}
-
-{
-# Proposer index
-'proposer_index': 'uint64',
-# First block header
-'header_1': BeaconBlockHeader,
-# Second block header
-'header_2': BeaconBlockHeader,
+  ProposalSignedData proposal_data_1 = 1001;
+  bytes proposal_signature_1 = 1002; // bytes96
+  ProposalSignedData proposal_data_2 = 1003;
+  bytes proposal_signature_2 = 1004;
 }
 
 message AttesterSlashing {
