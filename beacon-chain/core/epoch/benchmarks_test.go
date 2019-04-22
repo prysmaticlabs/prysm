@@ -48,14 +48,14 @@ func setBenchmarkConfig() {
 	// 	c.MaxDeposits = 16
 	// 	c.MaxVoluntaryExits = 16
 	// } else if conditions == "MIN" {
-	c.MaxAttestations = 2
+	c.MaxAttestations = 4
 	// 	c.MaxDeposits = 2
 	// 	c.MaxVoluntaryExits = 2
 	// }
 	params.OverrideBeaconConfig(c)
 
 	featureCfg := &featureconfig.FeatureFlagConfig{
-		EnableCrosslinks: true,
+		EnableCrosslinks: false,
 	}
 	featureconfig.InitFeatureConfig(featureCfg)
 }
@@ -130,7 +130,7 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 	prevEpochAttestations := e.PrevAttestations(beaconState16K)
 
 	b.Run("16K", func(b *testing.B) {
-		b.N = 10
+		b.N = 3
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := epoch.ProcessCrosslinks(beaconState16K, currentEpochAttestations, prevEpochAttestations)
@@ -140,19 +140,19 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 		}
 	})
 
-	currentEpochAttestations = e.CurrentAttestations(beaconState300K)
-	prevEpochAttestations = e.PrevAttestations(beaconState300K)
+	// currentEpochAttestations = e.CurrentAttestations(beaconState300K)
+	// prevEpochAttestations = e.PrevAttestations(beaconState300K)
 
-	b.Run("300K", func(b *testing.B) {
-		b.N = 10
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := epoch.ProcessCrosslinks(beaconState300K, currentEpochAttestations, prevEpochAttestations)
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
+	// b.Run("300K", func(b *testing.B) {
+	// 	b.N = 10
+	// 	b.ResetTimer()
+	// 	for i := 0; i < b.N; i++ {
+	// 		_, err := epoch.ProcessCrosslinks(beaconState300K, currentEpochAttestations, prevEpochAttestations)
+	// 		if err != nil {
+	// 			b.Fatal(err)
+	// 		}
+	// 	}
+	// })
 }
 
 func BenchmarkProcessRewards(b *testing.B) {
@@ -341,7 +341,7 @@ func BenchmarkAttestationInclusion(b *testing.B) {
 	}
 
 	b.Run("16K", func(b *testing.B) {
-		b.N = RunAmount
+		b.N = 20
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := bal.AttestationInclusion(beaconState16K, totalBalance, prevEpochAttesterIndices)
@@ -351,27 +351,27 @@ func BenchmarkAttestationInclusion(b *testing.B) {
 		}
 	})
 
-	currentEpoch = helpers.CurrentEpoch(beaconState300K)
-	activeValidatorIndices = helpers.ActiveValidatorIndices(beaconState300K.ValidatorRegistry, currentEpoch)
+	// currentEpoch = helpers.CurrentEpoch(beaconState300K)
+	// activeValidatorIndices = helpers.ActiveValidatorIndices(beaconState300K.ValidatorRegistry, currentEpoch)
 
-	totalBalance = e.TotalBalance(beaconState300K, activeValidatorIndices)
-	prevEpochAttestations = e.PrevAttestations(beaconState300K)
+	// totalBalance = e.TotalBalance(beaconState300K, activeValidatorIndices)
+	// prevEpochAttestations = e.PrevAttestations(beaconState300K)
 
-	prevEpochAttesterIndices, err = v.ValidatorIndices(beaconState300K, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
+	// prevEpochAttesterIndices, err = v.ValidatorIndices(beaconState300K, prevEpochAttestations)
+	// if err != nil {
+	// 	b.Fatal(err)
+	// }
 
-	b.Run("300K", func(b *testing.B) {
-		b.N = RunAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := bal.AttestationInclusion(beaconState300K, totalBalance, prevEpochAttesterIndices)
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
+	// b.Run("300K", func(b *testing.B) {
+	// 	b.N = RunAmount
+	// 	b.ResetTimer()
+	// 	for i := 0; i < b.N; i++ {
+	// 		_, err := bal.AttestationInclusion(beaconState300K, totalBalance, prevEpochAttesterIndices)
+	// 		if err != nil {
+	// 			b.Fatal(err)
+	// 		}
+	// 	}
+	// })
 }
 
 func BenchmarkCleanupAttestations(b *testing.B) {
@@ -460,27 +460,26 @@ func BenchmarkUpdateLatestSlashedBalances(b *testing.B) {
 
 func BenchmarkProcessEpoch(b *testing.B) {
 	b.Run("16K", func(b *testing.B) {
-		b.N = 10
+		b.N = 5
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err := state.ProcessEpoch(context.Background(), beaconState16K, cfg)
+			_, err := state.ProcessEpoch(context.Background(), beaconState16K, &pb.BeaconBlock{}, cfg)
 			if err != nil {
 				b.Fatal(err)
 			}
 		}
 	})
 
-	b.Run("300K", func(b *testing.B) {
-		b.N = 10
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := state.ProcessEpoch(context.Background(), beaconState300K, cfg)
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
-
+	// b.Run("300K", func(b *testing.B) {
+	// 	b.N = 10
+	// 	b.ResetTimer()
+	// 	for i := 0; i < b.N; i++ {
+	// 		_, err := state.ProcessEpoch(context.Background(), beaconState300K, nil, cfg)
+	// 		if err != nil {
+	// 			b.Fatal(err)
+	// 		}
+	// 	}
+	// })
 }
 
 func BenchmarkActiveValidatorIndices(b *testing.B) {
