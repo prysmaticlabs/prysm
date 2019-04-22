@@ -42,7 +42,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 	}
 
 	tests := []struct {
@@ -50,23 +50,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		index uint64
 	}{
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 1,
+			slot:  1,
 			index: 504,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 10,
+			slot:  10,
 			index: 2821,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 19,
+			slot:  19,
 			index: 5132,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 30,
+			slot:  30,
 			index: 7961,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 39,
+			slot:  39,
 			index: 10272,
 		},
 	}
@@ -88,7 +88,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
-	_, err := BeaconProposerIndex(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, params.BeaconConfig().GenesisSlot)
+	_, err := BeaconProposerIndex(&pb.BeaconState{Slot: 0}, 0)
 	expected := fmt.Sprintf("empty first committee at slot %d", 0)
 	if err.Error() != expected {
 		t.Errorf("Unexpected error. got=%v want=%s", err, expected)

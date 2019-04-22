@@ -109,8 +109,8 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 	sentBatchedBlockReq.Inc()
 	if startSlot > endSlot {
 		log.WithFields(logrus.Fields{
-			"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
-			"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+			"slotSlot": startSlot,
+			"endSlot":  endSlot},
 		).Debug("Invalid batched block request")
 		return
 	}
@@ -119,8 +119,8 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 		endSlot = startSlot + blockLimit
 	}
 	log.WithFields(logrus.Fields{
-		"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
-		"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+		"slotSlot": startSlot,
+		"endSlot":  endSlot},
 	).Debug("Requesting batched blocks")
 	s.p2p.Broadcast(ctx, &pb.BatchedBeaconBlockRequest{
 		StartSlot: startSlot,
@@ -145,7 +145,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	log.WithFields(logrus.Fields{
 		"root": fmt.Sprintf("%#x", root),
-		"slot": block.Slot - params.BeaconConfig().GenesisSlot,
+		"slot": block.Slot,
 	}).Info("Saving block")
 	s.currentSlot = block.Slot
 

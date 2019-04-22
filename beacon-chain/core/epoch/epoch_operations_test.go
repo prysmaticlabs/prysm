@@ -92,25 +92,25 @@ func TestEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 		{
 			Data: &pb.AttestationData{
 				EpochBoundaryRootHash32: []byte{64},
-				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch:          0,
 			},
 		},
 		{
 			Data: &pb.AttestationData{
 				EpochBoundaryRootHash32: []byte{64},
-				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch:          0,
 			},
 		},
 		{
 			Data: &pb.AttestationData{
 				EpochBoundaryRootHash32: []byte{64},
-				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch:          0,
 			},
 		},
 		{
 			Data: &pb.AttestationData{
 				EpochBoundaryRootHash32: []byte{64},
-				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch:          0,
 			},
 		},
 	}
@@ -123,20 +123,20 @@ func TestEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 	state := &pb.BeaconState{
 		LatestAttestations:     epochAttestations,
 		LatestBlockRootHash32S: latestBlockRootHash,
-		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
+		JustifiedEpoch:         0,
 	}
 
 	if _, err := CurrentEpochBoundaryAttestations(state, epochAttestations); err == nil {
 		t.Fatal("CurrentEpochBoundaryAttestations should have failed with empty block root hash")
 	}
 
-	state.Slot = params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1
+	state.Slot = params.BeaconConfig().SlotsPerEpoch + 1
 	epochBoundaryAttestation, err := CurrentEpochBoundaryAttestations(state, epochAttestations)
 	if err != nil {
 		t.Fatalf("CurrentEpochBoundaryAttestations failed: %v", err)
 	}
 
-	if epochBoundaryAttestation[0].Data.JustifiedEpoch != params.BeaconConfig().GenesisEpoch {
+	if epochBoundaryAttestation[0].Data.JustifiedEpoch != 0 {
 		t.Errorf("Wanted justified epoch 0 for epoch boundary attestation, got: %d",
 			epochBoundaryAttestation[0].Data.JustifiedEpoch)
 	}
@@ -156,7 +156,7 @@ func TestPrevEpochAttestations_AccurateAttestationSlots(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*5; i++ {
 		pendingAttestations = append(pendingAttestations, &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot: i + params.BeaconConfig().GenesisSlot,
+				Slot: i,
 			},
 		})
 	}
@@ -168,34 +168,34 @@ func TestPrevEpochAttestations_AccurateAttestationSlots(t *testing.T) {
 		firstAttestationSlot uint64
 	}{
 		{
-			stateSlot: 127 + params.BeaconConfig().GenesisSlot,
+			stateSlot: 127,
 			firstAttestationSlot: 127 - params.BeaconConfig().SlotsPerEpoch -
 				127%params.BeaconConfig().SlotsPerEpoch +
-				params.BeaconConfig().GenesisSlot,
+				0,
 		},
 		{
-			stateSlot: 128 + params.BeaconConfig().GenesisSlot,
+			stateSlot: 128,
 			firstAttestationSlot: 128 - params.BeaconConfig().SlotsPerEpoch -
 				128%params.BeaconConfig().SlotsPerEpoch +
-				params.BeaconConfig().GenesisSlot,
+				0,
 		},
 		{
-			stateSlot: 383 + params.BeaconConfig().GenesisSlot,
+			stateSlot: 383,
 			firstAttestationSlot: 383 - params.BeaconConfig().SlotsPerEpoch -
 				383%params.BeaconConfig().SlotsPerEpoch +
-				params.BeaconConfig().GenesisSlot,
+				0,
 		},
 		{
-			stateSlot: 129 + params.BeaconConfig().GenesisSlot,
+			stateSlot: 129,
 			firstAttestationSlot: 129 - params.BeaconConfig().SlotsPerEpoch -
 				129%params.BeaconConfig().SlotsPerEpoch +
-				params.BeaconConfig().GenesisSlot,
+				0,
 		},
 		{
-			stateSlot: 256 + params.BeaconConfig().GenesisSlot,
+			stateSlot: 256,
 			firstAttestationSlot: 256 - params.BeaconConfig().SlotsPerEpoch -
 				256%params.BeaconConfig().SlotsPerEpoch +
-				params.BeaconConfig().GenesisSlot,
+				0,
 		},
 	}
 
@@ -231,9 +231,9 @@ func TestPrevEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   3*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+		Slot:                   3 * params.BeaconConfig().SlotsPerEpoch,
 		LatestBlockRootHash32S: latestBlockRootHash,
-		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
+		JustifiedEpoch:         0,
 	}
 
 	prevEpochBoundaryAttestation, err := PrevEpochBoundaryAttestations(state, epochAttestations)
@@ -258,10 +258,10 @@ func TestHeadAttestations_AccurateHeadData(t *testing.T) {
 	}
 
 	prevAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot + 1, BeaconBlockRootHash32: []byte{'A'}}},
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot + 2, BeaconBlockRootHash32: []byte{'A'}}},
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot + 3, BeaconBlockRootHash32: []byte{'A'}}},
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot + 4, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: 1, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: 2, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: 3, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: 4, BeaconBlockRootHash32: []byte{'A'}}},
 	}
 
 	var latestBlockRootHash [][]byte
@@ -270,19 +270,19 @@ func TestHeadAttestations_AccurateHeadData(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 5,
+		Slot:                   5,
 		LatestBlockRootHash32S: latestBlockRootHash,
-		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch}
+		JustifiedEpoch:         0}
 
 	headAttestations, err := PrevHeadAttestations(state, prevAttestations)
 	if err != nil {
 		t.Fatalf("PrevHeadAttestations failed with %v", err)
 	}
 
-	if headAttestations[0].Data.Slot != params.BeaconConfig().GenesisSlot+1 {
+	if headAttestations[0].Data.Slot != 1 {
 		t.Errorf("headAttestations[0] wanted slot 9223372036854775809, got slot %d", headAttestations[0].Data.Slot)
 	}
-	if headAttestations[1].Data.Slot != params.BeaconConfig().GenesisSlot+2 {
+	if headAttestations[1].Data.Slot != 2 {
 		t.Errorf("headAttestations[1] wanted slot 9223372036854775810, got slot %d", headAttestations[1].Data.Slot)
 	}
 	if !bytes.Equal(headAttestations[0].Data.BeaconBlockRootHash32, []byte{'A'}) {
@@ -310,7 +310,7 @@ func TestHeadAttestations_InvalidRange(t *testing.T) {
 }
 
 func TestWinningRoot_AccurateRoot(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, 100)
+	state := buildState(0, 100)
 	var participationBitfield []byte
 	participationBitfield = append(participationBitfield, byte(0x80))
 
@@ -319,7 +319,7 @@ func TestWinningRoot_AccurateRoot(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot,
+				Slot:                    0,
 				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
 			AggregationBitfield: participationBitfield,
@@ -343,11 +343,11 @@ func TestWinningRoot_AccurateRoot(t *testing.T) {
 }
 
 func TestWinningRoot_EmptyParticipantBitfield(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	attestations := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot,
+			Slot:                    0,
 			CrosslinkDataRootHash32: []byte{},
 		},
 			AggregationBitfield: []byte{},
@@ -363,13 +363,13 @@ func TestWinningRoot_EmptyParticipantBitfield(t *testing.T) {
 }
 
 func TestAttestingValidators_MatchActive(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().SlotsPerEpoch*2)
+	state := buildState(0, params.BeaconConfig().SlotsPerEpoch*2)
 
 	var attestations []*pb.PendingAttestation
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot,
+				Slot:                    0,
 				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
 			AggregationBitfield: []byte{0xC0},
@@ -395,11 +395,11 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 }
 
 func TestAttestingValidators_EmptyWinningRoot(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot,
+			Slot:                    0,
 			CrosslinkDataRootHash32: []byte{},
 		},
 		AggregationBitfield: []byte{},
@@ -415,14 +415,14 @@ func TestAttestingValidators_EmptyWinningRoot(t *testing.T) {
 
 func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 	validatorsPerCommittee := uint64(2)
-	state := buildState(params.BeaconConfig().GenesisSlot, 2*params.BeaconConfig().SlotsPerEpoch)
+	state := buildState(0, 2*params.BeaconConfig().SlotsPerEpoch)
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestation
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot,
+				Slot:                    0,
 				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
 			// All validators attested to the above roots.
@@ -448,11 +448,11 @@ func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 }
 
 func TestTotalAttestingBalance_EmptyWinningRoot(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot,
+			Slot:                    0,
 			CrosslinkDataRootHash32: []byte{},
 		},
 		AggregationBitfield: []byte{},
@@ -482,20 +482,20 @@ func TestTotalBalance_CorrectBalance(t *testing.T) {
 }
 
 func TestInclusionSlot_GetsCorrectSlot(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 	var participationBitfield []byte
 	for i := 0; i < 16; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 
 	state.LatestAttestations = []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       101},
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       100},
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       102},
 	}
@@ -510,10 +510,10 @@ func TestInclusionSlot_GetsCorrectSlot(t *testing.T) {
 }
 
 func TestInclusionSlot_InvalidBitfield(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: []byte{},
 			InclusionSlot:       100},
 	}
@@ -525,7 +525,7 @@ func TestInclusionSlot_InvalidBitfield(t *testing.T) {
 }
 
 func TestInclusionSlot_SlotNotFound(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().SlotsPerEpoch)
+	state := buildState(0, params.BeaconConfig().SlotsPerEpoch)
 
 	badIndex := uint64(10000)
 	want := fmt.Sprintf("could not find inclusion slot for validator index %d", badIndex)
@@ -535,16 +535,16 @@ func TestInclusionSlot_SlotNotFound(t *testing.T) {
 }
 
 func TestInclusionDistance_CorrectDistance(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 	var participationBitfield []byte
 	for i := 0; i < 16; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 
 	state.LatestAttestations = []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       params.BeaconConfig().GenesisSlot + 100},
+			InclusionSlot:       100},
 	}
 	distance, err := InclusionDistance(state, 251)
 	if err != nil {
@@ -560,10 +560,10 @@ func TestInclusionDistance_CorrectDistance(t *testing.T) {
 }
 
 func TestInclusionDistance_InvalidBitfield(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: []byte{},
 			InclusionSlot:       100},
 	}

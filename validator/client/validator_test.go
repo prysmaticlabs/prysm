@@ -293,13 +293,13 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pbp2p.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}, nil)
+	).Return(&pbp2p.BeaconBlock{Slot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if headSlot != params.BeaconConfig().GenesisSlot {
-		t.Errorf("Mismatch slots, wanted: %v, received: %v", params.BeaconConfig().GenesisSlot, headSlot)
+	if headSlot != 0 {
+		t.Errorf("Mismatch slots, wanted: %v, received: %v", 0, headSlot)
 	}
 }
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {

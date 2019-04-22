@@ -299,7 +299,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) error {
 	block, err := rs.db.BlockBySlot(ctx, request.SlotNumber)
 	if err != nil || block == nil {
 		if block == nil {
-			log.WithField("slot", request.SlotNumber-params.BeaconConfig().GenesisSlot).Debug(
+			log.WithField("slot", request.SlotNumber).Debug(
 				"block does not exist")
 			return errors.New("block does not exist")
 		}
@@ -308,7 +308,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) error {
 	}
 
 	log.WithField("slot",
-		fmt.Sprintf("%d", request.SlotNumber-params.BeaconConfig().GenesisSlot)).Debug("Sending requested block to peer")
+		fmt.Sprintf("%d", request.SlotNumber)).Debug("Sending requested block to peer")
 
 	defer sentBlocks.Inc()
 	if err := rs.p2p.Send(ctx, &pb.BeaconBlockResponse{
@@ -430,7 +430,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 	log.WithFields(logrus.Fields{
 		"headRoot":       fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
-		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+		"justifiedEpoch": attestation.Data.JustifiedEpoch - 0,
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
@@ -563,8 +563,8 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 	if startSlot > endSlot {
 		// Do not process requests with invalid slot ranges
 		log.WithFields(logrus.Fields{
-			"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
-			"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+			"slotSlot": startSlot,
+			"endSlot":  endSlot},
 		).Debug("Invalid batched block range")
 		return err
 	}

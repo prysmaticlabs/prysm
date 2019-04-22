@@ -174,9 +174,9 @@ func CrosslinkCommitteesAtSlot(
 	default:
 		return nil, fmt.Errorf(
 			"input committee epoch %d out of bounds: %d <= epoch <= %d",
-			wantedEpoch-params.BeaconConfig().GenesisEpoch,
-			prevEpoch-params.BeaconConfig().GenesisEpoch,
-			currentEpoch-params.BeaconConfig().GenesisEpoch,
+			wantedEpoch-0,
+			prevEpoch-0,
+			currentEpoch-0,
 		)
 	}
 }
@@ -405,9 +405,9 @@ func CommitteeAssignment(
 	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
 		return nil, 0, 0, false, fmt.Errorf(
 			"epoch %d out of bounds: %d <= epoch <= %d",
-			wantedEpoch-params.BeaconConfig().GenesisEpoch,
-			prevEpoch-params.BeaconConfig().GenesisEpoch,
-			nextEpoch-params.BeaconConfig().GenesisEpoch,
+			wantedEpoch-0,
+			prevEpoch-0,
+			nextEpoch-0,
 		)
 	}
 

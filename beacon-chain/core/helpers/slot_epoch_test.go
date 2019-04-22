@@ -49,9 +49,9 @@ func TestPrevEpoch_OK(t *testing.T) {
 		slot  uint64
 		epoch uint64
 	}{
-		{slot: params.BeaconConfig().GenesisSlot, epoch: params.BeaconConfig().GenesisEpoch},
-		{slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1, epoch: params.BeaconConfig().GenesisEpoch},
-		{slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch, epoch: params.BeaconConfig().GenesisEpoch + 1},
+		{slot: 0, epoch: 0},
+		{slot: params.BeaconConfig().SlotsPerEpoch + 1, epoch: 0},
+		{slot: 2 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.slot}

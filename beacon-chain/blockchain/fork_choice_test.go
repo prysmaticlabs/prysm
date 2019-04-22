@@ -55,23 +55,23 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	}{
 		// Higher slot but same state should trigger chain update.
 		{
-			blockSlot: params.BeaconConfig().GenesisSlot + 64,
+			blockSlot: 64,
 			state:     beaconState,
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, but higher last finalized slot.
 		{
-			blockSlot: params.BeaconConfig().GenesisSlot + 64,
-			state:     &pb.BeaconState{FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 2},
+			blockSlot: 64,
+			state:     &pb.BeaconState{FinalizedEpoch: 2},
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, same last finalized slot,
 		// but last justified slot.
 		{
-			blockSlot: params.BeaconConfig().GenesisSlot + 64,
+			blockSlot: 64,
 			state: &pb.BeaconState{
-				FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
-				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
+				FinalizedEpoch: 0,
+				JustifiedEpoch: 2,
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -165,11 +165,11 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	}
 
 	potentialHead := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 5,
+		Slot:             5,
 		ParentRootHash32: genesisRoot[:],
 	}
 	potentialHead2 := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 6,
+		Slot:             6,
 		ParentRootHash32: genesisRoot[:],
 	}
 	// We store these potential heads in the DB.
@@ -1029,7 +1029,7 @@ func setupBeaconChainBenchmark(b *testing.B, faultyPoWClient bool, beaconDB *db.
 }
 
 func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
-	genesisSlot := params.BeaconConfig().GenesisSlot
+	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -1063,7 +1063,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gState.JustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.JustifiedEpoch = 1
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, gState.JustifiedEpoch)
@@ -1105,7 +1105,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 }
 
 func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
-	genesisSlot := params.BeaconConfig().GenesisSlot
+	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	chainSvc := setupBeaconChain(t, beaconDB, nil)
@@ -1145,7 +1145,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gState.FinalizedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.FinalizedEpoch = 1
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, gState.FinalizedEpoch)
@@ -1188,7 +1188,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 }
 
 func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
-	genesisSlot := params.BeaconConfig().GenesisSlot
+	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -1224,11 +1224,11 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gState.JustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.JustifiedEpoch = 1
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, params.BeaconConfig().GenesisEpoch)
-	domain := forkutil.DomainVersion(gState.Fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainRandao)
+	binary.LittleEndian.PutUint64(buf, 0)
+	domain := forkutil.DomainVersion(gState.Fork, 0, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:             genesisSlot + lastAvailableSlot,
@@ -1269,10 +1269,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 }
 
 func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*bls.SecretKey) {
-	genesisSlot := params.BeaconConfig().GenesisSlot
+	genesisSlot := uint64(0)
 	var crosslinks []*pb.Crosslink
 	for i := 0; i < int(params.BeaconConfig().ShardCount); i++ {
-		crosslinks = append(crosslinks, &pb.Crosslink{Epoch: params.BeaconConfig().GenesisEpoch})
+		crosslinks = append(crosslinks, &pb.Crosslink{Epoch: 0})
 	}
 	latestRandaoMixes := make(
 		[][]byte,
@@ -1315,7 +1315,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			Epoch:           params.BeaconConfig().GenesisEpoch,
+			Epoch:           0,
 		},
 	}
 	return gBlockRoot, gBlock, gState, privKeys
@@ -1338,11 +1338,11 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	}
 
 	potentialHead := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 5,
+		Slot:             5,
 		ParentRootHash32: genesisRoot[:],
 	}
 	potentialHead2 := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 6,
+		Slot:             6,
 		ParentRootHash32: genesisRoot[:],
 	}
 	// We store these potential heads in the DB.
@@ -1389,12 +1389,12 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 	}
 
 	potentialHead := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 5,
+		Slot:             5,
 		ParentRootHash32: genesisRoot[:],
 	}
 	pHeadHash, _ := hashutil.HashBeaconBlock(potentialHead)
 	potentialHead2 := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 6,
+		Slot:             6,
 		ParentRootHash32: genesisRoot[:],
 	}
 	pHeadHash2, _ := hashutil.HashBeaconBlock(potentialHead2)

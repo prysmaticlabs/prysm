@@ -213,7 +213,7 @@ func ProcessCrosslinks(
 		// ProcessCrosslinks will never ask for slot in next epoch.
 		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false /* registryChange */)
 		if err != nil {
-			return nil, fmt.Errorf("could not get committees for slot %d: %v", i-params.BeaconConfig().GenesisSlot, err)
+			return nil, fmt.Errorf("could not get committees for slot %d: %v", i, err)
 		}
 		for _, crosslinkCommittee := range crosslinkCommittees {
 			shard := crosslinkCommittee.Shard

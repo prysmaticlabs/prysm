@@ -199,7 +199,7 @@ func TestCleanUpAttestations_OlderThanOneEpoch(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
+				Slot:  uint64(i),
 				Shard: uint64(i),
 			},
 		}
@@ -209,7 +209,7 @@ func TestCleanUpAttestations_OlderThanOneEpoch(t *testing.T) {
 	}
 
 	// Assume current slot is 99. All the attestations before (99 - 64) should get removed.
-	if err := s.removeEpochOldAttestations(params.BeaconConfig().GenesisSlot + slot); err != nil {
+	if err := s.removeEpochOldAttestations(slot); err != nil {
 		t.Fatalf("Could not remove old attestations: %v", err)
 	}
 	attestations, err := s.beaconDB.Attestations()

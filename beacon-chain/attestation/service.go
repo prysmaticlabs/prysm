@@ -202,7 +202,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	}
 
 	log.WithFields(logrus.Fields{
-		"attestation slot":     attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
+		"attestation slot":     attestation.Data.Slot,
 		"attestation shard":    attestation.Data.Shard,
 		"committees shard":     cachedCommittees.Committees[0].Shard,
 		"committees list":      cachedCommittees.Committees[0].Committee,
@@ -242,8 +242,8 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 
 			log.WithFields(
 				logrus.Fields{
-					"attestationSlot": attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
-					"justifiedEpoch":  attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+					"attestationSlot": attestation.Data.Slot,
+					"justifiedEpoch":  attestation.Data.JustifiedEpoch - 0,
 				},
 			).Debug("Attestation store updated")
 

@@ -121,8 +121,8 @@ func ProcessBlock(
 	if block.Slot != state.Slot {
 		return nil, fmt.Errorf(
 			"block.slot != state.slot, block.slot = %d, state.slot = %d",
-			block.Slot-params.BeaconConfig().GenesisSlot,
-			state.Slot-params.BeaconConfig().GenesisSlot,
+			block.Slot,
+			state.Slot,
 		)
 	}
 
@@ -448,16 +448,16 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of prev epoch boundary attestations")
 		log.WithField("attesterIndices", prevEpochBoundaryAttesterIndices).Debug("Previous epoch boundary attester indices")
 		log.WithField(
-			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-0,
 		).Info("Previous justified epoch")
 		log.WithField(
-			"justifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+			"justifiedEpoch", state.JustifiedEpoch-0,
 		).Info("Justified epoch")
 		log.WithField(
-			"finalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
+			"finalizedEpoch", state.FinalizedEpoch-0,
 		).Info("Finalized epoch")
 		log.WithField(
-			"validatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
+			"validatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-0,
 		).Info("Validator Registry Update Epoch")
 		log.WithField(
 			"numValidators", len(state.ValidatorRegistry),

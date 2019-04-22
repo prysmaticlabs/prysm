@@ -91,7 +91,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	justifiedBlockRoot := headState.JustifiedRoot
 
 	// If an attester has to attest for genesis block.
-	if headState.Slot == params.BeaconConfig().GenesisSlot {
+	if headState.Slot == 0 {
 		epochBoundaryRoot = params.BeaconConfig().ZeroHash[:]
 		justifiedBlockRoot = params.BeaconConfig().ZeroHash[:]
 	}

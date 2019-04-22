@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -53,7 +52,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		// until we can get a block.
 		lastAvailBlkSlot := lastJustifiedSlot
 		for newJustifiedBlock == nil {
-			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
+			log.WithField("slot", lastAvailBlkSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
 			newJustifiedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
@@ -91,7 +90,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		// until we can get a block.
 		lastAvailBlkSlot := lastFinalizedSlot
 		for newFinalizedBlock == nil {
-			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
+			log.WithField("slot", lastAvailBlkSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
 			newFinalizedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
@@ -155,7 +154,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	newState := postState
 	if head.Slot != block.Slot {
 		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
-			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
+			block.Slot, head.Slot-0)
 
 		// Only regenerate head state if there was a reorg.
 		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, head.Slot)
@@ -165,7 +164,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 
 		if newState.Slot != postState.Slot {
 			log.Warnf("Reorg happened, post state slot at %d, new head state at slot %d",
-				postState.Slot-params.BeaconConfig().GenesisSlot, newState.Slot-params.BeaconConfig().GenesisSlot)
+				postState.Slot, newState.Slot-0)
 		}
 
 		for revertedSlot := block.Slot; revertedSlot > head.Slot; revertedSlot-- {

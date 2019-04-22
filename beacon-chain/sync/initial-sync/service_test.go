@@ -144,9 +144,9 @@ func TestSavingBlock_InSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	fState := &pb.BeaconState{
-		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
+		FinalizedEpoch: 1,
 		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+			Slot: params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
 			BlockHash32: []byte{},
@@ -158,10 +158,10 @@ func TestSavingBlock_InSync(t *testing.T) {
 	}
 
 	incorrectState := &pb.BeaconState{
-		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
+		FinalizedEpoch: 0,
+		JustifiedEpoch: 1,
 		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot + 4*params.BeaconConfig().SlotsPerEpoch,
+			Slot: 4 * params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
 			BlockHash32: []byte{},
@@ -204,7 +204,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 		t.Fatalf("Unable to hash block %v", err)
 	}
 
-	msg1 := getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
+	msg1 := getBlockResponseMsg(1)
 
 	// saving genesis block
 	ss.blockBuf <- msg1
@@ -221,10 +221,10 @@ func TestSavingBlock_InSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
+	msg1 = getBlockResponseMsg(1)
 	ss.blockBuf <- msg1
 
-	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 2)
+	msg1 = getBlockResponseMsg(2)
 	ss.blockBuf <- msg1
 
 	ss.cancel()
@@ -249,11 +249,11 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	batchSize := 20
 	batchedBlocks := make([]*pb.BeaconBlock, batchSize)
-	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
+	expectedSlot := uint64(batchSize)
 
 	for i := 1; i <= batchSize; i++ {
 		batchedBlocks[i-1] = &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot + uint64(i),
+			Slot: uint64(i),
 		}
 	}
 
@@ -300,9 +300,9 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	ss := NewInitialSyncService(context.Background(), cfg)
 
 	batchSize := 20
-	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
+	expectedSlot := uint64(batchSize)
 	ss.highestObservedSlot = expectedSlot
-	blk, err := ss.db.BlockBySlot(ctx, params.BeaconConfig().GenesisSlot)
+	blk, err := ss.db.BlockBySlot(ctx, 0)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
@@ -327,7 +327,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			continue
 		}
 		block := &pb.BeaconBlock{
-			Slot:             params.BeaconConfig().GenesisSlot + uint64(i),
+			Slot:             uint64(i),
 			ParentRootHash32: parentHash,
 		}
 

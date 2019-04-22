@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -103,7 +102,7 @@ func (ss *Service) Status() error {
 		return fmt.Errorf("could not retrieve chain head %v", err)
 	}
 	if blk.Slot < ss.InitialSync.HighestObservedSlot() {
-		return fmt.Errorf("node is not synced as the current chain head is at slot %d", blk.Slot-params.BeaconConfig().GenesisSlot)
+		return fmt.Errorf("node is not synced as the current chain head is at slot %d", blk.Slot)
 	}
 	return nil
 }

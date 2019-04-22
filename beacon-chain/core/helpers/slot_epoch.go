@@ -34,10 +34,10 @@ func CurrentEpoch(state *pb.BeaconState) uint64 {
 //    """
 //    return max(get_current_epoch(state) - 1, GENESIS_EPOCH)
 func PrevEpoch(state *pb.BeaconState) uint64 {
-	if CurrentEpoch(state) > params.BeaconConfig().GenesisEpoch {
+	if CurrentEpoch(state) > 0 {
 		return CurrentEpoch(state) - 1
 	}
-	return params.BeaconConfig().GenesisEpoch
+	return 0
 }
 
 // NextEpoch returns the next epoch number calculated form

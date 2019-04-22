@@ -44,8 +44,6 @@ type BeaconChainConfig struct {
 
 	// Initial value constants.
 	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
-	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields.
-	GenesisEpoch            uint64   // GenesisEpoch is used to initialize epoch.
 	GenesisStartShard       uint64   // GenesisStartShard is the first shard to assign validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 	EmptySignature          [96]byte // EmptySignature is used to represent a zeroed out BLS Signature.
@@ -135,8 +133,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Initial value constants.
 	GenesisForkVersion:      0,
-	GenesisSlot:             1 << 63,
-	GenesisEpoch:            1 << 63 / 64,
 	GenesisStartShard:       0,
 	FarFutureEpoch:          1<<64 - 1,
 	ZeroHash:                [32]byte{},
@@ -202,7 +198,6 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.TargetCommitteeSize = 1
 	demoConfig.DepositsForChainStart = 8
 	demoConfig.SlotsPerEpoch = 8
-	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3200000
 	demoConfig.EjectionBalance = 1600000

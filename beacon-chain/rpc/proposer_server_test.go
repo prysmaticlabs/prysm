@@ -141,13 +141,9 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	stateSlot := params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay + 100
 	beaconState := &pbp2p.BeaconState{
-		Slot: stateSlot,
-		LatestCrosslinks: []*pbp2p.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch + 1,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-		}},
+		Slot:             params.BeaconConfig().MinAttestationInclusionDelay + 100,
+		LatestCrosslinks: []*pbp2p.Crosslink{{Epoch: 1, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
 	}
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{
@@ -178,7 +174,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	}
 
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
-		ProposalBlockSlot: blk.Slot + 1,
+		FilterReadyForInclusion: true,
 	})
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
@@ -196,7 +192,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	// Edge case: current slot is at the end of an epoch. The pending attestation
 	// for the next slot should come from currentSlot + 1.
 	currentSlot := helpers.StartSlot(
-		params.BeaconConfig().GenesisEpoch+10,
+		10,
 	) - 1
 
 	expectedEpoch := uint64(100)
@@ -204,53 +200,17 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	opService := &mockOperationService{
 		pendingAttestations: []*pbp2p.Attestation{
 			//Expired attestations
-			{Data: &pbp2p.AttestationData{
-				Slot:                    0,
-				JustifiedEpoch:          expectedEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			}},
-			{Data: &pbp2p.AttestationData{
-				Slot:                    currentSlot - 10000,
-				JustifiedEpoch:          expectedEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			}},
-			{Data: &pbp2p.AttestationData{
-				Slot:                    currentSlot - 5000,
-				JustifiedEpoch:          expectedEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			}},
-			{Data: &pbp2p.AttestationData{
-				Slot:                    currentSlot - 100,
-				JustifiedEpoch:          expectedEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			}},
-			{Data: &pbp2p.AttestationData{
-				Slot:                    currentSlot - params.BeaconConfig().SlotsPerEpoch,
-				JustifiedEpoch:          expectedEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			}},
+			{Data: &pbp2p.AttestationData{Slot: 0, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 100, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - params.BeaconConfig().SlotsPerEpoch, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
 			// Non-expired attestation with incorrect justified epoch
-			{Data: &pbp2p.AttestationData{
-				Slot:                    currentSlot - 5,
-				JustifiedEpoch:          expectedEpoch - 1,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch - 1, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
 			// Non-expired attestations with correct justified epoch
-			{Data: &pbp2p.AttestationData{
-				Slot:                    currentSlot - 5,
-				JustifiedEpoch:          expectedEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			}},
-			{Data: &pbp2p.AttestationData{
-				Slot:                    currentSlot - 2,
-				JustifiedEpoch:          expectedEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			}},
-			{Data: &pbp2p.AttestationData{
-				Slot:                    currentSlot,
-				JustifiedEpoch:          expectedEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 2, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
 		},
 	}
 	expectedNumberOfAttestations := 3
@@ -263,10 +223,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		Slot:                   currentSlot + params.BeaconConfig().MinAttestationInclusionDelay,
 		JustifiedEpoch:         expectedEpoch,
 		PreviousJustifiedEpoch: expectedEpoch,
-		LatestCrosslinks: []*pbp2p.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch + 9,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-		}},
+		LatestCrosslinks:       []*pbp2p.Crosslink{{Epoch: 9, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -302,21 +259,9 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	}
 
 	expectedAtts := []*pbp2p.Attestation{
-		{Data: &pbp2p.AttestationData{
-			Slot:                    currentSlot - 5,
-			JustifiedEpoch:          expectedEpoch,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-		}},
-		{Data: &pbp2p.AttestationData{
-			Slot:                    currentSlot - 2,
-			JustifiedEpoch:          expectedEpoch,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-		}},
-		{Data: &pbp2p.AttestationData{
-			Slot:                    currentSlot,
-			JustifiedEpoch:          expectedEpoch,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-		}},
+		{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+		{Data: &pbp2p.AttestationData{Slot: currentSlot - 2, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+		{Data: &pbp2p.AttestationData{Slot: currentSlot, JustifiedEpoch: expectedEpoch, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
 	}
 	if !reflect.DeepEqual(res.PendingAttestations, expectedAtts) {
 		t.Error("Did not receive expected attestations")
@@ -334,10 +279,10 @@ func TestPendingAttestations_OK(t *testing.T) {
 		beaconDB:         db,
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot +
+		Slot: 0 +
 			params.BeaconConfig().SlotsPerEpoch +
 			params.BeaconConfig().MinAttestationInclusionDelay,
-		LatestCrosslinks: []*pbp2p.Crosslink{{Epoch: params.BeaconConfig().GenesisEpoch + 1,
+		LatestCrosslinks: []*pbp2p.Crosslink{{Epoch: 1,
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -356,9 +301,7 @@ func TestPendingAttestations_OK(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
-	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
-		ProposalBlockSlot: blk.Slot + 1,
-	})
+	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}

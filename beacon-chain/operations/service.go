@@ -245,7 +245,7 @@ func (s *Service) removePendingAttestations(attestations []*pb.Attestation) erro
 			if err := s.beaconDB.DeleteAttestation(attestation); err != nil {
 				return err
 			}
-			log.WithField("slot", attestation.Data.Slot-params.BeaconConfig().GenesisSlot).Debug("Attestation removed")
+			log.WithField("slot", attestation.Data.Slot).Debug("Attestation removed")
 		}
 	}
 	return nil

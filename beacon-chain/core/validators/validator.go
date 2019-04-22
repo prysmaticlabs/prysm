@@ -159,7 +159,7 @@ func ProcessDeposit(
 func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[idx]
 	if genesis {
-		validator.ActivationEpoch = params.BeaconConfig().GenesisEpoch
+		validator.ActivationEpoch = 0
 	} else {
 		validator.ActivationEpoch = helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(state))
 	}
@@ -168,7 +168,7 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 
 	log.WithFields(logrus.Fields{
 		"index":           idx,
-		"activationEpoch": validator.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+		"activationEpoch": validator.ActivationEpoch - 0,
 	}).Info("Validator activated")
 
 	return state, nil
@@ -328,7 +328,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 				"index":               idx,
 				"currentBalanceChurn": balChurn,
 				"maxBalanceChurn":     maxBalChurn,
-				"currentEpoch":        currentEpoch - params.BeaconConfig().GenesisEpoch,
+				"currentEpoch":        currentEpoch - 0,
 			}).Info("Attempting to activate validator")
 
 			if balChurn > maxBalChurn {

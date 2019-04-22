@@ -2,9 +2,11 @@ package rpc
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -30,19 +32,47 @@ func TestAttestHead_OK(t *testing.T) {
 	}
 }
 
+func TestAttestationDataAtSlot_EpochBoundaryFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	beaconState := &pbp2p.BeaconState{
+		Slot:                   3 * params.BeaconConfig().SlotsPerEpoch,
+		LatestBlockRootHash32S: make([][]byte, 20),
+		JustifiedEpoch:         1,
+	}
+	block := blocks.NewGenesisBlock([]byte("stateroot"))
+	block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
+	attesterServer := &AttesterServer{
+		beaconDB: db,
+	}
+	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
+		t.Fatalf("Could not save block in test db: %v", err)
+	}
+	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatalf("Could not update chain head in test db: %v", err)
+	}
+	want := "could not get epoch boundary block"
+	req := &pb.AttestationDataRequest{}
+	if _, err := attesterServer.AttestationDataAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
 func TestAttestationDataAtSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
 	block := &pbp2p.BeaconBlock{
-		Slot: 1 + params.BeaconConfig().GenesisSlot,
+		Slot: 1,
 	}
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
-		Slot: 1*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+		Slot: 1 * params.BeaconConfig().SlotsPerEpoch,
 	}
 	justifiedBlock := &pbp2p.BeaconBlock{
-		Slot: 2*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 	}
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
@@ -58,8 +88,8 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   3*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
-		JustifiedEpoch:         2 + params.BeaconConfig().GenesisEpoch,
+		Slot:                   3*params.BeaconConfig().SlotsPerEpoch + 1,
+		JustifiedEpoch:         2,
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
@@ -102,7 +132,7 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	expectedInfo := &pb.AttestationDataResponse{
 		HeadSlot:                 beaconState.Slot,
 		BeaconBlockRootHash32:    blockRoot[:],
-		JustifiedEpoch:           2 + params.BeaconConfig().GenesisEpoch,
+		JustifiedEpoch:           2,
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
 			CrosslinkDataRootHash32: []byte("A"),
@@ -132,13 +162,13 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 
 	block := &pbp2p.BeaconBlock{
-		Slot: 10000 + params.BeaconConfig().GenesisSlot,
+		Slot: 10000,
 	}
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
-		Slot: helpers.StartSlot(helpers.SlotToEpoch(10000 + params.BeaconConfig().GenesisSlot)),
+		Slot: helpers.StartSlot(helpers.SlotToEpoch(10000)),
 	}
 	justifiedBlock := &pbp2p.BeaconBlock{
-		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500+params.BeaconConfig().GenesisSlot)) - 2, // Imagine two skip block
+		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2, // Imagine two skip block
 	}
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
@@ -153,8 +183,8 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   10000 + params.BeaconConfig().GenesisSlot,
-		JustifiedEpoch:         helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot),
+		Slot:                   10000,
+		JustifiedEpoch:         helpers.SlotToEpoch(1500),
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
@@ -195,9 +225,9 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 	expectedInfo := &pb.AttestationDataResponse{
-		HeadSlot:                 10000 + params.BeaconConfig().GenesisSlot,
+		HeadSlot:                 10000,
 		BeaconBlockRootHash32:    blockRoot[:],
-		JustifiedEpoch:           helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot),
+		JustifiedEpoch:           helpers.SlotToEpoch(1500),
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
 			CrosslinkDataRootHash32: []byte("A"),

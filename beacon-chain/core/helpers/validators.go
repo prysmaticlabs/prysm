@@ -77,7 +77,7 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
 
 	if len(firstCommittee) == 0 {
 		return 0, fmt.Errorf("empty first committee at slot %d",
-			slot-params.BeaconConfig().GenesisSlot)
+			slot)
 	}
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil

@@ -21,10 +21,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	if params.BeaconConfig().GenesisSlot != 1<<63 {
+	if 0 != 1<<63 {
 		t.Error("GenesisSlot should be 2^63 for these tests to pass")
 	}
-	genesisEpochNumber := params.BeaconConfig().GenesisEpoch
 
 	if params.BeaconConfig().GenesisForkVersion != 0 {
 		t.Error("GenesisSlot( should be 0 for these tests to pass")
@@ -94,7 +93,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Misc fields checks.
-	if newState.Slot != params.BeaconConfig().GenesisSlot {
+	if newState.Slot != 0 {
 		t.Error("Slot was not correctly initialized")
 	}
 	if newState.GenesisTime != genesisTime {
@@ -103,13 +102,13 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !reflect.DeepEqual(*newState.Fork, pb.Fork{
 		PreviousVersion: genesisForkVersion,
 		CurrentVersion:  genesisForkVersion,
-		Epoch:           genesisEpochNumber,
+		Epoch:           0,
 	}) {
 		t.Error("Fork was not correctly initialized")
 	}
 
 	// Validator registry fields checks.
-	if newState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
+	if newState.ValidatorRegistryUpdateEpoch != 0 {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
 	if len(newState.ValidatorRegistry) != depositsForChainStart {
@@ -125,13 +124,13 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Finality fields checks.
-	if newState.PreviousJustifiedEpoch != genesisEpochNumber {
+	if newState.PreviousJustifiedEpoch != 0 {
 		t.Error("PreviousJustifiedEpoch was not correctly initialized")
 	}
-	if newState.JustifiedEpoch != genesisEpochNumber {
+	if newState.JustifiedEpoch != 0 {
 		t.Error("JustifiedEpoch was not correctly initialized")
 	}
-	if newState.FinalizedEpoch != genesisEpochNumber {
+	if newState.FinalizedEpoch != 0 {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
 	if newState.JustificationBitfield != 0 {
@@ -151,7 +150,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !reflect.DeepEqual(newState.BatchedBlockRootHash32S, [][]byte{}) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
 	}
-	activeValidators := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, 0)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)
@@ -165,7 +164,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 			newState.LatestIndexRootHash32S[0],
 		)
 	}
-	seed, err := helpers.GenerateSeed(newState, params.BeaconConfig().GenesisEpoch)
+	seed, err := helpers.GenerateSeed(newState, 0)
 	if err != nil {
 		t.Fatalf("Could not generate initial seed: %v", err)
 	}

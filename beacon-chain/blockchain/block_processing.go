@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -83,11 +82,11 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err := c.SaveAndBroadcastBlock(ctx, block); err != nil {
 		return beaconState, fmt.Errorf(
 			"could not save and broadcast beacon block with slot %d: %v",
-			block.Slot-params.BeaconConfig().GenesisSlot, err,
+			block.Slot, err,
 		)
 	}
 
-	log.WithField("slotNumber", block.Slot-params.BeaconConfig().GenesisSlot).Info(
+	log.WithField("slotNumber", block.Slot).Info(
 		"Executing state transition")
 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
@@ -107,8 +106,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	log.WithFields(logrus.Fields{
-		"slotNumber":   block.Slot - params.BeaconConfig().GenesisSlot,
-		"currentEpoch": helpers.SlotToEpoch(block.Slot) - params.BeaconConfig().GenesisEpoch,
+		"slotNumber":   block.Slot,
+		"currentEpoch": helpers.SlotToEpoch(block.Slot) - 0,
 	}).Info("State transition complete")
 
 	// Check state root
@@ -131,7 +130,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
 	}
 
-	log.WithField("slot", block.Slot-params.BeaconConfig().GenesisSlot).Info("Finished processing beacon block")
+	log.WithField("slot", block.Slot).Info("Finished processing beacon block")
 	return beaconState, nil
 }
 
@@ -192,9 +191,9 @@ func (c *ChainService) VerifyBlockValidity(
 	block *pb.BeaconBlock,
 	beaconState *pb.BeaconState,
 ) error {
-	if block.Slot == params.BeaconConfig().GenesisSlot {
+	if block.Slot == 0 {
 		return fmt.Errorf("cannot process a genesis block: received block with slot %d",
-			block.Slot-params.BeaconConfig().GenesisSlot)
+			block.Slot)
 	}
 	powBlockFetcher := c.web3Service.Client().BlockByHash
 	if err := b.IsValidBlock(ctx, beaconState, block,
@@ -270,12 +269,12 @@ func (c *ChainService) runStateTransition(
 		return beaconState, &BlockFailedProcessingErr{err}
 	}
 	log.WithField(
-		"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
+		"slotsSinceGenesis", newState.Slot,
 	).Info("Slot transition successfully processed")
 
 	if block != nil {
 		log.WithField(
-			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
+			"slotsSinceGenesis", newState.Slot,
 		).Info("Block transition successfully processed")
 
 		// Save Historical States.
@@ -298,7 +297,7 @@ func (c *ChainService) runStateTransition(
 			return newState, fmt.Errorf("could not update FFG checkpts: %v", err)
 		}
 		log.WithField(
-			"SlotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
+			"SlotsSinceGenesis", newState.Slot,
 		).Info("Epoch transition successfully processed")
 	}
 	return newState, nil

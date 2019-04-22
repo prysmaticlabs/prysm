@@ -217,9 +217,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		return fmt.Errorf("could not initialize state test %v", err)
 	}
 	averageTimesPerTransition := []time.Duration{}
-	startSlot := params.BeaconConfig().GenesisSlot
+	startSlot := uint64(0)
 	for i := startSlot; i < startSlot+testCase.Config.NumSlots; i++ {
-
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
 		if sliceutil.IsInUint64(i, testCase.Config.SkipSlots) {

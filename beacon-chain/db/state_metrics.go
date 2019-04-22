@@ -58,8 +58,8 @@ var (
 )
 
 func reportStateMetrics(state *pb.BeaconState) {
-	s := params.BeaconConfig().GenesisSlot
-	e := params.BeaconConfig().GenesisEpoch
+	s := uint64(0)
+	e := uint64(0)
 	currentEpoch := state.Slot / params.BeaconConfig().SlotsPerEpoch
 	// Validator balances
 	for i, bal := range state.ValidatorBalances {

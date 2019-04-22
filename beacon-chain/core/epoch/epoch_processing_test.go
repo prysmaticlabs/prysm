@@ -223,7 +223,7 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   300 + params.BeaconConfig().GenesisSlot,
+		Slot:                   300,
 		JustifiedEpoch:         3,
 		JustificationBitfield:  4,
 		LatestBlockRootHash32S: latestBlockRoots,
@@ -276,7 +276,7 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 	epoch := uint64(5)
-	state.Slot = params.BeaconConfig().GenesisSlot + epoch*params.BeaconConfig().SlotsPerEpoch
+	state.Slot = epoch * params.BeaconConfig().SlotsPerEpoch
 
 	byteLength := int(params.BeaconConfig().DepositsForChainStart / params.BeaconConfig().TargetCommitteeSize / 8)
 	var participationBitfield []byte
@@ -306,9 +306,9 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 		t.Fatalf("Could not execute ProcessCrosslinks: %v", err)
 	}
 	// Verify crosslink for shard 0([1]) was processed at genesis epoch + 5.
-	if newState.LatestCrosslinks[0].Epoch != params.BeaconConfig().GenesisEpoch+epoch {
+	if newState.LatestCrosslinks[0].Epoch != epoch {
 		t.Errorf("Shard 0s got crosslinked at epoch %d, wanted: %d",
-			newState.LatestCrosslinks[0].Epoch, +params.BeaconConfig().GenesisSlot)
+			newState.LatestCrosslinks[0].Epoch, epoch)
 	}
 	// Verify crosslink for shard 0 was root hashed for []byte{'A'}.
 	if !bytes.Equal(newState.LatestCrosslinks[0].CrosslinkDataRootHash32,
@@ -320,11 +320,11 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 }
 
 func TestProcessCrosslinks_NoParticipantsBitField(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot+5, params.BeaconConfig().DepositsForChainStart)
+	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 
 	attestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			// Empty participation bitfield will trigger error.
 			AggregationBitfield: []byte{}}}
 

@@ -61,14 +61,14 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		ValidatorRegistry: validators,
 	}
 
 	boundaryAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: []byte{0xC0}}, // returns indices 242
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: []byte{0xC0}}, // returns indices 237,224,2
 	}
 
@@ -97,12 +97,12 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 	}
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot + 3,
+			Slot:                    3,
 			Shard:                   6,
 			CrosslinkDataRootHash32: []byte{'B'},
 		},
@@ -372,7 +372,7 @@ func TestActivateValidatorGenesis_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not execute activateValidator:%v", err)
 	}
-	if newState.ValidatorRegistry[0].ActivationEpoch != params.BeaconConfig().GenesisEpoch {
+	if newState.ValidatorRegistry[0].ActivationEpoch != 0 {
 		t.Errorf("Wanted activation slot = genesis slot, got %d",
 			newState.ValidatorRegistry[0].ActivationEpoch)
 	}
@@ -649,7 +649,7 @@ func TestInitializeValidatoreStore(t *testing.T) {
 	for i := 0; i < validatorsLimit; i++ {
 		registry = append(registry, &pb.Validator{
 			Pubkey:          []byte(strconv.Itoa(i)),
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 		})
 		indices = append(indices, uint64(i))
@@ -657,7 +657,7 @@ func TestInitializeValidatoreStore(t *testing.T) {
 
 	bState := &pb.BeaconState{
 		ValidatorRegistry: registry,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 	}
 
 	if _, ok := vStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {

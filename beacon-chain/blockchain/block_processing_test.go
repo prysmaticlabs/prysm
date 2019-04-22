@@ -266,7 +266,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 			Attestations: []*pb.Attestation{
 				{
 					Data: &pb.AttestationData{
-						JustifiedEpoch: params.BeaconConfig().GenesisSlot * 100,
+						JustifiedEpoch: 0 * 100,
 					},
 				},
 			},
@@ -429,7 +429,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	currentSlot := params.BeaconConfig().GenesisSlot
+	currentSlot := uint64(0)
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	pendingDeposits := []*pb.Deposit{
@@ -585,7 +585,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err := db.SaveFinalizedState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	genesisSlot := params.BeaconConfig().GenesisSlot
+	genesisSlot := uint64(0)
 
 	// Top chain slots (see graph)
 	blockSlots := []uint64{1, 2, 3, 5, 8}
@@ -709,7 +709,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		t.Fatal("block processing succeeded despite block having no parent saved")
 	}
 
-	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
+	beaconState.Slot = 10
 
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
@@ -728,10 +728,10 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		DepositRootHash32: []byte{2},
 		BlockHash32:       []byte{3},
 	}
-	beaconState.Slot = params.BeaconConfig().GenesisSlot
+	beaconState.Slot = 0
 
-	currentSlot := params.BeaconConfig().GenesisSlot + 1
-	attestationSlot := params.BeaconConfig().GenesisSlot
+	currentSlot := uint64(1)
+	attestationSlot := uint64(0)
 
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block2 := &pb.BeaconBlock{

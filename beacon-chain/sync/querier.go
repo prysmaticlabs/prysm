@@ -164,7 +164,7 @@ func (q *Querier) run() {
 			response := msg.Data.(*pb.ChainHeadResponse)
 			queryLog.Infof(
 				"Latest chain head is at slot: %d and state root: %#x",
-				response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
+				response.CanonicalSlot, response.CanonicalStateRootHash32,
 			)
 			q.currentHeadSlot = response.CanonicalSlot
 			q.currentStateRoot = response.CanonicalStateRootHash32

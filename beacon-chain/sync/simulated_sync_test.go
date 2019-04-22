@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 type simulatedP2P struct {
@@ -170,7 +169,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 
 	for i := 1; i <= numOfBlocks; i++ {
 		block := &pb.BeaconBlock{
-			Slot:             params.BeaconConfig().GenesisSlot + uint64(i),
+			Slot:             uint64(i),
 			ParentRootHash32: parentRoot[:],
 			StateRootHash32:  stateRoot[:],
 		}
@@ -228,7 +227,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(simP2P.ctx, &pb.ChainHeadResponse{
-			CanonicalSlot:            params.BeaconConfig().GenesisSlot + 12,
+			CanonicalSlot:            12,
 			CanonicalStateRootHash32: stateRoot[:],
 		}, "")
 	}
@@ -281,8 +280,8 @@ loop:
 		case <-tick:
 			_, slot1 := us.InitialSync.NodeIsSynced()
 			_, slot2 := us2.InitialSync.NodeIsSynced()
-			if slot1 == uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot ||
-				slot2 == uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
+			if slot1 == uint64(numOfBlocks) ||
+				slot2 == uint64(numOfBlocks) {
 				break loop
 			}
 		}

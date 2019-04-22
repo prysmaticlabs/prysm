@@ -289,7 +289,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if beaconState == nil || beaconState.Slot != params.BeaconConfig().GenesisSlot {
+	if beaconState == nil || beaconState.Slot != 0 {
 		t.Error("Expected canonical state feed to send a state with genesis block")
 	}
 	if err := chainService.Stop(); err != nil {

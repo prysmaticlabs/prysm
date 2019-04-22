@@ -131,9 +131,9 @@ func NewInitialSyncService(ctx context.Context,
 		db:                  cfg.BeaconDB,
 		powchain:            cfg.PowChain,
 		chainService:        cfg.ChainService,
-		currentSlot:         params.BeaconConfig().GenesisSlot,
-		highestObservedSlot: params.BeaconConfig().GenesisSlot,
-		beaconStateSlot:     params.BeaconConfig().GenesisSlot,
+		currentSlot:         0,
+		highestObservedSlot: 0,
+		beaconStateSlot:     0,
 		blockBuf:            blockBuf,
 		stateBuf:            stateBuf,
 		batchedBlockBuf:     batchedBlockBuf,
@@ -240,7 +240,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 			s.highestObservedRoot,
 		)
 	}
-	log.WithField("canonicalStateSlot", canonicalState.Slot-params.BeaconConfig().GenesisSlot).Info("Exiting init sync and starting regular sync")
+	log.WithField("canonicalStateSlot", canonicalState.Slot).Info("Exiting init sync and starting regular sync")
 	s.syncService.ResumeSync()
 	s.cancel()
 	s.nodeIsSynced = true

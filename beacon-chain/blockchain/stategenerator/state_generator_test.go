@@ -70,7 +70,7 @@ func TestGenerateState_OK(t *testing.T) {
 	}
 
 	// Ran 30 slots to save finalized slot then ran another 30 slots.
-	slotToGenerateTill := params.BeaconConfig().GenesisSlot + slotLimit*2
+	slotToGenerateTill := slotLimit * 2
 	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, slotToGenerateTill)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
@@ -146,7 +146,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 	}
 
 	// Ran 30 slots to save finalized slot then ran another 10 slots w/o blocks and 20 slots w/ blocks.
-	slotToGenerateTill := params.BeaconConfig().GenesisSlot + slotLimit*2
+	slotToGenerateTill := slotLimit * 2
 	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, slotToGenerateTill)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
@@ -171,7 +171,7 @@ func TestGenerateState_NilLatestFinalizedBlock(t *testing.T) {
 	defer b.Shutdown()
 	defer db.TeardownDB(beaconDB)
 	beaconState := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*4,
+		Slot: params.BeaconConfig().SlotsPerEpoch * 4,
 	}
 	if err := beaconDB.SaveFinalizedState(beaconState); err != nil {
 		t.Fatalf("Unable to save finalized state")
@@ -180,7 +180,7 @@ func TestGenerateState_NilLatestFinalizedBlock(t *testing.T) {
 		t.Fatalf("Unable to save finalized state")
 	}
 
-	slot := params.BeaconConfig().GenesisSlot + 1 + params.BeaconConfig().SlotsPerEpoch*4
+	slot := 1 + params.BeaconConfig().SlotsPerEpoch*4
 	want := "latest head in state is nil"
 	if _, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDB, slot); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)

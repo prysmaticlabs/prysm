@@ -7,7 +7,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -73,7 +72,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	s.stateReceived = true
 	log.Debugf(
 		"Successfully saved beacon state with the last finalized slot: %d",
-		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
+		finalizedState.Slot,
 	)
 	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 	s.lastRequestedSlot = s.highestObservedSlot
