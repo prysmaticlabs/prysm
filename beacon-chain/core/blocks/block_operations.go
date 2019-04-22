@@ -31,12 +31,15 @@ type attesterInclusionStore struct {
 	sync.RWMutex
 	// attesterInclusion is a mapping that tracks when an attester's attestation
 	// last get included in beacon chain.
-	attesterInclusion     map[uint64]uint64
+	attesterInclusionSlot map[uint64]uint64
+	// attesterInclusion is a mapping that tracks the difference in slot number
+	// of when attestation gets submitted and when it gets included.
 	attesterInclusionDist map[uint64]uint64
 }
 
 var attsInclStore = attesterInclusionStore{
-	attesterInclusion: make(map[uint64]uint64),
+	attesterInclusionSlot: make(map[uint64]uint64),
+	attesterInclusionDist: make(map[uint64]uint64),
 }
 
 // VerifyProposerSignature uses BLS signature verification to ensure
@@ -455,7 +458,8 @@ func ProcessBlockAttestations(
 		attsInclStore.Lock()
 		defer attsInclStore.Unlock()
 		for _, index := range IndicesInCommittee {
-			attsInclStore.attesterInclusion[index] = beaconState.Slot
+			attsInclStore.attesterInclusionSlot[index] = beaconState.Slot
+			attsInclStore.attesterInclusionDist[index] = beaconState.Slot - attestation.Data.Slot
 		}
 
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
@@ -753,5 +757,13 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 func AttsInclusionSlot(index uint64) uint64 {
 	attsInclStore.RLock()
 	attsInclStore.RUnlock()
-	return attsInclStore.attesterInclusion[index]
+	return attsInclStore.attesterInclusionSlot[index]
+}
+
+// AttsInclusionDistance returns diff in slot of when an attestator's attestation gets submitted
+// and included.
+func AttsInclusionDistance(index uint64) uint64 {
+	attsInclStore.RLock()
+	attsInclStore.RUnlock()
+	return attsInclStore.attesterInclusionDist[index]
 }
