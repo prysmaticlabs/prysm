@@ -274,7 +274,6 @@ func AttestationParticipants(
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(crosslinkCommittees)
 		cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
 
 		if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
