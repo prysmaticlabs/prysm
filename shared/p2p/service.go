@@ -86,11 +86,15 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	// distributed hash table by their peer ID.
 	h = rhost.Wrap(h, dht)
 
+	psOpts := []pubsub.Option{
+		pubsub.WithMessageSigning(false),
+		pubsub.WithStrictSignatureVerification(false),
+	}
 	var gsub *pubsub.PubSub
 	if featureconfig.FeatureConfig().DisableGossipSub {
-		gsub, err = pubsub.NewFloodSub(ctx, h)
+		gsub, err = pubsub.NewFloodSub(ctx, h, psOpts...)
 	} else {
-		gsub, err = pubsub.NewGossipSub(ctx, h)
+		gsub, err = pubsub.NewGossipSub(ctx, h, psOpts...)
 	}
 	if err != nil {
 		cancel()
