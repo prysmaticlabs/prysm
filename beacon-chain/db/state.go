@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -47,6 +48,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	zeroBinary := encodeSlotNumber(0)
 
 	db.currentState = beaconState
+	db.serializedState = stateEnc
 	db.stateHash = stateHash
 
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -103,8 +105,10 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	if db.currentState != nil {
 		_, span := trace.StartSpan(ctx, "proto.Clone")
 		defer span.End()
-		cachedState := proto.Clone(db.currentState).(*pb.BeaconState)
-		return cachedState, nil
+		enc, _ := proto.Marshal(db.currentState)
+		if bytes.Equal(enc, db.serializedState) {
+			return db.currentState, nil
+		}
 	}
 
 	var beaconState *pb.BeaconState
@@ -117,10 +121,15 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 		var err error
 		beaconState, err = createState(enc)
+		if err != nil {
+			return err
+		}
 		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
 			db.highestBlockSlot = beaconState.Slot
 		}
-		return err
+		copy(db.serializedState, enc)
+
+		return db.currentState.Unmarshal(enc)
 	})
 
 	return beaconState, err
@@ -151,11 +160,13 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	db.currentState = currentState
 	cloneSpan.End()
 
-	stateHash, err := hashutil.HashProto(beaconState)
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
 		return err
 	}
+	stateHash := hashutil.Hash(enc)
 
+	copy(db.serializedState, enc)
 	db.stateHash = stateHash
 
 	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
