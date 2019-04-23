@@ -5,48 +5,63 @@ package ethereum.beacon.p2p.v1;
 import "proto/common/messages.proto";
 
 message BeaconState {
-  // Validator registry [1-1000]
-  repeated Validator validator_registry = 1;
-  uint64 validator_registry_update_epoch = 2;
-  repeated uint64 validator_balances = 3; // Balance in Gwei
+  // Miscellaneous [1001-2000]
+  uint64 genesis_time = 1001;
+  Fork fork = 1002;
+  uint64 slot = 1003;
 
-  // Randomness and committees [1001-2000]
-  repeated bytes latest_randao_mixes = 1004;
-  uint64 previous_shuffling_start_shard = 1005;
-  uint64 current_shuffling_start_shard = 1006;
-  uint64 previous_shuffling_epoch = 1007;
-  uint64 current_shuffling_epoch = 1008;
-  bytes previous_shuffling_seed_hash32 = 1009;
-  bytes current_shuffling_seed_hash32 = 1010;
+  // Validator registry [2001-3000]
+  repeated Validator validator_registry = 2001;
+  // Balances in Gwei
+  repeated uint64 balances = 2002;
 
-  // Finality [2001-3000]
-  uint64 previous_justified_epoch = 2001;
-  bytes previous_justified_root = 2002;
-  uint64 justified_epoch = 2003;
-  bytes justified_root = 2004;
-  uint64 justification_bitfield = 2005;
-  uint64 finalized_epoch = 2006;
-  bytes finalized_root = 2007;
+  // Randomness and committees [3001-4000]
+  repeated bytes latest_randao_mixes = 3001;
+  uint64 latest_start_shard = 3002;
 
+  // Finality [4001-5000]
+  repeated PendingAttestation previous_epoch_attestations = 4001;
+  repeated PendingAttestation current_epoch_attestations = 4002;
+  uint64 previous_justified_epoch = 4003;
+  uint64 current_justified_epoch = 4004;
+  bytes previous_justified_root = 4005;
+  bytes current_justified_root = 4006;
+  uint64 justification_bitfield = 4007;
+  uint64 finalized_epoch = 4008;
+  bytes finalized_root = 4009;
 
-  // Recent state [3001-4000]
-  repeated Crosslink latest_crosslinks = 3001;
-  repeated bytes latest_block_root_hash32s = 3003;
-  repeated bytes batched_block_root_hash32s = 3004;
-  repeated uint64 latest_slashed_balances = 3005;
-  repeated PendingAttestation latest_attestations = 3006;
-  repeated bytes latest_index_root_hash32s = 3007;
-  BeaconBlock latest_block = 3008;
+  // Recent state [5001-6000]
+  repeated Crosslink current_crosslinks = 5001;
+  repeated Crosslink previous_crosslinks = 5002;
+  repeated bytes latest_block_roots = 5003;
+  repeated bytes latest_state_roots = 5004;
+  repeated bytes latest_active_index_roots = 5005;
+  repeated uint64 latest_slashed_balances = 5006;
+  BeaconBlockHeader latest_block_header = 5007;
+  repeated bytes historical_roots = 5008;
 
-  // Ethereum 1.0 chain data [4001-5000]
-  Eth1Data latest_eth1_data = 4001;
-  repeated Eth1DataVote eth1_data_votes = 4002;
-  uint64 deposit_index = 4003;
+  // Ethereum 1.0 chain data [6001-7000]
+  Eth1Data latest_eth1_data = 6001;
+  repeated Eth1DataVote eth1_data_votes = 6002;
+  uint64 deposit_index = 6003;
 
-  // Miscellaneous [5001-6000]
-  uint64 genesis_time = 5001;
-  Fork fork = 5002;
-  uint64 slot = 5003;
+  // Deprecated [8001-9000]
+  uint64 validator_registry_update_epoch = 8001 [deprecated=true];
+  repeated uint64 validator_balances = 8002 [deprecated=true];
+  uint64 previous_shuffling_start_shard = 8003 [deprecated=true];
+  uint64 current_shuffling_start_shard = 8004 [deprecated=true];
+  uint64 previous_shuffling_epoch = 8005 [deprecated=true];
+  uint64 current_shuffling_epoch = 8006 [deprecated=true];
+  bytes previous_shuffling_seed_hash32 = 8007 [deprecated=true];
+  bytes current_shuffling_seed_hash32 = 8008 [deprecated=true];
+  uint64 justified_epoch = 8009 [deprecated=true];
+  bytes justified_root = 8010 [deprecated=true];
+  repeated bytes latest_index_root_hash32s = 8011 [deprecated=true];
+  repeated bytes latest_block_root_hash32s = 8012 [deprecated=true];
+  repeated bytes batched_block_root_hash32s = 8013 [deprecated=true];
+  repeated Crosslink latest_crosslinks = 8014 [deprecated=true];
+  repeated PendingAttestation latest_attestations = 8015 [deprecated=true];
+  BeaconBlock latest_block = 8016 [deprecated=true];
 }
 
 message Fork {
