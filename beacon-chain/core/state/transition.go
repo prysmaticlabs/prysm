@@ -4,6 +4,7 @@
 package state
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -72,7 +74,7 @@ func ExecuteStateTransition(
 
 	// Execute per epoch transition.
 	if e.CanProcessEpoch(state) {
-		state, err = ProcessEpoch(ctx, state, config)
+		state, err = ProcessEpoch(ctx, state, block, config)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not process epoch: %v", err)
@@ -195,7 +197,7 @@ func ProcessBlock(
 // 	 process_crosslink_reward_penalties(state)
 // 	 update_validator_registry(state)
 // 	 final_book_keeping(state)
-func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *TransitionConfig) (*pb.BeaconState, error) {
+func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBlock, config *TransitionConfig) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 
@@ -206,54 +208,86 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
-	// Calculate the attesting balances of validators that justified the
-	// epoch boundary block at the start of the current epoch.
-	currentEpochAttestations := e.CurrentAttestations(state)
-	currentEpochBoundaryAttestations, err := e.CurrentEpochBoundaryAttestations(state, currentEpochAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not get current boundary attestations: %v", err)
+	// We require the current epoch attestations, current epoch boundary attestations,
+	// and current boundary attesting balances for processing.
+	currentEpochAttestations := []*pb.PendingAttestation{}
+	currentEpochBoundaryAttestations := []*pb.PendingAttestation{}
+	currentBoundaryAttesterIndices := []uint64{}
+
+	// We also the previous epoch attestations, previous epoch boundary attestations,
+	// and previous boundary attesting balances for processing.
+	prevEpochAttestations := []*pb.PendingAttestation{}
+	prevEpochBoundaryAttestations := []*pb.PendingAttestation{}
+	prevEpochAttesterIndices := []uint64{}
+	prevEpochBoundaryAttesterIndices := []uint64{}
+	prevEpochHeadAttestations := []*pb.PendingAttestation{}
+	prevEpochHeadAttesterIndices := []uint64{}
+
+	for _, attestation := range state.LatestAttestations {
+
+		// We determine the attestation participants.
+		attesterIndices, err := helpers.AttestationParticipants(
+			state,
+			attestation.Data,
+			attestation.AggregationBitfield)
+		if err != nil {
+			return nil, err
+		}
+
+		// We extract the attestations from the current epoch.
+		if currentEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
+			currentEpochAttestations = append(currentEpochAttestations, attestation)
+
+			// We then extract the boundary attestations.
+			boundaryBlockRoot, err := b.BlockRoot(state, helpers.StartSlot(helpers.CurrentEpoch(state)))
+			if err != nil {
+				return nil, err
+			}
+
+			attestationData := attestation.Data
+			sameRoot := bytes.Equal(attestationData.EpochBoundaryRootHash32, boundaryBlockRoot)
+			if sameRoot {
+				currentEpochBoundaryAttestations = append(currentEpochBoundaryAttestations, attestation)
+				currentBoundaryAttesterIndices = sliceutil.Union(currentBoundaryAttesterIndices, attesterIndices)
+			}
+		}
+
+		// We extract the attestations from the previous epoch.
+		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
+			prevEpochAttestations = append(prevEpochAttestations, attestation)
+			prevEpochAttesterIndices = sliceutil.Union(prevEpochAttesterIndices, attesterIndices)
+
+			// We extract the previous epoch boundary attestations.
+			prevBoundaryBlockRoot, err := b.BlockRoot(state,
+				helpers.StartSlot(helpers.PrevEpoch(state)))
+			if err != nil {
+				return nil, err
+			}
+			if bytes.Equal(attestation.Data.EpochBoundaryRootHash32, prevBoundaryBlockRoot) {
+				prevEpochBoundaryAttestations = append(prevEpochBoundaryAttestations, attestation)
+				prevEpochBoundaryAttesterIndices = sliceutil.Union(prevEpochBoundaryAttesterIndices, attesterIndices)
+			}
+
+			// We extract the previous epoch head attestations.
+			canonicalBlockRoot, err := b.BlockRoot(state, attestation.Data.Slot)
+			if err != nil {
+				return nil, err
+			}
+
+			attestationData := attestation.Data
+			if bytes.Equal(attestationData.BeaconBlockRootHash32, canonicalBlockRoot) {
+				prevEpochHeadAttestations = append(prevEpochHeadAttestations, attestation)
+				prevEpochHeadAttesterIndices = sliceutil.Union(prevEpochHeadAttesterIndices, attesterIndices)
+			}
+		}
 	}
 
-	currentBoundaryAttesterIndices, err := v.ValidatorIndices(state, currentEpochBoundaryAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not get current boundary attester indices: %v", err)
-	}
+	// Calculate the attesting balances for previous and current epoch.
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
-
-	// Calculate the attesting balances of validators from previous epoch.
 	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, prevEpoch)
 	prevTotalBalance := e.TotalBalance(state, previousActiveValidatorIndices)
-
-	prevEpochAttestations := e.PrevAttestations(state)
-	prevEpochAttesterIndices, err := v.ValidatorIndices(state, prevEpochAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not get prev epoch attester indices: %v", err)
-	}
 	prevEpochAttestingBalance := e.TotalBalance(state, prevEpochAttesterIndices)
-
-	// Calculate the attesting balances of validator justifying epoch boundary block
-	// at the start of previous epoch.
-	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(state, prevEpochAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not get prev boundary attestations: %v", err)
-	}
-
-	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(state, prevEpochBoundaryAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not get prev boundary attester indices: %v", err)
-	}
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)
-
-	// Calculate attesting balances of validator attesting to expected beacon chain head
-	// during previous epoch.
-	prevEpochHeadAttestations, err := e.PrevHeadAttestations(state, prevEpochAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not get prev head attestations: %v", err)
-	}
-	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(state, prevEpochHeadAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not get prev head attester indices: %v", err)
-	}
 	prevEpochHeadAttestingBalances := e.TotalBalance(state, prevEpochHeadAttesterIndices)
 
 	// Process eth1 data.
@@ -262,7 +296,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	}
 
 	// Update justification and finality.
-	state, err = e.ProcessJustificationAndFinalization(
+	state, err := e.ProcessJustificationAndFinalization(
 		state,
 		currentBoundaryAttestingBalances,
 		prevEpochAttestingBalance,
@@ -400,9 +434,11 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	state = e.ProcessPrevSlotShardSeed(state)
 	state = v.ProcessPenaltiesAndExits(state)
 	if e.CanProcessValidatorRegistry(state) {
-		state, err = v.UpdateRegistry(state)
-		if err != nil {
-			return nil, fmt.Errorf("could not update validator registry: %v", err)
+		if block != nil {
+			state, err = v.UpdateRegistry(state)
+			if err != nil {
+				return nil, fmt.Errorf("could not update validator registry: %v", err)
+			}
 		}
 		state, err = e.ProcessCurrSlotShardSeed(state)
 		if err != nil {
