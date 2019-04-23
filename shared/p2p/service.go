@@ -55,10 +55,12 @@ type Server struct {
 	topicMapping  map[reflect.Type]string
 	bootstrapNode string
 	relayNodeAddr string
+	localNetwork  bool
 }
 
 // ServerConfig for peer to peer networking.
 type ServerConfig struct {
+	LocalNetwork      bool
 	BootstrapNodeAddr string
 	RelayNodeAddr     string
 	Port              int
@@ -112,6 +114,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		topicMapping:  make(map[reflect.Type]string),
 		bootstrapNode: cfg.BootstrapNodeAddr,
 		relayNodeAddr: cfg.RelayNodeAddr,
+		localNetwork:  cfg.LocalNetwork,
 	}, nil
 }
 
@@ -139,7 +142,7 @@ func (s *Server) Start() {
 	defer span.End()
 	log.Info("Starting service")
 
-	if s.bootstrapNode != "" {
+	if !s.localNetwork {
 		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
@@ -161,7 +164,11 @@ func (s *Server) Start() {
 		return
 	}
 
-	startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
+	if s.localNetwork {
+		startPeerWatcher(ctx, s.host, "", s.relayNodeAddr)
+	} else {
+		startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
+	}
 }
 
 // Stop the main p2p loop.

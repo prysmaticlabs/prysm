@@ -44,6 +44,7 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "cmd",
 		Flags: []cli.Flag{
+			cmd.LocalNetwork,
 			cmd.BootstrapNode,
 			cmd.RelayNode,
 			cmd.P2PPort,
