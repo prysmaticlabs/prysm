@@ -70,19 +70,42 @@ message Attestation {
 }
 
 message AttestationData {
+  // LMD GHOST vote
   uint64 slot = 1;
-  uint64 shard = 2;
-  bytes beacon_block_root_hash32 = 3;
-  bytes epoch_boundary_root_hash32  = 4;
-  bytes crosslink_data_root_hash32 = 5;
-  Crosslink latest_crosslink = 6;
-  uint64 justified_epoch = 7;
-  bytes justified_block_root_hash32 = 8;
+  bytes beacon_block_root = 2;
+
+  // FFG vote
+  uint64 source_epoch = 3;
+  uint64 source_root = 4;
+  uint64 target_root = 5;
+
+  // Crosslink vote
+  uint64 shard = 6;
+  bytes previous_crosslink_root = 7;
+  bytes crosslink_data_root = 8;
+
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  bytes epoch_boundary_root_hash32 = 1000 [deprecated=true];
+  Crosslink latest_crosslink = 1001 [deprecated=true];
+  uint64 justified_epoch = 1002 [deprecated=true];
+  bytes justified_block_root_hash32 = 1003 [deprecated=true];
+  bytes beacon_block_root_hash32 = 1004 [deprecated=true];
+  bytes crosslink_data_root_hash32 = 1005 [deprecated=true];
 }
 
 message AttestationDataAndCustodyBit {
   AttestationData data = 1;
   bool custody_bit = 2;
+}
+
+message IndexedAttestation {
+  // Validator indices
+  repeated uint64 custody_bit_0_indices = 1;
+  repeated uint64 custody_bit_1_indices = 2;
+  AttestationData data = 3;
+  // Aggregate signature
+  bytes signature = 4; // bytes96
 }
 
 message Validator {
