@@ -340,7 +340,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_secio",
     build_file_proto_mode = "disable_global",
-    commit = "c3eee8a92db23bd65c434512810c60bec85e7ac9",  # v0.0.1
+    commit = "12fd3dc7263b2586ec159c3961e75b8acc98c50a",  # v0.0.2
     importpath = "github.com/libp2p/go-libp2p-secio",
 )
 
@@ -376,7 +376,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_nat",
-    commit = "3efa307896b71a07705d8d0cf7f19a4595c62d4f",  # v0.0.2
+    commit = "7790752804f5e7c2356fed9352686f1e45939459",  # v0.0.4
     importpath = "github.com/libp2p/go-libp2p-nat",
 )
 
@@ -532,7 +532,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_msgio",
-    commit = "2efd92d62d528c56c6711346e82df0c74a5742a8",  # v0.0.1
+    commit = "d166a44c787c5308c27c8dae8b75dc7b182752b7",  # v0.0.2
     importpath = "github.com/libp2p/go-msgio",
 )
 
