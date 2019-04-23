@@ -57,7 +57,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
 			}).Info("Net gains/losses in eth")
 		}
-<<<<<<< HEAD
 	var totalPrevBalance uint64
 	reported := false
 	for _, pkey := range v.pubkeys {
@@ -106,8 +105,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			}
 		}
 		totalPrevBalance += resp.Balance
-=======
->>>>>>> 12673481ef71be911583e29f694a63fbc3c4039f
 	}
 
 	v.prevBalance = totalPrevBalance
