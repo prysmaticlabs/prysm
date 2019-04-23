@@ -30,7 +30,6 @@ type FeatureFlagConfig struct {
 	EnableCrosslinks             bool // EnableCrosslinks in epoch processing.
 	EnableCheckBlockStateRoot    bool // EnableCheckBlockStateRoot in block processing.
 	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updating finalized states.
-	EnableBlockAncestorCache     bool //EnableBlockAncestorCache for fork choice optimization.
 	DisableGossipSub             bool // DisableGossipSub in p2p messaging.
 }
 
@@ -72,10 +71,6 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableHistoricalStatePruningFlag.Name) {
 		log.Info("Enabled historical state pruning")
 		cfg.EnableHistoricalStatePruning = true
-	}
-	if ctx.GlobalBool(EnableBlockAncestorCacheFlag.Name) {
-		log.Info("Enabled block ancestor cache")
-		cfg.EnableBlockAncestorCache = true
 	}
 	if ctx.GlobalBool(DisableGossipSubFlag.Name) {
 		log.Info("Disabled gossipsub, using floodsub")

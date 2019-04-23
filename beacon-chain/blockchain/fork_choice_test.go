@@ -20,7 +20,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -1443,10 +1442,6 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 }
 
 func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableBlockAncestorCache: true,
-	})
-
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
@@ -1514,10 +1509,6 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 }
 
 func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableBlockAncestorCache: true,
-	})
-
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
