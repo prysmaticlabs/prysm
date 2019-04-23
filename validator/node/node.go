@@ -91,6 +91,7 @@ func (s *ValidatorClient) Start() {
 		defer signal.Stop(sigc)
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
+		debug.Exit(s.ctx) // Ensure trace and CPU profile data are flushed.
 		go s.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
@@ -98,7 +99,6 @@ func (s *ValidatorClient) Start() {
 				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
-		debug.Exit(s.ctx) // Ensure trace and CPU profile data are flushed.
 		panic("Panic closing the sharding validator")
 	}()
 
