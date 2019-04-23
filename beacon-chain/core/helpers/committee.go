@@ -448,20 +448,6 @@ func CommitteeAssignment(
 	return []uint64{}, 0, 0, false, status.Error(codes.NotFound, "validator not found found in assignments")
 }
 
-// ShardDelta returns the minimum number of shards get processed in one epoch.
-//
-// Spec pseudocode definition:
-// 	def get_shard_delta(state: BeaconState, epoch: Epoch) -> int:
-//    return min(get_epoch_committee_count(state, epoch), SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH)
-func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
-	shardCount := params.BeaconConfig().ShardCount
-	minShardDelta := shardCount - shardCount/params.BeaconConfig().SlotsPerEpoch
-	if EpochCommitteeCount(beaconState, epoch) < minShardDelta {
-		return EpochCommitteeCount(beaconState, epoch)
-	}
-	return minShardDelta
-}
-
 // prevEpochCommitteesAtSlot returns a list of crosslink committees of the previous epoch.
 //
 // Spec pseudocode definition:
