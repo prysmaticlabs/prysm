@@ -144,6 +144,35 @@ func TestNextEpochCommitteeCount_OK(t *testing.T) {
 	}
 }
 
+func TestShardDelta_OK(t *testing.T) {
+	minShardDelta := params.BeaconConfig().ShardCount -
+		params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
+	tests := []struct {
+		validatorCount uint64
+		shardCount     uint64
+	}{
+		{0, params.BeaconConfig().SlotsPerEpoch},
+		{1000, params.BeaconConfig().SlotsPerEpoch},
+		{100000, 768 /*len(active_validators) // TARGET_COMMITTEE_SIZE*/},
+		{500000, minShardDelta},
+	}
+	for _, test := range tests {
+		vals := make([]*pb.Validator, test.validatorCount)
+		for i := 0; i < len(vals); i++ {
+			vals[i] = &pb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+		s := &pb.BeaconState{
+			ValidatorRegistry: vals,
+		}
+		if test.shardCount != ShardDelta(s, 1) {
+			t.Errorf("wanted: %d, got: %d",
+				test.shardCount, ShardDelta(s, 1))
+		}
+	}
+}
+
 func TestShuffling_OK(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(6)
