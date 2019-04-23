@@ -2,12 +2,12 @@
 package utils
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -123,7 +123,7 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 		buf[hSeedSize] = round
 		hash := hashutil.Hash(buf[:hPivotViewSize])
 		hash8 := hash[:8]
-		pivot := BytesToInt(hash8) % listSize
+		pivot := bytesutil.FromBytes8(hash8) % listSize
 		flip := (pivot - index) % listSize
 		// spec: position = max(index, flip)
 		// Why? Don't do double work: we consider every pair only once.
@@ -138,7 +138,7 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 		// - round number is still in 32
 		// - mix in the position for randomness, except the last byte of it,
 		//     which will be used later to select a bit from the resulting hash.
-		p4b := IntToBytes4(position >> 8)
+		p4b := bytesutil.Bytes4(position >> 8)
 		copy(buf[hPivotViewSize:], p4b[:])
 		source := hashutil.Hash(buf)
 		// spec: byte = source[(position % 256) // 8]
@@ -155,84 +155,4 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 
 	}
 	return index, nil
-}
-
-// BytesToInt returns the uint64 representation of a byte slice.
-//
-// Spec pseudocode definition:
-// def bytes_to_int(data: bytes) -> int:
-//     return int.from_bytes(data, 'little')
-func BytesToInt(data []byte) uint64 {
-	return binary.LittleEndian.Uint64(data)
-}
-
-// IntToBytes1 returns the byte little endian representation of an uint64.
-// int_to_bytes1(x): return x.to_bytes(1, 'little')
-func IntToBytes1(x uint64) byte {
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, x)
-	return b[0]
-}
-
-// IntToBytes2 returns the 2 bytes little endian representation of an uint64.
-func IntToBytes2(x uint64) [2]byte {
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, x)
-	var arr [2]byte
-	copy(arr[:], b[:2])
-	return arr
-}
-
-// IntToBytes3 returns the 3 bytes little endian representation of an uint64.
-func IntToBytes3(x uint64) [3]byte {
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, x)
-	var arr [3]byte
-	copy(arr[:], b[:3])
-	return arr
-}
-
-// IntToBytes4 returns the 4 bytes little endian representation of an uint64.
-func IntToBytes4(x uint64) [4]byte {
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, x)
-	var arr [4]byte
-	copy(arr[:], b[:4])
-	return arr
-}
-
-// IntToBytes8 returns the 8 bytes little endian representation of an uint64.
-func IntToBytes8(x uint64) [8]byte {
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, x)
-	var arr [8]byte
-	copy(arr[:], b[:8])
-	return arr
-}
-
-// IntToBytes32 returns the 4 bytes little endian representation of an uint64.
-func IntToBytes32(x uint64) [32]byte {
-	b := make([]byte, 32)
-	binary.LittleEndian.PutUint64(b, x)
-	var arr [32]byte
-	copy(arr[:], b[:32])
-	return arr
-}
-
-// IntToBytes48 returns the 4 bytes little endian representation of an uint64.
-func IntToBytes48(x uint64) [48]byte {
-	b := make([]byte, 48)
-	binary.LittleEndian.PutUint64(b, x)
-	var arr [48]byte
-	copy(arr[:], b[:48])
-	return arr
-}
-
-// IntToBytes96 returns the 4 bytes little endian representation of an uint64.
-func IntToBytes96(x uint64) [96]byte {
-	b := make([]byte, 96)
-	binary.LittleEndian.PutUint64(b, x)
-	var arr [96]byte
-	copy(arr[:], b[:96])
-	return arr
 }
