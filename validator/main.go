@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -25,18 +24,31 @@ import (
 func startNode(ctx *cli.Context) error {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(types.PasswordFlag.Name)
-	if keystorePassword == "" {
-		logrus.Info("Enter your validator account password:")
-		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-		if err != nil {
-			logrus.Fatalf("Could not read account password: %v", err)
-		}
-		text := string(bytePassword)
-		keystorePassword = strings.Replace(text, "\n", "", -1)
-	}
 
-	if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
-		return errors.New("no account found, use `validator accounts create` to generate a new keystore")
+	exists, err := accounts.Exists(keystoreDirectory)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	if !exists {
+		// If an account does not exist, we create a new one and start the node.
+		keystoreDirectory, keystorePassword, err = createValidatorAccount(ctx)
+		if err != nil {
+			logrus.Fatalf("Could not create validator account: %v", err)
+		}
+	} else {
+		if keystorePassword == "" {
+			logrus.Info("Enter your validator account password:")
+			bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				logrus.Fatalf("Could not read account password: %v", err)
+			}
+			text := string(bytePassword)
+			keystorePassword = strings.Replace(text, "\n", "", -1)
+		}
+
+		if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
+			logrus.Info("No account found, creating new validator account...")
+		}
 	}
 
 	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
@@ -55,7 +67,7 @@ func startNode(ctx *cli.Context) error {
 	return nil
 }
 
-func createValidatorAccount(ctx *cli.Context) error {
+func createValidatorAccount(ctx *cli.Context) (string, string, error) {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(types.PasswordFlag.Name)
 	if keystorePassword == "" {
@@ -77,9 +89,9 @@ func createValidatorAccount(ctx *cli.Context) error {
 	}
 
 	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
-		return fmt.Errorf("could not initialize validator account: %v", err)
+		return "", "", fmt.Errorf("could not initialize validator account: %v", err)
 	}
-	return nil
+	return keystoreDirectory, keystorePassword, nil
 }
 
 func main() {
