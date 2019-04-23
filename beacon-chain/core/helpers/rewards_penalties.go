@@ -11,25 +11,25 @@ import (
 // but they can be slashed at most MAX_DEPOSIT at any time.
 //
 // Spec pseudocode definition:
-//   def get_effective_balance(state: State, index: int) -> int:
-//     """
-//     Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
-//     """
-//     return min(state.validator_balances[idx], MAX_DEPOSIT)
+//   def get_effective_balance(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//    """
+//    Return the effective balance (also known as "balance at stake") for a validator with the given ``index``.
+//    """
+//    return min(get_balance(state, index), MAX_DEPOSIT_AMOUNT)
 func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
-	if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
+	if state.Balances[idx] > params.BeaconConfig().MaxDepositAmount {
 		return params.BeaconConfig().MaxDepositAmount
 	}
-	return state.ValidatorBalances[idx]
+	return state.Balances[idx]
 }
 
-// TotalBalance returns the total deposited amount at stake in Gwei
+// TotalBalance returns the total amount at stake in Gwei
 // of all active validators.
 //
 // Spec pseudocode definition:
 //   def get_total_balance(state: BeaconState, validators: List[ValidatorIndex]) -> Gwei:
 //    """
-//    Return the combined effective balance of an array of validators.
+//    Return the combined effective balance of an array of ``validators``.
 //    """
 //    return sum([get_effective_balance(state, i) for i in validators])
 func TotalBalance(state *pb.BeaconState, validators []uint64) uint64 {

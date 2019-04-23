@@ -364,7 +364,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:     validators,
 		Slot:                  currentSlot,
-		ValidatorBalances:     validatorBalances,
+		Balances:     validatorBalances,
 		LatestSlashedBalances: []uint64{0},
 	}
 	block := &pb.BeaconBlock{
@@ -642,7 +642,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:     validators,
 		Slot:                  currentSlot,
-		ValidatorBalances:     validatorBalances,
+		Balances:     validatorBalances,
 		LatestSlashedBalances: make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
 	block := &pb.BeaconBlock{
@@ -1172,7 +1172,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
-		ValidatorBalances: balances,
+		Balances: balances,
 		LatestEth1Data: &pb.Eth1Data{
 			DepositRootHash32: root[:],
 			BlockHash32:       root[:],
@@ -1245,7 +1245,7 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	balances := []uint64{0}
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
-		ValidatorBalances: balances,
+		Balances: balances,
 		Slot:              currentSlot,
 		GenesisTime:       uint64(genesisTime),
 	}
@@ -1325,7 +1325,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
-		ValidatorBalances: balances,
+		Balances: balances,
 		LatestEth1Data: &pb.Eth1Data{
 			DepositRootHash32: root[:],
 			BlockHash32:       root[:],
@@ -1341,11 +1341,11 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
-	if newState.ValidatorBalances[0] != depositValue {
+	if newState.Balances[0] != depositValue {
 		t.Errorf(
 			"Expected state validator balances index 0 to equal %d, received %d",
 			depositValue,
-			newState.ValidatorBalances[0],
+			newState.Balances[0],
 		)
 	}
 }

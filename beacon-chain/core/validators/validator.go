@@ -127,7 +127,7 @@ func ProcessDeposit(
 			WithdrawalCredentialsHash32: withdrawalCredentials,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
-		state.ValidatorBalances = append(state.ValidatorBalances, amount)
+		state.Balances = append(state.Balances, amount)
 	} else {
 		if !bytes.Equal(
 			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
@@ -139,7 +139,7 @@ func ProcessDeposit(
 				withdrawalCredentials,
 			)
 		}
-		state.ValidatorBalances[existingValidatorIdx] += amount
+		state.Balances[existingValidatorIdx] += amount
 	}
 	return state, nil
 }
@@ -250,8 +250,8 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 	whistleblowerReward := helpers.EffectiveBalance(state, idx) /
 		params.BeaconConfig().WhistleBlowingRewardQuotient
 
-	state.ValidatorBalances[whistleblowerIdx] += whistleblowerReward
-	state.ValidatorBalances[idx] -= whistleblowerReward
+	state.Balances[whistleblowerIdx] += whistleblowerReward
+	state.Balances[idx] -= whistleblowerReward
 
 	state.ValidatorRegistry[idx].SlashedEpoch = helpers.CurrentEpoch(state) + params.BeaconConfig().LatestSlashedExitLength
 	return state, nil
@@ -320,7 +320,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
-			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount &&
+			state.Balances[idx] >= params.BeaconConfig().MaxDepositAmount &&
 			!helpers.IsActiveValidator(validator, currentEpoch) {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			log.WithFields(logrus.Fields{
@@ -423,7 +423,7 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 			}
 			penalty := helpers.EffectiveBalance(state, uint64(idx)) *
 				penaltyMultiplier / totalBalance
-			state.ValidatorBalances[idx] -= penalty
+			state.Balances[idx] -= penalty
 		}
 	}
 	allIndices := allValidatorsIndices(state)
