@@ -55,12 +55,12 @@ type Server struct {
 	topicMapping  map[reflect.Type]string
 	bootstrapNode string
 	relayNodeAddr string
-	noDiscovery  bool
+	noDiscovery   bool
 }
 
 // ServerConfig for peer to peer networking.
 type ServerConfig struct {
-	NoDiscovery      bool
+	NoDiscovery       bool
 	BootstrapNodeAddr string
 	RelayNodeAddr     string
 	Port              int
@@ -114,7 +114,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		topicMapping:  make(map[reflect.Type]string),
 		bootstrapNode: cfg.BootstrapNodeAddr,
 		relayNodeAddr: cfg.RelayNodeAddr,
-		noDiscovery:  cfg.NoDiscovery,
+		noDiscovery:   cfg.NoDiscovery,
 	}, nil
 }
 
@@ -142,7 +142,7 @@ func (s *Server) Start() {
 	defer span.End()
 	log.Info("Starting service")
 
-	if !s.noDiscovery {
+	if !s.noDiscovery && s.bootstrapNode != "" {
 		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
