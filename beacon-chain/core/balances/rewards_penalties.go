@@ -139,9 +139,9 @@ func InclusionDistance(
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range attesterIndices {
-		inclusionDistance, err := epoch.InclusionDistance(state, index)
+		inclusionDistance, err := blocks.AttsInclusionDistance(index)
 		if err != nil {
-			return nil, fmt.Errorf("could not get inclusion distance: %v", err)
+			return nil, err
 		}
 		if inclusionDistance == 0 {
 			return nil, errors.New("could not process inclusion distance: 0")
@@ -266,9 +266,9 @@ func InactivityInclusionDistance(
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range attesterIndices {
-		inclusionDistance, err := epoch.InclusionDistance(state, index)
+		inclusionDistance, err := blocks.AttsInclusionDistance(index)
 		if err != nil {
-			return nil, fmt.Errorf("could not get inclusion distance: %v", err)
+			return nil, err
 		}
 		baseReward := helpers.BaseReward(state, index, baseRewardQuotient)
 		state.ValidatorBalances[index] -= baseReward -
