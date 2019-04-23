@@ -251,7 +251,7 @@ func ProcessCrosslinks(
 //        if state.validator_balances[index] < EJECTION_BALANCE:
 //            exit_validator(state, index)
 func ProcessEjections(state *pb.BeaconState, enableLogging bool) (*pb.BeaconState, error) {
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalance {
 			if enableLogging {
@@ -346,7 +346,7 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 // 	next_epoch + ACTIVATION_EXIT_DELAY))
 func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
-	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
+	validatorIndices := helpers.ActiveValidatorIndices(state, nextEpoch)
 	indicesBytes := []byte{}
 	for _, val := range validatorIndices {
 		buf := make([]byte, 8)
