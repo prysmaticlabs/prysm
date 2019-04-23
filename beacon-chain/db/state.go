@@ -392,7 +392,7 @@ func (db *BeaconDB) ValidatorBalances(ctx context.Context) ([]uint64, error) {
 		return err
 	})
 
-	return beaconState.ValidatorBalances, err
+	return beaconState.Balances, err
 }
 
 func createState(enc []byte) (*pb.BeaconState, error) {
