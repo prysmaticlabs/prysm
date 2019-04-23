@@ -140,10 +140,16 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 
-	attestation := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+	attestations := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{
+			Slot:                     params.BeaconConfig().GenesisSlot,
+			JustifiedBlockRootHash32: []byte{},
+			Shard:                    0,
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+		},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       params.BeaconConfig().GenesisSlot + 5},
+			InclusionSlot:       params.BeaconConfig().GenesisSlot + 5,
+		},
 	}
 
 	tests := []struct {
@@ -158,10 +164,29 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
 		state := &pb.BeaconState{
-			Slot:               params.BeaconConfig().GenesisSlot,
-			ValidatorRegistry:  validators,
-			ValidatorBalances:  validatorBalances,
-			LatestAttestations: attestation,
+			Slot:                  params.BeaconConfig().GenesisSlot + 5,
+			ValidatorRegistry:     validators,
+			ValidatorBalances:     validatorBalances,
+			LatestAttestations:    attestations,
+			PreviousJustifiedRoot: []byte{},
+			LatestCrosslinks: []*pb.Crosslink{
+				{
+					CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+					Epoch:                   params.BeaconConfig().GenesisEpoch,
+				},
+			},
+		}
+		block := &pb.BeaconBlock{
+			Body: &pb.BeaconBlockBody{
+				Attestations: []*pb.Attestation{
+					{
+						Data: attestations[0].Data,
+					},
+				},
+			},
+		}
+		if _, err := blocks.ProcessBlockAttestations(state, block, false /* verify sig */); err != nil {
+			t.Fatal(err)
 		}
 		state, err := InclusionDistance(
 			state,
