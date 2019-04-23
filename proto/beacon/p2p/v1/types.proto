@@ -47,7 +47,6 @@ message BeaconState {
 
   // Deprecated [8001-9000]
   uint64 validator_registry_update_epoch = 8001 [deprecated=true];
-  repeated uint64 validator_balances = 8002 [deprecated=true];
   uint64 previous_shuffling_start_shard = 8003 [deprecated=true];
   uint64 current_shuffling_start_shard = 8004 [deprecated=true];
   uint64 previous_shuffling_epoch = 8005 [deprecated=true];

@@ -179,7 +179,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorBalances: []uint64{1e9, 1e9}}
+	beaconState := &pb.BeaconState{Balances: []uint64{1e9, 1e9}}
 	voteTargets := make(map[uint64]*pb.BeaconBlock)
 	voteTargets[0] = potentialHead
 	voteTargets[1] = potentialHead2
@@ -452,7 +452,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot:              10,
-		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
+		Balances: []uint64{params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{{}},
 	}
 
@@ -507,7 +507,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
-		ValidatorBalances: []uint64{
+		Balances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
@@ -592,7 +592,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
-		ValidatorBalances: []uint64{
+		Balances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
@@ -723,7 +723,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	epochLength := uint64(8)
 	beaconState := &pb.BeaconState{
 		Slot:              epochLength,
-		ValidatorBalances: balances,
+		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
 		Slot:             0,
@@ -794,7 +794,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	epochLength := uint64(8)
 	beaconState := &pb.BeaconState{
 		Slot:              epochLength,
-		ValidatorBalances: balances,
+		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
 		Slot:             0,
@@ -863,7 +863,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	epochLength := uint64(32)
 	beaconState := &pb.BeaconState{
 		Slot:              epochLength,
-		ValidatorBalances: balances,
+		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
 		Slot:             0,
@@ -932,7 +932,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	epochLength := uint64(64)
 	beaconState := &pb.BeaconState{
 		Slot:              epochLength,
-		ValidatorBalances: balances,
+		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
 		Slot:             0,
@@ -1310,7 +1310,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 		LatestCrosslinks:       crosslinks,
 		ValidatorRegistry:      validatorRegistry,
-		ValidatorBalances:      validatorBalances,
+		Balances:      validatorBalances,
 		LatestBlock:            gBlock,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -1352,7 +1352,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorBalances: []uint64{1e9, 1e9}}
+	beaconState := &pb.BeaconState{Balances: []uint64{1e9, 1e9}}
 	voteTargets := make(map[uint64]*pb.BeaconBlock)
 	voteTargets[0] = potentialHead
 	voteTargets[1] = potentialHead2
@@ -1399,7 +1399,7 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 	}
 	pHeadHash2, _ := hashutil.HashBeaconBlock(potentialHead2)
 
-	beaconState := &pb.BeaconState{ValidatorBalances: []uint64{1e9, 1e9}}
+	beaconState := &pb.BeaconState{Balances: []uint64{1e9, 1e9}}
 	voteTargets := make(map[uint64]*pb.BeaconBlock)
 	voteTargets[0] = potentialHead
 	voteTargets[1] = potentialHead2

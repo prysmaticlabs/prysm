@@ -45,7 +45,7 @@ func TestBaseReward_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{
-			ValidatorBalances: []uint64{tt.a},
+			Balances: []uint64{tt.a},
 		}
 		// Assume 10M Eth staked (base reward quotient: 3237888).
 		b := BaseReward(state, 0, 3237888)
@@ -69,7 +69,7 @@ func TestInactivityPenalty_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{
-			ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
+			Balances: []uint64{params.BeaconConfig().MaxDepositAmount},
 		}
 		// Assume 10 ETH staked (base reward quotient: 3237888).
 		b := InactivityPenalty(state, 0, 3237888, tt.a)
@@ -94,7 +94,7 @@ func TestEffectiveBalance_OK(t *testing.T) {
 		{a: defaultBalance * 100, b: defaultBalance},
 	}
 	for _, test := range tests {
-		state := &pb.BeaconState{ValidatorBalances: []uint64{test.a}}
+		state := &pb.BeaconState{Balances: []uint64{test.a}}
 		if EffectiveBalance(state, 0) != test.b {
 			t.Errorf("EffectiveBalance(%d) = %d, want = %d", test.a, EffectiveBalance(state, 0), test.b)
 		}
@@ -102,7 +102,7 @@ func TestEffectiveBalance_OK(t *testing.T) {
 }
 
 func TestTotalBalance_OK(t *testing.T) {
-	state := &pb.BeaconState{ValidatorBalances: []uint64{
+	state := &pb.BeaconState{Balances: []uint64{
 		27 * 1e9, 28 * 1e9, 32 * 1e9, 40 * 1e9,
 	}}
 

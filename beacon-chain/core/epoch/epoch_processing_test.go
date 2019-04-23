@@ -340,7 +340,7 @@ func TestProcessCrosslinks_NoParticipantsBitField(t *testing.T) {
 func TestProcessEjections_EjectsAtCorrectSlot(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1,
-		ValidatorBalances: []uint64{
+		Balances: []uint64{
 			params.BeaconConfig().EjectionBalance - 1,
 			params.BeaconConfig().EjectionBalance + 1},
 		LatestSlashedBalances: []uint64{0},
