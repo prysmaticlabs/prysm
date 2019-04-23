@@ -142,7 +142,7 @@ func (s *Server) Start() {
 	defer span.End()
 	log.Info("Starting service")
 
-	if !s.localNetwork {
+	if !s.localNetwork && s.bootstrapNode != "" {
 		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
