@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -26,7 +27,12 @@ import (
 var _ = BlockProcessor(&ChainService{})
 
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
-	beaconState, err := chainService.beaconDB.HistoricalStateFromSlot(context.Background(), block.Slot-1)
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parent, err := chainService.beaconDB.Block(parentRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState, err := chainService.beaconDB.HistoricalStateFromSlot(context.Background(), parent.Slot)
 	if err != nil {
 		t.Fatalf("Unable to retrieve state %v", err)
 	}
@@ -110,12 +116,19 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	if err := db.SaveFinalizedState(beaconState); err != nil {
+	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save block to db: %v", err)
+	}
+	parentHash, err := hashutil.HashBeaconBlock(genesis)
+	if err != nil {
+		t.Fatalf("Unable to get tree hash root of canonical head: %v", err)
+	}
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -154,6 +167,141 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
+func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, _ := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("Could not tree hash state: %v", err)
+	}
+
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
+	block := &pb.BeaconBlock{
+		Slot:             beaconState.Slot + 4,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		RandaoReveal:     []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
+		Body: &pb.BeaconBlockBody{
+			Attestations: nil,
+		},
+	}
+	initBlockStateRoot(t, block, chainService)
+	if err := chainService.beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
+		t.Errorf("Block failed processing: %v", err)
+	}
+	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
+}
+
+func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: false,
+	})
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, _ := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("Could not tree hash state: %v", err)
+	}
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.Slot++
+
+	block := &pb.BeaconBlock{
+		Slot:             beaconState.Slot,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		RandaoReveal:     []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{
+				{
+					Data: &pb.AttestationData{
+						JustifiedEpoch: params.BeaconConfig().GenesisSlot * 100,
+					},
+				},
+			},
+		},
+	}
+
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = chainService.ReceiveBlock(context.Background(), block)
+	switch err.(type) {
+	case *BlockFailedProcessingErr:
+		t.Log("Block failed processing as expected")
+	default:
+		t.Errorf("Unexpected block processing error: %v", err)
+	}
+
+	savedBlock, err := db.Block(blockRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if savedBlock != nil {
+		t.Errorf("Expected bad block to have been deleted, received: %v", savedBlock)
+	}
+	// We also verify the block has been blacklisted.
+	if !db.IsEvilBlockHash(blockRoot) {
+		t.Error("Expected block root to have been blacklisted")
+	}
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: true,
+	})
+}
+
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
@@ -173,7 +321,9 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
 	beaconState.Slot++
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
@@ -214,6 +364,9 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		t.Fatal(err)
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
 	beaconState.Slot++
@@ -611,8 +764,8 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(2)
-	v.InsertActivatedVal(epoch, []uint64{0, 1, 2})
-	v.InsertExitedVal(epoch, []uint64{0, 2})
+	v.InsertActivatedVal(epoch+1, []uint64{0, 1, 2})
+	v.InsertExitedVal(epoch+1, []uint64{0, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -654,7 +807,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(1)
-	v.InsertActivatedVal(epoch, []uint64{0, 1, 2})
+	v.InsertActivatedVal(epoch+1, []uint64{0, 1, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)

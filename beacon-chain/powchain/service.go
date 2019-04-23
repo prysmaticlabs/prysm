@@ -79,6 +79,7 @@ type Web3Service struct {
 	chainStartFeed          *event.Feed
 	reader                  Reader
 	logger                  bind.ContractFilterer
+	httpLogger              bind.ContractFilterer
 	blockFetcher            POWBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
@@ -104,6 +105,7 @@ type Web3ServiceConfig struct {
 	Client          Client
 	Reader          Reader
 	Logger          bind.ContractFilterer
+	HTTPLogger      bind.ContractFilterer
 	BlockFetcher    POWBlockFetcher
 	ContractBackend bind.ContractBackend
 	BeaconDB        *db.BeaconDB
@@ -127,6 +129,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	ctx, cancel := context.WithCancel(ctx)
 	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{{}}, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("could not setup deposit trie: %v", err)
 	}
 	return &Web3Service{
@@ -143,6 +146,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		depositTrie:             depositTrie,
 		reader:                  config.Reader,
 		logger:                  config.Logger,
+		httpLogger:              config.HTTPLogger,
 		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      [][]byte{},

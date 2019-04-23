@@ -19,8 +19,8 @@ go_test(
     srcs = ["rewards_penalties_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core/blocks:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
     ],
 )

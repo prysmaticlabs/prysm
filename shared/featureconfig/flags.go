@@ -25,11 +25,6 @@ var (
 		Name:  "enable-crosslinks",
 		Usage: "Enable crosslinks in epoch processing, default is disabled.",
 	}
-	// EnableCommitteesCacheFlag enables crosslink committees cache for state transition. It is disabled by default.
-	EnableCommitteesCacheFlag = cli.BoolFlag{
-		Name:  "enable-committees-cache",
-		Usage: "Enable crosslink committees cache for state transition, default is disabled.",
-	}
 	// EnableCheckBlockStateRootFlag check block state root in block processing. It is disabled by default.
 	EnableCheckBlockStateRootFlag = cli.BoolFlag{
 		Name:  "enable-check-block-state-root",
@@ -40,6 +35,11 @@ var (
 		Name:  "enable-historical-state-pruning",
 		Usage: "Enable database pruning of historical states after finalized epochs",
 	}
+	// DisableGossipSubFlag uses floodsub in place of gossipsub.
+	DisableGossipSubFlag = cli.BoolFlag{
+		Name:  "disable-gossip-sub",
+		Usage: "Disable gossip sub messaging and use floodsub messaging",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -49,7 +49,7 @@ var ValidatorFlags = []cli.Flag{}
 var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
-	EnableCommitteesCacheFlag,
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
+	DisableGossipSubFlag,
 }
