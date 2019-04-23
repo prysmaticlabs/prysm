@@ -51,6 +51,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableCrosslinksFlag,
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
-	EnableBlockAncestorCacheFlag,
 	DisableGossipSubFlag,
 }
