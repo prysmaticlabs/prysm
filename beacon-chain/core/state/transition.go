@@ -331,7 +331,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			prevEpochAttestingBalance,
 			totalBalance)
 		if config.Logging {
-			log.WithField("balances", state.ValidatorBalances).Debug("Balance after FFG src calculation")
+			log.WithField("balances", state.Balances).Debug("Balance after FFG src calculation")
 		}
 		// Apply rewards/penalties to validators for attesting
 		// expected FFG target.
@@ -341,7 +341,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			prevEpochBoundaryAttestingBalances,
 			totalBalance)
 		if config.Logging {
-			log.WithField("balances", state.ValidatorBalances).Debug("Balance after FFG target calculation")
+			log.WithField("balances", state.Balances).Debug("Balance after FFG target calculation")
 		}
 		// Apply rewards/penalties to validators for attesting
 		// expected beacon chain head.
@@ -351,7 +351,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			prevEpochHeadAttestingBalances,
 			totalBalance)
 		if config.Logging {
-			log.WithField("balances", state.ValidatorBalances).Debug("Balance after chain head calculation")
+			log.WithField("balances", state.Balances).Debug("Balance after chain head calculation")
 		}
 		// Apply rewards for to validators for including attestations
 		// based on inclusion distance.
@@ -363,7 +363,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			return nil, fmt.Errorf("could not calculate inclusion dist rewards: %v", err)
 		}
 		if config.Logging {
-			log.WithField("balances", state.ValidatorBalances).Debug("Balance after inclusion distance calculation")
+			log.WithField("balances", state.Balances).Debug("Balance after inclusion distance calculation")
 		}
 
 	case epochsSinceFinality > 4:
@@ -497,9 +497,9 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			"numValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
 		totalBalance := float32(0)
-		lowestBalance := float32(state.ValidatorBalances[0])
-		highestBalance := float32(state.ValidatorBalances[0])
-		for _, val := range state.ValidatorBalances {
+		lowestBalance := float32(state.Balances[0])
+		highestBalance := float32(state.Balances[0])
+		for _, val := range state.Balances {
 			if float32(val) < lowestBalance {
 				lowestBalance = float32(val)
 			}
@@ -508,7 +508,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			}
 			totalBalance += float32(val)
 		}
-		avgBalance := totalBalance / float32(len(state.ValidatorBalances)) / float32(params.BeaconConfig().GweiPerEth)
+		avgBalance := totalBalance / float32(len(state.Balances)) / float32(params.BeaconConfig().GweiPerEth)
 		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
 		highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
 		log.WithFields(logrus.Fields{

@@ -371,8 +371,8 @@ func (db *BeaconDB) ValidatorBalances(ctx context.Context) ([]uint64, error) {
 	if db.currentState != nil {
 		_, span := trace.StartSpan(ctx, "proto.Clone.ValidatorRegistry")
 		defer span.End()
-		newBalances := make([]uint64, len(db.currentState.ValidatorBalances))
-		copy(newBalances, db.currentState.ValidatorBalances)
+		newBalances := make([]uint64, len(db.currentState.Balances))
+		copy(newBalances, db.currentState.Balances)
 		return newBalances, nil
 	}
 
@@ -392,7 +392,7 @@ func (db *BeaconDB) ValidatorBalances(ctx context.Context) ([]uint64, error) {
 		return err
 	})
 
-	return beaconState.ValidatorBalances, err
+	return beaconState.Balances, err
 }
 
 func createState(enc []byte) (*pb.BeaconState, error) {

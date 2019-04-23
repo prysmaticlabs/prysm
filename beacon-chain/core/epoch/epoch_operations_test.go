@@ -25,7 +25,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	}
 	return &pb.BeaconState{
 		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
+		Balances: validatorBalances,
 		Slot:              slot,
 	}
 }
@@ -191,7 +191,7 @@ func TestTotalBalance_CorrectBalance(t *testing.T) {
 	// Assign validators to different balances.
 	state := &pb.BeaconState{
 		Slot: 5,
-		ValidatorBalances: []uint64{20 * 1e9, 25 * 1e9, 30 * 1e9, 30 * 1e9,
+		Balances: []uint64{20 * 1e9, 25 * 1e9, 30 * 1e9, 30 * 1e9,
 			32 * 1e9, 34 * 1e9, 50 * 1e9, 50 * 1e9},
 	}
 

@@ -221,7 +221,7 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 	}
 	balances := []uint64{0, 0}
 	beaconState := &pb.BeaconState{
-		ValidatorBalances: balances,
+		Balances:          balances,
 		ValidatorRegistry: registry,
 	}
 	pubkey := []byte{7, 8, 9}
@@ -240,8 +240,8 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if newState.ValidatorBalances[2] != 1000 {
-		t.Errorf("Expected balance at index 1 to be 1000, received %d", newState.ValidatorBalances[2])
+	if newState.Balances[2] != 1000 {
+		t.Errorf("Expected balance at index 1 to be 1000, received %d", newState.Balances[2])
 	}
 }
 
@@ -257,7 +257,7 @@ func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
 	}
 	balances := []uint64{0, 50}
 	beaconState := &pb.BeaconState{
-		ValidatorBalances: balances,
+		Balances:          balances,
 		ValidatorRegistry: registry,
 	}
 	pubkey := []byte{4, 5, 6}
@@ -276,8 +276,8 @@ func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if newState.ValidatorBalances[1] != 1050 {
-		t.Errorf("Expected balance at index 1 to be 1050, received %d", newState.ValidatorBalances[1])
+	if newState.Balances[1] != 1050 {
+		t.Errorf("Expected balance at index 1 to be 1050, received %d", newState.Balances[1])
 	}
 }
 
@@ -294,7 +294,7 @@ func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 	}
 	balances := []uint64{1000, 1000}
 	beaconState := &pb.BeaconState{
-		ValidatorBalances: balances,
+		Balances:          balances,
 		ValidatorRegistry: registry,
 	}
 	pubkey := []byte{7, 8, 9}
@@ -313,11 +313,11 @@ func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if len(newState.ValidatorBalances) != 3 {
-		t.Errorf("Expected validator balances list to increase by 1, received len %d", len(newState.ValidatorBalances))
+	if len(newState.Balances) != 3 {
+		t.Errorf("Expected validator balances list to increase by 1, received len %d", len(newState.Balances))
 	}
-	if newState.ValidatorBalances[2] != 2000 {
-		t.Errorf("Expected new validator have balance of %d, received %d", 2000, newState.ValidatorBalances[2])
+	if newState.Balances[2] != 2000 {
+		t.Errorf("Expected new validator have balance of %d, received %d", 2000, newState.Balances[2])
 	}
 }
 
@@ -335,7 +335,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	balances := []uint64{0, 1000}
 	beaconState := &pb.BeaconState{
 		Slot:              params.BeaconConfig().SlotsPerEpoch,
-		ValidatorBalances: balances,
+		Balances:          balances,
 		ValidatorRegistry: registry,
 	}
 	pubkey := []byte{7, 8, 9}
@@ -354,11 +354,11 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if len(newState.ValidatorBalances) != 3 {
-		t.Errorf("Expected validator balances list to be 3, received len %d", len(newState.ValidatorBalances))
+	if len(newState.Balances) != 3 {
+		t.Errorf("Expected validator balances list to be 3, received len %d", len(newState.Balances))
 	}
-	if newState.ValidatorBalances[len(newState.ValidatorBalances)-1] != 2000 {
-		t.Errorf("Expected validator at last index to have balance of %d, received %d", 2000, newState.ValidatorBalances[0])
+	if newState.Balances[len(newState.Balances)-1] != 2000 {
+		t.Errorf("Expected validator at last index to have balance of %d, received %d", 2000, newState.Balances[0])
 	}
 }
 
@@ -457,16 +457,16 @@ func TestSlashValidator_AlreadyWithdrawn(t *testing.T) {
 
 func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 	state := &pb.BeaconState{
-		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
+		Balances: []uint64{params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	}
-	if ProcessPenaltiesAndExits(state).ValidatorBalances[0] !=
+	if ProcessPenaltiesAndExits(state).Balances[0] !=
 		params.BeaconConfig().MaxDepositAmount {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount,
-			ProcessPenaltiesAndExits(state).ValidatorBalances[0])
+			ProcessPenaltiesAndExits(state).Balances[0])
 	}
 }
 
@@ -480,7 +480,7 @@ func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                  params.BeaconConfig().LatestSlashedExitLength / 2 * params.BeaconConfig().SlotsPerEpoch,
 		LatestSlashedBalances: latestSlashedExits,
-		ValidatorBalances:     []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
+		Balances:              []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
@@ -491,10 +491,10 @@ func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 		params.BeaconConfig().MaxDepositAmount
 
 	newState := ProcessPenaltiesAndExits(state)
-	if newState.ValidatorBalances[0] != params.BeaconConfig().MaxDepositAmount-penalty {
+	if newState.Balances[0] != params.BeaconConfig().MaxDepositAmount-penalty {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount-penalty,
-			newState.ValidatorBalances[0])
+			newState.Balances[0])
 	}
 }
 
@@ -531,7 +531,7 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
-		ValidatorBalances: []uint64{
+		Balances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
@@ -564,7 +564,7 @@ func TestUpdateRegistry_Activations(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
 				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
 		},
-		ValidatorBalances: []uint64{
+		Balances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 		},
@@ -598,7 +598,7 @@ func TestUpdateRegistry_Exits(t *testing.T) {
 				ExitEpoch:   exitEpoch,
 				StatusFlags: pb.Validator_INITIATED_EXIT},
 		},
-		ValidatorBalances: []uint64{
+		Balances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 		},
