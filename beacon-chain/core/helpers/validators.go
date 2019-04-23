@@ -34,8 +34,9 @@ func IsActiveValidator(validator *pb.Validator, epoch uint64) bool {
 //        validator.slashed is False
 // 		)
 func IsSlashableValidator(validator *pb.Validator, epoch uint64) bool {
-	active := validator.ActivationEpoch <= epoch < validator.WithdrawableEpoch
-	return active && !validator.Slashed
+	active := validator.ActivationEpoch <= epoch
+	beforeWithdrawable := epoch < validator.WithdrawableEpoch
+	return beforeWithdrawable && active && !validator.Slashed
 }
 
 // ActiveValidatorIndices filters out active validators based on validator status
