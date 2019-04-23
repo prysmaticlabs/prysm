@@ -176,6 +176,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ActivationExitDelay:          4,
 	EpochsPerEth1VotingPeriod:    16,
 	Eth1FollowDistance:           1024,
+	SlotsPerHistoricalRoot:       8192,
 
 	// State list length constants.
 	LatestRandaoMixesLength:      8192,
