@@ -17,9 +17,11 @@ var slog = logrus.WithField("prefix", "sync")
 
 // Service defines the main routines used in the sync service.
 type Service struct {
-	RegularSync *RegularSync
-	InitialSync *initialsync.InitialSync
-	Querier     *Querier
+	RegularSync     *RegularSync
+	InitialSync     *initialsync.InitialSync
+	Querier         *Querier
+	querierFinished bool
+	synced          bool
 }
 
 // Config defines the configured services required for sync to work.
@@ -61,9 +63,10 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	is := initialsync.NewInitialSyncService(ctx, isCfg)
 
 	return &Service{
-		RegularSync: rs,
-		InitialSync: is,
-		Querier:     sq,
+		RegularSync:     rs,
+		InitialSync:     is,
+		Querier:         sq,
+		querierFinished: false,
 	}
 
 }
@@ -92,9 +95,14 @@ func (ss *Service) Stop() error {
 // Status checks the status of the node. It returns nil if it's synced
 // with the rest of the network and no errors occurred. Otherwise, it returns an error.
 func (ss *Service) Status() error {
+	if !ss.querierFinished {
+		return errors.New("querier is still running")
+	}
+
 	if !ss.Querier.chainStarted {
 		return nil
 	}
+
 	if ss.Querier.atGenesis {
 		return nil
 	}
@@ -118,6 +126,7 @@ func (ss *Service) run() {
 	if err != nil {
 		slog.Fatalf("Unable to retrieve result from sync querier %v", err)
 	}
+	ss.querierFinished = true
 
 	// Sets the highest observed slot from querier.
 	ss.InitialSync.InitializeObservedSlot(ss.Querier.currentHeadSlot)
