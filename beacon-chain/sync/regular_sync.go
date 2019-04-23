@@ -443,7 +443,11 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		trace.Int64Attribute("attestation.Data.Slot", int64(attestation.Data.Slot)),
 		trace.Int64Attribute("finalized state slot", int64(beaconState.Slot-params.BeaconConfig().SlotsPerEpoch)),
 	)
-	if attestation.Data.Slot < beaconState.Slot-params.BeaconConfig().SlotsPerEpoch {
+
+	// Only accept attestations within the last epoch length.
+	if attestation.Data.Slot < beaconState.Slot-params.BeaconConfig().SlotsPerEpoch &&
+		// Edge case: do not reject any attestation in first epoch.
+		!(attestation.Data.Slot < beaconState.Slot && beaconState.Slot <= params.BeaconConfig().SlotsPerEpoch) {
 		log.WithFields(logrus.Fields{
 			"receivedSlot": attestation.Data.Slot,
 			"epochSlot":    beaconState.Slot - params.BeaconConfig().SlotsPerEpoch},
