@@ -179,16 +179,9 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 
-		_, marshalSpan := trace.StartSpan(ctx, "proto.Marshal")
-		beaconStateEnc, err := proto.Marshal(beaconState)
-		if err != nil {
-			return err
-		}
-		marshalSpan.End()
-
-		stateBytes.Set(float64(len(beaconStateEnc)))
+		stateBytes.Set(float64(len(enc)))
 		reportStateMetrics(beaconState)
-		return chainInfo.Put(stateLookupKey, beaconStateEnc)
+		return chainInfo.Put(stateLookupKey, enc)
 	})
 }
 
