@@ -61,7 +61,7 @@ message BeaconState {
   repeated bytes batched_block_root_hash32s = 8013 [deprecated=true];
   repeated Crosslink latest_crosslinks = 8014 [deprecated=true];
   repeated PendingAttestation latest_attestations = 8015 [deprecated=true];
-  BeaconBlock latest_block = 8016;
+  BeaconBlock latest_block = 8016 [deprecated=true];
 }
 
 message Fork {
