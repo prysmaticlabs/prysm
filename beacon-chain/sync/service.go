@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -101,6 +102,9 @@ func (ss *Service) Status() error {
 	blk, err := ss.Querier.db.ChainHead()
 	if err != nil {
 		return fmt.Errorf("could not retrieve chain head %v", err)
+	}
+	if blk == nil {
+		return errors.New("no chain head exists in db")
 	}
 	if blk.Slot < ss.InitialSync.HighestObservedSlot() {
 		return fmt.Errorf("node is not synced as the current chain head is at slot %d", blk.Slot-params.BeaconConfig().GenesisSlot)
