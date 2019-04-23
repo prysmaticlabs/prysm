@@ -65,29 +65,6 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error)
 	return lowestSlotIncluded, nil
 }
 
-// InclusionDistance returns the difference in slot number of when attestation
-// gets submitted and when it gets included.
-//
-// Spec pseudocode definition:
-//    Let inclusion_distance(state, index) =
-//    a.slot_included - a.data.slot where a is the above attestation same as
-//    inclusion_slot.
-func InclusionDistance(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
-
-	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
-		if err != nil {
-			return 0, fmt.Errorf("could not get attestation participants: %v", err)
-		}
-		for _, index := range participatedValidators {
-			if index == validatorIndex {
-				return attestation.InclusionSlot - attestation.Data.Slot, nil
-			}
-		}
-	}
-	return 0, fmt.Errorf("could not find inclusion distance for validator index %d", validatorIndex)
-}
-
 // AttestingValidators returns the validators of the winning root.
 //
 // Spec pseudocode definition:
