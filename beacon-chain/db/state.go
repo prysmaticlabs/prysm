@@ -103,12 +103,16 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 	// Return in-memory cached state, if available.
 	if db.currentState != nil {
-		_, span := trace.StartSpan(ctx, "proto.Clone")
+		_, span := trace.StartSpan(ctx, "proto.Marshal")
 		defer span.End()
-		enc, _ := proto.Marshal(db.currentState)
+		enc, err := proto.Marshal(db.currentState)
+		if err != nil {
+			return nil, err
+		}
 		if bytes.Equal(enc, db.serializedState) {
 			return db.currentState, nil
 		}
+		log.Error("Cached state has been mutated, so retrieving state from disk")
 	}
 
 	var beaconState *pb.BeaconState
@@ -121,15 +125,14 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 		var err error
 		beaconState, err = createState(enc)
-		if err != nil {
-			return err
-		}
+
 		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
 			db.highestBlockSlot = beaconState.Slot
 		}
-		copy(db.serializedState, enc)
+		db.serializedState = enc
+		db.currentState = beaconState
 
-		return db.currentState.Unmarshal(enc)
+		return err
 	})
 
 	return beaconState, err
@@ -166,7 +169,7 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	}
 	stateHash := hashutil.Hash(enc)
 
-	copy(db.serializedState, enc)
+	db.serializedState = enc
 	db.stateHash = stateHash
 
 	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
