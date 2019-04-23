@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -329,17 +328,9 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 	}
 
 	for validatorIndex, target := range targets {
-		if featureconfig.FeatureConfig().EnableBlockAncestorCache {
-			ancestorRoot, err = cachedAncestor(target, block.Slot, beaconDB)
-			if err != nil {
-				return 0, err
-			}
-		} else {
-			// if block ancestor cache was not enabled, retrieve the ancestor recursively.
-			ancestorRoot, err = BlockAncestor(target, block.Slot, beaconDB)
-			if err != nil {
-				return 0, err
-			}
+		ancestorRoot, err = cachedAncestor(target, block.Slot, beaconDB)
+		if err != nil {
+			return 0, err
 		}
 		// This covers the following case, we start at B5, and want to process B6 and B7
 		// B6 can be processed, B7 can not be processed because it's pointed to the
