@@ -446,7 +446,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,
-		Balances:      validatorBalances,
+		Balances:               validatorBalances,
 		ValidatorRegistry:      validatorRegistry,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       crosslinkRecord,
@@ -506,7 +506,7 @@ func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,
-		Balances:      validatorBalances,
+		Balances:               validatorBalances,
 		ValidatorRegistry:      validatorRegistry,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       crosslinkRecord,
@@ -577,7 +577,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,
-		Balances:      validatorBalances,
+		Balances:               validatorBalances,
 		ValidatorRegistry:      validatorRegistry,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       crosslinkRecord,
