@@ -143,22 +143,28 @@ message Crosslink {
 
 message BeaconBlock {
   uint64 slot = 1;
-  bytes parent_root_hash32 = 2;
-  bytes state_root_hash32 = 3;
-  bytes randao_reveal = 4;
-  Eth1Data eth1_data = 5;
-  bytes signature = 6; // bytes96
+  bytes parent_block_root = 2;
+  bytes state_root = 3;
+  BeaconBlockBody body = 4;
+  bytes signature = 5; // bytes96
 
-  // Block Body
-  BeaconBlockBody body = 7;
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  bytes parent_root_hash32 = 1001;
+  bytes state_root_hash32 = 1002;
+  bytes randao_reveal = 1003;
+  Eth1Data eth1_data = 1004;
 }
 
 message BeaconBlockBody {
-  repeated Attestation attestations = 1;
-  repeated ProposerSlashing proposer_slashings  = 2;
-  repeated AttesterSlashing attester_slashings = 3;
-  repeated Deposit deposits = 4;
-  repeated VoluntaryExit voluntary_exits = 5;
+  bytes randao_reveal = 1; // bytes96
+  Eth1Data eth1_data = 2;
+  repeated Attestation attestations = 3;
+  repeated ProposerSlashing proposer_slashings  = 4;
+  repeated AttesterSlashing attester_slashings = 5;
+  repeated Deposit deposits = 6;
+  repeated VoluntaryExit voluntary_exits = 7;
+  repeated Transfer transfers = 8;
 }
 
 message DepositInput {
