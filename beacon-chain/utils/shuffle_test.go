@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -70,5 +71,23 @@ func TestSplitIndices_OK(t *testing.T) {
 		if len(s) != validators/int(params.BeaconConfig().SlotsPerEpoch) {
 			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.BeaconConfig().SlotsPerEpoch), len(s))
 		}
+	}
+}
+
+func TestGetPermutedIndex(t *testing.T) {
+
+}
+
+func BenchmarkPermuteIndex(b *testing.B) {
+	listSizes := []uint64{4000000, 40000, 400}
+	// "random" seed for testing. Can be any 32 bytes.
+	seed := [32]byte{123, 42}
+	for _, listSize := range listSizes {
+		// benchmark!
+		b.Run(fmt.Sprintf("PermuteIndex_%d", listSize), func(ib *testing.B) {
+			for i := uint64(0); i < uint64(ib.N); i++ {
+				PermutedIndex(i%listSize, listSize, seed)
+			}
+		})
 	}
 }
