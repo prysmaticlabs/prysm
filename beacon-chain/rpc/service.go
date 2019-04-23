@@ -111,7 +111,7 @@ func (s *Service) Start() {
 		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
 	}
 	s.listener = lis
-	log.Infof("RPC server listening on port :%s", s.port)
+	log.WithField("port", s.port).Info("Listening on port")
 
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),

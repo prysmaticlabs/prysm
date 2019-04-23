@@ -11,7 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -108,7 +108,6 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		sb.state,
 		newBlock,
 		prevBlockRoot,
-		sb.beaconDB,
 		state.DefaultConfig(),
 	)
 	if err != nil {
@@ -133,7 +132,6 @@ func (sb *SimulatedBackend) GenerateNilBlockAndAdvanceChain() error {
 		sb.state,
 		nil,
 		prevBlockRoot,
-		sb.beaconDB,
 		state.DefaultConfig(),
 	)
 	if err != nil {
@@ -273,10 +271,11 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) ([]*bls
 func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*pb.Deposit) error {
 	var err error
 	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
-	sb.state, err = genesis.BeaconState(initialDeposits, uint64(genesisTime), nil)
+	sb.state, err = state.GenesisBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state: %v", err)
 	}
+	sb.historicalDeposits = initialDeposits
 
 	// We do not expect hashing initial beacon state and genesis block to
 	// fail, so we can safely ignore the error below.
@@ -285,7 +284,7 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	if err != nil {
 		return fmt.Errorf("could not tree hash state: %v", err)
 	}
-	genesisBlock := genesis.NewGenesisBlock(stateRoot[:])
+	genesisBlock := b.NewGenesisBlock(stateRoot[:])
 	genesisBlockRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		return fmt.Errorf("could not tree hash genesis block: %v", err)

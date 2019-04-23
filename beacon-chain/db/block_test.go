@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -74,6 +75,37 @@ func TestSaveBlock_OK(t *testing.T) {
 	}
 }
 
+func TestDeleteBlock_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
+	h, _ := hashutil.HashBeaconBlock(block)
+
+	err := db.SaveBlock(block)
+	if err != nil {
+		t.Fatalf("save block failed: %v", err)
+	}
+
+	savedBlock, err := db.Block(h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, savedBlock) {
+		t.Fatal(err)
+	}
+	if err := db.DeleteBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	savedBlock, err = db.Block(h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if savedBlock != nil {
+		t.Errorf("Expected block to have been deleted, received: %v", savedBlock)
+	}
+}
+
 func TestBlockBySlotEmptyChain_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
@@ -92,7 +124,7 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
+	err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -114,7 +146,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
+	err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -181,7 +213,7 @@ func TestChainProgress_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
+	err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}

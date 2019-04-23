@@ -1,5 +1,7 @@
-// Package genesis defines the initial state and block for Ethereum 2.0's beacon chain.
-package genesis
+// Package state implements the whole state transition
+// function which consists of per slot, per-epoch transitions.
+// It also bootstraps the genesis beacon state for slot 0.
+package state
 
 import (
 	"encoding/binary"
@@ -13,33 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// NewGenesisBlock initializes an initial block for the Ethereum 2.0 beacon chain that is
-// fixed in all clients and embedded in the protocol.
-func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
-	block := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot,
-		ParentRootHash32: params.BeaconConfig().ZeroHash[:],
-		StateRootHash32:  stateRoot,
-		RandaoReveal:     params.BeaconConfig().ZeroHash[:],
-		Signature:        params.BeaconConfig().EmptySignature[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: params.BeaconConfig().ZeroHash[:],
-			BlockHash32:       params.BeaconConfig().ZeroHash[:],
-		},
-		Body: &pb.BeaconBlockBody{
-			ProposerSlashings: []*pb.ProposerSlashing{},
-			AttesterSlashings: []*pb.AttesterSlashing{},
-			Attestations:      []*pb.Attestation{},
-			Deposits:          []*pb.Deposit{},
-			VoluntaryExits:    []*pb.VoluntaryExit{},
-		},
-	}
-	return block
-}
-
-// BeaconState initializes a genesis beacon state - it gets called when DepositsForChainStart count of
+// GenesisBeaconState gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
-func BeaconState(
+func GenesisBeaconState(
 	genesisValidatorDeposits []*pb.Deposit,
 	genesisTime uint64,
 	eth1Data *pb.Eth1Data,
@@ -124,9 +102,12 @@ func BeaconState(
 
 		// Finality.
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
+		JustifiedRoot:          params.BeaconConfig().ZeroHash[:],
 		JustificationBitfield:  0,
 		FinalizedEpoch:         params.BeaconConfig().GenesisEpoch,
+		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
 
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,
@@ -139,6 +120,7 @@ func BeaconState(
 		// Eth1 data.
 		LatestEth1Data: eth1Data,
 		Eth1DataVotes:  []*pb.Eth1DataVote{},
+		DepositIndex:   0,
 	}
 
 	// Process initial deposits.

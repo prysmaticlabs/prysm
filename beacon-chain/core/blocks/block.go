@@ -4,17 +4,38 @@
 package blocks
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"go.opencensus.io/trace"
 )
 
 var clock utils.Clock = &utils.RealClock{}
+
+// NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
+func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
+	block := &pb.BeaconBlock{
+		Slot:             params.BeaconConfig().GenesisSlot,
+		ParentRootHash32: params.BeaconConfig().ZeroHash[:],
+		StateRootHash32:  stateRoot,
+		RandaoReveal:     params.BeaconConfig().ZeroHash[:],
+		Signature:        params.BeaconConfig().EmptySignature[:],
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: params.BeaconConfig().ZeroHash[:],
+			BlockHash32:       params.BeaconConfig().ZeroHash[:],
+		},
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: []*pb.ProposerSlashing{},
+			AttesterSlashings: []*pb.AttesterSlashing{},
+			Attestations:      []*pb.Attestation{},
+			Deposits:          []*pb.Deposit{},
+			VoluntaryExits:    []*pb.VoluntaryExit{},
+		},
+	}
+	return block
+}
 
 // BlockRoot returns the block root stored in the BeaconState for a given slot.
 // It returns an error if the requested block root is not within the BeaconState.
@@ -49,9 +70,7 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 //  Let previous_block_root be the tree_hash_root of the previous beacon block processed in the chain.
 //	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root.
 //	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0 append merkle_root(state.latest_block_roots) to state.batched_block_roots.
-func ProcessBlockRoots(ctx context.Context, state *pb.BeaconState, parentRoot [32]byte) *pb.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlot.ProcessBlockRoots")
-	defer span.End()
+func ProcessBlockRoots(state *pb.BeaconState, parentRoot [32]byte) *pb.BeaconState {
 	state.LatestBlockRootHash32S[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = parentRoot[:]
 	if state.Slot%params.BeaconConfig().LatestBlockRootsLength == 0 {
 		merkleRoot := hashutil.MerkleRoot(state.LatestBlockRootHash32S)

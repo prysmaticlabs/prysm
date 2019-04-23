@@ -55,6 +55,8 @@ spec:
             - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
             - --trace-sample-fraction=1.0
             - --datadir=/data
+            # Disabling gossip sub until a larger beacon chain deployment.
+            - --disable-gossip-sub
           resources:
             requests:
               memory: "100Mi"

@@ -90,6 +90,7 @@ func (q *Querier) Start() {
 		return
 	}
 
+	q.chainStarted = hasChainStarted
 	q.atGenesis = !hasChainStarted
 
 	bState, err := q.db.HeadState(q.ctx)

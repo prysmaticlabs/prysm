@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -180,6 +179,11 @@ func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
 }
 
+// HighestObservedSlot returns the highest observed slot.
+func (s *InitialSync) HighestObservedSlot() uint64 {
+	return s.highestObservedSlot
+}
+
 // NodeIsSynced checks that the node has been caught up with the network.
 func (s *InitialSync) NodeIsSynced() (bool, uint64) {
 	return s.nodeIsSynced, s.currentSlot
@@ -201,7 +205,16 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}
 	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
-		return err
+		switch err.(type) {
+		case *blockchain.BlockFailedProcessingErr:
+			// If the block fails processing, we delete it from our DB.
+			if err := s.db.DeleteBlock(block); err != nil {
+				return fmt.Errorf("could not delete bad block from db: %v", err)
+			}
+			return fmt.Errorf("could not apply block state transition: %v", err)
+		default:
+			return fmt.Errorf("could not apply block state transition: %v", err)
+		}
 	}
 	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
 		return err
@@ -210,14 +223,8 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 		return err
 	}
 
-	canonicalState, err := s.db.HeadState(ctx)
-	if err != nil {
-		return fmt.Errorf("could not get state: %v", err)
-	}
-	stateRoot, err := hashutil.HashProto(canonicalState)
-	if err != nil {
-		return fmt.Errorf("could not hash state: %v", err)
-	}
+	stateRoot := s.db.HeadStateRoot()
+
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
 		log.Fatalf(
@@ -226,8 +233,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 			s.highestObservedRoot,
 		)
 	}
-	log.Infof("Canonical state slot: %d", canonicalState.Slot-params.BeaconConfig().GenesisSlot)
-	log.Info("Exiting initial sync and starting normal sync")
+	log.WithField("canonicalStateSlot", state.Slot-params.BeaconConfig().GenesisSlot).Info("Exiting init sync and starting regular sync")
 	s.syncService.ResumeSync()
 	s.cancel()
 	s.nodeIsSynced = true

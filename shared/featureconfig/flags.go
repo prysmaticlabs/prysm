@@ -11,7 +11,8 @@ var (
 		Usage: "Verify signatures for attestations.",
 	}
 	// EnableComputeStateRootFlag enables the implemenation for the proposer RPC
-	// method to compute the state root of a given block. This feature is not
+	// method to compute the state root of a given block.
+	// This feature is not
 	// necessary for the first iteration of the test network, but critical to
 	// future work. This flag can be removed once we are satisified that it works
 	// well without issue.
@@ -24,11 +25,26 @@ var (
 		Name:  "enable-crosslinks",
 		Usage: "Enable crosslinks in epoch processing, default is disabled.",
 	}
-
+	// EnableBlockAncestorCacheFlag enables block ancestor cache for LMD GHOST fork choice optimization. I
+	// it is disabled by default.
+	EnableBlockAncestorCacheFlag = cli.BoolFlag{
+		Name:  "enable-block-ancestor-cache",
+		Usage: "Enable block ancestor cache for fork choice optimization, default is disabled.",
+	}
+	// EnableCheckBlockStateRootFlag check block state root in block processing. It is disabled by default.
+	EnableCheckBlockStateRootFlag = cli.BoolFlag{
+		Name:  "enable-check-block-state-root",
+		Usage: "Enable check block state root in block processing, default is disabled.",
+	}
 	// EnableHistoricalStatePruningFlag allows the database to prune old historical states.
 	EnableHistoricalStatePruningFlag = cli.BoolFlag{
 		Name:  "enable-historical-state-pruning",
 		Usage: "Enable database pruning of historical states after finalized epochs",
+	}
+	// DisableGossipSubFlag uses floodsub in place of gossipsub.
+	DisableGossipSubFlag = cli.BoolFlag{
+		Name:  "disable-gossip-sub",
+		Usage: "Disable gossip sub messaging and use floodsub messaging",
 	}
 )
 
@@ -39,5 +55,8 @@ var ValidatorFlags = []cli.Flag{}
 var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
+	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
+	EnableBlockAncestorCacheFlag,
+	DisableGossipSubFlag,
 }

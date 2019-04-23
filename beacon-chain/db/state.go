@@ -5,11 +5,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -25,8 +27,11 @@ var (
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, eth1Data *pb.Eth1Data) error {
-	beaconState, err := genesis.BeaconState(deposits, genesisTime, eth1Data)
+func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, deposits []*pb.Deposit, eth1Data *pb.Eth1Data) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.InitializeState")
+	defer span.End()
+
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
 	if err != nil {
 		return err
 	}
@@ -34,7 +39,7 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, 
 	// #nosec G104
 	stateEnc, _ := proto.Marshal(beaconState)
 	stateHash := hashutil.Hash(stateEnc)
-	genesisBlock := genesis.NewGenesisBlock(stateHash[:])
+	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
 	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
@@ -42,8 +47,9 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, 
 	zeroBinary := encodeSlotNumber(0)
 
 	db.currentState = beaconState
+	db.stateHash = stateHash
 
-	if err := db.SaveHistoricalState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		return err
 	}
 
@@ -85,7 +91,7 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, 
 
 // HeadState fetches the canonical beacon chain's head state from the DB.
 func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
 	defer span.End()
 
 	ctx, lockSpan := trace.StartSpan(ctx, "BeaconDB.stateLock.Lock")
@@ -120,6 +126,11 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
+// HeadStateRoot returns the root of the current state from the db.
+func (db *BeaconDB) HeadStateRoot() [32]byte {
+	return db.stateHash
+}
+
 // SaveState updates the beacon chain state.
 func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
@@ -140,20 +151,19 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	db.currentState = currentState
 	cloneSpan.End()
 
-	if err := db.SaveHistoricalState(beaconState); err != nil {
+	stateHash, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		return err
+	}
+
+	db.stateHash = stateHash
+
+	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
 		return err
 	}
 
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
-
-		prevState := chainInfo.Get(stateLookupKey)
-		if prevState != nil {
-			prevStatePb := &pb.BeaconState{}
-			if err := proto.Unmarshal(prevState, prevStatePb); err != nil {
-				return err
-			}
-		}
 
 		_, marshalSpan := trace.StartSpan(ctx, "proto.Marshal")
 		beaconStateEnc, err := proto.Marshal(beaconState)
@@ -198,7 +208,9 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 }
 
 // SaveHistoricalState saves the last finalized state in the db.
-func (db *BeaconDB) SaveHistoricalState(beaconState *pb.BeaconState) error {
+func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.SaveHistoricalState")
+	defer span.End()
 
 	slotBinary := encodeSlotNumber(beaconState.Slot)
 	stateHash, err := hashutil.HashProto(beaconState)
@@ -254,7 +266,8 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
-// HistoricalStateFromSlot retrieves the closest historical state to a slot.
+// HistoricalStateFromSlot retrieves the state that is closest to the input slot,
+// while being smaller than or equal to the input slot.
 func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.HistoricalStateFromSlot")
 	defer span.End()
@@ -279,7 +292,8 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 				break
 			}
 		}
-		// If no state exists send the closest state.
+
+		// If no historical state exists, retrieve and decode the finalized state.
 		if !stateExists {
 			for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 				slotNumber := decodeToSlotNumber(k)
@@ -296,7 +310,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 			}
 		}
 
-		// retrieve the stored historical state.
+		// If historical state exists, retrieve and decode it.
 		encState := chainInfo.Get(histStateKey)
 		if encState == nil {
 			return errors.New("no historical state saved")
@@ -305,6 +319,80 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 		return err
 	})
 	return beaconState, err
+}
+
+// ValidatorRegistry fetches the current validator registry stored in state.
+func (db *BeaconDB) ValidatorRegistry(ctx context.Context) ([]*pb.Validator, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorRegistry")
+	defer span.End()
+
+	db.stateLock.RLock()
+	defer db.stateLock.RUnlock()
+
+	// Return in-memory cached state, if available.
+	if db.currentState != nil {
+		_, span := trace.StartSpan(ctx, "proto.Clone.ValidatorRegistry")
+		defer span.End()
+		newRegistry := make([]*pb.Validator, len(db.currentState.ValidatorRegistry))
+		for i, v := range db.currentState.ValidatorRegistry {
+			newRegistry[i] = proto.Clone(v).(*pb.Validator)
+		}
+		return newRegistry, nil
+	}
+
+	var beaconState *pb.BeaconState
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		enc := chainInfo.Get(stateLookupKey)
+		if enc == nil {
+			return nil
+		}
+
+		var err error
+		beaconState, err = createState(enc)
+		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
+			db.highestBlockSlot = beaconState.Slot
+		}
+		return err
+	})
+
+	return beaconState.ValidatorRegistry, err
+}
+
+// ValidatorBalances fetches the current validator balances stored in state.
+func (db *BeaconDB) ValidatorBalances(ctx context.Context) ([]uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorRegistry")
+	defer span.End()
+
+	db.stateLock.RLock()
+	defer db.stateLock.RUnlock()
+
+	// Return in-memory cached state, if available.
+	if db.currentState != nil {
+		_, span := trace.StartSpan(ctx, "proto.Clone.ValidatorRegistry")
+		defer span.End()
+		newBalances := make([]uint64, len(db.currentState.ValidatorBalances))
+		copy(newBalances, db.currentState.ValidatorBalances)
+		return newBalances, nil
+	}
+
+	var beaconState *pb.BeaconState
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		enc := chainInfo.Get(stateLookupKey)
+		if enc == nil {
+			return nil
+		}
+
+		var err error
+		beaconState, err = createState(enc)
+		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
+			db.highestBlockSlot = beaconState.Slot
+		}
+		return err
+	})
+
+	return beaconState.ValidatorBalances, err
 }
 
 func createState(enc []byte) (*pb.BeaconState, error) {

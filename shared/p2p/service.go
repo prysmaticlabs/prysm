@@ -24,6 +24,7 @@ import (
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -85,7 +86,16 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	// distributed hash table by their peer ID.
 	h = rhost.Wrap(h, dht)
 
-	gsub, err := pubsub.NewFloodSub(ctx, h)
+	psOpts := []pubsub.Option{
+		pubsub.WithMessageSigning(false),
+		pubsub.WithStrictSignatureVerification(false),
+	}
+	var gsub *pubsub.PubSub
+	if featureconfig.FeatureConfig().DisableGossipSub {
+		gsub, err = pubsub.NewFloodSub(ctx, h, psOpts...)
+	} else {
+		gsub, err = pubsub.NewGossipSub(ctx, h, psOpts...)
+	}
 	if err != nil {
 		cancel()
 		return nil, err
@@ -328,13 +338,23 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 // Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
 // this method will act as a broadcast.
 func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
-	if peerID == AnyPeer {
+	isPeer := false
+	for _, p := range s.host.Network().Peers() {
+		if p == peerID {
+			isPeer = true
+			break
+		}
+	}
+
+	if peerID == AnyPeer || s.host.Network().Connectedness(peerID) == libp2pnet.CannotConnect || !isPeer {
 		s.Broadcast(ctx, msg)
 		return nil
 	}
+
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
-	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
 	topic := s.topicMapping[messageType(msg)]
 	pid := protocol.ID(prysmProtocolPrefix + "/" + topic)

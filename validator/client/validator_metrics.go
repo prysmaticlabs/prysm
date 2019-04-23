@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,6 +25,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	if epoch == params.BeaconConfig().GenesisEpoch {
 		v.prevBalance = params.BeaconConfig().MaxDepositAmount
 	}
+<<<<<<< HEAD
 	req := &pb.ValidatorPerformanceRequest{
 		Slot:      slot,
 		PublicKey: v.key.PublicKey.Marshal(),
@@ -55,10 +58,56 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
 			}).Info("Net gains/losses in eth")
 		}
+=======
+	var totalPrevBalance uint64
+	reported := false
+	for _, pkey := range v.pubkeys {
+		req := &pb.ValidatorPerformanceRequest{
+			Slot:      slot,
+			PublicKey: pkey,
+		}
+		resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
+		if err != nil {
+			if strings.Contains(err.Error(), "could not get validator index") {
+				continue
+			}
+			return err
+		}
+		tpk := hex.EncodeToString(pkey)[:12]
+		if !reported {
+			log.WithFields(logrus.Fields{
+				"slot":  slot - params.BeaconConfig().GenesisSlot,
+				"epoch": (slot / params.BeaconConfig().SlotsPerEpoch) - params.BeaconConfig().GenesisEpoch,
+			}).Info("Start of a new epoch!")
+			log.WithFields(logrus.Fields{
+				"totalValidators":     resp.TotalValidators,
+				"numActiveValidators": resp.TotalActiveValidators,
+			}).Infof("Validator registry information")
+			log.Info("Generating validator performance report from the previous epoch...")
+			avgBalance := resp.AverageValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
+			log.WithField(
+				"averageEthBalance", fmt.Sprintf("%f", avgBalance),
+			).Info("Average eth balance per validator in the beacon chain")
+			reported = true
+		}
+		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
+		log.WithFields(logrus.Fields{
+			"ethBalance": newBalance,
+		}).Infof("%v New validator balance", tpk)
+
+		if v.prevBalance > 0 {
+			prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
+			percentNet := (newBalance - prevBalance) / prevBalance
+			log.WithField("prevEthBalance", prevBalance).Infof("%v Previous validator balance", tpk)
+			log.WithFields(logrus.Fields{
+				"eth":           fmt.Sprintf("%f", newBalance-prevBalance),
+				"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
+			}).Infof("%v Net gains/losses in eth", tpk)
+		}
+		totalPrevBalance += resp.Balance
+>>>>>>> cfd3e548cd925cfbebcb542c59de446e10b7b634
 	}
-	log.WithField(
-		"averageEthBalance", fmt.Sprintf("%f", avgBalance),
-	).Info("Average eth balance per validator in the beacon chain")
-	v.prevBalance = resp.Balance
+
+	v.prevBalance = totalPrevBalance
 	return nil
 }

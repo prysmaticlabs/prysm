@@ -1,7 +1,9 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -9,7 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -21,6 +25,8 @@ import (
 type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	IsCanonical(slot uint64, hash []byte) bool
+	InsertsCanonical(slot uint64, hash []byte)
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
@@ -29,6 +35,15 @@ type BlockProcessor interface {
 	VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error
 	ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error)
 	CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error
+}
+
+// BlockFailedProcessingErr represents a block failing a state transition function.
+type BlockFailedProcessingErr struct {
+	err error
+}
+
+func (b *BlockFailedProcessingErr) Error() string {
+	return fmt.Sprintf("block failed processing: %v", b.err)
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
@@ -41,11 +56,24 @@ type BlockProcessor interface {
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, block.Slot-1)
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parent, err := c.beaconDB.Block(parentRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get parent block: %v", err)
+	}
+	if parent == nil {
+		return nil, errors.New("parent does not exist in DB")
+	}
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
+	saveLatestBlock := beaconState.LatestBlock
 
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash beacon block")
+	}
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(ctx, block, beaconState); err != nil {
 		return beaconState, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
@@ -65,13 +93,37 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
 	beaconState, err = c.ApplyBlockStateTransition(ctx, block, beaconState)
 	if err != nil {
-		return beaconState, fmt.Errorf("could not apply block state transition: %v", err)
+		switch err.(type) {
+		case *BlockFailedProcessingErr:
+			// If the block fails processing, we mark it as blacklisted and delete it from our DB.
+			c.beaconDB.MarkEvilBlockHash(blockRoot)
+			if err := c.beaconDB.DeleteBlock(block); err != nil {
+				return nil, fmt.Errorf("could not delete bad block from db: %v", err)
+			}
+			return beaconState, err
+		default:
+			return beaconState, fmt.Errorf("could not apply block state transition: %v", err)
+		}
 	}
 
 	log.WithFields(logrus.Fields{
 		"slotNumber":   block.Slot - params.BeaconConfig().GenesisSlot,
 		"currentEpoch": helpers.SlotToEpoch(block.Slot) - params.BeaconConfig().GenesisEpoch,
 	}).Info("State transition complete")
+
+	// Check state root
+	if featureconfig.FeatureConfig().EnableCheckBlockStateRoot {
+		// Calc state hash with previous block
+		beaconState.LatestBlock = saveLatestBlock
+		stateRoot, err := hashutil.HashProto(beaconState)
+		if err != nil {
+			return nil, fmt.Errorf("could not hash beacon state: %v", err)
+		}
+		beaconState.LatestBlock = block
+		if !bytes.Equal(block.StateRootHash32, stateRoot[:]) {
+			return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRootHash32)
+		}
+	}
 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
@@ -114,7 +166,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = c.runStateTransition(ctx, headRoot, nil, beaconState)
 		if err != nil {
-			return beaconState, fmt.Errorf("could not execute state transition without block %v", err)
+			return beaconState, err
 		}
 		numSkippedSlots++
 	}
@@ -124,7 +176,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 
 	beaconState, err = c.runStateTransition(ctx, headRoot, block, beaconState)
 	if err != nil {
-		return beaconState, fmt.Errorf("could not execute state transition with block %v", err)
+		return beaconState, err
 	}
 	return beaconState, nil
 }
@@ -209,14 +261,13 @@ func (c *ChainService) runStateTransition(
 		beaconState,
 		block,
 		headRoot,
-		c.beaconDB,
 		&state.TransitionConfig{
 			VerifySignatures: false, // We disable signature verification for now.
 			Logging:          true,  // We enable logging in this state transition call.
 		},
 	)
 	if err != nil {
-		return beaconState, fmt.Errorf("could not execute state transition %v", err)
+		return beaconState, &BlockFailedProcessingErr{err}
 	}
 	log.WithField(
 		"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
@@ -228,7 +279,7 @@ func (c *ChainService) runStateTransition(
 		).Info("Block transition successfully processed")
 
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
+		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
 	}
@@ -257,7 +308,7 @@ func (c *ChainService) runStateTransition(
 // validators were activated from current epoch. After it saves, current epoch key
 // is deleted from ActivatedValidators mapping.
 func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
-	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state))
+	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range activatedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
@@ -272,7 +323,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 // validators were exited from current epoch. After it deletes, current epoch key
 // is deleted from ExitedValidators mapping.
 func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
-	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state))
+	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range exitedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -30,6 +31,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -92,6 +94,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -153,6 +156,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -236,6 +240,7 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -321,6 +326,7 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -405,6 +411,7 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -473,6 +480,7 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          testAcc.backend,
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -519,5 +527,110 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	}
 	if !ok {
 		t.Error("Expected chain start log to have occurred")
+	}
+}
+
+func TestETH1DataGenesis_OK(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          testAcc.backend,
+		HTTPLogger:      &goodLogger{},
+		ContractBackend: testAcc.backend,
+		BeaconDB:        &db.BeaconDB{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
+
+	data := &pb.DepositInput{
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
+	}
+	ok, _, err := web3Service.HasChainStartLogOccurred()
+	if err != nil {
+		t.Fatalf("Could not check if chain start log occurred: %v", err)
+	}
+	if ok {
+		t.Error("Expected chain start log to not have occurred")
+	}
+
+	// 8 Validators are used as size required for beacon-chain to start. This number
+	// is defined in the deposit contract as the number required for the testnet.
+	for i := 0; i < depositsReqForChainStart; i++ {
+		testAcc.txOpts.Value = amount32Eth
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+			t.Fatalf("Could not deposit to deposit contract %v", err)
+		}
+		testAcc.backend.Commit()
+	}
+	ok, _, err = web3Service.HasChainStartLogOccurred()
+	if err != nil {
+		t.Fatalf("Could not check if chain start log occurred: %v", err)
+	}
+	if !ok {
+		t.Error("Expected chain start log to have occurred")
+	}
+
+	chainStartIterator, err := testAcc.contract.FilterChainStart(nil)
+	if err != nil {
+		t.Fatalf("Could not create chainstart iterator: %v", err)
+	}
+
+	defer chainStartIterator.Close()
+	chainStartIterator.Next()
+	chainStartlog := chainStartIterator.Event
+
+	expectedETH1Data := &pb.Eth1Data{
+		BlockHash32:       chainStartlog.Raw.BlockHash[:],
+		DepositRootHash32: chainStartlog.DepositRoot[:],
+	}
+
+	// We add in another 8 deposits after chainstart.
+	for i := 0; i < depositsReqForChainStart; i++ {
+		testAcc.txOpts.Value = amount32Eth
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+			t.Fatalf("Could not deposit to deposit contract %v", err)
+		}
+		testAcc.backend.Commit()
+	}
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.depositContractAddress,
+		},
+	}
+
+	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	for _, log := range logs {
+		web3Service.ProcessLog(log)
+	}
+
+	if !proto.Equal(expectedETH1Data, web3Service.ChainStartETH1Data()) {
+		t.Errorf("Saved Chainstart eth1data not the expected chainstart eth1data, got: %v but expected: %v",
+			web3Service.ChainStartETH1Data(), expectedETH1Data)
 	}
 }
