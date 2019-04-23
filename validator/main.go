@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
+	"syscall"
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -16,11 +19,22 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func startNode(ctx *cli.Context) error {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	if keystorePassword == "" {
+		logrus.Info("Enter your validator account password:")
+		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			logrus.Fatalf("Could not read account password: %v", err)
+		}
+		text := string(bytePassword)
+		keystorePassword = strings.Replace(text, "\n", "", -1)
+	}
+
 	if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
 		return errors.New("no account found, use `validator accounts create` to generate a new keystore")
 	}
@@ -32,7 +46,7 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	validatorClient, err := node.NewValidatorClient(ctx)
+	validatorClient, err := node.NewValidatorClient(ctx, keystorePassword)
 	if err != nil {
 		return err
 	}
@@ -44,6 +58,24 @@ func startNode(ctx *cli.Context) error {
 func createValidatorAccount(ctx *cli.Context) error {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	if keystorePassword == "" {
+		reader := bufio.NewReader(os.Stdin)
+		logrus.Info("Create a new validator account for eth2")
+		logrus.Info("Enter a password:")
+		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			logrus.Fatalf("Could not read account password: %v", err)
+		}
+		text := string(bytePassword)
+		keystorePassword = strings.Replace(text, "\n", "", -1)
+		logrus.Infof("Keystore path to save your private keys (leave blank for default %s):", keystoreDirectory)
+		text, _ = reader.ReadString('\n')
+		text = strings.Replace(text, "\n", "", -1)
+		if text != "" {
+			keystoreDirectory = text
+		}
+	}
+
 	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
 		return fmt.Errorf("could not initialize validator account: %v", err)
 	}
