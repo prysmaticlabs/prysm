@@ -8,6 +8,7 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 )
 
