@@ -132,10 +132,12 @@ message Validator {
   uint64 activation_epoch = 4;
   // Epoch when validator exited
   uint64 exit_epoch = 5;
+  // Epoch when validator is eligible to withdraw
+  uint64 withdrawable_epoch = 6;
   // Was the validator slashed
-  bool slashed = 6;
+  bool slashed = 7;
   // Rounded balance
-  uint64 high_balance = 7;
+  uint64 high_balance = 8;
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
