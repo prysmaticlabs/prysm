@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -392,7 +393,7 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 	return BlockAncestor(newTarget, slot, beaconDB)
 }
 
-// cachedAncestorCached retrieves the cached ancestor target from block ancestor cache,
+// cachedAncestor retrieves the cached ancestor target from block ancestor cache,
 // if it's not there it looks up the block tree get it and cache it.
 func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.BeaconDB) ([]byte, error) {
 	// check if the ancestor block of from a given block height was cached.
