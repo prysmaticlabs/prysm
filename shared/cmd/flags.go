@@ -64,9 +64,9 @@ var (
 		Usage: "The port used by libp2p.",
 		Value: 12000,
 	}
-	// PersistDB tells the beacon node to keep any previously stored data at the data directory between runs.
-	PersistDB = cli.BoolFlag{
-		Name:  "persist-db",
-		Usage: "Persists any previously stored data at the data directory",
+	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
+	ClearDB = cli.BoolFlag{
+		Name:  "clear-db",
+		Usage: "Clears any previously stored data at the data directory",
 	}
 )

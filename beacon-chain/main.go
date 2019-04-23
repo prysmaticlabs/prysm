@@ -63,7 +63,7 @@ func main() {
 		cmd.TraceSampleFractionFlag,
 		cmd.MonitoringPortFlag,
 		cmd.DisableMonitoringFlag,
-		cmd.PersistDB,
+		cmd.ClearDB,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
