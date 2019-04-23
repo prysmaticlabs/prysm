@@ -15,7 +15,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/genesis"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -40,7 +40,8 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCrosslinks: true,
+		EnableCrosslinks:          true,
+		EnableCheckBlockStateRoot: true,
 	})
 }
 
@@ -171,20 +172,23 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
 		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+		deposits[i] = &pb.Deposit{
+			DepositData:     depositData,
+			MerkleTreeIndex: uint64(i),
+		}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys
 }
 
-func createPreChainStartDeposit(t *testing.T, pk []byte) *pb.Deposit {
+func createPreChainStartDeposit(t *testing.T, pk []byte, index uint64) *pb.Deposit {
 	depositInput := &pb.DepositInput{Pubkey: pk}
 	balance := params.BeaconConfig().MaxDepositAmount
 	depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
 	if err != nil {
 		t.Fatalf("Cannot encode data: %v", err)
 	}
-	return &pb.Deposit{DepositData: depositData}
+	return &pb.Deposit{DepositData: depositData, MerkleTreeIndex: index}
 }
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
@@ -203,7 +207,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 }
 
 func setupGenesisBlock(t *testing.T, cs *ChainService, beaconState *pb.BeaconState) ([32]byte, *pb.BeaconBlock) {
-	genesis := genesis.NewGenesisBlock([]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
@@ -309,7 +313,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(ctx)

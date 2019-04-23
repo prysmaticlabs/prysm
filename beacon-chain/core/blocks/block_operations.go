@@ -5,17 +5,17 @@ package blocks
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
@@ -23,8 +23,25 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
+
+var committeeCache = cache.NewCommitteesCache()
+
+type attesterInclusionStore struct {
+	slotLock sync.RWMutex
+	distLock sync.RWMutex
+	// attesterInclusion is a mapping that tracks when an attester's attestation
+	// last get included in beacon chain.
+	attesterInclusionSlot map[uint64]uint64
+	// attesterInclusion is a mapping that tracks the difference in slot number
+	// of when attestation gets submitted and when it gets included.
+	attesterInclusionDist map[uint64]uint64
+}
+
+var attsInclStore = attesterInclusionStore{
+	attesterInclusionSlot: make(map[uint64]uint64),
+	attesterInclusionDist: make(map[uint64]uint64),
+}
 
 // VerifyProposerSignature uses BLS signature verification to ensure
 // the correct proposer created an incoming beacon block during state
@@ -32,11 +49,8 @@ import (
 //
 // WIP - this is stubbed out until BLS is integrated into Prysm.
 func VerifyProposerSignature(
-	ctx context.Context,
 	_ *pb.BeaconBlock,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.VerifyProposerSignature")
-	defer span.End()
 
 	return nil
 }
@@ -49,10 +63,7 @@ func VerifyProposerSignature(
 //   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
 //   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
 //   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
-func ProcessEth1DataInBlock(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessEth1DataInBlock")
-	defer span.End()
-
+func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
 	var eth1DataVoteAdded bool
 
 	for idx := range beaconState.Eth1DataVotes {
@@ -87,14 +98,11 @@ func ProcessEth1DataInBlock(ctx context.Context, beaconState *pb.BeaconState, bl
 //   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
 //     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
 func ProcessBlockRandao(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockRandao")
-	defer span.End()
 
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
@@ -167,13 +175,10 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 //       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_2.slot), DOMAIN_PROPOSAL)).
 //     Run slash_validator(state, proposer_slashing.proposer_index).
 func ProcessProposerSlashings(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessProposerSlashings")
-	defer span.End()
 
 	body := block.Body
 	registry := beaconState.ValidatorRegistry
@@ -257,14 +262,10 @@ func verifyProposerSlashing(
 //     Verify that len(slashable_indices) >= 1.
 //     Run slash_validator(state, index) for each index in slashable_indices.
 func ProcessAttesterSlashings(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessAttesterSlashings")
-	defer span.End()
-
 	body := block.Body
 	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
 		return nil, fmt.Errorf(
@@ -414,15 +415,10 @@ func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 //     Append PendingAttestation(data=attestation.data, aggregation_bitfield=attestation.aggregation_bitfield,
 //       custody_bitfield=attestation.custody_bitfield, inclusion_slot=state.slot) to state.latest_attestations
 func ProcessBlockAttestations(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
-	beaconDB *db.BeaconDB,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockAttestations")
-	defer span.End()
-
 	atts := block.Body.Attestations
 	if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
 		return nil, fmt.Errorf(
@@ -433,9 +429,42 @@ func ProcessBlockAttestations(
 	}
 
 	for idx, attestation := range atts {
-		if err := verifyAttestation(ctx, beaconState, attestation, verifySignatures, beaconDB); err != nil {
+		if err := VerifyAttestation(beaconState, attestation, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
+
+		var IndicesInCommittee []uint64
+		// get the validator indices from the attestation using committees info cache.
+		cachedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Slot)
+		if err != nil {
+			return nil, err
+		}
+		if cachedCommittees == nil {
+			crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, attestation.Data.Slot, false /* registryChange */)
+			if err != nil {
+				return nil, err
+			}
+			cachedCommittees = helpers.ToCommitteeCache(attestation.Data.Slot, crosslinkCommittees)
+			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
+				return nil, err
+			}
+		}
+		for _, v := range cachedCommittees.Committees {
+			if v.Shard == attestation.Data.Shard {
+				IndicesInCommittee = v.Committee
+				break
+			}
+		}
+
+		attsInclStore.slotLock.Lock()
+		attsInclStore.distLock.Lock()
+		defer attsInclStore.slotLock.Unlock()
+		defer attsInclStore.distLock.Unlock()
+		for _, index := range IndicesInCommittee {
+			attsInclStore.attesterInclusionSlot[index] = beaconState.Slot
+			attsInclStore.attesterInclusionDist[index] = beaconState.Slot - attestation.Data.Slot
+		}
+
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
@@ -447,7 +476,8 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
-func verifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool, beaconDB *db.BeaconDB) error {
+// VerifyAttestation verifies an input attestation can pass through processing using the given beacon state.
+func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
 	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) less than genesis slot (%d)",
@@ -473,6 +503,7 @@ func verifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *pb
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
+	// and verify that `attestation.data.justified_root` is equal to `state.justified_root
 	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
@@ -483,6 +514,14 @@ func verifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *pb
 				beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
+
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.JustifiedRoot) {
+			return fmt.Errorf(
+				"expected attestation.JustifiedRoot == state.JustifiedRoot, received %#x == %#x",
+				att.Data.JustifiedBlockRootHash32,
+				beaconState.JustifiedRoot,
+			)
+		}
 	} else {
 		if att.Data.JustifiedEpoch != beaconState.PreviousJustifiedEpoch {
 			return fmt.Errorf(
@@ -491,33 +530,14 @@ func verifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *pb
 				beaconState.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
-	}
-
-	// Verify that attestation.data.justified_block_root is equal to
-	// get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
-	justifiedSlot := helpers.StartSlot(att.Data.JustifiedEpoch)
-	var justifiedBlock *pb.BeaconBlock
-	var err error
-	for i := uint64(0); justifiedBlock == nil && i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		justifiedBlock, err = beaconDB.BlockBySlot(ctx, justifiedSlot-i)
-		if err != nil {
-			return fmt.Errorf("could not get justified block: %v", err)
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.PreviousJustifiedRoot) {
+			return fmt.Errorf(
+				"expected attestation.JustifiedRoot == state.PreviousJustifiedRoot, received %#x == %#x",
+				att.Data.JustifiedBlockRootHash32,
+				beaconState.JustifiedRoot,
+			)
 		}
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(justifiedBlock)
-	if err != nil {
-		return fmt.Errorf("could not get justified block: %v", err)
-	}
-
-	justifiedBlockRoot := att.Data.JustifiedBlockRootHash32
-	if !bytes.Equal(justifiedBlockRoot, blockRoot[:]) {
-		return fmt.Errorf(
-			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
-			justifiedBlockRoot,
-			blockRoot,
-		)
-	}
-
 	// Verify that either:
 	// 1.) Crosslink(shard_block_root=attestation.data.shard_block_root,
 	// 	epoch=slot_to_epoch(attestation.data.slot)) equals
@@ -542,7 +562,7 @@ func verifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *pb
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
 	if !bytes.Equal(att.Data.CrosslinkDataRootHash32, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
-			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
+			"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
 			params.BeaconConfig().ZeroHash[:],
 			att.Data.CrosslinkDataRootHash32,
 		)
@@ -591,12 +611,9 @@ func verifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *pb
 //       withdrawal_credentials=deposit.deposit_data.deposit_input.withdrawal_credentials,
 //     )
 func ProcessValidatorDeposits(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessValidatorDeposits")
-	defer span.End()
 
 	deposits := block.Body.Deposits
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
@@ -638,13 +655,22 @@ func ProcessValidatorDeposits(
 }
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
+	// Deposits must be processed in order
+	if deposit.MerkleTreeIndex != beaconState.DepositIndex {
+		return fmt.Errorf(
+			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
+			beaconState.DepositIndex,
+			deposit.MerkleTreeIndex,
+		)
+	}
+
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := beaconState.LatestEth1Data.DepositRootHash32
 	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,
 		deposit.DepositData,
 		int(deposit.MerkleTreeIndex),
-		deposit.MerkleBranchHash32S,
+		deposit.MerkleProofHash32S,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",
@@ -674,13 +700,10 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 //       signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
 //     Run initiate_validator_exit(state, exit.validator_index).
 func ProcessValidatorExits(
-	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessValidatorExits")
-	defer span.End()
 
 	exits := block.Body.VoluntaryExits
 	if uint64(len(exits)) > params.BeaconConfig().MaxVoluntaryExits {
@@ -730,4 +753,26 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 		return nil
 	}
 	return nil
+}
+
+// AttsInclusionSlot returns the slot of when an attestator's attestation last gets included
+// in the beacon chain by a proposer.
+func AttsInclusionSlot(index uint64) (uint64, error) {
+	attsInclStore.slotLock.RLock()
+	attsInclStore.slotLock.RUnlock()
+	if slot, ok := attsInclStore.attesterInclusionSlot[index]; ok {
+		return slot, nil
+	}
+	return 0, fmt.Errorf("no inclusion slot for attestor %d", index)
+}
+
+// AttsInclusionDistance returns diff in slot of when an attestator's attestation gets submitted
+// and included.
+func AttsInclusionDistance(index uint64) (uint64, error) {
+	attsInclStore.distLock.RLock()
+	attsInclStore.distLock.RUnlock()
+	if slot, ok := attsInclStore.attesterInclusionDist[index]; ok {
+		return slot, nil
+	}
+	return 0, fmt.Errorf("no inclusion distance for attestor %d", index)
 }

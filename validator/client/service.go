@@ -46,6 +46,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 	ks := keystore.NewKeystore(cfg.KeystorePath)
 	keys, err := ks.GetKeys(validatorFolder, validatorPrefix, cfg.Password)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("could not get private key: %v", err)
 	}
 	var key *keystore.Key
@@ -66,7 +67,11 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	log.WithField("publicKey", fmt.Sprintf("%#x", v.key.PublicKey.Marshal())).Info("Initializing new validator service")
+	pubkeys := make([][]byte, 0)
+	for i := range v.keys {
+		log.WithField("publicKey", fmt.Sprintf("%#x", v.keys[i].PublicKey.Marshal())).Info("Initializing new validator service")
+		pubkeys = append(pubkeys, v.keys[i].PublicKey.Marshal())
+	}
 
 	var dialOpt grpc.DialOption
 	if v.withCert != "" {
@@ -92,7 +97,8 @@ func (v *ValidatorService) Start() {
 		validatorClient: pb.NewValidatorServiceClient(v.conn),
 		attesterClient:  pb.NewAttesterServiceClient(v.conn),
 		proposerClient:  pb.NewProposerServiceClient(v.conn),
-		key:             v.key,
+		keys:            v.keys,
+		pubkeys:         pubkeys,
 	}
 	go run(v.ctx, v.validator)
 }

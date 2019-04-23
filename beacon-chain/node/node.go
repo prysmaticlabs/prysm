@@ -137,6 +137,7 @@ func (b *BeaconNode) Start() {
 		defer signal.Stop(sigc)
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
+		debug.Exit(b.ctx) // Ensure trace and CPU profile data are flushed.
 		go b.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
@@ -144,7 +145,6 @@ func (b *BeaconNode) Start() {
 				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
 			}
 		}
-		debug.Exit(b.ctx) // Ensure trace and CPU profile data are flushed.
 		panic("Panic closing the beacon node")
 	}()
 
@@ -179,7 +179,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 
-	log.Infof("Checking db at %s", dbPath)
+	log.WithField("path", dbPath).Info("Checking db")
 	b.db = db
 	return nil
 }
@@ -259,6 +259,12 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	}
 	powClient := ethclient.NewClient(rpcClient)
 
+	logRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.HTTPWeb3ProviderFlag.Name))
+	if err != nil {
+		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+	}
+	pastLogHTTPClient := ethclient.NewClient(logRPCClient)
+
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
 		Endpoint:        cliCtx.GlobalString(utils.Web3ProviderFlag.Name),
@@ -266,6 +272,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		Client:          powClient,
 		Reader:          powClient,
 		Logger:          powClient,
+		HTTPLogger:      pastLogHTTPClient,
 		BlockFetcher:    powClient,
 		ContractBackend: powClient,
 		BeaconDB:        b.db,

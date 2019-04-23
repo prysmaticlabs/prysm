@@ -19,7 +19,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//beacon-chain/core/genesis:go_default_library",
+        "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
@@ -56,6 +57,7 @@ go_test(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "@com_github_boltdb_bolt//:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
     ],

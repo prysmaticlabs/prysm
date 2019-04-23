@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -22,7 +23,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.SaveHistoricalState(finalizedState); err != nil {
+	if err := s.db.SaveHistoricalState(ctx, finalizedState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 		return
 	}
@@ -47,7 +48,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	exists, blkNum, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
+	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
 	if err != nil {
 		log.Errorf("Unable to get powchain block %v", err)
 	}
@@ -57,12 +58,14 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	s.db.PrunePendingDeposits(ctx, blkNum)
+	s.db.PrunePendingDeposits(ctx, finalizedState.DepositIndex)
 
 	if err := s.db.UpdateChainHead(ctx, finalizedState.LatestBlock, finalizedState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)
 		return
 	}
+
+	validators.InitializeValidatorStore(finalizedState)
 
 	// sets the current slot to the last finalized slot of the
 	// beacon state to begin our sync from.

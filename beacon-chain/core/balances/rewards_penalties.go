@@ -5,16 +5,15 @@
 package balances
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"go.opencensus.io/trace"
 )
 
 // ExpectedFFGSource applies rewards or penalties
@@ -30,15 +29,11 @@ import (
 //	  Any active validator v not in previous_epoch_justified_attester_indices
 //	  loses base_reward(state, index).
 func ExpectedFFGSource(
-	ctx context.Context,
 	state *pb.BeaconState,
 	justifiedAttesterIndices []uint64,
 	justifiedAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ExpectedFFGSourceRewards")
-	defer span.End()
 
 	for _, index := range justifiedAttesterIndices {
 		state.ValidatorBalances[index] +=
@@ -69,14 +64,10 @@ func ExpectedFFGSource(
 //	  Any active validator index not in previous_epoch_boundary_attester_indices loses
 //	  base_reward(state, index).
 func ExpectedFFGTarget(
-	ctx context.Context,
 	state *pb.BeaconState,
 	boundaryAttesterIndices []uint64,
 	boundaryAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ExpectedFFGTargetRewards")
-	defer span.End()
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
@@ -109,14 +100,10 @@ func ExpectedFFGTarget(
 //    Any active validator index not in previous_epoch_head_attester_indices loses
 //    base_reward(state, index).
 func ExpectedBeaconChainHead(
-	ctx context.Context,
 	state *pb.BeaconState,
 	headAttesterIndices []uint64,
 	headAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ExpectedBeaconChainHeadRewards")
-	defer span.End()
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
@@ -145,20 +132,16 @@ func ExpectedBeaconChainHead(
 //    base_reward(state, index) * MIN_ATTESTATION_INCLUSION_DELAY //
 //    inclusion_distance(state, index)
 func InclusionDistance(
-	ctx context.Context,
 	state *pb.BeaconState,
 	attesterIndices []uint64,
 	totalBalance uint64) (*pb.BeaconState, error) {
 
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ExpectedInclusionDistanceRewards")
-	defer span.End()
-
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range attesterIndices {
-		inclusionDistance, err := epoch.InclusionDistance(state, index)
+		inclusionDistance, err := blocks.AttsInclusionDistance(index)
 		if err != nil {
-			return nil, fmt.Errorf("could not get inclusion distance: %v", err)
+			return nil, err
 		}
 		if inclusionDistance == 0 {
 			return nil, errors.New("could not process inclusion distance: 0")
@@ -179,14 +162,10 @@ func InclusionDistance(
 //    Any active validator index not in previous_epoch_justified_attester_indices,
 //    loses inactivity_penalty(state, index, epochs_since_finality)
 func InactivityFFGSource(
-	ctx context.Context,
 	state *pb.BeaconState,
 	justifiedAttesterIndices []uint64,
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.InactivityFFGSourcePenalties")
-	defer span.End()
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
@@ -207,14 +186,10 @@ func InactivityFFGSource(
 //    Any active validator index not in previous_epoch_boundary_attester_indices,
 // 	  loses inactivity_penalty(state, index, epochs_since_finality)
 func InactivityFFGTarget(
-	ctx context.Context,
 	state *pb.BeaconState,
 	boundaryAttesterIndices []uint64,
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.InactivityFFGTargetPenalties")
-	defer span.End()
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
@@ -235,13 +210,9 @@ func InactivityFFGTarget(
 //    Any active validator index not in previous_epoch_head_attester_indices,
 // 	  loses base_reward(state, index)
 func InactivityChainHead(
-	ctx context.Context,
 	state *pb.BeaconState,
 	headAttesterIndices []uint64,
 	totalBalance uint64) *pb.BeaconState {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.InactivityChainHeadPenalties")
-	defer span.End()
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
@@ -262,13 +233,9 @@ func InactivityChainHead(
 //    loses 2 * inactivity_penalty(state, index, epochs_since_finality) +
 //    base_reward(state, index).
 func InactivityExitedPenalties(
-	ctx context.Context,
 	state *pb.BeaconState,
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.InactivityExitedPenalties")
-	defer span.End()
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -292,20 +259,16 @@ func InactivityExitedPenalties(
 //    base_reward(state, index) - base_reward(state, index) *
 //    MIN_ATTESTATION_INCLUSION_DELAY // inclusion_distance(state, index)
 func InactivityInclusionDistance(
-	ctx context.Context,
 	state *pb.BeaconState,
 	attesterIndices []uint64,
 	totalBalance uint64) (*pb.BeaconState, error) {
 
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.InactivityInclusionDistancePenalties")
-	defer span.End()
-
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range attesterIndices {
-		inclusionDistance, err := epoch.InclusionDistance(state, index)
+		inclusionDistance, err := blocks.AttsInclusionDistance(index)
 		if err != nil {
-			return nil, fmt.Errorf("could not get inclusion distance: %v", err)
+			return nil, err
 		}
 		baseReward := helpers.BaseReward(state, index, baseRewardQuotient)
 		state.ValidatorBalances[index] -= baseReward -
@@ -325,17 +288,14 @@ func InactivityInclusionDistance(
 //    and set state.validator_balances[proposer_index] +=
 //    base_reward(state, index) // ATTESTATION_INCLUSION_REWARD_QUOTIENT
 func AttestationInclusion(
-	ctx context.Context,
 	state *pb.BeaconState,
 	totalBalance uint64,
 	prevEpochAttesterIndices []uint64) (*pb.BeaconState, error) {
 
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.AttestationInclusion")
-	defer span.End()
-
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	for _, index := range prevEpochAttesterIndices {
-		slot, err := epoch.InclusionSlot(state, index)
+		// Get the attestation's inclusion slot using the attestor's index.
+		slot, err := blocks.AttsInclusionSlot(index)
 		if err != nil {
 			return nil, fmt.Errorf("could not get inclusion slot: %v", err)
 		}
@@ -365,13 +325,9 @@ func AttestationInclusion(
 //			If index not in attesting_validators(crosslink_committee),
 //			state.validator_balances[index] -= base_reward(state, index).
 func Crosslinks(
-	ctx context.Context,
 	state *pb.BeaconState,
 	thisEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) (*pb.BeaconState, error) {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.CrosslinkBalances")
-	defer span.End()
 
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -390,16 +346,15 @@ func Crosslinks(
 			shard := crosslinkCommittee.Shard
 			committee := crosslinkCommittee.Committee
 			totalAttestingBalance, err :=
-				epoch.TotalAttestingBalance(ctx, state, shard, thisEpochAttestations, prevEpochAttestations)
+				epoch.TotalAttestingBalance(state, shard, thisEpochAttestations, prevEpochAttestations)
 			if err != nil {
 				return nil,
 					fmt.Errorf("could not get attesting balance for shard committee %d: %v", shard, err)
 			}
-			totalBalance := epoch.TotalBalance(ctx, state, committee)
+			totalBalance := epoch.TotalBalance(state, committee)
 			baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 			attestingIndices, err := epoch.AttestingValidators(
-				ctx,
 				state,
 				shard,
 				thisEpochAttestations,

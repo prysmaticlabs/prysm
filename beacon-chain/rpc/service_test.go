@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -54,19 +55,22 @@ func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error)
 		{
 			AggregationBitfield: []byte("A"),
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
 			AggregationBitfield: []byte("B"),
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
 			AggregationBitfield: []byte("C"),
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 	}, nil
@@ -77,6 +81,7 @@ type mockChainService struct {
 	stateFeed            *event.Feed
 	attestationFeed      *event.Feed
 	stateInitializedFeed *event.Feed
+	canonicalBlocks      map[uint64][]byte
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
@@ -99,6 +104,14 @@ func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error
 	return nil
 }
 
+func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
+	return bytes.Equal(m.canonicalBlocks[slot], hash)
+}
+
+func (m mockChainService) InsertsCanonical(slot uint64, hash []byte) {
+	m.canonicalBlocks[slot] = hash
+}
+
 func newMockChainService() *mockChainService {
 	return &mockChainService{
 		blockFeed:            new(event.Feed),
@@ -119,7 +132,7 @@ func TestLifecycle_OK(t *testing.T) {
 	rpcService.Start()
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
+	testutil.AssertLogsContain(t, hook, "Listening on port")
 
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
@@ -172,7 +185,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	rpcService.Start()
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
+	testutil.AssertLogsContain(t, hook, fmt.Sprint("Listening on port"))
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
 
 	rpcService.Stop()

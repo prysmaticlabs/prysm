@@ -139,7 +139,8 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
 		if err != nil {
-			log.Debugf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
+			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", eth1Hash)).
+				Debug("Could not verify block with hash in ETH1 chain")
 			continue
 		}
 		if !blockExists {
@@ -214,7 +215,6 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
 	}
 
-	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	beaconState, err := bs.beaconDB.HeadState(ctx)
@@ -242,6 +242,17 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
+	}
+
+	allPendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
+
+	// Deposits need to be received in order of merkle index root, so this has to make sure
+	// deposits are sorted from lowest to highest.
+	var pendingDeps []*pbp2p.Deposit
+	for _, dep := range allPendingDeps {
+		if dep.MerkleTreeIndex >= beaconState.DepositIndex {
+			pendingDeps = append(pendingDeps, dep)
+		}
 	}
 
 	for i := range pendingDeps {
@@ -306,6 +317,6 @@ func constructMerkleProof(trie *trieutil.MerkleTrie, deposit *pbp2p.Deposit) (*p
 	// For every deposit, we construct a Merkle proof using the powchain service's
 	// in-memory deposits trie, which is updated only once the state's LatestETH1Data
 	// property changes during a state transition after a voting period.
-	deposit.MerkleBranchHash32S = proof
+	deposit.MerkleProofHash32S = proof
 	return deposit, nil
 }

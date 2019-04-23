@@ -52,7 +52,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 		w.ProcessChainStartLog(depositLog)
 		return
 	}
-	log.Debugf("Log is not of a valid event signature %#x", depositLog.Topics[0])
+	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid signature")
 }
 
 // ProcessDepositLog processes the log which had been received from
@@ -127,6 +127,11 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 		return
 	}
 
+	w.chainStartETH1Data = &pb.Eth1Data{
+		BlockHash32:       depositLog.BlockHash[:],
+		DepositRootHash32: chainStartDepositRoot[:],
+	}
+
 	timestamp := binary.LittleEndian.Uint64(timestampData)
 	w.chainStarted = true
 	w.depositRoot = chainStartDepositRoot[:]
@@ -159,7 +164,7 @@ func (w *Web3Service) processPastLogs() error {
 		},
 	}
 
-	logs, err := w.logger.FilterLogs(w.ctx, query)
+	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
 	if err != nil {
 		return err
 	}
@@ -168,6 +173,15 @@ func (w *Web3Service) processPastLogs() error {
 		w.ProcessLog(log)
 	}
 	w.lastRequestedBlock.Set(w.blockHeight)
+
+	currentState, err := w.beaconDB.HeadState(w.ctx)
+	if err != nil {
+		return fmt.Errorf("could not get head state: %v", err)
+	}
+	if currentState != nil && currentState.DepositIndex > 0 {
+		w.beaconDB.PrunePendingDeposits(w.ctx, currentState.DepositIndex)
+	}
+
 	return nil
 }
 

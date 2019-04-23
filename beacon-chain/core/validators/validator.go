@@ -6,7 +6,6 @@ package validators
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"sync"
 
@@ -16,10 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
-var log = logrus.WithField("prefix", "powchain")
+var log = logrus.WithField("prefix", "validator")
 
 type validatorStore struct {
 	sync.RWMutex
@@ -42,13 +40,9 @@ var vStore = validatorStore{
 //   index sets given by [get_attestation_participants(state, a.data, a.aggregation_bitfield)
 //   for a in attestations]
 func ValidatorIndices(
-	ctx context.Context,
 	state *pb.BeaconState,
 	attestations []*pb.PendingAttestation,
 ) ([]uint64, error) {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ValidatorIndices")
-	defer span.End()
 
 	var attesterIndicesIntersection []uint64
 	for _, attestation := range attestations {
@@ -117,17 +111,20 @@ func ProcessDeposit(
 	var publicKeyExists bool
 	var existingValidatorIdx int
 
+	state.DepositIndex++
+
 	existingValidatorIdx, publicKeyExists = validatorIdxMap[bytesutil.ToBytes32(pubkey)]
 	if !publicKeyExists {
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
 		newValidator := &pb.Validator{
-			Pubkey:          pubkey,
-			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
-			StatusFlags:     0,
+			Pubkey:                      pubkey,
+			ActivationEpoch:             params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
+			StatusFlags:                 0,
+			WithdrawalCredentialsHash32: withdrawalCredentials,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
@@ -306,11 +303,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //            exit_validator(state, index)
 //
 //    state.validator_registry_update_epoch = current_epoch
-func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.UpdateRegistry")
-	defer span.End()
-
+func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	updatedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
@@ -328,7 +321,8 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
-			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
+			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount &&
+			!helpers.IsActiveValidator(validator, currentEpoch) {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			log.WithFields(logrus.Fields{
 				"index":               idx,
@@ -409,10 +403,7 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 //        withdrawn_so_far += 1
 //        if withdrawn_so_far >= MAX_EXIT_DEQUEUES_PER_EPOCH:
 //            break
-func ProcessPenaltiesAndExits(ctx context.Context, state *pb.BeaconState) *pb.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessPenaltiesAndExits")
-	defer span.End()
-
+func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, currentEpoch)
@@ -453,6 +444,19 @@ func ProcessPenaltiesAndExits(ctx context.Context, state *pb.BeaconState) *pb.Be
 		}
 	}
 	return state
+}
+
+// InitializeValidatorStore sets the current active validators from the current
+// state.
+func InitializeValidatorStore(bState *pb.BeaconState) {
+	vStore.Lock()
+	defer vStore.Unlock()
+
+	currentEpoch := helpers.CurrentEpoch(bState)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(
+		bState.ValidatorRegistry, currentEpoch)
+	vStore.activatedValidators[currentEpoch] = activeValidatorIndices
+
 }
 
 // InsertActivatedVal locks the validator store, inserts the activated validator
