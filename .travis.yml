@@ -10,9 +10,8 @@ matrix:
         - lint
       install:
         - go get ${gobuild_args} -t ./...
-        - go get ${gobuild_args} github.com/golangci/golangci-lint/cmd/golangci-lint
       script:
-        - golangci-lint run
+        - go get ${gobuild_args} github.com/golangci/golangci-lint/cmd/golangci-lint && curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.15.0 && golangci-lint run
       email: false
       after_success:
         - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
