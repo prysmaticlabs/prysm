@@ -63,7 +63,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		withCert:             cfg.CertFlag,
 		keys:                 keys,
 		key:                  key,
-		logValidatorBalances: true,
+		logValidatorBalances: false,
 	}, nil
 }
 
@@ -102,7 +102,7 @@ func (v *ValidatorService) Start() {
 		proposerClient:       pb.NewProposerServiceClient(v.conn),
 		keys:                 v.keys,
 		pubkeys:              pubkeys,
-		logValidatorBalances: true,
+		logValidatorBalances: false,
 	}
 	go run(v.ctx, v.validator)
 }
