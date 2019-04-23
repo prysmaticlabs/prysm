@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -134,14 +133,15 @@ func ExpectedBeaconChainHead(
 func InclusionDistance(
 	state *pb.BeaconState,
 	attesterIndices []uint64,
-	totalBalance uint64) (*pb.BeaconState, error) {
+	totalBalance uint64,
+	inclusionDistanceByAttester map[uint64]uint64) (*pb.BeaconState, error) {
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range attesterIndices {
-		inclusionDistance, err := blocks.AttsInclusionDistance(index)
-		if err != nil {
-			return nil, err
+		inclusionDistance, ok := inclusionDistanceByAttester[index]
+		if !ok {
+			return nil, fmt.Errorf("could not get inclusion distance for attester: %d", index)
 		}
 		if inclusionDistance == 0 {
 			return nil, errors.New("could not process inclusion distance: 0")
@@ -261,14 +261,14 @@ func InactivityExitedPenalties(
 func InactivityInclusionDistance(
 	state *pb.BeaconState,
 	attesterIndices []uint64,
-	totalBalance uint64) (*pb.BeaconState, error) {
-
+	totalBalance uint64,
+	inclusionDistanceByAttester map[uint64]uint64) (*pb.BeaconState, error) {
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range attesterIndices {
-		inclusionDistance, err := blocks.AttsInclusionDistance(index)
-		if err != nil {
-			return nil, err
+		inclusionDistance, ok := inclusionDistanceByAttester[index]
+		if !ok {
+			return nil, fmt.Errorf("could not get inclusion distance for attester: %d", index)
 		}
 		baseReward := helpers.BaseReward(state, index, baseRewardQuotient)
 		state.ValidatorBalances[index] -= baseReward -
@@ -290,18 +290,19 @@ func InactivityInclusionDistance(
 func AttestationInclusion(
 	state *pb.BeaconState,
 	totalBalance uint64,
-	prevEpochAttesterIndices []uint64) (*pb.BeaconState, error) {
+	prevEpochAttesterIndices []uint64,
+	inclusionSlotByAttester map[uint64]uint64) (*pb.BeaconState, error) {
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	for _, index := range prevEpochAttesterIndices {
 		// Get the attestation's inclusion slot using the attestor's index.
-		slot, err := blocks.AttsInclusionSlot(index)
-		if err != nil {
-			return nil, fmt.Errorf("could not get inclusion slot: %v", err)
+		slot, ok := inclusionSlotByAttester[index]
+		if !ok {
+			return nil, fmt.Errorf("could not get inclusion slot for attester: %d", index)
 		}
 		proposerIndex, err := helpers.BeaconProposerIndex(state, slot)
 		if err != nil {
-			return nil, fmt.Errorf("could not get propoer index: %v", err)
+			return nil, fmt.Errorf("could not get proposer index: %v", err)
 		}
 		state.ValidatorBalances[proposerIndex] +=
 			helpers.BaseReward(state, proposerIndex, baseRewardQuotient) /
