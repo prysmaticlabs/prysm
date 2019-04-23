@@ -55,12 +55,12 @@ type Server struct {
 	topicMapping  map[reflect.Type]string
 	bootstrapNode string
 	relayNodeAddr string
-	localNetwork  bool
+	noDiscovery  bool
 }
 
 // ServerConfig for peer to peer networking.
 type ServerConfig struct {
-	LocalNetwork      bool
+	NoDiscovery      bool
 	BootstrapNodeAddr string
 	RelayNodeAddr     string
 	Port              int
@@ -114,7 +114,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		topicMapping:  make(map[reflect.Type]string),
 		bootstrapNode: cfg.BootstrapNodeAddr,
 		relayNodeAddr: cfg.RelayNodeAddr,
-		localNetwork:  cfg.LocalNetwork,
+		noDiscovery:  cfg.NoDiscovery,
 	}, nil
 }
 
@@ -142,7 +142,7 @@ func (s *Server) Start() {
 	defer span.End()
 	log.Info("Starting service")
 
-	if !s.localNetwork {
+	if !s.noDiscovery {
 		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
@@ -151,6 +151,8 @@ func (s *Server) Start() {
 		if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
 			log.Errorf("Failed to bootstrap DHT: %v", err)
 		}
+	}
+	if !s.noDiscovery && s.relayNodeAddr != "" {
 		if err := dialRelayNode(ctx, s.host, s.relayNodeAddr); err != nil {
 			log.Errorf("Could not dial relay node: %v", err)
 		}
@@ -161,9 +163,7 @@ func (s *Server) Start() {
 		return
 	}
 
-	if s.localNetwork {
-		startPeerWatcher(ctx, s.host, "", "")
-	} else {
+	if !s.noDiscovery {
 		startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
 	}
 }

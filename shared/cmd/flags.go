@@ -47,10 +47,10 @@ var (
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8080,
 	}
-	// LocalNetwork specifies whether we are running a local network and have no need for connecting
+	// NoDiscovery specifies whether we are running a local network and have no need for connecting
 	// to the bootstrap nodes in the cloud
-	LocalNetwork = cli.BoolFlag{
-		Name:  "local-network",
+	NoDiscovery = cli.BoolFlag{
+		Name:  "no-discovery",
 		Usage: "Enable only local network p2p and do not connect to cloud bootstrap nodes.",
 	}
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
