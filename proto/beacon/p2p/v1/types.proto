@@ -190,8 +190,17 @@ message VoluntaryExit {
 }
 
 message Eth1Data {
-  bytes deposit_root_hash32 = 1;
-  bytes block_hash32 = 2;
+  // Root of the deposit tree
+  bytes deposit_root = 1;
+  // Total number of deposits
+  uint64 deposit_count = 2;
+  // Block hash
+  bytes block_root = 3;
+
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  bytes deposit_root_hash32 = 1000 [deprecated=true];
+  bytes block_hash32 = 1001 [deprecated=true];
 }
 
 message Eth1DataVote {
