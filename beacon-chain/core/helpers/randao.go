@@ -39,10 +39,8 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 	epochInBytes := make([]byte, 32)
 	binary.LittleEndian.PutUint64(epochInBytes, wantedEpoch)
 	epochBytes32 := bytesutil.ToBytes32(epochInBytes)
-
 	bytes := append(randaoMix, indexRoot...)
-	bytes = append(bytes, epochBytes32[:]...)
-	return hashutil.Hash(bytes), nil
+	return hashutil.Hash(append(bytes, epochBytes32[:]...)), nil
 }
 
 // ActiveIndexRoot returns the index root of a given epoch.
