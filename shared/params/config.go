@@ -15,26 +15,28 @@ type BeaconChainConfig struct {
 	MinPerEpochChurnLimit    uint64 // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
 	ChurnLimitQuotient       uint64 // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	ShuffleRoundCount        uint64 // ShuffleRoundCount is used for retrieving the permuted index.
-	MaxBalanceChurnQuotient  uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
-	// Deprecated: No longer in use.
+	// TODO(2307): Remove deprecated fields
+	// Deprecated: Do not use.
+	MaxBalanceChurnQuotient uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
+	// Deprecated: Do not use.
 	BeaconChainShardNumber uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
 	// Deprecated: Do not use.
 	MaxIndicesPerSlashableVote uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
 	// Deprecated: Do not use.
 	MaxExitDequeuesPerEpoch uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
-	// Deprecated: Do not use.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
 
 	// Gwei value constants.
-	MinDepositAmount           uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MaxDepositAmount           uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	EjectionBalance            uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
-	HighBalanceIncrement       uint64 // HighBalanceIncrement is used for converting the high balance into the low balance for validators.
-	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
+	MinDepositAmount     uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxDepositAmount     uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	EjectionBalance      uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	HighBalanceIncrement uint64 // HighBalanceIncrement is used for converting the high balance into the low balance for validators.
+	// TODO(2307): Remove deprecated fields
 	//Deprecated: Do not use.
+	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
 
 	// Initial value constants.
 	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields.
@@ -42,12 +44,13 @@ type BeaconChainConfig struct {
 	FarFutureEpoch          uint64   // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
-	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
+	// TODO(2307): Remove deprecated fields
+	// Deprecated: Do not use.
+	GenesisForkVersion uint64 // GenesisForkVersion is used to track fork version between state transitions.
 	// Deprecated: Do not use.
 	GenesisStartShard uint64 // GenesisStartShard is the first shard to assign validators.
 	// Deprecated: Do not use.
 	EmptySignature [96]byte // EmptySignature is used to represent a zeroed out BLS Signature.
-	// Deprecated: Do not use.
 
 	// Time parameters constants.
 	SecondsPerSlot               uint64 // SecondsPerSlot is how many seconds are in a single slot.
@@ -61,24 +64,27 @@ type BeaconChainConfig struct {
 	PersistentCommitteePeriod    uint64 // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
 	MaxCrosslinkEpochs           uint64 // MaxCrosslinkEpochs defines the max epoch from current a crosslink can be formed at.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
-	EpochsPerEth1VotingPeriod    uint64 // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
+	EpochsPerEth1VotingPeriod uint64 // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 
 	// State list lengths
 	LatestRandaoMixesLength      uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	LatestActiveIndexRootsLength uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	LatestSlashedExitLength      uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
-	LatestBlockRootsLength       uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
+	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
+	LatestBlockRootsLength uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 
 	// Reward and penalty quotients constants.
-	BaseRewardQuotient                 uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
-	WhistleBlowingRewardQuotient       uint64 // WhistleBlowingRewardQuotient is used to calculate whistler blower reward.
-	ProposerRewardQuotient             uint64 // ProposerRewardQuotient is used to calculate the reward for proposers.
-	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
-	MinPenaltyQuotient                 uint64 // MinPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
-	AttestationInclusionRewardQuotient uint64 // AttestationInclusionRewardQuotient defines the reward quotient of proposer for including attestations.
+	BaseRewardQuotient           uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
+	WhistleBlowingRewardQuotient uint64 // WhistleBlowingRewardQuotient is used to calculate whistler blower reward.
+	ProposerRewardQuotient       uint64 // ProposerRewardQuotient is used to calculate the reward for proposers.
+	InactivityPenaltyQuotient    uint64 // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
+	MinPenaltyQuotient           uint64 // MinPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
+	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
+	AttestationInclusionRewardQuotient uint64 // AttestationInclusionRewardQuotient defines the reward quotient of proposer for including attestations.
 
 	// Max operations per block constants.
 	MaxProposerSlashings uint64 // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
@@ -133,6 +139,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ChurnLimitQuotient:       1 << 16,
 	ShuffleRoundCount:        90,
 
+	// TODO(2307): Remove deprecated fields
 	// Deprecated.
 	MaxBalanceChurnQuotient:    32,
 	BeaconChainShardNumber:     1<<64 - 1,
@@ -155,6 +162,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ZeroHash:                [32]byte{},
 	BLSWithdrawalPrefixByte: byte(0),
 
+	// TODO(2307): Remove deprecated fields
 	// Deprecated.
 	GenesisForkVersion: 0,
 	GenesisStartShard:  0,
@@ -174,6 +182,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestActiveIndexRootsLength: 8192,
 	LatestSlashedExitLength:      8192,
 
+	// TODO(2307): Remove deprecated fields
 	// Deprecated.
 	LatestBlockRootsLength: 8192,
 
