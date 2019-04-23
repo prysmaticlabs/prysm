@@ -78,14 +78,15 @@ type BeaconChainConfig struct {
 	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
 
 	// Prysm constants.
-	DepositsForChainStart uint64        // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	RandBytes             uint64        // RandBytes is the number of bytes used as entropy to shuffle validators.
-	SyncPollingInterval   int64         // SyncPollingInterval queries network nodes for sync status.
-	BatchBlockLimit       uint64        // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
-	SyncEpochLimit        uint64        // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
-	MaxNumLog2Validators  uint64        // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
-	LogBlockDelay         int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
-	RPCSyncCheck          time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
+	DepositsForChainStart   uint64        // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
+	RandBytes               uint64        // RandBytes is the number of bytes used as entropy to shuffle validators.
+	SyncPollingInterval     int64         // SyncPollingInterval queries network nodes for sync status.
+	BatchBlockLimit         uint64        // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
+	SyncEpochLimit          uint64        // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
+	MaxNumLog2Validators    uint64        // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
+	LogBlockDelay           int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
+	RPCSyncCheck            time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
+	TestnetContractEndpoint string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
 }
 
 // DepositContractConfig contains the deposits for
@@ -175,6 +176,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
 	RPCSyncCheck:          1,
+
+	// Testnet misc values.
+	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultShardConfig = &ShardChainConfig{
