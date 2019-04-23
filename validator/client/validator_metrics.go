@@ -106,8 +106,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			}
 			totalPrevBalance += resp.Balance
 		}
-
 		v.prevBalance = totalPrevBalance
-		return nil
 	}
+	return nil
 }
