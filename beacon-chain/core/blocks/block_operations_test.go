@@ -385,7 +385,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	newStateVals := newState.ValidatorRegistry
 	if newStateVals[1].ExitEpoch != validators[1].ExitEpoch {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
-			newStateVals[1], validators[1].ExitEpoch)
+			newStateVals[1].ExitEpoch, validators[1].ExitEpoch)
 	}
 }
 
