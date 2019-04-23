@@ -66,23 +66,46 @@ message Attestation {
   AttestationData data = 1;
   bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
-  bytes aggregate_signature = 4; // Type of [uint384] ?
+  bytes aggregate_signature = 4; // bytes96
 }
 
 message AttestationData {
+  // LMD GHOST vote
   uint64 slot = 1;
-  uint64 shard = 2;
-  bytes beacon_block_root_hash32 = 3;
-  bytes epoch_boundary_root_hash32  = 4;
-  bytes crosslink_data_root_hash32 = 5;
-  Crosslink latest_crosslink = 6;
-  uint64 justified_epoch = 7;
-  bytes justified_block_root_hash32 = 8;
+  bytes beacon_block_root = 2;
+
+  // FFG vote
+  uint64 source_epoch = 3;
+  uint64 source_root = 4;
+  uint64 target_root = 5;
+
+  // Crosslink vote
+  uint64 shard = 6;
+  bytes previous_crosslink_root = 7;
+  bytes crosslink_data_root = 8;
+
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  bytes epoch_boundary_root_hash32 = 1000 [deprecated=true];
+  Crosslink latest_crosslink = 1001 [deprecated=true];
+  uint64 justified_epoch = 1002 [deprecated=true];
+  bytes justified_block_root_hash32 = 1003 [deprecated=true];
+  bytes beacon_block_root_hash32 = 1004 [deprecated=true];
+  bytes crosslink_data_root_hash32 = 1005 [deprecated=true];
 }
 
 message AttestationDataAndCustodyBit {
   AttestationData data = 1;
   bool custody_bit = 2;
+}
+
+message IndexedAttestation {
+  // Validator indices
+  repeated uint64 custody_bit_0_indices = 1;
+  repeated uint64 custody_bit_1_indices = 2;
+  AttestationData data = 3;
+  // Aggregate signature
+  bytes signature = 4; // bytes96
 }
 
 message Validator {
@@ -166,15 +189,24 @@ message DepositData {
 
 message ProposerSlashing {
   uint64 proposer_index = 1;
-  ProposalSignedData proposal_data_1 = 2;
-  bytes proposal_signature_1 = 3; // bytes96
-  ProposalSignedData proposal_data_2 = 4;
-  bytes proposal_signature_2 = 5;
+  BeaconBlockHeader header_1 = 2;
+  BeaconBlockHeader header_2 = 3;
+
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  ProposalSignedData proposal_data_1 = 1001 [deprecated=true];
+  bytes proposal_signature_1 = 1002 [deprecated=true]; // bytes96
+  ProposalSignedData proposal_data_2 = 1003 [deprecated=true];
+  bytes proposal_signature_2 = 1004 [deprecated=true];
 }
 
 message AttesterSlashing {
-  SlashableAttestation slashable_attestation_1 = 1;
-  SlashableAttestation slashable_attestation_2 = 2;
+  IndexedAttestation attestation_1 = 1;
+  IndexedAttestation attestation_2 = 2;
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  SlashableAttestation slashable_attestation_1 = 1001 [deprecated=true];
+  SlashableAttestation slashable_attestation_2 = 1002 [deprecated=true];
 }
 
 message Deposit {
@@ -185,15 +217,29 @@ message Deposit {
   DepositData data = 3;
   // Deprecated
   // TODO(2307): Remove deprecated fields
-  repeated bytes merkle_proof_hash32s = 1001;
-  uint64 merkle_tree_index = 1002;
-  bytes deposit_data = 1003;
+  repeated bytes merkle_proof_hash32s = 1001 [deprecated=true];
+  uint64 merkle_tree_index = 1002 [deprecated=true];
+  bytes deposit_data = 1003 [deprecated=true];
 }
 
 message VoluntaryExit {
+  // Minimum epoch for processing exit
   uint64 epoch = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // bytes96
+}
+
+message Transfer {
+  uint64 sender = 1;
+  uint64 recipient = 2;
+  // Amount in Gwei
+  uint64 amount = 3;
+  // Fee in Gwei for block proposer
+  uint64 fee = 4;
+  uint64 slot = 5;
+  // Sender withdrawal pubkey and signature
+  bytes pubkey = 6; // bytes48
+  bytes signature = 7; // bytes96
 }
 
 message Eth1Data {
