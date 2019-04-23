@@ -33,7 +33,7 @@ func TestFFGSrcRewardsPenalties_AccurateBalances(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
-			ValidatorBalances: validatorBalances,
+			Balances: validatorBalances,
 		}
 		state = ExpectedFFGSource(
 			state,
@@ -41,9 +41,9 @@ func TestFFGSrcRewardsPenalties_AccurateBalances(t *testing.T) {
 			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositAmount,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount)
 
-		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterSrcRewardPenalties) {
+		if !reflect.DeepEqual(state.Balances, tt.balanceAfterSrcRewardPenalties) {
 			t.Errorf("FFGSrcRewardsPenalties(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, tt.balanceAfterSrcRewardPenalties)
+				tt.voted, state.Balances, tt.balanceAfterSrcRewardPenalties)
 		}
 	}
 }
@@ -72,7 +72,7 @@ func TestFFGTargetRewardsPenalties_AccurateBalances(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
-			ValidatorBalances: validatorBalances,
+			Balances: validatorBalances,
 		}
 		state = ExpectedFFGTarget(
 			state,
@@ -80,9 +80,9 @@ func TestFFGTargetRewardsPenalties_AccurateBalances(t *testing.T) {
 			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositAmount,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount)
 
-		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterTgtRewardPenalties) {
+		if !reflect.DeepEqual(state.Balances, tt.balanceAfterTgtRewardPenalties) {
 			t.Errorf("FFGTargetRewardsPenalties(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, tt.balanceAfterTgtRewardPenalties)
+				tt.voted, state.Balances, tt.balanceAfterTgtRewardPenalties)
 		}
 	}
 }
@@ -111,7 +111,7 @@ func TestChainHeadRewardsPenalties_AccuratePenalties(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
-			ValidatorBalances: validatorBalances,
+			Balances: validatorBalances,
 		}
 		state = ExpectedBeaconChainHead(
 			state,
@@ -119,9 +119,9 @@ func TestChainHeadRewardsPenalties_AccuratePenalties(t *testing.T) {
 			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositAmount,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount)
 
-		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterHeadRewardPenalties) {
+		if !reflect.DeepEqual(state.Balances, tt.balanceAfterHeadRewardPenalties) {
 			t.Errorf("ChainHeadRewardsPenalties(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, tt.balanceAfterHeadRewardPenalties)
+				tt.voted, state.Balances, tt.balanceAfterHeadRewardPenalties)
 		}
 	}
 }
@@ -160,7 +160,7 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 		state := &pb.BeaconState{
 			Slot:               params.BeaconConfig().GenesisSlot,
 			ValidatorRegistry:  validators,
-			ValidatorBalances:  validatorBalances,
+			Balances:           validatorBalances,
 			LatestAttestations: attestation,
 		}
 		state, err := InclusionDistance(
@@ -175,9 +175,9 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 			validatorBalances[i] = 32000055555
 		}
 
-		if !reflect.DeepEqual(state.ValidatorBalances, validatorBalances) {
+		if !reflect.DeepEqual(state.Balances, validatorBalances) {
 			t.Errorf("InclusionDistRewards(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, validatorBalances)
+				tt.voted, state.Balances, validatorBalances)
 		}
 	}
 }
@@ -237,7 +237,7 @@ func TestInactivityFFGSrcPenalty_AccuratePenalties(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
-			ValidatorBalances: validatorBalances,
+			Balances: validatorBalances,
 		}
 		state = InactivityFFGSource(
 			state,
@@ -245,9 +245,9 @@ func TestInactivityFFGSrcPenalty_AccuratePenalties(t *testing.T) {
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount,
 			tt.epochsSinceFinality)
 
-		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterFFGSrcPenalty) {
+		if !reflect.DeepEqual(state.Balances, tt.balanceAfterFFGSrcPenalty) {
 			t.Errorf("InactivityFFGSrcPenalty(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, tt.balanceAfterFFGSrcPenalty)
+				tt.voted, state.Balances, tt.balanceAfterFFGSrcPenalty)
 		}
 	}
 }
@@ -276,7 +276,7 @@ func TestInactivityFFGTargetPenalty_AccuratePenalties(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
-			ValidatorBalances: validatorBalances,
+			Balances: validatorBalances,
 		}
 		state = InactivityFFGTarget(
 			state,
@@ -284,9 +284,9 @@ func TestInactivityFFGTargetPenalty_AccuratePenalties(t *testing.T) {
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount,
 			tt.epochsSinceFinality)
 
-		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterFFGTargetPenalty) {
+		if !reflect.DeepEqual(state.Balances, tt.balanceAfterFFGTargetPenalty) {
 			t.Errorf("InactivityFFGTargetPenalty(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, tt.balanceAfterFFGTargetPenalty)
+				tt.voted, state.Balances, tt.balanceAfterFFGTargetPenalty)
 		}
 	}
 }
@@ -312,16 +312,16 @@ func TestInactivityHeadPenalty_AccuratePenalties(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
-			ValidatorBalances: validatorBalances,
+			Balances: validatorBalances,
 		}
 		state = InactivityChainHead(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount)
 
-		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterInactivityHeadPenalty) {
+		if !reflect.DeepEqual(state.Balances, tt.balanceAfterInactivityHeadPenalty) {
 			t.Errorf("InactivityHeadPenalty(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, tt.balanceAfterInactivityHeadPenalty)
+				tt.voted, state.Balances, tt.balanceAfterInactivityHeadPenalty)
 		}
 	}
 }
@@ -346,7 +346,7 @@ func TestInactivityExitedPenality_AccuratePenalties(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
-			ValidatorBalances: validatorBalances,
+			Balances: validatorBalances,
 		}
 		state = InactivityExitedPenalties(
 			state,
@@ -354,9 +354,9 @@ func TestInactivityExitedPenality_AccuratePenalties(t *testing.T) {
 			tt.epochsSinceFinality,
 		)
 
-		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterExitedPenalty) {
+		if !reflect.DeepEqual(state.Balances, tt.balanceAfterExitedPenalty) {
 			t.Errorf("InactivityExitedPenalty(epochSinceFinality=%v) = %v, wanted: %v",
-				tt.epochsSinceFinality, state.ValidatorBalances, tt.balanceAfterExitedPenalty)
+				tt.epochsSinceFinality, state.Balances, tt.balanceAfterExitedPenalty)
 		}
 	}
 }
@@ -394,7 +394,7 @@ func TestInactivityInclusionPenalty_AccuratePenalties(t *testing.T) {
 		state := &pb.BeaconState{
 			Slot:               params.BeaconConfig().GenesisSlot,
 			ValidatorRegistry:  validators,
-			ValidatorBalances:  validatorBalances,
+			Balances:           validatorBalances,
 			LatestAttestations: attestation,
 		}
 		state, err := InactivityInclusionDistance(
@@ -409,9 +409,9 @@ func TestInactivityInclusionPenalty_AccuratePenalties(t *testing.T) {
 		if err != nil {
 			t.Fatalf("could not execute InactivityInclusionPenalty:%v", err)
 		}
-		if !reflect.DeepEqual(state.ValidatorBalances, validatorBalances) {
+		if !reflect.DeepEqual(state.Balances, validatorBalances) {
 			t.Errorf("InactivityInclusionPenalty(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, validatorBalances)
+				tt.voted, state.Balances, validatorBalances)
 		}
 	}
 }
@@ -484,7 +484,7 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 		state := &pb.BeaconState{
 			Slot:               params.BeaconConfig().GenesisSlot + 10,
 			ValidatorRegistry:  validators,
-			ValidatorBalances:  validatorBalances,
+			Balances:           validatorBalances,
 			LatestAttestations: pendingAtts,
 			LatestCrosslinks:   []*pb.Crosslink{{}},
 		}
@@ -509,9 +509,9 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 		if err != nil {
 			t.Fatalf("could not execute InactivityInclusionPenalty:%v", err)
 		}
-		if !reflect.DeepEqual(state.ValidatorBalances, validatorBalances) {
+		if !reflect.DeepEqual(state.Balances, validatorBalances) {
 			t.Errorf("AttestationInclusionRewards(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, validatorBalances)
+				tt.voted, state.Balances, validatorBalances)
 		}
 	}
 }
@@ -537,7 +537,7 @@ func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: validators,
-			ValidatorBalances: validatorBalances,
+			Balances:          validatorBalances,
 		}
 		if _, err := AttestationInclusion(state, 0, tt.voted); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no inclusion slot")
@@ -572,7 +572,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 		state := &pb.BeaconState{
 			Slot:               1000,
 			ValidatorRegistry:  validators,
-			ValidatorBalances:  validatorBalances,
+			Balances:           validatorBalances,
 			LatestAttestations: attestation,
 		}
 		if _, err := AttestationInclusion(state, 0, tt.voted); err == nil {
@@ -614,7 +614,7 @@ func TestCrosslinksRewardsPenalties_AccurateBalances(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry:  validators,
-			ValidatorBalances:  validatorBalances,
+			Balances:           validatorBalances,
 			LatestAttestations: attestation,
 		}
 		state, err := Crosslinks(
@@ -624,9 +624,9 @@ func TestCrosslinksRewardsPenalties_AccurateBalances(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not apply Crosslinks rewards: %v", err)
 		}
-		if !reflect.DeepEqual(state.ValidatorBalances, validatorBalances) {
+		if !reflect.DeepEqual(state.Balances, validatorBalances) {
 			t.Errorf("CrosslinksRewardsPenalties(%v) = %v, wanted: %v",
-				tt.voted, state.ValidatorBalances, validatorBalances)
+				tt.voted, state.Balances, validatorBalances)
 		}
 	}
 }

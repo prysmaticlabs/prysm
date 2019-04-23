@@ -253,7 +253,7 @@ func ProcessCrosslinks(
 func ProcessEjections(state *pb.BeaconState, enableLogging bool) (*pb.BeaconState, error) {
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	for _, index := range activeValidatorIndices {
-		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalance {
+		if state.Balances[index] < params.BeaconConfig().EjectionBalance {
 			if enableLogging {
 				log.WithFields(logrus.Fields{
 					"pubKey": fmt.Sprintf("%#x", state.ValidatorRegistry[index].Pubkey),
