@@ -21,7 +21,6 @@ type Service struct {
 	InitialSync     *initialsync.InitialSync
 	Querier         *Querier
 	querierFinished bool
-	synced          bool
 }
 
 // Config defines the configured services required for sync to work.
