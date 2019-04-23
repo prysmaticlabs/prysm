@@ -41,9 +41,18 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 		{32 * validatorsPerEpoch, 16 * params.BeaconConfig().SlotsPerEpoch},
 	}
 	for _, test := range tests {
-		if test.committeeCount != EpochCommitteeCount(test.validatorCount) {
+		vals := make([]*pb.Validator, test.validatorCount)
+		for i := 0; i < len(vals); i++ {
+			vals[i] = &pb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+		s := &pb.BeaconState{
+			ValidatorRegistry: vals,
+		}
+		if test.committeeCount != EpochCommitteeCount(s, 1) {
 			t.Errorf("wanted: %d, got: %d",
-				test.committeeCount, EpochCommitteeCount(test.validatorCount))
+				test.committeeCount, EpochCommitteeCount(s, 1))
 		}
 	}
 }
@@ -57,9 +66,18 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 		TargetCommitteeSize: 2,
 	}
 	params.OverrideBeaconConfig(testConfig)
-	if EpochCommitteeCount(validatorCount) != validatorCount/testConfig.TargetCommitteeSize {
+	vals := make([]*pb.Validator, validatorCount)
+	for i := 0; i < len(vals); i++ {
+		vals[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	s := &pb.BeaconState{
+		ValidatorRegistry: vals,
+	}
+	if EpochCommitteeCount(s, 1) != validatorCount/testConfig.TargetCommitteeSize {
 		t.Errorf("wanted: %d, got: %d",
-			validatorCount/testConfig.TargetCommitteeSize, EpochCommitteeCount(validatorCount))
+			validatorCount/testConfig.TargetCommitteeSize, EpochCommitteeCount(s, 1))
 	}
 	params.OverrideBeaconConfig(productionConfig)
 }
@@ -136,6 +154,9 @@ func TestShuffling_OK(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}
 
 	randaoSeed := [32]byte{'A'}
 	slot := uint64(10)
@@ -145,7 +166,7 @@ func TestShuffling_OK(t *testing.T) {
 	}
 
 	// Verify shuffled list is correctly split into committees_per_slot pieces.
-	committeesPerEpoch = EpochCommitteeCount(uint64(len(validators)))
+	committeesPerEpoch = EpochCommitteeCount(state, 1)
 	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().SlotsPerEpoch
 	if committeesPerSlot != committeesPerSlot {
 		t.Errorf("Incorrect committee count after splitting. Wanted: %d, got: %d",
