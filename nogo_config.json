@@ -1,0 +1,53 @@
+{
+  "unsafeptr": {
+    "exclude_files": {
+      "external/*": "Unsafe third party code"
+    }
+  },
+  "unreachable": {
+    "exclude_files": {
+      "shared/messagehandler/messagehandler_test.go": "Necessary panic before return for test",
+      "external/*": "Unreachable third party code"
+    }
+  },
+  "lostcancel": {
+    "exclude_files": {
+      "validator/client/runner.go": "No need to cancel right when goroutines begin"
+    }
+  },
+  "nilness": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
+  },
+  "stdmethods": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
+  }, 
+  "copylocks": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
+  },
+  "composites": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    } 
+  }, 
+  "cgocall": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    } 
+  },
+  "assign": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
+  },
+  "structtag": {
+    "exclude_files": {
+      "external/*": "Third party code"
+    }
+  }
+}

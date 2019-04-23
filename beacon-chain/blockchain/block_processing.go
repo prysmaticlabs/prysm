@@ -100,6 +100,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 			if err := c.beaconDB.DeleteBlock(block); err != nil {
 				return nil, fmt.Errorf("could not delete bad block from db: %v", err)
 			}
+			return beaconState, err
 		default:
 			return beaconState, fmt.Errorf("could not apply block state transition: %v", err)
 		}
@@ -307,7 +308,7 @@ func (c *ChainService) runStateTransition(
 // validators were activated from current epoch. After it saves, current epoch key
 // is deleted from ActivatedValidators mapping.
 func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
-	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state))
+	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range activatedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
@@ -322,7 +323,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 // validators were exited from current epoch. After it deletes, current epoch key
 // is deleted from ExitedValidators mapping.
 func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
-	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state))
+	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range exitedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
