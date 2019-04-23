@@ -47,16 +47,24 @@ var (
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8080,
 	}
+	// LocalNetwork specifies whether we are running a local network and have no need for connecting
+	// to the bootstrap nodes in the cloud
+	LocalNetwork = cli.BoolFlag{
+		Name:  "local-network",
+		Usage: "Enable only local network p2p and do not connect to cloud bootstrap nodes.",
+	}
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
 	BootstrapNode = cli.StringFlag{
 		Name:  "bootstrap-node",
 		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
+		Value: "/ip4/35.224.249.2/tcp/30001/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw",
 	}
 	// RelayNode tells the beacon node which relay node to connect to.
 	RelayNode = cli.StringFlag{
 		Name: "relay-node",
 		Usage: "The address of relay node. The beacon node will connect to the " +
 			"relay node and advertise their address via the relay node to other peers",
+		Value: "/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK",
 	}
 	// P2PPort defines the port to be used by libp2p.
 	P2PPort = cli.IntFlag{
@@ -64,9 +72,9 @@ var (
 		Usage: "The port used by libp2p.",
 		Value: 12000,
 	}
-	// ClearDBFlag tells the beacon node to remove any previously stored data at the data directory.
-	ClearDBFlag = cli.BoolFlag{
-		Name:  "clear-db",
-		Usage: "Clears any previously stored data at the data directory",
+	// PersistDBFlag tells the beacon node to keep any previously stored data at the data directory between runs.
+	PersistDB = cli.BoolFlag{
+		Name:  "persist-db",
+		Usage: "Persists any previously stored data at the data directory",
 	}
 )
