@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -130,7 +128,6 @@ func (c *ChainService) ApplyForkChoiceRule(
 	defer span.End()
 	log.Info("Applying LMD-GHOST Fork Choice Rule")
 
-	startTime := time.Now()
 	justifiedState, err := c.beaconDB.JustifiedState()
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified state: %v", err)
@@ -184,10 +181,8 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not hash head: %v", err)
 	}
-	endTime := time.Now()
 	log.WithFields(logrus.Fields{
 		"headRoot": fmt.Sprintf("0x%x", h),
-		"time":     fmt.Sprintf("%v", endTime.Sub(startTime)),
 	}).Info("Chain head block and state updated")
 	return nil
 }
