@@ -130,12 +130,12 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context) error {
 	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	keystoreDirectory := ctx.GlobalString(types.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(types.PasswordFlag.Name)
-	logBalances := ctx.GlobalBool(types.DisablePenaltyRewardLogFlag.Name)
+	logValidatorBalances := ctx.GlobalBool(types.DisablePenaltyRewardLogFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:             endpoint,
 		KeystorePath:         keystoreDirectory,
 		Password:             keystorePassword,
-		LogValidatorBalances: logBalances,
+		LogValidatorBalances: logValidatorBalances,
 	})
 	if err != nil {
 		return fmt.Errorf("could not initialize client service: %v", err)
