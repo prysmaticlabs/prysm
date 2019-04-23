@@ -37,21 +37,20 @@ type shufflingInput struct {
 // EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //
 // Spec pseudocode definition:
-//   def get_epoch_committee_count(state: BeaconState, epoch: Epoch) -> int:
+//   def get_epoch_committee_count(active_validator_count: int) -> int:
 //    """
 //    Return the number of committees in one epoch.
 //    """
-//    active_validators = get_active_validator_indices(state, epoch)
 //    return max(
 //        1,
 //        min(
 //            SHARD_COUNT // SLOTS_PER_EPOCH,
-//            len(active_validators) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
+//            active_validator_count // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //        )
 //    ) * SLOTS_PER_EPOCH
-func EpochCommitteeCount(beaconState *pb.BeaconState, epoch uint64) uint64 {
+func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 	var minCommitteePerSlot = uint64(1)
-	activeValidatorCount := uint64(len(ActiveValidatorIndices(beaconState.ValidatorRegistry, epoch)))
+
 	// Max committee count per slot will be 0 when shard count is less than epoch length, this
 	// covers the special case to ensure there's always 1 max committee count per slot.
 	var maxCommitteePerSlot = minCommitteePerSlot
@@ -85,7 +84,9 @@ func EpochCommitteeCount(beaconState *pb.BeaconState, epoch uint64) uint64 {
 //    )
 //    return get_epoch_committee_count(len(current_active_validators)
 func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
-	return EpochCommitteeCount(state, CurrentEpoch(state))
+	currActiveValidatorIndices := ActiveValidatorIndices(
+		state.ValidatorRegistry, CurrentEpoch(state))
+	return EpochCommitteeCount(uint64(len(currActiveValidatorIndices)))
 }
 
 // PrevEpochCommitteeCount returns the number of committees per slot
@@ -102,7 +103,9 @@ func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    )
 //    return get_epoch_committee_count(len(previous_active_validators))
 func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
-	return EpochCommitteeCount(state, PrevEpoch(state))
+	prevActiveValidatorIndices := ActiveValidatorIndices(
+		state.ValidatorRegistry, PrevEpoch(state))
+	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }
 
 // NextEpochCommitteeCount returns the number of committees per slot
@@ -119,7 +122,9 @@ func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    )
 //    return get_epoch_committee_count(len(next_active_validators))
 func NextEpochCommitteeCount(state *pb.BeaconState) uint64 {
-	return EpochCommitteeCount(state, CurrentEpoch(state)+1)
+	prevActiveValidatorIndices := ActiveValidatorIndices(
+		state.ValidatorRegistry, CurrentEpoch(state)+1)
+	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }
 
 // CrosslinkCommitteesAtSlot returns the list of crosslink committees, it
@@ -205,10 +210,8 @@ func Shuffling(
 
 	// Figure out how many committees can be in a single epoch.
 	activeIndices := ActiveValidatorIndices(validators, epoch)
-	s := &pb.BeaconState{
-		ValidatorRegistry: validators,
-	}
-	committeesPerEpoch := EpochCommitteeCount(s, epoch)
+	activeCount := uint64(len(activeIndices))
+	committeesPerEpoch := EpochCommitteeCount(activeCount)
 
 	// Convert slot to bytes and xor it with seed.
 	epochInBytes := make([]byte, 32)
