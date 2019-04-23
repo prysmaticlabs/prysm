@@ -86,6 +86,7 @@ type BeaconChainConfig struct {
 	MaxNumLog2Validators  uint64        // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
 	LogBlockDelay         int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	RPCSyncCheck          time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
+	TestnetContractEndpoint string // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
 }
 
 // DepositContractConfig contains the deposits for
@@ -175,6 +176,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
 	RPCSyncCheck:          1,
+
+	// Testnet misc values.
+	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultShardConfig = &ShardChainConfig{

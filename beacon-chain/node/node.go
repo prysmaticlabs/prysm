@@ -249,7 +249,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 
 	if depAddress == "" {
               log.Info("Fetching testnet cluster address from https://beta.prylabs.net/contract")
-		resp, err := http.Get("https://beta.prylabs.net/contract")
+		resp, err := http.Get(params.BeaconConfig().TestnetContractEndpoint)
 		if err != nil {
 			log.Fatalf("Could not get latest deposit contract address: %v", err)
 		}
