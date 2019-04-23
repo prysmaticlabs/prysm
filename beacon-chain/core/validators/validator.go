@@ -161,7 +161,7 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 	if genesis {
 		validator.ActivationEpoch = params.BeaconConfig().GenesisEpoch
 	} else {
-		validator.ActivationEpoch = helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(state))
+		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
 	}
 
 	state.ValidatorRegistry[idx] = validator
@@ -305,7 +305,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //    state.validator_registry_update_epoch = current_epoch
 func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
-	updatedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
+	updatedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, currentEpoch)
 

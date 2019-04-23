@@ -728,7 +728,7 @@ func ProcessValidatorExits(
 func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	entryExitEffectEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
+	entryExitEffectEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
 	if validator.ExitEpoch <= entryExitEffectEpoch {
 		return fmt.Errorf(
 			"validator exit epoch should be > entry_exit_effect_epoch, received %d <= %d",
