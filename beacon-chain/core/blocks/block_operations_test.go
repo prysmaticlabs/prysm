@@ -43,7 +43,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 	return deposits, privKeys
 }
 
-func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
+func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -66,7 +66,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	}
 
 	want := "block randao reveal signature did not verify"
-	if _, err := blocks.ProcessBlockRandao(
+	if _, err := blocks.ProcessRandao(
 
 		beaconState,
 		block,
@@ -77,7 +77,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	}
 }
 
-func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
+func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -98,7 +98,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 		RandaoReveal: epochSignature.Marshal(),
 	}
 
-	newState, err := blocks.ProcessBlockRandao(
+	newState, err := blocks.ProcessRandao(
 
 		beaconState,
 		block,

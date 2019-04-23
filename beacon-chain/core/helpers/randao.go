@@ -1,9 +1,11 @@
 package helpers
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -17,8 +19,9 @@ import (
 //    Generate a seed for the given ``epoch``.
 //    """
 //    return hash(
-//        get_randao_mix(state, epoch - MIN_SEED_LOOKAHED) +
-//        get_active_index_root(state, epoch)
+//      get_randao_mix(state, epoch - MIN_SEED_LOOKAHEAD) +
+//      get_active_index_root(state, epoch) +
+//      int_to_bytes32(epoch)
 //    )
 func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 	if wantedEpoch > params.BeaconConfig().MinSeedLookahead {
@@ -32,7 +35,14 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return hashutil.Hash(append(randaoMix, indexRoot...)), nil
+
+	epochInBytes := make([]byte, 32)
+	binary.LittleEndian.PutUint64(epochInBytes, wantedEpoch)
+	epochBytes32 := bytesutil.ToBytes32(epochInBytes)
+
+	bytes := append(randaoMix, indexRoot...)
+	bytes = append(bytes, epochBytes32[:]...)
+	return hashutil.Hash(bytes), nil
 }
 
 // ActiveIndexRoot returns the index root of a given epoch.
@@ -43,8 +53,9 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 //    """
 //    Return the index root at a recent ``epoch``.
 //    """
-//    assert get_current_epoch(state) - LATEST_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY < epoch <= get_current_epoch(state) + ACTIVATION_EXIT_DELAY
-//    return state.latest_index_roots[epoch % LATEST_INDEX_ROOTS_LENGTH]
+//    assert get_current_epoch(state) - LATEST_ACTIVE_INDEX_ROOTS_LENGTH +
+//    ACTIVATION_EXIT_DELAY < epoch <= get_current_epoch(state) + ACTIVATION_EXIT_DELAY
+//    return state.latest_index_roots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
 	var earliestEpoch uint64
 	currentEpoch := CurrentEpoch(state)
