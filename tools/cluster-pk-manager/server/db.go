@@ -129,20 +129,29 @@ func (d *db) AllocateNewPkToPod(
 	})
 }
 
-// RemovePKAssignment from pod and put the private key into the unassigned
+// RemovePKAssignments from pod and put the private keys into the unassigned
 // bucket.
 func (d *db) RemovePKAssignment(_ context.Context, podName string) error {
-	assignedPkCount.Dec()
 	return d.db.Update(func(tx *bolt.Tx) error {
-		pk := tx.Bucket(assignedPkBucket).Get([]byte(podName))
-		if pk == nil {
+		data := tx.Bucket(assignedPkBucket).Get([]byte(podName))
+		if data == nil {
 			log.WithField("podName", podName).Warn("Nil private key returned from db")
 			return nil
+		}
+		pks := &pb.PrivateKeys{}
+		if err := proto.Unmarshal(data, pks); err != nil {
+			return err
 		}
 		if err := tx.Bucket(assignedPkBucket).Delete([]byte(podName)); err != nil {
 			return err
 		}
-		return tx.Bucket(unassignedPkBucket).Put(pk, dummyVal)
+		assignedPkCount.Sub(float64(len(pks.PrivateKeys)))
+		for _, pk := range pks.PrivateKeys {
+			if err := tx.Bucket(unassignedPkBucket).Put(pk, dummyVal); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 
@@ -172,8 +181,6 @@ func (d *db) AssignExistingPKs(_ context.Context, pks *pb.PrivateKeys, podName s
 		}
 		return tx.Bucket(assignedPkBucket).Put([]byte(podName), data)
 	})
-
-	return nil
 }
 
 // AllocatedPodNames returns the string list of pod names with current private

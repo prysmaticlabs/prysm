@@ -29,6 +29,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        beaconDB,

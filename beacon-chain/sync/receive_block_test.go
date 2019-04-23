@@ -6,8 +6,11 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // totalMissingParents describes the number of missing parent requests we want to test.
@@ -59,6 +62,33 @@ func setupBlocksMissingParent(parents []*pb.BeaconBlock, parentRoots [][32]byte)
 	return blocksMissingParent
 }
 
+func TestReceiveBlockAnnounce_SkipsBlacklistedBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	rsCfg := DefaultRegularSyncConfig()
+	rsCfg.ChainService = &mockChainService{
+		db: db,
+	}
+	rsCfg.BeaconDB = db
+	rs := NewRegularSyncService(context.Background(), rsCfg)
+	evilBlockHash := []byte("evil-block")
+	blockRoot := bytesutil.ToBytes32(evilBlockHash)
+	db.MarkEvilBlockHash(blockRoot)
+	msg := p2p.Message{
+		Ctx: context.Background(),
+		Data: &pb.BeaconBlockAnnounce{
+			Hash: blockRoot[:],
+		},
+	}
+	if err := rs.receiveBlockAnnounce(msg); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	testutil.AssertLogsContain(t, hook, "Received blacklisted block")
+	hook.Reset()
+}
+
 func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -86,6 +116,9 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, genesisState); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.UpdateChainHead(ctx, genesisBlock, genesisState); err != nil {
 		t.Fatal(err)
 	}
 

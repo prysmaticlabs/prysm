@@ -5,13 +5,21 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+)
 
-	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+var (
+	badBlockCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "bad_blocks",
+		Help: "Number of bad, blacklisted blocks received",
+	})
 )
 
 func createBlock(enc []byte) (*pb.BeaconBlock, error) {
@@ -58,6 +66,30 @@ func (db *BeaconDB) HasBlock(root [32]byte) bool {
 	return hasBlock
 }
 
+// IsEvilBlockHash determines if a certain block root has been blacklisted
+// due to failing to process core state transitions.
+func (db *BeaconDB) IsEvilBlockHash(root [32]byte) bool {
+	db.badBlocksLock.Lock()
+	defer db.badBlocksLock.Unlock()
+	if db.badBlockHashes != nil {
+		return db.badBlockHashes[root]
+	}
+	db.badBlockHashes = make(map[[32]byte]bool)
+	return false
+}
+
+// MarkEvilBlockHash makes a block hash as tainted because it corresponds
+// to a block which fails core state transition processing.
+func (db *BeaconDB) MarkEvilBlockHash(root [32]byte) {
+	db.badBlocksLock.Lock()
+	defer db.badBlocksLock.Unlock()
+	if db.badBlockHashes == nil {
+		db.badBlockHashes = make(map[[32]byte]bool)
+	}
+	db.badBlockHashes[root] = true
+	badBlockCount.Inc()
+}
+
 // SaveBlock accepts a block and writes it to disk.
 func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	root, err := hashutil.HashBeaconBlock(block)
@@ -81,6 +113,24 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
 		}
 		return bucket.Put(root[:], enc)
+	})
+}
+
+// DeleteBlock deletes a block using the slot and its root as keys in their respective buckets.
+func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
+	root, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return fmt.Errorf("failed to tree hash block: %v", err)
+	}
+	slotBinary := encodeSlotNumber(block.Slot)
+
+	return db.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(blockBucket)
+		mainChain := tx.Bucket(mainChainBucket)
+		if err := mainChain.Delete(slotBinary); err != nil {
+			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
+		}
+		return bucket.Delete(root[:])
 	})
 }
 

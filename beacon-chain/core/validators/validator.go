@@ -17,7 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "powchain")
+var log = logrus.WithField("prefix", "validator")
 
 type validatorStore struct {
 	sync.RWMutex
@@ -321,7 +321,8 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
-			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
+			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount &&
+			!helpers.IsActiveValidator(validator, currentEpoch) {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			log.WithFields(logrus.Fields{
 				"index":               idx,
@@ -443,6 +444,19 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 		}
 	}
 	return state
+}
+
+// InitializeValidatorStore sets the current active validators from the current
+// state.
+func InitializeValidatorStore(bState *pb.BeaconState) {
+	vStore.Lock()
+	defer vStore.Unlock()
+
+	currentEpoch := helpers.CurrentEpoch(bState)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(
+		bState.ValidatorRegistry, currentEpoch)
+	vStore.activatedValidators[currentEpoch] = activeValidatorIndices
+
 }
 
 // InsertActivatedVal locks the validator store, inserts the activated validator

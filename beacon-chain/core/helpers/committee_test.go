@@ -8,7 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -18,12 +17,6 @@ var size = 1<<(params.BeaconConfig().RandBytes*8) - 1
 var validatorsUpperBound = make([]*pb.Validator, size)
 var validator = &pb.Validator{
 	ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-}
-
-func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: false,
-	})
 }
 
 func populateValidatorsMax() {
@@ -517,9 +510,6 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 }
 
 func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
-	})
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
 		Slot: params.BeaconConfig().GenesisSlot + slotOffset,
@@ -552,9 +542,6 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 }
 
 func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
-	})
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -602,9 +589,6 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
-	})
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
 		Slot: params.BeaconConfig().GenesisSlot + slotOffset,
@@ -644,9 +628,6 @@ func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: true,
-	})
 
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
