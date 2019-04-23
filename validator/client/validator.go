@@ -18,17 +18,17 @@ import (
 )
 
 type validator struct {
-	genesisTime          uint64
-	ticker               *slotutil.SlotTicker
-	assignments          *pb.CommitteeAssignmentResponse
-	proposerClient       pb.ProposerServiceClient
-	validatorClient      pb.ValidatorServiceClient
-	beaconClient         pb.BeaconServiceClient
-	attesterClient       pb.AttesterServiceClient
-	keys                 map[string]*keystore.Key
-	pubkeys              [][]byte
-	prevBalance          uint64
-	LogValidatorBalances bool
+	genesisTime     uint64
+	ticker          *slotutil.SlotTicker
+	assignments     *pb.CommitteeAssignmentResponse
+	proposerClient  pb.ProposerServiceClient
+	validatorClient pb.ValidatorServiceClient
+	beaconClient    pb.BeaconServiceClient
+	attesterClient  pb.AttesterServiceClient
+	keys            map[string]*keystore.Key
+	pubkeys         [][]byte
+	prevBalance     uint64
+	logBalances     bool
 }
 
 // Done cleans up the validator.
