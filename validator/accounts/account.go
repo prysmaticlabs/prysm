@@ -92,6 +92,7 @@ func NewValidatorAccount(directory string, password string) error {
 
 // Exists checks if a validator account at a given keystore path exists.
 func Exists(keystorePath string) (bool, error) {
+	/* #nosec */
 	f, err := os.Open(keystorePath)
 	if err != nil {
 		return false, nil

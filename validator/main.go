@@ -81,7 +81,10 @@ func createValidatorAccount(ctx *cli.Context) (string, string, error) {
 		text := string(bytePassword)
 		keystorePassword = strings.Replace(text, "\n", "", -1)
 		logrus.Infof("Keystore path to save your private keys (leave blank for default %s):", keystoreDirectory)
-		text, _ = reader.ReadString('\n')
+		text, err = reader.ReadString('\n')
+		if err != nil {
+			logrus.Fatal(err)
+		}
 		text = strings.Replace(text, "\n", "", -1)
 		if text != "" {
 			keystoreDirectory = text
