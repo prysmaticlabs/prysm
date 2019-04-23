@@ -31,10 +31,11 @@ type ValidatorService struct {
 
 // Config for the validator service.
 type Config struct {
-	Endpoint     string
-	CertFlag     string
-	KeystorePath string
-	Password     string
+	Endpoint             string
+	CertFlag             string
+	KeystorePath         string
+	Password             string
+	LogValidatorBalances bool
 }
 
 // NewValidatorService creates a new validator service for the service

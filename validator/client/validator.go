@@ -14,22 +14,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 	"go.opencensus.io/trace"
 )
 
 type validator struct {
-	genesisTime     uint64
-	ticker          *slotutil.SlotTicker
-	assignments     *pb.CommitteeAssignmentResponse
-	proposerClient  pb.ProposerServiceClient
-	validatorClient pb.ValidatorServiceClient
-	beaconClient    pb.BeaconServiceClient
-	attesterClient  pb.AttesterServiceClient
-	keys            map[string]*keystore.Key
-	pubkeys         [][]byte
-	prevBalance     uint64
-	ctxCli          *cli.Context
+	genesisTime          uint64
+	ticker               *slotutil.SlotTicker
+	assignments          *pb.CommitteeAssignmentResponse
+	proposerClient       pb.ProposerServiceClient
+	validatorClient      pb.ValidatorServiceClient
+	beaconClient         pb.BeaconServiceClient
+	attesterClient       pb.AttesterServiceClient
+	keys                 map[string]*keystore.Key
+	pubkeys              [][]byte
+	prevBalance          uint64
+	LogValidatorBalances bool
 }
 
 // Done cleans up the validator.
