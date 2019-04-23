@@ -64,6 +64,7 @@ var (
 		Name: "relay-node",
 		Usage: "The address of relay node. The beacon node will connect to the " +
 			"relay node and advertise their address via the relay node to other peers",
+		Value: "/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK",
 	}
 	// P2PPort defines the port to be used by libp2p.
 	P2PPort = cli.IntFlag{

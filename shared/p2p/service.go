@@ -151,9 +151,6 @@ func (s *Server) Start() {
 		if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
 			log.Errorf("Failed to bootstrap DHT: %v", err)
 		}
-	}
-
-	if s.relayNodeAddr != "" {
 		if err := dialRelayNode(ctx, s.host, s.relayNodeAddr); err != nil {
 			log.Errorf("Could not dial relay node: %v", err)
 		}
@@ -165,7 +162,7 @@ func (s *Server) Start() {
 	}
 
 	if s.localNetwork {
-		startPeerWatcher(ctx, s.host, "", s.relayNodeAddr)
+		startPeerWatcher(ctx, s.host, "", "")
 	} else {
 		startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
 	}
