@@ -87,7 +87,7 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 	return a.incomingFeed
 }
 
-// LatestAttestationTarget returns the target block the validator index attested to,
+// LatestAttestationTarget returns the target block that the validator index attested to,
 // the highest slotNumber attestation in attestation pool gets returned.
 //
 // Spec pseudocode definition:
