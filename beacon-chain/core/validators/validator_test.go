@@ -398,17 +398,6 @@ func TestActivateValidator_OK(t *testing.T) {
 	}
 }
 
-func TestInitiateValidatorExit_OK(t *testing.T) {
-	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{}, {}, {}}}
-	newState := InitiateValidatorExit(state, 2)
-	if newState.ValidatorRegistry[0].StatusFlags != pb.Validator_INITIAL {
-		t.Errorf("Wanted flag INITIAL, got %v", newState.ValidatorRegistry[0].StatusFlags)
-	}
-	if newState.ValidatorRegistry[2].StatusFlags != pb.Validator_INITIATED_EXIT {
-		t.Errorf("Wanted flag ACTIVE_PENDING_EXIT, got %v", newState.ValidatorRegistry[0].StatusFlags)
-	}
-}
-
 func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                  100, // epoch 2

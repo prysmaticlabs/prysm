@@ -208,7 +208,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 		return state
 	}
 
-	// Find the last initiated exited epoch and add exit delay to it.
+	// Find the last initiated exited epoch and add an exit delay to it.
 	var lastExitedEpoch uint64
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if state.ValidatorRegistry[i].ExitEpoch != params.BeaconConfig().FarFutureEpoch {

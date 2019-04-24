@@ -52,14 +52,11 @@ test_cases:
           slashable_attestation_1_validator_indices: [1, 2, 3, 4, 5, 6, 7, 51]
           slashable_attestation_2_custody_bitfield: !binary "F"
           slashable_attestation_2_validator_indices: [1, 2, 3, 4, 5, 6, 7, 51]
-      validator_exits:
-        - epoch: 144115188075855872
-          validator_index: 45 # At slot 9223372036854775868, validator at index 45 triggers a voluntary exit
+      TODO(2307): Validator rotation logic is getting revamped piece by piece, we'll add the Exit test caes back when state transtion aligns spec v0.6.
     results:
       slot: 9223372036854775872
       num_validators: 67
       penalized_validators: [50, 51] # We test that the validators at indices were indeed penalized
-      exited_validators: [45] # We confirm the indices of validators that willingly exited the registry
 # TODO(1387): Waiting for spec to stable to proceed with this test case
 #  - config:
 #      skip_slots: [10, 20]
