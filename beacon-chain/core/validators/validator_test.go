@@ -390,7 +390,7 @@ func TestActivateValidator_OK(t *testing.T) {
 		t.Fatalf("could not execute activateValidator:%v", err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	wantedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
+	wantedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
 	if newState.ValidatorRegistry[0].ActivationEpoch != wantedEpoch {
 		t.Errorf("Wanted activation slot = %d, got %d",
 			wantedEpoch,
@@ -420,7 +420,7 @@ func TestExitValidator_OK(t *testing.T) {
 	newState := ExitValidator(state, 0)
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	wantedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
+	wantedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
 	if newState.ValidatorRegistry[0].ExitEpoch != wantedEpoch {
 		t.Errorf("Wanted exit slot %d, got %d",
 			wantedEpoch,
@@ -587,7 +587,7 @@ func TestUpdateRegistry_Activations(t *testing.T) {
 
 func TestUpdateRegistry_Exits(t *testing.T) {
 	epoch := uint64(5)
-	exitEpoch := helpers.EntryExitEffectEpoch(epoch)
+	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
 	state := &pb.BeaconState{
 		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
 		ValidatorRegistry: []*pb.Validator{
