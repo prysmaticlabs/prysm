@@ -201,29 +201,42 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	v := state.ValidatorRegistry[idx]
 
+	// Return if validator already initiated exit.
+	// According to the spec, this is not an assert condition and
+	// shouldn't fail beacon block state transition.
 	if v.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state
 	}
 
+	// Find the last initiated exited epoch and add exit delay to it.
 	var lastExitedEpoch uint64
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if state.ValidatorRegistry[i].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			lastExitedEpoch = state.ValidatorRegistry[i].ExitEpoch
 		}
 	}
-	if helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(state)) > lastExitedEpoch {
-		lastExitedEpoch = helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(state))
+	if helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)) > lastExitedEpoch {
+		lastExitedEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
 	}
 
+	// Find the total number of validators exiting same epoch as
+	// input validator. If the number is greater than churn limit, postpone
+	// exit epoch to the next epoch.
 	var currentExitQueueLength uint64
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if state.ValidatorRegistry[i].ExitEpoch == lastExitedEpoch {
 			currentExitQueueLength++
 		}
 	}
+	if currentExitQueueLength >= helpers.ChurnLimit(state) {
+		lastExitedEpoch++
+	}
 
-	if currentExitQueueLength >= helpers.
+	v.ExitEpoch = lastExitedEpoch
+	v.WithdrawableEpoch = v.ExitEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
 
+	state.ValidatorRegistry[idx] = v
+	return state
 }
 
 // ExitValidator takes in validator index and does house
