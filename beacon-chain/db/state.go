@@ -356,17 +356,58 @@ func (db *BeaconDB) ValidatorRegistry(ctx context.Context) ([]*pb.Validator, err
 	return beaconState.ValidatorRegistry, err
 }
 
+// ValidatorRegistry fetches the current validator registry stored in state.
+func (db *BeaconDB) ValidatorFromState(ctx context.Context, index uint64) (*pb.Validator, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorFromState")
+	defer span.End()
+
+	db.stateLock.RLock()
+	defer db.stateLock.RUnlock()
+
+	if db.validatorRegistry != nil {
+		// return error if it's an invalid validator index.
+		if index >= uint64(len(db.validatorRegistry)) {
+			return nil, fmt.Errorf("invalid validator index %d", index)
+		}
+		validator := proto.Clone(db.validatorRegistry[index]).(*pb.Validator)
+		return validator, nil
+	}
+
+	var beaconState *pb.BeaconState
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		enc := chainInfo.Get(stateLookupKey)
+		if enc == nil {
+			return nil
+		}
+
+		var err error
+		beaconState, err = createState(enc)
+		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
+			db.highestBlockSlot = beaconState.Slot
+		}
+		return err
+	})
+
+	// return error if it's an invalid validator index.
+	if index >= uint64(len(db.validatorRegistry)) {
+		return nil, fmt.Errorf("invalid validator index %d", index)
+	}
+
+	return beaconState.ValidatorRegistry[index], err
+}
+
 // ValidatorBalances fetches the current validator balances stored in state.
 func (db *BeaconDB) ValidatorBalances(ctx context.Context) ([]uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorRegistry")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorBalances")
 	defer span.End()
 
 	db.stateLock.RLock()
 	defer db.stateLock.RUnlock()
 
 	// Return in-memory cached state, if available.
-	if db.serializedState != nil {
-		_, span := trace.StartSpan(ctx, "proto.Clone.ValidatorRegistry")
+	if db.validatorBalances != nil {
+		_, span := trace.StartSpan(ctx, "BeaconDB.Copy.Balances")
 		defer span.End()
 		newBalances := make([]uint64, len(db.validatorBalances))
 		copy(newBalances, db.validatorBalances)
