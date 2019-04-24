@@ -179,12 +179,51 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 //
 // Spec pseudocode definition:
 // def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
+//    """
+//    Initiate the validator of the given ``index``.
+//    Note that this function mutates ``state``.
+//    """
+//    # Return if validator already initiated exit
 //    validator = state.validator_registry[index]
-//    validator.status_flags |= INITIATED_EXIT
+//    if validator.exit_epoch != FAR_FUTURE_EPOCH:
+//        return
+//
+//    # Compute exit queue epoch
+//    exit_epochs = [v.exit_epoch for v in state.validator_registry if v.exit_epoch != FAR_FUTURE_EPOCH]
+//    exit_queue_epoch = max(exit_epochs + [get_delayed_activation_exit_epoch(get_current_epoch(state))])
+//    exit_queue_churn = len([v for v in state.validator_registry if v.exit_epoch == exit_queue_epoch])
+//    if exit_queue_churn >= get_churn_limit(state):
+//        exit_queue_epoch += 1
+//
+//    # Set validator exit epoch and withdrawable epoch
+//    validator.exit_epoch = exit_queue_epoch
+//    validator.withdrawable_epoch = validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
-	state.ValidatorRegistry[idx].StatusFlags |=
-		pb.Validator_INITIATED_EXIT
-	return state
+	v := state.ValidatorRegistry[idx]
+
+	if v.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+		return state
+	}
+
+	var lastExitedEpoch uint64
+	for i := 0; i < len(state.ValidatorRegistry); i++ {
+		if state.ValidatorRegistry[i].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			lastExitedEpoch = state.ValidatorRegistry[i].ExitEpoch
+		}
+	}
+	if helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(state)) > lastExitedEpoch {
+		lastExitedEpoch = helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(state))
+	}
+
+	var currentExitQueueLength uint64
+	for i := 0; i < len(state.ValidatorRegistry); i++ {
+		if state.ValidatorRegistry[i].ExitEpoch == lastExitedEpoch {
+			currentExitQueueLength++
+		}
+	}
+
+	if currentExitQueueLength >= helpers.
+
 }
 
 // ExitValidator takes in validator index and does house
