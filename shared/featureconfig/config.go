@@ -31,6 +31,8 @@ type FeatureFlagConfig struct {
 	EnableCheckBlockStateRoot    bool // EnableCheckBlockStateRoot in block processing.
 	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updating finalized states.
 	DisableGossipSub             bool // DisableGossipSub in p2p messaging.
+	EnableCommitteesCache        bool // EnableCommitteesCache for state transition.
+	CacheTreeHash                bool // CacheTreeHash determent whether tree hashes will be cached.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -68,6 +70,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Info("Enabled check block state root")
 		cfg.EnableCheckBlockStateRoot = true
 	}
+	if ctx.GlobalBool(CacheTreeHashFlag.Name) {
+		log.Info("Cache tree hashes for ssz")
+		cfg.CacheTreeHash = true
+	}
 	if ctx.GlobalBool(EnableHistoricalStatePruningFlag.Name) {
 		log.Info("Enabled historical state pruning")
 		cfg.EnableHistoricalStatePruning = true
@@ -87,6 +93,10 @@ func ConfigureValidatorFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(VerifyAttestationSigsFlag.Name) {
 		log.Info("Verifying signatures for attestations")
 		cfg.VerifyAttestationSigs = true
+	}
+	if ctx.GlobalBool(CacheTreeHashFlag.Name) {
+		log.Info("Cache tree hashes for ssz")
+		cfg.CacheTreeHash = true
 	}
 
 	InitFeatureConfig(cfg)

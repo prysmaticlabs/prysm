@@ -5,6 +5,11 @@ import (
 )
 
 var (
+	// CacheTreeHashFlag determines whether to cache tree hashes for ssz.
+	CacheTreeHashFlag = cli.BoolFlag{
+		Name:  "enable-cache-tree-hash",
+		Usage: "Cache tree hashes for ssz",
+	}
 	// VerifyAttestationSigsFlag determines whether to verify signatures for attestations.
 	VerifyAttestationSigsFlag = cli.BoolFlag{
 		Name:  "enable-attestation-signature-verification",
@@ -43,7 +48,9 @@ var (
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{}
+var ValidatorFlags = []cli.Flag{
+	CacheTreeHashFlag,
+}
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
@@ -52,4 +59,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableCheckBlockStateRootFlag,
 	EnableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
+	CacheTreeHashFlag,
 }
