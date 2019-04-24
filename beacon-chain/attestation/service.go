@@ -100,6 +100,11 @@ func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Atte
 		return nil, err
 	}
 
+	// return error if it's an invalid validator index.
+	if index >= uint64(len(bState.ValidatorRegistry)) {
+		return nil, fmt.Errorf("invalid validator index %d", index)
+	}
+
 	pubKey := bytesutil.ToBytes48(bState.ValidatorRegistry[index].Pubkey)
 	a.store.RLock()
 	defer a.store.RUnlock()
