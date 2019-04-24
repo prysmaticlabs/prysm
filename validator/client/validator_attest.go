@@ -31,6 +31,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	if len(idx) > 12 {
 		truncatedPk = idx[:12]
 	}
+	v.waitToSlotMidpoint(ctx, slot)
 	log.WithField("validator", truncatedPk).Info("Performing a beacon block attestation...")
 
 	// First the validator should construct attestation_data, an AttestationData
