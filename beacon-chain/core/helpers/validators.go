@@ -81,7 +81,7 @@ func DelayedActivationExitEpoch(epoch uint64) uint64 {
 //        len(get_active_validator_indices(state, get_current_epoch(state))) // CHURN_LIMIT_QUOTIENT
 //    )
 func ChurnLimit(state *pb.BeaconState) uint64 {
-	validatorCount := uint64(len(ActiveValidatorIndices(state.ValidatorRegistry, CurrentEpoch(state))))
+	validatorCount := uint64(len(ActiveValidatorIndices(state, CurrentEpoch(state))))
 	if validatorCount/params.BeaconConfig().ChurnLimitQuotient > params.BeaconConfig().MinPerEpochChurnLimit {
 		return validatorCount / params.BeaconConfig().ChurnLimitQuotient
 	}
