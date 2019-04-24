@@ -21,7 +21,6 @@ import (
 
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -84,7 +83,6 @@ func TestProcessDepositLog_OK(t *testing.T) {
 }
 
 func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -146,7 +144,6 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 }
 
 func TestUnpackDepositLogData_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -230,7 +227,6 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -316,7 +312,6 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 
 func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -401,7 +396,6 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 }
 
 func TestUnpackChainStartLogData_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -470,7 +464,6 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 }
 
 func TestHasChainStartLogOccurred_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -531,7 +524,6 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 }
 
 func TestETH1DataGenesis_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)

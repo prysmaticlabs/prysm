@@ -28,6 +28,8 @@ func init() {
 
 var _ = Validator(&validator{})
 
+const cancelledCtx = "context has been canceled"
+
 func publicKeys(keys map[string]*keystore.Key) [][]byte {
 	pks := make([][]byte, 0, len(keys))
 	for _, value := range keys {
@@ -94,7 +96,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	err := v.WaitForChainStart(ctx)
-	want := "context has been canceled"
+	want := cancelledCtx
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -174,7 +176,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	err := v.WaitForActivation(ctx)
-	want := "context has been canceled"
+	want := cancelledCtx
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}

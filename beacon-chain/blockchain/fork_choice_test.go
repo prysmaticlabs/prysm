@@ -29,6 +29,7 @@ import (
 
 // Ensure ChainService implements interfaces.
 var _ = ForkChoice(&ChainService{})
+var endpoint = "ws://127.0.0.1"
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	deposits, _ := setupInitialDeposits(t, 5)
@@ -1101,7 +1102,6 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 }
 
 func setupBeaconChainBenchmark(b *testing.B, faultyPoWClient bool, beaconDB *db.BeaconDB, enablePOWChain bool, attsService *attestation.Service) *ChainService {
-	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Web3Service
 	var err error
