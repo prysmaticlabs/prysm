@@ -63,7 +63,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		withCert:             cfg.CertFlag,
 		keys:                 keys,
 		key:                  key,
-		logValidatorBalances: false,
+		logValidatorBalances: cfg.LogValidatorBalances,
 	}, nil
 }
 
