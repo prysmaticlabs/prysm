@@ -57,7 +57,7 @@ type BeaconChainConfig struct {
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
 	SlotsPerEpoch                uint64 // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead             uint64 // SeedLookahead is the duration of randao look ahead seed.
-	ActivationExitDelay          uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
+	ActivationExitDelay          uint64 // ActivationExitDelay is the duration a validator has to wait for entry and exit in epoch.
 	SlotsPerEth1VotingPeriod     uint64 // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	SlotsPerHistoricalRoot       uint64 // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawalDelay  uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator has to wait to withdraw.

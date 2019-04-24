@@ -291,7 +291,7 @@ func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
 func (c *ChainService) attestationTargets(ctx context.Context, state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
-	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+	indices := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
 	attestationTargets := make(map[uint64]*pb.BeaconBlock)
 	for i, index := range indices {
 		block, err := c.attsService.LatestAttestationTarget(ctx, index)

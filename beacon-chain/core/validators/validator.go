@@ -161,7 +161,7 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 	if genesis {
 		validator.ActivationEpoch = params.BeaconConfig().GenesisEpoch
 	} else {
-		validator.ActivationEpoch = helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(state))
+		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
 	}
 
 	state.ValidatorRegistry[idx] = validator
@@ -206,7 +206,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	validator := state.ValidatorRegistry[idx]
 
-	exitEpoch := entryExitEffectEpoch(helpers.CurrentEpoch(state))
+	exitEpoch := helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
 	if validator.ExitEpoch <= exitEpoch {
 		return state
 	}
@@ -305,9 +305,8 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //    state.validator_registry_update_epoch = current_epoch
 func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
-	updatedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(
-		state.ValidatorRegistry, currentEpoch)
+	updatedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
 
 	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
 
@@ -405,8 +404,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //            break
 func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(
-		state.ValidatorRegistry, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
 	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
 
 	for idx, validator := range state.ValidatorRegistry {
@@ -453,8 +451,7 @@ func InitializeValidatorStore(bState *pb.BeaconState) {
 	defer vStore.Unlock()
 
 	currentEpoch := helpers.CurrentEpoch(bState)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(
-		bState.ValidatorRegistry, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(bState, currentEpoch)
 	vStore.activatedValidators[currentEpoch] = activeValidatorIndices
 
 }
@@ -577,18 +574,4 @@ func prepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.Beacon
 	state.ValidatorRegistry[idx].StatusFlags |=
 		pb.Validator_WITHDRAWABLE
 	return state
-}
-
-// entryExitEffectEpoch takes in epoch number and returns when
-// the validator is eligible for activation and exit.
-//
-// Spec pseudocode definition:
-// def get_entry_exit_effect_epoch(epoch: Epoch) -> Epoch:
-//    """
-//    An entry or exit triggered in the ``epoch`` given by the input takes effect at
-//    the epoch given by the output.
-//    """
-//    return epoch + 1 + ACTIVATION_EXIT_DELAY
-func entryExitEffectEpoch(epoch uint64) uint64 {
-	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }
