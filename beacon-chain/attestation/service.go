@@ -94,7 +94,7 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
-func (a *Service) LatestAttestationTarget(ctx context.Context, beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
+func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
 	// Return error if it's an invalid validator index.
 	if index >= uint64(len(beaconState.ValidatorRegistry)) {
 		return nil, fmt.Errorf("invalid validator index %d", index)
