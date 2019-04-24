@@ -21,6 +21,8 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
+var attestations struct {
+}
 
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
