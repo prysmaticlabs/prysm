@@ -48,7 +48,7 @@ linters:
     - gosec
     - misspell
     - structcheck
-    # - typecheck
+    - typecheck
     - unparam
     - varcheck
   disable-all: true
