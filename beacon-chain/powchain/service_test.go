@@ -38,16 +38,6 @@ func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 	return new(event.Feed).Subscribe(ch), nil
 }
 
-type badLogger struct{}
-
-func (b *badLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
-	return nil, errors.New("unable to retrieve logs")
-}
-
-func (b *badLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
-	return nil, errors.New("subscription has failed")
-}
-
 type goodLogger struct{}
 
 func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
