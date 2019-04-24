@@ -4,6 +4,7 @@ package attestation
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -94,12 +95,17 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
 func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
-	validator, err := a.beaconDB.ValidatorFromState(ctx, index)
+	bState, err := a.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	pubKey := bytesutil.ToBytes48(validator.Pubkey)
+	// return error if it's an invalid validator index.
+	if index >= uint64(len(bState.ValidatorRegistry)) {
+		return nil, fmt.Errorf("invalid validator index %d", index)
+	}
+
+	pubKey := bytesutil.ToBytes48(bState.ValidatorRegistry[index].Pubkey)
 	a.store.RLock()
 	defer a.store.RUnlock()
 	if _, exists := a.store.m[pubKey]; !exists {
@@ -125,18 +131,11 @@ func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*p
 		return nil, nil
 	}
 	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
-	targetBlock, err := a.beaconDB.Block(targetRoot)
-	if err != nil {
-		return nil, fmt.Errorf("could not get target block: %v", err)
-	}
-	if targetBlock == nil {
+	if !a.beaconDB.HasBlock(targetRoot) {
 		return nil, nil
 	}
-	return &pb.AttestationTarget{
-		Slot:       targetBlock.Slot,
-		BlockRoot:  targetRoot[:],
-		ParentRoot: targetBlock.ParentRootHash32,
-	}, nil
+
+	return a.beaconDB.AttestationTarget(targetRoot)
 }
 
 // attestationPool takes an newly received attestation from sync service
@@ -150,8 +149,8 @@ func (a *Service) attestationPool() {
 			log.Debug("Attestation pool closed, exiting goroutine")
 			return
 		// Listen for a newly received incoming attestation from the sync service.
-		case attestation := <-a.incomingChan:
-			handler.SafelyHandleMessage(a.ctx, a.handleAttestation, attestation)
+		case attestations := <-a.incomingChan:
+			handler.SafelyHandleMessage(a.ctx, a.handleAttestation, attestations)
 		}
 	}
 }
@@ -185,10 +184,58 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	if err != nil {
 		return err
 	}
+	return a.updateAttestation(ctx, headRoot, beaconState, attestation)
+}
+
+// BatchUpdateLatestAttestation updates multiple attestations and adds them into the attestation store
+// if they are valid.
+func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations []*pb.Attestation) error {
+
+	if attestations == nil {
+		return nil
+	}
+	// Potential improvement, instead of getting the state,
+	// we could get a mapping of validator index to public key.
+	beaconState, err := a.beaconDB.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	head, err := a.beaconDB.ChainHead()
+	if err != nil {
+		return err
+	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return err
+	}
+
+	attestations = a.sortAttestations(attestations)
+
+	for _, attestation := range attestations {
+		if err := a.updateAttestation(ctx, headRoot, beaconState, attestation); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// InsertAttestationIntoStore locks the store, inserts the attestation, then
+// unlocks the store again. This method may be used by external services
+// in testing to populate the attestation store.
+func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestation) {
+	a.store.Lock()
+	defer a.store.Unlock()
+	a.store.m[pubkey] = att
+}
+
+func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState,
+	attestation *pb.Attestation) error {
+	totalAttestationSeen.Inc()
 
 	slot := attestation.Data.Slot
 	var committee []uint64
 	var cachedCommittees *cache.CommitteesInSlot
+	var err error
 
 	for beaconState.Slot < slot {
 		beaconState, err = state.ExecuteStateTransition(
@@ -279,11 +326,11 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	return nil
 }
 
-// InsertAttestationIntoStore locks the store, inserts the attestation, then
-// unlocks the store again. This method may be used by external services
-// in testing to populate the attestation store.
-func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestation) {
-	a.store.Lock()
-	defer a.store.Unlock()
-	a.store.m[pubkey] = att
+// sortAttestations sorts attestations by their slot number in ascending order.
+func (a *Service) sortAttestations(attestations []*pb.Attestation) []*pb.Attestation {
+	sort.SliceStable(attestations, func(i, j int) bool {
+		return attestations[i].Data.Slot < attestations[j].Data.Slot
+	})
+
+	return attestations
 }

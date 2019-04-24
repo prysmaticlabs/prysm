@@ -215,6 +215,13 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.Beac
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return fmt.Errorf("failed to save block: %v", err)
 	}
+	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  blockRoot[:],
+		ParentRoot: block.ParentRootHash32,
+	}); err != nil {
+		return fmt.Errorf("failed to save attestation target: %v", err)
+	}
 	// Announce the new block to the network.
 	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       blockRoot[:],
@@ -233,11 +240,8 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 		log.Error("Sent processed block to no subscribers")
 	}
 
-	// Update attestation store with latest attestation target.
-	for _, att := range block.Body.Attestations {
-		if err := c.attsService.UpdateLatestAttestation(ctx, att); err != nil {
-			return fmt.Errorf("failed to update latest attestation for store: %v", err)
-		}
+	if err := c.attsService.BatchUpdateLatestAttestation(ctx, block.Body.Attestations); err != nil {
+		return fmt.Errorf("failed to update latest attestation for store: %v", err)
 	}
 
 	// Remove pending deposits from the deposit queue.

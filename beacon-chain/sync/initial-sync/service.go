@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -202,6 +204,17 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}
 	if err := s.db.SaveBlock(block); err != nil {
 		return err
+	}
+	root, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return fmt.Errorf("failed to tree hash block: %v", err)
+	}
+	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  root[:],
+		ParentRoot: block.ParentRootHash32,
+	}); err != nil {
+		return fmt.Errorf("failed to save attestation target: %v", err)
 	}
 	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
