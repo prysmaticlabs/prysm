@@ -140,9 +140,9 @@ func ProcessBlock(
 	state.LatestBlock = block
 
 	// Verify block RANDAO.
-	state, err = b.ProcessBlockRandao(state, block, config.VerifySignatures, config.Logging)
+	state, err = b.ProcessRandao(state, block, config.VerifySignatures, config.Logging)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
+		return nil, fmt.Errorf("could not verify and process randao: %v", err)
 	}
 
 	// Process ETH1 data.

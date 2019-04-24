@@ -126,8 +126,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	req := &pbp2p.BeaconBlock{
 		ParentRootHash32: nil,
 		Slot:             11,
-		RandaoReveal:     nil,
 		Body: &pbp2p.BeaconBlockBody{
+			RandaoReveal:      nil,
 			ProposerSlashings: nil,
 			AttesterSlashings: nil,
 		},
