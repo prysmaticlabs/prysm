@@ -153,6 +153,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinDepositAmount:           1 * 1e9,
 	MaxDepositAmount:           32 * 1e9,
 	EjectionBalance:            16 * 1e9,
+	HighBalanceIncrement:       1 * 1E9,
 	ForkChoiceBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.

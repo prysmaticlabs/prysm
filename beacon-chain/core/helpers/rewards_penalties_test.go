@@ -125,9 +125,9 @@ func TestGetBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{0, 0, 0}},
 	}
 	for _, test := range tests {
-		state := &pb.BeaconState{ValidatorBalances: test.b}
-		if GetBalance(state, test.i) != test.b[test.i] {
-			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.b[test.i], GetBalance(state, test.i))
+		state := &pb.BeaconState{Balances: test.b}
+		if Balance(state, test.i) != test.b[test.i] {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.b[test.i], Balance(state, test.i))
 		}
 	}
 }
@@ -137,16 +137,24 @@ func TestSetBalance_OK(t *testing.T) {
 		i  uint64
 		b  []uint64
 		nb uint64
+		hb uint64
 	}{
-		{i: 0, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 1},
-		{i: 1, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 0},
-		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33 * 1e9},
+		{i: 0, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 2*1e9 + 6, hb: 2 * 1e9},
+		{i: 1, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 0, hb: 0},
+		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33*1e9 - 10, hb: 32 * 1e9},
 	}
 	for _, test := range tests {
-		state := &pb.BeaconState{ValidatorBalances: test.b}
+		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.Validator{
+				{HighBalance: 4}, {HighBalance: 4}, {HighBalance: 4}},
+			Balances: test.b,
+		}
 		SetBalance(state, test.i, test.nb)
-		if GetBalance(state, test.i) != test.nb {
-			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.nb, GetBalance(state, test.i))
+		if Balance(state, test.i) != test.nb {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.nb, Balance(state, test.i))
+		}
+		if state.ValidatorRegistry[test.i].HighBalance != test.hb {
+			t.Errorf("Incorrect Validator HighBalance. Wanted: %d, got: %d", test.hb, state.ValidatorRegistry[test.i].HighBalance)
 		}
 	}
 }
@@ -163,10 +171,14 @@ func TestIncreseBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33 * 1e9, eb: 65 * 1e9},
 	}
 	for _, test := range tests {
-		state := &pb.BeaconState{ValidatorBalances: test.b}
+		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.Validator{
+				{HighBalance: 4}, {HighBalance: 4}, {HighBalance: 4}},
+			Balances: test.b,
+		}
 		IncreaseBalance(state, test.i, test.nb)
-		if GetBalance(state, test.i) != test.eb {
-			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, GetBalance(state, test.i))
+		if Balance(state, test.i) != test.eb {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, Balance(state, test.i))
 		}
 	}
 }
@@ -182,10 +194,14 @@ func TestDecreseBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 1}, nb: 2, eb: 0},
 	}
 	for _, test := range tests {
-		state := &pb.BeaconState{ValidatorBalances: test.b}
+		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.Validator{
+				{HighBalance: 4}, {HighBalance: 4}, {HighBalance: 4}},
+			Balances: test.b,
+		}
 		DecreaseBalance(state, test.i, test.nb)
-		if GetBalance(state, test.i) != test.eb {
-			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, GetBalance(state, test.i))
+		if Balance(state, test.i) != test.eb {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, Balance(state, test.i))
 		}
 	}
 }
