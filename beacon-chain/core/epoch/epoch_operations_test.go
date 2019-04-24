@@ -25,7 +25,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	}
 	return &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Balances: validatorBalances,
+		Balances:          validatorBalances,
 		Slot:              slot,
 	}
 }

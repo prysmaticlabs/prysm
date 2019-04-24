@@ -95,7 +95,7 @@ func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
 	}
 }
 
-func TestEntryExitEffectEpoch_OK(t *testing.T) {
+func TestDelayedActivationExitEpoch_OK(t *testing.T) {
 	epoch := uint64(9999)
 	got := DelayedActivationExitEpoch(epoch)
 	wanted := epoch + 1 + params.BeaconConfig().ActivationExitDelay

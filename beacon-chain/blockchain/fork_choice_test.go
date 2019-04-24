@@ -452,7 +452,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot:              10,
-		Balances: []uint64{params.BeaconConfig().MaxDepositAmount},
+		Balances:          []uint64{params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{{}},
 	}
 
@@ -722,7 +722,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	// Construct 8 blocks. (Epoch length = 8)
 	epochLength := uint64(8)
 	beaconState := &pb.BeaconState{
-		Slot:              epochLength,
+		Slot:     epochLength,
 		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
@@ -793,7 +793,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	// Construct 8 blocks. (Epoch length = 8)
 	epochLength := uint64(8)
 	beaconState := &pb.BeaconState{
-		Slot:              epochLength,
+		Slot:     epochLength,
 		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
@@ -862,7 +862,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	// Construct 64 blocks. (Epoch length = 64)
 	epochLength := uint64(32)
 	beaconState := &pb.BeaconState{
-		Slot:              epochLength,
+		Slot:     epochLength,
 		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
@@ -931,7 +931,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	// Construct 64 blocks. (Epoch length = 64)
 	epochLength := uint64(64)
 	beaconState := &pb.BeaconState{
-		Slot:              epochLength,
+		Slot:     epochLength,
 		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
@@ -1310,7 +1310,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 		LatestCrosslinks:       crosslinks,
 		ValidatorRegistry:      validatorRegistry,
-		Balances:      validatorBalances,
+		Balances:               validatorBalances,
 		LatestBlock:            gBlock,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
