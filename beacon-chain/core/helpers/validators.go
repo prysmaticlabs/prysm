@@ -71,6 +71,23 @@ func DelayedActivationExitEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }
 
+// ChurnLimit returns then number of validators that are allowed to
+// enter and exit validator pool for an epoch.
+//
+// Spec pseudocode definition:
+// def get_churn_limit(state: BeaconState) -> int:
+//    return max(
+//        MIN_PER_EPOCH_CHURN_LIMIT,
+//        len(get_active_validator_indices(state, get_current_epoch(state))) // CHURN_LIMIT_QUOTIENT
+//    )
+func ChurnLimit(state *pb.BeaconState) uint64 {
+	validatorCount := uint64(len(ActiveValidatorIndices(state, CurrentEpoch(state))))
+	if validatorCount/params.BeaconConfig().ChurnLimitQuotient > params.BeaconConfig().MinPerEpochChurnLimit {
+		return validatorCount / params.BeaconConfig().ChurnLimitQuotient
+	}
+	return params.BeaconConfig().MinPerEpochChurnLimit
+}
+
 // BeaconProposerIndex returns the index of the proposer of the block at a
 // given slot.
 // TODO(2307): Update BeaconProposerIndex to v0.6
