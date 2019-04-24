@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -32,6 +33,12 @@ func keySetup() {
 		vKey, _ := keystore.NewKey(rand.Reader)
 		keyMapThreeValidators[hex.EncodeToString(vKey.PublicKey.Marshal())] = vKey
 	}
+}
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
 }
 
 func TestMain(m *testing.M) {

@@ -7,11 +7,14 @@ import (
 	"reflect"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 const hashLengthBytes = 32
 const sszChunkSize = 128
+
+var useCache bool
 
 // Hashable defines the interface for supporting tree-hash function.
 type Hashable interface {
@@ -51,6 +54,7 @@ func newHashError(msg string, typ reflect.Type) *hashError {
 }
 
 func makeHasher(typ reflect.Type) (hasher, error) {
+	useCache = featureconfig.FeatureConfig().CacheTreeHash
 	kind := typ.Kind()
 	switch {
 	case kind == reflect.Bool ||
@@ -64,8 +68,14 @@ func makeHasher(typ reflect.Type) (hasher, error) {
 		kind == reflect.Array && typ.Elem().Kind() == reflect.Uint8:
 		return hashedEncoding, nil
 	case kind == reflect.Slice || kind == reflect.Array:
+		if useCache {
+			return makeSliceHasherCache(typ)
+		}
 		return makeSliceHasher(typ)
 	case kind == reflect.Struct:
+		if useCache {
+			return makeStructHasherCache(typ)
+		}
 		return makeStructHasher(typ)
 	case kind == reflect.Ptr:
 		return makePtrHasher(typ)
