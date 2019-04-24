@@ -14,6 +14,8 @@ func init() {
 }
 
 func TestFromYaml_Pass(t *testing.T) {
+	// TODO(2354): Unskip this test.
+	t.Skip()
 	tests, err := readTestsFromYaml("./tests")
 	if err != nil {
 		t.Fatalf("Failed to read yaml files: %v", err)
