@@ -25,7 +25,7 @@ func TestNode_Builds(t *testing.T) {
 	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
 		t.Fatalf("Could not create validator account: %v", err)
 	}
-	_, err := NewValidatorClient(context)
+	_, err := NewValidatorClient(context, "1234")
 	if err != nil {
 		t.Fatalf("Failed to create ValidatorClient: %v", err)
 	}
