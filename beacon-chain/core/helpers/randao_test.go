@@ -181,8 +181,8 @@ func TestGenerateSeed_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate seed: %v", err)
 	}
-	wanted := [32]byte{242, 35, 140, 234, 201, 60, 23, 152, 187, 111, 227, 129, 108, 254, 108, 63,
-		192, 111, 114, 225, 0, 159, 145, 106, 133, 217, 25, 25, 251, 58, 175, 168}
+	wanted := [32]byte{184, 125, 45, 85, 9, 149, 28, 150, 244, 26, 107, 190, 20,
+		226, 23, 62, 239, 72, 184, 214, 219, 91, 33, 42, 123, 110, 161, 17, 6, 206, 182, 195}
 	if got != wanted {
 		t.Errorf("Incorrect generated seeds. Got: %v, wanted: %v",
 			got, wanted)
