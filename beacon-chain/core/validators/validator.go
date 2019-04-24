@@ -208,15 +208,21 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 		return state
 	}
 
-	// Find the last initiated exited epoch and add an exit delay to it.
-	var lastExitedEpoch uint64
+	// Aggregate all the exit epochs from the last.
+	var exitedEpochs []uint64
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if state.ValidatorRegistry[i].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			lastExitedEpoch = state.ValidatorRegistry[i].ExitEpoch
+			exitedEpochs = append(exitedEpochs, state.ValidatorRegistry[i].ExitEpoch)
 		}
 	}
-	if helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)) > lastExitedEpoch {
-		lastExitedEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
+
+	// Find the highest exit epoch between the aggregated list and current epoch plus delay.
+	exitedEpochs = append(exitedEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
+	highestExitEpoch := exitedEpochs[0]
+	for _, e := range exitedEpochs {
+		if e > highestExitEpoch {
+			highestExitEpoch = e
+		}
 	}
 
 	// Find the total number of validators exiting same epoch as
@@ -224,15 +230,15 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	// exit epoch to the next epoch.
 	var currentExitQueueLength uint64
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if state.ValidatorRegistry[i].ExitEpoch == lastExitedEpoch {
+		if state.ValidatorRegistry[i].ExitEpoch == highestExitEpoch {
 			currentExitQueueLength++
 		}
 	}
 	if currentExitQueueLength >= helpers.ChurnLimit(state) {
-		lastExitedEpoch++
+		highestExitEpoch++
 	}
 
-	v.ExitEpoch = lastExitedEpoch
+	v.ExitEpoch = highestExitEpoch
 	v.WithdrawableEpoch = v.ExitEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
 
 	state.ValidatorRegistry[idx] = v

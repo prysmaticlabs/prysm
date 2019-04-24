@@ -398,6 +398,18 @@ func TestActivateValidator_OK(t *testing.T) {
 	}
 }
 
+func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
+	exitEpoch := uint64(199)
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{
+		ExitEpoch: exitEpoch},
+	}}
+	newState := InitiateValidatorExit(state, 0)
+	if newState.ValidatorRegistry[0].ExitEpoch != exitEpoch {
+		t.Errorf("Already exited, wanted exit epoch %d, got %d",
+			exitEpoch, newState.ValidatorRegistry[0].ExitEpoch)
+	}
+}
+
 func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                  100, // epoch 2
