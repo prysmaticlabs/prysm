@@ -124,7 +124,11 @@ contract in order to activate the validator client`,
 						types.KeystorePathFlag,
 						types.PasswordFlag,
 					},
-					Action: createValidatorAccount,
+					Action: func(ctx cli.Context) {
+						if keystoreDir, _, err := createValidatorAccount(ctx); err != nil {
+							logrus.Fatalf("Could not create validator at path: %s", keystoreDir)
+						}
+					},
 				},
 			},
 		},
