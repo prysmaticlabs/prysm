@@ -189,7 +189,8 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	return a.updateAttestation(ctx, headRoot, beaconState, attestation)
 }
 
-// BatchUpdateLatestAttestation updates a large amount of attestations and adds them into the attestation store.
+// BatchUpdateLatestAttestation updates multiple attestations and adds them into the attestation store
+// if they are valid.
 func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations []*pb.Attestation) error {
 
 	if attestations == nil {
