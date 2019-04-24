@@ -129,12 +129,11 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 func (s *ValidatorClient) registerClientService(ctx *cli.Context, password string) error {
 	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	keystoreDirectory := ctx.GlobalString(types.KeystorePathFlag.Name)
-	keystorePassword := ctx.String(types.PasswordFlag.Name)
 	logValidatorBalances := !ctx.GlobalBool(types.DisablePenaltyRewardLogFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:             endpoint,
 		KeystorePath:         keystoreDirectory,
-		Password:             keystorePassword,
+		Password:             password,
 		LogValidatorBalances: logValidatorBalances,
 	})
 	if err != nil {
