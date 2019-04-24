@@ -356,7 +356,7 @@ func (db *BeaconDB) ValidatorRegistry(ctx context.Context) ([]*pb.Validator, err
 	return beaconState.ValidatorRegistry, err
 }
 
-// ValidatorRegistry fetches the current validator registry stored in state.
+// ValidatorFromState fetches the validator with the desired index from the cached registry.
 func (db *BeaconDB) ValidatorFromState(ctx context.Context, index uint64) (*pb.Validator, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorFromState")
 	defer span.End()
