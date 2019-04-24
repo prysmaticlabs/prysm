@@ -238,12 +238,7 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 	var err error
 
 	for beaconState.Slot < slot {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, &state.TransitionConfig{},
-		)
-		if err != nil {
-			return fmt.Errorf("could not execute head transition: %v", err)
-		}
+		beaconState = state.ProcessSlot(ctx, beaconState, headRoot)
 	}
 
 	cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
