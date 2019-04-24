@@ -105,7 +105,9 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 		defer span.End()
 		newState := &pb.BeaconState{}
 		// For each READ we unmarshal the serialized state into a new state struct and return that.
-		proto.Unmarshal(db.serializedState, newState)
+		if err := proto.Unmarshal(db.serializedState, newState); err != nil {
+			return nil, err
+		}
 		return newState, nil
 	}
 
