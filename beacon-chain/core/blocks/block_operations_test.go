@@ -62,12 +62,13 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		RandaoReveal: epochSignature.Marshal(),
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		},
 	}
 
 	want := "block randao reveal signature did not verify"
 	if _, err := blocks.ProcessRandao(
-
 		beaconState,
 		block,
 		true,  /* verify signatures */
@@ -95,11 +96,12 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
-		RandaoReveal: epochSignature.Marshal(),
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		},
 	}
 
 	newState, err := blocks.ProcessRandao(
-
 		beaconState,
 		block,
 		true,  /* verify signatures */

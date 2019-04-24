@@ -1071,9 +1071,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:             genesisSlot + offset,
-		RandaoReveal:     epochSignature.Marshal(),
 		ParentRootHash32: gBlockRoot[:],
-		Body:             &pb.BeaconBlockBody{}}
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -1153,9 +1154,10 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:             genesisSlot + offset,
-		RandaoReveal:     epochSignature.Marshal(),
 		ParentRootHash32: gBlockRoot[:],
-		Body:             &pb.BeaconBlockBody{}}
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		}}
 
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -1232,9 +1234,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:             genesisSlot + lastAvailableSlot,
-		RandaoReveal:     epochSignature.Marshal(),
 		ParentRootHash32: gBlockRoot[:],
-		Body:             &pb.BeaconBlockBody{}}
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
