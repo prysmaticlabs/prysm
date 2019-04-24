@@ -138,7 +138,10 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		b.Fatalf("Could not save beacon state to cache from DB: %v", err)
 	}
 
-	if db.currentState.Slot != params.BeaconConfig().GenesisSlot+1 {
+	savedState := &pb.BeaconState{}
+	savedState.Unmarshal(db.serializedState)
+
+	if savedState.Slot != params.BeaconConfig().GenesisSlot+1 {
 		b.Fatal("cache should be prepared on state after saving to DB")
 	}
 

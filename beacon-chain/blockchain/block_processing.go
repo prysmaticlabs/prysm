@@ -233,11 +233,8 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 		log.Error("Sent processed block to no subscribers")
 	}
 
-	// Update attestation store with latest attestation target.
-	for _, att := range block.Body.Attestations {
-		if err := c.attsService.UpdateLatestAttestation(ctx, att); err != nil {
-			return fmt.Errorf("failed to update latest attestation for store: %v", err)
-		}
+	if err := c.attsService.BatchUpdateLatestAttestation(ctx, block.Body.Attestations); err != nil {
+		return fmt.Errorf("failed to update latest attestation for store: %v", err)
 	}
 
 	// Remove pending deposits from the deposit queue.
