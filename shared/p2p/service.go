@@ -104,6 +104,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	}
 
 	setHandshakeHandler(h, "todo")
+	setupPeerNegotiation(h, "todo")
 
 	return &Server{
 		ctx:           ctx,

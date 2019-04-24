@@ -4,45 +4,35 @@ import (
 	"context"
 
 	ggio "github.com/gogo/protobuf/io"
-	iconnmgr "github.com/libp2p/go-libp2p-interface-connmgr"
+	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
-	peer "github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 const handshakeProtocol = prysmProtocolPrefix + "/handshake"
 
-var _ = iconnmgr.ConnManager(&negotiator{})
-
-type negotiator struct {
-	contractAddress string
-}
-
-// Notifee ...
-func (n *negotiator) Notifee() inet.Notifiee {
-	return &inet.NotifyBundle{
+func setupPeerNegotiation(h host.Host, contractAddress string) {
+	h.Network().Notify(&inet.NotifyBundle{
 		ConnectedF: func(net inet.Network, conn inet.Conn) {
 			log.Debug("Checking connection to peer")
 
-			// TODO Not sure whether or not to use net.NewStream w/ peer or
-			// conn.NewStream.
-			//			s, err := net.NewStream(context.Background(), conn.RemotePeer())
-			s, err := conn.NewStream()
+			s, err := h.NewStream(context.Background(), conn.RemotePeer(), handshakeProtocol)
 			if err != nil {
 				log.WithError(err).Error("Failed to open stream with newly connected peer")
 				return
 			}
 			defer s.Close()
-			s.SetProtocol(handshakeProtocol)
 
 			w := ggio.NewDelimitedWriter(s)
 			defer w.Close()
 
-			hs := &pb.Handshake{DepositContractAddress: n.contractAddress}
+			hs := &pb.Handshake{DepositContractAddress: contractAddress}
 			if err := w.WriteMsg(hs); err != nil {
 				log.WithError(err).Error("Failed to write handshake to peer")
 				return
 			}
+
+			log.Info("wrote to peer")
 
 			// TODO This read is currently blocking, it seems that the peer never
 			// receives the on their handler for this protocol ID. Stepping through
@@ -54,27 +44,7 @@ func (n *negotiator) Notifee() inet.Notifiee {
 				return
 			}
 
-			log.Printf("Handshake received: %v", resp)
+			log.Infof("Handshake received: %v", resp)
 		},
-	}
+	})
 }
-
-// Unimplemented / unused interface methods.
-
-// TagPeer is unimplemented.
-func (_ negotiator) TagPeer(peer.ID, string, int) {}
-
-// UntagPeer is unimplemented.
-func (_ negotiator) UntagPeer(peer.ID, string) {}
-
-// GetTagInfo is unimplemented.
-func (_ negotiator) GetTagInfo(peer.ID) *iconnmgr.TagInfo { return &iconnmgr.TagInfo{} }
-
-// TrimOpenConns is unimplemented.
-func (_ negotiator) TrimOpenConns(context.Context) {}
-
-// Protect is unimplemented.
-func (_ negotiator) Protect(peer.ID, string) {}
-
-// Unprotect  is unimplemented.
-func (_ negotiator) Unprotect(peer.ID, string) bool { return false }
