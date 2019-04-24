@@ -1,7 +1,6 @@
 package db
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -48,7 +47,6 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	zeroBinary := encodeSlotNumber(0)
 
 	db.currentState = beaconState
-	db.serializedState = stateEnc
 	db.stateHash = stateHash
 
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -103,20 +101,10 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 	// Return in-memory cached state, if available.
 	if db.currentState != nil {
-		_, span := trace.StartSpan(ctx, "proto.Marshal")
+		_, span := trace.StartSpan(ctx, "proto.Clone")
 		defer span.End()
-		// For each READ, we compare the cached state with a serialized copy of the state
-		// to determine if the cached state has been corrupted. If the marshaled version
-		// of the cached state is not equal to the serialized copy, we then retrieve the
-		// state from disk and log an error.
-		enc, err := proto.Marshal(db.currentState)
-		if err != nil {
-			return nil, err
-		}
-		if bytes.Equal(enc, db.serializedState) {
-			return db.currentState, nil
-		}
-		log.Error("Cached state has been mutated, so retrieving state from disk")
+		cachedState := proto.Clone(db.currentState).(*pb.BeaconState)
+		return cachedState, nil
 	}
 
 	var beaconState *pb.BeaconState
@@ -129,13 +117,9 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 		var err error
 		beaconState, err = createState(enc)
-
 		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
 			db.highestBlockSlot = beaconState.Slot
 		}
-		db.serializedState = enc
-		db.currentState = beaconState
-
 		return err
 	})
 
@@ -157,18 +141,21 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	defer db.stateLock.Unlock()
 	lockSpan.End()
 
-	db.currentState = beaconState
+	// Clone to prevent mutations of the cached copy
+	ctx, cloneSpan := trace.StartSpan(ctx, "proto.Clone")
+	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
+	if !ok {
+		cloneSpan.End()
+		return errors.New("could not clone beacon state")
+	}
+	db.currentState = currentState
+	cloneSpan.End()
 
-	// For each WRITE of the state, we serialize the inputted state and save it in memory,
-	// then the inputted state is assigned our cached state. Further on we write the state to disk then.
-	// This removes the need to clone the state, as we handle mutated caches in each READ.
-	enc, err := proto.Marshal(beaconState)
+	stateHash, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return err
 	}
-	stateHash := hashutil.Hash(enc)
 
-	db.serializedState = enc
 	db.stateHash = stateHash
 
 	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
@@ -178,9 +165,16 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 
-		stateBytes.Set(float64(len(enc)))
+		_, marshalSpan := trace.StartSpan(ctx, "proto.Marshal")
+		beaconStateEnc, err := proto.Marshal(beaconState)
+		if err != nil {
+			return err
+		}
+		marshalSpan.End()
+
+		stateBytes.Set(float64(len(beaconStateEnc)))
 		reportStateMetrics(beaconState)
-		return chainInfo.Put(stateLookupKey, enc)
+		return chainInfo.Put(stateLookupKey, beaconStateEnc)
 	})
 }
 
