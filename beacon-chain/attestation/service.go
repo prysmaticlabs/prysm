@@ -131,18 +131,11 @@ func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*p
 		return nil, nil
 	}
 	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
-	targetBlock, err := a.beaconDB.Block(targetRoot)
-	if err != nil {
-		return nil, fmt.Errorf("could not get target block: %v", err)
-	}
-	if targetBlock == nil {
+	if !a.beaconDB.HasBlock(targetRoot) {
 		return nil, nil
 	}
-	return &pb.AttestationTarget{
-		Slot:       targetBlock.Slot,
-		BlockRoot:  targetRoot[:],
-		ParentRoot: targetBlock.ParentRootHash32,
-	}, nil
+
+	return a.beaconDB.AttestationTarget(targetRoot)
 }
 
 // attestationPool takes an newly received attestation from sync service

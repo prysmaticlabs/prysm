@@ -235,6 +235,13 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
 	}
+	if err := beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  blockRoot[:],
+		ParentRoot: []byte{},
+	}); err != nil {
+		log.Fatalf("could not save att target: %v", err)
+	}
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
@@ -249,6 +256,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get latest attestation: %v", err)
 	}
+
 	if !bytes.Equal(blockRoot[:], latestAttestedTarget.BlockRoot) {
 		t.Errorf("Wanted: %v, got: %v", blockRoot[:], latestAttestedTarget.BlockRoot)
 	}
