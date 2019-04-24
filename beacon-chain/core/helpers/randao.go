@@ -43,8 +43,8 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 //    """
 //    Return the index root at a recent ``epoch``.
 //    """
-//    assert get_current_epoch(state) - LATEST_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY < epoch <= get_current_epoch(state) + ACTIVATION_EXIT_DELAY
-//    return state.latest_index_roots[epoch % LATEST_INDEX_ROOTS_LENGTH]
+//    assert get_current_epoch(state) - LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY < epoch <= get_current_epoch(state) + ACTIVATION_EXIT_DELAY
+//	  return state.latest_active_index_roots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
 	var earliestEpoch uint64
 	currentEpoch := CurrentEpoch(state)
