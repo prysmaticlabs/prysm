@@ -52,7 +52,8 @@ test_cases:
           slashable_attestation_1_validator_indices: [1, 2, 3, 4, 5, 6, 7, 51]
           slashable_attestation_2_custody_bitfield: !binary "F"
           slashable_attestation_2_validator_indices: [1, 2, 3, 4, 5, 6, 7, 51]
-      TODO(2307): Validator rotation logic is getting revamped piece by piece, we'll add the Exit test caes back when state transtion aligns spec v0.6.
+     # TODO(2307): Validator rotation logic is getting revamped piece by piece,
+     # we'll add the Exit test case back when state transition aligns spec v0.6.
     results:
       slot: 9223372036854775872
       num_validators: 67
