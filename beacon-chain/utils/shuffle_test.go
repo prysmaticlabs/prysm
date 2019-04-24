@@ -74,10 +74,6 @@ func TestSplitIndices_OK(t *testing.T) {
 	}
 }
 
-func TestGetPermutedIndex(t *testing.T) {
-
-}
-
 func BenchmarkPermuteIndex(b *testing.B) {
 	listSizes := []uint64{4000000, 40000, 400}
 	// "random" seed for testing. Can be any 32 bytes.
