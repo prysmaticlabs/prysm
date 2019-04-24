@@ -149,7 +149,7 @@ func TestSetBalance_OK(t *testing.T) {
 				{HighBalance: 4}, {HighBalance: 4}, {HighBalance: 4}},
 			Balances: test.b,
 		}
-		SetBalance(state, test.i, test.nb)
+		state = SetBalance(state, test.i, test.nb)
 		if Balance(state, test.i) != test.nb {
 			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.nb, Balance(state, test.i))
 		}
@@ -176,7 +176,7 @@ func TestIncreseBalance_OK(t *testing.T) {
 				{HighBalance: 4}, {HighBalance: 4}, {HighBalance: 4}},
 			Balances: test.b,
 		}
-		IncreaseBalance(state, test.i, test.nb)
+		state = IncreaseBalance(state, test.i, test.nb)
 		if Balance(state, test.i) != test.eb {
 			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, Balance(state, test.i))
 		}
@@ -199,7 +199,7 @@ func TestDecreseBalance_OK(t *testing.T) {
 				{HighBalance: 4}, {HighBalance: 4}, {HighBalance: 4}},
 			Balances: test.b,
 		}
-		DecreaseBalance(state, test.i, test.nb)
+		state = DecreaseBalance(state, test.i, test.nb)
 		if Balance(state, test.i) != test.eb {
 			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, Balance(state, test.i))
 		}

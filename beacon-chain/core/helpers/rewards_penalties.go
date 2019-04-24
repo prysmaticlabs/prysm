@@ -109,13 +109,14 @@ func Balance(state *pb.BeaconState, validatorIndex uint64) uint64 {
 //     if validator.high_balance > balance or validator.high_balance + 3 * HALF_INCREMENT < balance:
 //         validator.high_balance = balance - balance % HIGH_BALANCE_INCREMENT
 //     state.balances[index] = balance
-func SetBalance(state *pb.BeaconState, idx uint64, balance uint64) {
+func SetBalance(state *pb.BeaconState, idx uint64, balance uint64) *pb.BeaconState {
 	validator := state.ValidatorRegistry[idx]
 	halfIncrement := params.BeaconConfig().HighBalanceIncrement / 2
 	if validator.HighBalance > balance || validator.HighBalance+3*halfIncrement < balance {
 		validator.HighBalance = balance - balance%params.BeaconConfig().HighBalanceIncrement
 	}
 	state.Balances[idx] = balance
+	return state
 }
 
 // IncreaseBalance increases validator with the given 'index' balance by 'delta' in Gwei.
@@ -126,8 +127,8 @@ func SetBalance(state *pb.BeaconState, idx uint64, balance uint64) {
 //     Increase the balance for a validator with the given ``index`` by ``delta``.
 //     """
 //     set_balance(state, index, get_balance(state, index) + delta)
-func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) {
-	SetBalance(state, idx, Balance(state, idx)+delta)
+func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
+	return SetBalance(state, idx, Balance(state, idx)+delta)
 }
 
 // DecreaseBalance decreases validator with the given 'index' balance by 'delta' in Gwei.
@@ -139,11 +140,12 @@ func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) {
 //     """
 //     current_balance = get_balance(state, index)
 //     set_balance(state, index, current_balance - delta if current_balance >= delta else 0)
-func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) {
+func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
 	currentBalance := Balance(state, idx)
 	if currentBalance >= delta {
 		SetBalance(state, idx, currentBalance-delta)
 	} else {
 		SetBalance(state, idx, 0)
 	}
+	return state
 }
