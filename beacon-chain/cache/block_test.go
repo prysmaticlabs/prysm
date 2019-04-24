@@ -14,6 +14,10 @@ func TestHeightHeightFn_OK(t *testing.T) {
 	aInfo := &AncestorInfo{
 		Height: height,
 		Hash:   hash,
+		Target: &pb.AttestationTarget{
+			Slot:      height,
+			BlockRoot: hash,
+		},
 	}
 
 	key, err := heightKeyFn(aInfo)
@@ -21,7 +25,7 @@ func TestHeightHeightFn_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	strHeightKey := string(aInfo.Hash) + strconv.Itoa(int(aInfo.Height))
+	strHeightKey := string(aInfo.Target.BlockRoot) + strconv.Itoa(int(aInfo.Target.Slot))
 	if key != strHeightKey {
 		t.Errorf("Incorrect hash key: %s, expected %s", key, strHeightKey)
 	}
@@ -42,7 +46,10 @@ func TestAncestorCache_AncestorInfoByHeight(t *testing.T) {
 	aInfo := &AncestorInfo{
 		Height: height,
 		Hash:   hash,
-		Block:  &pb.BeaconBlock{Slot: height},
+		Target: &pb.AttestationTarget{
+			Slot:      height,
+			BlockRoot: hash,
+		},
 	}
 
 	fetchedInfo, err := cache.AncestorBySlot(hash, height)
@@ -66,15 +73,15 @@ func TestAncestorCache_AncestorInfoByHeight(t *testing.T) {
 	if fetchedInfo.Height != height {
 		t.Errorf(
 			"Expected fetched slot number to be %d, got %d",
-			aInfo.Height,
-			fetchedInfo.Height,
+			aInfo.Target.Slot,
+			fetchedInfo.Target.Slot,
 		)
 	}
-	if !reflect.DeepEqual(fetchedInfo.Block, aInfo.Block) {
+	if !reflect.DeepEqual(fetchedInfo.Target, aInfo.Target) {
 		t.Errorf(
 			"Expected fetched info committee to be %v, got %v",
-			aInfo.Block,
-			fetchedInfo.Block,
+			aInfo.Target,
+			fetchedInfo.Target,
 		)
 	}
 }
@@ -85,6 +92,9 @@ func TestBlockAncestor_maxSize(t *testing.T) {
 	for i := 0; i < maxCacheSize+10; i++ {
 		aInfo := &AncestorInfo{
 			Height: uint64(i),
+			Target: &pb.AttestationTarget{
+				Slot: uint64(i),
+			},
 		}
 		if err := cache.AddBlockAncestor(aInfo); err != nil {
 			t.Fatal(err)

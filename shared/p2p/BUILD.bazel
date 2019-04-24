@@ -21,6 +21,7 @@ go_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/iputils:go_default_library",
         "@com_github_gogo_protobuf//io:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

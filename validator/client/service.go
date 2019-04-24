@@ -46,6 +46,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 	ks := keystore.NewKeystore(cfg.KeystorePath)
 	keys, err := ks.GetKeys(validatorFolder, validatorPrefix, cfg.Password)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("could not get private key: %v", err)
 	}
 	var key *keystore.Key

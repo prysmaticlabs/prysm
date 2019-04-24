@@ -85,7 +85,7 @@ func TestReceiveBlockAnnounce_SkipsBlacklistedBlock(t *testing.T) {
 	if err := rs.receiveBlockAnnounce(msg); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	testutil.AssertLogsContain(t, hook, "Received a blacklisted block hash")
+	testutil.AssertLogsContain(t, hook, "Received blacklisted block")
 	hook.Reset()
 }
 
@@ -116,6 +116,9 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, genesisState); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.UpdateChainHead(ctx, genesisBlock, genesisState); err != nil {
 		t.Fatal(err)
 	}
 

@@ -4,6 +4,8 @@ package node
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -137,6 +139,7 @@ func (b *BeaconNode) Start() {
 		defer signal.Stop(sigc)
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
+		debug.Exit(b.ctx) // Ensure trace and CPU profile data are flushed.
 		go b.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
@@ -144,7 +147,6 @@ func (b *BeaconNode) Start() {
 				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
 			}
 		}
-		debug.Exit(b.ctx) // Ensure trace and CPU profile data are flushed.
 		panic("Panic closing the beacon node")
 	}()
 
@@ -168,7 +170,7 @@ func (b *BeaconNode) Close() {
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, beaconChainDBName)
-	if b.ctx.GlobalBool(cmd.ClearDBFlag.Name) {
+	if b.ctx.GlobalBool(cmd.ClearDB.Name) {
 		if err := db.ClearDB(dbPath); err != nil {
 			return err
 		}
@@ -179,7 +181,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 
-	log.Infof("Checking db at %s", dbPath)
+	log.WithField("path", dbPath).Info("Checking db")
 	b.db = db
 	return nil
 }
@@ -246,7 +248,22 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	depAddress := cliCtx.GlobalString(utils.DepositContractFlag.Name)
 
 	if depAddress == "" {
-		log.Fatal("No deposit contract specified. Add --deposit-contract with a valid deposit contract address to start.")
+		log.Infof("Fetching testnet cluster address from %s...", params.BeaconConfig().TestnetContractEndpoint)
+		resp, err := http.Get(params.BeaconConfig().TestnetContractEndpoint)
+		if err != nil {
+			log.Fatalf("Could not get latest deposit contract address: %v", err)
+		}
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				log.Fatal(err)
+			}
+		}()
+
+		contractResponse, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		depAddress = string(contractResponse)
 	}
 
 	if !common.IsHexAddress(depAddress) {
@@ -344,6 +361,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var syncService *rbcsync.Service
+	if err := b.services.FetchService(&syncService); err != nil {
+		return err
+	}
+
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
@@ -355,6 +377,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,
+		SyncService:      syncService,
 	})
 
 	return b.services.RegisterService(rpcService)

@@ -80,6 +80,12 @@ message AttestationData {
   bytes justified_block_root_hash32 = 8;
 }
 
+message AttestationTarget {
+  uint64 slot = 1;
+  bytes block_root = 2;
+  bytes parent_root = 3;
+}
+
 message AttestationDataAndCustodyBit {
   AttestationData data = 1;
   bool custody_bit = 2;
