@@ -102,7 +102,7 @@ func (v *ValidatorService) Start() {
 		proposerClient:       pb.NewProposerServiceClient(v.conn),
 		keys:                 v.keys,
 		pubkeys:              pubkeys,
-		logValidatorBalances: false,
+		logValidatorBalances: v.logValidatorBalances,
 	}
 	go run(v.ctx, v.validator)
 }
