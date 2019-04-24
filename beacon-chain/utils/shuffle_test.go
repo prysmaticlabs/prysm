@@ -79,10 +79,11 @@ func TestSplitOffset_OK(t *testing.T) {
 	for i := uint64(0); i < validators; i++ {
 		l = append(l, i)
 	}
-	split := SplitIndices(l, params.BeaconConfig().SlotsPerEpoch)
-	for i := uint64(0); i < validators; i++ {
-		if !reflect.DeepEqual(split[i], l[SplitOffset(uint64(len(l)), uint64(6), i):SplitOffset(uint64(len(l)), uint64(6), i+1)]) {
-			t.Errorf("SplitOffset doesnt function as intended. want: %v got: %v", l[SplitOffset(uint64(len(l)), uint64(6), i):SplitOffset(uint64(len(l)), uint64(6), i+1)], split[i])
+	chunks := uint64(6)
+	split := SplitIndices(l, chunks)
+	for i := uint64(0); i < chunks; i++ {
+		if !reflect.DeepEqual(split[i], l[SplitOffset(uint64(len(l)), chunks, i):SplitOffset(uint64(len(l)), chunks, i+1)]) {
+			t.Errorf("SplitOffset doesnt function as intended. want: %v got: %v", l[SplitOffset(uint64(len(l)), chunks, i):SplitOffset(uint64(len(l)), chunks, i+1)], split[i])
 			break
 		}
 

@@ -64,8 +64,8 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 	var divided [][]uint64
 	var lSize = uint64(len(l))
 	for i := uint64(0); i < n; i++ {
-		start := lSize * i / n
-		end := lSize * (i + 1) / n
+		start := SplitOffset(lSize, n, i)
+		end := SplitOffset(lSize, n, i+1)
 		divided = append(divided, l[start:end])
 	}
 	return divided
