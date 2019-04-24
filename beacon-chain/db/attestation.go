@@ -106,7 +106,7 @@ func (db *BeaconDB) Attestations() ([]*pb.Attestation, error) {
 func (db *BeaconDB) AttestationTarget(hash [32]byte) (*pb.AttestationTarget, error) {
 	var attTgt *pb.AttestationTarget
 	err := db.view(func(tx *bolt.Tx) error {
-		a := tx.Bucket(attestationBucket)
+		a := tx.Bucket(attestationTargetBucket)
 
 		enc := a.Get(hash[:])
 		if enc == nil {
