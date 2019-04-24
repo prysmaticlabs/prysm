@@ -95,12 +95,17 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
 func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
-	validator, err := a.beaconDB.ValidatorFromState(ctx, index)
+	bState, err := a.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	pubKey := bytesutil.ToBytes48(validator.Pubkey)
+	// return error if it's an invalid validator index.
+	if index >= uint64(len(bState.ValidatorRegistry)) {
+		return nil, fmt.Errorf("invalid validator index %d", index)
+	}
+
+	pubKey := bytesutil.ToBytes48(bState.ValidatorRegistry[index].Pubkey)
 	a.store.RLock()
 	defer a.store.RUnlock()
 	if _, exists := a.store.m[pubKey]; !exists {
@@ -126,18 +131,11 @@ func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*p
 		return nil, nil
 	}
 	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
-	targetBlock, err := a.beaconDB.Block(targetRoot)
-	if err != nil {
-		return nil, fmt.Errorf("could not get target block: %v", err)
-	}
-	if targetBlock == nil {
+	if !a.beaconDB.HasBlock(targetRoot) {
 		return nil, nil
 	}
-	return &pb.AttestationTarget{
-		Slot:       targetBlock.Slot,
-		BlockRoot:  targetRoot[:],
-		ParentRoot: targetBlock.ParentRootHash32,
-	}, nil
+
+	return a.beaconDB.AttestationTarget(targetRoot)
 }
 
 // attestationPool takes an newly received attestation from sync service

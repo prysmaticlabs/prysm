@@ -72,3 +72,9 @@ spec:
         port:
           number: 8080
         host: contract-address-http.beacon-chain.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+      - '*'
+      allowMethods:
+      - GET
+      maxAge: '24h'
