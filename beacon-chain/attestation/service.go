@@ -191,6 +191,9 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 
 func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations []*pb.Attestation) error {
 
+	if attestations == nil {
+		return nil
+	}
 	// Potential improvement, instead of getting the state,
 	// we could get a mapping of validator index to public key.
 	beaconState, err := a.beaconDB.HeadState(ctx)
