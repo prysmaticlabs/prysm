@@ -1,11 +1,9 @@
 package helpers
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -19,9 +17,8 @@ import (
 //    Generate a seed for the given ``epoch``.
 //    """
 //    return hash(
-//      get_randao_mix(state, epoch - MIN_SEED_LOOKAHEAD) +
-//      get_active_index_root(state, epoch) +
-//      int_to_bytes32(epoch)
+//        get_randao_mix(state, epoch - MIN_SEED_LOOKAHED) +
+//        get_active_index_root(state, epoch)
 //    )
 func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 	if wantedEpoch > params.BeaconConfig().MinSeedLookahead {
@@ -35,12 +32,7 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-
-	epochInBytes := make([]byte, 32)
-	binary.LittleEndian.PutUint64(epochInBytes, wantedEpoch)
-	epochBytes32 := bytesutil.ToBytes32(epochInBytes)
-	bytes := append(randaoMix, indexRoot...)
-	return hashutil.Hash(append(bytes, epochBytes32[:]...)), nil
+	return hashutil.Hash(append(randaoMix, indexRoot...)), nil
 }
 
 // ActiveIndexRoot returns the index root of a given epoch.
