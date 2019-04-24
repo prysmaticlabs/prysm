@@ -234,6 +234,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 			currentExitQueueLength++
 		}
 	}
+
 	if currentExitQueueLength >= helpers.ChurnLimit(state) {
 		highestExitEpoch++
 	}
