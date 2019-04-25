@@ -143,9 +143,8 @@ func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.Beacon
 func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
 	currentBalance := Balance(state, idx)
 	if currentBalance >= delta {
-		SetBalance(state, idx, currentBalance-delta)
-	} else {
-		SetBalance(state, idx, 0)
+		return SetBalance(state, idx, currentBalance-delta)
+
 	}
-	return state
+	return SetBalance(state, idx, 0)
 }
