@@ -18,9 +18,7 @@ import (
 	"time"
 
 	peer "github.com/libp2p/go-libp2p-peer"
-
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"

@@ -186,7 +186,7 @@ func (s *Server) Status() error {
 
 // Peers returns a slice of currently connected peer id's to be used throughout the runtime.
 func (s *Server) Peers() peer.IDSlice {
-	return s.host.Peerstore().Peers()
+	return s.host.Network().Peers()
 }
 
 // RegisterTopic with a message and the adapter stack for the given topic. The

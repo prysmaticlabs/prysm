@@ -6,7 +6,6 @@ import (
 	"time"
 
 	peer "github.com/libp2p/go-libp2p-peer"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -163,10 +162,10 @@ func (q *Querier) run() {
 		case <-ticker.C:
 			peers := q.p2p.Peers()
 			for _, p := range peers {
-				if err := q.RequestLatestHead(p); err != nil {
-					queryLog.Warnf("Could not request head from peer %s: %v", p.Pretty(), err)
-				}
+			if err := q.RequestLatestHead(p); err != nil {
+				queryLog.Warnf("Could not request head from peer %s: %v", p.Pretty(), err)
 			}
+		}
 		case msg := <-q.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
 			peers := q.p2p.Peers()

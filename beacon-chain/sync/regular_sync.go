@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	peer "github.com/libp2p/go-libp2p-peer"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
