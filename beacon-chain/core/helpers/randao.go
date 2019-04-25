@@ -51,7 +51,7 @@ func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) 
 	if currentEpoch > params.BeaconConfig().LatestActiveIndexRootsLength+params.BeaconConfig().ActivationExitDelay {
 		earliestEpoch = currentEpoch - (params.BeaconConfig().LatestActiveIndexRootsLength + params.BeaconConfig().ActivationExitDelay)
 	}
-	if earliestEpoch > wantedEpoch || wantedEpoch > currentEpoch {
+	if earliestEpoch > wantedEpoch || wantedEpoch > currentEpoch+params.BeaconConfig().ActivationExitDelay {
 		return nil, fmt.Errorf("input indexRoot epoch %d out of bounds: %d <= epoch < %d",
 			wantedEpoch, earliestEpoch, currentEpoch)
 	}
