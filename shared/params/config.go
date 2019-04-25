@@ -153,6 +153,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinDepositAmount:           1 * 1e9,
 	MaxDepositAmount:           32 * 1e9,
 	EjectionBalance:            16 * 1e9,
+	HighBalanceIncrement:       1 * 1e9,
 	ForkChoiceBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
@@ -176,6 +177,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ActivationExitDelay:          4,
 	EpochsPerEth1VotingPeriod:    16,
 	Eth1FollowDistance:           1024,
+	SlotsPerHistoricalRoot:       8192,
 
 	// State list length constants.
 	LatestRandaoMixesLength:      8192,
