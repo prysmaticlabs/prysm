@@ -164,7 +164,7 @@ func (q *Querier) run() {
 			peers := q.p2p.Peers()
 			for _, p := range peers {
 				if err := q.RequestLatestHead(p); err != nil {
-					log.Warnf("Could not request head from peer %s: %v", p.Pretty(), err)
+					queryLog.Warnf("Could not request head from peer %s: %v", p.Pretty(), err)
 				}
 			}
 		case msg := <-q.responseBuf:
@@ -180,6 +180,7 @@ func (q *Querier) run() {
 			if response.CanonicalSlot > q.currentHeadSlot {
 				q.currentHeadSlot = response.CanonicalSlot
 			}
+			queryLog.Infof("Received chain head from best peer: %s", msg.Peer.Pretty())
 			queryLog.Infof(
 				"Latest chain head is at slot: %d and state root: %#x",
 				response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
