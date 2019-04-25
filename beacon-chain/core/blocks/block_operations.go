@@ -8,7 +8,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"reflect"
+	"sort"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -587,6 +589,80 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		// )
 		return nil
 	}
+	return nil
+}
+
+// VerifyIndexedAttestation determines the validity of an indexed attestation.
+// WIP - signing is not implemented until BLS is integrated into Prysm.
+//
+// Spec pseudocode definition:
+//  def verify_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+//    """
+//    Verify validity of ``indexed_attestation`` fields.
+//    """
+//    custody_bit_0_indices = indexed_attestation.custody_bit_0_indices
+//    custody_bit_1_indices = indexed_attestation.custody_bit_1_indices
+//
+//    # Ensure no duplicate indices across custody bits
+//    assert len(set(custody_bit_0_indices).intersection(set(custody_bit_1_indices))) == 0
+//
+//    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
+//        return False
+//
+//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
+//        return False
+//
+//    if custody_bit_0_indices != sorted(custody_bit_0_indices):
+//        return False
+//
+//    if custody_bit_1_indices != sorted(custody_bit_1_indices):
+//        return False
+//
+//    return bls_verify_multiple(
+//        pubkeys=[
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_indices]),
+//        ],
+//        message_hashes=[
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
+//        ],
+//        signature=indexed_attestation.signature,
+//        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
+//    )
+func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttestation) error {
+	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
+	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
+
+	custodyBitIntersection := sliceutil.Intersection(custodyBit0Indices, custodyBit1Indices)
+	if len(custodyBitIntersection) != 0 {
+		return fmt.Errorf("custody bit indice should not contain duplicates, received: %v", custodyBitIntersection)
+	}
+
+	if len(custodyBit1Indices) > 0 {
+		return fmt.Errorf("custody bit 1 indices should be empty for phase 0")
+	}
+
+	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
+	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
+	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
+		return fmt.Errorf("total length of indices is not proper length, received: %d",
+			totalIndicesLength,
+		)
+	}
+
+	if !sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
+		return custodyBit0Indices[i] < custodyBit0Indices[j]
+	}) {
+		return errors.New("custody bit 0 indices are not sorted")
+	}
+
+	if !sort.SliceIsSorted(custodyBit1Indices, func(i, j int) bool {
+		return custodyBit1Indices[i] < custodyBit1Indices[j]
+	}) {
+		return errors.New("custody bit 1 indices are not sorted")
+	}
+
 	return nil
 }
 

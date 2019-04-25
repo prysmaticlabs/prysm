@@ -993,6 +993,47 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 }
 
+func TestVerifyIndexedAttestation(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{1, 3, 5, 10, 12},
+		CustodyBit_1Indices: []uint64{},
+	}
+
+	if err := blocks.VerifyIndexedAttestation(&pb.BeaconState{}, indexedAtt1); err != nil {
+		t.Errorf("indexed attestation failed to verify: %v", err)
+	}
+}
+
+func TestVerifyIndexedAttestation_Empty(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{},
+		CustodyBit_1Indices: []uint64{},
+	}
+
+	want := "not proper length"
+	if err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
+		indexedAtt1,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
+func TestVerifyIndexedAttestation_NotSorted(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
+		CustodyBit_1Indices: []uint64{},
+	}
+
+	want := "custody bit 0 indices are not sorted"
+	if err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
+		indexedAtt1,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
 func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1002,7 +1043,6 @@ func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 	beaconState := &pb.BeaconState{}
 	want := "exceeds allowed threshold"
 	if _, err := blocks.ProcessValidatorDeposits(
-
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
