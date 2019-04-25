@@ -10,6 +10,12 @@ var (
 		Name:  "no-custom-config",
 		Usage: "Run the beacon chain with the real parameters from phase 0.",
 	}
+	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
+	HTTPWeb3ProviderFlag = cli.StringFlag{
+		Name:  "http-web3provider",
+		Usage: "A mainchain web3 provider string http endpoint",
+		Value: "https://goerli.prylabs.net",
+	}
 	// Web3ProviderFlag defines a flag for a mainchain RPC endpoint.
 	Web3ProviderFlag = cli.StringFlag{
 		Name:  "web3provider",

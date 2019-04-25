@@ -6,10 +6,17 @@ import (
 	"os"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
+}
 
 func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	directory := testutil.TempDir() + "/testkeystore"
@@ -27,7 +34,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	}
 	files, _ := ioutil.ReadDir(directory)
 	if len(files) != 3 {
-		t.Errorf("multiple validators wasn't created only: %v files in directory", len(files))
+		t.Errorf("multiple validators were not created only %v files in directory", len(files))
 		for _, f := range files {
 			t.Errorf("%v\n", f.Name())
 		}

@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"strconv"
 	"testing"
@@ -15,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,6 +26,9 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
 }
 
 type mockP2P struct {
@@ -468,10 +471,8 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	if err := ss.receiveAttestation(msg1); err != nil {
 		t.Error(err)
 	}
-	want := fmt.Sprintf(
-		"Skipping received attestation with slot smaller than one epoch ago, %d < %d",
-		request1.Attestation.Data.Slot, params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch)
-	testutil.AssertLogsContain(t, hook, want)
+
+	testutil.AssertLogsContain(t, hook, "Skipping received attestation with slot smaller than one epoch ago")
 }
 
 func TestReceiveExitReq_OK(t *testing.T) {
@@ -529,8 +530,8 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 	if err := ss.handleAttestationRequestByHash(msg); err != nil {
 		t.Error(err)
 	}
-	want := fmt.Sprintf("Attestation %#x is not in db", bytesutil.ToBytes32(req.Hash))
-	testutil.AssertLogsContain(t, hook, want)
+
+	testutil.AssertLogsContain(t, hook, "Attestation not in db")
 }
 
 func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
@@ -649,8 +650,8 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	if err := ss.handleAttestationRequestByHash(msg); err != nil {
 		t.Error(err)
 	}
-	want := fmt.Sprintf("Sending attestation %#x to peer", attRoot)
-	testutil.AssertLogsContain(t, hook, want)
+
+	testutil.AssertLogsContain(t, hook, "Sending attestation to peer")
 }
 
 func TestHandleStateReq_NOState(t *testing.T) {
@@ -681,7 +682,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 		t.Error(err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Requested state root is different from locally stored state root")
+	testutil.AssertLogsContain(t, hook, "Requested state root is diff than local state root")
 
 }
 

@@ -181,8 +181,6 @@ func (d *db) AssignExistingPKs(_ context.Context, pks *pb.PrivateKeys, podName s
 		}
 		return tx.Bucket(assignedPkBucket).Put([]byte(podName), data)
 	})
-
-	return nil
 }
 
 // AllocatedPodNames returns the string list of pod names with current private

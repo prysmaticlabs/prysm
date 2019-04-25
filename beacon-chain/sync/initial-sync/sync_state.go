@@ -4,6 +4,9 @@ import (
 	"context"
 	"github.com/libp2p/go-libp2p-peer"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -38,6 +41,20 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
+	root, err := hashutil.HashBeaconBlock(finalizedState.LatestBlock)
+	if err != nil {
+		log.Errorf("Could not hash finalized block %v", err)
+		return
+	}
+	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       finalizedState.LatestBlock.Slot,
+		BlockRoot:  root[:],
+		ParentRoot: finalizedState.LatestBlock.ParentRootHash32,
+	}); err != nil {
+		log.Errorf("Could not to save attestation target: %v", err)
+		return
+	}
+
 	if err := s.db.SaveJustifiedState(finalizedState); err != nil {
 		log.Errorf("Could not set beacon state for initial sync %v", err)
 		return
@@ -64,6 +81,8 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		log.Errorf("Could not update chain head: %v", err)
 		return
 	}
+
+	validators.InitializeValidatorStore(finalizedState)
 
 	// sets the current slot to the last finalized slot of the
 	// beacon state to begin our sync from.

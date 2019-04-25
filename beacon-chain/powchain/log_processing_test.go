@@ -14,10 +14,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
+}
 
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -31,6 +38,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -93,6 +101,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -154,6 +163,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -237,6 +247,7 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -322,6 +333,7 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
@@ -406,6 +418,7 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -474,6 +487,7 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          testAcc.backend,
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -534,6 +548,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          testAcc.backend,
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        &db.BeaconDB{},
 	})

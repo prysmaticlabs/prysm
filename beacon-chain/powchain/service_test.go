@@ -213,6 +213,7 @@ func TestStart_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        beaconDB,
@@ -283,6 +284,7 @@ func TestInitDataFromContract_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -312,6 +314,7 @@ func TestWeb3Service_BadReader(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &badReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {

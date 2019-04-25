@@ -3,6 +3,7 @@ package validators
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -10,15 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCommitteesCache: false,
-	})
-}
 
 func TestHasVoted_OK(t *testing.T) {
 	// Setting bit field to 11111111.
@@ -645,5 +639,35 @@ func TestMaxBalanceChurn_OK(t *testing.T) {
 			t.Errorf("MaxBalanceChurn was not an expected value. Wanted: %d, got: %d",
 				tt.maxBalanceChurn, churn)
 		}
+	}
+}
+
+func TestInitializeValidatoreStore(t *testing.T) {
+	registry := make([]*pb.Validator, 0)
+	indices := make([]uint64, 0)
+	validatorsLimit := 100
+	for i := 0; i < validatorsLimit; i++ {
+		registry = append(registry, &pb.Validator{
+			Pubkey:          []byte(strconv.Itoa(i)),
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		})
+		indices = append(indices, uint64(i))
+	}
+
+	bState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              params.BeaconConfig().GenesisSlot,
+	}
+
+	if _, ok := vStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {
+		t.Fatalf("Validator store already has indices saved in this epoch")
+	}
+
+	InitializeValidatorStore(bState)
+	retrievedIndices := vStore.activatedValidators[helpers.CurrentEpoch(bState)]
+
+	if !reflect.DeepEqual(retrievedIndices, indices) {
+		t.Errorf("Saved active indices are not the same as the one in the validator store, got %v but expected %v", retrievedIndices, indices)
 	}
 }
