@@ -3,6 +3,7 @@ package attestation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -287,6 +288,10 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		}
 		if !bitSet {
 			continue
+		}
+
+		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
+			return errors.New("index doesn't exist in validator registry")
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the
