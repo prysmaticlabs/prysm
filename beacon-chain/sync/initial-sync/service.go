@@ -296,7 +296,7 @@ func (s *InitialSync) run() {
 	}()
 
 	// We send out a state request to all peers.
-	if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot, s.bestPeer); err != nil {
+	if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot); err != nil {
 		log.Errorf("Could not request state from peer %v", err)
 	}
 

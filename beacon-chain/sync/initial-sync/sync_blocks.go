@@ -93,6 +93,12 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 		// Do not process empty responses.
 		return
 	}
+	if msg.Peer != s.bestPeer {
+		// Only process batch block responses that come from the best peer
+		// we originally synced with.
+		log.Debugf("Received batch blocks from a different peer: %s", msg.Peer.Pretty())
+		return
+	}
 
 	log.Debug("Processing batched block response")
 	for _, block := range batchedBlocks {
