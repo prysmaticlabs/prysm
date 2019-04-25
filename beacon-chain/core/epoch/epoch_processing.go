@@ -23,7 +23,7 @@ import (
 
 var log = logrus.WithField("prefix", "core/state")
 
-type matchedAttestations struct {
+type MatchedAttestations struct {
 	source []*pb.PendingAttestation
 	target []*pb.PendingAttestation
 	head   []*pb.PendingAttestation
@@ -416,7 +416,7 @@ func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
 //        a for a in get_matching_source_attestations(state, epoch)
 //        if a.data.beacon_block_root == get_block_root_at_slot(state, a.data.slot)
 //    ]
-func MatchAttestations(state *pb.BeaconState, epoch uint64) (*matchedAttestations, error) {
+func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestations, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	previousEpoch := helpers.PrevEpoch(state)
 
@@ -460,7 +460,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*matchedAttestation
 		}
 	}
 
-	return &matchedAttestations{
+	return &MatchedAttestations{
 		source: srcAtts,
 		target: tgtAtts,
 		head:   headAtts,
