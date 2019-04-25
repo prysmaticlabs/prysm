@@ -397,8 +397,9 @@ func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
 }
 
 // MatchAttestations matches the attestations gathered in a span of an epoch
-// and categorize them as source, target and head. We combined the helpers from
-// spec for efficiency and to achieve O(N) run time.
+// and categorize them whether they correctly voted for source, target and head.
+// We combined the individual helpers from spec for efficiency and to achieve O(N) run time.
+//
 // Spec pseudocode definition:
 //	def get_matching_source_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
 //    assert epoch in (get_current_epoch(state), get_previous_epoch(state))
@@ -419,11 +420,14 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*matchedAttestation
 	currentEpoch := helpers.CurrentEpoch(state)
 	previousEpoch := helpers.PrevEpoch(state)
 
-	if epoch != currentEpoch || epoch != previousEpoch {
-		return nil, fmt.Errorf("input epoch: %d!= current epoch: %d or previous epoch: %d",
+	// Input epoch for matching the source attestations has to be within range
+	// of current epoch & previous epoch.
+	if epoch != currentEpoch && epoch != previousEpoch {
+		return nil, fmt.Errorf("input epoch: %d != current epoch: %d or previous epoch: %d",
 			epoch, currentEpoch, previousEpoch)
 	}
 
+	// Decide if the source attestations are coming from current or previous epoch.
 	var srcAtts []*pb.PendingAttestation
 	if epoch == currentEpoch {
 		srcAtts = state.CurrentEpochAttestations
@@ -439,10 +443,14 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*matchedAttestation
 	var tgtAtts []*pb.PendingAttestation
 	var headAtts []*pb.PendingAttestation
 	for _, srcAtt := range srcAtts {
+		// If the target root matches attestation's target root,
+		// then we know this attestation has correctly voted for target.
 		if bytes.Equal(srcAtt.Data.TargetRoot, targetRoot) {
 			tgtAtts = append(tgtAtts, srcAtt)
 		}
 
+		// If the block root at slot matches attestation's block root at slot,
+		// then we know this attestation has correctly voted for head.
 		headRoot, err := helpers.BlockRootAtSlot(state, srcAtt.Data.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block root for slot %d: %v", srcAtt.Data.Slot, err)
