@@ -1,32 +1,31 @@
 package p2p
 
+import  ( 
+	ps "github.com/libp2p/go-libp2p-peerstore" 
+)
+
 
 type BlacklistedPeer struct {
-	Peer string
-}
-
-type BlacklistedPeers struct {
-	Peers []BlacklistedPeer
+	PeerMap map[ps.PeerInfo.ID]bool
 }
 
 
-func AddNewBlacklistedPeer(peerID string)  {
-	bp := &BlacklistedPeer{Peer: peerID}
-	bps := new(BlacklistedPeers)
-	bps.Peers = append(bps.Peers, bp)
+func AddNewBlacklistedPeer(peerID ps.PeerInfo.ID)  {
+	bp := new(BlacklistedPeer)
+	bp.PeerMap = make(map[ps.PeerInfo.ID]bool)
+	bp.PeerMap[peerID] = true
 }
 
 
-func IsPeerBlacklisted(peerID string) bool {
-	bps := new(BlacklistedPeers)
-	for i := 0 ; i < len(bps.Peers), i++ {
-		if bps.Peers[i].Peer == peerID {
-			return true
+func IsPeerBlacklisted(peerID ps.PeerInfo.ID) bool {
+	bps := new(BlacklistedPeer)
+	bp.PeerMap = make(map[ps.PeerInfo.ID]bool)
+	if v, found := bp.PeerMap[peerID]; found {
+		if v {
+		 	return true
 		}
-	}
+	} 
 	return false
 }
 	
-    
-}
 
