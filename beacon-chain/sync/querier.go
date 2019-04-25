@@ -164,7 +164,7 @@ func (q *Querier) run() {
 			peers := q.p2p.Peers()
 			for _, p := range peers {
 				if err := q.RequestLatestHead(p); err != nil {
-					log.Errorf("Could not request head from peer: %v", err)
+					log.Warnf("Could not request head from peer %d: %v", p, err)
 				}
 			}
 		case msg := <-q.responseBuf:
