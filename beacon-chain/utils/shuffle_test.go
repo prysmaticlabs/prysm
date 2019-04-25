@@ -83,7 +83,7 @@ func TestSplitOffset_OK(t *testing.T) {
 	split := SplitIndices(l, chunks)
 	for i := uint64(0); i < chunks; i++ {
 		if !reflect.DeepEqual(split[i], l[SplitOffset(uint64(len(l)), chunks, i):SplitOffset(uint64(len(l)), chunks, i+1)]) {
-			t.Errorf("SplitOffset doesnt function as intended. want: %v got: %v", l[SplitOffset(uint64(len(l)), chunks, i):SplitOffset(uint64(len(l)), chunks, i+1)], split[i])
+			t.Errorf("Want: %v got: %v", l[SplitOffset(uint64(len(l)), chunks, i):SplitOffset(uint64(len(l)), chunks, i+1)], split[i])
 			break
 		}
 
