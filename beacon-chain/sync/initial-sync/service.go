@@ -156,6 +156,7 @@ func (s *InitialSync) Start() {
 	go s.run()
 	go s.listenForNewBlocks()
 	go s.checkInMemoryBlocks()
+
 }
 
 // Stop kills the initial sync goroutine.
@@ -225,7 +226,6 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
-
 	//  blacklist peer
 	p2p.AddNewBlacklistedPeer(peer.ID)
 
