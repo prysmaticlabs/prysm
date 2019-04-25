@@ -149,7 +149,7 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 
 	index := uint64(100)
 	want := fmt.Sprintf("invalid validator index %d", index)
-	if _, err := service.LatestAttestationTarget(headState, index); !strings.Contains(err.Error(), want) {
+	if _, err := service.LatestAttestationTarget(context.Background(), headState, index); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
 	}
 }
@@ -196,7 +196,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	latestAttestedTarget, err := service.LatestAttestationTarget(headState, 0)
+	latestAttestedTarget, err := service.LatestAttestationTarget(context.Background(), headState, 0)
 	if err != nil {
 		t.Fatalf("Could not get latest attestation: %v", err)
 	}

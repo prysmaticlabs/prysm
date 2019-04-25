@@ -94,7 +94,7 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
-func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
+func (a *Service) LatestAttestationTarget(ctx context.Context, beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
 	validator, err := a.beaconDB.ValidatorFromState(ctx, index)
 	if err != nil {
 		return nil, err

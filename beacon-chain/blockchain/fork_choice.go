@@ -295,7 +295,7 @@ func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb
 	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	attestationTargets := make(map[uint64]*pb.AttestationTarget)
 	for i, index := range indices {
-		target, err := c.attsService.LatestAttestationTarget(state, index)
+		target, err := c.attsService.LatestAttestationTarget(context.Background(), state, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
 		}
