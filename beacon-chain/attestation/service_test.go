@@ -131,73 +131,6 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	}
 }
 
-func TestLatestAttestation_ReturnsLatestAttestation(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	pubKey := []byte{'A'}
-	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
-	}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-
-	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-	pubKey48 := bytesutil.ToBytes48(pubKey)
-	attestation := &pb.Attestation{AggregationBitfield: []byte{'B'}}
-	service.store.m[pubKey48] = attestation
-
-	latestAttestation, err := service.LatestAttestation(ctx, 0)
-	if err != nil {
-		t.Fatalf("Could not get latest attestation: %v", err)
-	}
-	if !reflect.DeepEqual(attestation, latestAttestation) {
-		t.Errorf("Wanted: %v, got: %v", attestation, latestAttestation)
-	}
-}
-
-func TestLatestAttestation_InvalidIndex(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{},
-	}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-
-	index := uint64(0)
-	want := fmt.Sprintf("invalid validator index %d", index)
-	if _, err := service.LatestAttestation(ctx, index); !strings.Contains(err.Error(), want) {
-		t.Errorf("Wanted error to contain %s, received %v", want, err)
-	}
-}
-
-func TestLatestAttestation_NoAttestation(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{}},
-	}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-
-	index := 0
-	a, err := service.LatestAttestation(ctx, uint64(index))
-	if err != nil {
-		t.Fatalf("could not run latest attestation: %v", err)
-	}
-	if a != nil {
-		t.Errorf("Wanted attesstation %v, received %v", nil, a)
-	}
-}
-
 func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -209,10 +142,14 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 		t.Fatalf("could not save state: %v", err)
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+	headState, err := beaconDB.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	index := uint64(100)
-	want := fmt.Sprintf("could not get attestation: invalid validator index %d", index)
-	if _, err := service.LatestAttestationTarget(ctx, index); !strings.Contains(err.Error(), want) {
+	want := fmt.Sprintf("invalid validator index %d", index)
+	if _, err := service.LatestAttestationTarget(headState, index); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
 	}
 }
@@ -254,7 +191,12 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	service.store.m[pubKey48] = attestation
 
-	latestAttestedTarget, err := service.LatestAttestationTarget(ctx, 0)
+	headState, err := beaconDB.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	latestAttestedTarget, err := service.LatestAttestationTarget(headState, 0)
 	if err != nil {
 		t.Fatalf("Could not get latest attestation: %v", err)
 	}
