@@ -435,20 +435,16 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	beaconState, err := rs.db.HeadState(ctx)
-	if err != nil {
-		log.Errorf("Failed to get beacon state: %v", err)
-		return err
-	}
+	highestSlot := rs.db.HighestBlockSlot()
 
 	span.AddAttributes(
 		trace.Int64Attribute("attestation.Data.Slot", int64(attestation.Data.Slot)),
-		trace.Int64Attribute("finalized state slot", int64(beaconState.Slot-params.BeaconConfig().SlotsPerEpoch)),
+		trace.Int64Attribute("finalized state slot", int64(highestSlot-params.BeaconConfig().SlotsPerEpoch)),
 	)
-	if attestation.Data.Slot < beaconState.Slot-params.BeaconConfig().SlotsPerEpoch {
+	if attestation.Data.Slot < highestSlot-params.BeaconConfig().SlotsPerEpoch {
 		log.WithFields(logrus.Fields{
 			"receivedSlot": attestation.Data.Slot,
-			"epochSlot":    beaconState.Slot - params.BeaconConfig().SlotsPerEpoch},
+			"epochSlot":    highestSlot - params.BeaconConfig().SlotsPerEpoch},
 		).Debug("Skipping received attestation with slot smaller than one epoch ago")
 		return nil
 	}
