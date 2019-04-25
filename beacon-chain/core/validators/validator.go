@@ -208,20 +208,13 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 		return state
 	}
 
-	// Aggregate all the exit epochs from the last.
-	var exitedEpochs []uint64
+	// Find the highest exit epoch among exited validators.
+	highestExitEpoch := helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if state.ValidatorRegistry[i].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			exitedEpochs = append(exitedEpochs, state.ValidatorRegistry[i].ExitEpoch)
-		}
-	}
-
-	// Find the highest exit epoch between the aggregated list and current epoch plus delay.
-	exitedEpochs = append(exitedEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
-	highestExitEpoch := exitedEpochs[0]
-	for _, e := range exitedEpochs {
-		if e > highestExitEpoch {
-			highestExitEpoch = e
+			if highestExitEpoch < state.ValidatorRegistry[i].ExitEpoch {
+				highestExitEpoch = state.ValidatorRegistry[i].ExitEpoch
+			}
 		}
 	}
 
