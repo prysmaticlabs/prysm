@@ -14,7 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
@@ -410,6 +412,49 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
 			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
+}
+
+func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	hook := logTest.NewGlobal()
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+		})
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		ValidatorRegistry: validators,
+	}
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+	attestation := &pb.Attestation{
+		AggregationBitfield: []byte{0xC0},
+		Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot + 1,
+			Shard: 1,
+		},
+	}
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	testutil.AssertLogsContain(t, hook, "Bitfield points to an invalid index in the committee")
 }
 
 func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
