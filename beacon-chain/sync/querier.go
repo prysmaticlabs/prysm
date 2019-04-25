@@ -172,6 +172,10 @@ func (q *Querier) run() {
 			q.cancel()
 		case msg := <-q.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
+			queryLog.WithFields(logrus.Fields{
+				"peerID":      msg.Peer.Pretty(),
+				"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
+			}).Info("Received chain head from peer")
 			if response.CanonicalSlot > q.currentHeadSlot {
 				q.currentHeadSlot = response.CanonicalSlot
 				q.bestPeer = msg.Peer
