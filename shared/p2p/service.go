@@ -184,11 +184,6 @@ func (s *Server) Status() error {
 	return nil
 }
 
-// Peers returns a slice of currently connected peer id's to be used throughout the runtime.
-func (s *Server) Peers() peer.IDSlice {
-	return s.host.Network().Peers()
-}
-
 // RegisterTopic with a message and the adapter stack for the given topic. The
 // message type provided will be feed selector for emitting messages received
 // on a given topic.

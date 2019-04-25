@@ -8,7 +8,6 @@ import (
 	"runtime/debug"
 	"sync"
 
-	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -49,7 +48,6 @@ type p2pAPI interface {
 	p2p.Broadcaster
 	p2p.Sender
 	p2p.Subscriber
-	Peers() peer.IDSlice
 }
 
 // RegularSync is the gateway and the bridge between the p2p network and the local beacon chain.

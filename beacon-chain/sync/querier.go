@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"time"
 
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-peer"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -153,54 +153,41 @@ func (q *Querier) run() {
 		ticker.Stop()
 	}()
 
-	peerResponses := 0
+	timeout := time.After(5 * time.Second)
 	for {
 		select {
 		case <-q.ctx.Done():
 			queryLog.Info("Exiting goroutine")
 			return
 		case <-ticker.C:
-			peers := q.p2p.Peers()
-			for _, p := range peers {
-			if err := q.RequestLatestHead(p); err != nil {
-				queryLog.Warnf("Could not request head from peer %s: %v", p.Pretty(), err)
-			}
-		}
-		case msg := <-q.responseBuf:
-			response := msg.Data.(*pb.ChainHeadResponse)
-			peers := q.p2p.Peers()
-			peerResponses++
-			if peerResponses != len(peers) {
-				if response.CanonicalSlot > q.currentHeadSlot {
-					q.currentHeadSlot = response.CanonicalSlot
-				}
-				continue
-			}
-			if response.CanonicalSlot > q.currentHeadSlot {
-				q.currentHeadSlot = response.CanonicalSlot
-			}
-			queryLog.Infof("Received chain head from best peer: %s", msg.Peer.Pretty())
+			q.RequestLatestHead()
+		case <-timeout:
+			queryLog.Infof("Peer with highest canonical head: %v", q.bestPeer.Pretty())
 			queryLog.Infof(
 				"Latest chain head is at slot: %d and state root: %#x",
-				response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
+				q.currentHeadSlot-params.BeaconConfig().GenesisSlot, q.currentStateRoot,
 			)
-			q.currentHeadSlot = response.CanonicalSlot
-			q.currentStateRoot = response.CanonicalStateRootHash32
-			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
-			q.bestPeer = msg.Peer
-
 			ticker.Stop()
 			responseSub.Unsubscribe()
 			q.cancel()
+		case msg := <-q.responseBuf:
+			response := msg.Data.(*pb.ChainHeadResponse)
+			if response.CanonicalSlot > q.currentHeadSlot {
+				q.currentHeadSlot = response.CanonicalSlot
+				q.bestPeer = msg.Peer
+				q.currentHeadSlot = response.CanonicalSlot
+				q.currentStateRoot = response.CanonicalStateRootHash32
+				q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
+			}
 		}
 	}
 }
 
 // RequestLatestHead sends a request for all
 // the latest chain head slot and state root to a peer.
-func (q *Querier) RequestLatestHead(p peer.ID) error {
+func (q *Querier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
-	return q.p2p.Send(context.Background(), request, p)
+	q.p2p.Broadcast(context.Background(), request)
 }
 
 // IsSynced checks if the node is currently synced with the
