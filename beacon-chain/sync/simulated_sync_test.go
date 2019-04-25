@@ -69,6 +69,10 @@ func (sim *simulatedP2P) Send(ctx context.Context, msg proto.Message, peerID pee
 	return nil
 }
 
+func (sim *simulatedP2P) Peers() peer.IDSlice {
+	return []peer.ID{}
+}
+
 func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB, []*bls.SecretKey) {
 	ctx := context.Background()
 

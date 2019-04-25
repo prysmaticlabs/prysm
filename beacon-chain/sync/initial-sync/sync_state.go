@@ -2,8 +2,8 @@ package initialsync
 
 import (
 	"context"
-	"github.com/libp2p/go-libp2p-peer"
 
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"

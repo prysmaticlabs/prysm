@@ -5,9 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/libp2p/go-libp2p-peer"
 	"runtime/debug"
 	"sync"
+
+	peer "github.com/libp2p/go-libp2p-peer"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"

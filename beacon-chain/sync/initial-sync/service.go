@@ -13,10 +13,11 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"github.com/libp2p/go-libp2p-peer"
 	"math/big"
 	"sync"
 	"time"
+
+	peer "github.com/libp2p/go-libp2p-peer"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
@@ -111,7 +112,7 @@ type InitialSync struct {
 	finalizedStateRoot  [32]byte
 	mutex               *sync.Mutex
 	nodeIsSynced        bool
-	bestPeer peer.ID
+	bestPeer            peer.ID
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -184,7 +185,7 @@ func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 
 // InitializeBestPeer sets the peer ID of the highest observed peer.
 func (s *InitialSync) InitializeBestPeer(p peer.ID) {
-    s.bestPeer = p
+	s.bestPeer = p
 }
 
 // HighestObservedSlot returns the highest observed slot.

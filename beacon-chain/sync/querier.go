@@ -2,9 +2,10 @@ package sync
 
 import (
 	"context"
-	"github.com/libp2p/go-libp2p-peer"
 	"math/big"
 	"time"
+
+	peer "github.com/libp2p/go-libp2p-peer"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -58,7 +59,7 @@ type Querier struct {
 	powchain                  powChainService
 	chainStarted              bool
 	atGenesis                 bool
-	bestPeer peer.ID
+	bestPeer                  peer.ID
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -170,11 +171,11 @@ func (q *Querier) run() {
 			response := msg.Data.(*pb.ChainHeadResponse)
 			peers := q.p2p.Peers()
 			peerResponses++
-            if peerResponses != len(peers) {
-            	if response.CanonicalSlot > q.currentHeadSlot {
-            		q.currentHeadSlot = response.CanonicalSlot
+			if peerResponses != len(peers) {
+				if response.CanonicalSlot > q.currentHeadSlot {
+					q.currentHeadSlot = response.CanonicalSlot
 				}
-            	continue
+				continue
 			}
 			if response.CanonicalSlot > q.currentHeadSlot {
 				q.currentHeadSlot = response.CanonicalSlot

@@ -15,12 +15,12 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-host"
+	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	libp2pnet "github.com/libp2p/go-libp2p-net"
-	"github.com/libp2p/go-libp2p-peer"
-	"github.com/libp2p/go-libp2p-protocol"
-	"github.com/libp2p/go-libp2p-pubsub"
+	peer "github.com/libp2p/go-libp2p-peer"
+	protocol "github.com/libp2p/go-libp2p-protocol"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -184,7 +184,7 @@ func (s *Server) Status() error {
 	return nil
 }
 
-// Peers --
+// Peers returns a slice of currently connected peer id's to be used throughout the runtime.
 func (s *Server) Peers() peer.IDSlice {
 	return s.host.Peerstore().Peers()
 }
