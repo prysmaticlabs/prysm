@@ -23,7 +23,7 @@ import (
 
 var log = logrus.WithField("prefix", "core/state")
 
-// MatchAttestations is an object that contains the correctly
+// MatchedAttestations is an object that contains the correctly
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
 	source []*pb.PendingAttestation
