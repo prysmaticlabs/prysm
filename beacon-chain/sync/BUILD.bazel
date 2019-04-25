@@ -40,11 +40,9 @@ go_test(
         "receive_block_test.go",
         "regular_sync_test.go",
         "service_test.go",
-        "simulated_sync_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/chaintest/backend:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/internal:go_default_library",
