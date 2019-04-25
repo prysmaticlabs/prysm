@@ -740,9 +740,7 @@ func TestMatchAttestations_CurrentEpoch(t *testing.T) {
 }
 
 func TestMatchAttestations_EpochOutOfBound(t *testing.T) {
-	_, err := MatchAttestations(&pb.BeaconState{
-		Slot: 1,
-	}, 2)
+	_, err := MatchAttestations(&pb.BeaconState{Slot: 1}, 2 /* epoch */)
 	if !strings.Contains(err.Error(), "input epoch: 2 != current epoch: 0") {
 		t.Fatal("Did not receive wanted error")
 	}
