@@ -288,9 +288,9 @@ func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(beaconState *p
 	return assignments
 }
 
-// valIdxLookup is a wrapper to RPC server for looking up validator index using public key.
-// If the validator index is not in the DB, as a fail over it searches in the state then
-// saves it to the DB when found. It returns an error if index is not found in both DB and state.
+// valIdxLookup is a wrapper for RPC server for looking up validator index using public key.
+// If the validator index is not found in DB, as a fail over, it searches the state and
+// saves it to the DB when found. Returns an error if index is not found in both DB and state.
 func (vs *ValidatorServer) valIdxLookup(ctx context.Context, pubkey []byte) (uint64, error) {
 	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
 	if err != nil {
