@@ -222,7 +222,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
-		if sliceutil.IsInUint64(i, testCase.Config.SkipSlots) {
+		if sliceutil.IsIn(i, testCase.Config.SkipSlots) {
 			if err := sb.GenerateNilBlockAndAdvanceChain(); err != nil {
 				return fmt.Errorf("could not advance the chain with a nil block %v", err)
 			}
