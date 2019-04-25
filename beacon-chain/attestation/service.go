@@ -95,12 +95,12 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
 func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
-	// Return error if it's an invalid validator index.
-	if index >= uint64(len(beaconState.ValidatorRegistry)) {
-		return nil, fmt.Errorf("invalid validator index %d", index)
+	validator, err := a.beaconDB.ValidatorFromState(ctx, index)
+	if err != nil {
+		return nil, err
 	}
 
-	pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[index].Pubkey)
+	pubKey := bytesutil.ToBytes48(validator.Pubkey)
 	a.store.RLock()
 	defer a.store.RUnlock()
 	if _, exists := a.store.m[pubKey]; !exists {
@@ -273,6 +273,15 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		}
 		if !bitSet {
 			continue
+		}
+
+		if i >= len(committee) {
+			log.Errorf("Bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
+			continue
+		}
+
+		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
+			log.Errorf("Index doesn't exist in validator registry: index %d", committee[i])
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the
