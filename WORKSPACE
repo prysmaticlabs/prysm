@@ -627,10 +627,10 @@ go_repository(
 )
 
 go_repository(
-     name = "io_opencensus_go",
-     commit = "bd64e5eff7498c1c67eba74dc87ad96aa525bf28",  # v0.20.2
-     importpath = "go.opencensus.io",
- )
+    name = "io_opencensus_go",
+    commit = "bd64e5eff7498c1c67eba74dc87ad96aa525bf28",  # v0.20.2
+    importpath = "go.opencensus.io",
+)
 
 go_repository(
     name = "io_opencensus_go_contrib_exporter_jaeger",
