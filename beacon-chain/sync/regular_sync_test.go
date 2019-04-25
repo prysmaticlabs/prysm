@@ -401,7 +401,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot+2,
+		Slot: params.BeaconConfig().GenesisSlot + 2,
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
