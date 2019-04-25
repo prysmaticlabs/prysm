@@ -633,9 +633,11 @@ go_repository(
  )
 
 go_repository(
-    name = "io_opencensus_go_contrib",
-    commit = "5b8293c22f362562285c2acbc52f4a1870a47a33",  # v0.21.0
-    importpath = "contrib.go.opencensus.io",
+    name = "io_opencensus_go_contrib_exporter_jaeger",
+    commit = "5b8293c22f362562285c2acbc52f4a1870a47a33",
+    importpath = "contrib.go.opencensus.io/exporter/jaeger",
+    remote = "http://github.com/census-ecosystem/opencensus-go-exporter-jaeger",
+    vcs = "git",
 )
 
 go_repository(
