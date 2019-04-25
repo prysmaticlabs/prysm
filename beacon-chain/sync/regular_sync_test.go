@@ -48,7 +48,7 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 }
 
 func (mp *mockP2P) Peers() peer.IDSlice {
-	return []peer.ID{}
+	return make([]peer.ID, 1)
 }
 
 type mockChainService struct {
