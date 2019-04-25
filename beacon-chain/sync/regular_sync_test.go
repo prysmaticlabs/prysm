@@ -400,10 +400,20 @@ func TestReceiveAttestation_OK(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	if err := db.SaveState(ctx, &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 2,
-	}); err != nil {
+	beaconState := &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot+2,
+	}
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
+	}
+	beaconBlock := &pb.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+	if err := db.SaveBlock(beaconBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.UpdateChainHead(ctx, beaconBlock, beaconState); err != nil {
+		t.Fatal(err)
 	}
 	cfg := &RegularSyncConfig{
 		ChainService:     ms,
