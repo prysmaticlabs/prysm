@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/libp2p/go-libp2p-peer"
 	"github.com/ethereum/go-ethereum/common"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
