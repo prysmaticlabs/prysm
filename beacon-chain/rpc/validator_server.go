@@ -299,6 +299,8 @@ func (vs *ValidatorServer) valIdxLookup(ctx context.Context, pubkey []byte) (uin
 			if err != nil {
 				return 0, fmt.Errorf("could not fetch beacon state: %v", err)
 			}
+
+			// Checking if validator exists in state. Returns and saves index in DB when found.
 			for i := 0; i < len(beaconState.ValidatorRegistry); i++ {
 				v := beaconState.ValidatorRegistry[i]
 				if bytes.Equal(v.Pubkey, pubkey) {
