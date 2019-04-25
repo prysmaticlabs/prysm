@@ -1,12 +1,10 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -66,12 +64,12 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
-	idx, err := vs.valIdxLookup(ctx, req.PublicKey)
+	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
 
-	return &pb.ValidatorIndexResponse{Index: uint64(idx)}, nil
+	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
 }
 
 // ValidatorPerformance reports the validator's latest balance along with other important metrics on
@@ -79,9 +77,9 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 func (vs *ValidatorServer) ValidatorPerformance(
 	ctx context.Context, req *pb.ValidatorPerformanceRequest,
 ) (*pb.ValidatorPerformanceResponse, error) {
-	idx, err := vs.valIdxLookup(ctx, req.PublicKey)
+	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
 	validatorRegistry, err := vs.beaconDB.ValidatorRegistry(ctx)
 	if err != nil {
@@ -96,7 +94,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 		totalBalance += float32(val)
 	}
 	avgBalance := totalBalance / float32(len(validatorBalances))
-	balance := validatorBalances[idx]
+	balance := validatorBalances[index]
 	activeIndices := helpers.ActiveValidatorIndices(validatorRegistry, helpers.SlotToEpoch(req.Slot))
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                 balance,
@@ -166,9 +164,9 @@ func (vs *ValidatorServer) assignment(
 		)
 	}
 
-	idx, err := vs.valIdxLookup(context.Background(), pubkey)
+	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
 
 	committee, shard, slot, isProposer, err :=
@@ -218,9 +216,9 @@ func (vs *ValidatorServer) ValidatorStatus(
 }
 
 func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.BeaconState) (pb.ValidatorStatus, error) {
-	idx, err := vs.valIdxLookup(context.Background(), pubkey)
+	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
 	if err != nil {
-		return pb.ValidatorStatus_UNKNOWN_STATUS, err
+		return pb.ValidatorStatus_UNKNOWN_STATUS, fmt.Errorf("could not get active validator index: %v", err)
 	}
 
 	var status pb.ValidatorStatus
@@ -286,32 +284,4 @@ func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(beaconState *p
 		}
 	}
 	return assignments
-}
-
-// valIdxLookup is a wrapper for RPC server for looking up validator index using public key.
-// If the validator index is not found in DB, as a fail over, it searches the state and
-// saves it to the DB when found. Returns an error if index is not found in both DB and state.
-func (vs *ValidatorServer) valIdxLookup(ctx context.Context, pubkey []byte) (uint64, error) {
-	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
-	if err != nil {
-		if strings.Contains(err.Error(), fmt.Sprintf("validator %#x does not exist", pubkey)) {
-			beaconState, err := vs.beaconDB.HeadState(ctx)
-			if err != nil {
-				return 0, fmt.Errorf("could not fetch beacon state: %v", err)
-			}
-
-			// Checking if validator exists in state. Returns and saves index in DB when found.
-			for i := 0; i < len(beaconState.ValidatorRegistry); i++ {
-				v := beaconState.ValidatorRegistry[i]
-				if bytes.Equal(v.Pubkey, pubkey) {
-					if err := vs.beaconDB.SaveValidatorIndex(pubkey, i); err != nil {
-						return 0, fmt.Errorf("could not save validator idx in DB: %v", err)
-					}
-					return uint64(i), nil
-				}
-			}
-		}
-		return 0, err
-	}
-	return idx, nil
 }
