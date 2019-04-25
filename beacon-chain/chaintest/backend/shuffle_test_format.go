@@ -17,10 +17,13 @@ type ShuffleTestCase struct {
 	Seed   string
 }
 
+// ShuffleInput --
 type ShuffleInput struct {
 	Epoch      uint64       `yaml:"epoch"`
 	Validators []Validators `yaml:"validators"`
 }
+
+// Validators --
 type Validators struct {
 	ActivationEpoch uint64 `yaml:"activation_epoch"`
 	ExitEpoch       uint64 `yaml:"exit_epoch"`
