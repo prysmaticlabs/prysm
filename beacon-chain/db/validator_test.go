@@ -1,11 +1,13 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/boltdb/bolt"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -47,11 +49,14 @@ func TestSaveAndDeleteValidatorIndex_OK(t *testing.T) {
 	p1 := []byte{'1', '2', '3'}
 
 	if err := db.SaveValidatorIndex(p1, 3); err != nil {
-		t.Fatalf("Failed to save vallidator index: %v", err)
+		t.Fatalf("Failed to save validator index: %v", err)
+	}
+	if err := db.SaveState(context.Background(), &pb.BeaconState{}); err != nil {
+		t.Fatalf("Failed to save state: %v", err)
 	}
 	index, err := db.ValidatorIndex(p1)
 	if err != nil {
-		t.Fatalf("Failed to call Attestation: %v", err)
+		t.Fatalf("Failed to call validator Index: %v", err)
 	}
 	if index != 3 {
 		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 3, index)
