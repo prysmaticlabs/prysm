@@ -3,7 +3,6 @@ package attestation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -290,8 +289,13 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 			continue
 		}
 
+		if i >= len(committee) {
+			log.Errorf("Bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
+			continue
+		}
+
 		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
-			return errors.New("index doesn't exist in validator registry")
+			log.Errorf("Index doesn't exist in validator registry: index %d", committee[i])
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the
