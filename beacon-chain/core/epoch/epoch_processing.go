@@ -5,6 +5,7 @@
 package epoch
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -21,7 +22,11 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
-var attestations struct {
+
+type matchedAttestations struct {
+	source []*pb.PendingAttestation
+	target []*pb.PendingAttestation
+	head   []*pb.PendingAttestation
 }
 
 // CanProcessEpoch checks the eligibility to process epoch.
@@ -389,4 +394,67 @@ func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	state.LatestRandaoMixes[nextEpoch] = randaoMix
 	return state, nil
+}
+
+// MatchAttestations matches the attestations gathered in a span of an epoch
+// and categorize them as source, target and head. We combined the helpers from
+// spec for efficiency and to achieve O(N) run time.
+// Spec pseudocode definition:
+//	def get_matching_source_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//    assert epoch in (get_current_epoch(state), get_previous_epoch(state))
+//    return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
+//
+//	def get_matching_target_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//    return [
+//        a for a in get_matching_source_attestations(state, epoch)
+//        if a.data.target_root == get_block_root(state, epoch)
+//    ]
+//
+//	def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//    return [
+//        a for a in get_matching_source_attestations(state, epoch)
+//        if a.data.beacon_block_root == get_block_root_at_slot(state, a.data.slot)
+//    ]
+func MatchAttestations(state *pb.BeaconState, epoch uint64) (*matchedAttestations, error) {
+	currentEpoch := helpers.CurrentEpoch(state)
+	previousEpoch := helpers.PrevEpoch(state)
+
+	if epoch != currentEpoch || epoch != previousEpoch {
+		return nil, fmt.Errorf("input epoch: %d!= current epoch: %d or previous epoch: %d",
+			epoch, currentEpoch, previousEpoch)
+	}
+
+	var srcAtts []*pb.PendingAttestation
+	if epoch == currentEpoch {
+		srcAtts = state.CurrentEpochAttestations
+	} else {
+		srcAtts = state.PreviousEpochAttestations
+	}
+
+	targetRoot, err := helpers.BlockRoot(state, epoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
+	}
+
+	var tgtAtts []*pb.PendingAttestation
+	var headAtts []*pb.PendingAttestation
+	for _, srcAtt := range srcAtts {
+		if bytes.Equal(srcAtt.Data.TargetRoot, targetRoot) {
+			tgtAtts = append(tgtAtts, srcAtt)
+		}
+
+		headRoot, err := helpers.BlockRootAtSlot(state, srcAtt.Data.Slot)
+		if err != nil {
+			return nil, fmt.Errorf("could not get block root for slot %d: %v", srcAtt.Data.Slot, err)
+		}
+		if bytes.Equal(srcAtt.Data.BeaconBlockRoot, headRoot) {
+			headAtts = append(headAtts, srcAtt)
+		}
+	}
+
+	return &matchedAttestations{
+		source: srcAtts,
+		target: tgtAtts,
+		head:   headAtts,
+	}, nil
 }
