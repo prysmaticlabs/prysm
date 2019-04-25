@@ -96,14 +96,14 @@ func TestValidatorIndex_InStateNotInDB(t *testing.T) {
 		t.Errorf("Wanted index 1 got %d", res.Index)
 	}
 
-	//// Verify index is also saved in DB.
-	//idx, err := validatorServer.beaconDB.ValidatorIndex(pubKey)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//if idx != 1 {
-	//	t.Errorf("Wanted index 1 in DB got %d", res.Index)
-	//}
+	// Verify index is also saved in DB.
+	idx, err := validatorServer.beaconDB.ValidatorIndex(pubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if idx != 1 {
+		t.Errorf("Wanted index 1 in DB got %d", res.Index)
+	}
 }
 
 func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
