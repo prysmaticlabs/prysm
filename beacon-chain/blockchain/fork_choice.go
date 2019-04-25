@@ -132,7 +132,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified state: %v", err)
 	}
-	attestationTargets, err := c.attestationTargets(ctx, justifiedState)
+	attestationTargets, err := c.attestationTargets(justifiedState)
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
@@ -291,11 +291,11 @@ func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock,
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
-func (c *ChainService) attestationTargets(ctx context.Context, state *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
+func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
 	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	attestationTargets := make(map[uint64]*pb.AttestationTarget)
 	for i, index := range indices {
-		target, err := c.attsService.LatestAttestationTarget(ctx, state, index)
+		target, err := c.attsService.LatestAttestationTarget(state, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
 		}

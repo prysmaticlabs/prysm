@@ -260,7 +260,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	attsService.InsertAttestationIntoStore(pubKey48, att)
 
 	chainService := setupBeaconChain(t, beaconDB, attsService)
-	attestationTargets, err := chainService.attestationTargets(context.Background(), beaconState)
+	attestationTargets, err := chainService.attestationTargets(beaconState)
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
 	}
