@@ -28,7 +28,7 @@ type Validator interface {
 }
 
 // Run the main validator routine. This routine exits if the context is
-// cancelled.
+// canceled.
 //
 // Order of operations:
 // 1 - Initialize validator data

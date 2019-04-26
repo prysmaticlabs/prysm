@@ -18,6 +18,7 @@ go_test(
     srcs = ["account_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//shared/featureconfig:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",

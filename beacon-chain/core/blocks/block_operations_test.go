@@ -15,11 +15,18 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
+}
 
 func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
 	privKeys := make([]*bls.SecretKey, numDeposits)
@@ -1022,14 +1029,14 @@ func TestVerifyIndexedAttestation_Intersecting(t *testing.T) {
 func TestVerifyIndexedAttestation_Custody1Length(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
 		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
-		CustodyBit_1Indices: []uint64{2},
+		CustodyBit_1Indices: []uint64{5},
 	}
 
 	if ok, err := blocks.VerifyIndexedAttestation(
 		&pb.BeaconState{},
 		indexedAtt1,
 	); ok || err != nil {
-		t.Errorf("Expected verification to fail return false, received: %t", ok)
+		t.Errorf("Expected verification to fail return false, received: %t with error: %v", ok, err)
 	}
 }
 
@@ -1043,7 +1050,7 @@ func TestVerifyIndexedAttestation_Empty(t *testing.T) {
 		&pb.BeaconState{},
 		indexedAtt1,
 	); ok || err != nil {
-		t.Errorf("Expected verification to fail return false, received: %t", ok)
+		t.Errorf("Expected verification to fail return false, received: %t with error: %v", ok, err)
 	}
 }
 
@@ -1075,7 +1082,7 @@ func TestVerifyIndexedAttestation_NotSorted(t *testing.T) {
 		&pb.BeaconState{},
 		indexedAtt1,
 	); ok || err != nil {
-		t.Errorf("Expected verification to fail return false, received: %t", ok)
+		t.Errorf("Expected verification to fail return false, received: %t with error: %v", ok, err)
 	}
 }
 

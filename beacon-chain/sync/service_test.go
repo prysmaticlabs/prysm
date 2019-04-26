@@ -45,9 +45,10 @@ func initializeTestSyncService(ctx context.Context, cfg *Config, synced bool) *S
 	return services
 }
 
-func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
-	privKeys := make([]*bls.SecretKey, numDeposits)
-	deposits := make([]*pb.Deposit, numDeposits)
+func setupInitialDeposits(t *testing.T) ([]*pb.Deposit, []*bls.SecretKey) {
+	numOfDeposits := 10
+	privKeys := make([]*bls.SecretKey, numOfDeposits)
+	deposits := make([]*pb.Deposit, numOfDeposits)
 	for i := 0; i < len(deposits); i++ {
 		priv, err := bls.RandKey(rand.Reader)
 		if err != nil {
@@ -71,7 +72,7 @@ func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 	db := internal.SetupDB(t)
 
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
+	deposits, _ := setupInitialDeposits(t)
 	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}

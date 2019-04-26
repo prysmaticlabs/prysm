@@ -10,10 +10,8 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -26,24 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
-
-var committeeCache = cache.NewCommitteesCache()
-
-type attesterInclusionStore struct {
-	slotLock sync.RWMutex
-	distLock sync.RWMutex
-	// attesterInclusion is a mapping that tracks when an attester's attestation
-	// last get included in beacon chain.
-	attesterInclusionSlot map[uint64]uint64
-	// attesterInclusion is a mapping that tracks the difference in slot number
-	// of when attestation gets submitted and when it gets included.
-	attesterInclusionDist map[uint64]uint64
-}
-
-var attsInclStore = attesterInclusionStore{
-	attesterInclusionSlot: make(map[uint64]uint64),
-	attesterInclusionDist: make(map[uint64]uint64),
-}
 
 // VerifyProposerSignature uses BLS signature verification to ensure
 // the correct proposer created an incoming beacon block during state
@@ -439,38 +419,6 @@ func ProcessBlockAttestations(
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
 
-		var IndicesInCommittee []uint64
-		// get the validator indices from the attestation using committees info cache.
-		cachedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Slot)
-		if err != nil {
-			return nil, err
-		}
-		if cachedCommittees == nil {
-			crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, attestation.Data.Slot, false /* registryChange */)
-			if err != nil {
-				return nil, err
-			}
-			cachedCommittees = helpers.ToCommitteeCache(attestation.Data.Slot, crosslinkCommittees)
-			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-				return nil, err
-			}
-		}
-		for _, v := range cachedCommittees.Committees {
-			if v.Shard == attestation.Data.Shard {
-				IndicesInCommittee = v.Committee
-				break
-			}
-		}
-
-		attsInclStore.slotLock.Lock()
-		attsInclStore.distLock.Lock()
-		defer attsInclStore.slotLock.Unlock()
-		defer attsInclStore.distLock.Unlock()
-		for _, index := range IndicesInCommittee {
-			attsInclStore.attesterInclusionSlot[index] = beaconState.Slot
-			attsInclStore.attesterInclusionDist[index] = beaconState.Slot - attestation.Data.Slot
-		}
-
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
@@ -634,7 +582,7 @@ func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttes
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
-	custodyBitIntersection := sliceutil.Intersection(custodyBit0Indices, custodyBit1Indices)
+	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
 	if len(custodyBitIntersection) != 0 {
 		return false, fmt.Errorf("custody bit indice should not contain duplicates, received: %v", custodyBitIntersection)
 	}
@@ -827,26 +775,4 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 		return nil
 	}
 	return nil
-}
-
-// AttsInclusionSlot returns the slot of when an attestator's attestation last gets included
-// in the beacon chain by a proposer.
-func AttsInclusionSlot(index uint64) (uint64, error) {
-	attsInclStore.slotLock.RLock()
-	attsInclStore.slotLock.RUnlock()
-	if slot, ok := attsInclStore.attesterInclusionSlot[index]; ok {
-		return slot, nil
-	}
-	return 0, fmt.Errorf("no inclusion slot for attestor %d", index)
-}
-
-// AttsInclusionDistance returns diff in slot of when an attestator's attestation gets submitted
-// and included.
-func AttsInclusionDistance(index uint64) (uint64, error) {
-	attsInclStore.distLock.RLock()
-	attsInclStore.distLock.RUnlock()
-	if slot, ok := attsInclStore.attesterInclusionDist[index]; ok {
-		return slot, nil
-	}
-	return 0, fmt.Errorf("no inclusion distance for attestor %d", index)
 }

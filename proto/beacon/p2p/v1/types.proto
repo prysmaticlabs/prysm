@@ -90,8 +90,8 @@ message AttestationData {
 
   // FFG vote
   uint64 source_epoch = 3;
-  uint64 source_root = 4;
-  uint64 target_root = 5;
+  bytes source_root = 4;
+  bytes target_root = 5;
 
   // Crosslink vote
   uint64 shard = 6;
@@ -106,6 +106,12 @@ message AttestationData {
   bytes justified_block_root_hash32 = 1003 [deprecated=true];
   bytes beacon_block_root_hash32 = 1004 [deprecated=true];
   bytes crosslink_data_root_hash32 = 1005 [deprecated=true];
+}
+
+message AttestationTarget {
+  uint64 slot = 1;
+  bytes block_root = 2;
+  bytes parent_root = 3;
 }
 
 message AttestationDataAndCustodyBit {

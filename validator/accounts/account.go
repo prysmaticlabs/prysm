@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -86,4 +88,24 @@ func NewValidatorAccount(directory string, password string) error {
 ===========================================================
 `, serializedData)
 	return nil
+}
+
+// Exists checks if a validator account at a given keystore path exists.
+func Exists(keystorePath string) (bool, error) {
+	/* #nosec */
+	f, err := os.Open(keystorePath)
+	if err != nil {
+		return false, nil
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	_, err = f.Readdirnames(1) // Or f.Readdir(1)
+	if err == io.EOF {
+		return false, nil
+	}
+	return true, err
 }

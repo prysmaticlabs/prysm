@@ -3,11 +3,20 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+const seedSize = int8(32)
+const roundSize = int8(1)
+const positionWindowSize = int8(4)
+const pivotViewSize = seedSize + roundSize
+const totalSize = seedSize + roundSize + positionWindowSize
+const maxShuffleListSize = 1 << 40
 
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to shuffle validators on ETH2.0 beacon chain.
@@ -64,9 +73,92 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 	var divided [][]uint64
 	var lSize = uint64(len(l))
 	for i := uint64(0); i < n; i++ {
-		start := lSize * i / n
-		end := lSize * (i + 1) / n
+		start := SplitOffset(lSize, n, i)
+		end := SplitOffset(lSize, n, i+1)
 		divided = append(divided, l[start:end])
 	}
 	return divided
+}
+
+// PermutedIndex returns `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
+// We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
+// constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
+// on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
+//
+// Spec pseudocode definition:
+// def get_permuted_index(index: int, list_size: int, seed: Bytes32) -> int:
+//     """
+//     Return `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
+//     Utilizes 'swap or not' shuffling found in
+//     https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf
+//     See the 'generalized domain' algorithm on page 3.
+//     """
+//     assert index < list_size
+//     assert list_size <= 2**40
+//     for round in range(SHUFFLE_ROUND_COUNT):
+//         pivot = bytes_to_int(hash(seed + int_to_bytes1(round))[0:8]) % list_size
+//         flip = (pivot - index) % list_size
+//         position = max(index, flip)
+//         source = hash(seed + int_to_bytes1(round) + int_to_bytes4(position // 256))
+//         byte = source[(position % 256) // 8]
+//         bit = (byte >> (position % 8)) % 2
+//         index = flip if bit else index
+//     return index
+func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error) {
+	if params.BeaconConfig().ShuffleRoundCount == 0 {
+		return index, nil
+	}
+	if index >= listSize {
+		return 0, fmt.Errorf("input index %d out of bounds: %d",
+			index, listSize)
+	}
+	if listSize > maxShuffleListSize {
+		return 0, fmt.Errorf("list size %d out of bounds",
+			listSize)
+	}
+	buf := make([]byte, totalSize, totalSize)
+	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
+	copy(buf[:32], seed[:])
+	for round := uint8(0); round < uint8(params.BeaconConfig().ShuffleRoundCount); round++ {
+		buf[seedSize] = round
+		hash := hashutil.Hash(buf[:pivotViewSize])
+		hash8 := hash[:8]
+		pivot := bytesutil.FromBytes8(hash8) % listSize
+		flip := (pivot - index) % listSize
+		// spec: position = max(index, flip)
+		// Consider every pair only once by picking the highest pair index to retrieve randomness.
+		position := index
+		if flip > position {
+			position = flip
+		}
+		// Add position except its last byte to []buf for randomness,
+		// it will be used later to select a bit from the resulting hash.
+		position4bytes := bytesutil.Bytes4(position >> 8)
+		copy(buf[pivotViewSize:], position4bytes[:])
+		source := hashutil.Hash(buf)
+		// Effectively keep the first 5 bits of the byte value of the position,
+		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
+		byteV := source[(position&0xff)>>3]
+		// Using the last 3 bits of the position-byte, determine which bit to get from the hash-byte (note: 8 bits = 2^3)
+		bitV := (byteV >> (position & 0x7)) & 0x1
+		// index = flip if bit else index
+		if bitV == 1 {
+			index = flip
+		}
+
+	}
+	return index, nil
+}
+
+// SplitOffset returns (listsize * index) / chunks
+//
+// Spec pseudocode definition:
+// def get_split_offset(list_size: int, chunks: int, index: int) -> int:
+//     """
+//     Returns a value such that for a list L, chunk count k and index i,
+//     split(L, k)[i] == L[get_split_offset(len(L), k, i): get_split_offset(len(L), k, i+1)]
+//     """
+//     return (list_size * index) // chunks
+func SplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
+	return (listSize * index) / chunks
 }
