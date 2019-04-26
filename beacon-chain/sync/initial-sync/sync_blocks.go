@@ -14,18 +14,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
-	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBlockAnnounce")
-	defer span.End()
-	data := msg.Data.(*pb.BeaconBlockAnnounce)
-	recBlockAnnounce.Inc()
-
-	if s.stateReceived && data.SlotNumber > s.highestObservedSlot {
-		s.requestBatchedBlocks(s.lastRequestedSlot, data.SlotNumber)
-		s.lastRequestedSlot = data.SlotNumber
-	}
-}
-
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
@@ -91,6 +79,12 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	batchedBlocks := response.BatchedBlocks
 	if len(batchedBlocks) == 0 {
 		// Do not process empty responses.
+		return
+	}
+	if msg.Peer != s.bestPeer {
+		// Only process batch block responses that come from the best peer
+		// we originally synced with.
+		log.WithField("peerID", msg.Peer.Pretty()).Debug("Received batch blocks from a different peer")
 		return
 	}
 
