@@ -47,7 +47,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			log.WithFields(logrus.Fields{
 				"totalValidators":     resp.TotalValidators,
 				"numActiveValidators": resp.TotalActiveValidators,
-			}).Infof("Validator registry information")
+			}).Info("Validator registry information")
 			log.Info("Generating validator performance report from the previous epoch...")
 			avgBalance := resp.AverageValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
 			log.WithField(

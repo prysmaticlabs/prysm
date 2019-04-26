@@ -136,7 +136,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 
 	go func() {
 		ss.run()
-		ss.listenForNewBlocks()
 		exitRoutine <- true
 	}()
 

@@ -24,6 +24,8 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+var closedContext = "context closed"
+
 type faultyPOWChainService struct {
 	chainStartFeed *event.Feed
 	hashesByHeight map[int][]byte
@@ -129,8 +131,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := internal.NewMockBeaconService_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
-		want := "context closed"
-		if err := beaconServer.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), want) {
+		if err := beaconServer.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), closedContext) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
