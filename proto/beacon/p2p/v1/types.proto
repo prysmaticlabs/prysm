@@ -108,6 +108,12 @@ message AttestationData {
   bytes crosslink_data_root_hash32 = 1005 [deprecated=true];
 }
 
+message AttestationTarget {
+  uint64 slot = 1;
+  bytes block_root = 2;
+  bytes parent_root = 3;
+}
+
 message AttestationDataAndCustodyBit {
   AttestationData data = 1;
   bool custody_bit = 2;

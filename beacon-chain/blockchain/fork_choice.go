@@ -1,10 +1,10 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -132,7 +132,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified state: %v", err)
 	}
-	attestationTargets, err := c.attestationTargets(ctx, justifiedState)
+	attestationTargets, err := c.attestationTargets(justifiedState)
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
@@ -181,7 +181,9 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not hash head: %v", err)
 	}
-	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
+	log.WithFields(logrus.Fields{
+		"headRoot": fmt.Sprintf("0x%x", h),
+	}).Info("Chain head block and state updated")
 	return nil
 }
 
@@ -217,10 +219,9 @@ func (c *ChainService) lmdGhost(
 	ctx context.Context,
 	startBlock *pb.BeaconBlock,
 	startState *pb.BeaconState,
-	voteTargets map[uint64]*pb.BeaconBlock,
+	voteTargets map[uint64]*pb.AttestationTarget,
 ) (*pb.BeaconBlock, error) {
 	highestSlot := c.beaconDB.HighestBlockSlot()
-
 	head := startBlock
 	for {
 		children, err := c.blockChildren(ctx, head, highestSlot)
@@ -290,18 +291,18 @@ func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock,
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
-func (c *ChainService) attestationTargets(ctx context.Context, state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
-	indices := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
-	attestationTargets := make(map[uint64]*pb.BeaconBlock)
+func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
+	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+	attestationTargets := make(map[uint64]*pb.AttestationTarget)
 	for i, index := range indices {
-		block, err := c.attsService.LatestAttestationTarget(ctx, index)
+		target, err := c.attsService.LatestAttestationTarget(state, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
 		}
-		if block == nil {
+		if target == nil {
 			continue
 		}
-		attestationTargets[uint64(i)] = block
+		attestationTargets[uint64(i)] = target
 	}
 	return attestationTargets, nil
 }
@@ -316,34 +317,31 @@ func (c *ChainService) attestationTargets(ctx context.Context, state *pb.BeaconS
 //            for validator_index, target in attestation_targets
 //            if get_ancestor(store, target, block.slot) == block
 //        )
-func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]*pb.BeaconBlock, beaconDB *db.BeaconDB) (int, error) {
+func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]*pb.AttestationTarget, beaconDB *db.BeaconDB) (int, error) {
 	balances := 0
-	var ancestor *pb.BeaconBlock
+	var ancestorRoot []byte
 	var err error
 
-	for validatorIndex, targetBlock := range targets {
-		if featureconfig.FeatureConfig().EnableBlockAncestorCache {
-			ancestor, err = cachedAncestorBlock(targetBlock, block.Slot, beaconDB)
-			if err != nil {
-				return 0, err
-			}
-		} else {
-			// if block ancestor cache was not enabled, retrieve the ancestor recursively.
-			ancestor, err = BlockAncestor(targetBlock, block.Slot, beaconDB)
-			if err != nil {
-				return 0, err
-			}
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return 0, err
+	}
+
+	for validatorIndex, target := range targets {
+		ancestorRoot, err = cachedAncestor(target, block.Slot, beaconDB)
+		if err != nil {
+			return 0, err
 		}
 		// This covers the following case, we start at B5, and want to process B6 and B7
 		// B6 can be processed, B7 can not be processed because it's pointed to the
 		// block older than current block 5.
 		// B4 - B5 - B6
 		//   \ - - - - - B7
-		if ancestor == nil {
+		if ancestorRoot == nil {
 			continue
 		}
 
-		if proto.Equal(ancestor, block) {
+		if bytes.Equal(blockRoot[:], ancestorRoot) {
 			balances += int(helpers.EffectiveBalance(state, validatorIndex))
 		}
 	}
@@ -363,53 +361,63 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 //        return None
 //    else:
 //        return get_ancestor(store, store.get_parent(block), slot)
-func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
-	if block.Slot == slot {
-		return block, nil
+func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.BeaconDB) ([]byte, error) {
+	if targetBlock.Slot == slot {
+		return targetBlock.BlockRoot[:], nil
 	}
-	if block.Slot < slot {
+	if targetBlock.Slot < slot {
 		return nil, nil
 	}
-	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
-	parent, err := beaconDB.Block(parentHash)
+	parentRoot := bytesutil.ToBytes32(targetBlock.ParentRoot)
+	parent, err := beaconDB.Block(parentRoot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block: %v", err)
 	}
 	if parent == nil {
 		return nil, fmt.Errorf("parent block does not exist: %v", err)
 	}
-	return BlockAncestor(parent, slot, beaconDB)
+	newTarget := &pb.AttestationTarget{
+		Slot:       parent.Slot,
+		BlockRoot:  parentRoot[:],
+		ParentRoot: parent.ParentRootHash32,
+	}
+	return BlockAncestor(newTarget, slot, beaconDB)
 }
 
-// cachedAncestorBlock retrieves the cached ancestor block from block ancestor cache,
+// cachedAncestor retrieves the cached ancestor target from block ancestor cache,
 // if it's not there it looks up the block tree get it and cache it.
-func cachedAncestorBlock(targetBlk *pb.BeaconBlock, height uint64, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
-	var ancestor *pb.BeaconBlock
-
+func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.BeaconDB) ([]byte, error) {
 	// check if the ancestor block of from a given block height was cached.
-	targetHash, err := hashutil.HashBeaconBlock(targetBlk)
-	if err != nil {
-		return nil, err
-	}
-	cachedAncestorBlock, err := blkAncestorCache.AncestorBySlot(targetHash[:], height)
+	cachedAncestorInfo, err := blkAncestorCache.AncestorBySlot(target.BlockRoot, height)
 	if err != nil {
 		return nil, nil
 	}
-	if cachedAncestorBlock != nil {
-		return cachedAncestorBlock.Block, nil
+	if cachedAncestorInfo != nil {
+		return cachedAncestorInfo.Target.BlockRoot, nil
 	}
 
-	// add the ancestor to the cache if it was not cached.
-	ancestor, err = BlockAncestor(targetBlk, height, beaconDB)
+	ancestorRoot, err := BlockAncestor(target, height, beaconDB)
 	if err != nil {
 		return nil, err
 	}
+	ancestor, err := beaconDB.Block(bytesutil.ToBytes32(ancestorRoot))
+	if err != nil {
+		return nil, err
+	}
+	if ancestor == nil {
+		return nil, nil
+	}
+	ancestorTarget := &pb.AttestationTarget{
+		Slot:       ancestor.Slot,
+		BlockRoot:  ancestorRoot,
+		ParentRoot: ancestor.ParentRootHash32,
+	}
 	if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
-		Hash:   targetHash[:],
 		Height: height,
-		Block:  ancestor,
+		Hash:   target.BlockRoot,
+		Target: ancestorTarget,
 	}); err != nil {
 		return nil, err
 	}
-	return ancestor, nil
+	return ancestorRoot, nil
 }

@@ -4,6 +4,7 @@ package params
 
 import (
 	"math/big"
+	"time"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -103,18 +104,20 @@ type BeaconChainConfig struct {
 	DomainTransfer       uint64 // DomainTransfer defines the BLS signature domain for transfer verification.
 
 	// Prysm constants.
-	GweiPerEth                uint64 // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	DepositsForChainStart     uint64 // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	RandBytes                 uint64 // RandBytes is the number of bytes used as entropy to shuffle validators.
-	BatchBlockLimit           uint64 // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
-	SyncEpochLimit            uint64 // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
-	MaxNumLog2Validators      uint64 // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
-	SyncPollingInterval       int64  // SyncPollingInterval queries network nodes for sync status.
-	LogBlockDelay             int64  // Number of blocks to wait from the current head before processing logs from the deposit contract.
-	BLSPubkeyLength           int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
-	DefaultBufferSize         int    // DefaultBufferSize for channels across the Prysm repository.
-	ValidatorPrivkeyFileName  string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
-	WithdrawalPrivkeyFileName string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
+	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
+	DepositsForChainStart     uint64        // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
+	RandBytes                 uint64        // RandBytes is the number of bytes used as entropy to shuffle validators.
+	BatchBlockLimit           uint64        // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
+	SyncEpochLimit            uint64        // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
+	MaxNumLog2Validators      uint64        // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
+	SyncPollingInterval       int64         // SyncPollingInterval queries network nodes for sync status.
+	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
+	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
+	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
+	ValidatorPrivkeyFileName  string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
+	WithdrawalPrivkeyFileName string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
+	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
+	TestnetContractEndpoint   string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
 }
 
 // DepositContractConfig contains the deposits for
@@ -220,6 +223,10 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DefaultBufferSize:         10000,
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
+	RPCSyncCheck:              1,
+
+	// Testnet misc values.
+	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultShardConfig = &ShardChainConfig{

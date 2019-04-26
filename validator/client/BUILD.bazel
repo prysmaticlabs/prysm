@@ -51,6 +51,7 @@ go_test(
         "//proto/beacon/rpc/v1:go_default_library",
         "//shared:go_default_library",
         "//shared/bitutil:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
