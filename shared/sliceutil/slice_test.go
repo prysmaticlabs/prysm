@@ -21,7 +21,7 @@ func TestIntersection(t *testing.T) {
 		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
-		result := Intersection(tt.setA, tt.setB)
+		result := IntersectionUint64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -43,7 +43,7 @@ func TestUnion(t *testing.T) {
 		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
-		result := Union(tt.setA, tt.setB)
+		result := UnionUint64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -65,7 +65,7 @@ func TestNot(t *testing.T) {
 		{[]uint64{1}, []uint64{1}, []uint64{}},
 	}
 	for _, tt := range testCases {
-		result := Not(tt.setA, tt.setB)
+		result := NotUint64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -84,7 +84,7 @@ func TestIsIn(t *testing.T) {
 		{100, []uint64{2, 3, 5, 4, 6}, false},
 	}
 	for _, tt := range testCases {
-		result := IsIn(tt.a, tt.b)
+		result := IsInUint64(tt.a, tt.b)
 		if result != tt.result {
 			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
 				tt.a, tt.b, result, tt.result)
@@ -132,7 +132,7 @@ func TestIntersectionint64(t *testing.T) {
 		{[]int64{1}, []int64{1}, []int64{1}},
 	}
 	for _, tt := range testCases {
-		result := Intersectionint64(tt.setA, tt.setB)
+		result := IntersectionInt64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -204,7 +204,7 @@ func TestUnionint64(t *testing.T) {
 		{[]int64{1}, []int64{1}, []int64{1}},
 	}
 	for _, tt := range testCases {
-		result := Unionint64(tt.setA, tt.setB)
+		result := UnionInt64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -295,7 +295,7 @@ func TestNotint64(t *testing.T) {
 		{[]int64{1}, []int64{1}, []int64{}},
 	}
 	for _, tt := range testCases {
-		result := Notint64(tt.setA, tt.setB)
+		result := NotInt64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -334,7 +334,7 @@ func TestIsInint64(t *testing.T) {
 		{100, []int64{2, 3, 5, 4, 6}, false},
 	}
 	for _, tt := range testCases {
-		result := IsInint64(tt.a, tt.b)
+		result := IsInInt64(tt.a, tt.b)
 		if result != tt.result {
 			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
 				tt.a, tt.b, result, tt.result)
