@@ -60,7 +60,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if v.prevBalance > 0 {
 			prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
-			log.WithField("prevEthBalance", prevBalance).Infof("%v Previous validator balance", tpk)
 			if v.logValidatorBalances {
 				log.WithFields(logrus.Fields{
 					"prevBalance":   prevBalance,
