@@ -67,28 +67,32 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 	return beaconState
 }
 
-// ProcessBlockRandao checks the block proposer's
+// ProcessRandao checks the block proposer's
 // randao commitment and generates a new randao mix to update
 // in the beacon state's latest randao mixes slice.
 //
-// Official spec definition for block randao verification:
-//   Let proposer = state.validator_registry[get_beacon_proposer_index(state, state.slot)].
-//   Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
-//     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
-//   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
-//     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
-func ProcessBlockRandao(
+// Spec pseudocode definition:
+//   def process_randao(state: BeaconState, block: BeaconBlock) -> None:
+//     proposer = state.validator_registry[get_beacon_proposer_index(state)]
+//     # Verify that the provided randao value is valid
+//     assert bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)), block.body.randao_reveal, get_domain(state, DOMAIN_RANDAO))
+//     # Mix it in
+//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
+//         xor(get_randao_mix(state, get_current_epoch(state)),
+//             hash(block.body.randao_reveal))
+//     )
+func ProcessRandao(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
-
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
-	if err != nil {
-		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
-	}
 	if verifySignatures {
+		proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+		if err != nil {
+			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+		}
+
 		if err := verifyBlockRandao(beaconState, block, proposerIdx, enableLogging); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
@@ -98,7 +102,7 @@ func ProcessBlockRandao(
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
-	blockRandaoReveal := hashutil.Hash(block.RandaoReveal)
+	blockRandaoReveal := hashutil.Hash(block.Body.RandaoReveal)
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
@@ -106,8 +110,8 @@ func ProcessBlockRandao(
 	return beaconState, nil
 }
 
-// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(get_current_epoch(state)),
-//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
+// Verify that bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)),
+//   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
 func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64, enableLogging bool) error {
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
@@ -118,7 +122,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
-	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
+	sig, err := bls.SignatureFromBytes(block.Body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
@@ -676,6 +680,7 @@ func ProcessValidatorExits(
 func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
+
 	delayedActivationExitEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
 	if validator.ExitEpoch <= delayedActivationExitEpoch {
 		return fmt.Errorf(

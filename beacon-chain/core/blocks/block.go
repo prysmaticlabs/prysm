@@ -20,13 +20,13 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 		Slot:             params.BeaconConfig().GenesisSlot,
 		ParentRootHash32: params.BeaconConfig().ZeroHash[:],
 		StateRootHash32:  stateRoot,
-		RandaoReveal:     params.BeaconConfig().ZeroHash[:],
 		Signature:        params.BeaconConfig().EmptySignature[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: params.BeaconConfig().ZeroHash[:],
 			BlockHash32:       params.BeaconConfig().ZeroHash[:],
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal:      params.BeaconConfig().ZeroHash[:],
 			ProposerSlashings: []*pb.ProposerSlashing{},
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},

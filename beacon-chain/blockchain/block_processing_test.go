@@ -86,6 +86,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 			DepositRootHash32: []byte("a"),
 			BlockHash32:       []byte("b"),
 		},
+		Body: &pb.BeaconBlockBody{},
 	}
 
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
@@ -139,12 +140,12 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		Slot:             beaconState.Slot,
 		StateRootHash32:  stateRoot[:],
 		ParentRootHash32: parentHash[:],
-		RandaoReveal:     randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
 			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal: randaoReveal,
 			Attestations: nil,
 		},
 	}
@@ -201,12 +202,12 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		Slot:             beaconState.Slot + 4,
 		StateRootHash32:  stateRoot[:],
 		ParentRootHash32: parentHash[:],
-		RandaoReveal:     []byte{},
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
 			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{},
 			Attestations: nil,
 		},
 	}
@@ -257,12 +258,12 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		Slot:             beaconState.Slot,
 		StateRootHash32:  stateRoot[:],
 		ParentRootHash32: parentHash[:],
-		RandaoReveal:     []byte{},
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
 			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{},
 			Attestations: []*pb.Attestation{
 				{
 					Data: &pb.AttestationData{
@@ -334,8 +335,9 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	goodStateBlock := &pb.BeaconBlock{
 		Slot:             beaconState.Slot,
 		ParentRootHash32: parentHash[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
+		},
 	}
 	beaconState.Slot--
 	initBlockStateRoot(t, goodStateBlock, chainService)
@@ -379,8 +381,9 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		Slot:             beaconState.Slot,
 		StateRootHash32:  []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
 		ParentRootHash32: parentHash[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
+		},
 	}
 	beaconState.Slot--
 
@@ -461,13 +464,13 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		Slot:             currentSlot + 1,
 		StateRootHash32:  stateRoot[:],
 		ParentRootHash32: parentHash[:],
-		RandaoReveal:     randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
 			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
-			Deposits: pendingDeposits,
+			RandaoReveal: randaoReveal,
+			Deposits:     pendingDeposits,
 		},
 	}
 
@@ -594,8 +597,9 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 			Slot:             genesisSlot + slot,
 			StateRootHash32:  stateRoot[:],
 			ParentRootHash32: parentHash[:],
-			RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-			Body:             &pb.BeaconBlockBody{},
+			Body: &pb.BeaconBlockBody{
+				RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
+			},
 		}
 		initBlockStateRoot(t, block, chainService)
 		computedState, err := chainService.ReceiveBlock(ctx, block)
@@ -642,8 +646,9 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		Slot:             genesisSlot + 6,
 		ParentRootHash32: parentHash[:],
 		StateRootHash32:  stateRoot[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
+		},
 	}
 	initBlockStateRoot(t, blockF, chainService)
 
@@ -671,8 +676,9 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		Slot:             genesisSlot + 7,
 		ParentRootHash32: parentHash[:],
 		StateRootHash32:  stateRoot[:],
-		RandaoReveal:     createRandaoReveal(t, computedState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: createRandaoReveal(t, computedState, privKeys),
+		},
 	}
 	initBlockStateRoot(t, blockG, chainService)
 
@@ -738,12 +744,12 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		Slot:             currentSlot,
 		StateRootHash32:  stateRoot[:],
 		ParentRootHash32: parentRoot[:],
-		RandaoReveal:     randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
 			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal: randaoReveal,
 			Attestations: []*pb.Attestation{{
 				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},

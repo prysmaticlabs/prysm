@@ -70,10 +70,10 @@ message Fork {
 }
 
 message PendingAttestation {
-  AttestationData data = 1;
-  bytes aggregation_bitfield = 2;
-  bytes custody_bitfield = 3;
-  uint64 inclusion_slot = 4;
+  bytes aggregation_bitfield = 1;
+  AttestationData data = 2;
+  uint64 inclusion_slot = 3;
+  bytes custody_bitfield = 4;
 }
 
 message Attestation {
@@ -141,8 +141,8 @@ message Validator {
   uint64 withdrawable_epoch = 6;
   // Was the validator slashed
   bool slashed = 7;
-  // Rounded balance
-  uint64 high_balance = 8;
+  // Effective balance
+  uint64 effective_balance = 8;
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
@@ -278,9 +278,11 @@ message Transfer {
   uint64 amount = 3;
   // Fee in Gwei for block proposer
   uint64 fee = 4;
+  // Inclusion slot
   uint64 slot = 5;
   // Sender withdrawal pubkey and signature
   bytes pubkey = 6; // bytes48
+  // Sender signature
   bytes signature = 7; // bytes96
 }
 
