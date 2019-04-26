@@ -29,6 +29,7 @@ import (
 
 // Ensure ChainService implements interfaces.
 var _ = ForkChoice(&ChainService{})
+var endpoint = "ws://127.0.0.1"
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	deposits, _ := setupInitialDeposits(t, 5)
@@ -804,7 +805,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 		balances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
-	chainService := setupBeaconChainBenchmark(b, false, beaconDB, true, nil)
+	chainService := setupBeaconChainBenchmark(b, beaconDB)
 
 	// Construct 8 blocks. (Epoch length = 8)
 	epochLength := uint64(8)
@@ -885,7 +886,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 		balances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
-	chainService := setupBeaconChainBenchmark(b, false, beaconDB, true, nil)
+	chainService := setupBeaconChainBenchmark(b, beaconDB)
 
 	// Construct 8 blocks. (Epoch length = 8)
 	epochLength := uint64(8)
@@ -964,7 +965,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 		balances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
-	chainService := setupBeaconChainBenchmark(b, false, beaconDB, true, nil)
+	chainService := setupBeaconChainBenchmark(b, beaconDB)
 
 	// Construct 64 blocks. (Epoch length = 64)
 	epochLength := uint64(32)
@@ -1043,7 +1044,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 		balances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
-	chainService := setupBeaconChainBenchmark(b, false, beaconDB, true, nil)
+	chainService := setupBeaconChainBenchmark(b, beaconDB)
 
 	// Construct 64 blocks. (Epoch length = 64)
 	epochLength := uint64(64)
@@ -1107,32 +1108,19 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	}
 }
 
-func setupBeaconChainBenchmark(b *testing.B, faultyPoWClient bool, beaconDB *db.BeaconDB, enablePOWChain bool, attsService *attestation.Service) *ChainService {
-	endpoint := "ws://127.0.0.1"
+func setupBeaconChainBenchmark(b *testing.B, beaconDB *db.BeaconDB) *ChainService {
 	ctx := context.Background()
 	var web3Service *powchain.Web3Service
 	var err error
-	if enablePOWChain {
-		if faultyPoWClient {
-			client := &faultyClient{}
-			web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
-				Endpoint:        endpoint,
-				DepositContract: common.Address{},
-				Reader:          client,
-				Client:          client,
-				Logger:          client,
-			})
-		} else {
-			client := &mockClient{}
-			web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
-				Endpoint:        endpoint,
-				DepositContract: common.Address{},
-				Reader:          client,
-				Client:          client,
-				Logger:          client,
-			})
-		}
-	}
+	client := &faultyClient{}
+	web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: common.Address{},
+		Reader:          client,
+		Client:          client,
+		Logger:          client,
+	})
+
 	if err != nil {
 		b.Fatalf("unable to set up web3 service: %v", err)
 	}
@@ -1142,7 +1130,7 @@ func setupBeaconChainBenchmark(b *testing.B, faultyPoWClient bool, beaconDB *db.
 		BeaconDB:       beaconDB,
 		Web3Service:    web3Service,
 		OpsPoolService: &mockOperationService{},
-		AttsService:    attsService,
+		AttsService:    nil,
 	}
 	if err != nil {
 		b.Fatalf("could not register blockchain service: %v", err)

@@ -191,6 +191,9 @@ func (rs *RegularSync) validateAndProcessBlock(
 			span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 			return nil, nil, false, err
 		}
+	} else {
+		forkedBlock.Inc()
+		log.Warnf("Received Block from a Forked Chain with root %#x and slot %d", blockRoot, block.Slot)
 	}
 
 	sentBlocks.Inc()
