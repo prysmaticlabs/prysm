@@ -166,7 +166,7 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 		state := &pb.BeaconState{
 			Slot:                  params.BeaconConfig().GenesisSlot + 5,
 			ValidatorRegistry:     validators,
-			ValidatorBalances:     validatorBalances,
+			Balances:              validatorBalances,
 			LatestAttestations:    attestations,
 			PreviousJustifiedRoot: []byte{},
 			LatestCrosslinks: []*pb.Crosslink{

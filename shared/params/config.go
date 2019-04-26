@@ -118,6 +118,7 @@ type BeaconChainConfig struct {
 	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
 	ValidatorPrivkeyFileName  string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
+	HashCacheSize             int64         // HashCacheSize defines the size of object hashes that are cached.
 	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
 	TestnetContractEndpoint   string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
 }
@@ -231,6 +232,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LogBlockDelay:             2,
 	BLSPubkeyLength:           96,
 	DefaultBufferSize:         10000,
+	HashCacheSize:             100000,
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
 	RPCSyncCheck:              1,
