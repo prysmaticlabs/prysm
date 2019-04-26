@@ -392,6 +392,15 @@ func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
+// UnslashedAttestingIndices returns all the attesting indices from a list of attestations,
+// it sorts the indices and filters out the slashed ones.
+//
+// Spec pseudocode definition:
+// def get_unslashed_attesting_indices(state: BeaconState, attestations: List[PendingAttestation]) -> List[ValidatorIndex]:
+//    output = set()
+//    for a in attestations:
+//        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bitfield))
+//    return sorted(filter(lambda index: not state.validator_registry[index].slashed, list(output)))
 func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
 	for _, att := range atts {
@@ -401,6 +410,56 @@ func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 		}
 		setIndices = sliceutil.Union(setIndices, indices)
 	}
+	// Sort the attesting set indices by increasing order.
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
+	// Remove the slashed validator indices.
+	for i := 0; i < len(setIndices); i++ {
+		if state.ValidatorRegistry[setIndices[i]].Slashed {
+			setIndices = append(setIndices[:i], setIndices[i+1:]...)
+		}
+	}
+	return setIndices, nil
+}
 
+// AttestingBalance returns the total balance from all the attesting indices.
+//
+// Spec pseudocode definition:
+// def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
+//    return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
+func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uint64, error) {
+	indices, err := UnslashedAttestingIndices(state, atts)
+	if err != nil {
+		return 0, fmt.Errorf("could not get attesting balance: %v", err)
+	}
+	return TotalBalance(state, indices), nil
+}
+
+// EarlistAttestation returns attestation with the earliest inclusion slot.
+//
+// Spec pseudocode definition:
+// def get_earliest_attestation(state: BeaconState, attestations: List[PendingAttestation], index: ValidatorIndex) -> PendingAttestation:
+//    return min([
+//        a for a in attestations if index in get_attesting_indices(state, a.data, a.aggregation_bitfield)
+//    ], key=lambda a: a.inclusion_slot)
+func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, index uint64) (*pb.PendingAttestation, error) {
+	var attested []*pb.PendingAttestation
+	for _, att := range atts {
+		indices, err := helpers.AttestationParticipants(state, att.Data, att.AggregationBitfield)
+		if err != nil {
+			return nil, fmt.Errorf("could not get attester indices: %v", err)
+		}
+		for _, i := range indices {
+			if index == i {
+				attested = append(attested, att)
+			}
+		}
+	}
+
+	earlist := attested[0]
+	for _, att := range attested {
+		if earlist.InclusionSlot > att.InclusionSlot {
+			earlist = att
+		}
+	}
+	return earlist, nil
 }

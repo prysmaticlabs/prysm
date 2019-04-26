@@ -599,3 +599,193 @@ func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 		)
 	}
 }
+
+func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
+	// Generate 2 attestations.
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
+				Shard: uint64(i + 1),
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
+				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
+		}
+	}
+
+	// Generate validators and state for the 2 attestations.
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: validators,
+	}
+
+	indices, err := UnslashedAttestingIndices(state, atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < len(indices)-1; i++ {
+		if indices[i] > indices[i+1] {
+			t.Error("sorted indices not sorted")
+		}
+	}
+
+	// Verify the slashed validator is filtered.
+	slashedValidator := indices[0]
+	state.ValidatorRegistry[slashedValidator].Slashed = true
+	indices, err = UnslashedAttestingIndices(state, atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < len(indices); i++ {
+		if indices[i] == slashedValidator {
+			t.Errorf("Slashed validator %d is not filtered", slashedValidator)
+		}
+	}
+}
+
+func TestUnslashedAttestingIndices_CantGetIndicesBitfieldError(t *testing.T) {
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot: params.BeaconConfig().GenesisSlot + uint64(i),
+			},
+			AggregationBitfield: []byte{0xFF},
+		}
+	}
+
+	state := &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+	}
+	wantedErr := "could not get attester indices: wanted participants bitfield length 16, got: 1"
+	if _, err := UnslashedAttestingIndices(state, atts); !strings.Contains(err.Error(), wantedErr) {
+		t.Fatal(err)
+	}
+}
+
+func TestAttestingBalance_CorrectBalance(t *testing.T) {
+	// Generate 2 attestations.
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
+				Shard: uint64(i + 1),
+			},
+			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+		}
+	}
+
+	// Generate validators with balances and state for the 2 attestations.
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}
+
+	balance, err := AttestingBalance(state, atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := 256 * params.BeaconConfig().MaxDepositAmount
+	if balance != wanted {
+		t.Errorf("wanted balance: %d, got: %d", wanted, balance)
+	}
+}
+
+func TestEarlistAttestation_CanGetEarlist(t *testing.T) {
+	// Generate 2 attestations.
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
+				Shard: uint64(i + 1),
+			},
+			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+		}
+	}
+
+	// Generate validators with balances and state for the 2 attestations.
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}
+
+	balance, err := AttestingBalance(state, atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := 256 * params.BeaconConfig().MaxDepositAmount
+	if balance != wanted {
+		t.Errorf("wanted balance: %d, got: %d", wanted, balance)
+	}
+}
+
+func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
+	// Generate 2 attestations.
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
+				Shard: uint64(i + 1),
+			},
+			InclusionSlot: uint64(i + 100),
+			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+		}
+	}
+
+	// Generate validators with balances and state for the 2 attestations.
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}
+
+	// Get attestation for validator index 255.
+	idx := uint64(255)
+	att, err := EarlistAttestation(state, atts, idx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedInclusion := uint64(100)
+	if att.InclusionSlot != wantedInclusion {
+		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionSlot)
+	}
+}

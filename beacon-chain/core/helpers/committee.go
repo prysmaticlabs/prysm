@@ -160,7 +160,6 @@ func CrosslinkCommitteesAtSlot(
 	currentEpoch := CurrentEpoch(state)
 	prevEpoch := PrevEpoch(state)
 	nextEpoch := NextEpoch(state)
-
 	switch wantedEpoch {
 	case currentEpoch:
 		return currEpochCommitteesAtSlot(state, slot)
