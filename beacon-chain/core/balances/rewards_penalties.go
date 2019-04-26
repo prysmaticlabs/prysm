@@ -41,7 +41,7 @@ func ExpectedFFGSource(
 				totalBalance
 	}
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
-	didNotAttestIndices := sliceutil.Not(justifiedAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.NotUint64(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -77,7 +77,7 @@ func ExpectedFFGTarget(
 				totalBalance
 	}
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
-	didNotAttestIndices := sliceutil.Not(boundaryAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.NotUint64(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -113,7 +113,7 @@ func ExpectedBeaconChainHead(
 				totalBalance
 	}
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
-	didNotAttestIndices := sliceutil.Not(headAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.NotUint64(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -169,7 +169,7 @@ func InactivityFFGSource(
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
-	didNotAttestIndices := sliceutil.Not(justifiedAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.NotUint64(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -193,7 +193,7 @@ func InactivityFFGTarget(
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
-	didNotAttestIndices := sliceutil.Not(boundaryAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.NotUint64(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -216,7 +216,7 @@ func InactivityChainHead(
 
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
-	didNotAttestIndices := sliceutil.Not(headAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.NotUint64(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -366,7 +366,7 @@ func Crosslinks(
 			}
 			for _, index := range committee {
 				baseReward := helpers.BaseReward(state, index, baseRewardQuotient)
-				if sliceutil.IsIn(index, attestingIndices) {
+				if sliceutil.IsInUint64(index, attestingIndices) {
 					state.ValidatorBalances[index] +=
 						baseReward * totalAttestingBalance / totalBalance
 				} else {
