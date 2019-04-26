@@ -12,7 +12,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -67,7 +66,7 @@ func main() {
 	httpClient := ethclient.NewClient(httpRPCClient)
 	cfg := &powchain.Web3ServiceConfig{
 		Endpoint:        "wss://goerli.prylabs.net/websocket",
-		DepositContract: common.HexToAddress("0x2348E5Db47B910DDC4478CA202DB280AC5790D2A"),
+		DepositContract: common.HexToAddress("0x30b3366A1c57F124b9B8fD17d95f97d5363Da6a6"),
 		Client:          powClient,
 		Reader:          powClient,
 		Logger:          powClient,
@@ -123,7 +122,7 @@ func main() {
 	}
 	log.Infof("Highest state: %d, current state: %d", highestState.Slot-params.BeaconConfig().GenesisSlot, 0)
 
-	lastFinalizedState, err := readOnlyDB.HistoricalStateFromSlot(ctx, helpers.StartSlot(params.BeaconConfig().GenesisEpoch+263))
+	lastFinalizedState, err := readOnlyDB.FinalizedState()
 	if err != nil {
 		log.Fatal(err)
 	}
