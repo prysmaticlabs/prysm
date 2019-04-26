@@ -65,6 +65,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"newBalance":    newBalance,
 				"delta":         fmt.Sprintf("%f", newBalance-prevBalance),
 				"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
+				"pubKey":        tpk,
 			}).Info("Net gains/losses in eth")
 		}
 		totalPrevBalance += resp.Balance
