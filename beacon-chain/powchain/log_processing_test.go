@@ -14,14 +14,20 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
+}
+
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -84,7 +90,6 @@ func TestProcessDepositLog_OK(t *testing.T) {
 }
 
 func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -146,7 +151,6 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 }
 
 func TestUnpackDepositLogData_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -230,7 +234,6 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -316,7 +319,6 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 
 func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -401,7 +403,6 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 }
 
 func TestUnpackChainStartLogData_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -470,7 +471,6 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 }
 
 func TestHasChainStartLogOccurred_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -531,7 +531,6 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 }
 
 func TestETH1DataGenesis_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)

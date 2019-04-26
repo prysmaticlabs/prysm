@@ -71,8 +71,10 @@ func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 	now := clock.Now()
 	isValid := now.After(validTimeThreshold)
 	if !isValid {
-		log.Infof("Waiting for slot to be valid. local clock: %v, genesis+slot: %v",
-			now, validTimeThreshold)
+		log.WithFields(logrus.Fields{
+			"localTime":           now,
+			"genesisPlusSlotTime": validTimeThreshold,
+		}).Info("Waiting for slot to be valid")
 	}
 	return isValid
 }

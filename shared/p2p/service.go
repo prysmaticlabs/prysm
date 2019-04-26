@@ -14,7 +14,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	libp2pnet "github.com/libp2p/go-libp2p-net"
@@ -24,6 +24,7 @@ import (
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -54,10 +55,12 @@ type Server struct {
 	topicMapping  map[reflect.Type]string
 	bootstrapNode string
 	relayNodeAddr string
+	noDiscovery   bool
 }
 
 // ServerConfig for peer to peer networking.
 type ServerConfig struct {
+	NoDiscovery       bool
 	BootstrapNodeAddr string
 	RelayNodeAddr     string
 	Port              int
@@ -85,7 +88,16 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	// distributed hash table by their peer ID.
 	h = rhost.Wrap(h, dht)
 
-	gsub, err := pubsub.NewFloodSub(ctx, h)
+	psOpts := []pubsub.Option{
+		pubsub.WithMessageSigning(false),
+		pubsub.WithStrictSignatureVerification(false),
+	}
+	var gsub *pubsub.PubSub
+	if featureconfig.FeatureConfig().DisableGossipSub {
+		gsub, err = pubsub.NewFloodSub(ctx, h, psOpts...)
+	} else {
+		gsub, err = pubsub.NewGossipSub(ctx, h, psOpts...)
+	}
 	if err != nil {
 		cancel()
 		return nil, err
@@ -102,6 +114,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		topicMapping:  make(map[reflect.Type]string),
 		bootstrapNode: cfg.BootstrapNodeAddr,
 		relayNodeAddr: cfg.RelayNodeAddr,
+		noDiscovery:   cfg.NoDiscovery,
 	}, nil
 }
 
@@ -129,7 +142,7 @@ func (s *Server) Start() {
 	defer span.End()
 	log.Info("Starting service")
 
-	if s.bootstrapNode != "" {
+	if !s.noDiscovery && s.bootstrapNode != "" {
 		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
@@ -139,8 +152,7 @@ func (s *Server) Start() {
 			log.Errorf("Failed to bootstrap DHT: %v", err)
 		}
 	}
-
-	if s.relayNodeAddr != "" {
+	if !s.noDiscovery && s.relayNodeAddr != "" {
 		if err := dialRelayNode(ctx, s.host, s.relayNodeAddr); err != nil {
 			log.Errorf("Could not dial relay node: %v", err)
 		}
@@ -151,7 +163,9 @@ func (s *Server) Start() {
 		return
 	}
 
-	startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
+	if !s.noDiscovery {
+		startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
+	}
 }
 
 // Stop the main p2p loop.
@@ -343,7 +357,8 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
-	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
 	topic := s.topicMapping[messageType(msg)]
 	pid := protocol.ID(prysmProtocolPrefix + "/" + topic)

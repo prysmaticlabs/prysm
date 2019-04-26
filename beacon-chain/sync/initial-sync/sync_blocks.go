@@ -6,25 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
-func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
-	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBlockAnnounce")
-	defer span.End()
-	data := msg.Data.(*pb.BeaconBlockAnnounce)
-	recBlockAnnounce.Inc()
-
-	if s.stateReceived && data.SlotNumber > s.highestObservedSlot {
-		s.requestBatchedBlocks(s.lastRequestedSlot, data.SlotNumber)
-		s.lastRequestedSlot = data.SlotNumber
-	}
-}
 
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
@@ -93,6 +81,12 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 		// Do not process empty responses.
 		return
 	}
+	if msg.Peer != s.bestPeer {
+		// Only process batch block responses that come from the best peer
+		// we originally synced with.
+		log.WithField("peerID", msg.Peer.Pretty()).Debug("Received batch blocks from a different peer")
+		return
+	}
 
 	log.Debug("Processing batched block response")
 	for _, block := range batchedBlocks {
@@ -108,20 +102,20 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 	defer span.End()
 	sentBatchedBlockReq.Inc()
 	if startSlot > endSlot {
-		log.Debugf(
-			"Invalid batched request from slot %d to %d",
-			startSlot-params.BeaconConfig().GenesisSlot, endSlot-params.BeaconConfig().GenesisSlot,
-		)
+		log.WithFields(logrus.Fields{
+			"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
+			"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+		).Debug("Invalid batched block request")
 		return
 	}
 	blockLimit := params.BeaconConfig().BatchBlockLimit
 	if startSlot+blockLimit < endSlot {
 		endSlot = startSlot + blockLimit
 	}
-	log.Debugf(
-		"Requesting batched blocks from slot %d to %d",
-		startSlot-params.BeaconConfig().GenesisSlot, endSlot-params.BeaconConfig().GenesisSlot,
-	)
+	log.WithFields(logrus.Fields{
+		"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
+		"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+	).Debug("Requesting batched blocks")
 	s.p2p.Broadcast(ctx, &pb.BatchedBeaconBlockRequest{
 		StartSlot: startSlot,
 		EndSlot:   endSlot,
@@ -143,7 +137,10 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err := s.checkBlockValidity(ctx, block); err != nil {
 		return err
 	}
-	log.Infof("Saving block with root %#x and slot %d for initial sync", root, block.Slot-params.BeaconConfig().GenesisSlot)
+	log.WithFields(logrus.Fields{
+		"root": fmt.Sprintf("%#x", root),
+		"slot": block.Slot - params.BeaconConfig().GenesisSlot,
+	}).Info("Saving block")
 	s.currentSlot = block.Slot
 
 	s.mutex.Lock()
@@ -162,17 +159,16 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err := s.db.SaveBlock(block); err != nil {
 		return err
 	}
+	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  root[:],
+		ParentRoot: block.ParentRootHash32,
+	}); err != nil {
+		return fmt.Errorf("could not to save attestation target: %v", err)
+	}
 	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
-		switch err.(type) {
-		case *blockchain.BlockFailedProcessingErr:
-			// If the block fails processing, we delete it from our DB.
-			if err := s.db.DeleteBlock(block); err != nil {
-				return fmt.Errorf("could not delete bad block from db: %v", err)
-			}
-		default:
-			return fmt.Errorf("could not apply block state transition: %v", err)
-		}
+		return fmt.Errorf("could not apply block state transition: %v", err)
 	}
 	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
 		return err

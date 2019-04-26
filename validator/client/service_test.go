@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -21,19 +22,30 @@ var validatorKey *keystore.Key
 var keyMap map[string]*keystore.Key
 var keyMapThreeValidators map[string]*keystore.Key
 
-func TestMain(m *testing.M) {
+func keySetup() {
 	keyMap = make(map[string]*keystore.Key)
 	keyMapThreeValidators = make(map[string]*keystore.Key)
+
+	validatorKey, _ = keystore.NewKey(rand.Reader)
+	keyMap[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
+
+	for i := 0; i < 3; i++ {
+		vKey, _ := keystore.NewKey(rand.Reader)
+		keyMapThreeValidators[hex.EncodeToString(vKey.PublicKey.Marshal())] = vKey
+	}
+}
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
+}
+
+func TestMain(m *testing.M) {
 	dir := testutil.TempDir() + "/keystore1"
 	defer os.RemoveAll(dir)
 	accounts.NewValidatorAccount(dir, "1234")
-	validatorKey, _ = keystore.NewKey(rand.Reader)
-	keyMap[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
-	keyMapThreeValidators[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
-	validatorKey2, _ := keystore.NewKey(rand.Reader)
-	keyMapThreeValidators[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey2
-	validatorKey3, _ := keystore.NewKey(rand.Reader)
-	keyMapThreeValidators[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey3
+	keySetup()
 	os.Exit(m.Run())
 }
 
@@ -57,7 +69,7 @@ func TestStop_CancelsContext(t *testing.T) {
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	// Use cancelled context so that the run function exits immediately..
+	// Use canceled context so that the run function exits immediately..
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{
@@ -76,7 +88,7 @@ func TestLifecycle(t *testing.T) {
 
 func TestLifecycle_Insecure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	// Use cancelled context so that the run function exits immediately.
+	// Use canceled context so that the run function exits immediately.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{

@@ -10,7 +10,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -73,11 +72,11 @@ func TestRoutineContextClosing_Ok(t *testing.T) {
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
 	exitRoutine := make(chan bool)
-	go func(tt *testing.T) {
+	go func() {
 		s.removeOperations()
 		s.saveOperations()
 		<-exitRoutine
-	}(t)
+	}()
 	s.cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "operations service context closed, exiting remove goroutine")
@@ -91,16 +90,11 @@ func TestIncomingExits_Ok(t *testing.T) {
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	exit := &pb.VoluntaryExit{Epoch: 100}
-	hash, err := hashutil.HashProto(exit)
-	if err != nil {
-		t.Fatalf("Could not hash exit proto: %v", err)
-	}
-
 	if err := service.HandleValidatorExits(context.Background(), exit); err != nil {
 		t.Error(err)
 	}
 
-	want := fmt.Sprintf("Exit request %#x saved in DB", hash)
+	want := fmt.Sprintf("Exit request saved in DB")
 	testutil.AssertLogsContain(t, hook, want)
 }
 

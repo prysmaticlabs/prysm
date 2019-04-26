@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -190,7 +191,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -220,6 +221,9 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 }
 
 func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: false,
+	})
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -242,7 +246,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -274,8 +278,12 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
-		t.Error("Expected block to fail processing, received nil")
+	_, err = chainService.ReceiveBlock(context.Background(), block)
+	switch err.(type) {
+	case *BlockFailedProcessingErr:
+		t.Log("Block failed processing as expected")
+	default:
+		t.Errorf("Unexpected block processing error: %v", err)
 	}
 
 	savedBlock, err := db.Block(blockRoot)
@@ -289,6 +297,9 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if !db.IsEvilBlockHash(blockRoot) {
 		t.Error("Expected block root to have been blacklisted")
 	}
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: true,
+	})
 }
 
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
@@ -313,7 +324,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	beaconState.Slot++
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
@@ -357,7 +368,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	beaconState.Slot++
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
@@ -412,7 +423,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	beaconState.Slot++
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
@@ -567,7 +578,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := db.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -753,8 +764,8 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(2)
-	v.InsertActivatedVal(epoch, []uint64{0, 1, 2})
-	v.InsertExitedVal(epoch, []uint64{0, 2})
+	v.InsertActivatedVal(epoch+1, []uint64{0, 1, 2})
+	v.InsertExitedVal(epoch+1, []uint64{0, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -796,7 +807,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(1)
-	v.InsertActivatedVal(epoch, []uint64{0, 1, 2})
+	v.InsertActivatedVal(epoch+1, []uint64{0, 1, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)

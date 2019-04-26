@@ -27,7 +27,8 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("isEvilBlock", isEvilBlock))
 
 	if isEvilBlock {
-		log.Debugf("Received a blacklisted block hash: %#x", h)
+		log.WithField("blockRoot", fmt.Sprintf("%#x", h)).
+			Debug("Received blacklisted block")
 		return nil
 	}
 
@@ -43,7 +44,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 
 	if hasBlock {
-		log.Debugf("Received a root for a block that has already been processed: %#x", h)
+		log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debug("Already processed")
 		return nil
 	}
 
@@ -119,7 +120,8 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	log.Debugf("Processing response to block request: %#x", blockRoot)
+	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).
+		Debug("Processing response to block request")
 	hasBlock := rs.db.HasBlock(blockRoot)
 	if hasBlock {
 		log.Debug("Received a block that already exists. Exiting...")
@@ -169,10 +171,29 @@ func (rs *RegularSync) validateAndProcessBlock(
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
-	if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
-		log.Errorf("Could not update chain head: %v", err)
-		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
+
+	head, err := rs.db.ChainHead()
+	if err != nil {
+		log.Errorf("Could not retrieve chainhead %v", err)
 		return nil, nil, false, err
+	}
+
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		log.Errorf("Could not hash head block: %v", err)
+		return nil, nil, false, err
+	}
+
+	// only update head of chain if block is a child of the chainhead.
+	if headRoot == bytesutil.ToBytes32(block.ParentRootHash32) {
+		if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
+			log.Errorf("Could not update chain head: %v", err)
+			span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
+			return nil, nil, false, err
+		}
+	} else {
+		forkedBlock.Inc()
+		log.Warnf("Received Block from a Forked Chain with root %#x and slot %d", blockRoot, block.Slot)
 	}
 
 	sentBlocks.Inc()
