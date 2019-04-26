@@ -56,18 +56,16 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			reported = true
 		}
 		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
-		log.WithFields(logrus.Fields{
-			"ethBalance": newBalance,
-		}).Info("%v New validator balance", tpk)
 
 		if v.prevBalance > 0 {
 			prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
-			log.WithField("prevEthBalance", prevBalance).Info("%v Previous validator balance", tpk)
 			log.WithFields(logrus.Fields{
-				"eth":           fmt.Sprintf("%f", newBalance-prevBalance),
+				"prevBalance":   prevBalance,
+				"newBalance":    newBalance,
+				"delta":         fmt.Sprintf("%f", newBalance-prevBalance),
 				"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
-			}).Info("%v Net gains/losses in eth", tpk)
+			}).Info("Net gains/losses in eth")
 		}
 		totalPrevBalance += resp.Balance
 	}
