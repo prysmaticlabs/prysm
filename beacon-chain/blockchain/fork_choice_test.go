@@ -241,6 +241,13 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
 	}
+	if err := beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  blockRoot[:],
+		ParentRoot: []byte{},
+	}); err != nil {
+		log.Fatalf("could not save att tgt: %v", err)
+	}
 
 	attsService := attestation.NewAttestationService(
 		context.Background(),
@@ -254,7 +261,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	attsService.InsertAttestationIntoStore(pubKey48, att)
 
 	chainService := setupBeaconChain(t, beaconDB, attsService)
-	attestationTargets, err := chainService.attestationTargets(ctx, beaconState)
+	attestationTargets, err := chainService.attestationTargets(beaconState)
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
 	}

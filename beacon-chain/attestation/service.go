@@ -87,18 +87,18 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 	return a.incomingFeed
 }
 
-// LatestAttestation returns the latest attestation from validator index, the highest
-// slotNumber attestation from the attestation pool gets returned.
+// LatestAttestationTarget returns the target block that the validator index attested to,
+// the highest slotNumber attestation in attestation pool gets returned.
 //
 // Spec pseudocode definition:
-//	Let `get_latest_attestation(store: Store, validator_index: ValidatorIndex) ->
-//		Attestation` be the attestation with the highest slot number in `store`
-//		from the validator with the given `validator_index`
-func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
-	validator, err := a.beaconDB.ValidatorFromState(ctx, index)
-	if err != nil {
-		return nil, err
+//	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
+//		BeaconBlock` be the target block in the attestation
+//		`get_latest_attestation(store, validator_index)`.
+func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
+	if index >= uint64(len(beaconState.ValidatorRegistry)) {
+		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
+	validator := beaconState.ValidatorRegistry[index]
 
 	pubKey := bytesutil.ToBytes48(validator.Pubkey)
 	a.store.RLock()
@@ -107,37 +107,16 @@ func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Atte
 		return nil, nil
 	}
 
-	return a.store.m[pubKey], nil
-}
-
-// LatestAttestationTarget returns the target block the validator index attested to,
-// the highest slotNumber attestation in attestation pool gets returned.
-//
-// Spec pseudocode definition:
-//	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
-//		BeaconBlock` be the target block in the attestation
-//		`get_latest_attestation(store, validator_index)`.
-func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*pb.AttestationTarget, error) {
-	attestation, err := a.LatestAttestation(ctx, index)
-	if err != nil {
-		return nil, fmt.Errorf("could not get attestation: %v", err)
-	}
+	attestation := a.store.m[pubKey]
 	if attestation == nil {
 		return nil, nil
 	}
 	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
-	targetBlock, err := a.beaconDB.Block(targetRoot)
-	if err != nil {
-		return nil, fmt.Errorf("could not get target block: %v", err)
-	}
-	if targetBlock == nil {
+	if !a.beaconDB.HasBlock(targetRoot) {
 		return nil, nil
 	}
-	return &pb.AttestationTarget{
-		Slot:       targetBlock.Slot,
-		BlockRoot:  targetRoot[:],
-		ParentRoot: targetBlock.ParentRootHash32,
-	}, nil
+
+	return a.beaconDB.AttestationTarget(targetRoot)
 }
 
 // attestationPool takes an newly received attestation from sync service
@@ -294,6 +273,15 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		}
 		if !bitSet {
 			continue
+		}
+
+		if i >= len(committee) {
+			log.Errorf("Bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
+			continue
+		}
+
+		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
+			log.Errorf("Index doesn't exist in validator registry: index %d", committee[i])
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the

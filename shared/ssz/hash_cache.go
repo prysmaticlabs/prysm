@@ -84,7 +84,7 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 	rval := reflect.ValueOf(val)
 	hs, err := hashedEncoding(rval)
 	if err != nil {
-		return [32]byte{}, newHashError(error.Error(err), rval.Type())
+		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 	}
 	exists, fetchedInfo, err := b.RootByEncodedHash(bytesutil.ToBytes32(hs))
 	if err != nil {
