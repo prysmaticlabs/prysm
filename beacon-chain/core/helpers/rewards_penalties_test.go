@@ -61,11 +61,11 @@ func TestInactivityPenalty_OK(t *testing.T) {
 		a uint64
 		b uint64
 	}{
-		{1, 2929},
-		{2, 3883},
-		{5, 6744},
-		{10, 11512},
-		{50, 49659},
+		{1, 2452},
+		{2, 2929},
+		{5, 4360},
+		{10, 6744},
+		{50, 25817},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{
@@ -110,5 +110,98 @@ func TestTotalBalance_OK(t *testing.T) {
 	if TotalBalance(state, []uint64{0, 1, 2, 3}) != 119*1e9 {
 		t.Errorf("Incorrect TotalEffectiveBalance. Wanted: 119, got: %d",
 			TotalBalance(state, []uint64{0, 1, 2, 3})/1e9)
+	}
+}
+
+func TestGetBalance_OK(t *testing.T) {
+	tests := []struct {
+		i uint64
+		b []uint64
+	}{
+		{i: 0, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}},
+		{i: 1, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}},
+		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}},
+		{i: 0, b: []uint64{0, 0, 0}},
+		{i: 2, b: []uint64{0, 0, 0}},
+	}
+	for _, test := range tests {
+		state := &pb.BeaconState{Balances: test.b}
+		if Balance(state, test.i) != test.b[test.i] {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.b[test.i], Balance(state, test.i))
+		}
+	}
+}
+
+func TestSetBalance_OK(t *testing.T) {
+	tests := []struct {
+		i  uint64
+		b  []uint64
+		nb uint64
+		hb uint64
+	}{
+		{i: 0, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 2*1e9 + 6, hb: 2 * 1e9},
+		{i: 1, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 0, hb: 0},
+		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33*1e9 - 10, hb: 32 * 1e9},
+	}
+	for _, test := range tests {
+		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.Validator{
+				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
+			Balances: test.b,
+		}
+		state = SetBalance(state, test.i, test.nb)
+		if Balance(state, test.i) != test.nb {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.nb, Balance(state, test.i))
+		}
+		if state.ValidatorRegistry[test.i].EffectiveBalance != test.hb {
+			t.Errorf("Incorrect Validator EffectiveBalance. Wanted: %d, got: %d", test.hb, state.ValidatorRegistry[test.i].EffectiveBalance)
+		}
+	}
+}
+
+func TestIncreseBalance_OK(t *testing.T) {
+	tests := []struct {
+		i  uint64
+		b  []uint64
+		nb uint64
+		eb uint64
+	}{
+		{i: 0, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 1, eb: 27*1e9 + 1},
+		{i: 1, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 0, eb: 28 * 1e9},
+		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33 * 1e9, eb: 65 * 1e9},
+	}
+	for _, test := range tests {
+		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.Validator{
+				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
+			Balances: test.b,
+		}
+		state = IncreaseBalance(state, test.i, test.nb)
+		if Balance(state, test.i) != test.eb {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, Balance(state, test.i))
+		}
+	}
+}
+func TestDecreseBalance_OK(t *testing.T) {
+	tests := []struct {
+		i  uint64
+		b  []uint64
+		nb uint64
+		eb uint64
+	}{
+		{i: 0, b: []uint64{2, 28 * 1e9, 32 * 1e9}, nb: 1, eb: 1},
+		{i: 1, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 0, eb: 28 * 1e9},
+		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 1}, nb: 2, eb: 0},
+	}
+	for _, test := range tests {
+		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.Validator{
+				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
+			Balances: test.b,
+		}
+		state = DecreaseBalance(state, test.i, test.nb)
+		if Balance(state, test.i) != test.eb {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, Balance(state, test.i))
+		}
 	}
 }

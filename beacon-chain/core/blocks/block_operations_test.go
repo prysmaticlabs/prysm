@@ -43,7 +43,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 	return deposits, privKeys
 }
 
-func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
+func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -62,12 +62,13 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		RandaoReveal: epochSignature.Marshal(),
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		},
 	}
 
 	want := "block randao reveal signature did not verify"
-	if _, err := blocks.ProcessBlockRandao(
-
+	if _, err := blocks.ProcessRandao(
 		beaconState,
 		block,
 		true,  /* verify signatures */
@@ -77,7 +78,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	}
 }
 
-func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
+func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -95,11 +96,12 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
-		RandaoReveal: epochSignature.Marshal(),
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		},
 	}
 
-	newState, err := blocks.ProcessBlockRandao(
-
+	newState, err := blocks.ProcessRandao(
 		beaconState,
 		block,
 		true,  /* verify signatures */
@@ -1502,7 +1504,8 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Could not process exits: %v", err)
 	}
 	newRegistry := newState.ValidatorRegistry
-	if newRegistry[0].StatusFlags == pb.Validator_INITIAL {
-		t.Error("Expected validator status to change, remained INITIAL")
+	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
+		t.Errorf("Expected validator exit epoch to be %d, got %d",
+			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
 	}
 }
