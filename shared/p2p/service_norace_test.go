@@ -28,7 +28,7 @@ func TestLifecycle(t *testing.T) {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
 
-	// The context should have been cancelled.
+	// The context should have been canceled.
 	if s.ctx.Err() == nil {
 		t.Error("Context was not cancelled")
 	}
