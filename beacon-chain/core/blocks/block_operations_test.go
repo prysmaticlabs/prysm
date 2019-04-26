@@ -999,7 +999,7 @@ func TestVerifyIndexedAttestation(t *testing.T) {
 		CustodyBit_1Indices: []uint64{},
 	}
 
-	if err := blocks.VerifyIndexedAttestation(&pb.BeaconState{}, indexedAtt1); err != nil {
+	if ok, err := blocks.VerifyIndexedAttestation(&pb.BeaconState{}, indexedAtt1); !ok {
 		t.Errorf("indexed attestation failed to verify: %v", err)
 	}
 }
@@ -1010,12 +1010,11 @@ func TestVerifyIndexedAttestation_Empty(t *testing.T) {
 		CustodyBit_1Indices: []uint64{},
 	}
 
-	want := "not proper length"
-	if err := blocks.VerifyIndexedAttestation(
+	if ok, _ := blocks.VerifyIndexedAttestation(
 		&pb.BeaconState{},
 		indexedAtt1,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error: %s, received %v", want, err)
+	); ok {
+		t.Errorf("Expected verification to fail return false, received: %t", ok)
 	}
 }
 
@@ -1025,12 +1024,26 @@ func TestVerifyIndexedAttestation_NotSorted(t *testing.T) {
 		CustodyBit_1Indices: []uint64{},
 	}
 
-	want := "custody bit 0 indices are not sorted"
-	if err := blocks.VerifyIndexedAttestation(
+	if ok, _ := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
+		indexedAtt1,
+	); ok {
+		t.Errorf("Expected verification to fail return false, received: %t", ok)
+	}
+}
+
+func TestVerifyIndexedAttestation_Intersecting(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
+		CustodyBit_1Indices: []uint64{3, 5, 8},
+	}
+
+	want := "should not contain duplicates"
+	if _, err := blocks.VerifyIndexedAttestation(
 		&pb.BeaconState{},
 		indexedAtt1,
 	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error: %s, received %v", want, err)
+		t.Errorf("Expected verification to fail, received: %v", err)
 	}
 }
 

@@ -630,40 +630,38 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 //        signature=indexed_attestation.signature,
 //        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
 //    )
-func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttestation) error {
+func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttestation) (bool, error) {
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
 	custodyBitIntersection := sliceutil.Intersection(custodyBit0Indices, custodyBit1Indices)
 	if len(custodyBitIntersection) != 0 {
-		return fmt.Errorf("custody bit indice should not contain duplicates, received: %v", custodyBitIntersection)
+		return false, fmt.Errorf("custody bit indice should not contain duplicates, received: %v", custodyBitIntersection)
 	}
 
 	if len(custodyBit1Indices) > 0 {
-		return fmt.Errorf("custody bit 1 indices should be empty for phase 0")
+		return false, nil
 	}
 
 	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
 	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
 	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
-		return fmt.Errorf("total length of indices is not proper length, received: %d",
-			totalIndicesLength,
-		)
+		return false, nil
 	}
 
 	if !sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
 		return custodyBit0Indices[i] < custodyBit0Indices[j]
 	}) {
-		return errors.New("custody bit 0 indices are not sorted")
+		return false, nil
 	}
 
 	if !sort.SliceIsSorted(custodyBit1Indices, func(i, j int) bool {
 		return custodyBit1Indices[i] < custodyBit1Indices[j]
 	}) {
-		return errors.New("custody bit 1 indices are not sorted")
+		return false, nil
 	}
 
-	return nil
+	return true, nil
 }
 
 // ProcessValidatorDeposits is one of the operations performed on each processed
