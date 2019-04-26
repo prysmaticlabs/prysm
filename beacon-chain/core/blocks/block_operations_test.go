@@ -1504,7 +1504,8 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Could not process exits: %v", err)
 	}
 	newRegistry := newState.ValidatorRegistry
-	if newRegistry[0].StatusFlags == pb.Validator_INITIAL {
-		t.Error("Expected validator status to change, remained INITIAL")
+	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
+		t.Errorf("Expected validator exit epoch to be %d, got %d",
+			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
 	}
 }
