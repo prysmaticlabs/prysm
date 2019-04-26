@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 type decodeTest struct {
@@ -182,6 +184,12 @@ var decodeTests = []decodeTest{
 
 	// error: struct: input too long
 	{input: "04000000 0200 01 01", ptr: new(simpleStruct), error: "decode error: input is too long for output type ssz.simpleStruct"},
+}
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
 }
 
 func runTests(t *testing.T, decode func([]byte, interface{}) error) {

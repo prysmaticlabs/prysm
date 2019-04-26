@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -32,6 +33,12 @@ func keySetup() {
 		vKey, _ := keystore.NewKey(rand.Reader)
 		keyMapThreeValidators[hex.EncodeToString(vKey.PublicKey.Marshal())] = vKey
 	}
+}
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
 }
 
 func TestMain(m *testing.M) {
@@ -62,7 +69,7 @@ func TestStop_CancelsContext(t *testing.T) {
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	// Use cancelled context so that the run function exits immediately..
+	// Use canceled context so that the run function exits immediately..
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{
@@ -81,7 +88,7 @@ func TestLifecycle(t *testing.T) {
 
 func TestLifecycle_Insecure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	// Use cancelled context so that the run function exits immediately.
+	// Use canceled context so that the run function exits immediately.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{

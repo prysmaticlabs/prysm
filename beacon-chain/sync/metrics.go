@@ -24,6 +24,10 @@ var (
 		Name: "regsync_received_blocks",
 		Help: "The number of received blocks",
 	})
+	forkedBlock = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "regsync_received_forked_blocks",
+		Help: "The number of received forked blocks",
+	})
 	recBlockAnnounce = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "regsync_received_block_announce",
 		Help: "The number of received block announcements",

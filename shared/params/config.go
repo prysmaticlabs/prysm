@@ -4,6 +4,7 @@ package params
 
 import (
 	"math/big"
+	"time"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -14,6 +15,7 @@ type BeaconChainConfig struct {
 	MaxIndicesPerAttestation uint64 // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
 	MinPerEpochChurnLimit    uint64 // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
 	ChurnLimitQuotient       uint64 // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
+	BaseRewardsPerEpoch      uint64 // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	ShuffleRoundCount        uint64 // ShuffleRoundCount is used for retrieving the permuted index.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
@@ -30,10 +32,10 @@ type BeaconChainConfig struct {
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
 
 	// Gwei value constants.
-	MinDepositAmount     uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MaxDepositAmount     uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	EjectionBalance      uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
-	HighBalanceIncrement uint64 // HighBalanceIncrement is used for converting the high balance into the low balance for validators.
+	MinDepositAmount          uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxDepositAmount          uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	EjectionBalance           uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	EffectiveBalanceIncrement uint64 // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 	// TODO(2307): Remove deprecated fields
 	//Deprecated: Do not use.
 	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
@@ -63,6 +65,7 @@ type BeaconChainConfig struct {
 	MinValidatorWithdrawalDelay  uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod    uint64 // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
 	MaxCrosslinkEpochs           uint64 // MaxCrosslinkEpochs defines the max epoch from current a crosslink can be formed at.
+	MinEpochsToInactivityPenalty uint64 // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
@@ -81,7 +84,7 @@ type BeaconChainConfig struct {
 	WhistleBlowingRewardQuotient uint64 // WhistleBlowingRewardQuotient is used to calculate whistler blower reward.
 	ProposerRewardQuotient       uint64 // ProposerRewardQuotient is used to calculate the reward for proposers.
 	InactivityPenaltyQuotient    uint64 // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
-	MinPenaltyQuotient           uint64 // MinPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
+	MinSlashingPenaltyQuotient   uint64 // MinSlashingPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
 	AttestationInclusionRewardQuotient uint64 // AttestationInclusionRewardQuotient defines the reward quotient of proposer for including attestations.
@@ -103,18 +106,21 @@ type BeaconChainConfig struct {
 	DomainTransfer       uint64 // DomainTransfer defines the BLS signature domain for transfer verification.
 
 	// Prysm constants.
-	GweiPerEth                uint64 // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	DepositsForChainStart     uint64 // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	RandBytes                 uint64 // RandBytes is the number of bytes used as entropy to shuffle validators.
-	BatchBlockLimit           uint64 // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
-	SyncEpochLimit            uint64 // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
-	MaxNumLog2Validators      uint64 // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
-	SyncPollingInterval       int64  // SyncPollingInterval queries network nodes for sync status.
-	LogBlockDelay             int64  // Number of blocks to wait from the current head before processing logs from the deposit contract.
-	BLSPubkeyLength           int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
-	DefaultBufferSize         int    // DefaultBufferSize for channels across the Prysm repository.
-	ValidatorPrivkeyFileName  string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
-	WithdrawalPrivkeyFileName string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
+	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
+	DepositsForChainStart     uint64        // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
+	RandBytes                 uint64        // RandBytes is the number of bytes used as entropy to shuffle validators.
+	BatchBlockLimit           uint64        // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
+	SyncEpochLimit            uint64        // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
+	MaxNumLog2Validators      uint64        // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
+	SyncPollingInterval       int64         // SyncPollingInterval queries network nodes for sync status.
+	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
+	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
+	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
+	ValidatorPrivkeyFileName  string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
+	WithdrawalPrivkeyFileName string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
+	HashCacheSize             int64         // HashCacheSize defines the size of object hashes that are cached.
+	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
+	TestnetContractEndpoint   string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
 }
 
 // DepositContractConfig contains the deposits for
@@ -137,6 +143,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxIndicesPerAttestation: 4096,
 	MinPerEpochChurnLimit:    4,
 	ChurnLimitQuotient:       1 << 16,
+	BaseRewardsPerEpoch:      5,
 	ShuffleRoundCount:        90,
 
 	// TODO(2307): Remove deprecated fields
@@ -153,7 +160,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinDepositAmount:           1 * 1e9,
 	MaxDepositAmount:           32 * 1e9,
 	EjectionBalance:            16 * 1e9,
-	HighBalanceIncrement:       1 * 1e9,
+	EffectiveBalanceIncrement:  1 * 1e9,
 	ForkChoiceBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
@@ -175,9 +182,13 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SlotsPerEpoch:                64,
 	MinSeedLookahead:             1,
 	ActivationExitDelay:          4,
-	EpochsPerEth1VotingPeriod:    16,
-	Eth1FollowDistance:           1024,
+	SlotsPerEth1VotingPeriod:     1024,
 	SlotsPerHistoricalRoot:       8192,
+	MinValidatorWithdrawalDelay:  256,
+	PersistentCommitteePeriod:    2048,
+	MaxCrosslinkEpochs:           64,
+	MinEpochsToInactivityPenalty: 4,
+	Eth1FollowDistance:           1024,
 
 	// State list length constants.
 	LatestRandaoMixesLength:      8192,
@@ -186,14 +197,15 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// TODO(2307): Remove deprecated fields
 	// Deprecated.
-	LatestBlockRootsLength: 8192,
+	EpochsPerEth1VotingPeriod: 16,
+	LatestBlockRootsLength:    8192,
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:                 32,
 	WhistleBlowingRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
-	InactivityPenaltyQuotient:          1 << 24,
-	MinPenaltyQuotient:                 32,
+	InactivityPenaltyQuotient:          1 << 25,
+	MinSlashingPenaltyQuotient:         32,
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
@@ -201,7 +213,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxAttestations:      128,
 	MaxDeposits:          16,
 	MaxVoluntaryExits:    16,
-	MaxTransfers:         16,
+	MaxTransfers:         0,
 
 	// BLS domain values.
 	DomainBeaconProposer: 0,
@@ -220,8 +232,13 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LogBlockDelay:             2,
 	BLSPubkeyLength:           96,
 	DefaultBufferSize:         10000,
+	HashCacheSize:             100000,
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
+	RPCSyncCheck:              1,
+
+	// Testnet misc values.
+	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultShardConfig = &ShardChainConfig{

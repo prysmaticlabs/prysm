@@ -5,14 +5,12 @@
 package epoch
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -20,10 +18,19 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "core/state")
+
+// MatchedAttestations is an object that contains the correctly
+// voted attestations based on source, target and head criteria.
+type MatchedAttestations struct {
+	source []*pb.PendingAttestation
+	target []*pb.PendingAttestation
+	head   []*pb.PendingAttestation
+}
 
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
@@ -408,7 +415,7 @@ func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 		if err != nil {
 			return nil, fmt.Errorf("could not get attester indices: %v", err)
 		}
-		setIndices = sliceutil.Union(setIndices, indices)
+		setIndices = sliceutil.UnionUint64(setIndices, indices)
 	}
 	// Sort the attesting set indices by increasing order.
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
@@ -462,4 +469,76 @@ func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, in
 		}
 	}
 	return earlist, nil
+}
+
+// MatchAttestations matches the attestations gathered in a span of an epoch
+// and categorize them whether they correctly voted for source, target and head.
+// We combined the individual helpers from spec for efficiency and to achieve O(N) run time.
+//
+// Spec pseudocode definition:
+//	def get_matching_source_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//    assert epoch in (get_current_epoch(state), get_previous_epoch(state))
+//    return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
+//
+//	def get_matching_target_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//    return [
+//        a for a in get_matching_source_attestations(state, epoch)
+//        if a.data.target_root == get_block_root(state, epoch)
+//    ]
+//
+//	def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//    return [
+//        a for a in get_matching_source_attestations(state, epoch)
+//        if a.data.beacon_block_root == get_block_root_at_slot(state, a.data.slot)
+//    ]
+func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestations, error) {
+	currentEpoch := helpers.CurrentEpoch(state)
+	previousEpoch := helpers.PrevEpoch(state)
+
+	// Input epoch for matching the source attestations has to be within range
+	// of current epoch & previous epoch.
+	if epoch != currentEpoch && epoch != previousEpoch {
+		return nil, fmt.Errorf("input epoch: %d != current epoch: %d or previous epoch: %d",
+			epoch, currentEpoch, previousEpoch)
+	}
+
+	// Decide if the source attestations are coming from current or previous epoch.
+	var srcAtts []*pb.PendingAttestation
+	if epoch == currentEpoch {
+		srcAtts = state.CurrentEpochAttestations
+	} else {
+		srcAtts = state.PreviousEpochAttestations
+	}
+
+	targetRoot, err := helpers.BlockRoot(state, epoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
+	}
+
+	//var tgtAtts []*pb.PendingAttestation
+	tgtAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
+	headAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
+	for _, srcAtt := range srcAtts {
+		// If the target root matches attestation's target root,
+		// then we know this attestation has correctly voted for target.
+		if bytes.Equal(srcAtt.Data.TargetRoot, targetRoot) {
+			tgtAtts = append(tgtAtts, srcAtt)
+		}
+
+		// If the block root at slot matches attestation's block root at slot,
+		// then we know this attestation has correctly voted for head.
+		headRoot, err := helpers.BlockRootAtSlot(state, srcAtt.Data.Slot)
+		if err != nil {
+			return nil, fmt.Errorf("could not get block root for slot %d: %v", srcAtt.Data.Slot, err)
+		}
+		if bytes.Equal(srcAtt.Data.BeaconBlockRoot, headRoot) {
+			headAtts = append(headAtts, srcAtt)
+		}
+	}
+
+	return &MatchedAttestations{
+		source: srcAtts,
+		target: tgtAtts,
+		head:   headAtts,
+	}, nil
 }

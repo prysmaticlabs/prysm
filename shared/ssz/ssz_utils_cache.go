@@ -29,6 +29,7 @@ type sszUtils struct {
 var (
 	sszUtilsCacheMutex sync.RWMutex
 	sszUtilsCache      = make(map[reflect.Type]*sszUtils)
+	hashCache          = newHashCache()
 )
 
 // Get cached encoder, encodeSizer and decoder implementation for a specified type.
