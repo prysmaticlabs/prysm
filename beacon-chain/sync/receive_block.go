@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -193,7 +195,10 @@ func (rs *RegularSync) validateAndProcessBlock(
 		}
 	} else {
 		forkedBlock.Inc()
-		log.Warnf("Received Block from a Forked Chain with root %#x and slot %d", blockRoot, block.Slot)
+		log.WithFields(logrus.Fields{
+			"slot": block.Slot,
+			"root": fmt.Sprintf("%#x", blockRoot)},
+		).Warn("Received Block from a forked chain")
 	}
 
 	sentBlocks.Inc()
