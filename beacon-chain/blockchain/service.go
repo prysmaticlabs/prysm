@@ -48,6 +48,7 @@ type ChainService struct {
 	p2p                  p2p.Broadcaster
 	canonicalBlocks      map[uint64][]byte
 	canonicalBlocksLock  sync.RWMutex
+	receiveBlockLock     sync.Mutex
 }
 
 // Config options for the service.
