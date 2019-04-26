@@ -110,9 +110,9 @@ func Balance(state *pb.BeaconState, validatorIndex uint64) uint64 {
 //     state.balances[index] = balance
 func SetBalance(state *pb.BeaconState, idx uint64, balance uint64) *pb.BeaconState {
 	validator := state.ValidatorRegistry[idx]
-	halfIncrement := params.BeaconConfig().HighBalanceIncrement / 2
-	if validator.HighBalance > balance || validator.HighBalance+3*halfIncrement < balance {
-		validator.HighBalance = balance - balance%params.BeaconConfig().HighBalanceIncrement
+	halfIncrement := params.BeaconConfig().EffectiveBalanceIncrement / 2
+	if validator.EffectiveBalance > balance || validator.EffectiveBalance+3*halfIncrement < balance {
+		validator.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
 	}
 	state.Balances[idx] = balance
 	return state
