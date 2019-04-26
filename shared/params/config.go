@@ -14,6 +14,7 @@ type BeaconChainConfig struct {
 	MaxIndicesPerAttestation uint64 // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
 	MinPerEpochChurnLimit    uint64 // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
 	ChurnLimitQuotient       uint64 // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
+	BaseRewardsPerEpoch      uint64 // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	ShuffleRoundCount        uint64 // ShuffleRoundCount is used for retrieving the permuted index.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
@@ -63,6 +64,7 @@ type BeaconChainConfig struct {
 	MinValidatorWithdrawalDelay  uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod    uint64 // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
 	MaxCrosslinkEpochs           uint64 // MaxCrosslinkEpochs defines the max epoch from current a crosslink can be formed at.
+	MinEpochsToInactivityPenalty uint64 // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
@@ -81,7 +83,7 @@ type BeaconChainConfig struct {
 	WhistleBlowingRewardQuotient uint64 // WhistleBlowingRewardQuotient is used to calculate whistler blower reward.
 	ProposerRewardQuotient       uint64 // ProposerRewardQuotient is used to calculate the reward for proposers.
 	InactivityPenaltyQuotient    uint64 // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
-	MinPenaltyQuotient           uint64 // MinPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
+	MinSlashingPenaltyQuotient   uint64 // MinSlashingPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
 	AttestationInclusionRewardQuotient uint64 // AttestationInclusionRewardQuotient defines the reward quotient of proposer for including attestations.
@@ -137,6 +139,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxIndicesPerAttestation: 4096,
 	MinPerEpochChurnLimit:    4,
 	ChurnLimitQuotient:       1 << 16,
+	BaseRewardsPerEpoch:      5,
 	ShuffleRoundCount:        90,
 
 	// TODO(2307): Remove deprecated fields
@@ -175,9 +178,13 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SlotsPerEpoch:                64,
 	MinSeedLookahead:             1,
 	ActivationExitDelay:          4,
-	EpochsPerEth1VotingPeriod:    16,
-	Eth1FollowDistance:           1024,
+	SlotsPerEth1VotingPeriod:     1024,
 	SlotsPerHistoricalRoot:       8192,
+	MinValidatorWithdrawalDelay:  256,
+	PersistentCommitteePeriod:    2048,
+	MaxCrosslinkEpochs:           64,
+	MinEpochsToInactivityPenalty: 4,
+	Eth1FollowDistance:           1024,
 
 	// State list length constants.
 	LatestRandaoMixesLength:      8192,
@@ -186,14 +193,15 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// TODO(2307): Remove deprecated fields
 	// Deprecated.
-	LatestBlockRootsLength: 8192,
+	EpochsPerEth1VotingPeriod: 16,
+	LatestBlockRootsLength:    8192,
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:                 32,
 	WhistleBlowingRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
-	InactivityPenaltyQuotient:          1 << 24,
-	MinPenaltyQuotient:                 32,
+	InactivityPenaltyQuotient:          1 << 25,
+	MinSlashingPenaltyQuotient:         32,
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
@@ -201,7 +209,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxAttestations:      128,
 	MaxDeposits:          16,
 	MaxVoluntaryExits:    16,
-	MaxTransfers:         16,
+	MaxTransfers:         0,
 
 	// BLS domain values.
 	DomainBeaconProposer: 0,

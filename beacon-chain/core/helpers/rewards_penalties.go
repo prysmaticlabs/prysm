@@ -61,7 +61,6 @@ func BaseReward(
 	state *pb.BeaconState,
 	validatorIndex uint64,
 	baseRewardQuotient uint64) uint64 {
-
 	validatorBalance := EffectiveBalance(state, validatorIndex)
 	return validatorBalance / baseRewardQuotient / 5
 }
