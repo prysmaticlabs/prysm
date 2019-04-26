@@ -54,7 +54,7 @@ func ValidatorIndices(
 			return nil, err
 		}
 
-		attesterIndicesIntersection = sliceutil.Union(attesterIndicesIntersection, attesterIndices)
+		attesterIndicesIntersection = sliceutil.UnionUint64(attesterIndicesIntersection, attesterIndices)
 	}
 
 	return attesterIndicesIntersection, nil
@@ -87,7 +87,7 @@ func AttestingValidatorIndices(
 			if err != nil {
 				return nil, fmt.Errorf("could not get attester indices: %v", err)
 			}
-			validatorIndicesCommittees = sliceutil.Union(validatorIndicesCommittees, validatorIndicesCommittee)
+			validatorIndicesCommittees = sliceutil.UnionUint64(validatorIndicesCommittees, validatorIndicesCommittee)
 		}
 	}
 	return validatorIndicesCommittees, nil

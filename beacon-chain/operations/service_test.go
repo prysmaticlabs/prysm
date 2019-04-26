@@ -72,11 +72,11 @@ func TestRoutineContextClosing_Ok(t *testing.T) {
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
 	exitRoutine := make(chan bool)
-	go func(tt *testing.T) {
+	go func() {
 		s.removeOperations()
 		s.saveOperations()
 		<-exitRoutine
-	}(t)
+	}()
 	s.cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "operations service context closed, exiting remove goroutine")
