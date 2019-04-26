@@ -162,7 +162,7 @@ func (q *Querier) run() {
 		case <-ticker.C:
 			q.RequestLatestHead()
 		case <-timeout:
-			queryLog.Infof("Peer with highest canonical head: %v", q.bestPeer.Pretty())
+			queryLog.WithField("peerID", q.bestPeer.Pretty()).Info("Peer with highest canonical head")
 			queryLog.Infof(
 				"Latest chain head is at slot: %d and state root: %#x",
 				q.currentHeadSlot-params.BeaconConfig().GenesisSlot, q.currentStateRoot,
@@ -187,7 +187,7 @@ func (q *Querier) run() {
 	}
 }
 
-// RequestLatestHead sends a request for all
+// RequestLatestHead broadcasts a request for
 // the latest chain head slot and state root to a peer.
 func (q *Querier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
