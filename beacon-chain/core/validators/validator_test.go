@@ -398,14 +398,53 @@ func TestActivateValidator_OK(t *testing.T) {
 	}
 }
 
-func TestInitiateValidatorExit_OK(t *testing.T) {
-	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{}, {}, {}}}
-	newState := InitiateValidatorExit(state, 2)
-	if newState.ValidatorRegistry[0].StatusFlags != pb.Validator_INITIAL {
-		t.Errorf("Wanted flag INITIAL, got %v", newState.ValidatorRegistry[0].StatusFlags)
+func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
+	exitEpoch := uint64(199)
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{
+		ExitEpoch: exitEpoch},
+	}}
+	newState := InitiateValidatorExit(state, 0)
+	if newState.ValidatorRegistry[0].ExitEpoch != exitEpoch {
+		t.Errorf("Already exited, wanted exit epoch %d, got %d",
+			exitEpoch, newState.ValidatorRegistry[0].ExitEpoch)
 	}
-	if newState.ValidatorRegistry[2].StatusFlags != pb.Validator_INITIATED_EXIT {
-		t.Errorf("Wanted flag ACTIVE_PENDING_EXIT, got %v", newState.ValidatorRegistry[0].StatusFlags)
+}
+
+func TestInitiateValidatorExit_ProperExit(t *testing.T) {
+	exitedEpoch := uint64(100)
+	idx := uint64(3)
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{
+		{ExitEpoch: exitedEpoch},
+		{ExitEpoch: exitedEpoch + 1},
+		{ExitEpoch: exitedEpoch + 2},
+		{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+	}}
+	newState := InitiateValidatorExit(state, idx)
+	if newState.ValidatorRegistry[idx].ExitEpoch != exitedEpoch+2 {
+		t.Errorf("Exit epoch was not the highest, wanted exit epoch %d, got %d",
+			exitedEpoch+2, newState.ValidatorRegistry[idx].ExitEpoch)
+	}
+}
+
+func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
+	exitedEpoch := uint64(100)
+	idx := uint64(4)
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{
+		{ExitEpoch: exitedEpoch + 2},
+		{ExitEpoch: exitedEpoch + 2},
+		{ExitEpoch: exitedEpoch + 2},
+		{ExitEpoch: exitedEpoch + 2}, //over flow here
+		{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+	}}
+	newState := InitiateValidatorExit(state, idx)
+
+	// Because of exit queue overflow,
+	// validator who init exited has to wait one more epoch.
+	wantedEpoch := state.ValidatorRegistry[0].ExitEpoch + 1
+
+	if newState.ValidatorRegistry[idx].ExitEpoch != wantedEpoch {
+		t.Errorf("Exit epoch did not cover overflow case, wanted exit epoch %d, got %d",
+			wantedEpoch, newState.ValidatorRegistry[idx].ExitEpoch)
 	}
 }
 

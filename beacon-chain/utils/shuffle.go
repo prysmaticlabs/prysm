@@ -73,8 +73,8 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 	var divided [][]uint64
 	var lSize = uint64(len(l))
 	for i := uint64(0); i < n; i++ {
-		start := lSize * i / n
-		end := lSize * (i + 1) / n
+		start := SplitOffset(lSize, n, i)
+		end := SplitOffset(lSize, n, i+1)
 		divided = append(divided, l[start:end])
 	}
 	return divided
@@ -149,4 +149,17 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 
 	}
 	return index, nil
+}
+
+// SplitOffset returns (listsize * index) / chunks
+//
+// Spec pseudocode definition:
+// def get_split_offset(list_size: int, chunks: int, index: int) -> int:
+//     """
+//     Returns a value such that for a list L, chunk count k and index i,
+//     split(L, k)[i] == L[get_split_offset(len(L), k, i): get_split_offset(len(L), k, i+1)]
+//     """
+//     return (list_size * index) // chunks
+func SplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
+	return (listSize * index) / chunks
 }

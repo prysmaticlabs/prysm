@@ -61,7 +61,6 @@ func BaseReward(
 	state *pb.BeaconState,
 	validatorIndex uint64,
 	baseRewardQuotient uint64) uint64 {
-
 	validatorBalance := EffectiveBalance(state, validatorIndex)
 	return validatorBalance / baseRewardQuotient / 5
 }
@@ -82,4 +81,69 @@ func InactivityPenalty(
 	baseReward := BaseReward(state, validatorIndex, baseRewardQuotient)
 	validatorBalance := EffectiveBalance(state, validatorIndex)
 	return baseReward + validatorBalance*epochsSinceFinality/params.BeaconConfig().InactivityPenaltyQuotient/2
+}
+
+// Balance returns the Gwei balance of a validator by its index.
+//
+// Spec pseudocode definition:
+//   def get_balance(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//     """
+//     Return the balance for a validator with the given ``index``.
+//     """
+//     return state.balances[index]
+func Balance(state *pb.BeaconState, validatorIndex uint64) uint64 {
+	return state.Balances[validatorIndex]
+}
+
+// SetBalance sets the Gwei balance of a validator by its index.
+//
+// Spec pseudocode definition:
+// def set_balance(state: BeaconState, index: ValidatorIndex, balance: Gwei) -> None:
+//     """
+//     Set the balance for a validator with the given ``index`` in both ``BeaconState``
+//     and validator's rounded balance ``high_balance``.
+//     """
+//     validator = state.validator_registry[index]
+//     HALF_INCREMENT = HIGH_BALANCE_INCREMENT // 2
+//     if validator.high_balance > balance or validator.high_balance + 3 * HALF_INCREMENT < balance:
+//         validator.high_balance = balance - balance % HIGH_BALANCE_INCREMENT
+//     state.balances[index] = balance
+func SetBalance(state *pb.BeaconState, idx uint64, balance uint64) *pb.BeaconState {
+	validator := state.ValidatorRegistry[idx]
+	halfIncrement := params.BeaconConfig().EffectiveBalanceIncrement / 2
+	if validator.EffectiveBalance > balance || validator.EffectiveBalance+3*halfIncrement < balance {
+		validator.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
+	}
+	state.Balances[idx] = balance
+	return state
+}
+
+// IncreaseBalance increases validator with the given 'index' balance by 'delta' in Gwei.
+//
+// Spec pseudocode definition:
+// def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
+//     """
+//     Increase the balance for a validator with the given ``index`` by ``delta``.
+//     """
+//     set_balance(state, index, get_balance(state, index) + delta)
+func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
+	return SetBalance(state, idx, Balance(state, idx)+delta)
+}
+
+// DecreaseBalance decreases validator with the given 'index' balance by 'delta' in Gwei.
+//
+// def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
+//     """
+//     Decrease the balance for a validator with the given ``index`` by ``delta``.
+//     Set to ``0`` when underflow.
+//     """
+//     current_balance = get_balance(state, index)
+//     set_balance(state, index, current_balance - delta if current_balance >= delta else 0)
+func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
+	currentBalance := Balance(state, idx)
+	if currentBalance >= delta {
+		return SetBalance(state, idx, currentBalance-delta)
+
+	}
+	return SetBalance(state, idx, 0)
 }
