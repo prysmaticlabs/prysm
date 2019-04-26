@@ -133,8 +133,8 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 		}
 		// Add position except its last byte to []buf for randomness,
 		// it will be used later to select a bit from the resulting hash.
-		p4b := bytesutil.Bytes4(position >> 8)
-		copy(buf[pivotViewSize:], p4b[:])
+		position4bytes := bytesutil.Bytes4(position >> 8)
+		copy(buf[pivotViewSize:], position4bytes[:])
 		source := hashutil.Hash(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,
 		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
