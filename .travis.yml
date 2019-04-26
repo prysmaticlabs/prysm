@@ -10,6 +10,7 @@ matrix:
         - lint
       install:
         - go get ${gobuild_args} -t ./...
+        - go get ${gobuild_args} github.com/golangci/golangci-lint/cmd/golangci-lint
       script:
         - golangci-lint run
       email: false
