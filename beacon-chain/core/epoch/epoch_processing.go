@@ -7,6 +7,9 @@ package epoch
 import (
 	"encoding/binary"
 	"fmt"
+	"sort"
+
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 
@@ -387,4 +390,17 @@ func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	state.LatestRandaoMixes[nextEpoch] = randaoMix
 	return state, nil
+}
+
+func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
+	var setIndices []uint64
+	for _, att := range atts {
+		indices, err := helpers.AttestationParticipants(state, att.Data, att.AggregationBitfield)
+		if err != nil {
+			return nil, fmt.Errorf("could not get attester indices: %v", err)
+		}
+		setIndices = sliceutil.Union(setIndices, indices)
+	}
+	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
+
 }
