@@ -192,7 +192,8 @@ func (rs *RegularSync) validateAndProcessBlock(
 			return nil, nil, false, err
 		}
 	} else {
-		log.Errorf("Received Block from a Forked Chain %#x with slot %d", blockRoot, block.Slot)
+		forkedBlock.Inc()
+		log.Warnf("Received Block from a Forked Chain with root %#x and slot %d", blockRoot, block.Slot)
 	}
 
 	sentBlocks.Inc()
