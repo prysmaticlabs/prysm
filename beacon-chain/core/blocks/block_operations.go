@@ -639,6 +639,7 @@ func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttes
 		return false, fmt.Errorf("custody bit indice should not contain duplicates, received: %v", custodyBitIntersection)
 	}
 
+	// To be removed in phase 1
 	if len(custodyBit1Indices) > 0 {
 		return false, nil
 	}
@@ -651,12 +652,6 @@ func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttes
 
 	if !sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
 		return custodyBit0Indices[i] < custodyBit0Indices[j]
-	}) {
-		return false, nil
-	}
-
-	if !sort.SliceIsSorted(custodyBit1Indices, func(i, j int) bool {
-		return custodyBit1Indices[i] < custodyBit1Indices[j]
 	}) {
 		return false, nil
 	}
