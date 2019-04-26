@@ -32,6 +32,9 @@ var _ = shared.Service(&Server{})
 var _ = Broadcaster(&Server{})
 var _ = Sender(&Server{})
 
+const bar = "bar"
+const testTopic = "test_topic"
+
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
@@ -84,7 +87,7 @@ func TestBroadcast_OK(t *testing.T) {
 
 func TestEmit_OK(t *testing.T) {
 	s, _ := NewServer(&ServerConfig{})
-	p := &testpb.TestMessage{Foo: "bar"}
+	p := &testpb.TestMessage{Foo: bar}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -302,8 +305,8 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-	topic := "test_topic"
-	testMessage := &testpb.TestMessage{Foo: "bar"}
+	topic := testTopic
+	testMessage := &testpb.TestMessage{Foo: bar}
 
 	s.RegisterTopic(topic, testMessage)
 
@@ -316,8 +319,8 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 		defer close(wait)
 		msg := <-ch
 		tmsg := msg.Data.(*testpb.TestMessage)
-		if tmsg.Foo != "bar" {
-			t.Errorf("Expected test message Foo: \"bar\". Got: %v", tmsg)
+		if tmsg.Foo != bar {
+			t.Errorf("Expected test message foo:\"bar\". Got: %v", tmsg)
 		}
 	}()
 
@@ -338,8 +341,8 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-	topic := "test_topic"
-	testMessage := &testpb.TestMessage{Foo: "bar"}
+	topic := testTopic
+	testMessage := &testpb.TestMessage{Foo: bar}
 
 	i := 0
 	var testAdapter Adapter = func(next Handler) Handler {
@@ -368,7 +371,7 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 		defer close(wait)
 		msg := <-ch
 		tmsg := msg.Data.(*testpb.TestMessage)
-		if tmsg.Foo != "bar" {
+		if tmsg.Foo != bar {
 			t.Errorf("Expected test message Foo: \"bar\". Got: %v", tmsg)
 		}
 	}()
@@ -395,8 +398,8 @@ func TestRegisterTopic_HandlesPanic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-	topic := "test_topic"
-	testMessage := &testpb.TestMessage{Foo: "bar"}
+	topic := testTopic
+	testMessage := &testpb.TestMessage{Foo: bar}
 
 	var panicAdapter Adapter = func(next Handler) Handler {
 		return func(msg Message) {
