@@ -90,13 +90,13 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:         params.BeaconConfig().GenesisSlot,
-		RandaoReveal: randaoReveal,
+		Slot: params.BeaconConfig().GenesisSlot,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal:      randaoReveal,
 			ProposerSlashings: slashings,
 		},
 	}
@@ -133,13 +133,13 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:         params.BeaconConfig().GenesisSlot,
-		RandaoReveal: randaoReveal,
+		Slot: params.BeaconConfig().GenesisSlot,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal:      randaoReveal,
 			ProposerSlashings: slashings,
 			AttesterSlashings: attesterSlashings,
 		},
@@ -201,13 +201,13 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:         params.BeaconConfig().GenesisSlot,
-		RandaoReveal: randaoReveal,
+		Slot: params.BeaconConfig().GenesisSlot,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal:      randaoReveal,
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      blockAttestations,
@@ -293,13 +293,13 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:         params.BeaconConfig().GenesisSlot + 10,
-		RandaoReveal: randaoReveal,
+		Slot: params.BeaconConfig().GenesisSlot + 10,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal:      randaoReveal,
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
@@ -388,13 +388,13 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:         params.BeaconConfig().GenesisSlot + 10,
-		RandaoReveal: randaoReveal,
+		Slot: params.BeaconConfig().GenesisSlot + 10,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal:      randaoReveal,
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
@@ -446,7 +446,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,
-		ValidatorBalances:      validatorBalances,
+		Balances:               validatorBalances,
 		ValidatorRegistry:      validatorRegistry,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       crosslinkRecord,
@@ -506,7 +506,7 @@ func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,
-		ValidatorBalances:      validatorBalances,
+		Balances:               validatorBalances,
 		ValidatorRegistry:      validatorRegistry,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       crosslinkRecord,
@@ -577,7 +577,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,
-		ValidatorBalances:      validatorBalances,
+		Balances:               validatorBalances,
 		ValidatorRegistry:      validatorRegistry,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       crosslinkRecord,

@@ -204,10 +204,8 @@ func Shuffling(
 	epoch uint64) ([][]uint64, error) {
 
 	// Figure out how many committees can be in a single epoch.
-	activeIndices := ActiveValidatorIndices(validators, epoch)
-	s := &pb.BeaconState{
-		ValidatorRegistry: validators,
-	}
+	s := &pb.BeaconState{ValidatorRegistry: validators}
+	activeIndices := ActiveValidatorIndices(s, epoch)
 	committeesPerEpoch := EpochCommitteeCount(s, epoch)
 
 	// Convert slot to bytes and xor it with seed.
@@ -361,7 +359,7 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //        * ``assignment[0]`` is the list of validators in the committee
 //        * ``assignment[1]`` is the shard to which the committee is assigned
 //        * ``assignment[2]`` is the slot at which the committee is assigned
-//        * ``assignment[3]`` is a bool signalling if the validator is expected to propose
+//        * ``assignment[3]`` is a bool signaling if the validator is expected to propose
 //            a beacon block at the assigned slot.
 //    """
 //    previous_epoch = get_previous_epoch(state)

@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 
@@ -37,13 +38,28 @@ func (db *BeaconDB) SaveValidatorIndexBatch(pubKey []byte, index int) error {
 }
 
 // ValidatorIndex accepts a public key and returns the corresponding validator index.
+// If the validator index is not found in DB, as a fail over, it searches the state and
+// saves it to the DB when found.
 func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 	if !db.HasValidator(pubKey) {
+		state, err := db.HeadState(context.Background())
+		if err != nil {
+			return 0, err
+		}
+		for i := 0; i < len(state.ValidatorRegistry); i++ {
+			v := state.ValidatorRegistry[i]
+			if bytes.Equal(v.Pubkey, pubKey) {
+				if err := db.SaveValidatorIndex(pubKey, i); err != nil {
+					return 0, err
+				}
+				return uint64(i), nil
+			}
+		}
 		return 0, fmt.Errorf("validator %#x does not exist", pubKey)
 	}
+
 	var index uint64
 	h := hashutil.Hash(pubKey)
-
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorBucket)
 

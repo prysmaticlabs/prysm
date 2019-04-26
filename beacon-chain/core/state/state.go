@@ -88,7 +88,7 @@ func GenesisBeaconState(
 
 		// Validator registry fields.
 		ValidatorRegistry:            validatorRegistry,
-		ValidatorBalances:            latestBalances,
+		Balances:                     latestBalances,
 		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 
 		// Randomness and committees.
@@ -157,7 +157,7 @@ func GenesisBeaconState(
 			}
 		}
 	}
-	activeValidators := helpers.ActiveValidatorIndices(state.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(state, params.BeaconConfig().GenesisEpoch)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)

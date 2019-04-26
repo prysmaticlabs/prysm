@@ -95,7 +95,8 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	}
 	avgBalance := totalBalance / float32(len(validatorBalances))
 	balance := validatorBalances[index]
-	activeIndices := helpers.ActiveValidatorIndices(validatorRegistry, helpers.SlotToEpoch(req.Slot))
+	state := &pbp2p.BeaconState{ValidatorRegistry: validatorRegistry}
+	activeIndices := helpers.ActiveValidatorIndices(state, helpers.SlotToEpoch(req.Slot))
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                 balance,
 		AverageValidatorBalance: avgBalance,
@@ -109,7 +110,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	1.) The list of validators in the committee.
 //	2.) The shard to which the committee is assigned.
 //	3.) The slot at which the committee is assigned.
-//	4.) The bool signalling if the validator is expected to propose a block at the assigned slot.
+//	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) CommitteeAssignment(
 	ctx context.Context,
 	req *pb.CommitteeAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {

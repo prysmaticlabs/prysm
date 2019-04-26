@@ -340,7 +340,7 @@ func TestProcessCrosslinks_NoParticipantsBitField(t *testing.T) {
 func TestProcessEjections_EjectsAtCorrectSlot(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1,
-		ValidatorBalances: []uint64{
+		Balances: []uint64{
 			params.BeaconConfig().EjectionBalance - 1,
 			params.BeaconConfig().EjectionBalance + 1},
 		LatestSlashedBalances: []uint64{0},
@@ -583,7 +583,7 @@ func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 		t.Fatalf("could not update latest index roots: %v", err)
 	}
 	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
-	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
+	validatorIndices := helpers.ActiveValidatorIndices(state, nextEpoch)
 	indicesBytes := []byte{}
 	for _, val := range validatorIndices {
 		buf := make([]byte, 8)
@@ -597,5 +597,151 @@ func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 				"wanted: %v, got: %v", nextEpoch, indexRoot,
 			newState.LatestIndexRootHash32S[nextEpoch],
 		)
+	}
+}
+
+func TestMatchAttestations_PrevEpoch(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	s := params.BeaconConfig().GenesisSlot
+
+	// The correct epoch for source is the first epoch
+	// The correct vote for target is '1'
+	// The correct vote for head is '2'
+	prevAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + 1}},                                                    // source
+		{Data: &pb.AttestationData{Slot: s + 1, TargetRoot: []byte{1}}},                             // source, target
+		{Data: &pb.AttestationData{Slot: s + 1, TargetRoot: []byte{3}}},                             // source
+		{Data: &pb.AttestationData{Slot: s + 1, TargetRoot: []byte{1}}},                             // source, target
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}}},                        // source, head
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{4}}},                        // source
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{1}}}, // source, target, head
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{5}, TargetRoot: []byte{1}}}, // source, target
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{6}}}, // source, head
+	}
+
+	currentAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + e + 1}},                                                    // none
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{1}}}, // none
+	}
+
+	blockRoots := make([][]byte, 128)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i + 1)}
+	}
+	state := &pb.BeaconState{
+		Slot:                      s + e + 2,
+		CurrentEpochAttestations:  currentAtts,
+		PreviousEpochAttestations: prevAtts,
+		LatestBlockRoots:          blockRoots,
+	}
+
+	mAtts, err := MatchAttestations(state, params.BeaconConfig().GenesisEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantedSrcAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + 1}},
+		{Data: &pb.AttestationData{Slot: s + 1, TargetRoot: []byte{1}}},
+		{Data: &pb.AttestationData{Slot: s + 1, TargetRoot: []byte{3}}},
+		{Data: &pb.AttestationData{Slot: s + 1, TargetRoot: []byte{1}}},
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}}},
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{4}}},
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{1}}},
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{5}, TargetRoot: []byte{1}}},
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{6}}},
+	}
+	if !reflect.DeepEqual(mAtts.source, wantedSrcAtts) {
+		t.Error("source attestations don't match")
+	}
+
+	wantedTgtAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + 1, TargetRoot: []byte{1}}},
+		{Data: &pb.AttestationData{Slot: s + 1, TargetRoot: []byte{1}}},
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{1}}},
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{5}, TargetRoot: []byte{1}}},
+	}
+	if !reflect.DeepEqual(mAtts.target, wantedTgtAtts) {
+		t.Error("target attestations don't match")
+	}
+
+	wantedHeadAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}}},
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{1}}},
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{6}}},
+	}
+	if !reflect.DeepEqual(mAtts.head, wantedHeadAtts) {
+		t.Error("head attestations don't match")
+	}
+}
+
+func TestMatchAttestations_CurrentEpoch(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	s := params.BeaconConfig().GenesisSlot
+
+	// The correct epoch for source is the first epoch
+	// The correct vote for target is '65'
+	// The correct vote for head is '66'
+	prevAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + 1}},                                                    // none
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{1}}}, // none
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{5}, TargetRoot: []byte{1}}}, // none
+		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{6}}}, // none
+	}
+
+	currentAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + e + 1}},                                                      // source
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{65}}}, // source, target, head
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{69}, TargetRoot: []byte{65}}}, // source, target
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{68}}}, // source, head
+	}
+
+	blockRoots := make([][]byte, 128)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i + 1)}
+	}
+	state := &pb.BeaconState{
+		Slot:                      s + e + 2,
+		CurrentEpochAttestations:  currentAtts,
+		PreviousEpochAttestations: prevAtts,
+		LatestBlockRoots:          blockRoots,
+	}
+
+	mAtts, err := MatchAttestations(state, params.BeaconConfig().GenesisEpoch+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantedSrcAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + e + 1}},
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{65}}},
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{69}, TargetRoot: []byte{65}}},
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{68}}},
+	}
+	if !reflect.DeepEqual(mAtts.source, wantedSrcAtts) {
+		t.Error("source attestations don't match")
+	}
+
+	wantedTgtAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{65}}},
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{69}, TargetRoot: []byte{65}}},
+	}
+	if !reflect.DeepEqual(mAtts.target, wantedTgtAtts) {
+		t.Error("target attestations don't match")
+	}
+
+	wantedHeadAtts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{65}}},
+		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{68}}},
+	}
+	if !reflect.DeepEqual(mAtts.head, wantedHeadAtts) {
+		t.Error("head attestations don't match")
+	}
+}
+
+func TestMatchAttestations_EpochOutOfBound(t *testing.T) {
+	_, err := MatchAttestations(&pb.BeaconState{Slot: 1}, 2 /* epoch */)
+	if !strings.Contains(err.Error(), "input epoch: 2 != current epoch: 0") {
+		t.Fatal("Did not receive wanted error")
 	}
 }

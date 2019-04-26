@@ -25,7 +25,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	}
 	return &pb.BeaconState{
 		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
+		Balances:          validatorBalances,
 		Slot:              slot,
 	}
 }
@@ -191,7 +191,7 @@ func TestTotalBalance_CorrectBalance(t *testing.T) {
 	// Assign validators to different balances.
 	state := &pb.BeaconState{
 		Slot: 5,
-		ValidatorBalances: []uint64{20 * 1e9, 25 * 1e9, 30 * 1e9, 30 * 1e9,
+		Balances: []uint64{20 * 1e9, 25 * 1e9, 30 * 1e9, 30 * 1e9,
 			32 * 1e9, 34 * 1e9, 50 * 1e9, 50 * 1e9},
 	}
 
@@ -251,56 +251,6 @@ func TestInclusionSlot_SlotNotFound(t *testing.T) {
 	badIndex := uint64(10000)
 	want := fmt.Sprintf("could not find inclusion slot for validator index %d", badIndex)
 	if _, err := InclusionSlot(state, badIndex); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestInclusionDistance_CorrectDistance(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
-	var participationBitfield []byte
-	for i := 0; i < 16; i++ {
-		participationBitfield = append(participationBitfield, byte(0xff))
-	}
-
-	state.LatestAttestations = []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
-			AggregationBitfield: participationBitfield,
-			InclusionSlot:       params.BeaconConfig().GenesisSlot + 100},
-	}
-	distance, err := InclusionDistance(state, 251)
-	if err != nil {
-		t.Fatalf("Could not execute InclusionDistance: %v", err)
-	}
-
-	// Inclusion distance is 100 because input validator index is 45,
-	// validator 45's attested slot 0 and got included slot 100.
-	if distance != 100 {
-		t.Errorf("Incorrect distance. Wanted: %d, got: %d",
-			100, distance)
-	}
-}
-
-func TestInclusionDistance_InvalidBitfield(t *testing.T) {
-	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
-
-	state.LatestAttestations = []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
-			AggregationBitfield: []byte{},
-			InclusionSlot:       100},
-	}
-
-	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
-	if _, err := InclusionDistance(state, 0); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestInclusionDistance_NotFound(t *testing.T) {
-	state := buildState(0, params.BeaconConfig().SlotsPerEpoch)
-
-	badIndex := uint64(10000)
-	want := fmt.Sprintf("could not find inclusion distance for validator index %d", badIndex)
-	if _, err := InclusionDistance(state, badIndex); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }

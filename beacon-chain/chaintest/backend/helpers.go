@@ -41,7 +41,6 @@ func generateSimulatedBlock(
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:             beaconState.Slot + 1,
-		RandaoReveal:     epochSignature.Marshal(),
 		ParentRootHash32: prevBlockRoot[:],
 		StateRootHash32:  stateRoot[:],
 		Eth1Data: &pb.Eth1Data{
@@ -49,6 +48,7 @@ func generateSimulatedBlock(
 			BlockHash32:       []byte{2},
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal:      epochSignature.Marshal(),
 			ProposerSlashings: []*pb.ProposerSlashing{},
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},

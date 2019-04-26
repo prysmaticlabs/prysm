@@ -9,10 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -24,24 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
-
-var committeeCache = cache.NewCommitteesCache()
-
-type attesterInclusionStore struct {
-	slotLock sync.RWMutex
-	distLock sync.RWMutex
-	// attesterInclusion is a mapping that tracks when an attester's attestation
-	// last get included in beacon chain.
-	attesterInclusionSlot map[uint64]uint64
-	// attesterInclusion is a mapping that tracks the difference in slot number
-	// of when attestation gets submitted and when it gets included.
-	attesterInclusionDist map[uint64]uint64
-}
-
-var attsInclStore = attesterInclusionStore{
-	attesterInclusionSlot: make(map[uint64]uint64),
-	attesterInclusionDist: make(map[uint64]uint64),
-}
 
 // VerifyProposerSignature uses BLS signature verification to ensure
 // the correct proposer created an incoming beacon block during state
@@ -87,28 +67,32 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 	return beaconState
 }
 
-// ProcessBlockRandao checks the block proposer's
+// ProcessRandao checks the block proposer's
 // randao commitment and generates a new randao mix to update
 // in the beacon state's latest randao mixes slice.
 //
-// Official spec definition for block randao verification:
-//   Let proposer = state.validator_registry[get_beacon_proposer_index(state, state.slot)].
-//   Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
-//     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
-//   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
-//     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
-func ProcessBlockRandao(
+// Spec pseudocode definition:
+//   def process_randao(state: BeaconState, block: BeaconBlock) -> None:
+//     proposer = state.validator_registry[get_beacon_proposer_index(state)]
+//     # Verify that the provided randao value is valid
+//     assert bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)), block.body.randao_reveal, get_domain(state, DOMAIN_RANDAO))
+//     # Mix it in
+//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
+//         xor(get_randao_mix(state, get_current_epoch(state)),
+//             hash(block.body.randao_reveal))
+//     )
+func ProcessRandao(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
-
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
-	if err != nil {
-		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
-	}
 	if verifySignatures {
+		proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+		if err != nil {
+			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+		}
+
 		if err := verifyBlockRandao(beaconState, block, proposerIdx, enableLogging); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
@@ -118,7 +102,7 @@ func ProcessBlockRandao(
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
-	blockRandaoReveal := hashutil.Hash(block.RandaoReveal)
+	blockRandaoReveal := hashutil.Hash(block.Body.RandaoReveal)
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
@@ -126,8 +110,8 @@ func ProcessBlockRandao(
 	return beaconState, nil
 }
 
-// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(get_current_epoch(state)),
-//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
+// Verify that bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)),
+//   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
 func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64, enableLogging bool) error {
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
@@ -138,7 +122,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
-	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
+	sig, err := bls.SignatureFromBytes(block.Body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
@@ -433,38 +417,6 @@ func ProcessBlockAttestations(
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
 
-		var IndicesInCommittee []uint64
-		// get the validator indices from the attestation using committees info cache.
-		cachedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Slot)
-		if err != nil {
-			return nil, err
-		}
-		if cachedCommittees == nil {
-			crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, attestation.Data.Slot, false /* registryChange */)
-			if err != nil {
-				return nil, err
-			}
-			cachedCommittees = helpers.ToCommitteeCache(attestation.Data.Slot, crosslinkCommittees)
-			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-				return nil, err
-			}
-		}
-		for _, v := range cachedCommittees.Committees {
-			if v.Shard == attestation.Data.Shard {
-				IndicesInCommittee = v.Committee
-				break
-			}
-		}
-
-		attsInclStore.slotLock.Lock()
-		attsInclStore.distLock.Lock()
-		defer attsInclStore.slotLock.Unlock()
-		defer attsInclStore.distLock.Unlock()
-		for _, index := range IndicesInCommittee {
-			attsInclStore.attesterInclusionSlot[index] = beaconState.Slot
-			attsInclStore.attesterInclusionDist[index] = beaconState.Slot - attestation.Data.Slot
-		}
-
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
@@ -728,12 +680,13 @@ func ProcessValidatorExits(
 func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	entryExitEffectEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
-	if validator.ExitEpoch <= entryExitEffectEpoch {
+
+	delayedActivationExitEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	if validator.ExitEpoch <= delayedActivationExitEpoch {
 		return fmt.Errorf(
 			"validator exit epoch should be > entry_exit_effect_epoch, received %d <= %d",
 			currentEpoch,
-			entryExitEffectEpoch,
+			delayedActivationExitEpoch,
 		)
 	}
 	if currentEpoch < exit.Epoch {
@@ -753,26 +706,4 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 		return nil
 	}
 	return nil
-}
-
-// AttsInclusionSlot returns the slot of when an attestator's attestation last gets included
-// in the beacon chain by a proposer.
-func AttsInclusionSlot(index uint64) (uint64, error) {
-	attsInclStore.slotLock.RLock()
-	attsInclStore.slotLock.RUnlock()
-	if slot, ok := attsInclStore.attesterInclusionSlot[index]; ok {
-		return slot, nil
-	}
-	return 0, fmt.Errorf("no inclusion slot for attestor %d", index)
-}
-
-// AttsInclusionDistance returns diff in slot of when an attestator's attestation gets submitted
-// and included.
-func AttsInclusionDistance(index uint64) (uint64, error) {
-	attsInclStore.distLock.RLock()
-	attsInclStore.distLock.RUnlock()
-	if slot, ok := attsInclStore.attesterInclusionDist[index]; ok {
-		return slot, nil
-	}
-	return 0, fmt.Errorf("no inclusion distance for attestor %d", index)
 }
