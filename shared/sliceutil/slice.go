@@ -68,7 +68,7 @@ func IsInUint64(a uint64, b []uint64) bool {
 	return false
 }
 
-// Intersectionint64 of two int64 slices with time
+// IntersectionInt64 of two int64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
@@ -87,7 +87,7 @@ func IntersectionInt64(a []int64, b []int64) []int64 {
 	return set
 }
 
-// Unionint64 of two int64 slices with time
+// UnionInt64 of two int64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
@@ -107,7 +107,7 @@ func UnionInt64(a []int64, b []int64) []int64 {
 	return set
 }
 
-// Notint64 returns the int64 in slice a that are
+// NotInt64 returns the int64 in slice a that are
 // not in slice b with time complexity of approximately
 // O(n) leveraging a map to check for element existence
 // off by a constant factor of underlying map efficiency.
@@ -126,7 +126,7 @@ func NotInt64(a []int64, b []int64) []int64 {
 	return set
 }
 
-// IsInint64 returns true if a is in b and False otherwise.
+// IsInInt64 returns true if a is in b and False otherwise.
 func IsInInt64(a int64, b []int64) bool {
 	for _, v := range b {
 		if a == v {
