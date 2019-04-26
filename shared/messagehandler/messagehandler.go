@@ -10,6 +10,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+const noMsgData = "message contains no data"
+
 var log = logrus.WithField("prefix", "message-handler")
 
 // SafelyHandleMessage will recover and log any panic that occurs from the
@@ -17,7 +19,7 @@ var log = logrus.WithField("prefix", "message-handler")
 func SafelyHandleMessage(ctx context.Context, fn func(ctx context.Context, message proto.Message) error, msg proto.Message) {
 	defer func() {
 		if r := recover(); r != nil {
-			printedMsg := "message contains no data"
+			printedMsg := noMsgData
 			if msg != nil {
 				printedMsg = proto.MarshalTextString(msg)
 			}

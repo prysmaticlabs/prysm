@@ -32,9 +32,9 @@ var (
 
 // AncestorInfo defines the cached ancestor block object for height.
 type AncestorInfo struct {
-	Hash   []byte
 	Height uint64
-	Block  *pb.BeaconBlock
+	Hash   []byte
+	Target *pb.AttestationTarget
 }
 
 // AncestorBlockCache structs with 1 queue for looking up block ancestor by height.
