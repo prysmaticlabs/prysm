@@ -81,8 +81,8 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 }
 
 // PermutedIndex returns `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
-// Utilizes 'swap or not' shuffling in this implementation we are allocating the memory with the seed that stays
-// constant between iterations instead of reallocating it each iteration as in spec. this implementation is based
+// We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
+// constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
 //
 // Spec pseudocode definition:
