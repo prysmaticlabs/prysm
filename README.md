@@ -170,10 +170,10 @@ To run the unit tests of our system do:
 bazel test //...
 ```
 
-To run our linter, make sure you have [gometalinter](https://github.com/alecthomas/gometalinter) installed and then run:
+To run our linter, make sure you have [golangci-lint](https://https://github.com/golangci/golangci-lint) installed and then run:
 
 ```
-gometalinter ./...
+golangci-lint run
 ```
 
 # Contributing

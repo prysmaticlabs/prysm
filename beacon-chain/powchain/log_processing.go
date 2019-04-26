@@ -189,7 +189,7 @@ func (w *Web3Service) processPastLogs() error {
 // last polled to now.
 func (w *Web3Service) requestBatchedLogs() error {
 	// We request for the nth block behind the current head, in order to have
-	// stabilised logs when we retrieve it from the 1.0 chain.
+	// stabilized logs when we retrieve it from the 1.0 chain.
 	requestedBlock := big.NewInt(0).Sub(w.blockHeight, big.NewInt(params.BeaconConfig().LogBlockDelay))
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
