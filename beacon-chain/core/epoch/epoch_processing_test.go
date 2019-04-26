@@ -666,7 +666,7 @@ func TestUnslashedAttestingIndices_CantGetIndicesBitfieldError(t *testing.T) {
 	}
 	wantedErr := "could not get attester indices: wanted participants bitfield length 16, got: 1"
 	if _, err := UnslashedAttestingIndices(state, atts); !strings.Contains(err.Error(), wantedErr) {
-		t.Fatal(err)
+		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
 }
 
@@ -709,42 +709,23 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	}
 }
 
-func TestEarlistAttestation_CanGetEarlist(t *testing.T) {
-	// Generate 2 attestations.
+func TestAttestingBalance_CantGetIndicesBitfieldError(t *testing.T) {
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
-				Shard: uint64(i + 1),
+				Slot: params.BeaconConfig().GenesisSlot + uint64(i),
 			},
-			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+			AggregationBitfield: []byte{0xFF},
 		}
 	}
 
-	// Generate validators with balances and state for the 2 attestations.
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-		balances[i] = params.BeaconConfig().MaxDepositAmount
-	}
 	state := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot: params.BeaconConfig().GenesisSlot,
 	}
-
-	balance, err := AttestingBalance(state, atts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	wanted := 256 * params.BeaconConfig().MaxDepositAmount
-	if balance != wanted {
-		t.Errorf("wanted balance: %d, got: %d", wanted, balance)
+	wantedErr := "could not get attester indices: wanted participants bitfield length 16, got: 1"
+	if _, err := AttestingBalance(state, atts); !strings.Contains(err.Error(), wantedErr) {
+		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
 }
 
@@ -788,6 +769,26 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 	if att.InclusionSlot != wantedInclusion {
 		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionSlot)
 
+	}
+}
+
+func TestEarliestAttestation_CantGetIndicesBitfieldError(t *testing.T) {
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot: params.BeaconConfig().GenesisSlot + uint64(i),
+			},
+			AggregationBitfield: []byte{0xFF},
+		}
+	}
+
+	state := &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+	}
+	wantedErr := "could not get attester indices: wanted participants bitfield length 16, got: 1"
+	if _, err := EarlistAttestation(state, atts, 0); !strings.Contains(err.Error(), wantedErr) {
+		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
 }
 
