@@ -54,6 +54,8 @@ func (b *BlockFailedProcessingErr) Error() string {
 // 4. Process and cleanup any block operations, such as attestations and deposits, which would need to be
 //    either included or flushed from the beacon node's runtime.
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	c.receiveBlockLock.Lock()
+	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
