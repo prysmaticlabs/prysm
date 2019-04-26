@@ -64,6 +64,48 @@ func TestValidatorIndex_OK(t *testing.T) {
 	}
 }
 
+func TestValidatorIndex_InStateNotInDB(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+
+	// Wanted validator with public key 'A' is in index '1'.
+	s := &pbp2p.BeaconState{
+		ValidatorRegistry: []*pbp2p.Validator{{Pubkey: []byte{0}}, {Pubkey: []byte{'A'}}, {Pubkey: []byte{'B'}}},
+	}
+
+	if err := db.SaveState(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+
+	validatorServer := &ValidatorServer{
+		beaconDB: db,
+	}
+
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+
+	// Verify index can be retrieved from state when it's not saved in DB.
+	res, err := validatorServer.ValidatorIndex(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Index != 1 {
+		t.Errorf("Wanted index 1 got %d", res.Index)
+	}
+
+	// Verify index is also saved in DB.
+	idx, err := validatorServer.beaconDB.ValidatorIndex(pubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if idx != 1 {
+		t.Errorf("Wanted index 1 in DB got %d", res.Index)
+	}
+}
+
 func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
 	ctx := context.Background()
@@ -691,7 +733,9 @@ func TestAddNonActivePublicKeysAssignmentStatus(t *testing.T) {
 			},
 		},
 	}
-
+	if err := db.SaveState(context.Background(), beaconState); err != nil {
+		t.Fatal(err)
+	}
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}

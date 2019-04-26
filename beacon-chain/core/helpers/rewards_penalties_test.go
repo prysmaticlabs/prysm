@@ -61,11 +61,11 @@ func TestInactivityPenalty_OK(t *testing.T) {
 		a uint64
 		b uint64
 	}{
-		{1, 2929},
-		{2, 3883},
-		{5, 6744},
-		{10, 11512},
-		{50, 49659},
+		{1, 2452},
+		{2, 2929},
+		{5, 4360},
+		{10, 6744},
+		{50, 25817},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{
@@ -146,15 +146,15 @@ func TestSetBalance_OK(t *testing.T) {
 	for _, test := range tests {
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.Validator{
-				{HighBalance: 4}, {HighBalance: 4}, {HighBalance: 4}},
+				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
 		}
 		state = SetBalance(state, test.i, test.nb)
 		if Balance(state, test.i) != test.nb {
 			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.nb, Balance(state, test.i))
 		}
-		if state.ValidatorRegistry[test.i].HighBalance != test.hb {
-			t.Errorf("Incorrect Validator HighBalance. Wanted: %d, got: %d", test.hb, state.ValidatorRegistry[test.i].HighBalance)
+		if state.ValidatorRegistry[test.i].EffectiveBalance != test.hb {
+			t.Errorf("Incorrect Validator EffectiveBalance. Wanted: %d, got: %d", test.hb, state.ValidatorRegistry[test.i].EffectiveBalance)
 		}
 	}
 }
@@ -173,7 +173,7 @@ func TestIncreseBalance_OK(t *testing.T) {
 	for _, test := range tests {
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.Validator{
-				{HighBalance: 4}, {HighBalance: 4}, {HighBalance: 4}},
+				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
 		}
 		state = IncreaseBalance(state, test.i, test.nb)
@@ -196,7 +196,7 @@ func TestDecreseBalance_OK(t *testing.T) {
 	for _, test := range tests {
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.Validator{
-				{HighBalance: 4}, {HighBalance: 4}, {HighBalance: 4}},
+				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
 		}
 		state = DecreaseBalance(state, test.i, test.nb)

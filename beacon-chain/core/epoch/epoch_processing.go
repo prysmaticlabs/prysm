@@ -442,8 +442,9 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
 	}
 
-	var tgtAtts []*pb.PendingAttestation
-	var headAtts []*pb.PendingAttestation
+	//var tgtAtts []*pb.PendingAttestation
+	tgtAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
+	headAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
 	for _, srcAtt := range srcAtts {
 		// If the target root matches attestation's target root,
 		// then we know this attestation has correctly voted for target.
