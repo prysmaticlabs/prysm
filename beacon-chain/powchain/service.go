@@ -79,7 +79,6 @@ type Web3Service struct {
 	chainStartFeed          *event.Feed
 	reader                  Reader
 	logger                  bind.ContractFilterer
-	httpLogger              bind.ContractFilterer
 	blockFetcher            POWBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
@@ -146,7 +145,6 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		depositTrie:             depositTrie,
 		reader:                  config.Reader,
 		logger:                  config.Logger,
-		httpLogger:              config.HTTPLogger,
 		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      [][]byte{},
@@ -252,10 +250,13 @@ func (w *Web3Service) initDataFromContract() error {
 	return nil
 }
 
-// processSubscribedHeaders adds a newly observed eth1 block to the block cache and
+// processHeader adds a newly observed eth1 block to the block cache and
 // updates the latest blockHeight, blockHash, and blockTime properties of the service.
-func (w *Web3Service) processSubscribedHeaders(header *gethTypes.Header) {
+func (w *Web3Service) processHeader(header *gethTypes.Header) {
 	defer safelyHandlePanic()
+	if header.Number.Cmp(w.blockHeight) == -1 {
+		return
+	}
 	blockNumberGauge.Set(float64(header.Number.Int64()))
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
@@ -306,13 +307,6 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		return
 	}
 
-	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
-	if err != nil {
-		log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
-		w.runError = err
-		return
-	}
-
 	header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
 	if err != nil {
 		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
@@ -330,8 +324,9 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
-	defer headSub.Unsubscribe()
 	defer ticker.Stop()
+	headRequestTicker := time.NewTicker(3*time.Second)
+	defer headRequestTicker.Stop()
 
 	for {
 		select {
@@ -340,11 +335,14 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			w.runError = nil
 			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
 			return
-		case w.runError = <-headSub.Err():
-			log.Debugf("Unsubscribed to head events, exiting goroutine: %v", w.runError)
-			return
-		case header := <-w.headerChan:
-			w.processSubscribedHeaders(header)
+		case <-headRequestTicker.C:
+			header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
+			if err != nil {
+				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
+				w.runError = err
+				return
+			}
+			w.processHeader(header)
 		case <-ticker.C:
 			w.handleDelayTicker()
 		}

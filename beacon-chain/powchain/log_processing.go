@@ -164,7 +164,7 @@ func (w *Web3Service) processPastLogs() error {
 		},
 	}
 
-	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
+	logs, err := w.logger.FilterLogs(w.ctx, query)
 	if err != nil {
 		return err
 	}
