@@ -469,3 +469,24 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 		head:   headAtts,
 	}, nil
 }
+
+// CrosslinkFromAttsData returns a constructed crosslink from attestation data.
+//
+// Spec pseudocode definition:
+//	def get_crosslink_from_attestation_data(state: BeaconState, data: AttestationData) -> Crosslink:
+//    return Crosslink(
+//        epoch=min(slot_to_epoch(data.slot), state.current_crosslinks[data.shard].epoch + MAX_CROSSLINK_EPOCHS),
+//        previous_crosslink_root=data.previous_crosslink_root,
+//        crosslink_data_root=data.crosslink_data_root,
+//    )
+func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *pb.Crosslink {
+	epoch := helpers.SlotToEpoch(attData.Slot)
+	if epoch > state.CurrentCrosslinks[attData.Shard].Epoch+params.BeaconConfig().MaxCrosslinkEpochs {
+		epoch = state.CurrentCrosslinks[attData.Shard].Epoch + params.BeaconConfig().MaxCrosslinkEpochs
+	}
+	return &pb.Crosslink{
+		Epoch:                       epoch,
+		CrosslinkDataRootHash32:     attData.CrosslinkDataRoot,
+		PreviousCrosslinkRootHash32: attData.PreviousCrosslinkRoot,
+	}
+}
