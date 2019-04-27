@@ -103,7 +103,7 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
 	// RegistryChange is false because BeaconProposerIndex is only written
 	// to be able to get proposers from current and previous epoch following
 	// ETH2.0 beacon chain spec.
-	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
+	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
 	if err != nil {
 		return 0, err
 	}

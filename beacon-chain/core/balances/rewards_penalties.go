@@ -338,7 +338,7 @@ func Crosslinks(
 	for i := startSlot; i < endSlot; i++ {
 		// RegistryChange is a no-op when requesting slot in current and previous epoch.
 		// Process crosslinks rewards will never request crosslink committees of next epoch.
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false /* registryChange */)
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v",
 				i-params.BeaconConfig().GenesisSlot, err)

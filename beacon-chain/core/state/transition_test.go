@@ -438,11 +438,11 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	}
 
 	var randaoHashes [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength; i++ {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
-	crosslinkRecord := make([]*pb.Crosslink, 64)
+	crosslinkRecord := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,
@@ -568,11 +568,11 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	}
 
 	var randaoHashes [][]byte
-	for i := uint64(0); i < 5*params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength; i++ {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
-	crosslinkRecord := make([]*pb.Crosslink, 64)
+	crosslinkRecord := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
@@ -633,7 +633,9 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 		LatestAttestations:     attestations,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestBlockRootHash32S: latestBlockRoots,
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	wanted := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 0, 1)

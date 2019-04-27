@@ -232,10 +232,12 @@ func TestCrosslinkCommitteesAtSlot_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot + 200,
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot + 200,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
-	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+132, false)
+	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+132)
 	if err != nil {
 		t.Fatalf("Could not get crosslink committee: %v", err)
 	}
@@ -244,7 +246,7 @@ func TestCrosslinkCommitteesAtSlot_OK(t *testing.T) {
 			committeesPerEpoch, len(committees))
 	}
 
-	newCommittees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+180, false)
+	newCommittees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+180)
 	if err != nil {
 		t.Fatalf("Could not get crosslink committee: %v", err)
 	}
@@ -272,7 +274,7 @@ func TestCrosslinkCommitteesAtSlot_RegistryChange(t *testing.T) {
 		LatestRandaoMixes:      [][]byte{{'C'}, {'D'}},
 	}
 
-	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+100, true)
+	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+100)
 	if err != nil {
 		t.Fatalf("Could not get crosslink committee: %v", err)
 	}
@@ -301,7 +303,7 @@ func TestCrosslinkCommitteesAtSlot_EpochSinceLastUpdatePow2(t *testing.T) {
 		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 	}
 
-	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+192, false)
+	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+192)
 	if err != nil {
 		t.Fatalf("Could not get crosslink committee: %v", err)
 	}
@@ -323,7 +325,7 @@ func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2,
 	}
 
-	if _, err := CrosslinkCommitteesAtSlot(beaconState, slot, false); !strings.Contains(err.Error(), want) {
+	if _, err := CrosslinkCommitteesAtSlot(beaconState, slot); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -338,7 +340,7 @@ func TestCrosslinkCommitteesAtSlot_ShuffleFailed(t *testing.T) {
 		"input list exceeded upper bound and reached modulo bias",
 	)
 
-	if _, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+1, false); !strings.Contains(err.Error(), want) {
+	if _, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
 	}
 }
