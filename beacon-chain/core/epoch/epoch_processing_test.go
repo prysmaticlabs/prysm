@@ -960,5 +960,22 @@ func TestCrosslinkFromAttsData_OK(t *testing.T) {
 }
 
 func TestAttsForCrosslink_OK(t *testing.T) {
-
+	s := &pb.BeaconState{
+		CurrentCrosslinks: []*pb.Crosslink{
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+		},
+	}
+	c := &pb.Crosslink{
+		CrosslinkDataRootHash32: []byte{'B'},
+	}
+	atts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'A'}}},
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'B'}}}, // Selected
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'C'}}},
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'B'}}}} // Selected
+	if !reflect.DeepEqual(attsForCrosslink(s, c, atts), []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'B'}}},
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'B'}}}}) {
+		t.Error("Incorrect attestations for crosslink")
+	}
 }
