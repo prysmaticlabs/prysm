@@ -172,6 +172,11 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
+	if err := rs.db.SaveHistoricalState(ctx, beaconState); err != nil {
+		log.Errorf("Could not save historical state at slot %d: %v", beaconState.Slot, err)
+		return nil, nil, false, err
+	}
+
 	head, err := rs.db.ChainHead()
 	if err != nil {
 		log.Errorf("Could not retrieve chainhead %v", err)
