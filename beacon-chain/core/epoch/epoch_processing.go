@@ -490,3 +490,28 @@ func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *
 		PreviousCrosslinkRootHash32: attData.PreviousCrosslinkRoot,
 	}
 }
+
+// WinningCrosslink returns the winning crosslink and its attesting indices of a given shard and epoch.
+//
+// Spec pseudocode definition:
+//	def get_winning_crosslink_and_attesting_indices(state: BeaconState, shard: Shard, epoch: Epoch) -> Tuple[Crosslink, List[ValidatorIndex]]:
+//    shard_attestations = [a for a in get_matching_source_attestations(state, epoch) if a.data.shard == shard]
+//    shard_crosslinks = [get_crosslink_from_attestation_data(state, a.data) for a in shard_attestations]
+//    candidate_crosslinks = [
+//        c for c in shard_crosslinks
+//        if hash_tree_root(state.current_crosslinks[shard]) in (c.previous_crosslink_root, hash_tree_root(c))
+//    ]
+//    if len(candidate_crosslinks) == 0:
+//        return Crosslink(epoch=GENESIS_EPOCH, previous_crosslink_root=ZERO_HASH, crosslink_data_root=ZERO_HASH), []
+//
+//    def get_attestations_for(crosslink: Crosslink) -> List[PendingAttestation]:
+//        return [a for a in shard_attestations if get_crosslink_from_attestation_data(state, a.data) == crosslink]
+//    # Winning crosslink has the crosslink data root with the most balance voting for it (ties broken lexicographically)
+//    winning_crosslink = max(candidate_crosslinks, key=lambda crosslink: (
+//        get_attesting_balance(state, get_attestations_for(crosslink)), crosslink.crosslink_data_root
+//    ))
+//
+//    return winning_crosslink, get_unslashed_attesting_indices(state, get_attestations_for(winning_crosslink))
+func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, []uint64) {
+
+}
