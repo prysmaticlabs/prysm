@@ -398,55 +398,6 @@ func TestActivateValidator_OK(t *testing.T) {
 	}
 }
 
-func TestDoubleActivatedValidator(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 100, // epoch 2
-		ValidatorRegistry: []*pb.Validator{
-			{Pubkey: []byte{'A'}},
-		},
-	}
-	newState, err := ActivateValidator(state, 0, false)
-	if err != nil {
-		t.Fatalf("could not execute activateValidator:%v", err)
-	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	wantedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
-	if newState.ValidatorRegistry[0].ActivationEpoch != wantedEpoch {
-		t.Errorf("Wanted activation slot = %d, got %d",
-			wantedEpoch,
-			newState.ValidatorRegistry[0].ActivationEpoch)
-	}
-
-	repeatedState, err := ActivateValidator(state, 0, false)
-	if err != nil {
-		t.Fatalf("could not execute activateValidator Initially:%v", err)
-	}
-
-	activeValidatorIndices := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, currentEpoch)
-
-	totalBalance := helpers.TotalBalance(newState, activeValidatorIndices)
-
-	maxBalanceChurn := maxBalanceChurn(totalBalance)
-
-	var balChurn uint64
-
-	for idx, validator := range repeatedState.ValidatorRegistry {
-		if !helpers.IsActiveValidator(validator, currentEpoch) {
-			balChurn += helpers.EffectiveBalance(repeatedState, uint64(idx))
-			fmt.Println("Validator activation attempt")
-
-			if balChurn > maxBalanceChurn {
-				break
-			}
-
-			newState, err = ActivateValidator(newState, uint64(idx), false)
-			if len(vStore.activatedValidators[wantedEpoch]) != len(append(vStore.activatedValidators[wantedEpoch], uint64(idx))) {
-				t.Errorf("Wanted unique activated validator, got %v", vStore.activatedValidators[wantedEpoch])
-			}
-		}
-	}
-}
-
 func TestInitiateValidatorExit_OK(t *testing.T) {
 	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{}, {}, {}}}
 	newState := InitiateValidatorExit(state, 2)
