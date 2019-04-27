@@ -90,6 +90,11 @@ func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*geth
 }
 
 func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+	if number == nil {
+		return &gethTypes.Header{
+			Number: big.NewInt(0),
+		}, nil
+	}
 	return &gethTypes.Header{
 		Number: big.NewInt(number.Int64()),
 	}, nil
