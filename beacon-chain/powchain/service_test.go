@@ -91,8 +91,22 @@ func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*geth
 
 func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
 	return &gethTypes.Header{
-		Number: big.NewInt(0),
+		Number: big.NewInt(number.Int64()),
 	}, nil
+}
+
+type badFetcher struct{}
+
+func (b *badFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	return nil, errors.New("block does not exist")
+}
+
+func (b *badFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	return nil, errors.New("block does not exist")
+}
+
+func (b *badFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+	return nil, errors.New("header does not exist")
 }
 
 var amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
@@ -366,4 +380,53 @@ func TestHandlePanic_OK(t *testing.T) {
 
 	web3Service.processSubscribedHeaders(nil)
 	testutil.AssertLogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
+}
+
+func TestSkippedHeaders_OK(t *testing.T) {
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &goodFetcher{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service.blockCache = newBlockCache()
+	web3Service.blockHeight = big.NewInt(10)
+	header := &gethTypes.Header{
+		Number: big.NewInt(13),
+	}
+	web3Service.handleSkippedHeaders(context.Background(), header)
+	exists, _, err := web3Service.blockCache.BlockInfoByHeight(big.NewInt(11))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Error("Block doesn't exist in cache")
+	}
+
+	exists, _, err = web3Service.blockCache.BlockInfoByHeight(big.NewInt(12))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Error("Block doesn't exist in cache")
+	}
+}
+
+func TestSkippedHeaders_NoBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &badFetcher{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	web3Service.blockHeight = big.NewInt(10)
+	header := &gethTypes.Header{
+		Number: big.NewInt(13),
+	}
+	web3Service.handleSkippedHeaders(context.Background(), header)
+	testutil.AssertLogsContain(t, hook, "Unable to fetch header")
 }

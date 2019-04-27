@@ -257,6 +257,7 @@ func (w *Web3Service) initDataFromContract() error {
 func (w *Web3Service) processSubscribedHeaders(header *gethTypes.Header) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
+	w.handleSkippedHeaders(w.ctx, header)
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
 	w.blockTime = time.Unix(int64(header.Time), 0)
@@ -294,6 +295,27 @@ func (w *Web3Service) handleDelayTicker() {
 	if err := w.requestBatchedLogs(); err != nil {
 		w.runError = err
 		log.Error(err)
+	}
+}
+
+func (w *Web3Service) handleSkippedHeaders(ctx context.Context, header *gethTypes.Header) {
+	headerHeight := header.Number.Uint64()
+	currentHeight := w.blockHeight.Uint64()
+
+	if headerHeight > currentHeight+1 {
+		for i := currentHeight + 1; i < headerHeight; i++ {
+			header, err := w.blockFetcher.HeaderByNumber(ctx, big.NewInt(int64(i)))
+			if err != nil {
+				w.runError = err
+				log.Errorf("Unable to fetch header: %v", err)
+				continue
+			}
+			if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+				w.runError = err
+				log.Errorf("Unable to add block data to cache %v", err)
+				continue
+			}
+		}
 	}
 }
 
