@@ -584,11 +584,11 @@ func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *
 //    ))
 //
 //    return winning_crosslink, get_unslashed_attesting_indices(state, get_attestations_for(winning_crosslink))
-func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, []uint64, error) {
+func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, error) {
 	var shardAtts []*pb.PendingAttestation
 	matchedAtts, err := MatchAttestations(state, epoch)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	for _, att := range matchedAtts.source {
 		if att.Data.Shard == shard {
@@ -606,7 +606,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 		cFromState := state.CurrentCrosslinks[shard]
 		h, err := hashutil.HashProto(cFromState)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if proto.Equal(cFromState, c) || bytes.Equal(h[:], c.PreviousCrosslinkRootHash32) {
 			candidateCrosslinks = append(candidateCrosslinks, c)
@@ -618,18 +618,38 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 			Epoch:                       params.BeaconConfig().GenesisEpoch,
 			CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
 			PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
-		}, nil, nil
+		}, nil
 	}
 
-	winnerCrosslink := candidateCrosslinks[0]
+	var crosslinkAtts []*pb.PendingAttestation
+	var winnerBalance uint64
+	var winnerCrosslink *pb.Crosslink
+	for _, a := range shardAtts {
+		if proto.Equal(CrosslinkFromAttsData(state, a.Data), candidateCrosslinks[0]) {
+			crosslinkAtts = append(crosslinkAtts, a)
+		}
+		winnerBalance, err = AttestingBalance(state, crosslinkAtts)
+		winnerCrosslink = candidateCrosslinks[0]
+		if err != nil {
+			return nil, err
+		}
+	}
 	for _, c := range candidateCrosslinks {
-		var crosslinkAtts []*pb.PendingAttestation
+		crosslinkAtts := crosslinkAtts[:0]
 		for _, a := range shardAtts {
 			if proto.Equal(CrosslinkFromAttsData(state, a.Data), c) {
 				crosslinkAtts = append(crosslinkAtts, a)
 			}
-			TotalAttestingBalance()
+			attestingBalance, err := AttestingBalance(state, crosslinkAtts)
+			if err != nil {
+				return nil, err
+			}
+			if attestingBalance > winnerBalance {
+				winnerCrosslink = c
+			}
 		}
 	}
-
+	return winnerCrosslink, nil
 }
+
+func crossl
