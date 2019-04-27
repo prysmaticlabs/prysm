@@ -198,7 +198,7 @@ func (w *Web3Service) requestBatchedLogs() error {
 		FromBlock: w.lastRequestedBlock.Add(w.lastRequestedBlock, big.NewInt(1)),
 		ToBlock:   requestedBlock,
 	}
-	logs, err := w.logger.FilterLogs(w.ctx, query)
+	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
 	if err != nil {
 		return err
 	}
