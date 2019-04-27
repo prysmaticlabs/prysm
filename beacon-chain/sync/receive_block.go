@@ -67,10 +67,8 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	defer span.End()
 	recBlock.Inc()
 	rs.blockProcessingLock.Lock()
-	err := rs.processBlockAndFetchAncestors(ctx, msg)
-	rs.blockProcessingLock.Unlock()
-
-	return err
+	defer rs.blockProcessingLock.Unlock()
+	return rs.processBlockAndFetchAncestors(ctx, msg)
 }
 
 // processBlockAndFetchAncestors verifies if a block has a child in the pending blocks map - if so, then
