@@ -587,42 +587,40 @@ func TestUpdateRegistry_Activations(t *testing.T) {
 
 func TestDoubleActivatedValidator(t *testing.T) {
 	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 		ValidatorRegistry: []*pb.Validator{
-			{
-				ExitEpoch:       params.BeaconConfig().ActivationExitDelay,
-				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1,
-			},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
 		},
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
+	currentEpoch := helpers.CurrentEpoch(state)
 	newState, err := UpdateRegistry(state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	wantedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, currentEpoch)
-	totalBalance := helpers.TotalBalance(newState, activeValidatorIndices)
+	totalBalance := helpers.EffectiveBalance(state, 0)
+	maxBalChurn := maxBalanceChurn(totalBalance)
 	var balChurn uint64
-	maxBalanceChurn := maxBalanceChurn(totalBalance)
 	for idx, validator := range newState.ValidatorRegistry {
-		if !(validator.ActivationEpoch <= currentEpoch && currentEpoch < validator.ExitEpoch) {
-			if newState.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
+		if validator.ActivationEpoch <= currentEpoch && currentEpoch < validator.ExitEpoch {
+			t.Errorf("received duplicate validator: %v", err)
+			if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
 				balChurn = params.BeaconConfig().MaxDepositAmount
 			}
-			balChurn = newState.ValidatorBalances[idx]
-			if balChurn > maxBalanceChurn {
+			balChurn = state.ValidatorBalances[idx]
+			if balChurn > maxBalChurn {
 				break
 			}
-			newState, err = ActivateValidator(newState, uint64(idx), false)
+			state, err = ActivateValidator(state, uint64(idx), false)
 			if err != nil {
 				t.Errorf("could not activate validator %d: %v", idx, err)
 			}
-			vStore.activatedValidators[wantedEpoch] = append(vStore.activatedValidators[wantedEpoch], uint64(idx))
-		} else {
-			t.Log("Validator is already active")
 		}
 	}
 }
