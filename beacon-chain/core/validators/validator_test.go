@@ -417,6 +417,11 @@ func TestDoubleActivatedValidator(t *testing.T) {
 			newState.ValidatorRegistry[0].ActivationEpoch)
 	}
 
+	repeatedState, err := ActivateValidator(state, 0, false)
+	if err != nil {
+		t.Fatalf("could not execute activateValidator Initially:%v", err)
+	}
+
 	activeValidatorIndices := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, currentEpoch)
 
 	totalBalance := helpers.TotalBalance(newState, activeValidatorIndices)
@@ -425,9 +430,9 @@ func TestDoubleActivatedValidator(t *testing.T) {
 
 	var balChurn uint64
 
-	for idx, validator := range newState.ValidatorRegistry {
+	for idx, validator := range repeatedState.ValidatorRegistry {
 		if !helpers.IsActiveValidator(validator, currentEpoch) {
-			balChurn += helpers.EffectiveBalance(newState, uint64(idx))
+			balChurn += helpers.EffectiveBalance(repeatedState, uint64(idx))
 			fmt.Println("Validator activation attempt")
 
 			if balChurn > maxBalanceChurn {
