@@ -138,3 +138,7 @@ message ExitResponse {
   bytes hash = 1;
   VoluntaryExit voluntary_exit = 2;
 }
+
+message Handshake {
+  string deposit_contract_address = 1;
+}
