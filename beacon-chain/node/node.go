@@ -4,8 +4,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -248,22 +246,11 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	depAddress := cliCtx.GlobalString(utils.DepositContractFlag.Name)
 
 	if depAddress == "" {
-		log.Infof("Fetching testnet cluster address from %s...", params.BeaconConfig().TestnetContractEndpoint)
-		resp, err := http.Get(params.BeaconConfig().TestnetContractEndpoint)
+		var err error
+		depAddress, err = fetchDepositContract()
 		if err != nil {
-			log.Fatalf("Could not get latest deposit contract address: %v", err)
+			log.WithError(err).Fatal("Cannot fetch deposit contract")
 		}
-		defer func() {
-			if err := resp.Body.Close(); err != nil {
-				log.Fatal(err)
-			}
-		}()
-
-		contractResponse, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		depAddress = string(contractResponse)
 	}
 
 	if !common.IsHexAddress(depAddress) {

@@ -39,19 +39,14 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-func TestStartDialRelayNode_InvalidMultiaddress(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	s, err := NewServer(&ServerConfig{
+func TestNewServer_InvalidMultiaddress(t *testing.T) {
+	_, err := NewServer(&ServerConfig{
 		RelayNodeAddr: "bad",
 	})
 
-	if err != nil {
-		t.Fatalf("Unable to create server: %v", err)
+	if err.Error() != "invalid multiaddr, must begin with /" {
+		t.Fatal("expected invalid multiaddr err")
 	}
-
-	s.Start()
-	logContains(t, hook, "Could not dial relay node: invalid multiaddr, must begin with /", logrus.ErrorLevel)
 }
 
 func TestP2P_PortTaken(t *testing.T) {
@@ -447,6 +442,8 @@ func TestStatus_MinimumPeers(t *testing.T) {
 func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Message) error {
 	ctx := context.Background()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+
+	setHandshakeHandler(h, "")
 
 	gsub, err := pubsub.NewFloodSub(ctx, h)
 	if err != nil {
