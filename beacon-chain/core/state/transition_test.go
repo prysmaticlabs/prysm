@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -76,6 +77,16 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
+}
+
+func TestProcessBlock_VerifySignature(t *testing.T) {
+	block := &pb.BeaconBlock{
+		Signature: make([]byte, 5, 5),
+	}
+	if err := b.VerifyProposerSignature(block); err != nil {
+		t.Errorf("unable to verify proposer signature: %v", err)
+	}
+	t.Logf("Signature was verified %v", b.VerifyProposerSignature(block))
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
