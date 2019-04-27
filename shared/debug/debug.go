@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" // required to serve pprof http endpoints.
 	"os"
 	"os/user"
 	"path/filepath"
