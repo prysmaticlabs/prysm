@@ -76,7 +76,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 // At the end of the recursive call, we'll have a block which has no children in the map, and at that point
 // we can apply the fork choice rule for ETH 2.0.
 func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2p.Message) error {
-	block, beaconState, isValid, err := rs.validateAndProcessBlock(ctx, msg)
+	block, _, isValid, err := rs.validateAndProcessBlock(ctx, msg)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2
 		rs.clearPendingBlock(blockRoot)
 		return rs.processBlockAndFetchAncestors(ctx, child)
 	}
-	return rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState)
+	return nil
 }
 
 func (rs *RegularSync) validateAndProcessBlock(
