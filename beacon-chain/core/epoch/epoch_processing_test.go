@@ -979,3 +979,53 @@ func TestAttsForCrosslink_OK(t *testing.T) {
 		t.Error("Incorrect attestations for crosslink")
 	}
 }
+
+func TestCrosslinkAttestingIndices_OK(t *testing.T) {
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:                  params.BeaconConfig().GenesisSlot + uint64(i),
+				Shard:                 uint64(i + 1),
+				PreviousCrosslinkRoot: []byte{'E'},
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
+				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
+		}
+	}
+
+	// Generate validators and state for the 2 attestations.
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	s := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: validators,
+		CurrentCrosslinks: []*pb.Crosslink{
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+		},
+	}
+	c := &pb.Crosslink{
+		Epoch:                       params.BeaconConfig().GenesisEpoch,
+		PreviousCrosslinkRootHash32: []byte{'E'},
+	}
+	indices, err := CrosslinkAttestingIndices(s, c, atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify the there's indices and it's sorted.
+	if len(indices) == 0 {
+		t.Error("crosslink attesting indices length can't be 0")
+	}
+	for i := 0; i < len(indices)-1; i++ {
+		if indices[i] > indices[i+1] {
+			t.Error("sorted indices not sorted")
+		}
+	}
+}
