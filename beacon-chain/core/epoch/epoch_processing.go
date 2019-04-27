@@ -449,7 +449,9 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 //        a for a in attestations if index in get_attesting_indices(state, a.data, a.aggregation_bitfield)
 //    ], key=lambda a: a.inclusion_slot)
 func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, index uint64) (*pb.PendingAttestation, error) {
-	var attested []*pb.PendingAttestation
+	earliest := &pb.PendingAttestation{
+		InclusionSlot: params.BeaconConfig().FarFutureEpoch,
+	}
 	for _, att := range atts {
 		indices, err := helpers.AttestationParticipants(state, att.Data, att.AggregationBitfield)
 		if err != nil {
@@ -457,18 +459,13 @@ func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, in
 		}
 		for _, i := range indices {
 			if index == i {
-				attested = append(attested, att)
+				if earliest.InclusionSlot > att.InclusionSlot {
+					earliest = att
+				}
 			}
 		}
 	}
-
-	earlist := attested[0]
-	for _, att := range attested {
-		if earlist.InclusionSlot > att.InclusionSlot {
-			earlist = att
-		}
-	}
-	return earlist, nil
+	return earliest, nil
 }
 
 // MatchAttestations matches the attestations gathered in a span of an epoch
