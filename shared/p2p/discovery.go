@@ -73,6 +73,6 @@ func (d *discovery) HandlePeerFound(pi ps.PeerInfo) {
 	}
 
 	log.WithFields(logrus.Fields{
-		"peers": d.host.Peerstore().Peers(),
+		"peers": d.host.Network().Peers(),
 	}).Debug("Peers are now")
 }
