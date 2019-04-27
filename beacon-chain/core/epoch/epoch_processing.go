@@ -9,6 +9,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -512,6 +514,52 @@ func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *
 //    ))
 //
 //    return winning_crosslink, get_unslashed_attesting_indices(state, get_attestations_for(winning_crosslink))
-func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, []uint64) {
+func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, []uint64, error) {
+	var shardAtts []*pb.PendingAttestation
+	matchedAtts, err := MatchAttestations(state, epoch)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, att := range matchedAtts.source {
+		if att.Data.Shard == shard {
+			shardAtts = append(shardAtts, att)
+		}
+	}
+
+	shardCrosslinks := make([]*pb.Crosslink, len(matchedAtts.source))
+	for i := 0; i < len(shardCrosslinks); i++ {
+		shardCrosslinks[i] = CrosslinkFromAttsData(state, shardAtts[i].Data)
+	}
+
+	var candidateCrosslinks []*pb.Crosslink
+	for _, c := range shardCrosslinks {
+		cFromState := state.CurrentCrosslinks[shard]
+		h, err := hashutil.HashProto(cFromState)
+		if err != nil {
+			return nil, nil, err
+		}
+		if proto.Equal(cFromState, c) || bytes.Equal(h[:], c.PreviousCrosslinkRootHash32) {
+			candidateCrosslinks = append(candidateCrosslinks, c)
+		}
+	}
+
+	if len(candidateCrosslinks) == 0 {
+		return &pb.Crosslink{
+			Epoch:                       params.BeaconConfig().GenesisEpoch,
+			CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
+			PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+		}, nil, nil
+	}
+
+	winnerCrosslink := candidateCrosslinks[0]
+	for _, c := range candidateCrosslinks {
+		var crosslinkAtts []*pb.PendingAttestation
+		for _, a := range shardAtts {
+			if proto.Equal(CrosslinkFromAttsData(state, a.Data), c) {
+				crosslinkAtts = append(crosslinkAtts, a)
+			}
+			TotalAttestingBalance()
+		}
+	}
 
 }
