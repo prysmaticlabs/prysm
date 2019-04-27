@@ -609,21 +609,28 @@ func TestDoubleActivatedValidator(t *testing.T) {
 
 	totalBalance := helpers.TotalBalance(newState, activeValidatorIndices)
 
+	var balChurn uint64
+
 	maxBalanceChurn := maxBalanceChurn(totalBalance)
 
 	for idx, validator := range newState.ValidatorRegistry {
 		if !(validator.ActivationEpoch <= currentEpoch && currentEpoch < validator.ExitEpoch) {
-			balChurn := params.BeaconConfig().MaxDepositAmount
-			fmt.Println("Validator activation attempt")
+
+			if newState.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
+				balChurn = params.BeaconConfig().MaxDepositAmount
+			}
+			balChurn = newState.ValidatorBalances[idx]
 
 			if balChurn > maxBalanceChurn {
 				break
 			}
 
 			newState, err = ActivateValidator(newState, uint64(idx), false)
-			if len(vStore.activatedValidators[wantedEpoch]) != len(append(vStore.activatedValidators[wantedEpoch], uint64(idx))) {
-				t.Errorf("unable to activate validator, got %v", vStore.activatedValidators[wantedEpoch])
+			if err != nil {
+				t.Errorf("could not activate validator %d: %v", idx, err)
 			}
+
+			vStore.activatedValidators[wantedEpoch] = append(vStore.activatedValidators[wantedEpoch], uint64(idx))
 		} else {
 			t.Log("Validator is already active")
 		}
