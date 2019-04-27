@@ -71,6 +71,7 @@ var appHelpFlagGroups = []flagGroup{
 			types.BeaconRPCProviderFlag,
 			types.KeystorePathFlag,
 			types.PasswordFlag,
+			types.DisablePenaltyRewardLogFlag,
 		},
 	},
 	{
