@@ -82,7 +82,11 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
 	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-
+	head, err := ps.beaconDB.ChainHead()
+	if err != nil {
+		return nil, err
+	}
+	log.WithField("slot", head.Slot).Info("Chain head successfully saved")
 	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 	}
