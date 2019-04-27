@@ -937,3 +937,28 @@ func TestMatchAttestations_EpochOutOfBound(t *testing.T) {
 		t.Fatal("Did not receive wanted error")
 	}
 }
+
+func TestCrosslinkFromAttsData_OK(t *testing.T) {
+	s := &pb.BeaconState{
+		CurrentCrosslinks: []*pb.Crosslink{
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+		},
+	}
+	slot := (params.BeaconConfig().GenesisEpoch + 100) * params.BeaconConfig().SlotsPerEpoch
+	a := &pb.AttestationData{
+		Slot:                  slot,
+		CrosslinkDataRoot:     []byte{'A'},
+		PreviousCrosslinkRoot: []byte{'B'},
+	}
+	if !proto.Equal(CrosslinkFromAttsData(s, a), &pb.Crosslink{
+		Epoch:                       params.BeaconConfig().GenesisEpoch + params.BeaconConfig().MaxCrosslinkEpochs,
+		CrosslinkDataRootHash32:     []byte{'A'},
+		PreviousCrosslinkRootHash32: []byte{'B'},
+	}) {
+		t.Error("Incorrect crosslink")
+	}
+}
+
+func TestAttsForCrosslink_OK(t *testing.T) {
+
+}
