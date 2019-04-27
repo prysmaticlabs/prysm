@@ -426,7 +426,7 @@ func TestDoubleActivatedValidator(t *testing.T) {
 	var balChurn uint64
 
 	for idx, validator := range newState.ValidatorRegistry {
-		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch && newState.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount && !helpers.IsActiveValidator(validator, currentEpoch) {
+		if !helpers.IsActiveValidator(validator, currentEpoch) {
 			balChurn += helpers.EffectiveBalance(newState, uint64(idx))
 			fmt.Println("Validator activation attempt")
 
