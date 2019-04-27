@@ -104,9 +104,21 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	// Blockchain peering negitiation.
+	// Blockchain peering negitiation; excludes negotiating with bootstrap or
+	// relay nodes.
+	exclusions := []peer.ID{}
+	for _, addr := range []string{cfg.BootstrapNodeAddr, cfg.RelayNodeAddr} {
+		if addr == "" {
+			continue
+		}
+		info, err := peerInfoFromAddr(addr)
+		if err != nil {
+			return nil, err
+		}
+		exclusions = append(exclusions, info.ID)
+	}
+	setupPeerNegotiation(h, cfg.DepositContractAddress, exclusions)
 	setHandshakeHandler(h, cfg.DepositContractAddress)
-	setupPeerNegotiation(h, cfg.DepositContractAddress)
 
 	return &Server{
 		ctx:           ctx,

@@ -6,6 +6,7 @@ import (
 	ggio "github.com/gogo/protobuf/io"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
+	peer "github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -14,12 +15,21 @@ const handshakeProtocol = prysmProtocolPrefix + "/handshake"
 
 // setupPeerNegotiation adds a "Connected" event handler which checks a peer's
 // handshake to ensure the peer is on the same blockchain. This currently
-// checks only the deposit contract address.
-func setupPeerNegotiation(h host.Host, contractAddress string) {
+// checks only the deposit contract address. Some peer IDs may be excluded.
+// For example, a relay or bootnode will not support the handshake protocol,
+// but we would not want to disconnect from those well known peer IDs.
+func setupPeerNegotiation(h host.Host, contractAddress string, exclusions []peer.ID) {
 	h.Network().Notify(&inet.NotifyBundle{
 		ConnectedF: func(net inet.Network, conn inet.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
+				// Exclude bootstrap node, relay node, etc.
+				for _, exclusion := range exclusions {
+					if conn.RemotePeer() == exclusion {
+						return
+					}
+				}
+
 				log.WithField("peer", conn.RemotePeer()).Debug(
 					"Checking connection to peer",
 				)
@@ -30,9 +40,13 @@ func setupPeerNegotiation(h host.Host, contractAddress string) {
 					handshakeProtocol,
 				)
 				if err != nil {
-					log.WithError(err).Error(
+					log.WithError(err).WithField("peer", conn.RemotePeer()).Error(
 						"Failed to open stream with newly connected peer",
 					)
+
+					if err := h.Network().ClosePeer(conn.RemotePeer()); err != nil {
+						log.WithError(err).Error("failed to disconnect peer")
+					}
 					return
 				}
 				defer s.Close()
@@ -43,6 +57,10 @@ func setupPeerNegotiation(h host.Host, contractAddress string) {
 				hs := &pb.Handshake{DepositContractAddress: contractAddress}
 				if err := w.WriteMsg(hs); err != nil {
 					log.WithError(err).Error("Failed to write handshake to peer")
+
+					if err := h.Network().ClosePeer(conn.RemotePeer()); err != nil {
+						log.WithError(err).Error("failed to disconnect peer")
+					}
 					return
 				}
 
@@ -50,6 +68,10 @@ func setupPeerNegotiation(h host.Host, contractAddress string) {
 				resp := &pb.Handshake{}
 				if err := r.ReadMsg(resp); err != nil {
 					log.WithError(err).Error("Failed to read message")
+
+					if err := h.Network().ClosePeer(conn.RemotePeer()); err != nil {
+						log.WithError(err).Error("failed to disconnect peer")
+					}
 					return
 				}
 
