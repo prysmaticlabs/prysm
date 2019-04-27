@@ -69,7 +69,7 @@ func TestStop_CancelsContext(t *testing.T) {
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	// Use cancelled context so that the run function exits immediately..
+	// Use canceled context so that the run function exits immediately..
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{
@@ -88,7 +88,7 @@ func TestLifecycle(t *testing.T) {
 
 func TestLifecycle_Insecure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	// Use cancelled context so that the run function exits immediately.
+	// Use canceled context so that the run function exits immediately.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{

@@ -196,7 +196,11 @@ func (rs *RegularSync) validateAndProcessBlock(
 			"headRoot": fmt.Sprintf("0x%x", blockRoot),
 		}).Info("Chain head block and state updated")
 	} else {
-		log.Errorf("Received Block from a Forked Chain %#x with slot %d", blockRoot, block.Slot)
+		forkedBlock.Inc()
+		log.WithFields(logrus.Fields{
+			"slot": block.Slot,
+			"root": fmt.Sprintf("%#x", blockRoot)},
+		).Warn("Received Block from a forked chain")
 	}
 
 	sentBlocks.Inc()
