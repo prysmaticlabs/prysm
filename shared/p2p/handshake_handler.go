@@ -17,7 +17,6 @@ func setHandshakeHandler(host host.Host, contractAddress string) {
 
 		hs := &pb.Handshake{DepositContractAddress: contractAddress}
 		if err := w.WriteMsg(hs); err != nil {
-
 			log.WithError(err).Error("Failed to write handshake response")
 		}
 	})
