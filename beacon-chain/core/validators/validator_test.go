@@ -429,10 +429,13 @@ func TestDoubleActivatedValidator(t *testing.T) {
 	maxBalanceChurn := maxBalanceChurn(totalBalance)
 
 	var balChurn uint64
+	vStore.Lock()
+	defer vStore.Unlock()
 
-	for _, validator := range repeatedState.ValidatorRegistry {
-		if !helpers.IsActiveValidator(validator, currentEpoch) {
-			balChurn += helpers.EffectiveBalance(repeatedState, uint64(0))
+	for idx, validator := range repeatedState.ValidatorRegistry {
+		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
+			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount && !helpers.IsActiveValidator(validator, currentEpoch) {
+			balChurn += helpers.EffectiveBalance(repeatedState, uint64(idx))
 			fmt.Println("Validator activation attempt")
 
 			if balChurn > maxBalanceChurn {
@@ -440,11 +443,11 @@ func TestDoubleActivatedValidator(t *testing.T) {
 			}
 
 			newState, err = ActivateValidator(newState, 0, false)
-			if len(vStore.activatedValidators[wantedEpoch]) != len(append(vStore.activatedValidators[wantedEpoch], uint64(0))) {
+			if len(vStore.activatedValidators[wantedEpoch]) != len(append(vStore.activatedValidators[wantedEpoch], uint64(idx))) {
 				t.Errorf("Wanted unique activated validator, got %v", vStore.activatedValidators[wantedEpoch])
 			}
 		} else {
-			t.Error("Repeated Validator")
+			t.Log("Repeated Validator")
 		}
 	}
 }
