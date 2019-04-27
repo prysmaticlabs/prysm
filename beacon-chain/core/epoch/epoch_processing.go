@@ -591,18 +591,21 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	if err != nil {
 		return nil, fmt.Errorf("could not get matching attestations: %v", err)
 	}
+	// Filter out source attestations by shard.
 	for _, att := range matchedAtts.source {
 		if att.Data.Shard == shard {
 			shardAtts = append(shardAtts, att)
 		}
 	}
 
+	// Convert shard attestations to shard crosslinks.
 	shardCrosslinks := make([]*pb.Crosslink, len(matchedAtts.source))
 	for i := 0; i < len(shardCrosslinks); i++ {
 		shardCrosslinks[i] = CrosslinkFromAttsData(state, shardAtts[i].Data)
 	}
 
 	var candidateCrosslinks []*pb.Crosslink
+	// Filter out shard crosslinks with correct current or previous crosslink data.
 	for _, c := range shardCrosslinks {
 		cFromState := state.CurrentCrosslinks[shard]
 		h, err := hashutil.HashProto(cFromState)
@@ -625,6 +628,8 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	var crosslinkAtts []*pb.PendingAttestation
 	var winnerBalance uint64
 	var winnerCrosslink *pb.Crosslink
+	// Out of the existing shard crosslinks, pick the one that has the
+	// most balance staked.
 	crosslinkAtts = attsForCrosslink(state, candidateCrosslinks[0], shardAtts)
 	winnerBalance, err = AttestingBalance(state, crosslinkAtts)
 	winnerCrosslink = candidateCrosslinks[0]
