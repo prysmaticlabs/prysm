@@ -302,19 +302,17 @@ func (w *Web3Service) handleSkippedHeaders(ctx context.Context, header *gethType
 	headerHeight := header.Number.Uint64()
 	currentHeight := w.blockHeight.Uint64()
 
-	if headerHeight > currentHeight+1 {
-		for i := currentHeight + 1; i < headerHeight; i++ {
-			header, err := w.blockFetcher.HeaderByNumber(ctx, big.NewInt(int64(i)))
-			if err != nil {
-				w.runError = err
-				log.Errorf("Unable to fetch header: %v", err)
-				continue
-			}
-			if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
-				w.runError = err
-				log.Errorf("Unable to add block data to cache %v", err)
-				continue
-			}
+	for i := currentHeight + 1; i < headerHeight; i++ {
+		header, err := w.blockFetcher.HeaderByNumber(ctx, big.NewInt(int64(i)))
+		if err != nil {
+			w.runError = err
+			log.Errorf("Unable to fetch header: %v", err)
+			continue
+		}
+		if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+			w.runError = err
+			log.Errorf("Unable to add block data to cache %v", err)
+			continue
 		}
 	}
 }
