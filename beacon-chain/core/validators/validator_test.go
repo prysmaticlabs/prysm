@@ -398,60 +398,6 @@ func TestActivateValidator_OK(t *testing.T) {
 	}
 }
 
-func TestDoubleActivatedValidator(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 100, // epoch 2
-		ValidatorRegistry: []*pb.Validator{
-			{Pubkey: []byte{'A'}},
-		},
-	}
-	newState, err := ActivateValidator(state, 0, false)
-	if err != nil {
-		t.Fatalf("could not execute activateValidator:%v", err)
-	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	wantedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
-	if newState.ValidatorRegistry[0].ActivationEpoch != wantedEpoch {
-		t.Errorf("Wanted activation slot = %d, got %d",
-			wantedEpoch,
-			newState.ValidatorRegistry[0].ActivationEpoch)
-	}
-
-	repeatedState, err := ActivateValidator(state, 0, false)
-	if err != nil {
-		t.Fatalf("could not execute activateValidator Initially:%v", err)
-	}
-
-	activeValidatorIndices := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, currentEpoch)
-
-	totalBalance := helpers.TotalBalance(newState, activeValidatorIndices)
-
-	maxBalanceChurn := maxBalanceChurn(totalBalance)
-
-	var balChurn uint64
-	vStore.Lock()
-	defer vStore.Unlock()
-
-	for idx, validator := range repeatedState.ValidatorRegistry {
-		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
-			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount && !helpers.IsActiveValidator(validator, currentEpoch) {
-			balChurn += helpers.EffectiveBalance(repeatedState, uint64(idx))
-			fmt.Println("Validator activation attempt")
-
-			if balChurn > maxBalanceChurn {
-				break
-			}
-
-			newState, err = ActivateValidator(newState, 0, false)
-			if len(vStore.activatedValidators[wantedEpoch]) != len(append(vStore.activatedValidators[wantedEpoch], uint64(idx))) {
-				t.Errorf("Wanted unique activated validator, got %v", vStore.activatedValidators[wantedEpoch])
-			}
-		} else {
-			t.Log("Repeated Validator")
-		}
-	}
-}
-
 func TestInitiateValidatorExit_OK(t *testing.T) {
 	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{}, {}, {}}}
 	newState := InitiateValidatorExit(state, 2)
@@ -636,6 +582,53 @@ func TestUpdateRegistry_Activations(t *testing.T) {
 	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
 			state.Slot, newState.ValidatorRegistryUpdateEpoch)
+	}
+}
+
+func TestDoubleActivatedValidator(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{
+				ExitEpoch:       params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1,
+			},
+		},
+		ValidatorBalances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	newState, err := UpdateRegistry(state)
+	if err != nil {
+		t.Fatalf("could not update validator registry:%v", err)
+	}
+	currentEpoch := helpers.CurrentEpoch(state)
+	wantedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
+
+	activeValidatorIndices := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, currentEpoch)
+
+	totalBalance := helpers.TotalBalance(newState, activeValidatorIndices)
+
+	maxBalanceChurn := maxBalanceChurn(totalBalance)
+
+	var balChurn uint64
+
+	for idx, validator := range newState.ValidatorRegistry {
+		if !(validator.ActivationEpoch <= currentEpoch && currentEpoch < validator.ExitEpoch) {
+			balChurn += helpers.EffectiveBalance(newState, uint64(idx))
+			fmt.Println("Validator activation attempt")
+
+			if balChurn > maxBalanceChurn {
+				break
+			}
+
+			newState, err = ActivateValidator(newState, uint64(idx), false)
+			if len(vStore.activatedValidators[wantedEpoch]) != len(append(vStore.activatedValidators[wantedEpoch], uint64(idx))) {
+				t.Errorf("unable to activate validator, got %v", vStore.activatedValidators[wantedEpoch])
+			}
+		} else {
+			t.Log("Validator is already active")
+		}
 	}
 }
 
