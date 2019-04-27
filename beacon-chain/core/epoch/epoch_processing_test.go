@@ -938,7 +938,7 @@ func TestMatchAttestations_EpochOutOfBound(t *testing.T) {
 	}
 }
 
-func TestCrosslinkFromAttsData_OK(t *testing.T) {
+func TestCrosslinkFromAttsData_CanGetCrosslink(t *testing.T) {
 	s := &pb.BeaconState{
 		CurrentCrosslinks: []*pb.Crosslink{
 			{Epoch: params.BeaconConfig().GenesisEpoch},
@@ -959,7 +959,7 @@ func TestCrosslinkFromAttsData_OK(t *testing.T) {
 	}
 }
 
-func TestAttsForCrosslink_OK(t *testing.T) {
+func TestAttsForCrosslink_CanGetAttestations(t *testing.T) {
 	s := &pb.BeaconState{
 		CurrentCrosslinks: []*pb.Crosslink{
 			{Epoch: params.BeaconConfig().GenesisEpoch},
@@ -980,7 +980,7 @@ func TestAttsForCrosslink_OK(t *testing.T) {
 	}
 }
 
-func TestCrosslinkAttestingIndices_OK(t *testing.T) {
+func TestCrosslinkAttestingIndices_CanGetIndices(t *testing.T) {
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
