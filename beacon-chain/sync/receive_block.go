@@ -185,22 +185,24 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	// only update head of chain if block is a child of the chainhead.
+	// only run fork choice if the block has the chain head as the parent
 	if headRoot == bytesutil.ToBytes32(block.ParentRootHash32) {
-		if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
-			log.Errorf("Could not update chain head: %v", err)
-			span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
+		if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+			log.Errorf("Could not run fork choice on block %v", err)
 			return nil, nil, false, err
 		}
-		log.WithFields(logrus.Fields{
-			"headRoot": fmt.Sprintf("0x%x", blockRoot),
-		}).Info("Chain head block and state updated")
+
 	} else {
+		// Save historical state from forked block.
 		forkedBlock.Inc()
 		log.WithFields(logrus.Fields{
 			"slot": block.Slot,
 			"root": fmt.Sprintf("%#x", blockRoot)},
 		).Warn("Received Block from a forked chain")
+		if err := rs.db.SaveHistoricalState(ctx, beaconState); err != nil {
+			log.Errorf("Could not save historical state %v", err)
+			return nil, nil, false, err
+		}
 	}
 
 	sentBlocks.Inc()
