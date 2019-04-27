@@ -40,21 +40,13 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	}
 	testAcc.backend.Commit()
 
-	exitRoutine := make(chan bool)
-
-	go func() {
-		web3Service.run(web3Service.ctx.Done())
-		<-exitRoutine
-	}()
+	web3Service.blockHeight = big.NewInt(0)
 
 	header := &gethTypes.Header{
 		Number: big.NewInt(42),
 		Time:   308534400,
 	}
-
-	web3Service.headerChan <- header
-	web3Service.cancel()
-	exitRoutine <- true
+	web3Service.processHeader(header)
 
 	if web3Service.blockHeight.Cmp(header.Number) != 0 {
 		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockHeight)

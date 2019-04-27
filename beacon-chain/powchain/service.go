@@ -325,7 +325,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	headRequestTicker := time.NewTicker(3*time.Second)
+	headRequestTicker := time.NewTicker(3 * time.Second)
 	defer headRequestTicker.Stop()
 
 	for {

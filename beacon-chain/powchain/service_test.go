@@ -290,37 +290,6 @@ func TestInitDataFromContract_OK(t *testing.T) {
 	}
 }
 
-func TestWeb3Service_BadReader(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	testAcc, err := setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
-		Reader:          &badReader{},
-		Logger:          &goodLogger{},
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	testAcc.backend.Commit()
-	web3Service.reader = &badReader{}
-	web3Service.logger = &goodLogger{}
-	web3Service.run(web3Service.ctx.Done())
-	msg := hook.LastEntry().Message
-	want := "Unable to subscribe to incoming ETH1.0 chain headers: subscription has failed"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
-	hook.Reset()
-}
-
 func TestStatus(t *testing.T) {
 	now := time.Now()
 
@@ -364,6 +333,6 @@ func TestHandlePanic_OK(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	web3Service.processSubscribedHeaders(nil)
+	web3Service.processHeader(nil)
 	testutil.AssertLogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }
