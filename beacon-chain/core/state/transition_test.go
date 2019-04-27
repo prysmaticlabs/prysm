@@ -81,7 +81,7 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 
 func TestProcessBlock_VerifySignature(t *testing.T) {
 	block := &pb.BeaconBlock{
-		Signature: make([]byte, 5, 5),
+		Signature: make([]byte, 3, 3),
 	}
 	if err := b.VerifyProposerSignature(block); err != nil {
 		t.Errorf("unable to verify proposer signature: %v", err)
