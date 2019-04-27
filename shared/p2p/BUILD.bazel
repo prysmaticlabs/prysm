@@ -33,7 +33,6 @@ go_library(
         "@com_github_libp2p_go_libp2p//p2p/discovery:go_default_library",
         "@com_github_libp2p_go_libp2p//p2p/host/routed:go_default_library",
         "@com_github_libp2p_go_libp2p_host//:go_default_library",
-        "@com_github_libp2p_go_libp2p_interface_connmgr//:go_default_library",
         "@com_github_libp2p_go_libp2p_kad_dht//:go_default_library",
         "@com_github_libp2p_go_libp2p_net//:go_default_library",
         "@com_github_libp2p_go_libp2p_peer//:go_default_library",

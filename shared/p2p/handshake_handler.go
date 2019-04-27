@@ -7,6 +7,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+// setHandshakeHandler to respond to requests for p2p handshake messages.
 func setHandshakeHandler(host host.Host, contractAddress string) {
 	host.SetStreamHandler(handshakeProtocol, func(stream inet.Stream) {
 		defer stream.Close()

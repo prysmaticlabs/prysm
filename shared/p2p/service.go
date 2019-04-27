@@ -60,10 +60,11 @@ type Server struct {
 
 // ServerConfig for peer to peer networking.
 type ServerConfig struct {
-	NoDiscovery       bool
-	BootstrapNodeAddr string
-	RelayNodeAddr     string
-	Port              int
+	NoDiscovery            bool
+	BootstrapNodeAddr      string
+	RelayNodeAddr          string
+	Port                   int
+	DepositContractAddress string
 }
 
 // NewServer creates a new p2p server instance.
@@ -103,8 +104,9 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	setHandshakeHandler(h, "todo")
-	setupPeerNegotiation(h, "todo")
+	// Blockchain peering negitiation.
+	setHandshakeHandler(h, cfg.DepositContractAddress)
+	setupPeerNegotiation(h, cfg.DepositContractAddress)
 
 	return &Server{
 		ctx:           ctx,
