@@ -11,7 +11,6 @@ import (
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -563,7 +562,9 @@ func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *
 	}
 }
 
-// WinningCrosslink returns the winning crosslink and its attesting indices of a given shard and epoch.
+// WinningCrosslink returns the most staked balance-wise crosslink of a given shard and epoch.
+// Here we deviated from the spec definition and split the following to two functions
+// `WinningCrosslink` and  `CrosslinkAttestingIndices` for clarity and efficiency.
 //
 // Spec pseudocode definition:
 //	def get_winning_crosslink_and_attesting_indices(state: BeaconState, shard: Shard, epoch: Epoch) -> Tuple[Crosslink, List[ValidatorIndex]]:
@@ -588,7 +589,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	var shardAtts []*pb.PendingAttestation
 	matchedAtts, err := MatchAttestations(state, epoch)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get matching attestations: %v", err)
 	}
 	for _, att := range matchedAtts.source {
 		if att.Data.Shard == shard {
@@ -606,7 +607,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 		cFromState := state.CurrentCrosslinks[shard]
 		h, err := hashutil.HashProto(cFromState)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not hash crosslink from state: %v", err)
 		}
 		if proto.Equal(cFromState, c) || bytes.Equal(h[:], c.PreviousCrosslinkRootHash32) {
 			candidateCrosslinks = append(candidateCrosslinks, c)
@@ -624,32 +625,37 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	var crosslinkAtts []*pb.PendingAttestation
 	var winnerBalance uint64
 	var winnerCrosslink *pb.Crosslink
-	for _, a := range shardAtts {
-		if proto.Equal(CrosslinkFromAttsData(state, a.Data), candidateCrosslinks[0]) {
-			crosslinkAtts = append(crosslinkAtts, a)
-		}
-		winnerBalance, err = AttestingBalance(state, crosslinkAtts)
-		winnerCrosslink = candidateCrosslinks[0]
-		if err != nil {
-			return nil, err
-		}
-	}
+	crosslinkAtts = attsForCrosslink(state, candidateCrosslinks[0], shardAtts)
+	winnerBalance, err = AttestingBalance(state, crosslinkAtts)
+	winnerCrosslink = candidateCrosslinks[0]
+
 	for _, c := range candidateCrosslinks {
 		crosslinkAtts := crosslinkAtts[:0]
-		for _, a := range shardAtts {
-			if proto.Equal(CrosslinkFromAttsData(state, a.Data), c) {
-				crosslinkAtts = append(crosslinkAtts, a)
-			}
-			attestingBalance, err := AttestingBalance(state, crosslinkAtts)
-			if err != nil {
-				return nil, err
-			}
-			if attestingBalance > winnerBalance {
-				winnerCrosslink = c
-			}
+		crosslinkAtts = attsForCrosslink(state, c, shardAtts)
+		attestingBalance, err := AttestingBalance(state, crosslinkAtts)
+		if err != nil {
+			return nil, fmt.Errorf("could not get crosslink's attesting balance: %v", err)
+		}
+		if attestingBalance > winnerBalance {
+			winnerCrosslink = c
 		}
 	}
 	return winnerCrosslink, nil
 }
 
-func crossl
+// CrosslinkAttestingIndices returns the attesting indices of the input crosslink.
+func CrosslinkAttestingIndices(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) ([]uint64, error) {
+	crosslinkAtts := attsForCrosslink(state, crosslink, atts)
+	return UnslashedAttestingIndices(state, crosslinkAtts)
+}
+
+// attsForCrosslink returns the attestations of the input crosslink.
+func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
+	var crosslinkAtts []*pb.PendingAttestation
+	for _, a := range atts {
+		if proto.Equal(CrosslinkFromAttsData(state, a.Data), crosslink) {
+			crosslinkAtts = append(crosslinkAtts, a)
+		}
+	}
+	return crosslinkAtts
+}
