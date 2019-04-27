@@ -370,7 +370,7 @@ func BenchmarkIntersection(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			Intersection(tt.setA, tt.setB)
+			IntersectionUint64(tt.setA, tt.setB)
 
 		}
 	}
@@ -393,7 +393,7 @@ func BenchmarkUnion(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			Union(tt.setA, tt.setB)
+			UnionUint64(tt.setA, tt.setB)
 
 		}
 
@@ -443,7 +443,7 @@ func BenchmarkNot(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			Not(tt.setA, tt.setB)
+			NotUint64(tt.setA, tt.setB)
 
 		}
 
@@ -490,7 +490,7 @@ func BenchmarkIsIn(b *testing.B) {
 			{100, []uint64{2, 3, 5, 4, 6}, false},
 		}
 		for _, tt := range testCases {
-			IsIn(tt.a, tt.b)
+			IsInUint64(tt.a, tt.b)
 
 		}
 

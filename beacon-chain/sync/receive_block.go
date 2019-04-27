@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -191,6 +192,12 @@ func (rs *RegularSync) validateAndProcessBlock(
 			span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 			return nil, nil, false, err
 		}
+	} else {
+		forkedBlock.Inc()
+		log.WithFields(logrus.Fields{
+			"slot": block.Slot,
+			"root": fmt.Sprintf("%#x", blockRoot)},
+		).Warn("Received Block from a forked chain")
 	}
 
 	sentBlocks.Inc()
