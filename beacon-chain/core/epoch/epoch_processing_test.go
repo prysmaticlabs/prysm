@@ -664,7 +664,7 @@ func TestUnslashedAttestingIndices_CantGetIndicesBitfieldError(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot,
 	}
-	wantedErr := "could not get attester indices: wanted participants bitfield length 16, got: 1"
+	const wantedErr = "could not get attester indices: wanted participants bitfield length 16, got: 1"
 	if _, err := UnslashedAttestingIndices(state, atts); !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
@@ -723,7 +723,7 @@ func TestAttestingBalance_CantGetIndicesBitfieldError(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot,
 	}
-	wantedErr := "could not get attester indices: wanted participants bitfield length 16, got: 1"
+	const wantedErr = "could not get attester indices: wanted participants bitfield length 16, got: 1"
 	if _, err := AttestingBalance(state, atts); !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
@@ -786,7 +786,7 @@ func TestEarliestAttestation_CantGetIndicesBitfieldError(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot,
 	}
-	wantedErr := "could not get attester indices: wanted participants bitfield length 16, got: 1"
+	const wantedErr = "could not get attester indices: wanted participants bitfield length 16, got: 1"
 	if _, err := EarlistAttestation(state, atts, 0); !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
