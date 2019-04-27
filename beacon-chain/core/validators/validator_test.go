@@ -430,19 +430,21 @@ func TestDoubleActivatedValidator(t *testing.T) {
 
 	var balChurn uint64
 
-	for idx, validator := range repeatedState.ValidatorRegistry {
+	for _, validator := range repeatedState.ValidatorRegistry {
 		if !helpers.IsActiveValidator(validator, currentEpoch) {
-			balChurn += helpers.EffectiveBalance(repeatedState, uint64(idx))
+			balChurn += helpers.EffectiveBalance(repeatedState, uint64(0))
 			fmt.Println("Validator activation attempt")
 
 			if balChurn > maxBalanceChurn {
 				break
 			}
 
-			newState, err = ActivateValidator(newState, uint64(idx), false)
-			if len(vStore.activatedValidators[wantedEpoch]) != len(append(vStore.activatedValidators[wantedEpoch], uint64(idx))) {
+			newState, err = ActivateValidator(newState, 0, false)
+			if len(vStore.activatedValidators[wantedEpoch]) != len(append(vStore.activatedValidators[wantedEpoch], uint64(0))) {
 				t.Errorf("Wanted unique activated validator, got %v", vStore.activatedValidators[wantedEpoch])
 			}
+		} else {
+			t.Error("Repeated Validator")
 		}
 	}
 }
