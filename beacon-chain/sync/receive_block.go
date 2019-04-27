@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -186,19 +185,9 @@ func (rs *RegularSync) validateAndProcessBlock(
 	}
 
 	// only update head of chain if block is a child of the chainhead.
-	if headRoot == bytesutil.ToBytes32(block.ParentRootHash32) {
-		if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
-			log.Errorf("Could not update chain head: %v", err)
-			span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
-			return nil, nil, false, err
-		}
-		log.WithFields(logrus.Fields{
-			"headRoot": fmt.Sprintf("0x%x", blockRoot),
-		}).Info("Chain head block and state updated")
-	} else {
+	if headRoot != bytesutil.ToBytes32(block.ParentRootHash32) {
 		log.Errorf("Received Block from a Forked Chain %#x with slot %d", blockRoot, block.Slot)
 	}
-
 	sentBlocks.Inc()
 	// We update the last observed slot to the received canonical block's slot.
 	if block.Slot > rs.highestObservedSlot {
