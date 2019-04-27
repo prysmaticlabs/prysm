@@ -611,11 +611,9 @@ func TestDoubleActivatedValidator(t *testing.T) {
 
 	maxBalanceChurn := maxBalanceChurn(totalBalance)
 
-	var balChurn uint64
-
 	for idx, validator := range newState.ValidatorRegistry {
 		if !(validator.ActivationEpoch <= currentEpoch && currentEpoch < validator.ExitEpoch) {
-			balChurn += helpers.EffectiveBalance(newState, uint64(idx))
+			balChurn := params.BeaconConfig().MaxDepositAmount
 			fmt.Println("Validator activation attempt")
 
 			if balChurn > maxBalanceChurn {
