@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -65,7 +66,11 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlock")
 	defer span.End()
 	recBlock.Inc()
-	return rs.processBlockAndFetchAncestors(ctx, msg)
+	rs.blockProcessingLock.Lock()
+	err := rs.processBlockAndFetchAncestors(ctx, msg)
+	rs.blockProcessingLock.Unlock()
+
+	return err
 }
 
 // processBlockAndFetchAncestors verifies if a block has a child in the pending blocks map - if so, then
@@ -108,8 +113,6 @@ func (rs *RegularSync) validateAndProcessBlock(
 ) (*pb.BeaconBlock, *pb.BeaconState, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.validateAndProcessBlock")
 	defer span.End()
-	rs.blockProcessingLock.Lock()
-	defer rs.blockProcessingLock.Unlock()
 
 	response := blockMsg.Data.(*pb.BeaconBlockResponse)
 	block := response.Block
@@ -191,6 +194,9 @@ func (rs *RegularSync) validateAndProcessBlock(
 			span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 			return nil, nil, false, err
 		}
+		log.WithFields(logrus.Fields{
+			"headRoot": fmt.Sprintf("0x%x", blockRoot),
+		}).Info("Chain head block and state updated")
 	} else {
 		log.Errorf("Received Block from a Forked Chain %#x with slot %d", blockRoot, block.Slot)
 	}
