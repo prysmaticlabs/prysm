@@ -162,10 +162,15 @@ func (c *ChainService) ApplyForkChoiceRule(
 	defer c.canonicalBlocksLock.Unlock()
 	c.canonicalBlocks[head.Slot] = headRoot[:]
 
+	isDescendant, err := c.isDescendant(chainHead, chainRoot, head)
+	if err != nil {
+		return fmt.Errorf("could not check if block is descendant: %v", err)
+	}
+
 	newState := postState
-	if chainRoot != bytesutil.ToBytes32(head.ParentRootHash32) {
-		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
-			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
+	if !isDescendant {
+		log.Warnf("Reorg happened, last head at slot %d, new head block at slot %d",
+			chainHead.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
 
 		// Only regenerate head state if there was a reorg.
 		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, head.Slot)
@@ -178,7 +183,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 				postState.Slot-params.BeaconConfig().GenesisSlot, newState.Slot-params.BeaconConfig().GenesisSlot)
 		}
 
-		for revertedSlot := block.Slot; revertedSlot > head.Slot; revertedSlot-- {
+		for revertedSlot := chainHead.Slot; revertedSlot > head.Slot; revertedSlot-- {
 			delete(c.canonicalBlocks, revertedSlot)
 		}
 		reorgCount.Inc()
@@ -305,6 +310,24 @@ func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock,
 		}
 	}
 	return children, nil
+}
+
+func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, headRoot [32]byte,
+	targetBlock *pb.BeaconBlock) (bool, error) {
+	var err error
+	for targetBlock.Slot > currentHead.Slot {
+		if bytesutil.ToBytes32(targetBlock.ParentRootHash32) == headRoot {
+			return true, nil
+		}
+		targetBlock, err = c.beaconDB.Block(bytesutil.ToBytes32(targetBlock.ParentRootHash32))
+		if err != nil {
+			return false, err
+		}
+		if targetBlock == nil {
+			return false, nil
+		}
+	}
+	return false, nil
 }
 
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,
