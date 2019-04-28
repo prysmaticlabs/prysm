@@ -604,23 +604,9 @@ func TestDoubleActivatedValidator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
-	totalBalance := helpers.EffectiveBalance(state, 0)
-	maxBalChurn := maxBalanceChurn(totalBalance)
-	var balChurn uint64
-	for idx, validator := range newState.ValidatorRegistry {
+	for _, validator := range newState.ValidatorRegistry {
 		if validator.ActivationEpoch <= currentEpoch && currentEpoch < validator.ExitEpoch {
 			t.Errorf("received duplicate validator: %v", err)
-			if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
-				balChurn = params.BeaconConfig().MaxDepositAmount
-			}
-			balChurn = state.ValidatorBalances[idx]
-			if balChurn > maxBalChurn {
-				break
-			}
-			state, err = ActivateValidator(state, uint64(idx), false)
-			if err != nil {
-				t.Errorf("could not activate validator %d: %v", idx, err)
-			}
 		}
 	}
 }
