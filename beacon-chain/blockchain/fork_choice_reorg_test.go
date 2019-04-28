@@ -7,12 +7,11 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -21,7 +20,7 @@ type mockAttestationHandler struct {
 }
 
 func (m *mockAttestationHandler) LatestAttestationTarget(beaconState *pb.BeaconState, idx uint64) (*pb.AttestationTarget, error) {
-	return nil, nil
+	return m.targets[idx], nil
 }
 
 func (m *mockAttestationHandler) BatchUpdateLatestAttestation(ctx context.Context, atts []*pb.Attestation) error {
@@ -34,8 +33,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 
 	ctx := context.Background()
-	params.UseDemoBeaconConfig()
-	deposits, _ := setupInitialDeposits(t, 8)
+	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
 		DepositRootHash32: []byte{},
 		BlockHash32:       []byte{},
@@ -118,7 +116,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		BlockRoot:  roots[5][:],
 		ParentRoot: blocks[5].ParentRootHash32,
 	}
-	for i := 1; i < 8; i++ {
+	for i := 1; i < len(deposits); i++ {
 		voteTargets[uint64(i)] = &pb.AttestationTarget{
 			Slot:       blocks[4].Slot,
 			BlockRoot:  roots[4][:],
