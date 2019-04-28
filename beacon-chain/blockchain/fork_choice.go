@@ -140,6 +140,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified head: %v", err)
 	}
+
 	head, err := c.lmdGhost(ctx, justifiedHead, justifiedState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
@@ -148,12 +149,21 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not hash head block: %v", err)
 	}
+
+	chainHead, err := c.beaconDB.ChainHead()
+	if err != nil {
+		return fmt.Errorf("could not retrieve chain head: %v", err)
+	}
+	chainRoot, err := hashutil.HashBeaconBlock(chainHead)
+	if err != nil {
+		return fmt.Errorf("could not hash current chain head: %v", err)
+	}
 	c.canonicalBlocksLock.Lock()
 	defer c.canonicalBlocksLock.Unlock()
 	c.canonicalBlocks[head.Slot] = headRoot[:]
 
 	newState := postState
-	if head.Slot != block.Slot {
+	if chainRoot != bytesutil.ToBytes32(head.ParentRootHash32) {
 		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
 			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
 
@@ -174,6 +184,14 @@ func (c *ChainService) ApplyForkChoiceRule(
 		reorgCount.Inc()
 	}
 
+	// if we receive forked blocks
+	if head.Slot != newState.Slot {
+		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, head.Slot)
+		if err != nil {
+			return fmt.Errorf("could not gen state: %v", err)
+		}
+	}
+
 	if err := c.beaconDB.UpdateChainHead(ctx, head, newState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
@@ -184,6 +202,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	log.WithFields(logrus.Fields{
 		"headRoot": fmt.Sprintf("0x%x", h),
 	}).Info("Chain head block and state updated")
+
 	return nil
 }
 
