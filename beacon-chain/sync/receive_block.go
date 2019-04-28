@@ -199,7 +199,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	}
 
 	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
-		log.Errorf("Could not run fork choice on block %v", err)
+		log.WithError(err).Error("Could not run fork choice on block")
 		return nil, nil, false, err
 	}
 	sentBlocks.Inc()
