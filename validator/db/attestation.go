@@ -3,12 +3,9 @@ package db
 import (
 	"fmt"
 
-	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -24,38 +21,38 @@ func createAttestation(enc []byte) (*pbp2p.Attestation, error) {
 // SaveAttestation TODO
 func (db *ValidatorDB) SaveAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, attestation *pbp2p.Attestation) error {
 	return nil
-	epoch := attestation.Data.Slot / params.BeaconConfig().SlotsPerEpoch
-	if lastAttestationEpoch, ok := db.lastAttestationEpoch[(*pubKey)]; !ok || lastAttestationEpoch < epoch {
-		db.lastAttestationEpoch[(*pubKey)] = epoch
-	}
-
-	forkVersion := forkutil.ForkVersion(fork, epoch)
-	attestationEnc, err := attestation.Marshal()
-	if err != nil {
-		return fmt.Errorf("failed to encode attestation: %v", err)
-	}
-
-	return db.update(func(tx *bolt.Tx) error {
-		bucket := getBucket(tx, pubKey, forkVersion, attestationBucket)
-		return bucket.Put(bytesutil.Bytes8(epoch), attestationEnc)
-	})
+	//	epoch := attestation.Data.Slot / params.BeaconConfig().SlotsPerEpoch
+	//	if lastAttestationEpoch, ok := db.lastAttestationEpoch[(*pubKey)]; !ok || lastAttestationEpoch < epoch {
+	//		db.lastAttestationEpoch[(*pubKey)] = epoch
+	//	}
+	//
+	//	forkVersion := forkutil.ForkVersion(fork, epoch)
+	//	attestationEnc, err := attestation.Marshal()
+	//	if err != nil {
+	//		return fmt.Errorf("failed to encode attestation: %v", err)
+	//	}
+	//
+	//	return db.update(func(tx *bolt.Tx) error {
+	//		bucket := getBucket(tx, pubKey, forkVersion, attestationBucket)
+	///		return bucket.Put(bytesutil.Bytes8(epoch), attestationEnc)
+	//	})
 }
 
 // GetAttestation TODO
 func (db *ValidatorDB) GetAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, epoch uint64) (attestation *pbp2p.Attestation, err error) {
 	return
-	if lastAttestationEpoch, ok := db.lastAttestationEpoch[(*pubKey)]; ok && lastAttestationEpoch < epoch {
-		return
-	}
+	//	if lastAttestationEpoch, ok := db.lastAttestationEpoch[(*pubKey)]; ok && lastAttestationEpoch < epoch {
+	//		return
+	//	}
 
-	forkVersion := forkutil.ForkVersion(fork, epoch)
-	err = db.view(func(tx *bolt.Tx) error {
-		bucket := getBucket(tx, pubKey, forkVersion, attestationBucket)
-		attestationEnc := bucket.Get(bytesutil.Bytes8(epoch))
-		attestation, err = createAttestation(attestationEnc)
-		return err
-	})
-	return
+	//	forkVersion := forkutil.ForkVersion(fork, epoch)
+	//	err = db.view(func(tx *bolt.Tx) error {
+	//		bucket := getBucket(tx, pubKey, forkVersion, attestationBucket)
+	//		attestationEnc := bucket.Get(bytesutil.Bytes8(epoch))
+	//		attestation, err = createAttestation(attestationEnc)
+	//		return err
+	//	})
+	//	return
 }
 
 func (db *ValidatorDB) getMaxAttestationEpoch(pubKey *bls.PublicKey) (maxAttestationEpoch uint64, err error) {

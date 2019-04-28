@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,14 +23,16 @@ func VerifyAccountNotExists(directory string, password string) error {
 	if directory == "" || password == "" {
 		return errors.New("expected a path to the validator keystore and password to be provided, received nil")
 	}
+	shardWithdrawalKeyFile := params.BeaconConfig().WithdrawalPrivkeyFileName
+	validatorKeyFile := params.BeaconConfig().ValidatorPrivkeyFileName
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
 	ks := keystore.NewKeystore(directory)
-	if _, err := ks.GetKeys(directory, params.BeaconConfig().WithdrawalPrivkeyFileName, password); err == nil {
-		return fmt.Errorf("keystore at path already exists: %s", directory)
+	if _, err := ks.GetKeys(directory, shardWithdrawalKeyFile, password); err == nil {
+		return fmt.Errorf("keystore at path already exists: %s", shardWithdrawalKeyFile)
 	}
-	if _, err := ks.GetKeys(directory, params.BeaconConfig().ValidatorPrivkeyFileName, password); err == nil {
-		return fmt.Errorf("keystore at path already exists: %s", directory)
+	if _, err := ks.GetKeys(directory, validatorKeyFile, password); err == nil {
+		return fmt.Errorf("keystore at path already exists: %s", validatorKeyFile)
 	}
 	return nil
 }
@@ -84,4 +88,24 @@ func NewValidatorAccount(directory string, password string) error {
 ===========================================================
 `, serializedData)
 	return nil
+}
+
+// Exists checks if a validator account at a given keystore path exists.
+func Exists(keystorePath string) (bool, error) {
+	/* #nosec */
+	f, err := os.Open(keystorePath)
+	if err != nil {
+		return false, nil
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	_, err = f.Readdirnames(1) // Or f.Readdir(1)
+	if err == io.EOF {
+		return false, nil
+	}
+	return true, err
 }

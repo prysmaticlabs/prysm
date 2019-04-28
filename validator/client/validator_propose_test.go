@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"testing"
 
@@ -31,13 +32,12 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		validatorClient: internal.NewMockValidatorServiceClient(ctrl),
 		attesterClient:  internal.NewMockAttesterServiceClient(ctrl),
 	}
-
 	validator := &validator{
 		proposerClient:  m.proposerClient,
 		beaconClient:    m.beaconClient,
 		attesterClient:  m.attesterClient,
 		validatorClient: m.validatorClient,
-		key:             validatorKey,
+		keys:            keyMap,
 	}
 
 	return validator, m, ctrl.Finish
@@ -47,7 +47,7 @@ func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, finish := setup(t)
 	defer finish()
-	validator.ProposeBlock(context.Background(), params.BeaconConfig().GenesisSlot)
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().GenesisSlot, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	testutil.AssertLogsContain(t, hook, "Assigned to genesis slot, skipping proposal")
 }
@@ -71,7 +71,7 @@ func TestProposeBlock_LogsCanonicalHeadFailure(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/).Times(1)
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	testutil.AssertLogsContain(t, hook, "something bad happened")
 }
@@ -100,7 +100,7 @@ func TestProposeBlock_PendingDepositsFailure(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/).Times(1)
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	testutil.AssertLogsContain(t, hook, "something bad happened")
 }
@@ -157,7 +157,7 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/).Times(1)
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	if !bytes.Equal(broadcastedBlock.Body.Deposits[0].DepositData, []byte{'D', 'A', 'T', 'A'}) {
 		t.Errorf("Unexpected deposit data: %v", broadcastedBlock.Body.Deposits)
@@ -193,7 +193,7 @@ func TestProposeBlock_Eth1DataFailure(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/).Times(1)
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	testutil.AssertLogsContain(t, hook, "something bad happened")
 }
@@ -248,7 +248,7 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/).Times(1)
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	if !bytes.Equal(broadcastedBlock.Eth1Data.BlockHash32, []byte{'B', 'L', 'O', 'C', 'K'}) {
 		t.Errorf("Unexpected ETH1 data: %v", broadcastedBlock.Eth1Data)
@@ -306,7 +306,7 @@ func TestProposeBlock_PendingAttestations_UsesCurrentSlot(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/).Times(1)
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	if req.ProposalBlockSlot != 55 {
 		t.Errorf(
 			"expected request to use the current proposal slot %d, but got %d",
@@ -352,7 +352,7 @@ func TestProposeBlock_PendingAttestationsFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
 	).Return(nil, errors.New("failed"))
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Failed to fetch pending attestations")
 }
 
@@ -395,7 +395,7 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
 	).Return(nil /*response*/, errors.New("something bad happened"))
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "something bad happened")
 }
 
@@ -451,7 +451,7 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 		nil, // err
 	)
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	if !bytes.Equal(broadcastedBlock.StateRootHash32, computedStateRoot) {
 		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRootHash32)
@@ -503,5 +503,5 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/).Times(1)
 
-	validator.ProposeBlock(context.Background(), 55)
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 }

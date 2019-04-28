@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -30,38 +31,30 @@ type ValidatorServer struct {
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
-	if vs.beaconDB.HasValidator(req.Pubkey) {
-		beaconState, err := vs.beaconDB.HeadState(vs.ctx)
+
+	reply := func() error {
+		beaconState, err := vs.beaconDB.HeadState(stream.Context())
 		if err != nil {
 			return fmt.Errorf("could not retrieve beacon state: %v", err)
 		}
-		activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
-		if err != nil {
-			return fmt.Errorf("could not retrieve active validator from state: %v", err)
-		}
+		activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
 		res := &pb.ValidatorActivationResponse{
-			Validator: activeVal,
+			ActivatedPublicKeys: activeKeys,
 		}
 		return stream.Send(res)
+
+	}
+
+	if vs.beaconDB.HasAnyValidators(req.PublicKeys) {
+		return reply()
 	}
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-			if !vs.beaconDB.HasValidator(req.Pubkey) {
+			if !vs.beaconDB.HasAnyValidators(req.PublicKeys) {
 				continue
 			}
-			beaconState, err := vs.beaconDB.HeadState(vs.ctx)
-			if err != nil {
-				return fmt.Errorf("could not retrieve beacon state: %v", err)
-			}
-			activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
-			if err != nil {
-				return fmt.Errorf("could not retrieve active validator from state: %v", err)
-			}
-			res := &pb.ValidatorActivationResponse{
-				Validator: activeVal,
-			}
-			return stream.Send(res)
+			return reply()
 		case <-vs.ctx.Done():
 			return errors.New("rpc context closed, exiting goroutine")
 		}
@@ -88,21 +81,25 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
-	beaconState, err := vs.beaconDB.HeadState(ctx)
+	validatorRegistry, err := vs.beaconDB.ValidatorRegistry(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
+	validatorBalances, err := vs.beaconDB.ValidatorBalances(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve validator balances %v", err)
+	}
 	totalBalance := float32(0)
-	for _, val := range beaconState.ValidatorBalances {
+	for _, val := range validatorBalances {
 		totalBalance += float32(val)
 	}
-	avgBalance := totalBalance / float32(len(beaconState.ValidatorBalances))
-	balance := beaconState.ValidatorBalances[index]
-	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, helpers.SlotToEpoch(req.Slot))
+	avgBalance := totalBalance / float32(len(validatorBalances))
+	balance := validatorBalances[index]
+	activeIndices := helpers.ActiveValidatorIndices(validatorRegistry, helpers.SlotToEpoch(req.Slot))
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                 balance,
 		AverageValidatorBalance: avgBalance,
-		TotalValidators:         uint64(len(beaconState.ValidatorRegistry)),
+		TotalValidators:         uint64(len(validatorRegistry)),
 		TotalActiveValidators:   uint64(len(activeIndices)),
 	}, nil
 }
@@ -112,7 +109,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	1.) The list of validators in the committee.
 //	2.) The shard to which the committee is assigned.
 //	3.) The slot at which the committee is assigned.
-//	4.) The bool signalling if the validator is expected to propose a block at the assigned slot.
+//	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) CommitteeAssignment(
 	ctx context.Context,
 	req *pb.CommitteeAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {
@@ -120,21 +117,40 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
+	chainHead, err := vs.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not get chain head: %v", err)
+	}
+	headRoot, err := hashutil.HashBeaconBlock(chainHead)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+
+	for beaconState.Slot < req.EpochStart {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
+	}
+
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
-	for _, pk := range req.PublicKeys {
-		a, err := vs.assignment(ctx, pk, beaconState, req.EpochStart)
+	activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
+	for _, pk := range activeKeys {
+		a, err := vs.assignment(pk, beaconState, req.EpochStart)
 		if err != nil {
 			return nil, err
 		}
 		assignments = append(assignments, a)
 	}
+	assignments = vs.addNonActivePublicKeysAssignmentStatus(beaconState, req.PublicKeys, assignments)
 	return &pb.CommitteeAssignmentResponse{
 		Assignment: assignments,
 	}, nil
 }
 
 func (vs *ValidatorServer) assignment(
-	ctx context.Context,
 	pubkey []byte,
 	beaconState *pbp2p.BeaconState,
 	epochStart uint64,
@@ -151,22 +167,6 @@ func (vs *ValidatorServer) assignment(
 	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
-	}
-	chainHead, err := vs.beaconDB.ChainHead()
-	if err != nil {
-		return nil, fmt.Errorf("could not get chain head: %v", err)
-	}
-	headRoot, err := hashutil.HashBeaconBlock(chainHead)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
-	}
-	for beaconState.Slot < epochStart {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
-		}
 	}
 
 	committee, shard, slot, isProposer, err :=
@@ -245,10 +245,43 @@ func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.Bea
 	return status, nil
 }
 
-func (vs *ValidatorServer) retrieveActiveValidator(beaconState *pbp2p.BeaconState, pubkey []byte) (*pbp2p.Validator, error) {
-	validatorIdx, err := vs.beaconDB.ValidatorIndex(pubkey)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve validator index: %v", err)
+// filterActivePublicKeys takes a list of validator public keys and returns
+// the list of active public keys from the given state.
+func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState, pubkeys [][]byte) [][]byte {
+	// Generate a map for O(1) lookup of existence of pub keys in request.
+	pkMap := make(map[string]bool)
+	for _, pk := range pubkeys {
+		pkMap[hex.EncodeToString(pk)] = true
 	}
-	return beaconState.ValidatorRegistry[validatorIdx], nil
+
+	var activeKeys [][]byte
+	currentEpoch := helpers.SlotToEpoch(beaconState.Slot)
+	for _, v := range beaconState.ValidatorRegistry {
+		if pkMap[hex.EncodeToString(v.Pubkey)] && helpers.IsActiveValidator(v, currentEpoch) {
+			activeKeys = append(activeKeys, v.Pubkey)
+		}
+	}
+
+	return activeKeys
+}
+
+func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(beaconState *pbp2p.BeaconState, pubkeys [][]byte, assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment) []*pb.CommitteeAssignmentResponse_CommitteeAssignment {
+	// Generate a map for O(1) lookup of existence of pub keys in request.
+	validatorMap := make(map[string]*pbp2p.Validator)
+	for _, v := range beaconState.ValidatorRegistry {
+		validatorMap[hex.EncodeToString(v.Pubkey)] = v
+	}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	for _, pk := range pubkeys {
+		hexPk := hex.EncodeToString(pk)
+		if _, ok := validatorMap[hexPk]; !ok || !helpers.IsActiveValidator(validatorMap[hexPk], currentEpoch) {
+			status, _ := vs.validatorStatus(pk, beaconState) //nolint:gosec
+			a := &pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				PublicKey: pk,
+				Status:    status,
+			}
+			assignments = append(assignments, a)
+		}
+	}
+	return assignments
 }

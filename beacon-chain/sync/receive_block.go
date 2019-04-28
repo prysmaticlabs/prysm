@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -23,6 +24,15 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	h := bytesutil.ToBytes32(data.Hash[:32])
 
+	isEvilBlock := rs.db.IsEvilBlockHash(h)
+	span.AddAttributes(trace.BoolAttribute("isEvilBlock", isEvilBlock))
+
+	if isEvilBlock {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", h)).
+			Debug("Received blacklisted block")
+		return nil
+	}
+
 	// This prevents us from processing a block announcement we have already received.
 	// TODO(#2072): If the peer failed to give the block, broadcast request to the whole network.
 	rs.blockAnnouncementsLock.Lock()
@@ -35,7 +45,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 
 	if hasBlock {
-		log.Debugf("Received a root for a block that has already been processed: %#x", h)
+		log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debug("Already processed")
 		return nil
 	}
 
@@ -56,6 +66,8 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlock")
 	defer span.End()
 	recBlock.Inc()
+	rs.blockProcessingLock.Lock()
+	defer rs.blockProcessingLock.Unlock()
 	return rs.processBlockAndFetchAncestors(ctx, msg)
 }
 
@@ -64,7 +76,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 // At the end of the recursive call, we'll have a block which has no children in the map, and at that point
 // we can apply the fork choice rule for ETH 2.0.
 func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2p.Message) error {
-	block, beaconState, isValid, err := rs.validateAndProcessBlock(ctx, msg)
+	block, _, isValid, err := rs.validateAndProcessBlock(ctx, msg)
 	if err != nil {
 		return err
 	}
@@ -78,6 +90,11 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2
 		return err
 	}
 
+	if rs.db.IsEvilBlockHash(blockRoot) {
+		log.WithField("blockHash", blockRoot).Debug("Skipping blacklisted block")
+		return nil
+	}
+
 	// If the block has a child, we then clear it from the blocks pending processing
 	// and call receiveBlock recursively. The recursive function call will stop once
 	// the block we process no longer has children.
@@ -86,7 +103,7 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2
 		rs.clearPendingBlock(blockRoot)
 		return rs.processBlockAndFetchAncestors(ctx, child)
 	}
-	return rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState)
+	return nil
 }
 
 func (rs *RegularSync) validateAndProcessBlock(
@@ -94,8 +111,6 @@ func (rs *RegularSync) validateAndProcessBlock(
 ) (*pb.BeaconBlock, *pb.BeaconState, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.validateAndProcessBlock")
 	defer span.End()
-	rs.blockProcessingLock.Lock()
-	defer rs.blockProcessingLock.Unlock()
 
 	response := blockMsg.Data.(*pb.BeaconBlockResponse)
 	block := response.Block
@@ -106,7 +121,8 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	log.Debugf("Processing response to block request: %#x", blockRoot)
+	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).
+		Debug("Processing response to block request")
 	hasBlock := rs.db.HasBlock(blockRoot)
 	if hasBlock {
 		log.Debug("Received a block that already exists. Exiting...")
@@ -156,10 +172,37 @@ func (rs *RegularSync) validateAndProcessBlock(
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
-	if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
-		log.Errorf("Could not update chain head: %v", err)
-		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
+
+	head, err := rs.db.ChainHead()
+	if err != nil {
+		log.Errorf("Could not retrieve chainhead %v", err)
 		return nil, nil, false, err
+	}
+
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		log.Errorf("Could not hash head block: %v", err)
+		return nil, nil, false, err
+	}
+
+	// only run fork choice if the block has the chain head as the parent
+	if headRoot == bytesutil.ToBytes32(block.ParentRootHash32) {
+		if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+			log.Errorf("Could not run fork choice on block %v", err)
+			return nil, nil, false, err
+		}
+
+	} else {
+		// Save historical state from forked block.
+		forkedBlock.Inc()
+		log.WithFields(logrus.Fields{
+			"slot": block.Slot,
+			"root": fmt.Sprintf("%#x", blockRoot)},
+		).Warn("Received Block from a forked chain")
+		if err := rs.db.SaveHistoricalState(ctx, beaconState); err != nil {
+			log.Errorf("Could not save historical state %v", err)
+			return nil, nil, false, err
+		}
 	}
 
 	sentBlocks.Inc()
@@ -174,6 +217,10 @@ func (rs *RegularSync) validateAndProcessBlock(
 func (rs *RegularSync) insertPendingBlock(ctx context.Context, blockRoot [32]byte, blockMsg p2p.Message) {
 	rs.blocksAwaitingProcessingLock.Lock()
 	defer rs.blocksAwaitingProcessingLock.Unlock()
+	// Do not reinsert into the map if block root was previously added.
+	if _, ok := rs.blocksAwaitingProcessing[blockRoot]; ok {
+		return
+	}
 	rs.blocksAwaitingProcessing[blockRoot] = blockMsg
 	blocksAwaitingProcessingGauge.Inc()
 	rs.p2p.Broadcast(ctx, &pb.BeaconBlockRequest{Hash: blockRoot[:]})

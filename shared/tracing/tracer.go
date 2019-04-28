@@ -3,8 +3,8 @@ package tracing
 import (
 	"errors"
 
+	"contrib.go.opencensus.io/exporter/jaeger"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/exporter/jaeger"
 	"go.opencensus.io/trace"
 )
 

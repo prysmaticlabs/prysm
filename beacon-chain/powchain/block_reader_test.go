@@ -13,8 +13,9 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
+var endpoint = "ws://127.0.0.1"
+
 func TestLatestMainchainInfo_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -29,6 +30,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        beaconDB,
@@ -83,7 +85,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 }
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: &goodFetcher{},
@@ -122,7 +123,6 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 }
 
 func TestBlockExists_ValidHash(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: &goodFetcher{},
@@ -162,7 +162,6 @@ func TestBlockExists_ValidHash(t *testing.T) {
 }
 
 func TestBlockExists_InvalidHash(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: &goodFetcher{},
@@ -178,7 +177,6 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 }
 
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: nil, // nil blockFetcher would panic if cached value not used

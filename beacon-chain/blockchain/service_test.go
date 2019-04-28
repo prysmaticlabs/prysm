@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
@@ -206,7 +206,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	return epochSignature.Marshal()
 }
 
-func setupGenesisBlock(t *testing.T, cs *ChainService, beaconState *pb.BeaconState) ([32]byte, *pb.BeaconBlock) {
+func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *pb.BeaconBlock) {
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
@@ -307,7 +307,6 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
 
@@ -316,11 +315,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.HeadState(ctx)
-	if err != nil {
-		t.Fatalf("Could not fetch beacon state: %v", err)
-	}
-	setupGenesisBlock(t, chainService, beaconState)
+	setupGenesisBlock(t, chainService)
 	// Test the start function.
 	chainService.Start()
 

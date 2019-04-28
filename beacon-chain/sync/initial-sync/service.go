@@ -19,6 +19,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -109,6 +110,7 @@ type InitialSync struct {
 	finalizedStateRoot  [32]byte
 	mutex               *sync.Mutex
 	nodeIsSynced        bool
+	bestPeer            peer.ID
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -154,7 +156,6 @@ func (s *InitialSync) Start() {
 	}
 	s.currentSlot = cHead.Slot
 	go s.run()
-	go s.listenForNewBlocks()
 	go s.checkInMemoryBlocks()
 }
 
@@ -178,6 +179,11 @@ func (s *InitialSync) InitializeObservedStateRoot(root [32]byte) {
 // InitializeFinalizedStateRoot sets the state root of the last finalized state.
 func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
+}
+
+// InitializeBestPeer sets the peer ID of the highest observed peer.
+func (s *InitialSync) InitializeBestPeer(p peer.ID) {
+	s.bestPeer = p
 }
 
 // HighestObservedSlot returns the highest observed slot.
@@ -204,6 +210,17 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	if err := s.db.SaveBlock(block); err != nil {
 		return err
 	}
+	root, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return fmt.Errorf("failed to tree hash block: %v", err)
+	}
+	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  root[:],
+		ParentRoot: block.ParentRootHash32,
+	}); err != nil {
+		return fmt.Errorf("failed to save attestation target: %v", err)
+	}
 	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
 		switch err.(type) {
@@ -212,6 +229,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 			if err := s.db.DeleteBlock(block); err != nil {
 				return fmt.Errorf("could not delete bad block from db: %v", err)
 			}
+			return fmt.Errorf("could not apply block state transition: %v", err)
 		default:
 			return fmt.Errorf("could not apply block state transition: %v", err)
 		}
@@ -223,14 +241,8 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 		return err
 	}
 
-	canonicalState, err := s.db.HeadState(ctx)
-	if err != nil {
-		return fmt.Errorf("could not get state: %v", err)
-	}
-	stateRoot, err := hashutil.HashProto(canonicalState)
-	if err != nil {
-		return fmt.Errorf("could not hash state: %v", err)
-	}
+	stateRoot := s.db.HeadStateRoot()
+
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
 		log.Fatalf(
@@ -239,8 +251,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 			s.highestObservedRoot,
 		)
 	}
-	log.Infof("Canonical state slot: %d", canonicalState.Slot-params.BeaconConfig().GenesisSlot)
-	log.Info("Exiting initial sync and starting normal sync")
+	log.WithField("canonicalStateSlot", state.Slot-params.BeaconConfig().GenesisSlot).Info("Exiting init sync and starting regular sync")
 	s.syncService.ResumeSync()
 	s.cancel()
 	s.nodeIsSynced = true
@@ -268,24 +279,6 @@ func (s *InitialSync) checkInMemoryBlocks() {
 	}
 }
 
-// listenForNewBlocks listens for block announcements beyond the canonical head slot that may
-// be received during initial sync - we must process these blocks to catch up with peers.
-func (s *InitialSync) listenForNewBlocks() {
-	blockAnnounceSub := s.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, s.blockAnnounceBuf)
-	defer func() {
-		blockAnnounceSub.Unsubscribe()
-		close(s.blockAnnounceBuf)
-	}()
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case msg := <-s.blockAnnounceBuf:
-			safelyHandleMessage(s.processBlockAnnounce, msg)
-		}
-	}
-}
-
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
@@ -302,6 +295,7 @@ func (s *InitialSync) run() {
 		close(s.stateBuf)
 	}()
 
+	// We send out a state request to all peers.
 	if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot); err != nil {
 		log.Errorf("Could not request state from peer %v", err)
 	}

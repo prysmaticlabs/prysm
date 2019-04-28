@@ -3,12 +3,9 @@ package db
 import (
 	"fmt"
 
-	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -26,37 +23,36 @@ func createBlock(enc []byte) (*pbp2p.BeaconBlock, error) {
 // SaveProposedBlock !!!! accepts a public key and validator index and writes them to disk.
 func (db *ValidatorDB) SaveProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey, block *pbp2p.BeaconBlock) error {
 	return nil
-	epoch := block.Slot / params.BeaconConfig().SlotsPerEpoch
-
-	if lastProposedBlockEpoch, ok := db.lastProposedBlockEpoch[(*pubKey)]; !ok || lastProposedBlockEpoch < epoch {
-		db.lastProposedBlockEpoch[(*pubKey)] = epoch
-	}
-	forkVersion := forkutil.ForkVersion(fork, epoch)
-	blockEnc, err := block.Marshal()
-	if err != nil {
-		return fmt.Errorf("failed to encode block: %v", err)
-	}
-
-	return db.update(func(tx *bolt.Tx) error {
-		bucket := getBucket(tx, pubKey, forkVersion, proposedBlockBucket)
-		return bucket.Put(bytesutil.Bytes8(epoch), blockEnc)
-	})
+	//	epoch := block.Slot / params.BeaconConfig().SlotsPerEpoch
+	//
+	//	if lastProposedBlockEpoch, ok := db.lastProposedBlockEpoch[(*pubKey)]; !ok || lastProposedBlockEpoch < epoch {
+	//		db.lastProposedBlockEpoch[(*pubKey)] = epoch
+	//	}
+	//	forkVersion := forkutil.ForkVersion(fork, epoch)
+	//	blockEnc, err := block.Marshal()
+	//	if err != nil {
+	//		return fmt.Errorf("failed to encode block: %v", err)
+	//	}
+	//
+	//	return db.update(func(tx *bolt.Tx) error {
+	//		bucket := getBucket(tx, pubKey, forkVersion, proposedBlockBucket)
+	//		return bucket.Put(bytesutil.Bytes8(epoch), blockEnc)
+	//	})
 }
 
 //GetProposedBlock TODO
 func (db *ValidatorDB) GetProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey, epoch uint64) (block *pbp2p.BeaconBlock, err error) {
-	return
-	if lastProposedBlockEpoch, ok := db.lastProposedBlockEpoch[(*pubKey)]; ok && lastProposedBlockEpoch < epoch {
-		return
-	}
-
-	forkVersion := forkutil.ForkVersion(fork, epoch)
-	err = db.view(func(tx *bolt.Tx) error {
-		bucket := getBucket(tx, pubKey, forkVersion, proposedBlockBucket)
-		blockEnc := bucket.Get(bytesutil.Bytes8(epoch))
-		block, err = createBlock(blockEnc)
-		return err
-	})
+	//	if lastProposedBlockEpoch, ok := db.lastProposedBlockEpoch[(*pubKey)]; ok && lastProposedBlockEpoch < epoch {
+	//		return
+	//	}
+	//
+	//	forkVersion := forkutil.ForkVersion(fork, epoch)
+	//	err = db.view(func(tx *bolt.Tx) error {
+	//		bucket := getBucket(tx, pubKey, forkVersion, proposedBlockBucket)
+	//		blockEnc := bucket.Get(bytesutil.Bytes8(epoch))
+	//		block, err = createBlock(blockEnc)
+	//		return err
+	//	})
 	return
 }
 

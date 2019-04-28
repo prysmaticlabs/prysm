@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -52,14 +54,28 @@ func (b *BlockFailedProcessingErr) Error() string {
 // 4. Process and cleanup any block operations, such as attestations and deposits, which would need to be
 //    either included or flushed from the beacon node's runtime.
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	c.receiveBlockLock.Lock()
+	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, block.Slot-1)
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parent, err := c.beaconDB.Block(parentRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get parent block: %v", err)
+	}
+	if parent == nil {
+		return nil, errors.New("parent does not exist in DB")
+	}
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 	saveLatestBlock := beaconState.LatestBlock
 
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash beacon block")
+	}
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(ctx, block, beaconState); err != nil {
 		return beaconState, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
@@ -81,10 +97,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err != nil {
 		switch err.(type) {
 		case *BlockFailedProcessingErr:
-			// If the block fails processing, we delete it from our DB.
+			// If the block fails processing, we mark it as blacklisted and delete it from our DB.
+			c.beaconDB.MarkEvilBlockHash(blockRoot)
 			if err := c.beaconDB.DeleteBlock(block); err != nil {
 				return nil, fmt.Errorf("could not delete bad block from db: %v", err)
 			}
+			return beaconState, err
 		default:
 			return beaconState, fmt.Errorf("could not apply block state transition: %v", err)
 		}
@@ -199,6 +217,13 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.Beac
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return fmt.Errorf("failed to save block: %v", err)
 	}
+	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  blockRoot[:],
+		ParentRoot: block.ParentRootHash32,
+	}); err != nil {
+		return fmt.Errorf("failed to save attestation target: %v", err)
+	}
 	// Announce the new block to the network.
 	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       blockRoot[:],
@@ -217,11 +242,8 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 		log.Error("Sent processed block to no subscribers")
 	}
 
-	// Update attestation store with latest attestation target.
-	for _, att := range block.Body.Attestations {
-		if err := c.attsService.UpdateLatestAttestation(ctx, att); err != nil {
-			return fmt.Errorf("failed to update latest attestation for store: %v", err)
-		}
+	if err := c.attsService.BatchUpdateLatestAttestation(ctx, block.Body.Attestations); err != nil {
+		return fmt.Errorf("failed to update latest attestation for store: %v", err)
 	}
 
 	// Remove pending deposits from the deposit queue.
@@ -292,7 +314,7 @@ func (c *ChainService) runStateTransition(
 // validators were activated from current epoch. After it saves, current epoch key
 // is deleted from ActivatedValidators mapping.
 func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
-	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state))
+	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range activatedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
@@ -307,7 +329,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 // validators were exited from current epoch. After it deletes, current epoch key
 // is deleted from ExitedValidators mapping.
 func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
-	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state))
+	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range exitedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {

@@ -17,7 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "powchain")
+var log = logrus.WithField("prefix", "validator")
 
 type validatorStore struct {
 	sync.RWMutex
@@ -54,7 +54,7 @@ func ValidatorIndices(
 			return nil, err
 		}
 
-		attesterIndicesIntersection = sliceutil.Union(attesterIndicesIntersection, attesterIndices)
+		attesterIndicesIntersection = sliceutil.UnionUint64(attesterIndicesIntersection, attesterIndices)
 	}
 
 	return attesterIndicesIntersection, nil
@@ -87,7 +87,7 @@ func AttestingValidatorIndices(
 			if err != nil {
 				return nil, fmt.Errorf("could not get attester indices: %v", err)
 			}
-			validatorIndicesCommittees = sliceutil.Union(validatorIndicesCommittees, validatorIndicesCommittee)
+			validatorIndicesCommittees = sliceutil.UnionUint64(validatorIndicesCommittees, validatorIndicesCommittee)
 		}
 	}
 	return validatorIndicesCommittees, nil
@@ -321,7 +321,8 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
-			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
+			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount &&
+			!helpers.IsActiveValidator(validator, currentEpoch) {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			log.WithFields(logrus.Fields{
 				"index":               idx,

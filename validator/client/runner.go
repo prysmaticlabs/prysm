@@ -22,13 +22,13 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
-	RoleAt(slot uint64) pb.ValidatorRole
-	AttestToBlockHead(ctx context.Context, slot uint64)
-	ProposeBlock(ctx context.Context, slot uint64)
+	RolesAt(slot uint64) map[string]pb.ValidatorRole // validatorIndex -> role
+	AttestToBlockHead(ctx context.Context, slot uint64, idx string)
+	ProposeBlock(ctx context.Context, slot uint64, idx string)
 }
 
 // Run the main validator routine. This routine exits if the context is
-// cancelled.
+// canceled.
 //
 // Order of operations:
 // 1 - Initialize validator data
@@ -62,7 +62,7 @@ func run(ctx context.Context, v Validator) {
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
-			slotCtx, _ := context.WithDeadline(ctx, v.SlotDeadline(slot))
+			slotCtx, cancel := context.WithDeadline(ctx, v.SlotDeadline(slot))
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v",
@@ -73,23 +73,32 @@ func run(ctx context.Context, v Validator) {
 			// epoch transition in the beacon node's state.
 			if err := v.UpdateAssignments(slotCtx, slot); err != nil {
 				handleAssignmentError(err, slot)
+				cancel()
 				continue
 			}
-			role := v.RoleAt(slot)
+			for id, role := range v.RolesAt(slot) {
+				go func(role pb.ValidatorRole, id string) {
+					switch role {
+					case pb.ValidatorRole_ATTESTER:
+						v.AttestToBlockHead(slotCtx, slot, id)
+					case pb.ValidatorRole_PROPOSER:
+						v.ProposeBlock(slotCtx, slot, id)
+						v.AttestToBlockHead(slotCtx, slot, id)
+					case pb.ValidatorRole_UNKNOWN:
+						pk12Char := id
+						if len(id) > 12 {
+							pk12Char = id[:12]
+						}
+						log.WithFields(logrus.Fields{
+							"public_key": pk12Char,
+							"slot":       slot - params.BeaconConfig().GenesisSlot,
+							"role":       role,
+						}).Debug("No active assignment, doing nothing")
+					default:
+						// Do nothing :)
+					}
 
-			switch role {
-			case pb.ValidatorRole_ATTESTER:
-				v.AttestToBlockHead(slotCtx, slot)
-			case pb.ValidatorRole_PROPOSER:
-				v.ProposeBlock(slotCtx, slot)
-				v.AttestToBlockHead(slotCtx, slot)
-			case pb.ValidatorRole_UNKNOWN:
-				log.WithFields(logrus.Fields{
-					"slot": slot - params.BeaconConfig().GenesisSlot,
-					"role": role,
-				}).Info("No active assignment, doing nothing")
-			default:
-				// Do nothing :)
+				}(role, id)
 			}
 		}
 	}

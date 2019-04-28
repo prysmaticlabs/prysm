@@ -412,6 +412,7 @@ func ProcessBlockAttestations(
 		if err := VerifyAttestation(beaconState, attestation, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
+
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,

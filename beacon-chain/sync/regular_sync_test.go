@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"strconv"
 	"testing"
@@ -15,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,6 +26,9 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
 }
 
 type mockP2P struct {
@@ -45,7 +48,6 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 }
 
 type mockChainService struct {
-	bFeed           *event.Feed
 	sFeed           *event.Feed
 	cFeed           *event.Feed
 	db              *db.BeaconDB
@@ -117,7 +119,7 @@ func (ma *mockAttestationService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func setupService(t *testing.T, db *db.BeaconDB) *RegularSync {
+func setupService(db *db.BeaconDB) *RegularSync {
 	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
@@ -175,7 +177,7 @@ func TestProcessBlock_OK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
+	deposits, _ := setupInitialDeposits(t)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -250,7 +252,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
+	deposits, _ := setupInitialDeposits(t)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
@@ -344,7 +346,7 @@ func TestBlockRequest_InvalidMsg(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ss := setupService(t, db)
+	ss := setupService(db)
 
 	malformedRequest := &pb.BeaconBlockAnnounce{
 		Hash: []byte{'t', 'e', 's', 't'},
@@ -367,7 +369,7 @@ func TestBlockRequest_OK(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ss := setupService(t, db)
+	ss := setupService(db)
 
 	request1 := &pb.BeaconBlockRequestBySlotNumber{
 		SlotNumber: 20,
@@ -397,10 +399,20 @@ func TestReceiveAttestation_OK(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	if err := db.SaveState(ctx, &pb.BeaconState{
+	beaconState := &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + 2,
-	}); err != nil {
+	}
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
+	}
+	beaconBlock := &pb.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+	if err := db.SaveBlock(beaconBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.UpdateChainHead(ctx, beaconBlock, beaconState); err != nil {
+		t.Fatal(err)
 	}
 	cfg := &RegularSyncConfig{
 		ChainService:     ms,
@@ -468,10 +480,8 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	if err := ss.receiveAttestation(msg1); err != nil {
 		t.Error(err)
 	}
-	want := fmt.Sprintf(
-		"Skipping received attestation with slot smaller than one epoch ago, %d < %d",
-		request1.Attestation.Data.Slot, params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch)
-	testutil.AssertLogsContain(t, hook, want)
+
+	testutil.AssertLogsContain(t, hook, "Skipping received attestation with slot smaller than one epoch ago")
 }
 
 func TestReceiveExitReq_OK(t *testing.T) {
@@ -529,8 +539,8 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 	if err := ss.handleAttestationRequestByHash(msg); err != nil {
 		t.Error(err)
 	}
-	want := fmt.Sprintf("Attestation %#x is not in db", bytesutil.ToBytes32(req.Hash))
-	testutil.AssertLogsContain(t, hook, want)
+
+	testutil.AssertLogsContain(t, hook, "Attestation not in db")
 }
 
 func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
@@ -649,8 +659,8 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	if err := ss.handleAttestationRequestByHash(msg); err != nil {
 		t.Error(err)
 	}
-	want := fmt.Sprintf("Sending attestation %#x to peer", attRoot)
-	testutil.AssertLogsContain(t, hook, want)
+
+	testutil.AssertLogsContain(t, hook, "Sending attestation to peer")
 }
 
 func TestHandleStateReq_NOState(t *testing.T) {
@@ -659,10 +669,10 @@ func TestHandleStateReq_NOState(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	ss := setupService(t, db)
+	ss := setupService(db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
+	deposits, _ := setupInitialDeposits(t)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -681,7 +691,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 		t.Error(err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Requested state root is different from locally stored state root")
+	testutil.AssertLogsContain(t, hook, "Requested state root is diff than local state root")
 
 }
 
@@ -711,7 +721,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 		t.Fatalf("could not hash beacon state: %v", err)
 	}
 
-	ss := setupService(t, db)
+	ss := setupService(db)
 
 	request1 := &pb.BeaconStateRequest{
 		FinalizedStateRootHash32S: stateRoot[:],

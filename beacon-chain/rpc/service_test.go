@@ -121,18 +121,26 @@ func newMockChainService() *mockChainService {
 	}
 }
 
+type mockSyncService struct {
+}
+
+func (ms *mockSyncService) Status() error {
+	return nil
+}
+
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:     "7348",
-		CertFlag: "alice.crt",
-		KeyFlag:  "alice.key",
+		Port:        "7348",
+		CertFlag:    "alice.crt",
+		KeyFlag:     "alice.key",
+		SyncService: &mockSyncService{},
 	})
 
 	rpcService.Start()
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
+	testutil.AssertLogsContain(t, hook, "Listening on port")
 
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
@@ -150,7 +158,8 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewLocal(fl.Logger)
 
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port: "ralph merkle!!!",
+		Port:        "ralph merkle!!!",
+		SyncService: &mockSyncService{},
 	})
 
 	if val, ok := log.(*TestLogger).testMap["error"]; ok {
@@ -179,13 +188,14 @@ func TestStatus_CredentialError(t *testing.T) {
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port: "7777",
+		Port:        "7777",
+		SyncService: &mockSyncService{},
 	})
 
 	rpcService.Start()
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
+	testutil.AssertLogsContain(t, hook, fmt.Sprint("Listening on port"))
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
 
 	rpcService.Stop()

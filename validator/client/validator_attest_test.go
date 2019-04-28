@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"sync"
 	"testing"
@@ -21,8 +22,8 @@ import (
 
 func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-
 	validator, m, finish := setup(t)
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{}}
 	defer finish()
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -38,7 +39,7 @@ func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/)
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator index")
 }
 
@@ -47,9 +48,10 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.assignment = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
-			Shard: 5,
+			PublicKey: validatorKey.PublicKey.Marshal(),
+			Shard:     5,
 		},
 	}}
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -69,7 +71,7 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/)
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Could not fetch necessary info to produce attestation")
 }
 
@@ -78,8 +80,9 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.assignment = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
 			Committee: make([]uint64, 111),
 		}}}
@@ -112,7 +115,7 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/)
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Could not submit attestation to beacon node")
 }
 
@@ -123,8 +126,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignment = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
 			Committee: committee,
 		}}}
@@ -163,7 +167,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/)
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	// Validator index is at index 4 in the mocked committee defined in this test.
 	expectedAttestation := &pbp2p.Attestation{
@@ -185,7 +189,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
-	testutil.AssertLogsContain(t, hook, "Beacon node processed attestation successfully")
+	testutil.AssertLogsContain(t, hook, "Attested latest head")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
@@ -225,7 +229,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 
 	delay = 3
 	timer := time.NewTimer(time.Duration(1 * time.Second))
-	go validator.AttestToBlockHead(context.Background(), 0)
+	go validator.AttestToBlockHead(context.Background(), 0, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	<-timer.C
 }
 
@@ -240,8 +244,9 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignment = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
 			Committee: committee,
 		}}}
@@ -283,7 +288,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	}, nil /*err*/).Times(1)
 
 	delay = 0
-	validator.AttestToBlockHead(context.Background(), 0)
+	validator.AttestToBlockHead(context.Background(), 0, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 }
 
 func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
@@ -291,8 +296,9 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(2)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignment = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
 			Committee: committee,
 		}}}
@@ -331,7 +337,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		PreviousVersion: 0,
 	}, nil /*err*/).Times(1)
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	if len(generatedAttestation.AggregationBitfield) != 2 {
 		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBitfield))
