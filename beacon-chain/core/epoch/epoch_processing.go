@@ -634,7 +634,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	crosslinkAtts = attsForCrosslink(state, candidateCrosslinks[0], shardAtts)
 	winnerBalance, err = AttestingBalance(state, crosslinkAtts)
 	winnerCrosslink = candidateCrosslinks[0]
-	fmt.Println(candidateCrosslinks)
+
 	for _, c := range candidateCrosslinks {
 		crosslinkAtts := crosslinkAtts[:0]
 		crosslinkAtts = attsForCrosslink(state, c, shardAtts)
@@ -646,7 +646,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 			winnerCrosslink = c
 		}
 	}
-	fmt.Println()
+
 	return winnerCrosslink, nil
 }
 

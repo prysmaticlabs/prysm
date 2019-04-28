@@ -1061,7 +1061,7 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reflect.DeepEqual(crosslink, gCrosslink) {
+	if !reflect.DeepEqual(crosslink, gCrosslink) {
 		t.Errorf("Did not get genesis crosslink, got: %v", crosslink)
 	}
 }
@@ -1094,8 +1094,8 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &pb.AttestationData{Slot: gs + 1, CrosslinkDataRoot: []byte{'B'}}
-	if reflect.DeepEqual(winner, want) {
+	want := &pb.Crosslink{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}
+	if !reflect.DeepEqual(winner, want) {
 		t.Errorf("Did not get genesis crosslink, got: %v", winner)
 	}
 }
