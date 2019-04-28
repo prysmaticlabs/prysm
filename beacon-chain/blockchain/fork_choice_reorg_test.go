@@ -48,7 +48,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	// Construct a forked chain that looks as follows:
 	//    /------B1 ----B3 ----- B5 (current head)
 	// B0 --B2 -------------B4
-	blocks, roots := constructForkedChain(t, chainService, justifiedState)
+	blocks, roots := constructForkedChain(t, justifiedState)
 
 	// We then setup a canonical chain of the following blocks:
 	// B0->B1->B3->B5.
@@ -155,7 +155,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, want)
 }
 
-func constructForkedChain(t *testing.T, chainService *ChainService, beaconState *pb.BeaconState) ([]*pb.BeaconBlock, [][32]byte) {
+func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.BeaconBlock, [][32]byte) {
 	// Construct the following chain:
 	//    /------B1 ----B3 ----- B5 (current head)
 	// B0 --B2 -------------B4
