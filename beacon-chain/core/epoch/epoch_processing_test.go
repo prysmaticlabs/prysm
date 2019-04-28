@@ -1029,3 +1029,73 @@ func TestCrosslinkAttestingIndices_CanGetIndices(t *testing.T) {
 		}
 	}
 }
+
+func TestWinningCrosslink_CantGetMatchingAtts(t *testing.T) {
+	wanted := fmt.Sprintf("could not get matching attestations: input epoch: %d != current epoch: %d or previous epoch: %d",
+		100, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().GenesisEpoch)
+	_, err := WinningCrosslink(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, 0, 100)
+	if err.Error() != wanted {
+		t.Fatal(err)
+	}
+}
+
+func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+	ge := params.BeaconConfig().GenesisEpoch
+
+	state := &pb.BeaconState{
+		Slot:                      gs + e + 2,
+		PreviousEpochAttestations: []*pb.PendingAttestation{},
+		LatestBlockRoots:          make([][]byte, 128),
+		CurrentCrosslinks:         []*pb.Crosslink{{Epoch: ge}},
+	}
+
+	gCrosslink := &pb.Crosslink{
+		Epoch:                       params.BeaconConfig().GenesisEpoch,
+		CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
+		PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+	}
+
+	crosslink, err := WinningCrosslink(state, 0, ge)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.DeepEqual(crosslink, gCrosslink) {
+		t.Errorf("Did not get genesis crosslink, got: %v", crosslink)
+	}
+}
+
+func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+	ge := params.BeaconConfig().GenesisEpoch
+
+	atts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: gs + 1, CrosslinkDataRoot: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: gs + 1, CrosslinkDataRoot: []byte{'B'}}}, // winner
+		{Data: &pb.AttestationData{Slot: gs + 1, CrosslinkDataRoot: []byte{'C'}}},
+	}
+
+	blockRoots := make([][]byte, 128)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i + 1)}
+	}
+
+	state := &pb.BeaconState{
+		Slot:                      gs + e + 2,
+		PreviousEpochAttestations: atts,
+		LatestBlockRoots:          blockRoots,
+		CurrentCrosslinks:         []*pb.Crosslink{{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}},
+	}
+
+	winner, err := WinningCrosslink(state, 0, ge)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &pb.AttestationData{Slot: gs + 1, CrosslinkDataRoot: []byte{'B'}}
+	if reflect.DeepEqual(winner, want) {
+		t.Errorf("Did not get genesis crosslink, got: %v", winner)
+	}
+}
