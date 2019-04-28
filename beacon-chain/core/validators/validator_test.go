@@ -587,10 +587,9 @@ func TestUpdateRegistry_Activations(t *testing.T) {
 
 func TestDoubleActivatedValidator(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
-				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+				ActivationEpoch: 6 + params.BeaconConfig().ActivationExitDelay + 2},
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
 				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
 		},
