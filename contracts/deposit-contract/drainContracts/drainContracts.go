@@ -92,7 +92,8 @@ func main() {
 				log.Fatalf("could not get account nonce: %v", err)
 			}
 			txOps.Nonce = big.NewInt(int64(nonce))
-			fmt.Printf("nonce is %d", nonce)
+			fmt.Printf("current address is %s\n", crypto.PubkeyToAddress(privKey.PublicKey).String())
+			fmt.Printf("nonce is %d\n", nonce)
 			// User inputs keystore json file, sign tx with keystore json
 		} else {
 			password := loadTextFromFile(passwordFile)
@@ -115,7 +116,8 @@ func main() {
 				log.Fatalf("could not get account nonce: %v", err)
 			}
 			txOps.Nonce = big.NewInt(int64(nonce))
-			fmt.Printf("nonce is %d", nonce)
+			fmt.Printf("current address is %s\n", privKey.Address.String())
+			fmt.Printf("nonce is %d\n", nonce)
 		}
 
 		addresses, err := allDepositContractAddresses(client)
@@ -123,7 +125,7 @@ func main() {
 			log.Fatalf("Could not get all deposit contract address: %v", err)
 		}
 
-		fmt.Printf("%d contracts with balance found.", len(addresses))
+		fmt.Printf("%d contracts with balance found\n", len(addresses))
 
 		for _, address := range addresses {
 			depositContract, err := contracts.NewDepositContract(address, client)
@@ -180,15 +182,24 @@ func allDepositContractAddresses(client *ethclient.Client) ([]common.Address, er
 		return nil, fmt.Errorf("could not get all chainstart logs: %v", err)
 	}
 
-	fmt.Printf("%d chain start logs found", len(logs))
+	fmt.Printf("%d chain start logs found\n", len(logs))
+	for i := len(logs)/2 - 1; i >= 0; i-- {
+		opp := len(logs) - 1 - i
+		logs[i], logs[opp] = logs[opp], logs[i]
+	}
+
 	for _, ll := range logs {
-		balance, err := client.BalanceAt(context.Background(), ll.Address, nil)
-		if err != nil {
-			return nil, fmt.Errorf("could not get balance of account: %v", err)
-		}
-		if balance.Cmp(big.NewInt(0)) > 0 {
-			addresses = append(addresses, ll.Address)
-		}
+		addresses = append(addresses, ll.Address)
+		// Wanted this to be a bit more dynamic but needs more testing
+		// balance, err := client.BalanceAt(context.Background(), ll.Address, nil)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("could not get balance of account: %v", err)
+		// }
+		// if balance.Cmp(big.NewInt(0)) > 0 {
+		// addresses = append(addresses, ll.Address)
+		// } else {
+		// 	break
+		// }
 	}
 
 	return addresses, nil
