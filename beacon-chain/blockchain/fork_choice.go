@@ -312,6 +312,8 @@ func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock,
 	return children, nil
 }
 
+// isDescendant checks if the target block is a descendant block of the current
+// head.
 func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, headRoot [32]byte,
 	targetBlock *pb.BeaconBlock) (bool, error) {
 	var err error
