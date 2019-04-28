@@ -158,7 +158,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 		return fmt.Errorf("could not retrieve chain head: %v", err)
 	}
 
-	isDescendant, err := c.isDescendant(newHead, currentHead)
+	isDescendant, err := c.isDescendant(currentHead, newHead)
 	if err != nil {
 		return fmt.Errorf("could not check if block is descendant: %v", err)
 	}
@@ -187,7 +187,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 
 	// if we receive forked blocks
 	if newHead.Slot != newState.Slot {
-		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, head.Slot)
+		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot)
 		if err != nil {
 			return fmt.Errorf("could not gen state: %v", err)
 		}
