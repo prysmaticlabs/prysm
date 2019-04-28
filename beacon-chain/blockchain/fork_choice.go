@@ -174,11 +174,6 @@ func (c *ChainService) ApplyForkChoiceRule(
 			return fmt.Errorf("could not gen state: %v", err)
 		}
 
-		if newState.Slot != postState.Slot {
-			log.Warnf("Reorg happened, post state slot at %d, new head state at slot %d",
-				postState.Slot-params.BeaconConfig().GenesisSlot, newState.Slot-params.BeaconConfig().GenesisSlot)
-		}
-
 		for revertedSlot := currentHead.Slot; revertedSlot > newHead.Slot; revertedSlot-- {
 			delete(c.canonicalBlocks, revertedSlot)
 		}
