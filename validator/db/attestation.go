@@ -23,6 +23,7 @@ func createAttestation(enc []byte) (*pbp2p.Attestation, error) {
 
 // SaveAttestation TODO
 func (db *ValidatorDB) SaveAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, attestation *pbp2p.Attestation) error {
+	return nil
 	epoch := attestation.Data.Slot / params.BeaconConfig().SlotsPerEpoch
 	if lastAttestationEpoch, ok := db.lastAttestationEpoch[(*pubKey)]; !ok || lastAttestationEpoch < epoch {
 		db.lastAttestationEpoch[(*pubKey)] = epoch
@@ -42,6 +43,7 @@ func (db *ValidatorDB) SaveAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, 
 
 // GetAttestation TODO
 func (db *ValidatorDB) GetAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, epoch uint64) (attestation *pbp2p.Attestation, err error) {
+	return
 	if lastAttestationEpoch, ok := db.lastAttestationEpoch[(*pubKey)]; ok && lastAttestationEpoch < epoch {
 		return
 	}

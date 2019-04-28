@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -27,6 +28,15 @@ func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(nil /* Validator Index Response*/, errors.New("something bad happened"))
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
 
 	validator.AttestToBlockHead(context.Background(), 30)
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator index")
@@ -50,6 +60,14 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
 	).Return(nil, errors.New("something went wrong"))
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
 
 	validator.AttestToBlockHead(context.Background(), 30)
 	testutil.AssertLogsContain(t, hook, "Could not fetch necessary info to produce attestation")
@@ -85,6 +103,14 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
 
 	validator.AttestToBlockHead(context.Background(), 30)
 	testutil.AssertLogsContain(t, hook, "Could not submit attestation to beacon node")
@@ -127,6 +153,15 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	).Do(func(_ context.Context, att *pbp2p.Attestation) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
 
 	validator.AttestToBlockHead(context.Background(), 30)
 
@@ -179,6 +214,15 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/).Times(1)
+
 	delay = 3
 	timer := time.NewTimer(time.Duration(1 * time.Second))
 	go validator.AttestToBlockHead(context.Background(), 0)
@@ -229,6 +273,15 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(),
 	).Return(&pb.AttestResponse{}, nil).Times(1)
 
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/).Times(1)
+
 	delay = 0
 	validator.AttestToBlockHead(context.Background(), 0)
 }
@@ -268,6 +321,15 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	).Do(func(_ context.Context, att *pbp2p.Attestation) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/).Times(1)
 
 	validator.AttestToBlockHead(context.Background(), 30)
 

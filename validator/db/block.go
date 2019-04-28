@@ -25,6 +25,7 @@ func createBlock(enc []byte) (*pbp2p.BeaconBlock, error) {
 
 // SaveProposedBlock !!!! accepts a public key and validator index and writes them to disk.
 func (db *ValidatorDB) SaveProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey, block *pbp2p.BeaconBlock) error {
+	return nil
 	epoch := block.Slot / params.BeaconConfig().SlotsPerEpoch
 
 	if lastProposedBlockEpoch, ok := db.lastProposedBlockEpoch[(*pubKey)]; !ok || lastProposedBlockEpoch < epoch {
@@ -44,6 +45,7 @@ func (db *ValidatorDB) SaveProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey
 
 //GetProposedBlock TODO
 func (db *ValidatorDB) GetProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey, epoch uint64) (block *pbp2p.BeaconBlock, err error) {
+	return
 	if lastProposedBlockEpoch, ok := db.lastProposedBlockEpoch[(*pubKey)]; ok && lastProposedBlockEpoch < epoch {
 		return
 	}
