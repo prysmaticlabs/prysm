@@ -11,12 +11,24 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+type mockAttestationHandler struct {
+	targets map[uint64]*pb.AttestationTarget
+}
+
+func (m *mockAttestationHandler) LatestAttestationTarget(beaconState *pb.BeaconState, idx uint64) (*pb.AttestationTarget, error) {
+	return nil, nil
+}
+
+func (m *mockAttestationHandler) BatchUpdateLatestAttestation(ctx context.Context, atts []*pb.Attestation) error {
+	return nil
+}
+
 func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 
 	beaconState := &pb.BeaconState{
-		Slot: 10,
+		Slot: 15,
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
@@ -31,7 +43,6 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	//    /- B1 - B3 - B5 (current head)
 	// B0  - B2 - B4
 	blocks, roots := constructForkedChain(t, chainService, beaconState)
-
 	// Give block 4 the most votes (2).
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
@@ -49,7 +60,12 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		BlockRoot:  roots[4][:],
 		ParentRoot: blocks[4].ParentRootHash32,
 	}
-	// LMDGhost should pick block 5.
+	attHandler := &mockAttestationHandler{
+		targets: voteTargets,
+	}
+	chainService.attsService = attHandler
+
+	// LMDGhost should pick block 4.
 	head, err := chainService.lmdGhost(context.Background(), blocks[0], beaconState, voteTargets)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)

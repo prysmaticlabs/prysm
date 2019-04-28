@@ -23,6 +23,8 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
+var _ = AttestationHandler(&Service{})
+
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)

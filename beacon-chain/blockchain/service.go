@@ -38,7 +38,7 @@ type ChainService struct {
 	cancel               context.CancelFunc
 	beaconDB             *db.BeaconDB
 	web3Service          *powchain.Web3Service
-	attsService          *attestation.Service
+	attsService          attestation.AttestationHandler
 	opsPoolService       operations.OperationFeeds
 	chainStartChan       chan time.Time
 	canonicalBlockFeed   *event.Feed
@@ -55,7 +55,7 @@ type ChainService struct {
 type Config struct {
 	BeaconBlockBuf int
 	Web3Service    *powchain.Web3Service
-	AttsService    *attestation.Service
+	AttsService    attestation.AttestationHandler
 	BeaconDB       *db.BeaconDB
 	OpsPoolService operations.OperationFeeds
 	DevMode        bool

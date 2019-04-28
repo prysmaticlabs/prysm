@@ -185,7 +185,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 		reorgCount.Inc()
 	}
 
-	// if we receive forked blocks
+	// If we receive forked blocks.
 	if newHead.Slot != newState.Slot {
 		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot)
 		if err != nil {
