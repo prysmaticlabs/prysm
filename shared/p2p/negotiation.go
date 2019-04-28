@@ -40,13 +40,15 @@ func setupPeerNegotiation(h host.Host, contractAddress string, exclusions []peer
 					handshakeProtocol,
 				)
 				if err != nil {
-					log.WithError(err).WithField("peer", conn.RemotePeer()).Error(
-						"Failed to open stream with newly connected peer",
-					)
+					log.WithError(err).WithFields(logrus.Fields{
+						"peer":    conn.RemotePeer(),
+						"address": conn.RemoteMultiaddr(),
+					}).Error("Failed to open stream with newly connected peer")
 
-					if err := h.Network().ClosePeer(conn.RemotePeer()); err != nil {
-						log.WithError(err).Error("failed to disconnect peer")
-					}
+					log.Warn("Temporarily disabled -- not disconnecting peer. See https://github.com/prysmaticlabs/prysm/issues/2408")
+					//	if err := h.Network().ClosePeer(conn.RemotePeer()); err != nil {
+					//		log.WithError(err).Error("failed to disconnect peer")
+					//	}
 					return
 				}
 				defer s.Close()
