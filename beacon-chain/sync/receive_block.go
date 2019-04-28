@@ -185,14 +185,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	// only run fork choice if the block has the chain head as the parent
-	if headRoot == bytesutil.ToBytes32(block.ParentRootHash32) {
-		if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
-			log.Errorf("Could not run fork choice on block %v", err)
-			return nil, nil, false, err
-		}
-
-	} else {
+	if headRoot != bytesutil.ToBytes32(block.ParentRootHash32) {
 		// Save historical state from forked block.
 		forkedBlock.Inc()
 		log.WithFields(logrus.Fields{
@@ -205,6 +198,10 @@ func (rs *RegularSync) validateAndProcessBlock(
 		}
 	}
 
+	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+		log.WithError(err).Error("Could not run fork choice on block")
+		return nil, nil, false, err
+	}
 	sentBlocks.Inc()
 	// We update the last observed slot to the received canonical block's slot.
 	if block.Slot > rs.highestObservedSlot {

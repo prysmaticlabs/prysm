@@ -25,6 +25,13 @@ import (
 var log = logrus.WithField("prefix", "attestation")
 var committeeCache = cache.NewCommitteesCache()
 
+// TargetHandler provides an interface for fetching latest attestation targets
+// and updating attestations in batches.
+type TargetHandler interface {
+	LatestAttestationTarget(state *pb.BeaconState, validatorIndex uint64) (*pb.AttestationTarget, error)
+	BatchUpdateLatestAttestation(ctx context.Context, atts []*pb.Attestation) error
+}
+
 type attestationStore struct {
 	sync.RWMutex
 	m map[[48]byte]*pb.Attestation
