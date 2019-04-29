@@ -111,14 +111,15 @@ _go_image_repos()
 
 http_archive(
     name = "prysm_testnet_site",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/3d0a15deb03aeefe0c69d4400a1f9486383fde27.tar.gz",
-    strip_prefix = "prysm-testnet-site-3d0a15deb03aeefe0c69d4400a1f9486383fde27",
-    sha256 = "f56cb21ab184ab2bfa7e8503ef1d3ec189bd2004aac9681012e6a58a0ba3f3e3",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/3848e91aab9332a0b2c15291f65f09c94db1a84d.tar.gz",
+    strip_prefix = "prysm-testnet-site-3848e91aab9332a0b2c15291f65f09c94db1a84d",
+    sha256 = "d57cbb11cbd8126d31385064315df731132401f5c5ea110e05ed86da350c9523",
     build_file_content = """
 proto_library(
   name = "faucet_proto",
   srcs = ["src/proto/faucet.proto"],
   visibility = ["//visibility:public"],
+)""",
 )""",
 )
 
