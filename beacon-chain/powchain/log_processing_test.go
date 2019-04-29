@@ -124,7 +124,14 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	}
 
 	testAcc.txOpts.Value = amount32Eth
+	badData := []byte("bad data")
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to deposit contract %v", err)
+	}
+
+	// A deposit with bad data should also be correctly processed and added to the
+	// db in the pending deposits bucket.
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, badData); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -144,8 +151,9 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	web3Service.chainStarted = true
 
 	web3Service.ProcessDepositLog(logs[0])
+	web3Service.ProcessDepositLog(logs[1])
 	pendingDeposits := web3Service.beaconDB.PendingDeposits(context.Background(), nil /*blockNum*/)
-	if len(pendingDeposits) != 1 {
+	if len(pendingDeposits) != 2 {
 		t.Errorf("Unexpected number of deposits. Wanted 1 deposit, got %+v", pendingDeposits)
 	}
 }
@@ -300,7 +308,7 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	}
 
 	cachedDeposits := web3Service.ChainStartDeposits()
-	if len(cachedDeposits) != 1 {
+	if len(cachedDeposits) != depositsReqForChainStart {
 		t.Errorf(
 			"Did not cache the chain start deposits correctly, received %d, wanted %d",
 			len(cachedDeposits),

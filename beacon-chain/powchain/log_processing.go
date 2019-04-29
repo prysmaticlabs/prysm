@@ -98,6 +98,13 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		}
 	}
 
+	if validData {
+		log.WithFields(logrus.Fields{
+			"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
+			"merkleTreeIndex": index,
+		}).Info("Deposit registered from deposit contract")
+	}
+
 	// We always store all historical deposits in the DB.
 	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
 
@@ -106,10 +113,6 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
 	}
-	log.WithFields(logrus.Fields{
-		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
-		"merkleTreeIndex": index,
-	}).Info("Deposit registered from deposit contract")
 	validDepositsCount.Inc()
 }
 
