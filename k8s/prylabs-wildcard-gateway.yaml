@@ -16,6 +16,7 @@ spec:
       protocol: HTTP
     hosts:
     - "*.prylabs.net"
+    - "prylabs.net"
     tls:
       httpsRedirect: false
   - port:
@@ -24,6 +25,7 @@ spec:
       protocol: HTTPS
     hosts:
     - "*.prylabs.net"
+    - "prylabs.net"
     tls:
       mode: SIMPLE
       privateKey: /etc/istio/ingressgateway-certs/tls.key
