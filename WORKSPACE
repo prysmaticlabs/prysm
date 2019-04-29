@@ -961,7 +961,7 @@ go_repository(
 
 go_repository(
     name = "com_github_deckarep_golang_set",
-    commit = "699df6a3acf6867538e50931511e9dc403da108a",
+    commit = "cbaa98ba5575e67703b32b4b19f73c91f3c4159e",  # v1.7.1
     importpath = "github.com/deckarep/golang-set",
 )
 
