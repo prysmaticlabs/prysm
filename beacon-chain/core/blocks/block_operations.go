@@ -499,6 +499,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 	crosslinkFromAttestation := att.Data.LatestCrosslink
 	crosslinkFromState := beaconState.LatestCrosslinks[shard]
+
 	if !(reflect.DeepEqual(crosslinkFromState, crosslink) ||
 		reflect.DeepEqual(crosslinkFromState, crosslinkFromAttestation)) {
 		return fmt.Errorf(

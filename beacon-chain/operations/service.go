@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -112,21 +113,36 @@ func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 // PendingAttestations returns the attestations that have not seen on the beacon chain, the attestations are
 // returns in slot ascending order and up to MaxAttestations capacity. The attestations get
 // deleted in DB after they have been retrieved.
-func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
+func (s *Service) PendingAttestations(ctx context.Context) ([]*pb.Attestation, error) {
 	var attestations []*pb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve attestations from DB")
+	}
+	state, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
 	}
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
 		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
 	})
-	for i := range attestationsFromDB {
+	var validAttsCount uint64
+	for _, att := range attestationsFromDB {
+		// Delete the attestation if it fails to verify using head state,
+		// we don't want to pass the attestation to the proposer.
+		if err := blocks.VerifyAttestation(state, att, false /* verify signature */); err != nil {
+			if err := s.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, err
+			}
+			continue
+		}
+
+		validAttsCount++
 		// Stop the max attestation number per beacon block is reached.
-		if uint64(i) == params.BeaconConfig().MaxAttestations {
+		if validAttsCount == params.BeaconConfig().MaxAttestations {
 			break
 		}
-		attestations = append(attestations, attestationsFromDB[i])
+		attestations = append(attestations, att)
 	}
 	return attestations, nil
 }
