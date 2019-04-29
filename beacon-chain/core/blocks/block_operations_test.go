@@ -1000,6 +1000,92 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 }
 
+func TestVerifyIndexedAttestation_OK(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{1, 3, 5, 10, 12},
+		CustodyBit_1Indices: []uint64{},
+	}
+
+	if ok, err := blocks.VerifyIndexedAttestation(&pb.BeaconState{}, indexedAtt1); !ok {
+		t.Errorf("indexed attestation failed to verify: %v", err)
+	}
+}
+
+func TestVerifyIndexedAttestation_Intersecting(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
+		CustodyBit_1Indices: []uint64{3, 5, 8},
+	}
+
+	want := "should not contain duplicates"
+	if _, err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
+		indexedAtt1,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected verification to fail, received: %v", err)
+	}
+}
+
+func TestVerifyIndexedAttestation_Custody1Length(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
+		CustodyBit_1Indices: []uint64{5},
+	}
+
+	if ok, err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
+		indexedAtt1,
+	); ok || err != nil {
+		t.Errorf("Expected verification to fail return false, received: %t with error: %v", ok, err)
+	}
+}
+
+func TestVerifyIndexedAttestation_Empty(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{},
+		CustodyBit_1Indices: []uint64{},
+	}
+
+	if ok, err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
+		indexedAtt1,
+	); ok || err != nil {
+		t.Errorf("Expected verification to fail return false, received: %t with error: %v", ok, err)
+	}
+}
+
+func TestVerifyIndexedAttestation_AboveMaxLength(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+5),
+		CustodyBit_1Indices: []uint64{},
+	}
+
+	for i := uint64(0); i < params.BeaconConfig().MaxIndicesPerAttestation+5; i++ {
+		indexedAtt1.CustodyBit_0Indices[i] = i
+	}
+
+	if ok, err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
+		indexedAtt1,
+	); ok || err != nil {
+		t.Errorf("Expected verification to fail return false, received: %t", ok)
+	}
+}
+
+func TestVerifyIndexedAttestation_NotSorted(t *testing.T) {
+	indexedAtt1 := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
+		CustodyBit_1Indices: []uint64{},
+	}
+
+	if ok, err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
+		indexedAtt1,
+	); ok || err != nil {
+		t.Errorf("Expected verification to fail return false, received: %t with error: %v", ok, err)
+	}
+}
+
 func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1009,7 +1095,6 @@ func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 	beaconState := &pb.BeaconState{}
 	want := "exceeds allowed threshold"
 	if _, err := blocks.ProcessValidatorDeposits(
-
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
