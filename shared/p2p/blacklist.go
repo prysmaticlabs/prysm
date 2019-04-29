@@ -1,31 +1,45 @@
 package p2p
 
 import  ( 
-	ps "github.com/libp2p/go-libp2p-peerstore" 
+	"sync"
+	peer "github.com/libp2p/go-libp2p-peer"
 )
 
 
-type BlacklistedPeer struct {
-	PeerMap map[ps.PeerInfo.ID]bool
+type PeerBlackList struct {
+	pb map[peer.ID]struct{}
+	lk sync.RWMutex
+	size int
+}
+
+func GetPeerBlackList() *PeerBlackList {
+	pbl := new(PeerBlackList)
+	pbl.pb = make(map[peer.ID]struct{})
+	pbl.size = -1
+	return pbl
 }
 
 
-func AddNewBlacklistedPeer(peerID ps.PeerInfo.ID)  {
-	bp := new(BlacklistedPeer)
-	bp.PeerMap = make(map[ps.PeerInfo.ID]bool)
-	bp.PeerMap[peerID] = true
+func (pbl *PeerBlackList) Add(p peer.ID)  {
+	pbl.lk.RLock()
+	pbl.pb[p] = struct{}{}
+	pbl.lk.RUnlock()
+}
+
+func (pbl *PeerBlackList) Contains(p peer.ID) bool {
+	pbl.lk.RLock()
+	_, ok := pbl.pb[p]
+	pbl.lk.RUnlock()
+	return ok
+}
+
+func (pbl *PeerBlackList) Size() int {
+	pbl.lk.RLock()
+	defer pbl.lk.RUnlock()
+	return len(pbl.pb)
 }
 
 
-func IsPeerBlacklisted(peerID ps.PeerInfo.ID) bool {
-	bps := new(BlacklistedPeer)
-	bp.PeerMap = make(map[ps.PeerInfo.ID]bool)
-	if v, found := bp.PeerMap[peerID]; found {
-		if v {
-		 	return true
-		}
-	} 
-	return false
-}
+
 	
 
