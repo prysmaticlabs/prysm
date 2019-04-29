@@ -222,6 +222,21 @@ func TestFinalizedState_CanSaveRetrieve(t *testing.T) {
 	}
 }
 
+func TestBadBlockHashes_Pruning(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	stateSlot := uint64(10)
+	state := &pb.BeaconState{
+		Slot: stateSlot,
+	}
+	db.badBlockHashes = make(map[[32]byte]bool)
+	db.badBlockHashes[[32]byte{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32}] = true
+	db.SaveFinalizedState(state)
+	if len(db.badBlockHashes) != 0 {
+		t.Errorf("Bad block hashes were not pruned when finalized state was saved")
+	}
+}
+
 func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)

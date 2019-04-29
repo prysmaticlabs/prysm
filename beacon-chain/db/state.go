@@ -192,11 +192,9 @@ func (db *BeaconDB) SaveJustifiedState(beaconState *pb.BeaconState) error {
 // SaveFinalizedState saves the last finalized state in the db.
 func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 	// Delete blacklisted block hashes which came before the new finalized state
-	defer func() {
-		db.badBlocksLock.Lock()
-		defer db.badBlocksLock.Unlock()
-		db.badBlockHashes = make(map[[32]byte]bool)
-	}()
+	db.badBlocksLock.Lock()
+	defer db.badBlocksLock.Unlock()
+	db.badBlockHashes = make(map[[32]byte]bool)
 
 	// Delete historical states if we are saving a new finalized state.
 	if err := db.deleteHistoricalStates(beaconState.Slot); err != nil {
