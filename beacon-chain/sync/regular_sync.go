@@ -419,7 +419,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":       fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
+		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRootHash32)),
 		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 	}).Debug("Received an attestation")
 
@@ -427,7 +427,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	hasAttestation := rs.db.HasAttestation(attestationRoot)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", attestationRoot)).
+		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(attestationRoot[:]))).
 			Debug("Received, skipping attestation")
 		return nil
 	}
@@ -596,13 +596,13 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) error {
 	}
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", att == nil))
 	if att == nil {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", root)).
+		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).
 			Debug("Attestation not in db")
 		return nil
 	}
 
 	log.WithFields(logrus.Fields{
-		"attestationRoot": fmt.Sprintf("%#x", root),
+		"attestationRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"peer":            msg.Peer},
 	).Debug("Sending attestation to peer")
 	if err := rs.p2p.Send(ctx, &pb.AttestationResponse{
@@ -649,7 +649,7 @@ func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) error {
 func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb.BeaconBlockAnnounce) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
 	defer span.End()
-	log.WithField("blockRoot", fmt.Sprintf("%#x", announce.Hash)).
+	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(announce.Hash))).
 		Debug("Announcing canonical block")
 	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()
