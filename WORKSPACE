@@ -2,15 +2,15 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_skylib",
-    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
     sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
     strip_prefix = "bazel-skylib-0.8.0",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
 )
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.3/rules_go-0.18.3.tar.gz",
     sha256 = "86ae934bd4c43b99893fc64be9d9fc684b81461581df7ea8fc291c816f5ee8c5",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.3/rules_go-0.18.3.tar.gz",
 )
 
 http_archive(
@@ -28,9 +28,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.7.0.tar.gz",
-    strip_prefix = "rules_docker-0.7.0",
     sha256 = "aed1c249d4ec8f703edddf35cbe9dfaca0b5f5ea6e4cd9e83e99f3b0d1136c3d",
+    strip_prefix = "rules_docker-0.7.0",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.7.0.tar.gz",
 )
 
 http_archive(
@@ -64,7 +64,7 @@ yarn_install(
 )
 
 # This requires rules_docker to be fully instantiated before it is pulled in.
-load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
+load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults", "k8s_repositories")
 
 k8s_repositories()
 
@@ -88,7 +88,7 @@ k8s_repositories()
     "service_account",
 ]]
 
-load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains")
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
 
@@ -111,15 +111,15 @@ _go_image_repos()
 
 http_archive(
     name = "prysm_testnet_site",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/3848e91aab9332a0b2c15291f65f09c94db1a84d.tar.gz",
-    strip_prefix = "prysm-testnet-site-3848e91aab9332a0b2c15291f65f09c94db1a84d",
-    sha256 = "d57cbb11cbd8126d31385064315df731132401f5c5ea110e05ed86da350c9523",
     build_file_content = """
 proto_library(
   name = "faucet_proto",
   srcs = ["src/proto/faucet.proto"],
   visibility = ["//visibility:public"],
 )""",
+    sha256 = "d57cbb11cbd8126d31385064315df731132401f5c5ea110e05ed86da350c9523",
+    strip_prefix = "prysm-testnet-site-3848e91aab9332a0b2c15291f65f09c94db1a84d",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/3848e91aab9332a0b2c15291f65f09c94db1a84d.tar.gz",
 )
 
 http_archive(
@@ -376,7 +376,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_nat",
-    commit = "7790752804f5e7c2356fed9352686f1e45939459",  # v0.0.4
+    commit = "3efa307896b71a07705d8d0cf7f19a4595c62d4f",  # v0.0.2
     importpath = "github.com/libp2p/go-libp2p-nat",
 )
 
@@ -1075,6 +1075,6 @@ go_repository(
 
 go_repository(
     name = "com_github_karlseguin_ccache",
-    commit = "a2d62155777b39595c825ed3824279e642a5db3c",  # v2.0.2
+    commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",
     importpath = "github.com/karlseguin/ccache",
 )
