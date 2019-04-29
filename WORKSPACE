@@ -985,7 +985,7 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_urfave_cli_v1",
-    commit = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
+    commit = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",  # v1.20.0
     importpath = "gopkg.in/urfave/cli.v1",
 )
 
