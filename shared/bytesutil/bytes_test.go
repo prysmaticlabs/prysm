@@ -135,9 +135,9 @@ func TestTruncate(t *testing.T) {
 		{[]byte{}, []byte{}},
 	}
 	for _, tt := range tests {
-		b := Truncate(tt.a)
+		b := Trunc(tt.a)
 		if !bytes.Equal(b, tt.b) {
-			t.Errorf("Truncate(%d) = %v, want = %d", tt.a, b, tt.b)
+			t.Errorf("Trunc(%d) = %v, want = %d", tt.a, b, tt.b)
 		}
 	}
 }
