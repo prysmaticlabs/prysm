@@ -190,16 +190,6 @@ func allDepositContractAddresses(client *ethclient.Client) ([]common.Address, er
 
 	for _, ll := range logs {
 		addresses = append(addresses, ll.Address)
-		// Wanted this to be a bit more dynamic but just checking the balances isn't enough info
-		// balance, err := client.BalanceAt(context.Background(), ll.Address, nil)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("could not get balance of account: %v", err)
-		// }
-		// if balance.Cmp(big.NewInt(0)) > 0 {
-		// addresses = append(addresses, ll.Address)
-		// } else {
-		// 	break
-		// }
 	}
 
 	return addresses, nil
