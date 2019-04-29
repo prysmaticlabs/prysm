@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -128,9 +127,9 @@ func (s *Service) PendingAttestations(ctx context.Context) ([]*pb.Attestation, e
 	})
 	var validAttsCount uint64
 	for _, att := range attestationsFromDB {
-		// Delete the attestation if it fails to verify using head state,
-		// we don't want to pass the attestation to the proposer.
-		if err := blocks.VerifyAttestation(state, att, false /* verify signature */); err != nil {
+		// Delete the attestation if the attestation is one epoch older than head state,
+		// we don't want to pass these attestations to RPC for proposer to include.
+		if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch <= state.Slot {
 			if err := s.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, err
 			}

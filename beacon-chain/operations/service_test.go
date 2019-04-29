@@ -154,7 +154,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
 
-	if !reflect.DeepEqual(attestations, origAttestations[1:61]) {
+	if !reflect.DeepEqual(attestations, origAttestations[1:128]) {
 		t.Error("Retrieved attestations did not match")
 	}
 }
