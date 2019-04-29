@@ -90,6 +90,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 }
 
 func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
+	hook := logTest.NewGlobal()
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -156,6 +157,8 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	if len(pendingDeposits) != 2 {
 		t.Errorf("Unexpected number of deposits. Wanted 1 deposit, got %+v", pendingDeposits)
 	}
+	testutil.AssertLogsContain(t, hook, "Invalid deposit registered in deposit contract")
+	hook.Reset()
 }
 
 func TestUnpackDepositLogData_OK(t *testing.T) {
