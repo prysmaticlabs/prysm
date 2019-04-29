@@ -68,8 +68,7 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 	}
 	state := &pb.BeaconState{LatestIndexRootHash32S: activeIndexRoots}
 	tests := []struct {
-		epoch     uint64
-		indexRoot []byte
+		epoch uint64
 	}{
 		{
 			epoch: 34,
@@ -91,7 +90,7 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 
 			if !bytes.Equal(activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().LatestActiveIndexRootsLength], indexRoot) {
 				t.Errorf("Incorrect index root. Wanted: %#x, got: %#x",
-					test.indexRoot, indexRoot)
+					activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().LatestActiveIndexRootsLength], indexRoot)
 			}
 		}
 
