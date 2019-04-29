@@ -127,29 +127,35 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	// Save 140 attestations for test. During 1st retrieval we should get slot:0 - slot:128 attestations,
-	// 2nd retrieval we should get slot:128 - slot:140 attestations.
-	// Max attestation config value is set to 128.
+	// Save 140 attestations for test. During 1st retrieval we should get slot:1 - slot:61 attestations.
+	// The 1st retrieval is set at slot 64.
 	origAttestations := make([]*pb.Attestation, 140)
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:  uint64(i),
-				Shard: uint64(i),
+				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
-	// Test we can retrieve attestations from slot0 - slot127 (Max attestation amount).
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + 64,
+		LatestCrosslinks: []*pb.Crosslink{{
+			Epoch:                   params.BeaconConfig().GenesisEpoch,
+			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		t.Fatal(err)
+	}
+	// Test we can retrieve attestations from slot1 - slot61.
 	attestations, err := service.PendingAttestations(context.Background())
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
-	if !reflect.DeepEqual(attestations, origAttestations[0:params.BeaconConfig().MaxAttestations]) {
-		t.Errorf("Retrieved attestations did not match prev generated attestations for the first %d",
-			params.BeaconConfig().MaxAttestations)
+
+	if !reflect.DeepEqual(attestations, origAttestations[1:61]) {
+		t.Error("Retrieved attestations did not match")
 	}
 }
 
@@ -207,13 +213,20 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:  uint64(i),
-				Shard: uint64(i),
+				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
+	}
+	if err := db.SaveState(context.Background(), &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + 15,
+		LatestCrosslinks: []*pb.Crosslink{{
+			Epoch:                   params.BeaconConfig().GenesisEpoch,
+			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		t.Fatal(err)
 	}
 
 	retrievedAtts, err := s.PendingAttestations(context.Background())
@@ -279,13 +292,21 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:  uint64(i),
-				Shard: uint64(i),
+				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
+	}
+
+	if err := db.SaveState(context.Background(), &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + 15,
+		LatestCrosslinks: []*pb.Crosslink{{
+			Epoch:                   params.BeaconConfig().GenesisEpoch,
+			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		t.Fatal(err)
 	}
 
 	atts, _ := s.PendingAttestations(context.Background())
