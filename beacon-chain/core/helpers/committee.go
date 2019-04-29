@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -249,6 +250,16 @@ func Shuffling(
 //         if aggregation_bit == 0b1:
 //            participants.append(validator_index)
 //    return participants
+//   def get_attesting_indices(state: BeaconState,
+//     attestation_data: AttestationData,
+// 	   bitfield: bytes) -> List[ValidatorIndex]:
+//     """
+//     Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
+//     """
+//     crosslink_committees = get_crosslink_committees_at_slot(state, attestation_data.slot)
+//     crosslink_committee = [committee for committee, shard in crosslink_committees if shard == attestation_data.shard][0]
+//     assert verify_bitfield(bitfield, len(crosslink_committee))
+//     return sorted([index for i, index in enumerate(crosslink_committee) if get_bitfield_bit(bitfield, i) == 0b1])
 func AttestationParticipants(
 	state *pb.BeaconState,
 	attestationData *pb.AttestationData,
@@ -304,6 +315,7 @@ func AttestationParticipants(
 			participants = append(participants, validatorIndex)
 		}
 	}
+	sort.Slice(participants, func(i, j int) bool { return participants[i] < participants[j] })
 	return participants, nil
 }
 
