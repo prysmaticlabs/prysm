@@ -27,6 +27,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	peer "github.com/libp2p/go-libp2p-peer"
+
 )
 
 var log = logrus.WithField("prefix", "initial-sync")
@@ -226,12 +228,18 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
-	//  blacklist peer
-	p2p.AddNewBlacklistedPeer(peer.ID)
+	
+    // initialize PeerBlackList
+	pbl := p2p.GetPeerBlackList()
+
+	//Add peer to the blacklist
+	pbl.Add(peer.ID)
+
+	//drop a peer
+	
 
 
-
-
+	
 
 		// log.Fatalf(
 		// 	"Canonical state root %#x does not match highest observed root from peer %#x",
