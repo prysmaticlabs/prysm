@@ -88,13 +88,11 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		MerkleTreeIndex: index,
 	}
 
-
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted && validData {
 		var pubkey = fmt.Sprintf("#%x", depositInput.Pubkey)
 		if w.beaconDB.PubkeyInChainstart(w.ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
-			validData = false
 		} else {
 			w.beaconDB.MarkPubkeyForChainstart(w.ctx, pubkey)
 		}
