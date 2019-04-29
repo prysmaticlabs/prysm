@@ -18,7 +18,7 @@ import (
 
 func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableHistoricalStatePruning: true,
+		DisableHistoricalStatePruning: false,
 	})
 }
 
