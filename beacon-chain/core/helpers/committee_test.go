@@ -246,7 +246,7 @@ func TestCrosslinkCommitteesAtSlot_EpochSinceLastUpdatePow2(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry:            validators,
 		Slot:                         params.BeaconConfig().GenesisSlot + 128,
-		LatestIndexRootHash32S:       [][]byte{{'A'}, {'B'}, {'C'}},
+		LatestIndexRootHash32S:       [][]byte{{'A'}, {'B'}, {'C'}, {'D'}},
 		LatestRandaoMixes:            [][]byte{{'D'}, {'E'}, {'F'}},
 		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 	}
