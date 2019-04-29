@@ -12,24 +12,21 @@ import (
 // GenerateSeed generates the randao seed of a given epoch.
 //
 // Spec pseudocode definition:
-// def generate_seed(state: BeaconState,
-// 	epoch: Epoch) -> Bytes32:
-// """
-// Generate a seed for the given ``epoch``.
-// """
-// return hash(
-// get_randao_mix(state, epoch - MIN_SEED_LOOKAHEAD) +
-// get_active_index_root(state, epoch) +
-// int_to_bytes32(epoch)
-// )
+//   def generate_seed(state: BeaconState,
+// 	                   epoch: Epoch) -> Bytes32:
+//    """
+//    Generate a seed for the given ``epoch``.
+//    """
+//    return hash(
+//               get_randao_mix(state, epoch - MIN_SEED_LOOKAHEAD) +
+//               get_active_index_root(state, epoch) +
+//               int_to_bytes32(epoch)
+//    )
 func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
-	var wantedEpochM uint64
-	if wantedEpoch >= params.BeaconConfig().MinSeedLookahead {
-		wantedEpochM = wantedEpoch - params.BeaconConfig().MinSeedLookahead
-	} else {
+	if wantedEpoch < params.BeaconConfig().MinSeedLookahead {
 		return [32]byte{}, fmt.Errorf("can't generate seed for epoch: %d that is smaller then MIN_SEED_LOOKAHEAD: %d", wantedEpoch, params.BeaconConfig().MinSeedLookahead)
 	}
-	randaoMix, err := RandaoMix(state, wantedEpochM)
+	randaoMix, err := RandaoMix(state, wantedEpoch-params.BeaconConfig().MinSeedLookahead)
 	if err != nil {
 		return [32]byte{}, err
 	}
