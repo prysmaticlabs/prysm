@@ -69,10 +69,11 @@ func TestWinningRoot_EmptyParticipantBitfield(t *testing.T) {
 	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
 
 	attestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot,
-			CrosslinkDataRootHash32: []byte{},
-		},
+		{
+			Data: &pb.AttestationData{
+				Slot:                    params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRootHash32: []byte{},
+			},
 			AggregationBitfield: []byte{},
 		},
 	}
