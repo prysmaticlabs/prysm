@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -126,13 +128,14 @@ func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
 		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
 	})
 	for i, att := range attestationsFromDB {
-		// Prune attestation when it's an epoch old and it no longer can be
-		// included in the beacon chain.
-		if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch <= state.Slot {
+		// Delete the attestation if it fails to verify using head state,
+		// we don't want to pass the attestation to the proposer.
+		if err := blocks.VerifyAttestation(state, att, false /* verify signature */); err != nil {
 			if err := s.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, err
 			}
 		}
+
 		// Stop the max attestation number per beacon block is reached.
 		if uint64(i) == params.BeaconConfig().MaxAttestations {
 			break
