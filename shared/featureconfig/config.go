@@ -29,7 +29,7 @@ type FeatureFlagConfig struct {
 	EnableComputeStateRoot       bool // EnableComputeStateRoot implementation on server side.
 	EnableCrosslinks             bool // EnableCrosslinks in epoch processing.
 	EnableCheckBlockStateRoot    bool // EnableCheckBlockStateRoot in block processing.
-	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updating finalized states.
+	DisableHistoricalStatePruning bool // DisableHistoricalStatePruning when updating finalized states.
 	DisableGossipSub             bool // DisableGossipSub in p2p messaging.
 	EnableCommitteesCache        bool // EnableCommitteesCache for state transition.
 	CacheTreeHash                bool // CacheTreeHash determent whether tree hashes will be cached.
@@ -74,9 +74,9 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Info("Cache tree hashes for ssz")
 		cfg.CacheTreeHash = true
 	}
-	if ctx.GlobalBool(EnableHistoricalStatePruningFlag.Name) {
+	if ctx.GlobalBool(DisableHistoricalStatePruningFlag.Name) {
 		log.Info("Enabled historical state pruning")
-		cfg.EnableHistoricalStatePruning = true
+		cfg.DisableHistoricalStatePruning = true
 	}
 	if ctx.GlobalBool(DisableGossipSubFlag.Name) {
 		log.Info("Disabled gossipsub, using floodsub")
