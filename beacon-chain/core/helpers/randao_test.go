@@ -66,7 +66,7 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestIndexRootHash32S: activeIndexRoots}
+	state := &pb.BeaconState{LatestActiveIndexRoots: activeIndexRoots}
 	tests := []struct {
 		epoch     uint64
 		indexRoot []byte
@@ -132,7 +132,7 @@ func TestGenerateSeed_OK(t *testing.T) {
 	}
 	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		LatestIndexRootHash32S: activeIndexRoots,
+		LatestActiveIndexRoots: activeIndexRoots,
 		LatestRandaoMixes:      randaoMixes,
 		Slot:                   slot}
 

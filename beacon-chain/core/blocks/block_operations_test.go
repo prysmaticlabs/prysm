@@ -649,10 +649,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:     validators,
-		Slot:                  currentSlot,
-		Balances:              validatorBalances,
-		LatestSlashedBalances: make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		ValidatorRegistry:      validators,
+		Slot:                   currentSlot,
+		Balances:               validatorBalances,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{

@@ -38,8 +38,10 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 1,
-		ValidatorRegistry: validators,
+		Slot:                   params.BeaconConfig().GenesisSlot + 1,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot + 1,
@@ -71,8 +73,10 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState = &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 36,
-		ValidatorRegistry: validators,
+		Slot:                   params.BeaconConfig().GenesisSlot + 36,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)

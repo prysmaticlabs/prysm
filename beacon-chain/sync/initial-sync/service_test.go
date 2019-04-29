@@ -151,6 +151,8 @@ func TestSavingBlock_InSync(t *testing.T) {
 		LatestEth1Data: &pb.Eth1Data{
 			BlockHash32: []byte{},
 		},
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
@@ -166,6 +168,8 @@ func TestSavingBlock_InSync(t *testing.T) {
 		LatestEth1Data: &pb.Eth1Data{
 			BlockHash32: []byte{},
 		},
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	incorrectStateResponse := &pb.BeaconStateResponse{

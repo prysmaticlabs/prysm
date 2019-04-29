@@ -165,10 +165,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
-	if !bytes.Equal(newState.LatestIndexRootHash32S[0], genesisActiveIndexRoot[:]) {
+	if !bytes.Equal(newState.LatestActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.LatestIndexRootHash32S[0],
+			newState.LatestActiveIndexRoots[0],
 		)
 	}
 	seed, err := helpers.GenerateSeed(newState, params.BeaconConfig().GenesisEpoch)

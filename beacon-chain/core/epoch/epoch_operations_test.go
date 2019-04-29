@@ -24,9 +24,11 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 	return &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Balances:          validatorBalances,
-		Slot:              slot,
+		Slot:                   slot,
+		Balances:               validatorBalances,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 }
 
