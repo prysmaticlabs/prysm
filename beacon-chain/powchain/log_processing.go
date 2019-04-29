@@ -109,6 +109,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	log.WithFields(logrus.Fields{
 		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 		"merkleTreeIndex": index,
+		"valid":           validData,
 	}).Info("Deposit registered from deposit contract")
 	validDepositsCount.Inc()
 }
