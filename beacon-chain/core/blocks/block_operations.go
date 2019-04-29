@@ -583,9 +583,7 @@ func ProcessValidatorDeposits(
 			continue
 		}
 		if err = verifyDeposit(beaconState, deposit); err != nil {
-			beaconState = processInvalidDeposit(beaconState)
-			log.Errorf("could not verify deposit #%d: %v", idx, err)
-			continue
+			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}
 		// depositData consists of depositValue [8]byte +
 		// depositTimestamp [8]byte + depositInput []byte .

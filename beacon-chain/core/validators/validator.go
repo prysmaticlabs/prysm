@@ -131,7 +131,7 @@ func ProcessDeposit(
 			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
 			withdrawalCredentials,
 		) {
-			return nil, fmt.Errorf(
+			return state, fmt.Errorf(
 				"expected withdrawal credentials to match, received %#x == %#x",
 				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
 				withdrawalCredentials,
