@@ -125,7 +125,7 @@ func main() {
 			log.Fatalf("Could not get all deposit contract address: %v", err)
 		}
 
-		fmt.Printf("%d contracts with balance found\n", len(addresses))
+		fmt.Printf("%d contracts ready to drain found\n", len(addresses))
 
 		for _, address := range addresses {
 			depositContract, err := contracts.NewDepositContract(address, client)
@@ -190,7 +190,7 @@ func allDepositContractAddresses(client *ethclient.Client) ([]common.Address, er
 
 	for _, ll := range logs {
 		addresses = append(addresses, ll.Address)
-		// Wanted this to be a bit more dynamic but needs more testing
+		// Wanted this to be a bit more dynamic but just checking the balances isn't enough info
 		// balance, err := client.BalanceAt(context.Background(), ll.Address, nil)
 		// if err != nil {
 		// 	return nil, fmt.Errorf("could not get balance of account: %v", err)
