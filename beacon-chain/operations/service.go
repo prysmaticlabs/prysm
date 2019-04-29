@@ -118,10 +118,21 @@ func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
 	}
+	state, err := s.beaconDB.HeadState(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve attestations from DB")
+	}
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
 		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
 	})
-	for i := range attestationsFromDB {
+	for i, att := range attestationsFromDB {
+		// Prune attestation when it's an epoch old and it no longer can be
+		// included in the beacon chain.
+		if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch <= state.Slot {
+			if err := s.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, err
+			}
+		}
 		// Stop the max attestation number per beacon block is reached.
 		if uint64(i) == params.BeaconConfig().MaxAttestations {
 			break
