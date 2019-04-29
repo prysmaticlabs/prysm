@@ -72,35 +72,77 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 		indexRoot []byte
 	}{
 		{
-			epoch:     34,
-			indexRoot: activeIndexRoots[34],
+			epoch: 34,
 		},
 		{
-			epoch:     3444,
-			indexRoot: activeIndexRoots[3444],
+			epoch: 3444,
 		},
 		{
-			epoch:     999999,
-			indexRoot: activeIndexRoots[999999%params.BeaconConfig().LatestActiveIndexRootsLength],
+			epoch: 999999,
 		},
 	}
 	for _, test := range tests {
-		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
-		indexRoot, err := ActiveIndexRoot(state, test.epoch)
-		if err != nil {
-			t.Fatalf("Could not get index root: %v", err)
+		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
+		for i := 0; i <= int(params.BeaconConfig().ActivationExitDelay); i++ {
+			indexRoot, err := ActiveIndexRoot(state, test.epoch+uint64(i))
+			if err != nil {
+				t.Fatalf("Could not get index root: %v", err)
+			}
+
+			if !bytes.Equal(activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().LatestActiveIndexRootsLength], indexRoot) {
+				t.Errorf("Incorrect index root. Wanted: %#x, got: %#x",
+					test.indexRoot, indexRoot)
+			}
 		}
-		if !bytes.Equal(test.indexRoot, indexRoot) {
-			t.Errorf("Incorrect index root. Wanted: %#x, got: %#x",
-				test.indexRoot, indexRoot)
+
+	}
+}
+func TestActiveIndexRoot_OutOfBoundActivationExitDelay(t *testing.T) {
+	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
+	for i := 0; i < len(activeIndexRoots); i++ {
+		intInBytes := make([]byte, 32)
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
+		activeIndexRoots[i] = intInBytes
+	}
+	state := &pb.BeaconState{LatestIndexRootHash32S: activeIndexRoots}
+	tests := []struct {
+		epoch         uint64
+		earliestEpoch uint64
+	}{
+		{
+			epoch:         34,
+			earliestEpoch: 0,
+		},
+		{
+			epoch:         3444,
+			earliestEpoch: 0,
+		},
+		{
+			epoch:         999999,
+			earliestEpoch: 999999 - (params.BeaconConfig().LatestActiveIndexRootsLength + params.BeaconConfig().ActivationExitDelay),
+		},
+	}
+	for _, test := range tests {
+		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
+		for i := params.BeaconConfig().ActivationExitDelay + 1; i < params.BeaconConfig().ActivationExitDelay+3; i++ {
+			wanted := fmt.Sprintf(
+				"input indexRoot epoch %d out of bounds: %d <= epoch < %d",
+				test.epoch+i, test.earliestEpoch, test.epoch+params.BeaconConfig().ActivationExitDelay,
+			)
+			_, err := ActiveIndexRoot(state, test.epoch+i)
+			if err != nil && !strings.Contains(err.Error(), wanted) {
+				t.Errorf("Expected: %s, received: %s", wanted, err.Error())
+			}
+
 		}
+
 	}
 }
 
 func TestActiveIndexRoot_OutOfBound(t *testing.T) {
 	wanted := fmt.Sprintf(
 		"input indexRoot epoch %d out of bounds: %d <= epoch < %d",
-		100, 0, 0,
+		100, 0, params.BeaconConfig().ActivationExitDelay,
 	)
 	if _, err := ActiveIndexRoot(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
