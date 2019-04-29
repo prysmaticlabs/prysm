@@ -111,12 +111,12 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 			"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 			"merkleTreeIndex": index,
 		}).Info("Deposit registered from deposit contract")
+		validDepositsCount.Inc()
 	} else {
 		log.WithFields(logrus.Fields{
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
-	validDepositsCount.Inc()
 }
 
 // ProcessChainStartLog processes the log which had been received from
