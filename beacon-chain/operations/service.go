@@ -113,13 +113,13 @@ func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 // PendingAttestations returns the attestations that have not seen on the beacon chain, the attestations are
 // returns in slot ascending order and up to MaxAttestations capacity. The attestations get
 // deleted in DB after they have been retrieved.
-func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
+func (s *Service) PendingAttestations(ctx context.Context) ([]*pb.Attestation, error) {
 	var attestations []*pb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
 	}
-	state, err := s.beaconDB.HeadState(context.Background())
+	state, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
 	}

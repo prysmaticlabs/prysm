@@ -143,7 +143,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		}
 	}
 	// Test we can retrieve attestations from slot0 - slot127 (Max attestation amount).
-	attestations, err := service.PendingAttestations()
+	attestations, err := service.PendingAttestations(context.Background())
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -180,7 +180,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
-	attestations, err := service.PendingAttestations()
+	attestations, err := service.PendingAttestations(context.Background())
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -216,7 +216,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		}
 	}
 
-	retrievedAtts, err := s.PendingAttestations()
+	retrievedAtts, err := s.PendingAttestations(context.Background())
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -228,7 +228,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		t.Fatalf("Could not remove pending attestations: %v", err)
 	}
 
-	retrievedAtts, _ = s.PendingAttestations()
+	retrievedAtts, _ = s.PendingAttestations(context.Background())
 	if len(retrievedAtts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(retrievedAtts))
 	}
@@ -288,7 +288,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		}
 	}
 
-	atts, _ := s.PendingAttestations()
+	atts, _ := s.PendingAttestations(context.Background())
 	if len(atts) != len(attestations) {
 		t.Errorf("Attestation pool should be %d but got a length of %d",
 			len(attestations), len(atts))
@@ -305,7 +305,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		t.Error(err)
 	}
 
-	atts, _ = s.PendingAttestations()
+	atts, _ = s.PendingAttestations(context.Background())
 	if len(atts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
 	}

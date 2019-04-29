@@ -39,7 +39,7 @@ type chainService interface {
 }
 
 type operationService interface {
-	PendingAttestations() ([]*pbp2p.Attestation, error)
+	PendingAttestations(ctx context.Context) ([]*pbp2p.Attestation, error)
 	HandleAttestations(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
