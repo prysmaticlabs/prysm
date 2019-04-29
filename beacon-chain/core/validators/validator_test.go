@@ -426,6 +426,11 @@ func TestExitValidator_OK(t *testing.T) {
 			wantedEpoch,
 			newState.ValidatorRegistry[0].ExitEpoch)
 	}
+	if newState.ValidatorRegistry[0].StatusFlags != pb.Validator_INITIATED_EXIT {
+		t.Errorf("Wanted status flags %v, got %v",
+			pb.Validator_INITIATED_EXIT,
+			newState.ValidatorRegistry[0].StatusFlags)
+	}
 }
 
 func TestExitValidator_AlreadyExited(t *testing.T) {

@@ -210,6 +210,7 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	if validator.ExitEpoch <= exitEpoch {
 		return state
 	}
+	validator.StatusFlags = pb.Validator_INITIATED_EXIT
 	validator.ExitEpoch = exitEpoch
 	return state
 }
