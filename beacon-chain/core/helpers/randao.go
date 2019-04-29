@@ -13,7 +13,7 @@ import (
 //
 // Spec pseudocode definition:
 //   def generate_seed(state: BeaconState,
-// 	              epoch: Epoch) -> Bytes32:
+// 	            epoch: Epoch) -> Bytes32:
 //    """
 //    Generate a seed for the given ``epoch``.
 //    """
