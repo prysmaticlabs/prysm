@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -138,7 +139,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"root": fmt.Sprintf("%#x", root),
+		"root": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"slot": block.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Saving block")
 	s.currentSlot = block.Slot
