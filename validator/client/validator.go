@@ -140,9 +140,7 @@ func (v *validator) SlotDeadline(slot uint64) time.Time {
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
 func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
-	// Testing run time for fetching every slot. This is not meant for production!
-	// https://github.com/prysmaticlabs/prysm/issues/2167
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignments != nil && false {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignments != nil {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
