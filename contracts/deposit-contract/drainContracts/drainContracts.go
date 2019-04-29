@@ -128,6 +128,13 @@ func main() {
 		fmt.Printf("%d contracts ready to drain found\n", len(addresses))
 
 		for _, address := range addresses {
+			bal, err := client.BalanceAt(context.Background(), address, nil /*blockNum*/)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if bal.Cmp(big.NewInt(0)) < 1 {
+				continue
+			}
 			depositContract, err := contracts.NewDepositContract(address, client)
 			if err != nil {
 				log.Fatal(err)
@@ -164,33 +171,40 @@ func loadTextFromFile(filepath string) string {
 }
 
 func allDepositContractAddresses(client *ethclient.Client) ([]common.Address, error) {
-	var addresses []common.Address
+	log.Print("Looking up contracts")
+	addresses := make(map[common.Address]bool)
 
-	chainStartEventSignature := []byte("ChainStart(bytes32,bytes)")
-	chainStartTopicHash := crypto.Keccak256Hash(chainStartEventSignature)
-	fmt.Println(chainStartTopicHash.Hex()) // d1faa3f...
+	depositEventSignature := []byte("Deposit(bytes32,bytes,bytes,bytes32[32])")
+	depositTopicHash := crypto.Keccak256Hash(depositEventSignature)
+	fmt.Println(depositTopicHash.Hex())
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{},
 		Topics: [][]common.Hash{
-			[]common.Hash{chainStartTopicHash},
+			[]common.Hash{depositTopicHash},
 		},
+		FromBlock: big.NewInt(400000), // Contracts before this may not have drain().
 	}
 
 	logs, err := client.FilterLogs(context.Background(), query)
 	if err != nil {
-		return nil, fmt.Errorf("could not get all chainstart logs: %v", err)
+		return nil, fmt.Errorf("could not get all deposit logs: %v", err)
 	}
 
-	fmt.Printf("%d chain start logs found\n", len(logs))
+	fmt.Printf("%d deposit logs found\n", len(logs))
 	for i := len(logs)/2 - 1; i >= 0; i-- {
 		opp := len(logs) - 1 - i
 		logs[i], logs[opp] = logs[opp], logs[i]
 	}
 
 	for _, ll := range logs {
-		addresses = append(addresses, ll.Address)
+		addresses[ll.Address] = true
 	}
 
-	return addresses, nil
+	keys := make([]common.Address, 0, len(addresses))
+	for key := range addresses {
+		keys = append(keys, key)
+	}
+
+	return keys, nil
 }
