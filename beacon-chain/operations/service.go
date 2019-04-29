@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -127,20 +126,23 @@ func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
 		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
 	})
-	for i, att := range attestationsFromDB {
+	var validAttsCount uint64
+	for _, att := range attestationsFromDB {
 		// Delete the attestation if it fails to verify using head state,
 		// we don't want to pass the attestation to the proposer.
 		if err := blocks.VerifyAttestation(state, att, false /* verify signature */); err != nil {
 			if err := s.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, err
 			}
+			continue
 		}
 
+		validAttsCount++
 		// Stop the max attestation number per beacon block is reached.
-		if uint64(i) == params.BeaconConfig().MaxAttestations {
+		if validAttsCount == params.BeaconConfig().MaxAttestations {
 			break
 		}
-		attestations = append(attestations, attestationsFromDB[i])
+		attestations = append(attestations, att)
 	}
 	return attestations, nil
 }

@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -149,6 +151,51 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	if !reflect.DeepEqual(attestations, origAttestations[0:params.BeaconConfig().MaxAttestations]) {
 		t.Errorf("Retrieved attestations did not match prev generated attestations for the first %d",
 			params.BeaconConfig().MaxAttestations)
+	}
+}
+
+func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
+
+	// Save 140 attestations for slots 0 to 139.
+	origAttestations := make([]*pb.Attestation, 140)
+	for i := 0; i < len(origAttestations); i++ {
+		origAttestations[i] = &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+			},
+		}
+		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
+			t.Fatalf("Failed to save attestation: %v", err)
+		}
+	}
+
+	// At slot 200 only attestations up to from slot 137 to 139 are valid attestations.
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + 200,
+		LatestCrosslinks: []*pb.Crosslink{{
+			Epoch:                   params.BeaconConfig().GenesisEpoch + 2,
+			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		t.Fatal(err)
+	}
+	attestations, err := service.PendingAttestations()
+	if err != nil {
+		t.Fatalf("Could not retrieve attestations: %v", err)
+	}
+	if !reflect.DeepEqual(attestations, origAttestations[137:]) {
+		t.Error("Incorrect pruned attestations")
+	}
+
+	// Verify the invalid attestations are deleted.
+	hash, err := hashutil.HashProto(origAttestations[136])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if service.beaconDB.HasAttestation(hash) {
+		t.Error("Invalid attestation is not deleted")
 	}
 }
 
