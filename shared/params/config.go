@@ -213,8 +213,8 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.SlotsPerEpoch = 8
 	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
 	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxDepositAmount = 3200000
-	demoConfig.EjectionBalance = 1600000
+	demoConfig.MaxDepositAmount = 3.2 * 1e9
+	demoConfig.EjectionBalance = 3 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.EpochsPerEth1VotingPeriod = 1

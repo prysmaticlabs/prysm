@@ -39,7 +39,7 @@ type chainService interface {
 }
 
 type operationService interface {
-	PendingAttestations() ([]*pbp2p.Attestation, error)
+	PendingAttestations(ctx context.Context) ([]*pbp2p.Attestation, error)
 	HandleAttestations(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
@@ -55,10 +55,6 @@ type powChainService interface {
 	ChainStartDeposits() [][]byte
 }
 
-type syncService interface {
-	Status() error
-}
-
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                 context.Context
@@ -67,7 +63,6 @@ type Service struct {
 	chainService        chainService
 	powChainService     powChainService
 	operationService    operationService
-	syncService         syncService
 	port                string
 	listener            net.Listener
 	withCert            string
@@ -87,7 +82,6 @@ type Config struct {
 	ChainService     chainService
 	POWChainService  powChainService
 	OperationService operationService
-	SyncService      syncService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -101,7 +95,6 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		chainService:        cfg.ChainService,
 		powChainService:     cfg.POWChainService,
 		operationService:    cfg.OperationService,
-		syncService:         cfg.SyncService,
 		port:                cfg.Port,
 		withCert:            cfg.CertFlag,
 		withKey:             cfg.KeyFlag,
@@ -181,9 +174,6 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
-		for s.syncService.Status() != nil {
-			time.Sleep(time.Second * params.BeaconConfig().RPCSyncCheck)
-		}
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
 				log.Errorf("Could not serve gRPC: %v", err)

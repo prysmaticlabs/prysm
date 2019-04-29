@@ -58,7 +58,7 @@ spec:
         - --rpc=ws://public-rpc-nodes.pow.svc.cluster.local:8546
         - --port=8000
         - --metrics-port=9090
-        - --deposit-amount=3200000000000000
+        - --deposit-amount=3200000000000000000
         - --db-path=/data
         - --verbose
         ports:
