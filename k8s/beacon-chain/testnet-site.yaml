@@ -26,14 +26,14 @@ spec:
       - name: site
         image: gcr.io/prysmaticlabs/prysm-testnet-site:latest
         ports:
-        - containerPort: 80
+        - containerPort: 4000
           name: http
         livenessProbe:
           httpGet:
-            path: /healthz
-            port: 80
+            path: /
+            port: 4000
           initialDelaySeconds: 3
-          periodSeconds: 3
+          periodSeconds: 15
         resources:
           requests:
             cpu: "100m"
@@ -68,7 +68,7 @@ spec:
     version: alpha
   ports:
   - port: 80
-    targetPort: 80
+    targetPort: 4000
     name: http-nginx
   type: ClusterIP
 ---
@@ -111,4 +111,8 @@ spec:
         port: 
           number: 80
         host: testnet-site-alpha.beacon-chain.svc.cluster.local
-
+  - match: 
+    - uri:
+        prefix: /
+    redirect:
+      authority: alpha.prylabs.net 
