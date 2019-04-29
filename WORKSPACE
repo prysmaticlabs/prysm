@@ -991,7 +991,7 @@ go_repository(
 
 go_repository(
     name = "com_github_rjeczalik_notify",
-    commit = "629144ba06a1c6af28c1e42c228e3d42594ce081",
+    commit = "69d839f37b13a8cb7a78366f7633a4071cb43be7",  # v0.9.2
     importpath = "github.com/rjeczalik/notify",
 )
 
