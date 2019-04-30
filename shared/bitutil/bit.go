@@ -83,3 +83,15 @@ func fillBit(target byte, index uint64) byte {
 	bitShift := 7 - index
 	return target ^ (1 << bitShift)
 }
+
+// BitfieldBit Extract the bit in `bitfield` at position `i`.
+// Spec pseudocode definition:
+//   def get_bitfield_bit(bitfield: bytes, i: int) -> int:
+//     """
+//     Extract the bit in ``bitfield`` at position ``i``.
+//     """
+//     return (bitfield[i // 8] >> (i % 8)) % 2
+func BitfieldBit(bitfield []byte, i int) byte {
+	by := (bitfield[i>>3] >> (uint(i) & 0x7)) & 0x1
+	return by
+}
