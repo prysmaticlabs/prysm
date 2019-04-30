@@ -31,6 +31,10 @@ type ValidatorServer struct {
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
+	pkMap := make(map[string]bool)
+	for _, pk := range req.PublicKeys {
+		pkMap[hex.EncodeToString(pk)] = true
+	}
 
 	reply := func() error {
 		beaconState, err := vs.beaconDB.HeadState(stream.Context())
@@ -42,7 +46,27 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 			ActivatedPublicKeys: activeKeys,
 		}
 		return stream.Send(res)
+	}
 
+	validatorEstimations := func() error {
+		bState, err := vs.beaconDB.HeadState(stream.Context())
+		if err != nil {
+			return fmt.Errorf("could not retrieve Validator Registry: %v", err)
+		}
+		var estimations []*pb.ValidatorEstimation
+		for _, v := range bState.ValidatorRegistry {
+			if pkMap[hex.EncodeToString(v.Pubkey)] {
+				estimations = append(estimations, &pb.ValidatorEstimation{
+					PublicKey:            v.Pubkey,
+					EpochsTillActivation: v.ActivationEpoch - helpers.CurrentEpoch(bState),
+				})
+			}
+		}
+
+		res := &pb.ValidatorActivationResponse{
+			ValidatorEstimations: estimations,
+		}
+		return stream.Send(res)
 	}
 
 	if vs.beaconDB.HasAnyValidators(req.PublicKeys) {
@@ -52,6 +76,9 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 		select {
 		case <-time.After(3 * time.Second):
 			if !vs.beaconDB.HasAnyValidators(req.PublicKeys) {
+				if err := validatorEstimations(); err != nil {
+					log.Errorf("")
+				}
 				continue
 			}
 			return reply()
