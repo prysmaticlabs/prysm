@@ -54,7 +54,13 @@ message ValidatorActivationRequest {
 }
 
 message ValidatorActivationResponse {
-    repeated bytes activated_public_keys = 1;
+    repeated ValidatorEstimation validator_estimations = 1;
+    repeated bytes activated_public_keys = 2;
+}
+
+message ValidatorEstimation {
+    bytes public_key = 1;
+    uint64 epochs_till_activation = 2;
 }
 
 message AttestationDataRequest {
