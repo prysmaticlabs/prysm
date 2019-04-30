@@ -574,7 +574,8 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -594,6 +595,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
 	exitRoutine := make(chan bool)
 	go func(tt *testing.T) {
 		want := "context closed"
@@ -653,6 +655,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Send(
 		&pb.ValidatorActivationResponse{

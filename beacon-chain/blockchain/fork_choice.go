@@ -196,7 +196,9 @@ func (c *ChainService) ApplyForkChoiceRule(
 		return fmt.Errorf("could not hash head: %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot": fmt.Sprintf("#%x", bytesutil.Trunc(h[:])),
+		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headSlot":  newHead.Slot - params.BeaconConfig().GenesisSlot,
+		"stateSlot": newState.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Chain head block and state updated")
 
 	return nil

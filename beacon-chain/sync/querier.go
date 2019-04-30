@@ -128,7 +128,7 @@ func (q *Querier) listenForStateInitialization() {
 	for {
 		select {
 		case <-q.chainStartBuf:
-			queryLog.Info("state initialized")
+			queryLog.Info("State has been initialized")
 			q.chainStarted = true
 			return
 		case <-sub.Err():
@@ -154,10 +154,11 @@ func (q *Querier) run() {
 	}()
 
 	timeout := time.After(5 * time.Second)
+	log.Info("Polling peers for latest chain head...")
 	for {
 		select {
 		case <-q.ctx.Done():
-			queryLog.Info("Exiting goroutine")
+			queryLog.Info("Finished querying state of the network, importing blocks...")
 			return
 		case <-ticker.C:
 			q.RequestLatestHead()
