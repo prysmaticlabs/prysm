@@ -107,7 +107,7 @@ func (db *BeaconDB) HasValidator(pubKey []byte) bool {
 func (db *BeaconDB) HasAnyValidators(state *pb.BeaconState, pubKeys [][]byte) (bool, error) {
 	exists := false
 	// #nosec G104, similar to HasBlock, HasAttestation... etc
-	_ := db.view(func(tx *bolt.Tx) error {
+	db.view(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorBucket)
 		for _, pk := range pubKeys {
 			h := hashutil.Hash(pk)
