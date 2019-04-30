@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -139,10 +140,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":        fmt.Sprintf("%#x", bytesutil.Trunc(attData.BeaconBlockRootHash32)),
-		"slot":            attData.Slot - params.BeaconConfig().GenesisSlot,
-		"shard":           attData.Shard,
-		"validator":       truncatedPk,
+		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attData.BeaconBlockRootHash32)),
+		"slot":      attData.Slot - params.BeaconConfig().GenesisSlot,
+		"shard":     attData.Shard,
+		"validator": truncatedPk,
 	}).Info("Attested latest head")
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)),
