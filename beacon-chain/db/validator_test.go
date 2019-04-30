@@ -140,7 +140,7 @@ func TestHasAnyValidator(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !has {
+	if has {
 		t.Error("Database returned true when there are only pubkeys that did not exist")
 	}
 }
