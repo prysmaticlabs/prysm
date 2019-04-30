@@ -396,7 +396,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x01}
+	bitfield = []byte{0xff, 0x80}
 	committeeSize = 9
 
 	isValidated, err = VerifyBitfield(bitfield, committeeSize)
@@ -408,46 +408,9 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x80}
+	bitfield = []byte{0xff, 0x03}
 	committeeSize = 10
 	isValidated, err = VerifyBitfield(bitfield, committeeSize)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !isValidated {
-		t.Error("bitfield is not validated when it was supposed to be")
-	}
-}
-
-func TestVerifyBitfieldNew_OK(t *testing.T) {
-	bitfield := []byte{0xFF}
-	committeeSize := 8
-
-	isValidated, err := VerifyBitfieldNew(bitfield, committeeSize)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !isValidated {
-		t.Error("bitfield is not validated when it was supposed to be")
-	}
-
-	bitfield = []byte{0xff, 0x80}
-	committeeSize = 9
-
-	isValidated, err = VerifyBitfieldNew(bitfield, committeeSize)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if isValidated {
-		t.Error("bitfield is validated when it was supposed to be")
-	}
-
-	bitfield = []byte{0xff, 0x01}
-	committeeSize = 10
-	isValidated, err = VerifyBitfieldNew(bitfield, committeeSize)
 	if err != nil {
 		t.Fatal(err)
 	}

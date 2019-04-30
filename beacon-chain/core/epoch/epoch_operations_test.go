@@ -33,7 +33,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 func TestWinningRoot_AccurateRoot(t *testing.T) {
 	state := buildState(params.BeaconConfig().GenesisSlot, 100)
 	var participationBitfield []byte
-	participationBitfield = append(participationBitfield, byte(0x80))
+	participationBitfield = append(participationBitfield, byte(0x01))
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestation

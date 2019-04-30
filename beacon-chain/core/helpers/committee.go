@@ -307,46 +307,7 @@ func AttestationParticipants(
 	return participants, nil
 }
 
-// VerifyBitfield validates a bitfield with a given committee size.
-//
-// Spec pseudocode:
-//
-// def verify_bitfield(bitfield: bytes, committee_size: int) -> bool:
-// """
-// Verify ``bitfield`` against the ``committee_size``.
-// """
-// if len(bitfield) != (committee_size + 7) // 8:
-// return False
-//
-// # Check `bitfield` is padded with zero bits only
-// for i in range(committee_size, len(bitfield) * 8):
-// if get_bitfield_bit(bitfield, i) == 0b1:
-// return False
-//
-// return True
-func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
-	if len(bitfield) != mathutil.CeilDiv8(committeeSize) {
-		return false, fmt.Errorf(
-			"wanted participants bitfield length %d, got: %d",
-			mathutil.CeilDiv8(committeeSize),
-			len(bitfield))
-	}
-
-	for i := committeeSize; i < len(bitfield)*8; i++ {
-		bitSet, err := bitutil.CheckBit(bitfield, i)
-		if err != nil {
-			return false, fmt.Errorf("unable to check bit in bitfield %v", err)
-		}
-
-		if bitSet {
-			return false, nil
-		}
-	}
-
-	return true, nil
-}
-
-// VerifyBitfieldNew Verify ``bitfield`` against the ``committee_size``.
+// VerifyBitfield Verify ``bitfield`` against the ``committee_size``.
 //
 // Spec pseudocode definition:
 //   def verify_bitfield(bitfield: bytes, committee_size: int) -> bool:
@@ -360,7 +321,7 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //         if get_bitfield_bit(bitfield, i) == 0b1:
 //             return False
 //     return True
-func VerifyBitfieldNew(bitfield []byte, committeeSize int) (bool, error) {
+func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 	if len(bitfield) != (committeeSize+7)>>3 {
 		return false, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
@@ -369,12 +330,10 @@ func VerifyBitfieldNew(bitfield []byte, committeeSize int) (bool, error) {
 	}
 
 	for i := committeeSize; i < len(bitfield)<<3; i++ {
-		by := bitutil.BitfieldBit(bitfield, i)
-		if by == 1 {
+		if bitutil.BitfieldBit(bitfield, i) == 1 {
 			return false, nil
 		}
 	}
-
 	return true, nil
 }
 
