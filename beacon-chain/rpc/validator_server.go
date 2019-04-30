@@ -95,8 +95,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	}
 	avgBalance := totalBalance / float32(len(validatorBalances))
 	balance := validatorBalances[index]
-	state := &pbp2p.BeaconState{ValidatorRegistry: validatorRegistry}
-	activeIndices := helpers.ActiveValidatorIndices(state, helpers.SlotToEpoch(req.Slot))
+	activeIndices := helpers.ActiveValidatorIndices(validatorRegistry, helpers.SlotToEpoch(req.Slot))
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                 balance,
 		AverageValidatorBalance: avgBalance,

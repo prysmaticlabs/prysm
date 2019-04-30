@@ -505,6 +505,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 	crosslinkFromAttestation := att.Data.LatestCrosslink
 	crosslinkFromState := beaconState.LatestCrosslinks[shard]
+
 	if !(reflect.DeepEqual(crosslinkFromState, crosslink) ||
 		reflect.DeepEqual(crosslinkFromState, crosslinkFromAttestation)) {
 		return fmt.Errorf(
@@ -651,7 +652,9 @@ func ProcessValidatorDeposits(
 		depositData := deposit.DepositData
 		depositInput, err = helpers.DecodeDepositInput(depositData)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit input: %v", err)
+			beaconState = processInvalidDeposit(beaconState)
+			log.Errorf("could not decode deposit input: %v", err)
+			continue
 		}
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
@@ -669,7 +672,9 @@ func ProcessValidatorDeposits(
 			depositInput.WithdrawalCredentialsHash32,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not process deposit into beacon state: %v", err)
+			beaconState = processInvalidDeposit(beaconState)
+			log.Errorf("could not process deposit into beacon state: %v", err)
+			continue
 		}
 	}
 	return beaconState, nil
@@ -700,6 +705,13 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	}
 
 	return nil
+}
+
+// we increase the state deposit index, since deposits have to be processed
+// in order even if they are invalid
+func processInvalidDeposit(bState *pb.BeaconState) *pb.BeaconState {
+	bState.DepositIndex++
+	return bState
 }
 
 // ProcessValidatorExits is one of the operations performed

@@ -111,8 +111,6 @@ func ProcessDeposit(
 	var publicKeyExists bool
 	var existingValidatorIdx int
 
-	state.DepositIndex++
-
 	existingValidatorIdx, publicKeyExists = validatorIdxMap[bytesutil.ToBytes32(pubkey)]
 	if !publicKeyExists {
 		// If public key does not exist in the registry, we add a new validator
@@ -133,7 +131,7 @@ func ProcessDeposit(
 			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
 			withdrawalCredentials,
 		) {
-			return nil, fmt.Errorf(
+			return state, fmt.Errorf(
 				"expected withdrawal credentials to match, received %#x == %#x",
 				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
 				withdrawalCredentials,
@@ -141,6 +139,8 @@ func ProcessDeposit(
 		}
 		state.Balances[existingValidatorIdx] += amount
 	}
+	state.DepositIndex++
+
 	return state, nil
 }
 
@@ -258,11 +258,10 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	validator := state.ValidatorRegistry[idx]
 
-	exitEpoch := helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
-	if validator.ExitEpoch <= exitEpoch {
+	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state
 	}
-	validator.ExitEpoch = exitEpoch
+	validator.ExitEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
 	return state
 }
 
@@ -358,7 +357,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	updatedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
 
 	// The maximum balance churn in Gwei (for deposits and exits separately).
@@ -455,7 +454,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //            break
 func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
 
 	for idx, validator := range state.ValidatorRegistry {
@@ -502,7 +501,7 @@ func InitializeValidatorStore(bState *pb.BeaconState) {
 	defer vStore.Unlock()
 
 	currentEpoch := helpers.CurrentEpoch(bState)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(bState, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(bState.ValidatorRegistry, currentEpoch)
 	vStore.activatedValidators[currentEpoch] = activeValidatorIndices
 
 }

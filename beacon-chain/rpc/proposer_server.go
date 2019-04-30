@@ -73,7 +73,8 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
+	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debugf(
+		"Block proposal received via RPC")
 	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
@@ -81,12 +82,9 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
-	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-	head, err := ps.beaconDB.ChainHead()
-	if err != nil {
-		return nil, err
-	}
-	log.WithField("slot", head.Slot).Info("Chain head successfully saved")
+	log.WithField("headRoot", fmt.Sprintf("0x%x", bytesutil.Trunc(h[:]))).Info(
+		"Chain head block and state updated")
+
 	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 	}
@@ -103,7 +101,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	atts, err := ps.operationService.PendingAttestations()
+	atts, err := ps.operationService.PendingAttestations(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
