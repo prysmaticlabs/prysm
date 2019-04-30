@@ -436,8 +436,6 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 	*pb.BeaconState, error) {
 	// There's no reason to process justification until the 2nd epoch.
 	currentEpoch := helpers.CurrentEpoch(state)
-	fmt.Println(currentEpoch)
-	fmt.Println(params.BeaconConfig().GenesisEpoch + 1)
 	if currentEpoch <= params.BeaconConfig().GenesisEpoch+1 {
 		return state, nil
 	}
@@ -451,7 +449,6 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
 	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
 	state.JustificationBitfield = (state.JustificationBitfield << 1) % (1 << 63)
-	fmt.Println(totalBal)
 	// Process justification.
 	if 3*prevAttestedBal >= 2*totalBal {
 		state.CurrentJustifiedEpoch = prevEpoch
@@ -473,7 +470,6 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 		state.CurrentJustifiedRoot = blockRoot
 		state.JustificationBitfield |= 1
 	}
-
 	// Process finalization.
 	bitfield := state.JustificationBitfield
 	// When the 2nd, 3rd and 4th most recent epochs are all justified,
@@ -490,13 +486,13 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 	}
 	// when 1st, 2nd and 3rd most recent epochs are all justified,
 	// 1st epoch can finalize 3rd as a source.
-	if oldCurrJustifiedEpoch == currentEpoch-2 && (bitfield>>1)%8 == 7 {
+	if oldCurrJustifiedEpoch == currentEpoch-2 && (bitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = oldCurrJustifiedEpoch
 		state.FinalizedRoot = oldCurrJustifiedRoot
 	}
 	// when 1st, 2nd most recent epochs are all justified,
 	// 1st epoch can finalize 2nd as a source.
-	if oldCurrJustifiedEpoch == currentEpoch-1 && (bitfield>>1)%4 == 3 {
+	if oldCurrJustifiedEpoch == currentEpoch-1 && (bitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = oldCurrJustifiedEpoch
 		state.FinalizedRoot = oldCurrJustifiedRoot
 	}
