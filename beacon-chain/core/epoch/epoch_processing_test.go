@@ -1099,3 +1099,38 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		t.Errorf("Did not get genesis crosslink, got: %v", winner)
 	}
 }
+
+func TestProcessJustificationFinalization_LessThan2ndEpoch(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: params.BeaconConfig().SlotsPerEpoch,
+	}
+	newState, err := ProcessJustificationFinalization(state, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(state, newState) {
+		t.Error("Did not get the original state")
+	}
+}
+
+func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
+	e := params.BeaconConfig().FarFutureEpoch
+	a := params.BeaconConfig().MaxDepositAmount
+	state := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
+		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
+		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
+	}
+	// Since Attested balances are less than total balances, nothing happened.
+	newState, err := ProcessJustificationFinalization(state, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(state, newState) {
+		t.Error("Did not get the original state")
+	}
+}

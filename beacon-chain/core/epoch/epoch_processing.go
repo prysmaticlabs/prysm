@@ -386,7 +386,8 @@ func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error
 	return state, nil
 }
 
-// ProcessJustification checks if there has been a new justified epoch.
+// ProcessJustificationFinalization processes justification and finalization during
+// epoch processing. This is where a beacon node can justify and finalize a new epoch.
 //
 // Spec pseudocode definition:
 //	def process_justification_and_finalization(state: BeaconState) -> None:
@@ -435,6 +436,8 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 	*pb.BeaconState, error) {
 	// There's no reason to process justification until the 2nd epoch.
 	currentEpoch := helpers.CurrentEpoch(state)
+	fmt.Println(currentEpoch)
+	fmt.Println(params.BeaconConfig().GenesisEpoch + 1)
 	if currentEpoch <= params.BeaconConfig().GenesisEpoch+1 {
 		return state, nil
 	}
@@ -448,7 +451,7 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
 	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
 	state.JustificationBitfield = (state.JustificationBitfield << 1) % (1 << 63)
-
+	fmt.Println(totalBal)
 	// Process justification.
 	if 3*prevAttestedBal >= 2*totalBal {
 		state.CurrentJustifiedEpoch = prevEpoch
@@ -801,5 +804,5 @@ func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb
 //	def get_total_active_balance(state: BeaconState) -> Gwei:
 //    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
 func totalActiveBalance(state *pb.BeaconState) uint64 {
-	return TotalBalance(state, helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state)))
+	return TotalBalance(state, helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state)))
 }
