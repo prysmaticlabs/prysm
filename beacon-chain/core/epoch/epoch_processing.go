@@ -418,39 +418,69 @@ func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error
 func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (
 	*pb.BeaconState, error) {
 	// There's no reason to process justification until the 2nd epoch.
-	currE := helpers.CurrentEpoch(state)
-	if currE <= params.BeaconConfig().GenesisEpoch+1 {
+	currentEpoch := helpers.CurrentEpoch(state)
+	if currentEpoch <= params.BeaconConfig().GenesisEpoch+1 {
 		return state, nil
 	}
 
-	prevE := helpers.PrevEpoch(state)
+	prevEpoch := helpers.PrevEpoch(state)
 	totalBal := totalActiveBalance(state)
+	oldPrevJustifiedEpoch := state.PreviousJustifiedEpoch
+	oldPrevJustifiedRoot := state.PreviousJustifiedRoot
+	oldCurrJustifiedEpoch := state.CurrentJustifiedEpoch
+	oldCurrJustifiedRoot := state.CurrentJustifiedRoot
 	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
 	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
 	state.JustificationBitfield = (state.JustificationBitfield << 1) % (1 << 64)
 
+	// Process justification.
 	if 3*prevAttestedBal >= 2*totalBal {
-		state.CurrentJustifiedEpoch = prevE
-		blockRoot, err := helpers.BlockRoot(state, prevE)
+		state.CurrentJustifiedEpoch = prevEpoch
+		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block root for previous epoch %d: %v",
-				prevE, err)
+				prevEpoch, err)
 		}
 		state.CurrentJustifiedRoot = blockRoot
 		state.JustificationBitfield |= 2
 	}
-
 	if 3*currAttestedBal >= 2*totalBal {
-		state.CurrentJustifiedEpoch = currE
-		blockRoot, err := helpers.BlockRoot(state, currE)
+		state.CurrentJustifiedEpoch = currentEpoch
+		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block root for current epoch %d: %v",
-				prevE, err)
+				prevEpoch, err)
 		}
 		state.CurrentJustifiedRoot = blockRoot
 		state.JustificationBitfield |= 1
 	}
 
+	// Process finalization.
+	bitfield := state.JustificationBitfield
+	// When the 2nd, 3rd and 4th most recent epochs are all justified,
+	// 2nd epoch can finalize the 4th epoch as a source.
+	if oldPrevJustifiedEpoch == currentEpoch-3 && (bitfield>>1)%8 == 7 {
+		state.FinalizedEpoch = oldPrevJustifiedEpoch
+		state.FinalizedRoot = oldPrevJustifiedRoot
+	}
+	// when 2nd and 3rd most recent epochs are all justified,
+	// 2nd epoch can finalize 3rd as a source.
+	if oldPrevJustifiedEpoch == currentEpoch-2 && (bitfield>>1)%4 == 3 {
+		state.FinalizedEpoch = oldPrevJustifiedEpoch
+		state.FinalizedRoot = oldPrevJustifiedRoot
+	}
+	// when 1st, 2nd and 3rd most recent epochs are all justified,
+	// 1st epoch can finalize 3rd as a source.
+	if oldCurrJustifiedEpoch == currentEpoch-2 && (bitfield>>1)%8 == 7 {
+		state.FinalizedEpoch = oldCurrJustifiedEpoch
+		state.FinalizedRoot = oldCurrJustifiedRoot
+	}
+	// when 1st, 2nd most recent epochs are all justified,
+	// 1st epoch can finalize 2nd as a source.
+	if oldCurrJustifiedEpoch == currentEpoch-1 && (bitfield>>1)%4 == 3 {
+		state.FinalizedEpoch = oldCurrJustifiedEpoch
+		state.FinalizedRoot = oldCurrJustifiedRoot
+	}
 	return state, nil
 }
 
