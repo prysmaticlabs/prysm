@@ -574,7 +574,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot:              params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: []*pbp2p.Validator{},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
