@@ -491,9 +491,9 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	if config.Logging {
 		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")
 		log.WithField("attesterIndices", currentBoundaryAttesterIndices).Debug("Current epoch boundary attester indices")
-		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of prev epoch attestations")
+		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of previous epoch attestations")
 		log.WithField("attesterIndices", prevEpochAttesterIndices).Debug("Previous epoch attester indices")
-		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of prev epoch boundary attestations")
+		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of previous epoch boundary attestations")
 		log.WithField("attesterIndices", prevEpochBoundaryAttesterIndices).Debug("Previous epoch boundary attester indices")
 		log.WithField(
 			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
