@@ -85,9 +85,10 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
 	}
+	log.Info("Waiting for validator to be activated in the beacon chain")
+
 	var validatorActivatedRecords [][]byte
 	for {
-		log.Info("Waiting for validator to be activated in the beacon chain")
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
@@ -101,11 +102,12 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 			return fmt.Errorf("could not receive validator activation from stream: %v", err)
 		}
 		if len(res.ValidatorEstimations) > 0 {
+			log.Info("Time till Activation")
 			for _, e := range res.ValidatorEstimations {
 				log.WithFields(logrus.Fields{
-					"pubkey":                 e.PublicKey,
-					"epochs till activation": e.EpochsTillActivation,
-				}).Info("Time till Activation")
+					"pubkey":                fmt.Sprintf("%#x", e.PublicKey),
+					"Slots till Activation": fmt.Sprintf("%d", e.SlotsTillActivation),
+				})
 			}
 		}
 		if len(res.ActivatedPublicKeys) > 0 {

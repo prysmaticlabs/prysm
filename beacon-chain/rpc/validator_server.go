@@ -57,8 +57,8 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 		for _, v := range bState.ValidatorRegistry {
 			if pkMap[hex.EncodeToString(v.Pubkey)] {
 				estimations = append(estimations, &pb.ValidatorEstimation{
-					PublicKey:            v.Pubkey,
-					EpochsTillActivation: v.ActivationEpoch - helpers.CurrentEpoch(bState),
+					PublicKey:           v.Pubkey,
+					SlotsTillActivation: helpers.StartSlot(v.ActivationEpoch) - bState.Slot,
 				})
 			}
 		}

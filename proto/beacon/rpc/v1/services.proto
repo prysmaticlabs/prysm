@@ -60,7 +60,7 @@ message ValidatorActivationResponse {
 
 message ValidatorEstimation {
     bytes public_key = 1;
-    uint64 epochs_till_activation = 2;
+    uint64 slots_till_activation = 2;
 }
 
 message AttestationDataRequest {
