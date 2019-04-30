@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // SaveValidatorIndex accepts a public key and validator index and writes them to disk.
@@ -125,7 +125,7 @@ func (db *BeaconDB) HasAnyValidators(state *pb.BeaconState, pubKeys [][]byte) (b
 					if err := db.SaveValidatorIndex(pubKey, i); err != nil {
 						return false, err
 					}
-					return true, nil
+					exists = true
 				}
 			}
 		}
