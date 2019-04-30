@@ -77,7 +77,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 		case <-time.After(3 * time.Second):
 			if !vs.beaconDB.HasAnyValidators(req.PublicKeys) {
 				if err := validatorEstimations(); err != nil {
-					log.Errorf("")
+					log.Errorf("Could not stream validator activation estimate: %v", err)
 				}
 				continue
 			}
