@@ -431,7 +431,7 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 	oldCurrJustifiedRoot := state.CurrentJustifiedRoot
 	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
 	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
-	state.JustificationBitfield = (state.JustificationBitfield << 1) % (1 << 64)
+	state.JustificationBitfield = (state.JustificationBitfield << 1) % (1 << 63)
 
 	// Process justification.
 	if 3*prevAttestedBal >= 2*totalBal {
