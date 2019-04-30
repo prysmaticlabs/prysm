@@ -273,6 +273,13 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
 }
 
+func (bs *BeaconServer) RecentBlockRoots(ctx context.Context, request *pb.BlockRootsRequest) (res *pb.BlockRootsRespond) {
+	blockRoots := bs.chainService.RecentCanonicalRoots(request.Count)
+	return &pb.BlockRootsRespond{
+		BlockRoots: blockRoots,
+	}
+}
+
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)

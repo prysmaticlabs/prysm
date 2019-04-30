@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -234,6 +236,25 @@ func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
 		return bytes.Equal(canonicalHash, hash)
 	}
 	return false
+}
+
+func (c *ChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
+	c.canonicalBlocksLock.RLock()
+	defer c.canonicalBlocksLock.RUnlock()
+	var slots []int
+	for s := range c.canonicalBlocks {
+		slots = append(slots, int(s))
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(slots)))
+	blockRoots := make([]*pbrpc.BlockRoot, count)
+	for i := 0; i < int(count); i++ {
+		slot := uint64(slots[i])
+		blockRoots[i] = &pbrpc.BlockRoot{
+			Slot: slot,
+			Root: c.canonicalBlocks[slot],
+		}
+	}
+	return blockRoots
 }
 
 // InsertsCanonical inserts a canonical block hash to its corresponding slot.
