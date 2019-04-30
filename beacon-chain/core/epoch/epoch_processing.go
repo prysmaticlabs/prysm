@@ -6,6 +6,7 @@ package epoch
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"sort"
 
@@ -16,6 +17,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
@@ -302,13 +304,143 @@ func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
+// ProcessPartialValidatorRegistry processes the portion of validator registry
+// fields, it doesn't set registry latest change slot. This only gets called if
+// validator registry update did not happen.
+//
+// Spec pseudocode definition:
+//	Let epochs_since_last_registry_change = current_epoch -
+//		state.validator_registry_update_epoch
+//	If epochs_since_last_registry_update > 1 and
+//		is_power_of_two(epochs_since_last_registry_update):
+// 			set state.current_calculation_epoch = next_epoch
+// 			set state.current_shuffling_seed = generate_seed(
+// 				state, state.current_calculation_epoch)
+func ProcessPartialValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
+	epochsSinceLastRegistryChange := helpers.CurrentEpoch(state) -
+		state.ValidatorRegistryUpdateEpoch
+	if epochsSinceLastRegistryChange > 1 &&
+		mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
+		state.CurrentShufflingEpoch = helpers.NextEpoch(state)
+		// TODO(#2072)we have removed the generation of a new seed for the timebeing to get it stable for the testnet.
+		// this will be handled in Q2.
+	}
+	return state, nil
+}
+
+// CleanupAttestations removes any attestation in state's latest attestations
+// such that the attestation slot is lower than state slot minus epoch length.
+// Spec pseudocode definition:
+// 		Remove any attestation in state.latest_attestations such
+// 		that slot_to_epoch(att.data.slot) < slot_to_epoch(state) - 1
+func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
+	currEpoch := helpers.CurrentEpoch(state)
+
+	var latestAttestations []*pb.PendingAttestation
+	for _, attestation := range state.LatestAttestations {
+		if helpers.SlotToEpoch(attestation.Data.Slot) >= currEpoch {
+			latestAttestations = append(latestAttestations, attestation)
+		}
+	}
+	state.LatestAttestations = latestAttestations
+	return state
+}
+
+// UpdateLatestActiveIndexRoots updates the latest index roots. Index root
+// is computed by hashing validator indices of the next epoch + delay.
+//
+// Spec pseudocode definition:
+// Let e = state.slot // SLOTS_PER_EPOCH.
+// Set state.latest_index_roots[(next_epoch + ACTIVATION_EXIT_DELAY) %
+// 	LATEST_INDEX_ROOTS_LENGTH] =
+// 	hash_tree_root(get_active_validator_indices(state,
+// 	next_epoch + ACTIVATION_EXIT_DELAY))
+func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
+	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
+	validatorIndices := helpers.ActiveValidatorIndices(state, nextEpoch)
+	indicesBytes := []byte{}
+	for _, val := range validatorIndices {
+		buf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(buf, val)
+		indicesBytes = append(indicesBytes, buf...)
+	}
+	indexRoot := hashutil.Hash(indicesBytes)
+	state.LatestIndexRootHash32S[nextEpoch%params.BeaconConfig().LatestActiveIndexRootsLength] =
+		indexRoot[:]
+	return state, nil
+}
+
+// ProcessJustification checks if there has been a new justified epoch.
+//
+// Spec pseudocode definition:
+//	def process_justification_and_finalization(state: BeaconState) -> None:
+//    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
+//        return
+//
+//    previous_epoch = get_previous_epoch(state)
+//    current_epoch = get_current_epoch(state)
+//    old_previous_justified_epoch = state.previous_justified_epoch
+//    old_current_justified_epoch = state.current_justified_epoch
+//
+//    # Process justifications
+//    state.previous_justified_epoch = state.current_justified_epoch
+//    state.previous_justified_root = state.current_justified_root
+//    state.justification_bitfield = (state.justification_bitfield << 1) % 2**64
+//    previous_epoch_matching_target_balance = get_attesting_balance(state, get_matching_target_attestations(state, previous_epoch))
+//    if previous_epoch_matching_target_balance * 3 >= get_total_active_balance(state) * 2:
+//        state.current_justified_epoch = previous_epoch
+//        state.current_justified_root = get_block_root(state, state.current_justified_epoch)
+//        state.justification_bitfield |= (1 << 1)
+//    current_epoch_matching_target_balance = get_attesting_balance(state, get_matching_target_attestations(state, current_epoch))
+//    if current_epoch_matching_target_balance * 3 >= get_total_active_balance(state) * 2:
+//        state.current_justified_epoch = current_epoch
+//        state.current_justified_root = get_block_root(state, state.current_justified_epoch)
+//        state.justification_bitfield |= (1 << 0)
+func ProcessJustification(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (
+	*pb.BeaconState, error) {
+	// There's no reason to process justification until the 2nd epoch.
+	currE := helpers.CurrentEpoch(state)
+	if currE <= params.BeaconConfig().GenesisEpoch+1 {
+		return state, nil
+	}
+
+	prevE := helpers.PrevEpoch(state)
+	totalBal := totalActiveBalance(state)
+	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
+	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
+	state.JustificationBitfield = (state.JustificationBitfield << 1) % (1 << 64)
+
+	if 3*prevAttestedBal >= 2*totalBal {
+		state.CurrentJustifiedEpoch = prevE
+		blockRoot, err := helpers.BlockRoot(state, prevE)
+		if err != nil {
+			return nil, fmt.Errorf("could not get block root for previous epoch %d: %v",
+				prevE, err)
+		}
+		state.CurrentJustifiedRoot = blockRoot
+		state.JustificationBitfield |= 2
+	}
+
+	if 3*currAttestedBal >= 2*totalBal {
+		state.CurrentJustifiedEpoch = currE
+		blockRoot, err := helpers.BlockRoot(state, currE)
+		if err != nil {
+			return nil, fmt.Errorf("could not get block root for current epoch %d: %v",
+				prevE, err)
+		}
+		state.CurrentJustifiedRoot = blockRoot
+		state.JustificationBitfield |= 1
+	}
+
+	return state, nil
+}
+
 // UpdateLatestSlashedBalances updates the latest slashed balances. It transfers
 // the amount from the current epoch index to next epoch index.
 //
 // Spec pseudocode definition:
 // Set state.latest_slashed_balances[(next_epoch) % LATEST_PENALIZED_EXIT_LENGTH] =
 // 	state.latest_slashed_balances[current_epoch % LATEST_PENALIZED_EXIT_LENGTH].
-
 func UpdateLatestSlashedBalances(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
 	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
