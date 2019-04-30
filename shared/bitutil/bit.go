@@ -27,21 +27,16 @@ func SetBitfield(index int, committeeLength int) []byte {
 
 // CheckBit checks if a bit in a bit field (small endian) is one.
 func CheckBit(bitfield []byte, index int) (bool, error) {
-	chunkLocation := (index + 1) / 8
-	indexLocation := (index + 1) % 8
-
-	if indexLocation == 0 {
-		indexLocation = 8
-	} else {
-		chunkLocation++
+	if len(bitfield) < (index+7)>>3 {
+		return false, fmt.Errorf(
+			"wanted index is out of bound of bitfield length %d, got: %d",
+			(index+7)>>3,
+			len(bitfield))
 	}
-	if chunkLocation > len(bitfield) {
-		return false, fmt.Errorf("index out of range for bitfield: length: %d, position: %d ",
-			len(bitfield), chunkLocation-1)
+	if BitfieldBit(bitfield, index) == 1 {
+		return true, nil
 	}
-
-	field := bitfield[chunkLocation-1] >> (7 - uint(indexLocation-1))
-	return field%2 != 0, nil
+	return false, nil
 }
 
 // BitSetCount counts the number of 1s in a byte using Hamming weight.

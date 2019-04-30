@@ -55,7 +55,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x80},
+		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
 			Slot:  params.BeaconConfig().GenesisSlot + 1,
 			Shard: 1,
@@ -239,7 +239,7 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x80},
+		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
 			Slot:  params.BeaconConfig().GenesisSlot + 1,
 			Shard: 1,
@@ -326,7 +326,7 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 	shard := uint64(3)
 	index := uint64(4)
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x80},
+		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
 			Slot:  slot,
 			Shard: shard,

@@ -93,7 +93,7 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 				Slot:                    params.BeaconConfig().GenesisSlot,
 				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
-			AggregationBitfield: []byte{0xC0},
+			AggregationBitfield: []byte{0x03},
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -147,7 +147,7 @@ func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
 			// All validators attested to the above roots.
-			AggregationBitfield: []byte{0xC0},
+			AggregationBitfield: []byte{0x03},
 		}
 		attestations = append(attestations, attestation)
 	}

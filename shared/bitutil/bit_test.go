@@ -13,12 +13,17 @@ func TestCheckBit(t *testing.T) {
 		b int
 		c bool
 	}{
-		{a: []byte{200}, b: 4, c: true},   //11001000
-		{a: []byte{148}, b: 3, c: true},   //10010100
-		{a: []byte{146}, b: 7, c: false},  //10010010
-		{a: []byte{179}, b: 0, c: true},   //10110011
-		{a: []byte{49}, b: 1, c: false},   //00110001
-		{a: []byte{49}, b: 100, c: false}, //00110001
+		{a: []byte{200}, b: 3, c: true},        //11001000
+		{a: []byte{148}, b: 2, c: true},        //10010100
+		{a: []byte{146}, b: 0, c: false},       //10010010
+		{a: []byte{179}, b: 0, c: true},        //10110011
+		{a: []byte{49}, b: 7, c: false},        //00110001
+		{a: []byte{179}, b: 7, c: true},        //10110011
+		{a: []byte{179, 179}, b: 8, c: true},   //10110011
+		{a: []byte{179, 179}, b: 9, c: true},   //10110011
+		{a: []byte{179, 179}, b: 10, c: false}, //10110011
+		{a: []byte{179, 179}, b: 15, c: true},  //10110011
+		{a: []byte{179, 179}, b: 14, c: false}, //10110011
 
 	}
 	for _, tt := range tests {
