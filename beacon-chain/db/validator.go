@@ -118,7 +118,7 @@ func (db *BeaconDB) HasAnyValidators(state *pb.BeaconState, pubKeys [][]byte) (b
 	})
 
 	if !exists {
-		for pubKey := range pubKeys {
+		for _, pubKey := range pubKeys {
 			for i := 0; i < len(state.ValidatorRegistry); i++ {
 				v := state.ValidatorRegistry[i]
 				if bytes.Equal(v.Pubkey, pubKey) {
