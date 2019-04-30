@@ -110,8 +110,8 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 	}
 
 	// Verify the winner root is attested by validators based on shuffling.
-	if !reflect.DeepEqual(attestedValidators, []uint64{123, 65}) {
-		t.Errorf("Active validators don't match. Wanted:[123,65], Got: %v", attestedValidators)
+	if !reflect.DeepEqual(attestedValidators, []uint64{65, 123}) {
+		t.Errorf("Active validators don't match. Wanted:[65,123], Got: %v", attestedValidators)
 	}
 }
 
