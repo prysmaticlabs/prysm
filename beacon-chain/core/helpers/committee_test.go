@@ -420,6 +420,46 @@ func TestVerifyBitfield_OK(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
+=======
+func TestVerifyBitfieldNew_OK(t *testing.T) {
+	bitfield := []byte{0xFF}
+	committeeSize := 8
+
+	isValidated, err := VerifyBitfieldNew(bitfield, committeeSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !isValidated {
+		t.Error("bitfield is not validated when it was supposed to be")
+	}
+
+	bitfield = []byte{0xff, 0x80}
+	committeeSize = 9
+
+	isValidated, err = VerifyBitfieldNew(bitfield, committeeSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if isValidated {
+		t.Error("bitfield is validated when it was supposed to be")
+	}
+
+	bitfield = []byte{0xff, 0x01}
+	committeeSize = 10
+	isValidated, err = VerifyBitfieldNew(bitfield, committeeSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !isValidated {
+		t.Error("bitfield is not validated when it was supposed to be")
+	}
+}
+
+>>>>>>> add bitfield functions and tests
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
