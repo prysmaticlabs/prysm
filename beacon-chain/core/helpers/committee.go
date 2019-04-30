@@ -228,28 +228,16 @@ func Shuffling(
 // AttestationParticipants returns the attesting participants indices.
 //
 // Spec pseudocode definition:
-//   def get_attestation_participants(state: BeaconState,
+//   def get_attesting_indices(state: BeaconState,
 //     attestation_data: AttestationData,
-//     bitfield: bytes) -> List[ValidatorIndex]:
+// 	   bitfield: bytes) -> List[ValidatorIndex]:
 //     """
-//     Returns the participant indices at for the ``attestation_data`` and ``bitfield``.
+//     Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
 //     """
-//     # Find the committee in the list with the desired shard
 //     crosslink_committees = get_crosslink_committees_at_slot(state, attestation_data.slot)
-//
-//	   assert attestation_data.shard in [shard for _, shard in crosslink_committees]
-//     crosslink_committee = [committee for committee,
-//     		shard in crosslink_committees if shard == attestation_data.shard][0]
-//
-//	   assert verify_bitfield(bitfield, len(crosslink_committee))
-//
-//     # Find the participating attesters in the committee
-//     participants = []
-//     for i, validator_index in enumerate(crosslink_committee):
-//         aggregation_bit = get_bitfield_bit(bitfield, i)
-//         if aggregation_bit == 0b1:
-//            participants.append(validator_index)
-//    return participants
+//     crosslink_committee = [committee for committee, shard in crosslink_committees if shard == attestation_data.shard][0]
+//     assert verify_bitfield(bitfield, len(crosslink_committee))
+//     return sorted([index for i, index in enumerate(crosslink_committee) if get_bitfield_bit(bitfield, i) == 0b1])
 func AttestationParticipants(
 	state *pb.BeaconState,
 	attestationData *pb.AttestationData,
@@ -302,74 +290,6 @@ func AttestationParticipants(
 			return nil, fmt.Errorf("could not get participant bitfield: %v", err)
 		}
 		if bitSet {
-			participants = append(participants, validatorIndex)
-		}
-	}
-	return participants, nil
-}
-
-// AttestationParticipantsNew returns the attesting participants indices.
-//
-// Spec pseudocode definition:
-//   def get_attesting_indices(state: BeaconState,
-//     attestation_data: AttestationData,
-// 	   bitfield: bytes) -> List[ValidatorIndex]:
-//     """
-//     Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
-//     """
-//     crosslink_committees = get_crosslink_committees_at_slot(state, attestation_data.slot)
-//     crosslink_committee = [committee for committee, shard in crosslink_committees if shard == attestation_data.shard][0]
-//     assert verify_bitfield(bitfield, len(crosslink_committee))
-//     return sorted([index for i, index in enumerate(crosslink_committee) if get_bitfield_bit(bitfield, i) == 0b1])
-func AttestationParticipantsNew(
-	state *pb.BeaconState,
-	attestationData *pb.AttestationData,
-	bitfield []byte) ([]uint64, error) {
-
-	var cachedCommittees *cache.CommitteesInSlot
-	var err error
-	slot := attestationData.Slot
-
-	// When enabling committee cache, we fetch the committees using slot.
-	// If it's not prev cached, we compute for the committees of slot and
-	// add it to the cache.
-	cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
-	if err != nil {
-		return nil, err
-	}
-
-	if cachedCommittees == nil {
-		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
-		if err != nil {
-			return nil, err
-		}
-		cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
-
-		if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-			return nil, err
-		}
-	}
-
-	var selectedCommittee []uint64
-	for _, committee := range cachedCommittees.Committees {
-		if committee.Shard == attestationData.Shard {
-			selectedCommittee = committee.Committee
-			break
-		}
-	}
-
-	if isValidated, err := VerifyBitfieldNew(bitfield, len(selectedCommittee)); !isValidated || err != nil {
-		if err != nil {
-			return nil, err
-		}
-		return nil, errors.New("bitfield is unable to be verified")
-	}
-
-	// Find the participating validators in the committee.
-	var participants []uint64
-	for i, validatorIndex := range selectedCommittee {
-		bit := bitutil.BitfieldBit(bitfield, i)
-		if bit == 0x01 {
 			participants = append(participants, validatorIndex)
 		}
 	}
