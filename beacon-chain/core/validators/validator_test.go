@@ -68,9 +68,17 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	}
 
 	boundaryAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot,
+				Shard: 1,
+			},
 			AggregationBitfield: []byte{0xC0}}, // returns indices 242
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot,
+				Shard: 1,
+			},
 			AggregationBitfield: []byte{0xC0}}, // returns indices 237,224,2
 	}
 
@@ -79,9 +87,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{123, 65}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{113, 18}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{123, 65}, attesterIndices)
+			[]uint64{113, 18}, attesterIndices)
 	}
 }
 

@@ -360,6 +360,14 @@ func AttestationParticipants(
 		}
 	}
 
+	if selectedCommittee == nil {
+		committeesFound := make([]uint64, len(cachedCommittees.Committees))
+		for i := 0; i < len(committeesFound); i++ {
+			committeesFound[i] = cachedCommittees.Committees[i].Shard
+		}
+		return nil, fmt.Errorf("could not find a committee with the shard: %d, wanted one of: %v", attestationData.Shard, committeesFound)
+	}
+
 	if isValidated, err := VerifyBitfield(bitfield, len(selectedCommittee)); !isValidated || err != nil {
 		if err != nil {
 			return nil, err

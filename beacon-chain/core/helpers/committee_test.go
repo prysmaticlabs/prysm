@@ -330,23 +330,6 @@ func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 	}
 }
 
-func TestCrosslinkCommitteesAtSlot_ShuffleFailed(t *testing.T) {
-	state := &pb.BeaconState{
-		ValidatorRegistry:      validatorsUpperBound,
-		Slot:                   params.BeaconConfig().GenesisSlot + 100,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	want := fmt.Sprint(
-		"input list exceeded upper bound and reached modulo bias",
-	)
-
-	if _, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+1); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
-	}
-}
-
 func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
@@ -360,7 +343,9 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	attestationData := &pb.AttestationData{}

@@ -276,7 +276,7 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		}
 
 		if i >= len(committee) {
-			log.Errorf("Bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
+			log.Errorf("Bitfield points to an invalid index in the committee: bitfield %08b, %v", bitfield, committee)
 			continue
 		}
 

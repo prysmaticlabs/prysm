@@ -324,7 +324,9 @@ func TestProcessCrosslinks_NoParticipantsBitField(t *testing.T) {
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 
 	attestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{
+			Slot: params.BeaconConfig().GenesisSlot,
+		},
 			// Empty participation bitfield will trigger error.
 			AggregationBitfield: []byte{}}}
 

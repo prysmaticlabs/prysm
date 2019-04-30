@@ -58,6 +58,8 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error)
 				}
 			}
 		}
+
+		fmt.Println(participatedValidators)
 	}
 	if lowestSlotIncluded == math.MaxUint64 {
 		return 0, fmt.Errorf("could not find inclusion slot for validator index %d", validatorIndex)

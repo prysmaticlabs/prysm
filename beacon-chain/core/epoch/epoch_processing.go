@@ -200,6 +200,17 @@ func ProcessJustificationAndFinalization(
 // If it's greater then beacon node updates crosslink committee with
 // the state epoch and wining root.
 //
+// def process_crosslinks(state: BeaconState) -> None:
+//  state.previous_crosslinks = [c for c in state.current_crosslinks]
+//  previous_epoch = get_previous_epoch(state)
+//  next_epoch = get_current_epoch(state) + 1
+//  for slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)):
+//    epoch = slot_to_epoch(slot)
+//    for crosslink_committee, shard in get_crosslink_committees_at_slot(state, slot):
+//      winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, shard, epoch)
+//      if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
+//        state.current_crosslinks[shard] = winning_crosslink
+//
 // Spec pseudocode definition:
 //	For every slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)),
 // 	let `crosslink_committees_at_slot = get_crosslink_committees_at_slot(state, slot)`.
@@ -207,11 +218,19 @@ func ProcessJustificationAndFinalization(
 // 			Set state.latest_crosslinks[shard] = Crosslink(
 // 			epoch=slot_to_epoch(slot), crosslink_data_root=winning_root(crosslink_committee))
 // 			if 3 * total_attesting_balance(crosslink_committee) >= 2 * total_balance(crosslink_committee)
-func ProcessCrosslinks(
-	state *pb.BeaconState,
-	thisEpochAttestations []*pb.PendingAttestation,
-	prevEpochAttestations []*pb.PendingAttestation) (*pb.BeaconState, error) {
-
+func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
+	// def process_crosslinks(state: BeaconState) -> None:
+	//  state.previous_crosslinks = [c for c in state.current_crosslinks]
+	//  previous_epoch = get_previous_epoch(state)
+	//  next_epoch = get_current_epoch(state) + 1
+	//  for slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)):
+	//    epoch = slot_to_epoch(slot)
+	//    for crosslink_committee, shard in get_crosslink_committees_at_slot(state, slot):
+	//      winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, shard, epoch)
+	//      if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
+	//        state.current_crosslinks[shard] = winning_crosslink
+	//
+	state.PreviousCrosslinks = state.CurrentCrosslinks
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
 	nextEpoch := helpers.NextEpoch(state)
