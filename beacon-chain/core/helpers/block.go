@@ -19,7 +19,7 @@ import (
 //    return state.latest_block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
 func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 	earliestSlot := state.Slot - params.BeaconConfig().SlotsPerHistoricalRoot
-	fmt.Println(slot, state.Slot)
+
 	if slot < earliestSlot || slot >= state.Slot {
 		if earliestSlot < params.BeaconConfig().GenesisSlot {
 			earliestSlot = params.BeaconConfig().GenesisSlot
