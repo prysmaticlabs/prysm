@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -84,9 +85,9 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot": fmt.Sprintf("0x%x", bytesutil.Trunc(h[:])),
-		"headSlot": blk.Slot-params.BeaconConfig().GenesisSlot,
-		"stateSlot": beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		"headRoot":  fmt.Sprintf("0x%x", bytesutil.Trunc(h[:])),
+		"headSlot":  blk.Slot - params.BeaconConfig().GenesisSlot,
+		"stateSlot": beaconState.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Chain head block and state updated")
 
 	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
