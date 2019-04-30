@@ -84,7 +84,7 @@ func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 //    )
 //    return get_epoch_committee_count(len(current_active_validators)
 func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
-	currActiveValidatorIndices := ActiveValidatorIndices(state, CurrentEpoch(state))
+	currActiveValidatorIndices := ActiveValidatorIndices(state.ValidatorRegistry, CurrentEpoch(state))
 	return EpochCommitteeCount(uint64(len(currActiveValidatorIndices)))
 }
 
@@ -102,7 +102,7 @@ func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    )
 //    return get_epoch_committee_count(len(previous_active_validators))
 func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
-	prevActiveValidatorIndices := ActiveValidatorIndices(state, PrevEpoch(state))
+	prevActiveValidatorIndices := ActiveValidatorIndices(state.ValidatorRegistry, PrevEpoch(state))
 	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }
 
@@ -120,7 +120,7 @@ func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    )
 //    return get_epoch_committee_count(len(next_active_validators))
 func NextEpochCommitteeCount(state *pb.BeaconState) uint64 {
-	prevActiveValidatorIndices := ActiveValidatorIndices(state, CurrentEpoch(state)+1)
+	prevActiveValidatorIndices := ActiveValidatorIndices(state.ValidatorRegistry, CurrentEpoch(state)+1)
 	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }
 
@@ -206,9 +206,7 @@ func Shuffling(
 	epoch uint64) ([][]uint64, error) {
 
 	// Figure out how many committees can be in a single epoch.
-	activeIndices := ActiveValidatorIndices(&pb.BeaconState{
-		ValidatorRegistry: validators,
-	}, epoch)
+	activeIndices := ActiveValidatorIndices(validators, epoch)
 	activeCount := uint64(len(activeIndices))
 	committeesPerEpoch := EpochCommitteeCount(activeCount)
 

@@ -653,6 +653,96 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	}
 }
 
+func TestIsDescendant_Ok(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	chainService := setupBeaconChain(t, beaconDB, nil)
+
+	// Construct the following chain:
+	// B1  - B2 - B3
+	//    \- B4 - B5
+	// Prove the following:
+	// 	B5 is not a descendant of B2
+	// 	B3 is not a descendant of B4
+	//  B5 and B3 are descendants of B1
+
+	block1 := &pb.BeaconBlock{
+		Slot:             1,
+		ParentRootHash32: []byte{'A'},
+	}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block2 := &pb.BeaconBlock{
+		Slot:             2,
+		ParentRootHash32: root1[:],
+	}
+	root2, err := hashutil.HashBeaconBlock(block2)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block3 := &pb.BeaconBlock{
+		Slot:             3,
+		ParentRootHash32: root2[:],
+	}
+	_, err = hashutil.HashBeaconBlock(block3)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block4 := &pb.BeaconBlock{
+		Slot:             4,
+		ParentRootHash32: root1[:],
+	}
+	root4, err := hashutil.HashBeaconBlock(block4)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block5 := &pb.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: root4[:],
+	}
+	_, err = hashutil.HashBeaconBlock(block5)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block5); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+
+	isDescendant, err := chainService.isDescendant(block2, block5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isDescendant {
+		t.Errorf("block%d can't be descendant of block%d", block5.Slot, block2.Slot)
+	}
+	isDescendant, _ = chainService.isDescendant(block4, block3)
+	if isDescendant {
+		t.Errorf("block%d can't be descendant of block%d", block3.Slot, block4.Slot)
+	}
+	isDescendant, _ = chainService.isDescendant(block1, block5)
+	if !isDescendant {
+		t.Errorf("block%d is the descendant of block%d", block3.Slot, block1.Slot)
+	}
+	isDescendant, _ = chainService.isDescendant(block1, block3)
+	if !isDescendant {
+		t.Errorf("block%d is the descendant of block%d", block3.Slot, block1.Slot)
+	}
+}
+
 func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
