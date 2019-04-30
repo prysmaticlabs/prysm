@@ -297,12 +297,14 @@ func AttestationParticipants(
 	// Find the participating validators in the committee.
 	var participants []uint64
 	for i, validatorIndex := range selectedCommittee {
-		bit := bitutil.BitfieldBit(bitfield, i)
-		if bit == 0x01 {
+		bitSet, err := bitutil.CheckBit(bitfield, i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get participant bitfield: %v", err)
+		}
+		if bitSet {
 			participants = append(participants, validatorIndex)
 		}
 	}
-	sort.Slice(participants, func(i, j int) bool { return participants[i] < participants[j] })
 	return participants, nil
 }
 
