@@ -293,6 +293,96 @@ func TestCrosslinkCommitteesAtSlot_ShuffleFailed(t *testing.T) {
 	}
 }
 
+func TestAttestationParticipantsNew_IncorrectBitfield(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}
+	attestationData := &pb.AttestationData{}
+
+	if _, err := AttestationParticipantsNew(state, attestationData, []byte{}); err == nil {
+		t.Error("attestation participants should have failed with incorrect bitfield")
+	}
+}
+
+func TestAttestationParticipantsNew_NoCommitteeCache(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}
+
+	attestationData := &pb.AttestationData{}
+
+	tests := []struct {
+		attestationSlot uint64
+		stateSlot       uint64
+		shard           uint64
+		bitfield        []byte
+		wanted          []uint64
+	}{
+		{
+			attestationSlot: params.BeaconConfig().GenesisSlot + 2,
+			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
+			shard:           2,
+			bitfield:        []byte{0x03},
+			wanted:          []uint64{11, 14},
+		},
+		{
+			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
+			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
+			shard:           1,
+			bitfield:        []byte{0x01},
+			wanted:          []uint64{5},
+		},
+		{
+			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
+			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
+			shard:           10,
+			bitfield:        []byte{0x03},
+			wanted:          []uint64{55, 105},
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+		attestationData.Slot = tt.attestationSlot
+		attestationData.Shard = tt.shard
+
+		result, err := AttestationParticipantsNew(state, attestationData, tt.bitfield)
+		if err != nil {
+			t.Errorf("Failed to get attestation participants: %v", err)
+		}
+
+		if !reflect.DeepEqual(tt.wanted, result) {
+			t.Errorf(
+				"Result indices was an unexpected value. Wanted %d, got %d",
+				tt.wanted,
+				result,
+			)
+		}
+	}
+}
+
 func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
