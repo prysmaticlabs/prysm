@@ -94,10 +94,6 @@ func (ss *Service) Stop() error {
 // Status checks the status of the node. It returns nil if it's synced
 // with the rest of the network and no errors occurred. Otherwise, it returns an error.
 func (ss *Service) Status() error {
-	if !ss.querierFinished {
-		return errors.New("querier is still running")
-	}
-
 	if !ss.Querier.chainStarted {
 		return nil
 	}
@@ -129,6 +125,7 @@ func (ss *Service) run() {
 
 	// Sets the highest observed slot from querier.
 	ss.InitialSync.InitializeObservedSlot(ss.Querier.currentHeadSlot)
+	ss.InitialSync.InitializeBestPeer(ss.Querier.bestPeer)
 	ss.InitialSync.InitializeObservedStateRoot(bytesutil.ToBytes32(ss.Querier.currentStateRoot))
 	// Sets the state root of the highest observed slot.
 	ss.InitialSync.InitializeFinalizedStateRoot(ss.Querier.currentFinalizedStateRoot)

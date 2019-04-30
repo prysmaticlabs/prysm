@@ -11,6 +11,8 @@ import (
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -32,6 +34,14 @@ type MatchedAttestations struct {
 	target []*pb.PendingAttestation
 	head   []*pb.PendingAttestation
 }
+
+var (
+	ejectedCount          float64
+	validatorEjectedGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "validator_ejected_count",
+		Help: "Total number of ejected validators",
+	})
+)
 
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
@@ -262,7 +272,7 @@ func ProcessCrosslinks(
 //        if state.validator_balances[index] < EJECTION_BALANCE:
 //            exit_validator(state, index)
 func ProcessEjections(state *pb.BeaconState, enableLogging bool) (*pb.BeaconState, error) {
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	for _, index := range activeValidatorIndices {
 		if state.Balances[index] < params.BeaconConfig().EjectionBalance {
 			if enableLogging {
@@ -271,6 +281,12 @@ func ProcessEjections(state *pb.BeaconState, enableLogging bool) (*pb.BeaconStat
 					"index":  index}).Info("Validator ejected")
 			}
 			state = validators.ExitValidator(state, index)
+			// Verify the validator has properly exited due to ejection before setting the
+			// ejection count for gauge.
+			if state.ValidatorRegistry[index].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+				ejectedCount++
+				validatorEjectedGauge.Set(ejectedCount)
+			}
 		}
 	}
 	return state, nil
@@ -357,7 +373,7 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 // 	next_epoch + ACTIVATION_EXIT_DELAY))
 func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
-	validatorIndices := helpers.ActiveValidatorIndices(state, nextEpoch)
+	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
 	indicesBytes := []byte{}
 	for _, val := range validatorIndices {
 		buf := make([]byte, 8)

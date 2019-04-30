@@ -122,3 +122,22 @@ func TestFromBytes8(t *testing.T) {
 		}
 	}
 }
+
+func TestTruncate(t *testing.T) {
+	tests := []struct {
+		a []byte
+		b []byte
+	}{
+		{[]byte{'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'},
+			[]byte{'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'}},
+		{[]byte{'A', 'C', 'D', 'E', 'F'},
+			[]byte{'A', 'C', 'D', 'E', 'F'}},
+		{[]byte{}, []byte{}},
+	}
+	for _, tt := range tests {
+		b := Trunc(tt.a)
+		if !bytes.Equal(b, tt.b) {
+			t.Errorf("Trunc(%d) = %v, want = %d", tt.a, b, tt.b)
+		}
+	}
+}

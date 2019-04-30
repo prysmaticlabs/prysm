@@ -157,7 +157,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !reflect.DeepEqual(newState.BatchedBlockRootHash32S, [][]byte{}) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
 	}
-	activeValidators := helpers.ActiveValidatorIndices(newState, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)
