@@ -435,6 +435,36 @@ func ProcessJustification(state *pb.BeaconState, prevAttestedBal uint64, currAtt
 	return state, nil
 }
 
+// ProcessFinalization checks if there has been a new finalized epoch.
+// Spec pseudocode definition:
+//	def process_justification_and_finalization(state: BeaconState) -> None:
+//    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
+//        return
+//
+//    previous_epoch = get_previous_epoch(state)
+//    current_epoch = get_current_epoch(state)
+//    old_previous_justified_epoch = state.previous_justified_epoch
+//    old_current_justified_epoch = state.current_justified_epoch
+//
+//    # Process finalizations
+//    bitfield = state.justification_bitfield
+//    # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+//    if (bitfield >> 1) % 8 == 0b111 and old_previous_justified_epoch == current_epoch - 3:
+//        state.finalized_epoch = old_previous_justified_epoch
+//        state.finalized_root = get_block_root(state, state.finalized_epoch)
+//    # The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
+//    if (bitfield >> 1) % 4 == 0b11 and old_previous_justified_epoch == current_epoch - 2:
+//        state.finalized_epoch = old_previous_justified_epoch
+//        state.finalized_root = get_block_root(state, state.finalized_epoch)
+//    # The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+//    if (bitfield >> 0) % 8 == 0b111 and old_current_justified_epoch == current_epoch - 2:
+//        state.finalized_epoch = old_current_justified_epoch
+//        state.finalized_root = get_block_root(state, state.finalized_epoch)
+//    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+//    if (bitfield >> 0) % 4 == 0b11 and old_current_justified_epoch == current_epoch - 1:
+//        state.finalized_epoch = old_current_justified_epoch
+//        state.finalized_root = get_block_root(state, state.finalized_epoch)
+
 // UpdateLatestSlashedBalances updates the latest slashed balances. It transfers
 // the amount from the current epoch index to next epoch index.
 //
