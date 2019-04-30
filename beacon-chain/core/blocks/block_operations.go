@@ -348,7 +348,7 @@ func verifySlashableAttestation(att *pb.SlashableAttestation, verifySignatures b
 		}
 	}
 
-	if isValidated, err := helpers.VerifyBitfield(att.CustodyBitfield, len(att.ValidatorIndices)); !isValidated || err != nil {
+	if isValidated, err := helpers.VerifyBitfieldNew(att.CustodyBitfield, len(att.ValidatorIndices)); !isValidated || err != nil {
 		if err != nil {
 			return err
 		}
