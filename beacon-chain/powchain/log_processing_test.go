@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -24,6 +25,7 @@ func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		CacheTreeHash: false,
 	})
+	logrus.SetLevel(logrus.DebugLevel)
 }
 
 func TestProcessDepositLog_OK(t *testing.T) {
