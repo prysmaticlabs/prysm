@@ -197,6 +197,8 @@ func (c *ChainService) ApplyForkChoiceRule(
 	}
 	log.WithFields(logrus.Fields{
 		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headSlot": newHead.Slot-params.BeaconConfig().GenesisSlot,
+		"stateSlot": newState.Slot-params.BeaconConfig().GenesisSlot,
 	}).Info("Chain head block and state updated")
 
 	return nil
