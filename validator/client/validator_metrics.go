@@ -64,8 +64,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				log.WithFields(logrus.Fields{
 					"prevBalance":   prevBalance,
 					"newBalance":    newBalance,
-					"delta":         fmt.Sprintf("%f", newBalance-prevBalance),
-					"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
+					"delta":         fmt.Sprintf("%.8f", newBalance-prevBalance),
+					"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
 					"pubKey":        tpk,
 				}).Info("Net gains/losses in eth")
 			}
