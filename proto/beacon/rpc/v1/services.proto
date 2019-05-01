@@ -161,6 +161,7 @@ message ValidatorStatusResponse {
   uint64 eth1_deposit_block_number = 2;
   uint64 deposit_inclusion_slot = 3;
   uint64 activation_epoch = 4;
+  uint64 position_in_activation_queue = 5;
 }
 
 message Eth1DataResponse {
