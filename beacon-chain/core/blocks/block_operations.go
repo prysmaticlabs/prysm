@@ -11,8 +11,6 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -559,8 +557,33 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 //         data=attestation.data,
 //         signature=attestation.signature,
 //     )
-func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) *pb.IndexedAttestation {
-	ai := epoch.AttestingValidators()
+func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
+	attI, err := helpers.AttestationParticipants(state, attestation.Data, attestation.GetAggregationBitfield())
+	if err != nil {
+		return nil, err
+	}
+	cb1i, err := helpers.AttestationParticipants(state, attestation.Data, attestation.GetCustodyBitfield())
+	if err != nil {
+		return nil, err
+	}
+	cb1iMap := make(map[uint64]bool)
+	for _, in := range cb1i {
+		cb1iMap[in] = true
+	}
+	cb0i := []uint64{}
+	for _, index := range attI {
+		_, ok := cb1iMap[index]
+		if !ok {
+			cb0i = append(cb0i, index)
+		}
+	}
+	inAtt := &pb.IndexedAttestation{
+		Data:                attestation.Data,
+		Signature:           attestation.AggregateSignature,
+		CustodyBit_0Indices: cb0i,
+		CustodyBit_1Indices: cb1i,
+	}
+	return inAtt, nil
 }
 
 // VerifyIndexedAttestation determines the validity of an indexed attestation.

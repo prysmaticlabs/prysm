@@ -1013,6 +1013,44 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		t.Errorf("indexed attestation failed to verify: %v", err)
 	}
 }
+func TestConvertToIndexed_OK(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	committeesPerEpoch := uint64(1)
+	// Set epoch total validators count to 6 committees per slot.
+	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().GenesisSlot + 200,
+	}
+	attestation := &pb.Attestation{
+		AggregationBitfield: []byte{0x01},
+		CustodyBitfield:     []byte{0x00},
+		Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot + 200,
+			Shard: 8,
+		},
+	}
+	wanted := &pb.IndexedAttestation{
+		CustodyBit_0Indices: []uint64{1, 3, 5, 10, 12},
+		CustodyBit_1Indices: []uint64{},
+		Data:                attestation.Data,
+		Signature:           attestation.AggregateSignature,
+	}
+	ia, err := blocks.ConvertToIndexed(state, attestation)
+	if err != nil {
+		t.Errorf("failed to convert attestation to indexed attestation: %v", err)
+	}
+	if !reflect.DeepEqual(wanted, ia) {
+		t.Errorf("convert attestation to indexed attestation didn't result as wanted: %v got: %v", wanted, ia)
+	}
+
+}
 
 func TestVerifyIndexedAttestation_Intersecting(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
