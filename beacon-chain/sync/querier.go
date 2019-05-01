@@ -153,8 +153,9 @@ func (q *Querier) run() {
 		ticker.Stop()
 	}()
 
-	timeout := time.After(5 * time.Second)
 	log.Info("Polling peers for latest chain head...")
+	hasReceivedResponse := false
+	var timeout <-chan time.Time
 	for {
 		select {
 		case <-q.ctx.Done():
@@ -172,6 +173,13 @@ func (q *Querier) run() {
 			responseSub.Unsubscribe()
 			q.cancel()
 		case msg := <-q.responseBuf:
+			// If this is the first response a node receives, we start
+			// a timeout that will keep listening for more respones over a
+			// certain time interval to ensure we get the best head from our peers.
+			if !hasReceivedResponse {
+				timeout = time.After(10 * time.Second)
+				hasReceivedResponse = true
+			}
 			response := msg.Data.(*pb.ChainHeadResponse)
 			queryLog.WithFields(logrus.Fields{
 				"peerID":      msg.Peer.Pretty(),
