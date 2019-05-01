@@ -104,7 +104,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	// Blockchain peering negitiation; excludes negotiating with bootstrap or
+	// Blockchain peering negotiation; excludes negotiating with bootstrap or
 	// relay nodes.
 	exclusions := []peer.ID{}
 	for _, addr := range []string{cfg.BootstrapNodeAddr, cfg.RelayNodeAddr} {
