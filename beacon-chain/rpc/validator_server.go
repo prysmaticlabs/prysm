@@ -39,11 +39,12 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 			return fmt.Errorf("could not retrieve beacon state: %v", err)
 		}
 		activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
+		statuses := vs.determineActivationStatuses(beaconstate, req.PublicKeys)
 		res := &pb.ValidatorActivationResponse{
 			ActivatedPublicKeys: activeKeys,
+			Statuses: statuses,
 		}
 		return stream.Send(res)
-
 	}
 
 	hasAny, err := vs.beaconDB.HasAnyValidators(beaconState, req.PublicKeys)
@@ -252,6 +253,17 @@ func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.Bea
 	}
 
 	return status, nil
+}
+
+// determineActivationStatuses for a list of validator public keys.
+func (vs *ValidatorServer) determineActivationStatuses(beaconState *pbp2p.BeaconState, pubkeys [][]byte) [][]byte {
+	// We construct a map of pubKey => deposit container objects once.
+	depositsByPubKey := make(map[string]*pbp2p.Deposit)
+
+	// We then 
+
+
+	return activeKeys
 }
 
 // filterActivePublicKeys takes a list of validator public keys and returns
