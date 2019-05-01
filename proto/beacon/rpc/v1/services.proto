@@ -55,7 +55,13 @@ message ValidatorActivationRequest {
 }
 
 message ValidatorActivationResponse {
-  repeated bytes activated_public_keys = 1;
+  repeated bytes activated_public_keys = 1 [deprecated = true];
+
+  message Status {
+    bytes public_key = 1;
+    ValidatorStatusResponse status = 2;
+  }
+  repeated Status statuses = 2;
 }
 
 message AttestationDataRequest {
@@ -152,6 +158,10 @@ message CommitteeAssignmentResponse {
 
 message ValidatorStatusResponse {
   ValidatorStatus status = 1;
+  uint64 eth1_deposit_block_number = 2;
+  uint64 deposit_inclusion_slot = 3;
+  uint64 activation_epoch = 4;
+  uint64 position_in_activation_queue = 5;
 }
 
 message Eth1DataResponse {
