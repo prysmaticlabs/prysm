@@ -11,6 +11,8 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -539,6 +541,26 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		return nil
 	}
 	return nil
+}
+
+// ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
+//
+// Spec pseudocode definition:
+//   def convert_to_indexed(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
+//     """
+//     Convert ``attestation`` to (almost) indexed-verifiable form.
+//     """
+//     attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bitfield)
+//     custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bitfield)
+//     custody_bit_0_indices = [index for index in attesting_indices if index not in custody_bit_1_indices]
+//     return IndexedAttestation(
+//         custody_bit_0_indices=custody_bit_0_indices,
+//         custody_bit_1_indices=custody_bit_1_indices,
+//         data=attestation.data,
+//         signature=attestation.signature,
+//     )
+func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) *pb.IndexedAttestation {
+	ai := epoch.AttestingValidators()
 }
 
 // VerifyIndexedAttestation determines the validity of an indexed attestation.
