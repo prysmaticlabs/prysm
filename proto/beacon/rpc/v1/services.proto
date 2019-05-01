@@ -158,8 +158,9 @@ message CommitteeAssignmentResponse {
 
 message ValidatorStatusResponse {
   ValidatorStatus status = 1;
-  uint64 deposit_inclusion_slot = 2;
-  uint64 activation_epoch = 3;
+  uint64 eth1_deposit_block_number = 2;
+  uint64 deposit_inclusion_slot = 3;
+  uint64 activation_epoch = 4;
 }
 
 message Eth1DataResponse {
