@@ -307,7 +307,7 @@ func AttestationParticipants(
 	return participants, nil
 }
 
-// VerifyBitfield Verify ``bitfield`` against the ``committee_size``.
+// VerifyBitfield verifies bitfield against the committee_size.
 //
 // Spec pseudocode definition:
 //   def verify_bitfield(bitfield: bytes, committee_size: int) -> bool:
@@ -322,15 +322,19 @@ func AttestationParticipants(
 //             return False
 //     return True
 func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
-	if len(bitfield) != (committeeSize+7)>>3 {
+	if len(bitfield) != mathutil.CeilDiv8(committeeSize) {
 		return false, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
 			(committeeSize+7)>>3,
 			len(bitfield))
 	}
-
-	for i := committeeSize; i < len(bitfield)<<3; i++ {
-		if bitutil.BitfieldBit(bitfield, i) == 1 {
+	bitLength := len(bitfield) << 3
+	for i := committeeSize; i < bitLength; i++ {
+		set, err := bitutil.CheckBit(bitfield, i)
+		if err != nil {
+			return false, err
+		}
+		if set {
 			return false, nil
 		}
 	}

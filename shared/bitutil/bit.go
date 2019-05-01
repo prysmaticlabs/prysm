@@ -27,10 +27,10 @@ func SetBitfield(index int, committeeLength int) []byte {
 
 // CheckBit checks if a bit in a bit field (small endian) is one.
 func CheckBit(bitfield []byte, index int) (bool, error) {
-	if len(bitfield) < (index+7)>>3 {
+	if len(bitfield) < mathutil.CeilDiv8(index) {
 		return false, fmt.Errorf(
 			"wanted index is out of bound of bitfield length %d, got: %d",
-			(index+7)>>3,
+			mathutil.CeilDiv8(index),
 			len(bitfield))
 	}
 	if BitfieldBit(bitfield, index) == 1 {
@@ -79,7 +79,7 @@ func fillBit(target byte, index uint64) byte {
 	return target ^ (1 << bitShift)
 }
 
-// BitfieldBit Extract the bit in `bitfield` at position `i`.
+// BitfieldBit extracts the bit in bitfield at position i.
 // Spec pseudocode definition:
 //   def get_bitfield_bit(bitfield: bytes, i: int) -> int:
 //     """
@@ -87,6 +87,11 @@ func fillBit(target byte, index uint64) byte {
 //     """
 //     return (bitfield[i // 8] >> (i % 8)) % 2
 func BitfieldBit(bitfield []byte, i int) byte {
-	by := (bitfield[i>>3] >> (uint(i) & 0x7)) & 0x1
-	return by
+	//take the relevant byte in bitfield in order to get i value
+	rb := bitfield[i>>3]
+	//shift the byte till i is its first bit
+	fb := rb >> (uint(i) & 0x7)
+	//zero the byte value except its first bit
+	b := fb & 0x1
+	return b
 }
