@@ -256,14 +256,22 @@ func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.Bea
 }
 
 // determineActivationStatuses for a list of validator public keys.
-func (vs *ValidatorServer) determineActivationStatuses(beaconState *pbp2p.BeaconState, pubkeys [][]byte) [][]byte {
+func (vs *ValidatorServer) determineActivationStatuses(
+	beaconState *pbp2p.BeaconState, pubKeys [][]byte,
+) []*pb.ValidatorStatusResponse {
 	// We construct a map of pubKey => deposit container objects once.
 	depositsByPubKey := make(map[string]*pbp2p.Deposit)
 
-	// We then 
+	statuses := []*pb.ValidatorStatusResponse{}
+	// We then loop through public keys and create a response.
+	for idx := range pubKeys {
+		status := &pb.ValidatorStatusResponse{
+			Eth1DepositBlockNumber: uint64(idx),
+		}
+		statuses = append(statuses, status)
+	}
 
-
-	return activeKeys
+	return statuses
 }
 
 // filterActivePublicKeys takes a list of validator public keys and returns
