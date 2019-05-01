@@ -322,21 +322,21 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: params.BeaconConfig().GenesisSlot + 2,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
 			shard:           2,
-			bitfield:        []byte{0xC0},
+			bitfield:        []byte{0x03},
 			wanted:          []uint64{11, 14},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           1,
-			bitfield:        []byte{0x80},
+			bitfield:        []byte{0x01},
 			wanted:          []uint64{5},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           10,
-			bitfield:        []byte{0xC0},
+			bitfield:        []byte{0x03},
 			wanted:          []uint64{55, 105},
 		},
 	}
@@ -396,7 +396,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x01}
+	bitfield = []byte{0xff, 0x80}
 	committeeSize = 9
 
 	isValidated, err = VerifyBitfield(bitfield, committeeSize)
@@ -408,7 +408,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x80}
+	bitfield = []byte{0xff, 0x03}
 	committeeSize = 10
 	isValidated, err = VerifyBitfield(bitfield, committeeSize)
 	if err != nil {
@@ -419,6 +419,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 }
+
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
@@ -526,7 +527,7 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 		Shard: 234,
 		Slot:  params.BeaconConfig().GenesisSlot + uint64(slotOffset),
 	}
-	result, err := AttestationParticipants(&pb.BeaconState{}, attestationData, []byte{0xC0})
+	result, err := AttestationParticipants(&pb.BeaconState{}, attestationData, []byte{0x03})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -560,7 +561,7 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 		Slot:  params.BeaconConfig().GenesisSlot + slotOffset,
 	}
 
-	result, err := AttestationParticipants(state, attestationData, []byte{0xC0})
+	result, err := AttestationParticipants(state, attestationData, []byte{0x03})
 	if err != nil {
 		t.Fatal(err)
 	}
