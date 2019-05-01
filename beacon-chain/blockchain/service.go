@@ -245,6 +245,12 @@ func (c *ChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
 	for s := range c.canonicalBlocks {
 		slots = append(slots, int(s))
 	}
+
+	totalRoots := uint64(len(slots))
+	if count > totalRoots {
+		count = totalRoots
+	}
+
 	sort.Sort(sort.Reverse(sort.IntSlice(slots)))
 	blockRoots := make([]*pbrpc.BlockRoot, count)
 	for i := 0; i < int(count); i++ {

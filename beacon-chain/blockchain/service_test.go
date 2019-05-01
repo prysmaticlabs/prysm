@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"math/big"
+	"reflect"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -328,4 +330,47 @@ func TestChainStartStop_Initialized(t *testing.T) {
 		t.Error("context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
+}
+
+func TestRecentCanonicalRoots_CanFilter(t *testing.T) {
+	service := setupBeaconChain(t, nil, nil)
+	blks := map[uint64][]byte{
+		1:  []byte{'A'},
+		50: []byte{'E'},
+		2:  []byte{'B'},
+		99: []byte{'F'},
+		30: []byte{'D'},
+		3:  []byte{'C'},
+	}
+	service.canonicalBlocks = blks
+
+	want := []*pbrpc.BlockRoot{{Slot: 99, Root: []byte{'F'}}}
+	roots := service.RecentCanonicalRoots(1)
+	if !reflect.DeepEqual(want, roots) {
+		t.Log("Incorrect block roots received")
+	}
+
+	want = []*pbrpc.BlockRoot{
+		{Slot: 99, Root: []byte{'F'}},
+		{Slot: 50, Root: []byte{'E'}},
+		{Slot: 30, Root: []byte{'D'}},
+	}
+	roots = service.RecentCanonicalRoots(3)
+	if !reflect.DeepEqual(want, roots) {
+		t.Log("Incorrect block roots received")
+	}
+
+	want = []*pbrpc.BlockRoot{
+		{Slot: 99, Root: []byte{'F'}},
+		{Slot: 50, Root: []byte{'E'}},
+		{Slot: 30, Root: []byte{'D'}},
+		{Slot: 3, Root: []byte{'C'}},
+		{Slot: 2, Root: []byte{'B'}},
+		{Slot: 1, Root: []byte{'A'}},
+	}
+	roots = service.RecentCanonicalRoots(100)
+	if !reflect.DeepEqual(want, roots) {
+		t.Log("Incorrect block roots received")
+	}
+
 }
