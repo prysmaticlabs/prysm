@@ -174,7 +174,7 @@ func (q *Querier) run() {
 			q.cancel()
 		case msg := <-q.responseBuf:
 			// If this is the first response a node receives, we start
-			// a timeout that will keep listening for more respones over a
+			// a timeout that will keep listening for more responses over a
 			// certain time interval to ensure we get the best head from our peers.
 			if !hasReceivedResponse {
 				timeout = time.After(10 * time.Second)
