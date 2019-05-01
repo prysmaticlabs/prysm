@@ -66,33 +66,6 @@ func TestBitfieldBit(t *testing.T) {
 	}
 }
 
-func TestBitfieldBit(t *testing.T) {
-	tests := []struct {
-		a []byte
-		b int
-		c byte
-	}{
-		{a: []byte{200}, b: 3, c: 1},       //11001000
-		{a: []byte{148}, b: 2, c: 1},       //10010100
-		{a: []byte{146}, b: 0, c: 0},       //10010010
-		{a: []byte{179}, b: 0, c: 1},       //10110011
-		{a: []byte{49}, b: 7, c: 0},        //00110001
-		{a: []byte{179}, b: 7, c: 1},       //10110011
-		{a: []byte{179, 179}, b: 8, c: 1},  //10110011
-		{a: []byte{179, 179}, b: 9, c: 1},  //10110011
-		{a: []byte{179, 179}, b: 10, c: 0}, //10110011
-		{a: []byte{179, 179}, b: 15, c: 1}, //10110011
-		{a: []byte{179, 179}, b: 14, c: 0}, //10110011
-
-	}
-	for _, tt := range tests {
-		set := BitfieldBit(tt.a, tt.b)
-		if set != tt.c {
-			t.Errorf("Test check bit set failed with %08b and location %v", tt.a, tt.b)
-		}
-	}
-}
-
 func TestBitSetCount(t *testing.T) {
 	tests := []struct {
 		a byte
