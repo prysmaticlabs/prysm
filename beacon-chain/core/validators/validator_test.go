@@ -87,9 +87,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{113, 18}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{9, 32}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{113, 18}, attesterIndices)
+			[]uint64{9, 32}, attesterIndices)
 	}
 }
 
@@ -131,7 +131,7 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{278, 2292}) {
+	if !reflect.DeepEqual(indices, []uint64{2597, 980}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
 			[]uint64{278, 2292}, indices)
 	}
@@ -483,14 +483,14 @@ func TestExitValidator_OK(t *testing.T) {
 
 func TestExitValidator_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 1,
+		Slot: params.BeaconConfig().GenesisEpoch + 1000,
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
 	}
 	state = ExitValidator(state, 0)
-	if len(state.ValidatorRegistry) != 1 {
-		t.Error("Expected validator to have failed exiting")
+	if state.ValidatorRegistry[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+		t.Error("Expected exited validator to stay exited")
 	}
 }
 

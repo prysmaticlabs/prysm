@@ -939,3 +939,165 @@ func TestMatchAttestations_EpochOutOfBound(t *testing.T) {
 		t.Fatal("Did not receive wanted error")
 	}
 }
+
+func TestCrosslinkFromAttsData_CanGetCrosslink(t *testing.T) {
+	s := &pb.BeaconState{
+		CurrentCrosslinks: []*pb.Crosslink{
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+		},
+	}
+	slot := (params.BeaconConfig().GenesisEpoch + 100) * params.BeaconConfig().SlotsPerEpoch
+	a := &pb.AttestationData{
+		Slot:                  slot,
+		CrosslinkDataRoot:     []byte{'A'},
+		PreviousCrosslinkRoot: []byte{'B'},
+	}
+	if !proto.Equal(CrosslinkFromAttsData(s, a), &pb.Crosslink{
+		Epoch:                       params.BeaconConfig().GenesisEpoch + params.BeaconConfig().MaxCrosslinkEpochs,
+		CrosslinkDataRootHash32:     []byte{'A'},
+		PreviousCrosslinkRootHash32: []byte{'B'},
+	}) {
+		t.Error("Incorrect crosslink")
+	}
+}
+
+func TestAttsForCrosslink_CanGetAttestations(t *testing.T) {
+	s := &pb.BeaconState{
+		CurrentCrosslinks: []*pb.Crosslink{
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+		},
+	}
+	c := &pb.Crosslink{
+		CrosslinkDataRootHash32: []byte{'B'},
+	}
+	atts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'A'}}},
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'B'}}}, // Selected
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'C'}}},
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'B'}}}} // Selected
+	if !reflect.DeepEqual(attsForCrosslink(s, c, atts), []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'B'}}},
+		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'B'}}}}) {
+		t.Error("Incorrect attestations for crosslink")
+	}
+}
+
+func TestCrosslinkAttestingIndices_CanGetIndices(t *testing.T) {
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:                  params.BeaconConfig().GenesisSlot + uint64(i),
+				Shard:                 uint64(i + 1),
+				PreviousCrosslinkRoot: []byte{'E'},
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
+				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
+		}
+	}
+
+	// Generate validators and state for the 2 attestations.
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	s := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: validators,
+		CurrentCrosslinks: []*pb.Crosslink{
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+			{Epoch: params.BeaconConfig().GenesisEpoch},
+		},
+	}
+	c := &pb.Crosslink{
+		Epoch:                       params.BeaconConfig().GenesisEpoch,
+		PreviousCrosslinkRootHash32: []byte{'E'},
+	}
+	indices, err := CrosslinkAttestingIndices(s, c, atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify the there's indices and it's sorted.
+	if len(indices) == 0 {
+		t.Error("crosslink attesting indices length can't be 0")
+	}
+	for i := 0; i < len(indices)-1; i++ {
+		if indices[i] > indices[i+1] {
+			t.Error("sorted indices not sorted")
+		}
+	}
+}
+
+func TestWinningCrosslink_CantGetMatchingAtts(t *testing.T) {
+	wanted := fmt.Sprintf("could not get matching attestations: input epoch: %d != current epoch: %d or previous epoch: %d",
+		100, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().GenesisEpoch)
+	_, err := WinningCrosslink(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, 0, 100)
+	if err.Error() != wanted {
+		t.Fatal(err)
+	}
+}
+
+func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+	ge := params.BeaconConfig().GenesisEpoch
+
+	state := &pb.BeaconState{
+		Slot:                      gs + e + 2,
+		PreviousEpochAttestations: []*pb.PendingAttestation{},
+		LatestBlockRoots:          make([][]byte, 128),
+		CurrentCrosslinks:         []*pb.Crosslink{{Epoch: ge}},
+	}
+
+	gCrosslink := &pb.Crosslink{
+		Epoch:                       params.BeaconConfig().GenesisEpoch,
+		CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
+		PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+	}
+
+	crosslink, err := WinningCrosslink(state, 0, ge)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(crosslink, gCrosslink) {
+		t.Errorf("Did not get genesis crosslink, got: %v", crosslink)
+	}
+}
+
+func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+	ge := params.BeaconConfig().GenesisEpoch
+
+	atts := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{Slot: gs + 1, CrosslinkDataRoot: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: gs + 1, CrosslinkDataRoot: []byte{'B'}}}, // winner
+		{Data: &pb.AttestationData{Slot: gs + 1, CrosslinkDataRoot: []byte{'C'}}},
+	}
+
+	blockRoots := make([][]byte, 128)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i + 1)}
+	}
+
+	state := &pb.BeaconState{
+		Slot:                      gs + e + 2,
+		PreviousEpochAttestations: atts,
+		LatestBlockRoots:          blockRoots,
+		CurrentCrosslinks:         []*pb.Crosslink{{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}},
+	}
+
+	winner, err := WinningCrosslink(state, 0, ge)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &pb.Crosslink{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}
+	if !reflect.DeepEqual(winner, want) {
+		t.Errorf("Did not get genesis crosslink, got: %v", winner)
+	}
+}

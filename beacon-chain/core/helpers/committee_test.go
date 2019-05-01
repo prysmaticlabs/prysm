@@ -298,8 +298,8 @@ func TestCrosslinkCommitteesAtSlot_EpochSinceLastUpdatePow2(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry:            validators,
 		Slot:                         params.BeaconConfig().GenesisSlot + 128,
-		LatestActiveIndexRoots:       [][]byte{{'A'}, {'B'}, {'C'}},
-		LatestRandaoMixes:            [][]byte{{'D'}, {'E'}, {'F'}},
+		LatestActiveIndexRoots:       [][]byte{{'A'}, {'B'}, {'C'}, {'D'}},
+		LatestRandaoMixes:            [][]byte{{'E'}, {'F'}, {'G'}, {'H'}},
 		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 	}
 
@@ -360,23 +360,23 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 2,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
-			shard:           2,
+			shard:           3,
 			bitfield:        []byte{0xC0},
-			wanted:          []uint64{11, 14},
+			wanted:          []uint64{35, 2},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
-			shard:           1,
+			shard:           2,
 			bitfield:        []byte{0x80},
-			wanted:          []uint64{5},
+			wanted:          []uint64{87},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
-			shard:           10,
+			shard:           11,
 			bitfield:        []byte{0xC0},
-			wanted:          []uint64{55, 105},
+			wanted:          []uint64{92, 49},
 		},
 	}
 
@@ -458,6 +458,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 }
+
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
@@ -467,8 +468,10 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 		}
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	tests := []struct {
@@ -480,30 +483,30 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       params.BeaconConfig().GenesisSlot + 160,
-			committee:  []uint64{0, 50},
-			shard:      32,
+			slot:       params.BeaconConfig().GenesisSlot + 151,
+			committee:  []uint64{28, 0},
+			shard:      88,
 			isProposer: true,
 		},
 		{
 			index:      105,
-			slot:       params.BeaconConfig().GenesisSlot + 130,
-			committee:  []uint64{11, 105},
-			shard:      2,
+			slot:       params.BeaconConfig().GenesisSlot + 157,
+			committee:  []uint64{105, 40},
+			shard:      94,
 			isProposer: false,
 		},
 		{
 			index:      64,
-			slot:       params.BeaconConfig().GenesisSlot + 161,
-			committee:  []uint64{110, 64},
-			shard:      33,
-			isProposer: true,
+			slot:       params.BeaconConfig().GenesisSlot + 163,
+			committee:  []uint64{64, 27},
+			shard:      100,
+			isProposer: false,
 		},
 		{
 			index:      11,
-			slot:       params.BeaconConfig().GenesisSlot + 130,
-			committee:  []uint64{11, 105},
-			shard:      2,
+			slot:       params.BeaconConfig().GenesisSlot + 160,
+			committee:  []uint64{11, 101},
+			shard:      97,
 			isProposer: true,
 		},
 	}
@@ -535,7 +538,9 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 
 func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	index := uint64(10000)
 	_, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false)
@@ -640,8 +645,14 @@ func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	beaconState := &pb.BeaconState{
+		Slot:                   csInSlot.Slot,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
 	committee, shard, _, isProposer, err :=
-		CommitteeAssignment(&pb.BeaconState{Slot: csInSlot.Slot}, csInSlot.Slot, 105, false)
+		CommitteeAssignment(beaconState, csInSlot.Slot, 105, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -667,7 +678,6 @@ func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
-
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -677,8 +687,10 @@ func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 
 	slotOffset := uint64(10)
 	state := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + slotOffset,
-		ValidatorRegistry: validators,
+		Slot:                   params.BeaconConfig().GenesisSlot + slotOffset,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	committee, shard, _, isProposer, err :=
@@ -687,7 +699,7 @@ func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wantedCommittee := []uint64{55, 105}
+	wantedCommittee := []uint64{92, 49}
 	if !reflect.DeepEqual(wantedCommittee, committee) {
 		t.Errorf(
 			"Result indices was an unexpected value. Wanted %d, got %d",
@@ -696,7 +708,7 @@ func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 		)
 	}
 
-	wantedShard := uint64(10)
+	wantedShard := uint64(43)
 	if shard != wantedShard {
 		t.Errorf(
 			"Result shard was an expected value. Wanted %d, got %d",

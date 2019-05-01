@@ -47,7 +47,7 @@ func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Me
 	return nil
 }
 
-func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error) {
+func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
 	}

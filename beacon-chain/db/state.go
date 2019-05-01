@@ -445,7 +445,7 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 }
 
 func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
-	if !featureconfig.FeatureConfig().EnableHistoricalStatePruning {
+	if featureconfig.FeatureConfig().DisableHistoricalStatePruning {
 		return nil
 	}
 	return db.update(func(tx *bolt.Tx) error {

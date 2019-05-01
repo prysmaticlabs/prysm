@@ -40,6 +40,13 @@ func Bytes8(x uint64) []byte {
 	return bytes
 }
 
+// Bytes32 returns integer x to bytes in little-endian format, x.to_bytes(8, 'little').
+func Bytes32(x uint64) []byte {
+	bytes := make([]byte, 32)
+	binary.LittleEndian.PutUint64(bytes, x)
+	return bytes
+}
+
 // FromBytes8 returns an integer which is stored in the little-endian format(8, 'big')
 // from a byte array.
 func FromBytes8(x []byte) uint64 {
@@ -96,4 +103,12 @@ func Xor(x []byte, y []byte) []byte {
 		result = append(result, x[i]^y[i])
 	}
 	return result
+}
+
+// Trunc truncates the byte slices to 12 bytes.
+func Trunc(x []byte) []byte {
+	if len(x) > 12 {
+		return x[:12]
+	}
+	return x
 }

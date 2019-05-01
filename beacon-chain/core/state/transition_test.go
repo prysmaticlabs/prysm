@@ -424,7 +424,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		attestations = append(attestations, &pb.PendingAttestation{
 			Data: &pb.AttestationData{
 				Slot:                     i + params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
-				Shard:                    1,
+				Shard:                    2,
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
 				JustifiedBlockRootHash32: []byte{0},
 			},
@@ -484,7 +484,7 @@ func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
 		attestations = append(attestations, &pb.PendingAttestation{
 			Data: &pb.AttestationData{
 				Slot:                     i + params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
-				Shard:                    1,
+				Shard:                    2,
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
 				JustifiedBlockRootHash32: []byte{0},
 			},

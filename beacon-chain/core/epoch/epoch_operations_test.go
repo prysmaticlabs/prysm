@@ -115,8 +115,8 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 	}
 
 	// Verify the winner root is attested by validators based on shuffling.
-	if !reflect.DeepEqual(attestedValidators, []uint64{113, 18}) {
-		t.Errorf("Active validators don't match. Wanted:[113, 18], Got: %v", attestedValidators)
+	if !reflect.DeepEqual(attestedValidators, []uint64{9, 32}) {
+		t.Errorf("Active validators don't match. Wanted: [9, 32], Got: %v", attestedValidators)
 	}
 }
 
@@ -237,7 +237,7 @@ func TestInclusionSlot_GetsCorrectSlot(t *testing.T) {
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       102},
 	}
-	slot, err := InclusionSlot(state, 995)
+	slot, err := InclusionSlot(state, 849)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionSlot: %v", err)
 	}

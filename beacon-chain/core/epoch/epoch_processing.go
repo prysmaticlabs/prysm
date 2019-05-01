@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -31,6 +34,14 @@ type MatchedAttestations struct {
 	target []*pb.PendingAttestation
 	head   []*pb.PendingAttestation
 }
+
+var (
+	ejectedCount          float64
+	validatorEjectedGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "validator_ejected_count",
+		Help: "Total number of ejected validators",
+	})
+)
 
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
@@ -200,17 +211,6 @@ func ProcessJustificationAndFinalization(
 // If it's greater then beacon node updates crosslink committee with
 // the state epoch and wining root.
 //
-// def process_crosslinks(state: BeaconState) -> None:
-//  state.previous_crosslinks = [c for c in state.current_crosslinks]
-//  previous_epoch = get_previous_epoch(state)
-//  next_epoch = get_current_epoch(state) + 1
-//  for slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)):
-//    epoch = slot_to_epoch(slot)
-//    for crosslink_committee, shard in get_crosslink_committees_at_slot(state, slot):
-//      winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, shard, epoch)
-//      if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
-//        state.current_crosslinks[shard] = winning_crosslink
-//
 // Spec pseudocode definition:
 //	For every slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)),
 // 	let `crosslink_committees_at_slot = get_crosslink_committees_at_slot(state, slot)`.
@@ -218,19 +218,11 @@ func ProcessJustificationAndFinalization(
 // 			Set state.latest_crosslinks[shard] = Crosslink(
 // 			epoch=slot_to_epoch(slot), crosslink_data_root=winning_root(crosslink_committee))
 // 			if 3 * total_attesting_balance(crosslink_committee) >= 2 * total_balance(crosslink_committee)
-func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
-	// def process_crosslinks(state: BeaconState) -> None:
-	//  state.previous_crosslinks = [c for c in state.current_crosslinks]
-	//  previous_epoch = get_previous_epoch(state)
-	//  next_epoch = get_current_epoch(state) + 1
-	//  for slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)):
-	//    epoch = slot_to_epoch(slot)
-	//    for crosslink_committee, shard in get_crosslink_committees_at_slot(state, slot):
-	//      winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, shard, epoch)
-	//      if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
-	//        state.current_crosslinks[shard] = winning_crosslink
-	//
-	state.PreviousCrosslinks = state.CurrentCrosslinks
+func ProcessCrosslinks(
+	state *pb.BeaconState,
+	thisEpochAttestations []*pb.PendingAttestation,
+	prevEpochAttestations []*pb.PendingAttestation) (*pb.BeaconState, error) {
+
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
 	nextEpoch := helpers.NextEpoch(state)
@@ -289,6 +281,12 @@ func ProcessEjections(state *pb.BeaconState, enableLogging bool) (*pb.BeaconStat
 					"index":  index}).Info("Validator ejected")
 			}
 			state = validators.ExitValidator(state, index)
+			// Verify the validator has properly exited due to ejection before setting the
+			// ejection count for gauge.
+			if state.ValidatorRegistry[index].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+				ejectedCount++
+				validatorEjectedGauge.Set(ejectedCount)
+			}
 		}
 	}
 	return state, nil
@@ -531,7 +529,6 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
 	}
 
-	//var tgtAtts []*pb.PendingAttestation
 	tgtAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
 	headAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
 	for _, srcAtt := range srcAtts {
@@ -557,4 +554,130 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 		target: tgtAtts,
 		head:   headAtts,
 	}, nil
+}
+
+// CrosslinkFromAttsData returns a constructed crosslink from attestation data.
+//
+// Spec pseudocode definition:
+//	def get_crosslink_from_attestation_data(state: BeaconState, data: AttestationData) -> Crosslink:
+//    return Crosslink(
+//        epoch=min(slot_to_epoch(data.slot), state.current_crosslinks[data.shard].epoch + MAX_CROSSLINK_EPOCHS),
+//        previous_crosslink_root=data.previous_crosslink_root,
+//        crosslink_data_root=data.crosslink_data_root,
+//    )
+func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *pb.Crosslink {
+	epoch := helpers.SlotToEpoch(attData.Slot)
+	if epoch > state.CurrentCrosslinks[attData.Shard].Epoch+params.BeaconConfig().MaxCrosslinkEpochs {
+		epoch = state.CurrentCrosslinks[attData.Shard].Epoch + params.BeaconConfig().MaxCrosslinkEpochs
+	}
+	return &pb.Crosslink{
+		Epoch:                       epoch,
+		CrosslinkDataRootHash32:     attData.CrosslinkDataRoot,
+		PreviousCrosslinkRootHash32: attData.PreviousCrosslinkRoot,
+	}
+}
+
+// WinningCrosslink returns the most staked balance-wise crosslink of a given shard and epoch.
+// Here we deviated from the spec definition and split the following to two functions
+// `WinningCrosslink` and  `CrosslinkAttestingIndices` for clarity and efficiency.
+//
+// Spec pseudocode definition:
+//	def get_winning_crosslink_and_attesting_indices(state: BeaconState, shard: Shard, epoch: Epoch) -> Tuple[Crosslink, List[ValidatorIndex]]:
+//    shard_attestations = [a for a in get_matching_source_attestations(state, epoch) if a.data.shard == shard]
+//    shard_crosslinks = [get_crosslink_from_attestation_data(state, a.data) for a in shard_attestations]
+//    candidate_crosslinks = [
+//        c for c in shard_crosslinks
+//        if hash_tree_root(state.current_crosslinks[shard]) in (c.previous_crosslink_root, hash_tree_root(c))
+//    ]
+//    if len(candidate_crosslinks) == 0:
+//        return Crosslink(epoch=GENESIS_EPOCH, previous_crosslink_root=ZERO_HASH, crosslink_data_root=ZERO_HASH), []
+//
+//    def get_attestations_for(crosslink: Crosslink) -> List[PendingAttestation]:
+//        return [a for a in shard_attestations if get_crosslink_from_attestation_data(state, a.data) == crosslink]
+//    # Winning crosslink has the crosslink data root with the most balance voting for it (ties broken lexicographically)
+//    winning_crosslink = max(candidate_crosslinks, key=lambda crosslink: (
+//        get_attesting_balance(state, get_attestations_for(crosslink)), crosslink.crosslink_data_root
+//    ))
+//
+//    return winning_crosslink, get_unslashed_attesting_indices(state, get_attestations_for(winning_crosslink))
+func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, error) {
+	var shardAtts []*pb.PendingAttestation
+	matchedAtts, err := MatchAttestations(state, epoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get matching attestations: %v", err)
+	}
+
+	// Filter out source attestations by shard.
+	for _, att := range matchedAtts.source {
+		if att.Data.Shard == shard {
+			shardAtts = append(shardAtts, att)
+		}
+	}
+
+	// Convert shard attestations to shard crosslinks.
+	shardCrosslinks := make([]*pb.Crosslink, len(matchedAtts.source))
+	for i := 0; i < len(shardCrosslinks); i++ {
+		shardCrosslinks[i] = CrosslinkFromAttsData(state, shardAtts[i].Data)
+	}
+
+	var candidateCrosslinks []*pb.Crosslink
+	// Filter out shard crosslinks with correct current or previous crosslink data.
+	for _, c := range shardCrosslinks {
+		cFromState := state.CurrentCrosslinks[shard]
+		h, err := hashutil.HashProto(cFromState)
+		if err != nil {
+			return nil, fmt.Errorf("could not hash crosslink from state: %v", err)
+		}
+		if proto.Equal(cFromState, c) || bytes.Equal(h[:], c.PreviousCrosslinkRootHash32) {
+			candidateCrosslinks = append(candidateCrosslinks, c)
+		}
+	}
+
+	if len(candidateCrosslinks) == 0 {
+		return &pb.Crosslink{
+			Epoch:                       params.BeaconConfig().GenesisEpoch,
+			CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
+			PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+		}, nil
+	}
+
+	var crosslinkAtts []*pb.PendingAttestation
+	var winnerBalance uint64
+	var winnerCrosslink *pb.Crosslink
+	// Out of the existing shard crosslinks, pick the one that has the
+	// most balance staked.
+	crosslinkAtts = attsForCrosslink(state, candidateCrosslinks[0], shardAtts)
+	winnerBalance, err = AttestingBalance(state, crosslinkAtts)
+	winnerCrosslink = candidateCrosslinks[0]
+
+	for _, c := range candidateCrosslinks {
+		crosslinkAtts := crosslinkAtts[:0]
+		crosslinkAtts = attsForCrosslink(state, c, shardAtts)
+		attestingBalance, err := AttestingBalance(state, crosslinkAtts)
+		if err != nil {
+			return nil, fmt.Errorf("could not get crosslink's attesting balance: %v", err)
+		}
+		if attestingBalance > winnerBalance {
+			winnerCrosslink = c
+		}
+	}
+
+	return winnerCrosslink, nil
+}
+
+// CrosslinkAttestingIndices returns the attesting indices of the input crosslink.
+func CrosslinkAttestingIndices(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) ([]uint64, error) {
+	crosslinkAtts := attsForCrosslink(state, crosslink, atts)
+	return UnslashedAttestingIndices(state, crosslinkAtts)
+}
+
+// attsForCrosslink returns the attestations of the input crosslink.
+func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
+	var crosslinkAtts []*pb.PendingAttestation
+	for _, a := range atts {
+		if proto.Equal(CrosslinkFromAttsData(state, a.Data), crosslink) {
+			crosslinkAtts = append(crosslinkAtts, a)
+		}
+	}
+	return crosslinkAtts
 }

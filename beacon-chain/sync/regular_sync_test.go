@@ -48,7 +48,6 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 }
 
 type mockChainService struct {
-	bFeed           *event.Feed
 	sFeed           *event.Feed
 	cFeed           *event.Feed
 	db              *db.BeaconDB
