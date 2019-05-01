@@ -556,6 +556,45 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	}, nil
 }
 
+// ProcessCrosslink processes crosslink and finds the crosslink
+// with enough state to make it canonical in state.
+//
+// Spec pseudocode definition:
+//	def process_crosslinks(state: BeaconState) -> None:
+//    state.previous_crosslinks = [c for c in state.current_crosslinks]
+//    previous_epoch = get_previous_epoch(state)
+//    next_epoch = get_current_epoch(state) + 1
+//    for slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)):
+//        epoch = slot_to_epoch(slot)
+//        for crosslink_committee, shard in get_crosslink_committees_at_slot(state, slot):
+//            winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, shard, epoch)
+//            if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
+//                state.current_crosslinks[shard] = winning_crosslink
+func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
+	state.PreviousCrosslinks = state.CurrentCrosslinks
+	prevEpoch := helpers.PrevEpoch(state)
+	nextEpoch := helpers.CurrentEpoch(state)
+	for slot := helpers.StartSlot(prevEpoch); slot < helpers.StartSlot(nextEpoch); slot++ {
+		epoch := helpers.SlotToEpoch(slot)
+		committees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registery change */)
+		if err != nil {
+			return nil, err
+		}
+		for _, committee := range committees {
+			crosslink, indices, err := WinningCrosslink(state, committee.Shard, epoch)
+			if err != nil {
+				return nil, err
+			}
+			attestedBalance := TotalBalance(state, indices)
+			totalBalance := TotalBalance(state, committee.Committee)
+			if 3*attestedBalance >= 2*totalBalance {
+				state.CurrentCrosslinks[committee.Shard] = crosslink
+			}
+		}
+	}
+	return state, nil
+}
+
 // CrosslinkFromAttsData returns a constructed crosslink from attestation data.
 //
 // Spec pseudocode definition:
@@ -600,11 +639,11 @@ func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *
 //    ))
 //
 //    return winning_crosslink, get_unslashed_attesting_indices(state, get_attestations_for(winning_crosslink))
-func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, error) {
+func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, []uint64, error) {
 	var shardAtts []*pb.PendingAttestation
 	matchedAtts, err := MatchAttestations(state, epoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get matching attestations: %v", err)
+		return nil, nil, fmt.Errorf("could not get matching attestations: %v", err)
 	}
 
 	// Filter out source attestations by shard.
@@ -626,7 +665,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 		cFromState := state.CurrentCrosslinks[shard]
 		h, err := hashutil.HashProto(cFromState)
 		if err != nil {
-			return nil, fmt.Errorf("could not hash crosslink from state: %v", err)
+			return nil, nil, fmt.Errorf("could not hash crosslink from state: %v", err)
 		}
 		if proto.Equal(cFromState, c) || bytes.Equal(h[:], c.PreviousCrosslinkRootHash32) {
 			candidateCrosslinks = append(candidateCrosslinks, c)
@@ -638,7 +677,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 			Epoch:                       params.BeaconConfig().GenesisEpoch,
 			CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
 			PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
-		}, nil
+		}, nil, nil
 	}
 
 	var crosslinkAtts []*pb.PendingAttestation
@@ -655,14 +694,19 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 		crosslinkAtts = attsForCrosslink(state, c, shardAtts)
 		attestingBalance, err := AttestingBalance(state, crosslinkAtts)
 		if err != nil {
-			return nil, fmt.Errorf("could not get crosslink's attesting balance: %v", err)
+			return nil, nil, fmt.Errorf("could not get crosslink's attesting balance: %v", err)
 		}
 		if attestingBalance > winnerBalance {
 			winnerCrosslink = c
 		}
 	}
 
-	return winnerCrosslink, nil
+	crosslinkIndices, err := UnslashedAttestingIndices(state, attsForCrosslink(state, winnerCrosslink, shardAtts))
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get crosslink indices")
+	}
+
+	return winnerCrosslink, crosslinkIndices, nil
 }
 
 // CrosslinkAttestingIndices returns the attesting indices of the input crosslink.

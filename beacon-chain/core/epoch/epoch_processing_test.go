@@ -1033,7 +1033,7 @@ func TestCrosslinkAttestingIndices_CanGetIndices(t *testing.T) {
 func TestWinningCrosslink_CantGetMatchingAtts(t *testing.T) {
 	wanted := fmt.Sprintf("could not get matching attestations: input epoch: %d != current epoch: %d or previous epoch: %d",
 		100, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().GenesisEpoch)
-	_, err := WinningCrosslink(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, 0, 100)
+	_, _, err := WinningCrosslink(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, 0, 100)
 	if err.Error() != wanted {
 		t.Fatal(err)
 	}
@@ -1057,9 +1057,12 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 		PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 	}
 
-	crosslink, err := WinningCrosslink(state, 0, ge)
+	crosslink, indices, err := WinningCrosslink(state, 0, ge)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if len(indices) != 0 {
+		t.Errorf("gensis crosslink indices is not 0, got: %d", len(indices))
 	}
 	if !reflect.DeepEqual(crosslink, gCrosslink) {
 		t.Errorf("Did not get genesis crosslink, got: %v", crosslink)
@@ -1089,11 +1092,13 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		CurrentCrosslinks:         []*pb.Crosslink{{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}},
 	}
 
-	winner, err := WinningCrosslink(state, 0, ge)
+	winner, indices, err := WinningCrosslink(state, 0, ge)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	if len(indices) != 0 {
+		t.Errorf("gensis crosslink indices is not 0, got: %d", len(indices))
+	}
 	want := &pb.Crosslink{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}
 	if !reflect.DeepEqual(winner, want) {
 		t.Errorf("Did not get genesis crosslink, got: %v", winner)
