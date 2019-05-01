@@ -238,6 +238,9 @@ func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return false
 }
 
+// RecentCanonicalRoots returns the latest block slot and root of the canonical block chain,
+// the block slots and roots are sorted and in descending order. Input count determines
+// the number of block slots and roots to return.
 func (c *ChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
 	c.canonicalBlocksLock.RLock()
 	defer c.canonicalBlocksLock.RUnlock()
@@ -246,6 +249,8 @@ func (c *ChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
 		slots = append(slots, int(s))
 	}
 
+	// Return the all the canonical blocks if the input count is greater than
+	// the depth of the block tree.
 	totalRoots := uint64(len(slots))
 	if count > totalRoots {
 		count = totalRoots

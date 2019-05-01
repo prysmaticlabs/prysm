@@ -273,6 +273,8 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
 }
 
+// RecentBlockRoots returns the list of canonical slots and roots. It starts from the head
+// and go down the canonical block list.
 func (bs *BeaconServer) RecentBlockRoots(ctx context.Context, request *pb.BlockRootsRequest) (*pb.BlockRootsRespond, error) {
 	blockRoots := bs.chainService.RecentCanonicalRoots(request.Count)
 	return &pb.BlockRootsRespond{
