@@ -335,12 +335,12 @@ func TestChainStartStop_Initialized(t *testing.T) {
 func TestRecentCanonicalRoots_CanFilter(t *testing.T) {
 	service := setupBeaconChain(t, nil, nil)
 	blks := map[uint64][]byte{
-		1:  []byte{'A'},
-		50: []byte{'E'},
-		2:  []byte{'B'},
-		99: []byte{'F'},
-		30: []byte{'D'},
-		3:  []byte{'C'},
+		1:  {'A'},
+		50: {'E'},
+		2:  {'B'},
+		99: {'F'},
+		30: {'D'},
+		3:  {'C'},
 	}
 	service.canonicalBlocks = blks
 
