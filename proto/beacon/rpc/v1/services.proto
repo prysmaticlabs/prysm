@@ -31,6 +31,7 @@ service ProposerService {
 
 service ValidatorService {
     rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse);
+    rpc AcivationStatus(ValidatorActivationRequest) returns (ValidatorActivationResponse);
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
     rpc CommitteeAssignment(CommitteeAssignmentsRequest) returns (CommitteeAssignmentResponse);
     rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
@@ -54,7 +55,16 @@ message ValidatorActivationRequest {
 }
 
 message ValidatorActivationResponse {
-    repeated bytes activated_public_keys = 1;
+    repeated bytes activated_public_keys = 1 [deprecated=true];
+
+    repeated ActivationStatus statuses = 2;
+}
+
+message ActivationStatus {
+  bytes public_key = 1;
+  ValidatorStatus status = 2;
+  uint64 deposit_inclusion_slot = 3;
+  uint64 activation_epoch = 4;
 }
 
 message AttestationDataRequest {
