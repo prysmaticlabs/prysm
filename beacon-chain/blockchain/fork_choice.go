@@ -259,7 +259,16 @@ func (c *ChainService) lmdGhost(
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
-			if candidateChildVotes > maxChildVotes {
+			maxChildRoot, err := hashutil.HashBeaconBlock(maxChild)
+			if err != nil {
+				return nil, err
+			}
+			candidateChildRoot, err := hashutil.HashBeaconBlock(children[i])
+			if err != nil {
+				return nil, err
+			}
+			if candidateChildVotes > maxChildVotes ||
+				(candidateChildVotes == maxChildVotes && bytesutil.LowerThan(maxChildRoot[:], candidateChildRoot[:])) {
 				maxChild = children[i]
 			}
 		}

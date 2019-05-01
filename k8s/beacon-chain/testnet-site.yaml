@@ -23,6 +23,20 @@ spec:
     spec:
       priorityClassName: best-effort-priority
       containers:
+      - name: proxy-cache
+        image: gcr.io/prysmaticlabs/prysm/testnet-proxy-cache:latest
+        ports:
+        - containerPort: 80
+          name: http-cache
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 4000
+          initialDelaySeconds: 3
+          periodSeconds: 15
+        resources:
+          requests:
+            cpu: "100m"
       - name: site
         image: gcr.io/prysmaticlabs/prysm-testnet-site:latest
         ports:
@@ -67,8 +81,11 @@ spec:
     component: testnet-site
     version: alpha
   ports:
-  - port: 80
+  - port: 4000
     targetPort: 4000
+    name: http-ng
+  - port: 80
+    targetPort: 80
     name: http-nginx
   type: ClusterIP
 ---
@@ -88,7 +105,7 @@ spec:
         prefix: /
     route:
     - destination:
-        port: 
+        port:
           number: 80
         host: testnet-site-alpha.beacon-chain.svc.cluster.local
 ---
