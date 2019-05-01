@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	peer "github.com/libp2p/go-libp2p-peer"
+	host "github.com/libp2p/go-libp2p-host"
 
 )
 
@@ -232,11 +233,22 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
     // initialize PeerBlackList
 	pbl := p2p.GetPeerBlackList()
 
+	//how to get a peer.ID 
+
 	//Add peer to the blacklist
 	pbl.Add(peer.ID)
 
 	//drop a peer
+	//https://github.com/libp2p/go-libp2p-host/issues/13
+	host.Network().ClosePeer(peer.ID)
 	
+
+
+
+	//restart initial sync
+	
+
+
 
 
 	
