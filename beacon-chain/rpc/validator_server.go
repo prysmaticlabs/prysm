@@ -274,7 +274,11 @@ func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState
 	return activeKeys
 }
 
-func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(beaconState *pbp2p.BeaconState, pubkeys [][]byte, assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment) []*pb.CommitteeAssignmentResponse_CommitteeAssignment {
+func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(
+	beaconState *pbp2p.BeaconState,
+	pubkeys [][]byte,
+	assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment,
+) []*pb.CommitteeAssignmentResponse_CommitteeAssignment {
 	// Generate a map for O(1) lookup of existence of pub keys in request.
 	validatorMap := make(map[string]*pbp2p.Validator)
 	for _, v := range beaconState.ValidatorRegistry {
