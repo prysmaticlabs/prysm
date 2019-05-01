@@ -33,10 +33,8 @@ func CheckBit(bitfield []byte, index int) (bool, error) {
 			mathutil.CeilDiv8(index),
 			len(bitfield))
 	}
-	if BitfieldBit(bitfield, index) == 1 {
-		return true, nil
-	}
-	return false, nil
+	bitExists := BitfieldBit(bitfield, index) == 1
+	return bitExists, nil
 }
 
 // BitSetCount counts the number of 1s in a byte using Hamming weight.
