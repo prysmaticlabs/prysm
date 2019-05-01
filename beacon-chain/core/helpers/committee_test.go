@@ -595,12 +595,14 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 
 	slotOffset := uint64(10)
 	state := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + slotOffset,
-		ValidatorRegistry: validators,
+		Slot:                   params.BeaconConfig().GenesisSlot + slotOffset,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	attestationData := &pb.AttestationData{
-		Shard: 10,
+		Shard: 11,
 		Slot:  params.BeaconConfig().GenesisSlot + slotOffset,
 	}
 
@@ -609,7 +611,7 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted := []uint64{55, 105}
+	wanted := []uint64{92, 49}
 	if !reflect.DeepEqual(wanted, result) {
 		t.Errorf(
 			"Result indices was an unexpected value. Wanted %d, got %d",
@@ -633,6 +635,8 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
+	t.Skip()
+	// TODO(#2307) unskip after CommitteeAssignments is updated
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
 		Slot: params.BeaconConfig().GenesisSlot + slotOffset,
@@ -678,6 +682,8 @@ func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
+	t.Skip()
+	// TODO(#2307) unskip after CommitteeAssignments is updated
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -699,7 +705,7 @@ func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wantedCommittee := []uint64{92, 49}
+	wantedCommittee := []uint64{44, 105}
 	if !reflect.DeepEqual(wantedCommittee, committee) {
 		t.Errorf(
 			"Result indices was an unexpected value. Wanted %d, got %d",
