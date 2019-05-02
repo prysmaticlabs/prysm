@@ -148,7 +148,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 			Slot: params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
-			BlockHash32: []byte{},
+			BlockRoot: []byte{},
 		},
 	}
 
@@ -157,13 +157,13 @@ func TestSavingBlock_InSync(t *testing.T) {
 	}
 
 	incorrectState := &pb.BeaconState{
-		FinalizedEpoch: 0,
-		JustifiedEpoch: 1,
+		FinalizedEpoch:        0,
+		CurrentJustifiedEpoch: 1,
 		LatestBlock: &pb.BeaconBlock{
 			Slot: 4 * params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
-			BlockHash32: []byte{},
+			BlockRoot: []byte{},
 		},
 	}
 
@@ -180,12 +180,12 @@ func TestSavingBlock_InSync(t *testing.T) {
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
 			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte{1, 2, 3},
-				BlockHash32:       []byte{4, 5, 6},
+				DepositRoot: []byte{1, 2, 3},
+				BlockRoot:   []byte{4, 5, 6},
 			},
-			ParentRootHash32: genericHash,
-			Slot:             Slot,
-			StateRootHash32:  beaconStateRootHash32[:],
+			ParentBlockRoot: genericHash,
+			Slot:            Slot,
+			StateRoot:       beaconStateRootHash32[:],
 		}
 
 		blockResponse := &pb.BeaconBlockResponse{
@@ -327,7 +327,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		}
 		block := &pb.BeaconBlock{
 			Slot:             uint64(i),
-			ParentRootHash32: parentHash,
+			ParentBlockRoot: parentHash,
 		}
 
 		ss.processBlock(context.Background(), block)

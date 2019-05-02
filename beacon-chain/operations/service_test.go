@@ -134,7 +134,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Slot:                    uint64(i),
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -170,7 +170,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Slot:                    uint64(i),
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -214,7 +214,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Slot:                    uint64(i),
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -293,7 +293,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Slot:                    uint64(i),
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {

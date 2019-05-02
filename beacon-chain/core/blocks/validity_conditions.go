@@ -35,13 +35,13 @@ func IsValidBlock(
 
 	// Pre-Processing Condition 1:
 	// Check that the parent Block has been processed and saved.
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
 	parentBlock := HasBlock(parentRoot)
 	if !parentBlock {
 		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", parentRoot)
 	}
 
-	h := common.BytesToHash(state.LatestEth1Data.BlockHash32)
+	h := common.BytesToHash(state.LatestEth1Data.BlockRoot)
 	powBlock, err := GetPOWBlock(ctx, h)
 	if err != nil {
 		return fmt.Errorf("unable to retrieve POW chain reference block: %v", err)
@@ -51,7 +51,7 @@ func IsValidBlock(
 	// The block pointed to by the state in state.processed_pow_receipt_root has
 	// been processed in the ETH 1.0 chain.
 	if powBlock == nil {
-		return fmt.Errorf("proof-of-Work chain reference in state does not exist: %#x", state.LatestEth1Data.BlockHash32)
+		return fmt.Errorf("proof-of-Work chain reference in state does not exist: %#x", state.LatestEth1Data.BlockRoot)
 	}
 
 	// Pre-Processing Condition 4:

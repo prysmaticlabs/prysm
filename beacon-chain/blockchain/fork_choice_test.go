@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/binary"
@@ -72,7 +71,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			blockSlot: 64,
 			state: &pb.BeaconState{
 				FinalizedEpoch: 0,
-				JustifiedEpoch: 2,
+				CurrentJustifiedEpoch: 2,
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -109,12 +108,12 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			t.Fatalf("Could not tree hash state: %v", err)
 		}
 		block := &pb.BeaconBlock{
-			Slot:             tt.blockSlot,
-			StateRootHash32:  stateRoot[:],
-			ParentRootHash32: genesisRoot[:],
+			Slot:            tt.blockSlot,
+			StateRoot:       stateRoot[:],
+			ParentBlockRoot: genesisRoot[:],
 			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte("a"),
-				BlockHash32:       []byte("b"),
+				DepositRoot: []byte("a"),
+				BlockRoot:   []byte("b"),
 			},
 		}
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
@@ -136,7 +135,7 @@ func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 		t.Fatal(err)
 	}
 	potentialHead := &pb.BeaconBlock{
-		ParentRootHash32: []byte{'A'}, // We give a bogus parent root hash.
+		ParentBlockRoot: []byte{'A'}, // We give a bogus parent root hash.
 	}
 	if err := beaconDB.SaveBlock(potentialHead); err != nil {
 		t.Fatal(err)
@@ -150,7 +149,7 @@ func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
 		BlockRoot:  headRoot[:],
-		ParentRoot: potentialHead.ParentRootHash32,
+		ParentRoot: potentialHead.ParentBlockRoot,
 	}
 	count, err := VoteCount(genesisBlock, &pb.BeaconState{}, voteTargets, beaconDB)
 	if err != nil {
@@ -175,7 +174,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 
 	potentialHead := &pb.BeaconBlock{
 		Slot:             5,
-		ParentRootHash32: genesisRoot[:],
+		ParentBlockRoot: genesisRoot[:],
 	}
 	headRoot1, err := hashutil.HashBeaconBlock(potentialHead)
 	if err != nil {
@@ -184,7 +183,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 
 	potentialHead2 := &pb.BeaconBlock{
 		Slot:             6,
-		ParentRootHash32: genesisRoot[:],
+		ParentBlockRoot: genesisRoot[:],
 	}
 	headRoot2, err := hashutil.HashBeaconBlock(potentialHead2)
 	if err != nil {
@@ -197,17 +196,17 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorBalances: []uint64{1e9, 1e9}}
+	beaconState := &pb.BeaconState{Balances: []uint64{1e9, 1e9}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
 		BlockRoot:  headRoot1[:],
-		ParentRoot: potentialHead.ParentRootHash32,
+		ParentRoot: potentialHead.ParentBlockRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
 		Slot:       potentialHead2.Slot,
 		BlockRoot:  headRoot2[:],
-		ParentRoot: potentialHead2.ParentRootHash32,
+		ParentRoot: potentialHead2.ParentBlockRoot,
 	}
 	count, err := VoteCount(genesisBlock, beaconState, voteTargets, beaconDB)
 	if err != nil {
@@ -285,8 +284,8 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	// Construct the following chain:
 	// B1 <- B2 <- B3  (State is slot 3)
 	block1 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: []byte{'A'},
+		Slot:            1,
+		ParentBlockRoot: []byte{'A'},
 	}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
@@ -300,8 +299,8 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: root1[:],
+		Slot:            2,
+		ParentBlockRoot: root1[:],
 	}
 	root2, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {
@@ -315,8 +314,8 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	}
 
 	block3 := &pb.BeaconBlock{
-		Slot:             3,
-		ParentRootHash32: root2[:],
+		Slot:            3,
+		ParentBlockRoot: root2[:],
 	}
 	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
@@ -353,8 +352,8 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	// B1 <- B3 (State is slot 10)
 	//      \- B4
 	block1 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: []byte{'A'},
+		Slot:            1,
+		ParentBlockRoot: []byte{'A'},
 	}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
@@ -368,8 +367,8 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: root1[:],
+		Slot:            2,
+		ParentBlockRoot: root1[:],
 	}
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
@@ -379,8 +378,8 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	}
 
 	block3 := &pb.BeaconBlock{
-		Slot:             3,
-		ParentRootHash32: root1[:],
+		Slot:            3,
+		ParentBlockRoot: root1[:],
 	}
 	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
@@ -390,8 +389,8 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	}
 
 	block4 := &pb.BeaconBlock{
-		Slot:             4,
-		ParentRootHash32: root1[:],
+		Slot:            4,
+		ParentBlockRoot: root1[:],
 	}
 	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
@@ -426,8 +425,8 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	// Construct the following chain:
 	// B1 <- B5 <- B9 (State is slot 10)
 	block1 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: []byte{'A'},
+		Slot:            1,
+		ParentBlockRoot: []byte{'A'},
 	}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
@@ -441,8 +440,8 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	}
 
 	block5 := &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: root1[:],
+		Slot:            5,
+		ParentBlockRoot: root1[:],
 	}
 	root2, err := hashutil.HashBeaconBlock(block5)
 	if err != nil {
@@ -456,8 +455,8 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	}
 
 	block9 := &pb.BeaconBlock{
-		Slot:             9,
-		ParentRootHash32: root2[:],
+		Slot:            9,
+		ParentBlockRoot: root2[:],
 	}
 	if err = chainService.beaconDB.SaveBlock(block9); err != nil {
 		t.Fatalf("Could not save block: %v", err)
@@ -485,7 +484,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot:              10,
-		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
+		Balances:          []uint64{params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{{}},
 	}
 
@@ -494,8 +493,8 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	// Construct the following chain:
 	// B1 - B2 (State is slot 2)
 	block1 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: []byte{'A'},
+		Slot:            1,
+		ParentBlockRoot: []byte{'A'},
 	}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
@@ -509,8 +508,8 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: root1[:],
+		Slot:            2,
+		ParentBlockRoot: root1[:],
 	}
 	block2Root, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {
@@ -528,7 +527,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       block2.Slot,
 		BlockRoot:  block2Root[:],
-		ParentRoot: block2.ParentRootHash32,
+		ParentRoot: block2.ParentBlockRoot,
 	}
 
 	// LMDGhost should pick block 2.
@@ -548,7 +547,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
-		ValidatorBalances: []uint64{
+		Balances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
@@ -563,8 +562,8 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	// B1  - B3 (State is slot 10)
 	//    \- B4
 	block1 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: []byte{'A'},
+		Slot:            1,
+		ParentBlockRoot: []byte{'A'},
 	}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
@@ -578,8 +577,8 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: root1[:],
+		Slot:            2,
+		ParentBlockRoot: root1[:],
 	}
 	root2, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {
@@ -593,8 +592,8 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	}
 
 	block3 := &pb.BeaconBlock{
-		Slot:             3,
-		ParentRootHash32: root1[:],
+		Slot:            3,
+		ParentBlockRoot: root1[:],
 	}
 	root3, err := hashutil.HashBeaconBlock(block3)
 	if err != nil {
@@ -608,8 +607,8 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	}
 
 	block4 := &pb.BeaconBlock{
-		Slot:             4,
-		ParentRootHash32: root1[:],
+		Slot:            4,
+		ParentBlockRoot: root1[:],
 	}
 	root4, err := hashutil.HashBeaconBlock(block4)
 	if err != nil {
@@ -627,22 +626,22 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       block2.Slot,
 		BlockRoot:  root2[:],
-		ParentRoot: block2.ParentRootHash32,
+		ParentRoot: block2.ParentBlockRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
 		Slot:       block3.Slot,
 		BlockRoot:  root3[:],
-		ParentRoot: block3.ParentRootHash32,
+		ParentRoot: block3.ParentBlockRoot,
 	}
 	voteTargets[2] = &pb.AttestationTarget{
 		Slot:       block4.Slot,
 		BlockRoot:  root4[:],
-		ParentRoot: block4.ParentRootHash32,
+		ParentRoot: block4.ParentBlockRoot,
 	}
 	voteTargets[3] = &pb.AttestationTarget{
 		Slot:       block4.Slot,
 		BlockRoot:  root4[:],
-		ParentRoot: block4.ParentRootHash32,
+		ParentRoot: block4.ParentBlockRoot,
 	}
 	// LMDGhost should pick block 4.
 	head, err := chainService.lmdGhost(ctx, block1, beaconState, voteTargets)
@@ -651,93 +650,6 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	}
 	if !reflect.DeepEqual(block4, head) {
 		t.Errorf("Expected head to equal %v, received %v", block4, head)
-	}
-}
-
-func TestLMDGhost_3WayChainSplitsEqualVotes(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	beaconState := &pb.BeaconState{
-		Slot: 10,
-	}
-
-	chainService := setupBeaconChain(t, beaconDB, nil)
-
-	// Construct the following chain:
-	//    /- B2 (0 vote)
-	// B1  - B3 (0 vote)
-	//    \- B4 (0 vote)
-	block1 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: []byte{'A'},
-	}
-	root1, err := hashutil.HashBeaconBlock(block1)
-	if err != nil {
-		t.Fatalf("Could not hash block: %v", err)
-	}
-	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
-		t.Fatalf("Could not save block: %v", err)
-	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
-		t.Fatalf("Could update chain head: %v", err)
-	}
-
-	block2 := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: root1[:],
-	}
-	root2, _ := hashutil.HashBeaconBlock(block2)
-	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
-		t.Fatalf("Could not save block: %v", err)
-	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
-		t.Fatalf("Could update chain head: %v", err)
-	}
-
-	block3 := &pb.BeaconBlock{
-		Slot:             3,
-		ParentRootHash32: root1[:],
-	}
-	root3, _ := hashutil.HashBeaconBlock(block3)
-	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
-		t.Fatalf("Could not save block: %v", err)
-	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
-		t.Fatalf("Could update chain head: %v", err)
-	}
-
-	block4 := &pb.BeaconBlock{
-		Slot:             4,
-		ParentRootHash32: root1[:],
-	}
-	root4, _ := hashutil.HashBeaconBlock(block4)
-	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
-		t.Fatalf("Could not save block: %v", err)
-	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block4, beaconState); err != nil {
-		t.Fatalf("Could update chain head: %v", err)
-	}
-
-	head, err := chainService.lmdGhost(ctx, block1, beaconState, nil)
-	if err != nil {
-		t.Fatalf("Could not run LMD GHOST: %v", err)
-	}
-
-	// Don't assign any vote to blocks 2, 3 and 4.
-	// Find which has a lexicographically higher root between block 2, 3 and 4.
-	higherRoot := root2
-	if bytesutil.LowerThan(root2[:], root3[:]) {
-		higherRoot = root3
-	}
-	if bytesutil.LowerThan(higherRoot[:], root4[:]) {
-		higherRoot = root4
-	}
-	// Compare the highest root with head root.
-	headRoot, _ := hashutil.HashBeaconBlock(head)
-	if !bytes.Equal(headRoot[:], higherRoot[:]) {
-		t.Errorf("Expected head root to equal %v, received %v", higherRoot, headRoot)
 	}
 }
 
@@ -755,8 +667,8 @@ func TestIsDescendant_Ok(t *testing.T) {
 	//  B5 and B3 are descendants of B1
 
 	block1 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: []byte{'A'},
+		Slot:            1,
+		ParentBlockRoot: []byte{'A'},
 	}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
@@ -766,8 +678,8 @@ func TestIsDescendant_Ok(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block2 := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: root1[:],
+		Slot:            2,
+		ParentBlockRoot: root1[:],
 	}
 	root2, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {
@@ -777,8 +689,8 @@ func TestIsDescendant_Ok(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block3 := &pb.BeaconBlock{
-		Slot:             3,
-		ParentRootHash32: root2[:],
+		Slot:            3,
+		ParentBlockRoot: root2[:],
 	}
 	_, err = hashutil.HashBeaconBlock(block3)
 	if err != nil {
@@ -788,8 +700,8 @@ func TestIsDescendant_Ok(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block4 := &pb.BeaconBlock{
-		Slot:             4,
-		ParentRootHash32: root1[:],
+		Slot:            4,
+		ParentBlockRoot: root1[:],
 	}
 	root4, err := hashutil.HashBeaconBlock(block4)
 	if err != nil {
@@ -799,8 +711,8 @@ func TestIsDescendant_Ok(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block5 := &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: root4[:],
+		Slot:            5,
+		ParentBlockRoot: root4[:],
 	}
 	_, err = hashutil.HashBeaconBlock(block5)
 	if err != nil {
@@ -838,7 +750,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
-		ValidatorBalances: []uint64{
+		Balances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
@@ -852,8 +764,8 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	//    /- B2 - B4 - B6
 	// B1  - B3 - B5 (State is slot 10)
 	block1 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: []byte{'A'},
+		Slot:            1,
+		ParentBlockRoot: []byte{'A'},
 	}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
@@ -867,8 +779,8 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: root1[:],
+		Slot:            2,
+		ParentBlockRoot: root1[:],
 	}
 	root2, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {
@@ -882,8 +794,8 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	}
 
 	block3 := &pb.BeaconBlock{
-		Slot:             3,
-		ParentRootHash32: root1[:],
+		Slot:            3,
+		ParentBlockRoot: root1[:],
 	}
 	root3, err := hashutil.HashBeaconBlock(block3)
 	if err != nil {
@@ -897,8 +809,8 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	}
 
 	block4 := &pb.BeaconBlock{
-		Slot:             4,
-		ParentRootHash32: root2[:],
+		Slot:            4,
+		ParentBlockRoot: root2[:],
 	}
 	root4, err := hashutil.HashBeaconBlock(block4)
 	if err != nil {
@@ -912,8 +824,8 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	}
 
 	block5 := &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: root3[:],
+		Slot:            5,
+		ParentBlockRoot: root3[:],
 	}
 	root5, err := hashutil.HashBeaconBlock(block5)
 	if err != nil {
@@ -927,8 +839,8 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	}
 
 	block6 := &pb.BeaconBlock{
-		Slot:             6,
-		ParentRootHash32: root4[:],
+		Slot:            6,
+		ParentBlockRoot: root4[:],
 	}
 	root6, err := hashutil.HashBeaconBlock(block6)
 	if err != nil {
@@ -946,17 +858,17 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       block6.Slot,
 		BlockRoot:  root6[:],
-		ParentRoot: block6.ParentRootHash32,
+		ParentRoot: block6.ParentBlockRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
 		Slot:       block5.Slot,
 		BlockRoot:  root5[:],
-		ParentRoot: block5.ParentRootHash32,
+		ParentRoot: block5.ParentBlockRoot,
 	}
 	voteTargets[2] = &pb.AttestationTarget{
 		Slot:       block5.Slot,
 		BlockRoot:  root5[:],
-		ParentRoot: block5.ParentRootHash32,
+		ParentRoot: block5.ParentBlockRoot,
 	}
 	// LMDGhost should pick block 5.
 	head, err := chainService.lmdGhost(ctx, block1, beaconState, voteTargets)
@@ -988,12 +900,12 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	// Construct 8 blocks. (Epoch length = 8)
 	epochLength := uint64(8)
 	beaconState := &pb.BeaconState{
-		Slot:              epochLength,
-		ValidatorBalances: balances,
+		Slot:     epochLength,
+		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
-		Slot:             0,
-		ParentRootHash32: []byte{},
+		Slot:            0,
+		ParentBlockRoot: []byte{},
 	}
 	root, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
@@ -1009,8 +921,8 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	var block *pb.BeaconBlock
 	for i := 1; i < int(epochLength); i++ {
 		block = &pb.BeaconBlock{
-			Slot:             uint64(i),
-			ParentRootHash32: root[:],
+			Slot:            uint64(i),
+			ParentBlockRoot: root[:],
 		}
 		if err = chainService.beaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
@@ -1033,7 +945,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	target := &pb.AttestationTarget{
 		Slot:       block.Slot,
 		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRootHash32,
+		ParentRoot: block.ParentBlockRoot,
 	}
 	for i := 0; i < validatorCount; i++ {
 		voteTargets[uint64(i)] = target
@@ -1069,12 +981,12 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	// Construct 8 blocks. (Epoch length = 8)
 	epochLength := uint64(8)
 	beaconState := &pb.BeaconState{
-		Slot:              epochLength,
-		ValidatorBalances: balances,
+		Slot:     epochLength,
+		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
-		Slot:             0,
-		ParentRootHash32: []byte{},
+		Slot:            0,
+		ParentBlockRoot: []byte{},
 	}
 	root, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
@@ -1090,8 +1002,8 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	var block *pb.BeaconBlock
 	for i := 1; i < int(epochLength); i++ {
 		block = &pb.BeaconBlock{
-			Slot:             uint64(i),
-			ParentRootHash32: root[:],
+			Slot:            uint64(i),
+			ParentBlockRoot: root[:],
 		}
 		if err = chainService.beaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
@@ -1114,7 +1026,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	target := &pb.AttestationTarget{
 		Slot:       block.Slot,
 		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRootHash32,
+		ParentRoot: block.ParentBlockRoot,
 	}
 	for i := 0; i < validatorCount; i++ {
 		voteTargets[uint64(i)] = target
@@ -1148,12 +1060,12 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	// Construct 64 blocks. (Epoch length = 64)
 	epochLength := uint64(32)
 	beaconState := &pb.BeaconState{
-		Slot:              epochLength,
-		ValidatorBalances: balances,
+		Slot:     epochLength,
+		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
-		Slot:             0,
-		ParentRootHash32: []byte{},
+		Slot:            0,
+		ParentBlockRoot: []byte{},
 	}
 	root, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
@@ -1169,8 +1081,8 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	var block *pb.BeaconBlock
 	for i := 1; i < int(epochLength); i++ {
 		block = &pb.BeaconBlock{
-			Slot:             uint64(i),
-			ParentRootHash32: root[:],
+			Slot:            uint64(i),
+			ParentBlockRoot: root[:],
 		}
 		if err = chainService.beaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
@@ -1193,7 +1105,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	target := &pb.AttestationTarget{
 		Slot:       block.Slot,
 		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRootHash32,
+		ParentRoot: block.ParentBlockRoot,
 	}
 	for i := 0; i < validatorCount; i++ {
 		voteTargets[uint64(i)] = target
@@ -1227,12 +1139,12 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	// Construct 64 blocks. (Epoch length = 64)
 	epochLength := uint64(64)
 	beaconState := &pb.BeaconState{
-		Slot:              epochLength,
-		ValidatorBalances: balances,
+		Slot:     epochLength,
+		Balances: balances,
 	}
 	genesis := &pb.BeaconBlock{
-		Slot:             0,
-		ParentRootHash32: []byte{},
+		Slot:            0,
+		ParentBlockRoot: []byte{},
 	}
 	root, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
@@ -1248,8 +1160,8 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	var block *pb.BeaconBlock
 	for i := 1; i < int(epochLength); i++ {
 		block = &pb.BeaconBlock{
-			Slot:             uint64(i),
-			ParentRootHash32: root[:],
+			Slot:            uint64(i),
+			ParentBlockRoot: root[:],
 		}
 		if err = chainService.beaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
@@ -1272,7 +1184,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	target := &pb.AttestationTarget{
 		Slot:       block.Slot,
 		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRootHash32,
+		ParentRoot: block.ParentBlockRoot,
 	}
 	for i := 0; i < validatorCount; i++ {
 		voteTargets[uint64(i)] = target
@@ -1356,17 +1268,18 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gState.JustifiedEpoch = 1
+	gState.CurrentJustifiedEpoch = 1
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, gState.JustifiedEpoch)
-	domain := forkutil.DomainVersion(gState.Fork, gState.JustifiedEpoch, params.BeaconConfig().DomainRandao)
+	binary.LittleEndian.PutUint64(buf, gState.CurrentJustifiedEpoch)
+	domain := forkutil.DomainVersion(gState.Fork, gState.CurrentJustifiedEpoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:             genesisSlot + offset,
-		RandaoReveal:     epochSignature.Marshal(),
-		ParentRootHash32: gBlockRoot[:],
-		Body:             &pb.BeaconBlockBody{}}
+		Slot:            genesisSlot + offset,
+		ParentBlockRoot: gBlockRoot[:],
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -1445,10 +1358,11 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	domain := forkutil.DomainVersion(gState.Fork, gState.FinalizedEpoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:             genesisSlot + offset,
-		RandaoReveal:     epochSignature.Marshal(),
-		ParentRootHash32: gBlockRoot[:],
-		Body:             &pb.BeaconBlockBody{}}
+		Slot:            genesisSlot + offset,
+		ParentBlockRoot: gBlockRoot[:],
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		}}
 
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -1517,17 +1431,18 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gState.JustifiedEpoch = 1
+	gState.CurrentJustifiedEpoch = 1
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
 	domain := forkutil.DomainVersion(gState.Fork, 0, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:             genesisSlot + lastAvailableSlot,
-		RandaoReveal:     epochSignature.Marshal(),
-		ParentRootHash32: gBlockRoot[:],
-		Body:             &pb.BeaconBlockBody{}}
+		Slot:            genesisSlot + lastAvailableSlot,
+		ParentBlockRoot: gBlockRoot[:],
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+		}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -1597,13 +1512,13 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	}
 	gState := &pb.BeaconState{
 		Slot:                   genesisSlot,
-		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestBlockRoots:       make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestRandaoMixes:      latestRandaoMixes,
-		LatestIndexRootHash32S: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 		LatestCrosslinks:       crosslinks,
 		ValidatorRegistry:      validatorRegistry,
-		ValidatorBalances:      validatorBalances,
+		Balances:               validatorBalances,
 		LatestBlock:            gBlock,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -1628,7 +1543,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 
 	potentialHead := &pb.BeaconBlock{
 		Slot:             5,
-		ParentRootHash32: genesisRoot[:],
+		ParentBlockRoot: genesisRoot[:],
 	}
 	pHeadHash, err := hashutil.HashBeaconBlock(potentialHead)
 	if err != nil {
@@ -1636,7 +1551,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	}
 	potentialHead2 := &pb.BeaconBlock{
 		Slot:             6,
-		ParentRootHash32: genesisRoot[:],
+		ParentBlockRoot: genesisRoot[:],
 	}
 	pHeadHash2, err := hashutil.HashBeaconBlock(potentialHead2)
 	if err != nil {
@@ -1649,17 +1564,17 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorBalances: []uint64{1e9, 1e9}}
+	beaconState := &pb.BeaconState{Balances: []uint64{1e9, 1e9}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
 		BlockRoot:  pHeadHash[:],
-		ParentRoot: potentialHead.ParentRootHash32,
+		ParentRoot: potentialHead.ParentBlockRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
 		Slot:       potentialHead2.Slot,
 		BlockRoot:  pHeadHash2[:],
-		ParentRoot: potentialHead2.ParentRootHash32,
+		ParentRoot: potentialHead2.ParentBlockRoot,
 	}
 	count, err := VoteCount(genesisBlock, beaconState, voteTargets, beaconDB)
 	if err != nil {
@@ -1690,33 +1605,33 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 
 	potentialHead := &pb.BeaconBlock{
 		Slot:             5,
-		ParentRootHash32: genesisRoot[:],
+		ParentBlockRoot: genesisRoot[:],
 	}
 	pHeadHash, _ := hashutil.HashBeaconBlock(potentialHead)
 	potentialHead2 := &pb.BeaconBlock{
 		Slot:             6,
-		ParentRootHash32: genesisRoot[:],
+		ParentBlockRoot: genesisRoot[:],
 	}
 	pHeadHash2, _ := hashutil.HashBeaconBlock(potentialHead2)
 
-	beaconState := &pb.BeaconState{ValidatorBalances: []uint64{1e9, 1e9}}
+	beaconState := &pb.BeaconState{Balances: []uint64{1e9, 1e9}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
 		BlockRoot:  pHeadHash[:],
-		ParentRoot: potentialHead.ParentRootHash32,
+		ParentRoot: potentialHead.ParentBlockRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
 		Slot:       potentialHead2.Slot,
 		BlockRoot:  pHeadHash2[:],
-		ParentRoot: potentialHead2.ParentRootHash32,
+		ParentRoot: potentialHead2.ParentBlockRoot,
 	}
 
 	aInfo := &cache.AncestorInfo{
 		Target: &pb.AttestationTarget{
 			Slot:       genesisBlock.Slot,
 			BlockRoot:  genesisRoot[:],
-			ParentRoot: genesisBlock.ParentRootHash32,
+			ParentRoot: genesisBlock.ParentBlockRoot,
 		},
 	}
 	// Presave cached ancestor blocks before running vote count.

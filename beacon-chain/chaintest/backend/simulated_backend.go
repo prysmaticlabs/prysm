@@ -195,7 +195,11 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	defer db.TeardownDB(sb.beaconDB)
 	seed := common.BytesToHash([]byte(testCase.Seed))
-	output, err := utils.ShuffleIndices(seed, testCase.Input)
+	indexList := make([]uint64, len(testCase.Input.Validators), len(testCase.Input.Validators))
+	for i, v := range testCase.Input.Validators {
+		indexList[i] = uint64(v.OriginalIndex)
+	}
+	output, err := utils.ShuffleIndices(seed, indexList)
 	if err != nil {
 		return err
 	}

@@ -22,9 +22,9 @@ func TestAttestHead_OK(t *testing.T) {
 	}
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:                    999,
-			Shard:                   1,
-			CrosslinkDataRootHash32: []byte{'a'},
+			Slot:              999,
+			Shard:             1,
+			CrosslinkDataRoot: []byte{'a'},
 		},
 	}
 	if _, err := attesterServer.AttestHead(context.Background(), req); err != nil {
@@ -38,9 +38,9 @@ func TestAttestationDataAtSlot_EpochBoundaryFailure(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   3 * params.BeaconConfig().SlotsPerEpoch,
-		LatestBlockRootHash32S: make([][]byte, 20),
-		JustifiedEpoch:         1,
+		Slot:                  3 * params.BeaconConfig().SlotsPerEpoch,
+		LatestBlockRoots:      make([][]byte, 20),
+		CurrentJustifiedEpoch: 1,
 	}
 	block := blocks.NewGenesisBlock([]byte("stateroot"))
 	block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
@@ -88,19 +88,19 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   3*params.BeaconConfig().SlotsPerEpoch + 1,
-		JustifiedEpoch:         2,
-		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		Slot:                  3*params.BeaconConfig().SlotsPerEpoch + 1,
+		CurrentJustifiedEpoch: 2,
+		LatestBlockRoots:      make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
 				CrosslinkDataRootHash32: []byte("A"),
 			},
 		},
-		JustifiedRoot: justifiedBlockRoot[:],
+		CurrentJustifiedRoot: justifiedBlockRoot[:],
 	}
-	beaconState.LatestBlockRootHash32S[1] = blockRoot[:]
-	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
-	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
+	beaconState.LatestBlockRoots[1] = blockRoot[:]
+	beaconState.LatestBlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
+	beaconState.LatestBlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 	}
@@ -183,19 +183,19 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   10000,
-		JustifiedEpoch:         helpers.SlotToEpoch(1500),
-		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		Slot:                  10000,
+		CurrentJustifiedEpoch: helpers.SlotToEpoch(1500),
+		LatestBlockRoots:      make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
 				CrosslinkDataRootHash32: []byte("A"),
 			},
 		},
-		JustifiedRoot: justifiedBlockRoot[:],
+		CurrentJustifiedRoot: justifiedBlockRoot[:],
 	}
-	beaconState.LatestBlockRootHash32S[1] = blockRoot[:]
-	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
-	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
+	beaconState.LatestBlockRoots[1] = blockRoot[:]
+	beaconState.LatestBlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
+	beaconState.LatestBlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 	}

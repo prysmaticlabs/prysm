@@ -159,7 +159,7 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	tempState := &pb.BeaconState{}
 	tempState.ValidatorRegistry = beaconState.ValidatorRegistry
 
-	copy(db.validatorBalances, beaconState.ValidatorBalances)
+	copy(db.validatorBalances, beaconState.Balances)
 	db.validatorRegistry = proto.Clone(tempState).(*pb.BeaconState).ValidatorRegistry
 	db.serializedState = enc
 	db.stateHash = stateHash
@@ -432,7 +432,7 @@ func (db *BeaconDB) ValidatorBalances(ctx context.Context) ([]uint64, error) {
 		return err
 	})
 
-	return beaconState.ValidatorBalances, err
+	return beaconState.Balances, err
 }
 
 func createState(enc []byte) (*pb.BeaconState, error) {

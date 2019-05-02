@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -67,28 +69,32 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 	return beaconState
 }
 
-// ProcessBlockRandao checks the block proposer's
+// ProcessRandao checks the block proposer's
 // randao commitment and generates a new randao mix to update
 // in the beacon state's latest randao mixes slice.
 //
-// Official spec definition for block randao verification:
-//   Let proposer = state.validator_registry[get_beacon_proposer_index(state, state.slot)].
-//   Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
-//     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
-//   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
-//     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
-func ProcessBlockRandao(
+// Spec pseudocode definition:
+//   def process_randao(state: BeaconState, block: BeaconBlock) -> None:
+//     proposer = state.validator_registry[get_beacon_proposer_index(state)]
+//     # Verify that the provided randao value is valid
+//     assert bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)), block.body.randao_reveal, get_domain(state, DOMAIN_RANDAO))
+//     # Mix it in
+//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
+//         xor(get_randao_mix(state, get_current_epoch(state)),
+//             hash(block.body.randao_reveal))
+//     )
+func ProcessRandao(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
-
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
-	if err != nil {
-		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
-	}
 	if verifySignatures {
+		proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+		if err != nil {
+			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+		}
+
 		if err := verifyBlockRandao(beaconState, block, proposerIdx, enableLogging); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
@@ -98,7 +104,7 @@ func ProcessBlockRandao(
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
-	blockRandaoReveal := hashutil.Hash(block.RandaoReveal)
+	blockRandaoReveal := hashutil.Hash(block.Body.RandaoReveal)
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
@@ -106,8 +112,8 @@ func ProcessBlockRandao(
 	return beaconState, nil
 }
 
-// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(get_current_epoch(state)),
-//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
+// Verify that bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)),
+//   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
 func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64, enableLogging bool) error {
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
@@ -118,7 +124,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
-	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
+	sig, err := bls.SignatureFromBytes(block.Body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
@@ -455,19 +461,19 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
-		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
+		if att.Data.JustifiedEpoch != beaconState.CurrentJustifiedEpoch {
 			return fmt.Errorf(
-				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
-				att.Data.JustifiedEpoch-0,
-				beaconState.JustifiedEpoch-0,
+				"expected attestation.JustifiedEpoch == state.CurrentJustifiedEpoch, received %d == %d",
+				att.Data.JustifiedEpoch,
+				beaconState.CurrentJustifiedEpoch,
 			)
 		}
 
-		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.JustifiedRoot) {
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.CurrentJustifiedRoot) {
 			return fmt.Errorf(
-				"expected attestation.JustifiedRoot == state.JustifiedRoot, received %#x == %#x",
+				"expected attestation.JustifiedRoot == state.CurrentJustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
-				beaconState.JustifiedRoot,
+				beaconState.CurrentJustifiedRoot,
 			)
 		}
 	} else {
@@ -482,7 +488,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			return fmt.Errorf(
 				"expected attestation.JustifiedRoot == state.PreviousJustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
-				beaconState.JustifiedRoot,
+				beaconState.CurrentJustifiedRoot,
 			)
 		}
 	}
@@ -494,7 +500,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// 	equals state.latest_crosslinks[attestation.data.shard]
 	shard := att.Data.Shard
 	crosslink := &pb.Crosslink{
-		CrosslinkDataRootHash32: att.Data.CrosslinkDataRootHash32,
+		CrosslinkDataRootHash32: att.Data.CrosslinkDataRoot,
 		Epoch:                   helpers.SlotToEpoch(att.Data.Slot),
 	}
 	crosslinkFromAttestation := att.Data.LatestCrosslink
@@ -509,11 +515,11 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.Data.CrosslinkDataRootHash32, params.BeaconConfig().ZeroHash[:]) {
+	if !bytes.Equal(att.Data.CrosslinkDataRoot, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
 			"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
 			params.BeaconConfig().ZeroHash[:],
-			att.Data.CrosslinkDataRootHash32,
+			att.Data.CrosslinkDataRoot,
 		)
 	}
 	if verifySignatures {
@@ -533,6 +539,73 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		return nil
 	}
 	return nil
+}
+
+// VerifyIndexedAttestation determines the validity of an indexed attestation.
+// WIP - signing is not implemented until BLS is integrated into Prysm.
+//
+// Spec pseudocode definition:
+//  def verify_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+//    """
+//    Verify validity of ``indexed_attestation`` fields.
+//    """
+//    custody_bit_0_indices = indexed_attestation.custody_bit_0_indices
+//    custody_bit_1_indices = indexed_attestation.custody_bit_1_indices
+//
+//    # Ensure no duplicate indices across custody bits
+//    assert len(set(custody_bit_0_indices).intersection(set(custody_bit_1_indices))) == 0
+//
+//    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
+//        return False
+//
+//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
+//        return False
+//
+//    if custody_bit_0_indices != sorted(custody_bit_0_indices):
+//        return False
+//
+//    if custody_bit_1_indices != sorted(custody_bit_1_indices):
+//        return False
+//
+//    return bls_verify_multiple(
+//        pubkeys=[
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_indices]),
+//        ],
+//        message_hashes=[
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
+//        ],
+//        signature=indexed_attestation.signature,
+//        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
+//    )
+func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttestation) (bool, error) {
+	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
+	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
+
+	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
+	if len(custodyBitIntersection) != 0 {
+		return false, fmt.Errorf("custody bit indice should not contain duplicates, received: %v", custodyBitIntersection)
+	}
+
+	// To be removed in phase 1
+	if len(custodyBit1Indices) > 0 {
+		return false, nil
+	}
+
+	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
+	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
+	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
+		return false, nil
+	}
+
+	if !sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
+		return custodyBit0Indices[i] < custodyBit0Indices[j]
+	}) {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // ProcessValidatorDeposits is one of the operations performed on each processed
@@ -609,21 +682,21 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Deposits must be processed in order
-	if deposit.MerkleTreeIndex != beaconState.DepositIndex {
+	if deposit.Index != beaconState.DepositIndex {
 		return fmt.Errorf(
 			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
 			beaconState.DepositIndex,
-			deposit.MerkleTreeIndex,
+			deposit.Index,
 		)
 	}
 
 	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := beaconState.LatestEth1Data.DepositRootHash32
+	receiptRoot := beaconState.LatestEth1Data.DepositRoot
 	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,
 		deposit.DepositData,
-		int(deposit.MerkleTreeIndex),
-		deposit.MerkleProofHash32S,
+		int(deposit.Index),
+		deposit.Proof,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",
@@ -688,12 +761,13 @@ func ProcessValidatorExits(
 func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	entryExitEffectEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
-	if validator.ExitEpoch <= entryExitEffectEpoch {
+
+	delayedActivationExitEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	if validator.ExitEpoch <= delayedActivationExitEpoch {
 		return fmt.Errorf(
 			"validator exit epoch should be > entry_exit_effect_epoch, received %d <= %d",
 			currentEpoch,
-			entryExitEffectEpoch,
+			delayedActivationExitEpoch,
 		)
 	}
 	if currentEpoch < exit.Epoch {

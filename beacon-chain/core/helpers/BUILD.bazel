@@ -3,11 +3,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "block.go",
         "committee.go",
         "deposits.go",
         "randao.go",
         "rewards_penalties.go",
         "slot_epoch.go",
+        "state.go",
         "validators.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers",
@@ -30,11 +32,13 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "block_test.go",
         "committee_test.go",
         "deposits_test.go",
         "randao_test.go",
         "rewards_penalties_test.go",
         "slot_epoch_test.go",
+        "state_test.go",
         "validators_test.go",
     ],
     embed = [":go_default_library"],

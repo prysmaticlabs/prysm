@@ -57,21 +57,21 @@ func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.At
 			AggregationBitfield: []byte("A"),
 			Data: &pb.AttestationData{
 				Slot:                    params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
 			AggregationBitfield: []byte("B"),
 			Data: &pb.AttestationData{
 				Slot:                    params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
 			AggregationBitfield: []byte("C"),
 			Data: &pb.AttestationData{
 				Slot:                    params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 	}, nil

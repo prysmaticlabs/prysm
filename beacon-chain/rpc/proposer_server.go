@@ -164,7 +164,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	parentHash := bytesutil.ToBytes32(req.ParentRootHash32)
+	parentHash := bytesutil.ToBytes32(req.ParentBlockRoot)
 	// Check for skipped slots.
 	for beaconState.Slot < req.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(

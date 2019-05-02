@@ -78,8 +78,8 @@ func TestIsValidBlock_InvalidSlot(t *testing.T) {
 	db.hasBlock = true
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: []byte{2},
-		BlockHash32:       []byte{3},
+		DepositRoot: []byte{2},
+		BlockRoot:   []byte{3},
 	}
 	if err := IsValidBlock(ctx, beaconState, block,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
@@ -107,8 +107,8 @@ func TestIsValidBlock_InvalidPoWReference(t *testing.T) {
 	block.Slot = 4
 	powClient.blockExists = false
 	beaconState.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: []byte{2},
-		BlockHash32:       []byte{3},
+		DepositRoot: []byte{2},
+		BlockRoot:   []byte{3},
 	}
 
 	if err := IsValidBlock(ctx, beaconState, block,
@@ -130,8 +130,8 @@ func TestIsValidBlock_InvalidGenesis(t *testing.T) {
 
 	beaconState.Slot = 3
 	beaconState.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: []byte{2},
-		BlockHash32:       []byte{3},
+		DepositRoot: []byte{2},
+		BlockRoot:   []byte{3},
 	}
 
 	genesisTime := time.Unix(0, 0)
@@ -160,8 +160,8 @@ func TestIsValidBlock_GoodBlock(t *testing.T) {
 
 	beaconState.Slot = 3
 	beaconState.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: []byte{2},
-		BlockHash32:       []byte{3},
+		DepositRoot: []byte{2},
+		BlockRoot:   []byte{3},
 	}
 
 	genesisTime := time.Unix(0, 0)

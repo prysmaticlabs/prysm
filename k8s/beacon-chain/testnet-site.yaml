@@ -128,8 +128,8 @@ spec:
         port: 
           number: 80
         host: testnet-site-alpha.beacon-chain.svc.cluster.local
-  - match: 
+  - match:
     - uri:
         prefix: /
     redirect:
-      authority: alpha.prylabs.net 
+      authority: alpha.prylabs.net

@@ -173,8 +173,8 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: bHash[:],
+		Slot:            1,
+		ParentBlockRoot: bHash[:],
 	}
 	b2Hash, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {

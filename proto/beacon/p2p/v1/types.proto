@@ -5,42 +5,58 @@ package ethereum.beacon.p2p.v1;
 import "proto/common/messages.proto";
 
 message BeaconState {
-  // Validator registry [1-1000]
-  repeated Validator validator_registry = 1;
-  uint64 validator_registry_update_epoch = 2;
-  repeated uint64 validator_balances = 3; // Balance in Gwei
-  // Randomness and committees [1001-2000]
-  repeated bytes latest_randao_mixes = 1004;
-  uint64 previous_shuffling_start_shard = 1005;
-  uint64 current_shuffling_start_shard = 1006;
-  uint64 previous_shuffling_epoch = 1007;
-  uint64 current_shuffling_epoch = 1008;
-  bytes previous_shuffling_seed_hash32 = 1009;
-  bytes current_shuffling_seed_hash32 = 1010;
-  // Finality [2001-3000]
-  uint64 previous_justified_epoch = 2001;
-  bytes previous_justified_root = 2002;
-  uint64 justified_epoch = 2003;
-  bytes justified_root = 2004;
-  uint64 justification_bitfield = 2005;
-  uint64 finalized_epoch = 2006;
-  bytes finalized_root = 2007;
-  // Recent state [3001-4000]
-  repeated Crosslink latest_crosslinks = 3001;
-  repeated bytes latest_block_root_hash32s = 3003;
-  repeated bytes batched_block_root_hash32s = 3004;
-  repeated uint64 latest_slashed_balances = 3005;
-  repeated PendingAttestation latest_attestations = 3006;
-  repeated bytes latest_index_root_hash32s = 3007;
-  BeaconBlock latest_block = 3008;
-  // Ethereum 1.0 chain data [4001-5000]
-  Eth1Data latest_eth1_data = 4001;
-  repeated Eth1DataVote eth1_data_votes = 4002;
-  uint64 deposit_index = 4003;
-  // Miscellaneous [5001-6000]
-  uint64 genesis_time = 5001;
-  Fork fork = 5002;
-  uint64 slot = 5003;
+  // Miscellaneous [1001-2000]
+  uint64 genesis_time = 1001;
+  Fork fork = 1002;
+  uint64 slot = 1003;
+
+  // Validator registry [2001-3000]
+  repeated Validator validator_registry = 2001;
+  // Balances in Gwei
+  repeated uint64 balances = 2002;
+
+  // Randomness and committees [3001-4000]
+  repeated bytes latest_randao_mixes = 3001;
+  uint64 latest_start_shard = 3002;
+
+  // Finality [4001-5000]
+  repeated PendingAttestation previous_epoch_attestations = 4001;
+  repeated PendingAttestation current_epoch_attestations = 4002;
+  uint64 previous_justified_epoch = 4003;
+  uint64 current_justified_epoch = 4004;
+  bytes previous_justified_root = 4005;
+  bytes current_justified_root = 4006;
+  uint64 justification_bitfield = 4007;
+  uint64 finalized_epoch = 4008;
+  bytes finalized_root = 4009;
+
+  // Recent state [5001-6000]
+  repeated Crosslink current_crosslinks = 5001;
+  repeated Crosslink previous_crosslinks = 5002;
+  repeated bytes latest_block_roots = 5003;
+  repeated bytes latest_state_roots = 5004;
+  repeated bytes latest_active_index_roots = 5005;
+  repeated uint64 latest_slashed_balances = 5006;
+  BeaconBlockHeader latest_block_header = 5007;
+  repeated bytes historical_roots = 5008;
+
+  // Ethereum 1.0 chain data [6001-7000]
+  Eth1Data latest_eth1_data = 6001;
+  repeated Eth1DataVote eth1_data_votes = 6002;
+  uint64 deposit_index = 6003;
+
+  // Deprecated [8001-9000]
+  uint64 validator_registry_update_epoch = 8001 [deprecated=true];
+  uint64 previous_shuffling_start_shard = 8003 [deprecated=true];
+  uint64 current_shuffling_start_shard = 8004 [deprecated=true];
+  uint64 previous_shuffling_epoch = 8005 [deprecated=true];
+  uint64 current_shuffling_epoch = 8006 [deprecated=true];
+  bytes previous_shuffling_seed_hash32 = 8007 [deprecated=true];
+  bytes current_shuffling_seed_hash32 = 8008 [deprecated=true];
+  repeated bytes batched_block_root_hash32s = 8013 [deprecated=true];
+  repeated Crosslink latest_crosslinks = 8014 [deprecated=true];
+  repeated PendingAttestation latest_attestations = 8015 [deprecated=true];
+  BeaconBlock latest_block = 8016 [deprecated=true];
 }
 
 message Fork {
@@ -50,28 +66,41 @@ message Fork {
 }
 
 message PendingAttestation {
-  AttestationData data = 1;
-  bytes aggregation_bitfield = 2;
-  bytes custody_bitfield = 3;
-  uint64 inclusion_slot = 4;
+  bytes aggregation_bitfield = 1;
+  AttestationData data = 2;
+  uint64 inclusion_slot = 3;
+  bytes custody_bitfield = 4;
 }
 
 message Attestation {
   AttestationData data = 1;
   bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
-  bytes aggregate_signature = 4; // Type of [uint384] ?
+  bytes aggregate_signature = 4; // bytes96
 }
 
 message AttestationData {
+  // LMD GHOST vote
   uint64 slot = 1;
-  uint64 shard = 2;
-  bytes beacon_block_root_hash32 = 3;
-  bytes epoch_boundary_root_hash32 = 4;
-  bytes crosslink_data_root_hash32 = 5;
-  Crosslink latest_crosslink = 6;
-  uint64 justified_epoch = 7;
-  bytes justified_block_root_hash32 = 8;
+  bytes beacon_block_root = 2;
+
+  // FFG vote
+  uint64 source_epoch = 3;
+  bytes source_root = 4;
+  bytes target_root = 5;
+
+  // Crosslink vote
+  uint64 shard = 6;
+  bytes previous_crosslink_root = 7;
+  bytes crosslink_data_root = 8;
+
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  bytes epoch_boundary_root_hash32 = 1000 [deprecated=true];
+  Crosslink latest_crosslink = 1001 [deprecated=true];
+  uint64 justified_epoch = 1002 [deprecated=true];
+  bytes justified_block_root_hash32 = 1003 [deprecated=true];
+  bytes beacon_block_root_hash32 = 1004 [deprecated=true];
 }
 
 message AttestationTarget {
@@ -85,22 +114,40 @@ message AttestationDataAndCustodyBit {
   bool custody_bit = 2;
 }
 
+message IndexedAttestation {
+  // Validator indices
+  repeated uint64 custody_bit_0_indices = 1;
+  repeated uint64 custody_bit_1_indices = 2;
+  AttestationData data = 3;
+  // Aggregate signature
+  bytes signature = 4; // bytes96
+}
+
 message Validator {
-  bytes pubkey = 1;
-  // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
-  bytes withdrawal_credentials_hash32 = 2;
-  uint64 activation_epoch = 5;
-  uint64 exit_epoch = 6;
-  uint64 withdrawal_epoch = 7;
-  uint64 slashed_epoch = 8;
-  // Possible validator status code:
-  // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
+  bytes pubkey = 1; // bytes48
+  bytes withdrawal_credentials = 2; //bytes32
+  // Epoch when became eligible for activation
+  uint64 activation_eligibility_epoch = 3;
+  // Epoch when validator activated
+  uint64 activation_epoch = 4;
+  // Epoch when validator exited
+  uint64 exit_epoch = 5;
+  // Epoch when validator is eligible to withdraw
+  uint64 withdrawable_epoch = 6;
+  // Was the validator slashed
+  bool slashed = 7;
+  // Effective balance
+  uint64 effective_balance = 8;
+
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  uint64 slashed_epoch = 1002 [deprecated=true];
   enum StatusFlags {
-    INITIAL = 0; // validator status initial value.
-    INITIATED_EXIT = 1; // validator initiated exit.
-    WITHDRAWABLE = 2; // validator deposit is withdrawable.
+    INITIAL = 0 [deprecated=true]; // validator status initial value.
+    INITIATED_EXIT = 1 [deprecated=true]; // validator initiated exit.
+    WITHDRAWABLE = 2 [deprecated=true]; // validator deposit is withdrawable.
   }
-  StatusFlags status_flags = 9;
+  StatusFlags status_flags = 1003 [deprecated=true];
 }
 
 message ShardReassignmentRecord {
@@ -120,21 +167,26 @@ message Crosslink {
 
 message BeaconBlock {
   uint64 slot = 1;
-  bytes parent_root_hash32 = 2;
-  bytes state_root_hash32 = 3;
-  bytes randao_reveal = 4;
-  Eth1Data eth1_data = 5;
-  bytes signature = 6; // bytes96
-  // Block Body
-  BeaconBlockBody body = 7;
+  bytes parent_block_root = 2;
+  bytes state_root = 3;
+  BeaconBlockBody body = 4;
+  bytes signature = 5; // bytes96
+
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  bytes randao_reveal = 1003;
+  Eth1Data eth1_data = 1004;
 }
 
 message BeaconBlockBody {
-  repeated Attestation attestations = 1;
-  repeated ProposerSlashing proposer_slashings = 2;
-  repeated AttesterSlashing attester_slashings = 3;
-  repeated Deposit deposits = 4;
-  repeated VoluntaryExit voluntary_exits = 5;
+  bytes randao_reveal = 1; // bytes96
+  Eth1Data eth1_data = 2;
+  repeated Attestation attestations = 3;
+  repeated ProposerSlashing proposer_slashings  = 4;
+  repeated AttesterSlashing attester_slashings = 5;
+  repeated Deposit deposits = 6;
+  repeated VoluntaryExit voluntary_exits = 7;
+  repeated Transfer transfers = 8;
 }
 
 message DepositInput {
@@ -158,42 +210,94 @@ message SlashableAttestation {
 }
 
 message DepositData {
-  DepositInput deposit_input = 1;
-  uint64 amount = 2; // Amount in Gwei
-  uint64 timestamp = 3;
+  bytes pubkey = 1; // bytes48
+  bytes withdrawal_credentials = 2; // bytes32
+  // Amount in Gwei
+  uint64 amount = 3;
+  bytes signature = 4; //bytes96
+  // Deprecated
+  DepositInput deposit_input = 1001 [deprecated=true];
+  uint64 timestamp = 1002 [deprecated=true];
 }
 
 message ProposerSlashing {
   uint64 proposer_index = 1;
-  ProposalSignedData proposal_data_1 = 2;
-  bytes proposal_signature_1 = 3; // bytes96
-  ProposalSignedData proposal_data_2 = 4;
-  bytes proposal_signature_2 = 5;
+  BeaconBlockHeader header_1 = 2;
+  BeaconBlockHeader header_2 = 3;
+
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  ProposalSignedData proposal_data_1 = 1001 [deprecated=true];
+  bytes proposal_signature_1 = 1002 [deprecated=true]; // bytes96
+  ProposalSignedData proposal_data_2 = 1003 [deprecated=true];
+  bytes proposal_signature_2 = 1004 [deprecated=true];
 }
 
 message AttesterSlashing {
-  SlashableAttestation slashable_attestation_1 = 1;
-  SlashableAttestation slashable_attestation_2 = 2;
+  IndexedAttestation attestation_1 = 1;
+  IndexedAttestation attestation_2 = 2;
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  SlashableAttestation slashable_attestation_1 = 1001 [deprecated=true];
+  SlashableAttestation slashable_attestation_2 = 1002 [deprecated=true];
 }
 
 message Deposit {
-  repeated bytes merkle_proof_hash32s = 1;
-  uint64 merkle_tree_index = 2;
-  bytes deposit_data = 3;
+  // Branch in the deposit tree
+  repeated bytes proof = 1;
+  // Index in the deposit tree
+  uint64 index = 2;
+  DepositData data = 3;
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  bytes deposit_data = 1003 [deprecated=true];
 }
 
 message VoluntaryExit {
+  // Minimum epoch for processing exit
   uint64 epoch = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // bytes96
 }
 
+message Transfer {
+  uint64 sender = 1;
+  uint64 recipient = 2;
+  // Amount in Gwei
+  uint64 amount = 3;
+  // Fee in Gwei for block proposer
+  uint64 fee = 4;
+  // Inclusion slot
+  uint64 slot = 5;
+  // Sender withdrawal pubkey and signature
+  bytes pubkey = 6; // bytes48
+  // Sender signature
+  bytes signature = 7; // bytes96
+}
+
 message Eth1Data {
-  bytes deposit_root_hash32 = 1;
-  bytes block_hash32 = 2;
+  // Root of the deposit tree
+  bytes deposit_root = 1;
+  // Total number of deposits
+  uint64 deposit_count = 2;
+  // Block hash
+  bytes block_root = 3;
 }
 
 message Eth1DataVote {
   Eth1Data eth1_data = 1;
   uint64 vote_count = 2;
+}
+
+message HistoricalBatch {
+  repeated bytes block_roots = 1;
+  repeated bytes state_roots = 2;
+}
+
+message BeaconBlockHeader {
+  uint64 slot = 1;
+  bytes previous_block_root = 2;
+  bytes state_root = 3;
+  bytes block_body_root = 4;
+  bytes signature = 5; // bytes86
 }

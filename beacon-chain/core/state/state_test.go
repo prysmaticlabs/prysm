@@ -81,9 +81,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 			t.Fatalf("Could not encode deposit data: %v", err)
 		}
 		deposits = append(deposits, &pb.Deposit{
-			MerkleProofHash32S: [][]byte{{1}, {2}, {3}},
-			MerkleTreeIndex:    0,
-			DepositData:        depositData,
+			Proof:       [][]byte{{1}, {2}, {3}},
+			Index:       0,
+			DepositData: depositData,
 		})
 	}
 
@@ -91,8 +91,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		deposits,
 		genesisTime,
 		&pb.Eth1Data{
-			DepositRootHash32: processedPowReceiptRoot,
-			BlockHash32:       []byte{},
+			DepositRoot: processedPowReceiptRoot,
+			BlockRoot:   []byte{},
 		})
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
@@ -120,7 +120,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.ValidatorRegistry) != depositsForChainStart {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
-	if len(newState.ValidatorBalances) != depositsForChainStart {
+	if len(newState.Balances) != depositsForChainStart {
 		t.Error("ValidatorBalances was not correctly initialized")
 	}
 
@@ -133,7 +133,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if newState.PreviousJustifiedEpoch != 0 {
 		t.Error("PreviousJustifiedEpoch was not correctly initialized")
 	}
-	if newState.JustifiedEpoch != 0 {
+	if newState.CurrentJustifiedEpoch != 0 {
 		t.Error("JustifiedEpoch was not correctly initialized")
 	}
 	if newState.FinalizedEpoch != 0 {
@@ -164,10 +164,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
-	if !bytes.Equal(newState.LatestIndexRootHash32S[0], genesisActiveIndexRoot[:]) {
+	if !bytes.Equal(newState.LatestActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.LatestIndexRootHash32S[0],
+			newState.LatestActiveIndexRoots[0],
 		)
 	}
 	seed, err := helpers.GenerateSeed(newState, 0)
@@ -179,8 +179,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// deposit root checks.
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, processedPowReceiptRoot) {
-		t.Error("LatestEth1Data DepositRootHash32 was not correctly initialized")
+	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, processedPowReceiptRoot) {
+		t.Error("LatestEth1Data DepositRoot was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.Eth1DataVotes, []*pb.Eth1DataVote{}) {
 		t.Error("Eth1DataVotes was not correctly initialized")
@@ -205,17 +205,17 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	s, _ := state.GenesisBeaconState(nil, 0, nil)
-	want, got := len(s.LatestBlockRootHash32S), int(params.BeaconConfig().LatestBlockRootsLength)
+	want, got := len(s.LatestBlockRoots), int(params.BeaconConfig().LatestBlockRootsLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
 
-	want = cap(s.LatestBlockRootHash32S)
+	want = cap(s.LatestBlockRoots)
 	if want != got {
 		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}
 
-	for _, h := range s.LatestBlockRootHash32S {
+	for _, h := range s.LatestBlockRoots {
 		if !bytes.Equal(h, params.BeaconConfig().ZeroHash[:]) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}

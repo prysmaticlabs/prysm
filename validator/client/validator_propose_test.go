@@ -188,7 +188,7 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+		Eth1Data: &pbp2p.Eth1Data{BlockRoot: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
@@ -222,7 +222,7 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if !bytes.Equal(broadcastedBlock.Eth1Data.BlockHash32, []byte{'B', 'L', 'O', 'C', 'K'}) {
+	if !bytes.Equal(broadcastedBlock.Eth1Data.BlockRoot, []byte{'B', 'L', 'O', 'C', 'K'}) {
 		t.Errorf("Unexpected ETH1 data: %v", broadcastedBlock.Eth1Data)
 	}
 }
@@ -245,7 +245,7 @@ func TestProposeBlock_PendingAttestations_UsesCurrentSlot(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+		Eth1Data: &pbp2p.Eth1Data{BlockRoot: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
@@ -307,7 +307,7 @@ func TestProposeBlock_PendingAttestationsFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+		Eth1Data: &pbp2p.Eth1Data{BlockRoot: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
@@ -425,8 +425,8 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if !bytes.Equal(broadcastedBlock.StateRootHash32, computedStateRoot) {
-		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRootHash32)
+	if !bytes.Equal(broadcastedBlock.StateRoot, computedStateRoot) {
+		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRoot)
 	}
 }
 

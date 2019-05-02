@@ -35,7 +35,7 @@ func ExpectedFFGSource(
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range justifiedAttesterIndices {
-		state.ValidatorBalances[index] +=
+		state.Balances[index] +=
 			helpers.BaseReward(state, index, baseRewardQuotient) *
 				justifiedAttestingBalance /
 				totalBalance
@@ -44,7 +44,7 @@ func ExpectedFFGSource(
 	didNotAttestIndices := sliceutil.NotUint64(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
-		state.ValidatorBalances[index] -=
+		state.Balances[index] -=
 			helpers.BaseReward(state, index, baseRewardQuotient)
 	}
 	return state
@@ -71,7 +71,7 @@ func ExpectedFFGTarget(
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range boundaryAttesterIndices {
-		state.ValidatorBalances[index] +=
+		state.Balances[index] +=
 			helpers.BaseReward(state, index, baseRewardQuotient) *
 				boundaryAttestingBalance /
 				totalBalance
@@ -80,7 +80,7 @@ func ExpectedFFGTarget(
 	didNotAttestIndices := sliceutil.NotUint64(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
-		state.ValidatorBalances[index] -=
+		state.Balances[index] -=
 			helpers.BaseReward(state, index, baseRewardQuotient)
 	}
 	return state
@@ -107,7 +107,7 @@ func ExpectedBeaconChainHead(
 	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range headAttesterIndices {
-		state.ValidatorBalances[index] +=
+		state.Balances[index] +=
 			helpers.BaseReward(state, index, baseRewardQuotient) *
 				headAttestingBalance /
 				totalBalance
@@ -116,7 +116,7 @@ func ExpectedBeaconChainHead(
 	didNotAttestIndices := sliceutil.NotUint64(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
-		state.ValidatorBalances[index] -=
+		state.Balances[index] -=
 			helpers.BaseReward(state, index, baseRewardQuotient)
 	}
 	return state
@@ -146,7 +146,7 @@ func InclusionDistance(
 		if inclusionDistance == 0 {
 			return nil, errors.New("could not process inclusion distance: 0")
 		}
-		state.ValidatorBalances[index] +=
+		state.Balances[index] +=
 			helpers.BaseReward(state, index, baseRewardQuotient) *
 				params.BeaconConfig().MinAttestationInclusionDelay /
 				inclusionDistance
@@ -172,7 +172,7 @@ func InactivityFFGSource(
 	didNotAttestIndices := sliceutil.NotUint64(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
-		state.ValidatorBalances[index] -=
+		state.Balances[index] -=
 			helpers.InactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality)
 	}
 	return state
@@ -196,7 +196,7 @@ func InactivityFFGTarget(
 	didNotAttestIndices := sliceutil.NotUint64(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
-		state.ValidatorBalances[index] -=
+		state.Balances[index] -=
 			helpers.InactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality)
 	}
 	return state
@@ -219,7 +219,7 @@ func InactivityChainHead(
 	didNotAttestIndices := sliceutil.NotUint64(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
-		state.ValidatorBalances[index] -=
+		state.Balances[index] -=
 			helpers.BaseReward(state, index, baseRewardQuotient)
 	}
 	return state
@@ -243,7 +243,7 @@ func InactivityExitedPenalties(
 
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorRegistry[index].SlashedEpoch <= currentEpoch {
-			state.ValidatorBalances[index] -=
+			state.Balances[index] -=
 				2*helpers.InactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality) +
 					helpers.BaseReward(state, index, baseRewardQuotient)
 		}
@@ -271,7 +271,7 @@ func InactivityInclusionDistance(
 			return nil, fmt.Errorf("could not get inclusion distance for attester: %d", index)
 		}
 		baseReward := helpers.BaseReward(state, index, baseRewardQuotient)
-		state.ValidatorBalances[index] -= baseReward -
+		state.Balances[index] -= baseReward -
 			baseReward*params.BeaconConfig().MinAttestationInclusionDelay/
 				inclusionDistance
 	}
@@ -304,7 +304,7 @@ func AttestationInclusion(
 		if err != nil {
 			return nil, fmt.Errorf("could not get proposer index: %v", err)
 		}
-		state.ValidatorBalances[proposerIndex] +=
+		state.Balances[proposerIndex] +=
 			helpers.BaseReward(state, proposerIndex, baseRewardQuotient) /
 				params.BeaconConfig().AttestationInclusionRewardQuotient
 	}
@@ -367,10 +367,10 @@ func Crosslinks(
 			for _, index := range committee {
 				baseReward := helpers.BaseReward(state, index, baseRewardQuotient)
 				if sliceutil.IsInUint64(index, attestingIndices) {
-					state.ValidatorBalances[index] +=
+					state.Balances[index] +=
 						baseReward * totalAttestingBalance / totalBalance
 				} else {
-					state.ValidatorBalances[index] -= baseReward
+					state.Balances[index] -= baseReward
 				}
 			}
 		}

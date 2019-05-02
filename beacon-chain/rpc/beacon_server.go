@@ -120,7 +120,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	currentHeight := bs.powChainService.LatestBlockHeight()
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 
-	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
+	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockRoot)
 	// If latest ETH1 block hash is empty, send a default response
 	if stateLatestEth1Hash == [32]byte{} {
 		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
@@ -135,7 +135,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	bestVote := &pbp2p.Eth1DataVote{}
 	bestVoteHeight := big.NewInt(0)
 	for _, vote := range beaconState.Eth1DataVotes {
-		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
+		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockRoot)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
 		if err != nil {
@@ -195,8 +195,8 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
-			BlockHash32:       bestVote.Eth1Data.BlockHash32,
-			DepositRootHash32: bestVote.Eth1Data.DepositRootHash32,
+			BlockRoot:   bestVote.Eth1Data.BlockRoot,
+			DepositRoot: bestVote.Eth1Data.DepositRoot,
 		},
 	}, nil
 }
@@ -221,7 +221,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
+	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockRoot)
 	_, latestEth1DataHeight, err := bs.powChainService.BlockExists(ctx, h)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
@@ -250,7 +250,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*pbp2p.Deposit
 	for _, dep := range allPendingDeps {
-		if dep.MerkleTreeIndex >= beaconState.DepositIndex {
+		if dep.Index >= beaconState.DepositIndex {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}
@@ -308,24 +308,24 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	depositRoot := depositTrie.Root()
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
-			DepositRootHash32: depositRoot[:],
-			BlockHash32:       blockHash[:],
+			DepositRoot: depositRoot[:],
+			BlockRoot:   blockHash[:],
 		},
 	}, nil
 }
 
 func constructMerkleProof(trie *trieutil.MerkleTrie, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
-	proof, err := trie.MerkleProof(int(deposit.MerkleTreeIndex))
+	proof, err := trie.MerkleProof(int(deposit.Index))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"could not generate merkle proof for deposit at index %d: %v",
-			deposit.MerkleTreeIndex,
+			deposit.Index,
 			err,
 		)
 	}
 	// For every deposit, we construct a Merkle proof using the powchain service's
 	// in-memory deposits trie, which is updated only once the state's LatestETH1Data
 	// property changes during a state transition after a voting period.
-	deposit.MerkleProofHash32S = proof
+	deposit.Proof = proof
 	return deposit, nil
 }
