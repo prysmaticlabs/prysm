@@ -665,6 +665,115 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	return winnerCrosslink, nil
 }
 
+// AttestationDelta calculates the rewards and penalties of individual
+// attester for voting the correct FFG source, FFG target, and head. It
+// also calculates proposer delay inclusion and inactivity rewards
+// and penalties.
+//
+// Spec pseudocode definition:
+//	def get_attestation_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
+//    previous_epoch = get_previous_epoch(state)
+//    total_balance = get_total_active_balance(state)
+//    rewards = [0 for _ in range(len(state.validator_registry))]
+//    penalties = [0 for _ in range(len(state.validator_registry))]
+//    eligible_validator_indices = [
+//        index for index, v in enumerate(state.validator_registry)
+//        if is_active_validator(v, previous_epoch) or (v.slashed and previous_epoch + 1 < v.withdrawable_epoch)
+//    ]
+//
+//    # Micro-incentives for matching FFG source, FFG target, and head
+//    matching_source_attestations = get_matching_source_attestations(state, previous_epoch)
+//    matching_target_attestations = get_matching_target_attestations(state, previous_epoch)
+//    matching_head_attestations = get_matching_head_attestations(state, previous_epoch)
+//    for attestations in (matching_source_attestations, matching_target_attestations, matching_head_attestations):
+//        unslashed_attesting_indices = get_unslashed_attesting_indices(state, attestations)
+//        attesting_balance = get_attesting_balance(state, attestations)
+//        for index in eligible_validator_indices:
+//            if index in unslashed_attesting_indices:
+//                rewards[index] += get_base_reward(state, index) * attesting_balance // total_balance
+//            else:
+//                penalties[index] += get_base_reward(state, index)
+//
+//    # Proposer and inclusion delay micro-rewards
+//    for index in get_unslashed_attesting_indices(state, matching_source_attestations):
+//        attestation = min([
+//            a for a in attestations if index in get_attesting_indices(state, a.data, a.aggregation_bitfield)
+//        ], key=lambda a: a.inclusion_delay)
+//        rewards[attestation.proposer_index] += get_base_reward(state, index) // PROPOSER_REWARD_QUOTIENT
+//        rewards[index] += get_base_reward(state, index) * MIN_ATTESTATION_INCLUSION_DELAY // attestation.inclusion_delay
+//
+//    # Inactivity penalty
+//    finality_delay = previous_epoch - state.finalized_epoch
+//    if finality_delay > MIN_EPOCHS_TO_INACTIVITY_PENALTY:
+//        matching_target_attesting_indices = get_unslashed_attesting_indices(state, matching_target_attestations)
+//        for index in eligible_validator_indices:
+//            penalties[index] += BASE_REWARDS_PER_EPOCH * get_base_reward(state, index)
+//            if index not in matching_target_attesting_indices:
+//                penalties[index] += state.validator_registry[index].effective_balance * finality_delay // INACTIVITY_PENALTY_QUOTIENT
+//
+//    return rewards, penalties
+func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
+	prevEpoch := helpers.PrevEpoch(state)
+	totalBalance := totalActiveBalance(state)
+	rewards := make([]uint64, len(state.ValidatorRegistry))
+	penalties := make([]uint64, len(state.ValidatorRegistry))
+	var eligible []uint64
+	for i, v := range state.ValidatorRegistry {
+		isActive := helpers.IsActiveValidator(v, prevEpoch)
+		isSlashed := v.Slashed && (prevEpoch+1 < v.WithdrawableEpoch)
+		if isActive || isSlashed {
+			eligible = append(eligible, uint64(i))
+		}
+	}
+	atts, err := MatchAttestations(state, prevEpoch)
+	if err != nil {
+		return nil, nil, err
+	}
+	var matchedAtts [][]*pb.PendingAttestation
+	matchedAtts = append(matchedAtts, atts.source)
+	matchedAtts = append(matchedAtts, atts.target)
+	matchedAtts = append(matchedAtts, atts.head)
+
+	for _, matchAtt := range matchedAtts {
+		indices, err := UnslashedAttestingIndices(state, matchAtt)
+		if err != nil {
+			return nil, nil, err
+		}
+		attested := make(map[uint64]bool)
+		for _, index := range indices {
+			attested[index] = true
+		}
+		attestedBalance, err := AttestingBalance(state, matchAtt)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, index := range eligible {
+			if _, ok := attested[index]; ok {
+				rewards[index] += BaseReward(state, index) * attestedBalance / totalBalance
+			} else {
+				penalties[index] -= BaseReward(state, index)
+			}
+		}
+	}
+
+	indices, err := UnslashedAttestingIndices(state, atts.source)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, index := range indices {
+
+	}
+	//    # Proposer and inclusion delay micro-rewards
+	//    for index in get_unslashed_attesting_indices(state, matching_source_attestations):
+	//        attestation = min([
+	//            a for a in attestations if index in get_attesting_indices(state, a.data, a.aggregation_bitfield)
+	//        ], key=lambda a: a.inclusion_delay)
+	//        rewards[attestation.proposer_index] += get_base_reward(state, index) // PROPOSER_REWARD_QUOTIENT
+	//        rewards[index] += get_base_reward(state, index) * MIN_ATTESTATION_INCLUSION_DELAY // attestation.inclusion_delay
+
+	return nil, nil, nil
+}
+
 // CrosslinkAttestingIndices returns the attesting indices of the input crosslink.
 func CrosslinkAttestingIndices(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) ([]uint64, error) {
 	crosslinkAtts := attsForCrosslink(state, crosslink, atts)
