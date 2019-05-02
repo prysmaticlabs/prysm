@@ -1104,3 +1104,36 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		t.Errorf("Did not get genesis crosslink, got: %v", winner)
 	}
 }
+
+func TestProcessCrosslink_NoUpdate(t *testing.T) {
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	blockRoots := make([][]byte, 128)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i + 1)}
+	}
+	oldCrosslink := &pb.Crosslink{
+		Epoch:                   params.BeaconConfig().GenesisEpoch,
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+		LatestBlockRoots:  blockRoots,
+		CurrentCrosslinks: []*pb.Crosslink{oldCrosslink},
+	}
+	newState, err := ProcessCrosslink(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(oldCrosslink, newState.CurrentCrosslinks[0]) {
+		t.Errorf("Did not get correct crosslink back")
+	}
+}

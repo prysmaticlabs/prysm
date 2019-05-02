@@ -573,7 +573,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.PreviousCrosslinks = state.CurrentCrosslinks
 	prevEpoch := helpers.PrevEpoch(state)
-	nextEpoch := helpers.CurrentEpoch(state)
+	nextEpoch := helpers.CurrentEpoch(state) + 1
 	for slot := helpers.StartSlot(prevEpoch); slot < helpers.StartSlot(nextEpoch); slot++ {
 		epoch := helpers.SlotToEpoch(slot)
 		committees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registery change */)
