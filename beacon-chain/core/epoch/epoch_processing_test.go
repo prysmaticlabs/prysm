@@ -1099,3 +1099,29 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		t.Errorf("Did not get genesis crosslink, got: %v", winner)
 	}
 }
+
+func TestBaseReward_AccurateRewards(t *testing.T) {
+	tests := []struct {
+		a uint64
+		b uint64
+		c uint64
+	}{
+		{0, 0, 0},
+		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 35778},
+		{30 * 1e9, 30 * 1e9, 195963},
+		{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount, 202390},
+		{40 * 1e9, params.BeaconConfig().MaxDepositAmount, 202390},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.Validator{
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
+			Balances: []uint64{tt.a},
+		}
+		c := BaseReward(state, 0)
+		if c != tt.c {
+			t.Errorf("BaseReward(%d) = %d, want = %d",
+				tt.a, c, tt.c)
+		}
+	}
+}
