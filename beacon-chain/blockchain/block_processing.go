@@ -58,7 +58,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
 	parent, err := c.beaconDB.Block(parentRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get parent block: %v", err)
@@ -122,8 +122,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 			return nil, fmt.Errorf("could not hash beacon state: %v", err)
 		}
 		beaconState.LatestBlock = block
-		if !bytes.Equal(block.StateRootHash32, stateRoot[:]) {
-			return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRootHash32)
+		if !bytes.Equal(block.StateRoot, stateRoot[:]) {
+			return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRoot)
 		}
 	}
 
@@ -220,7 +220,7 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.Beac
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       block.Slot,
 		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRootHash32,
+		ParentRoot: block.ParentBlockRoot,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}

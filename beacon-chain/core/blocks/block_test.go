@@ -16,7 +16,7 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 	stateHash := []byte{0}
 	b1 := NewGenesisBlock(stateHash)
 
-	if b1.ParentRootHash32 == nil {
+	if b1.ParentBlockRoot == nil {
 		t.Error("genesis block missing ParentHash field")
 	}
 
@@ -28,12 +28,12 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 		t.Error("genesis block missing RandaoReveal field")
 	}
 
-	if !bytes.Equal(b1.StateRootHash32, stateHash) {
+	if !bytes.Equal(b1.StateRoot, stateHash) {
 		t.Error("genesis block StateRootHash32 isn't initialized correctly")
 	}
 	expectedEth1 := &pb.Eth1Data{
-		DepositRootHash32: params.BeaconConfig().ZeroHash[:],
-		BlockHash32:       params.BeaconConfig().ZeroHash[:],
+		DepositRoot: params.BeaconConfig().ZeroHash[:],
+		BlockRoot:   params.BeaconConfig().ZeroHash[:],
 	}
 	if !proto.Equal(b1.Eth1Data, expectedEth1) {
 		t.Error("genesis block Eth1Data isn't initialized correctly")
@@ -50,7 +50,7 @@ func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
-		LatestBlockRootHash32S: blockRoots,
+		LatestBlockRoots: blockRoots,
 	}
 
 	tests := []struct {
@@ -110,7 +110,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
-		LatestBlockRootHash32S: blockRoots,
+		LatestBlockRoots: blockRoots,
 	}
 
 	tests := []struct {
@@ -144,15 +144,15 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 	state := &pb.BeaconState{}
 
-	state.LatestBlockRootHash32S = make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
+	state.LatestBlockRoots = make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	state.Slot = params.BeaconConfig().LatestBlockRootsLength + 1
 
 	testRoot := [32]byte{'a'}
 
 	newState := ProcessBlockRoots(state, testRoot)
-	if !bytes.Equal(newState.LatestBlockRootHash32S[0], testRoot[:]) {
+	if !bytes.Equal(newState.LatestBlockRoots[0], testRoot[:]) {
 		t.Fatalf("Latest Block root hash not saved."+
-			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRootHash32S[0])
+			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRoots[0])
 	}
 
 	newState.Slot = newState.Slot - 1

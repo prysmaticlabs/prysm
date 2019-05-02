@@ -81,7 +81,7 @@ func AttestingValidatorIndices(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard &&
-			bytes.Equal(attestation.Data.CrosslinkDataRootHash32, crosslinkDataRoot) {
+			bytes.Equal(attestation.Data.CrosslinkDataRoot, crosslinkDataRoot) {
 
 			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
 			if err != nil {
@@ -116,24 +116,24 @@ func ProcessDeposit(
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
 		newValidator := &pb.Validator{
-			Pubkey:                      pubkey,
-			ActivationEpoch:             params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
-			StatusFlags:                 0,
-			WithdrawalCredentialsHash32: withdrawalCredentials,
+			Pubkey:                pubkey,
+			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:          params.BeaconConfig().FarFutureEpoch,
+			StatusFlags:           0,
+			WithdrawalCredentials: withdrawalCredentials,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.Balances = append(state.Balances, amount)
 	} else {
 		if !bytes.Equal(
-			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
+			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentials,
 			withdrawalCredentials,
 		) {
 			return state, fmt.Errorf(
 				"expected withdrawal credentials to match, received %#x == %#x",
-				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
+				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentials,
 				withdrawalCredentials,
 			)
 		}
@@ -283,10 +283,10 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //    state.validator_balances[index] -= whistleblower_reward
 //    validator.slashed_epoch = get_current_epoch(state)
 func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
-	if state.Slot >= helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawalEpoch) {
+	if state.Slot >= helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawableEpoch) {
 		return nil, fmt.Errorf("withdrawn validator %d could not get slashed, "+
 			"current slot: %d, withdrawn slot %d",
-			idx, state.Slot, helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawalEpoch))
+			idx, state.Slot, helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawableEpoch))
 	}
 
 	state = ExitValidator(state, idx)

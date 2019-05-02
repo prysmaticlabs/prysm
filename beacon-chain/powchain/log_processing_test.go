@@ -611,8 +611,8 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	chainStartlog := chainStartIterator.Event
 
 	expectedETH1Data := &pb.Eth1Data{
-		BlockHash32:       chainStartlog.Raw.BlockHash[:],
-		DepositRootHash32: chainStartlog.DepositRoot[:],
+		BlockRoot:   chainStartlog.Raw.BlockHash[:],
+		DepositRoot: chainStartlog.DepositRoot[:],
 	}
 
 	// We add in another 8 deposits after chainstart.
