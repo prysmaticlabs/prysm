@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -214,14 +215,39 @@ func (vs *ValidatorServer) ValidatorStatus(
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
+	//uint64 eth1_deposit_block_number = 2;
+	//uint64 deposit_inclusion_slot = 3;
+	//uint64 activation_epoch = 4;
+	//uint64 position_in_activation_queue = 5;
+    _, eth1BlockNum, err := vs.beaconDB.DepositByPubkey(req.PublicKey)
+    if err != nil {
+    	return nil, err
+	}
+
+    var validatorInState *pbp2p.Validator
+    var validatorIndex uint64
+    for idx, val := range beaconState.ValidatorRegistry {
+    	if bytes.Equal(val.Pubkey, req.PublicKey) {
+    		validatorInState = val
+    		validatorIndex = uint64(idx)
+    		break
+		}
+	}
+
+    // We find the lowest validator which has not yet been activated.
+
+    // Our position in the activation queue is the above index - our validator index.
+
 	status, err := vs.validatorStatus(req.PublicKey, beaconState)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.ValidatorStatusResponse{
+	res := &pb.ValidatorStatusResponse{
 		Status: status,
-	}, nil
+	}
+
+	return res, nil
 }
 
 func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.BeaconState) (pb.ValidatorStatus, error) {
