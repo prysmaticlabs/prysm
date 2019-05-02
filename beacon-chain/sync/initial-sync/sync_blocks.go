@@ -117,10 +117,12 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 		"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
 		"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
 	).Debug("Requesting batched blocks")
-	s.p2p.Broadcast(ctx, &pb.BatchedBeaconBlockRequest{
+	if err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
 		StartSlot: startSlot,
 		EndSlot:   endSlot,
-	})
+	}, s.bestPeer); err != nil {
+		log.Errorf("Could not send batch block request to peer %s: %v", s.bestPeer.Pretty(), err)
+	}
 }
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher

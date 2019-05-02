@@ -63,7 +63,6 @@ func DefaultConfig() *Config {
 }
 
 type p2pAPI interface {
-	p2p.Broadcaster
 	p2p.Sender
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
 }
