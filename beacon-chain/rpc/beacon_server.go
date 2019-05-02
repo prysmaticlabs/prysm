@@ -139,7 +139,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
 		if err != nil {
-			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", eth1Hash)).
+			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
 				Debug("Could not verify block with hash in ETH1 chain")
 			continue
 		}
@@ -271,6 +271,15 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		pendingDeposits = append(pendingDeposits, pendingDeps[i])
 	}
 	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
+}
+
+// RecentBlockRoots returns the list of canonical slots and roots. It starts from the head
+// and go down the canonical block list.
+func (bs *BeaconServer) RecentBlockRoots(ctx context.Context, request *pb.BlockRootsRequest) (*pb.BlockRootsRespond, error) {
+	blockRoots := bs.chainService.RecentCanonicalRoots(request.Count)
+	return &pb.BlockRootsRespond{
+		BlockRoots: blockRoots,
+	}, nil
 }
 
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {

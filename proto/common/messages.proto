@@ -3,9 +3,9 @@ syntax = "proto3";
 package ethereum.common;
 
 // Uint32List represents a message that can be used to form two dimensional
-// arrays of uint32s. 
-// 
-// Example: 
+// arrays of uint32s.
+//
+// Example:
 //   message Example {
 //     repeated ethereum.common.Uint32List = 1; // Type of [[uint32]]
 //   }

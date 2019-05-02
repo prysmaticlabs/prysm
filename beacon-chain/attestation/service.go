@@ -258,11 +258,11 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 	}
 
 	log.WithFields(logrus.Fields{
-		"attestation slot":     attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
-		"attestation shard":    attestation.Data.Shard,
-		"committees shard":     cachedCommittees.Committees[0].Shard,
-		"committees list":      cachedCommittees.Committees[0].Committee,
-		"length of committees": len(cachedCommittees.Committees),
+		"attestationSlot":    attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
+		"attestationShard":   attestation.Data.Shard,
+		"committeesShard":    cachedCommittees.Committees[0].Shard,
+		"committeesList":     cachedCommittees.Committees[0].Committee,
+		"lengthOfCommittees": len(cachedCommittees.Committees),
 	}).Debug("Updating latest attestation")
 
 	// The participation bitfield from attestation is represented in bytes,

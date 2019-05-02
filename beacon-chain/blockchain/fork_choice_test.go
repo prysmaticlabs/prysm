@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/binary"
@@ -650,6 +651,93 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	}
 	if !reflect.DeepEqual(block4, head) {
 		t.Errorf("Expected head to equal %v, received %v", block4, head)
+	}
+}
+
+func TestLMDGhost_3WayChainSplitsEqualVotes(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	beaconState := &pb.BeaconState{
+		Slot: 10,
+	}
+
+	chainService := setupBeaconChain(t, beaconDB, nil)
+
+	// Construct the following chain:
+	//    /- B2 (0 vote)
+	// B1  - B3 (0 vote)
+	//    \- B4 (0 vote)
+	block1 := &pb.BeaconBlock{
+		Slot:             1,
+		ParentRootHash32: []byte{'A'},
+	}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block2 := &pb.BeaconBlock{
+		Slot:             2,
+		ParentRootHash32: root1[:],
+	}
+	root2, _ := hashutil.HashBeaconBlock(block2)
+	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block3 := &pb.BeaconBlock{
+		Slot:             3,
+		ParentRootHash32: root1[:],
+	}
+	root3, _ := hashutil.HashBeaconBlock(block3)
+	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block4 := &pb.BeaconBlock{
+		Slot:             4,
+		ParentRootHash32: root1[:],
+	}
+	root4, _ := hashutil.HashBeaconBlock(block4)
+	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block4, beaconState); err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	head, err := chainService.lmdGhost(ctx, block1, beaconState, nil)
+	if err != nil {
+		t.Fatalf("Could not run LMD GHOST: %v", err)
+	}
+
+	// Don't assign any vote to blocks 2, 3 and 4.
+	// Find which has a lexicographically higher root between block 2, 3 and 4.
+	higherRoot := root2
+	if bytesutil.LowerThan(root2[:], root3[:]) {
+		higherRoot = root3
+	}
+	if bytesutil.LowerThan(higherRoot[:], root4[:]) {
+		higherRoot = root4
+	}
+	// Compare the highest root with head root.
+	headRoot, _ := hashutil.HashBeaconBlock(head)
+	if !bytes.Equal(headRoot[:], higherRoot[:]) {
+		t.Errorf("Expected head root to equal %v, received %v", higherRoot, headRoot)
 	}
 }
 
