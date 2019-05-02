@@ -81,7 +81,7 @@ func AttestingValidatorIndices(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard &&
-			bytes.Equal(attestation.Data.CrosslinkDataRootHash32, crosslinkDataRoot) {
+			bytes.Equal(attestation.Data.CrosslinkDataRoot, crosslinkDataRoot) {
 
 			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
 			if err != nil {

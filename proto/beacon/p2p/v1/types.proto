@@ -101,7 +101,6 @@ message AttestationData {
   uint64 justified_epoch = 1002 [deprecated=true];
   bytes justified_block_root_hash32 = 1003 [deprecated=true];
   bytes beacon_block_root_hash32 = 1004 [deprecated=true];
-  bytes crosslink_data_root_hash32 = 1005 [deprecated=true];
 }
 
 message AttestationTarget {

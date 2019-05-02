@@ -20,9 +20,9 @@ func TestAttestHead_OK(t *testing.T) {
 	}
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:                    999,
-			Shard:                   1,
-			CrosslinkDataRootHash32: []byte{'a'},
+			Slot:              999,
+			Shard:             1,
+			CrosslinkDataRoot: []byte{'a'},
 		},
 	}
 	if _, err := attesterServer.AttestHead(context.Background(), req); err != nil {
