@@ -230,8 +230,8 @@ func (vs *ValidatorServer) ValidatorStatus(
 	}
 
 	eth1BlockNum := eth1BlockNumBigInt.Uint64()
-	blocksToInclusion := (eth1BlockNum + params.BeaconConfig().Eth1FollowDistance)
-	eth1Timestamp, err := vs.powChainService.BlockTimeByHeight(ctx, big.NewInt(int64(blocksToInclusion)))
+	addFollowDistance := (eth1BlockNum + params.BeaconConfig().Eth1FollowDistance)
+	eth1Timestamp, err := vs.powChainService.BlockTimeByHeight(ctx, big.NewInt(int64(addFollowDistance)))
 	if err != nil {
 		return nil, err
 	}
