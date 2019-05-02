@@ -2,6 +2,7 @@ package node
 
 import (
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -27,10 +28,21 @@ var topicMappings = map[pb.Topic]proto.Message{
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
+	contractAddress := ctx.GlobalString(utils.DepositContractFlag.Name)
+	if contractAddress == "" {
+		var err error
+		contractAddress, err = fetchDepositContract()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	s, err := p2p.NewServer(&p2p.ServerConfig{
-		BootstrapNodeAddr: ctx.GlobalString(cmd.BootstrapNode.Name),
-		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
-		Port:              ctx.GlobalInt(cmd.P2PPort.Name),
+		NoDiscovery:            ctx.GlobalBool(cmd.NoDiscovery.Name),
+		BootstrapNodeAddr:      ctx.GlobalString(cmd.BootstrapNode.Name),
+		RelayNodeAddr:          ctx.GlobalString(cmd.RelayNode.Name),
+		Port:                   ctx.GlobalInt(cmd.P2PPort.Name),
+		DepositContractAddress: contractAddress,
 	})
 	if err != nil {
 		return nil, err

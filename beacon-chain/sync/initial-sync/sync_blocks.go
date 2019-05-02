@@ -7,24 +7,13 @@ import (
 	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
-func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
-	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBlockAnnounce")
-	defer span.End()
-	data := msg.Data.(*pb.BeaconBlockAnnounce)
-	recBlockAnnounce.Inc()
-
-	if s.stateReceived && data.SlotNumber > s.highestObservedSlot {
-		s.requestBatchedBlocks(s.lastRequestedSlot, data.SlotNumber)
-		s.lastRequestedSlot = data.SlotNumber
-	}
-}
 
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
@@ -93,6 +82,12 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 		// Do not process empty responses.
 		return
 	}
+	if msg.Peer != s.bestPeer {
+		// Only process batch block responses that come from the best peer
+		// we originally synced with.
+		log.WithField("peerID", msg.Peer.Pretty()).Debug("Received batch blocks from a different peer")
+		return
+	}
 
 	log.Debug("Processing batched block response")
 	for _, block := range batchedBlocks {
@@ -144,7 +139,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"root": fmt.Sprintf("%#x", root),
+		"root": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"slot": block.Slot,
 	}).Info("Saving block")
 	s.currentSlot = block.Slot
@@ -164,6 +159,13 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	if err := s.db.SaveBlock(block); err != nil {
 		return err
+	}
+	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  root[:],
+		ParentRoot: block.ParentRootHash32,
+	}); err != nil {
+		return fmt.Errorf("could not to save attestation target: %v", err)
 	}
 	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {

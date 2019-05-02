@@ -140,10 +140,16 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 
-	attestation := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: 0},
+	attestations := []*pb.PendingAttestation{
+		{Data: &pb.AttestationData{
+			Slot:                     0,
+			JustifiedBlockRootHash32: []byte{},
+			Shard:                    0,
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+		},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       5},
+			InclusionSlot:       5,
+		},
 	}
 
 	tests := []struct {
@@ -158,15 +164,39 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
 		state := &pb.BeaconState{
-			Slot:               0,
-			ValidatorRegistry:  validators,
-			ValidatorBalances:  validatorBalances,
-			LatestAttestations: attestation,
+			Slot:                  5,
+			ValidatorRegistry:     validators,
+			ValidatorBalances:     validatorBalances,
+			LatestAttestations:    attestations,
+			PreviousJustifiedRoot: []byte{},
+			LatestCrosslinks: []*pb.Crosslink{
+				{
+					CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+					Epoch:                   0,
+				},
+			},
+		}
+		block := &pb.BeaconBlock{
+			Body: &pb.BeaconBlockBody{
+				Attestations: []*pb.Attestation{
+					{
+						Data: attestations[0].Data,
+					},
+				},
+			},
+		}
+		if _, err := blocks.ProcessBlockAttestations(state, block, false /* verify sig */); err != nil {
+			t.Fatal(err)
+		}
+		inclusionMap := make(map[uint64]uint64)
+		for _, voted := range tt.voted {
+			inclusionMap[voted] = state.Slot
 		}
 		state, err := InclusionDistance(
 			state,
 			tt.voted,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount)
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount,
+			inclusionMap)
 		if err != nil {
 			t.Fatalf("could not execute InclusionDistRewards:%v", err)
 		}
@@ -206,7 +236,8 @@ func TestInclusionDistRewards_OutOfBounds(t *testing.T) {
 			ValidatorRegistry:  validators,
 			LatestAttestations: attestation,
 		}
-		_, err := InclusionDistance(state, tt.voted, 0)
+		inclusionMap := make(map[uint64]uint64)
+		_, err := InclusionDistance(state, tt.voted, 0, inclusionMap)
 		if err == nil {
 			t.Fatal("InclusionDistRewards should have failed")
 		}
@@ -397,10 +428,15 @@ func TestInactivityInclusionPenalty_AccuratePenalties(t *testing.T) {
 			ValidatorBalances:  validatorBalances,
 			LatestAttestations: attestation,
 		}
+		inclusionMap := make(map[uint64]uint64)
+		for _, voted := range tt.voted {
+			inclusionMap[voted] = state.Slot + 1
+		}
 		state, err := InactivityInclusionDistance(
 			state,
 			tt.voted,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount)
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount,
+			inclusionMap)
 
 		for _, i := range tt.voted {
 			validatorBalances[i] = 32000055555
@@ -439,7 +475,8 @@ func TestInactivityInclusionPenalty_OutOfBounds(t *testing.T) {
 			ValidatorRegistry:  validators,
 			LatestAttestations: attestation,
 		}
-		_, err := InactivityInclusionDistance(state, tt.voted, 0)
+		inclusionMap := make(map[uint64]uint64)
+		_, err := InactivityInclusionDistance(state, tt.voted, 0, inclusionMap)
 		if err == nil {
 			t.Fatal("InclusionDistRewards should have failed")
 		}
@@ -497,10 +534,16 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		inclusionMap := make(map[uint64]uint64)
+		for _, voted := range tt.voted {
+			inclusionMap[voted] = state.Slot
+		}
+
 		state, err = AttestationInclusion(
 			state,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositAmount,
-			tt.voted)
+			tt.voted,
+			inclusionMap)
 
 		for _, i := range tt.voted {
 			validatorBalances[i] = 32000008680
@@ -539,7 +582,8 @@ func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
 			ValidatorRegistry: validators,
 			ValidatorBalances: validatorBalances,
 		}
-		if _, err := AttestationInclusion(state, 0, tt.voted); err == nil {
+		inclusionMap := make(map[uint64]uint64)
+		if _, err := AttestationInclusion(state, 0, tt.voted, inclusionMap); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no inclusion slot")
 		}
 	}
@@ -575,7 +619,8 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 			ValidatorBalances:  validatorBalances,
 			LatestAttestations: attestation,
 		}
-		if _, err := AttestationInclusion(state, 0, tt.voted); err == nil {
+		inclusionMap := make(map[uint64]uint64)
+		if _, err := AttestationInclusion(state, 0, tt.voted, inclusionMap); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no proposer index")
 		}
 	}

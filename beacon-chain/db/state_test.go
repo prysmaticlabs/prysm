@@ -18,7 +18,7 @@ import (
 
 func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableHistoricalStatePruning: true,
+		DisableHistoricalStatePruning: false,
 	})
 }
 
@@ -93,7 +93,7 @@ func TestFinalizeState_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
+	deposits, _ := setupInitialDeposits(t, 20)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -138,7 +138,10 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		b.Fatalf("Could not save beacon state to cache from DB: %v", err)
 	}
 
-	if db.currentState.Slot != 1 {
+	savedState := &pb.BeaconState{}
+	savedState.Unmarshal(db.serializedState)
+
+	if savedState.Slot != 1 {
 		b.Fatal("cache should be prepared on state after saving to DB")
 	}
 

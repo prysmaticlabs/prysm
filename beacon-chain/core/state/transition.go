@@ -7,13 +7,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,6 +27,15 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
+
+var (
+	correctAttestedValidatorGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "correct_attested_validator_rate",
+		Help: "The % of validators correctly attested for source and target",
+	}, []string{
+		"epoch",
+	})
+)
 
 // TransitionConfig defines important configuration options
 // for executing a state transition, which can have logging and signature
@@ -172,9 +185,9 @@ func ProcessBlock(
 	}
 
 	if config.Logging {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block slot == state slot")
-		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
-		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Processed ETH1 data")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Verified block slot == state slot")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Verified and processed block RANDAO")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Processed ETH1 data")
 		log.WithField(
 			"attestationsInBlock", len(block.Body.Attestations),
 		).Info("Block attestations")
@@ -223,6 +236,9 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	prevEpochHeadAttestations := []*pb.PendingAttestation{}
 	prevEpochHeadAttesterIndices := []uint64{}
 
+	inclusionSlotByAttester := make(map[uint64]uint64)
+	inclusionDistanceByAttester := make(map[uint64]uint64)
+
 	for _, attestation := range state.LatestAttestations {
 
 		// We determine the attestation participants.
@@ -232,6 +248,11 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			attestation.AggregationBitfield)
 		if err != nil {
 			return nil, err
+		}
+
+		for _, participant := range attesterIndices {
+			inclusionDistanceByAttester[participant] = state.Slot - attestation.Data.Slot
+			inclusionSlotByAttester[participant] = attestation.InclusionSlot
 		}
 
 		// We extract the attestations from the current epoch.
@@ -248,14 +269,14 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			sameRoot := bytes.Equal(attestationData.EpochBoundaryRootHash32, boundaryBlockRoot)
 			if sameRoot {
 				currentEpochBoundaryAttestations = append(currentEpochBoundaryAttestations, attestation)
-				currentBoundaryAttesterIndices = sliceutil.Union(currentBoundaryAttesterIndices, attesterIndices)
+				currentBoundaryAttesterIndices = sliceutil.UnionUint64(currentBoundaryAttesterIndices, attesterIndices)
 			}
 		}
 
 		// We extract the attestations from the previous epoch.
 		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
 			prevEpochAttestations = append(prevEpochAttestations, attestation)
-			prevEpochAttesterIndices = sliceutil.Union(prevEpochAttesterIndices, attesterIndices)
+			prevEpochAttesterIndices = sliceutil.UnionUint64(prevEpochAttesterIndices, attesterIndices)
 
 			// We extract the previous epoch boundary attestations.
 			prevBoundaryBlockRoot, err := b.BlockRoot(state,
@@ -265,7 +286,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			}
 			if bytes.Equal(attestation.Data.EpochBoundaryRootHash32, prevBoundaryBlockRoot) {
 				prevEpochBoundaryAttestations = append(prevEpochBoundaryAttestations, attestation)
-				prevEpochBoundaryAttesterIndices = sliceutil.Union(prevEpochBoundaryAttesterIndices, attesterIndices)
+				prevEpochBoundaryAttesterIndices = sliceutil.UnionUint64(prevEpochBoundaryAttesterIndices, attesterIndices)
 			}
 
 			// We extract the previous epoch head attestations.
@@ -277,7 +298,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			attestationData := attestation.Data
 			if bytes.Equal(attestationData.BeaconBlockRootHash32, canonicalBlockRoot) {
 				prevEpochHeadAttestations = append(prevEpochHeadAttestations, attestation)
-				prevEpochHeadAttesterIndices = sliceutil.Union(prevEpochHeadAttesterIndices, attesterIndices)
+				prevEpochHeadAttesterIndices = sliceutil.UnionUint64(prevEpochHeadAttesterIndices, attesterIndices)
 			}
 		}
 	}
@@ -358,7 +379,8 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		state, err = bal.InclusionDistance(
 			state,
 			prevEpochAttesterIndices,
-			totalBalance)
+			totalBalance,
+			inclusionDistanceByAttester)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate inclusion dist rewards: %v", err)
 		}
@@ -367,7 +389,9 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		}
 
 	case epochsSinceFinality > 4:
-		log.WithField("epochSinceFinality", epochsSinceFinality).Info("Applying quadratic leak penalties")
+		if config.Logging {
+			log.WithField("epochSinceFinality", epochsSinceFinality).Info("Applying quadratic leak penalties")
+		}
 		// Apply penalties for long inactive FFG source participants.
 		state = bal.InactivityFFGSource(
 			state,
@@ -397,7 +421,8 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		state, err = bal.InactivityInclusionDistance(
 			state,
 			prevEpochAttesterIndices,
-			totalBalance)
+			totalBalance,
+			inclusionDistanceByAttester)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate inclusion penalties: %v", err)
 		}
@@ -407,7 +432,8 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	state, err = bal.AttestationInclusion(
 		state,
 		totalBalance,
-		prevEpochAttesterIndices)
+		prevEpochAttesterIndices,
+		inclusionSlotByAttester)
 	if err != nil {
 		return nil, fmt.Errorf("could not process attestation inclusion rewards: %v", err)
 	}
@@ -474,12 +500,17 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
 
+	// Log the useful metrics via prometheus.
+	correctAttestedValidatorGauge.WithLabelValues(
+		strconv.Itoa(int(currentEpoch)),
+	).Set(float64(len(currentBoundaryAttesterIndices) / len(activeValidatorIndices)))
+
 	if config.Logging {
 		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")
 		log.WithField("attesterIndices", currentBoundaryAttesterIndices).Debug("Current epoch boundary attester indices")
-		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of prev epoch attestations")
+		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of previous epoch attestations")
 		log.WithField("attesterIndices", prevEpochAttesterIndices).Debug("Previous epoch attester indices")
-		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of prev epoch boundary attestations")
+		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of previous epoch boundary attestations")
 		log.WithField("attesterIndices", prevEpochBoundaryAttesterIndices).Debug("Previous epoch boundary attester indices")
 		log.WithField(
 			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-0,

@@ -5,6 +5,11 @@ import (
 )
 
 var (
+	// CacheTreeHashFlag determines whether to cache tree hashes for ssz.
+	CacheTreeHashFlag = cli.BoolFlag{
+		Name:  "enable-cache-tree-hash",
+		Usage: "Cache tree hashes for ssz",
+	}
 	// VerifyAttestationSigsFlag determines whether to verify signatures for attestations.
 	VerifyAttestationSigsFlag = cli.BoolFlag{
 		Name:  "enable-attestation-signature-verification",
@@ -25,21 +30,15 @@ var (
 		Name:  "enable-crosslinks",
 		Usage: "Enable crosslinks in epoch processing, default is disabled.",
 	}
-	// EnableBlockAncestorCacheFlag enables block ancestor cache for LMD GHOST fork choice optimization. I
-	// it is disabled by default.
-	EnableBlockAncestorCacheFlag = cli.BoolFlag{
-		Name:  "enable-block-ancestor-cache",
-		Usage: "Enable block ancestor cache for fork choice optimization, default is disabled.",
-	}
 	// EnableCheckBlockStateRootFlag check block state root in block processing. It is disabled by default.
 	EnableCheckBlockStateRootFlag = cli.BoolFlag{
 		Name:  "enable-check-block-state-root",
 		Usage: "Enable check block state root in block processing, default is disabled.",
 	}
-	// EnableHistoricalStatePruningFlag allows the database to prune old historical states.
-	EnableHistoricalStatePruningFlag = cli.BoolFlag{
-		Name:  "enable-historical-state-pruning",
-		Usage: "Enable database pruning of historical states after finalized epochs",
+	// DisableHistoricalStatePruningFlag allows the database to keep old historical states.
+	DisableHistoricalStatePruningFlag = cli.BoolFlag{
+		Name:  "disable-historical-state-pruning",
+		Usage: "Disable database pruning of historical states after finalized epochs.",
 	}
 	// DisableGossipSubFlag uses floodsub in place of gossipsub.
 	DisableGossipSubFlag = cli.BoolFlag{
@@ -49,14 +48,16 @@ var (
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{}
+var ValidatorFlags = []cli.Flag{
+	CacheTreeHashFlag,
+}
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
 	EnableCheckBlockStateRootFlag,
-	EnableHistoricalStatePruningFlag,
-	EnableBlockAncestorCacheFlag,
+	DisableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
+	CacheTreeHashFlag,
 }

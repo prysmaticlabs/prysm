@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -26,6 +27,7 @@ type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
 	IsCanonical(slot uint64, hash []byte) bool
 	InsertsCanonical(slot uint64, hash []byte)
+	RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
@@ -53,6 +55,8 @@ func (b *BlockFailedProcessingErr) Error() string {
 // 4. Process and cleanup any block operations, such as attestations and deposits, which would need to be
 //    either included or flushed from the beacon node's runtime.
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	c.receiveBlockLock.Lock()
+	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
@@ -214,6 +218,13 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.Beac
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return fmt.Errorf("failed to save block: %v", err)
 	}
+	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  blockRoot[:],
+		ParentRoot: block.ParentRootHash32,
+	}); err != nil {
+		return fmt.Errorf("failed to save attestation target: %v", err)
+	}
 	// Announce the new block to the network.
 	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       blockRoot[:],
@@ -232,11 +243,8 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 		log.Error("Sent processed block to no subscribers")
 	}
 
-	// Update attestation store with latest attestation target.
-	for _, att := range block.Body.Attestations {
-		if err := c.attsService.UpdateLatestAttestation(ctx, att); err != nil {
-			return fmt.Errorf("failed to update latest attestation for store: %v", err)
-		}
+	if err := c.attsService.BatchUpdateLatestAttestation(ctx, block.Body.Attestations); err != nil {
+		return fmt.Errorf("failed to update latest attestation for store: %v", err)
 	}
 
 	// Remove pending deposits from the deposit queue.

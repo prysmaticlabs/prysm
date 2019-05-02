@@ -25,13 +25,14 @@ var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
-	VerifyAttestationSigs        bool // VerifyAttestationSigs declares if the client will verify attestations.
-	EnableComputeStateRoot       bool // EnableComputeStateRoot implementation on server side.
-	EnableCrosslinks             bool // EnableCrosslinks in epoch processing.
-	EnableCheckBlockStateRoot    bool // EnableCheckBlockStateRoot in block processing.
-	EnableHistoricalStatePruning bool // EnableHistoricalStatePruning when updating finalized states.
-	EnableBlockAncestorCache     bool //EnableBlockAncestorCache for fork choice optimization.
-	DisableGossipSub             bool // DisableGossipSub in p2p messaging.
+	VerifyAttestationSigs         bool // VerifyAttestationSigs declares if the client will verify attestations.
+	EnableComputeStateRoot        bool // EnableComputeStateRoot implementation on server side.
+	EnableCrosslinks              bool // EnableCrosslinks in epoch processing.
+	EnableCheckBlockStateRoot     bool // EnableCheckBlockStateRoot in block processing.
+	DisableHistoricalStatePruning bool // DisableHistoricalStatePruning when updating finalized states.
+	DisableGossipSub              bool // DisableGossipSub in p2p messaging.
+	EnableCommitteesCache         bool // EnableCommitteesCache for state transition.
+	CacheTreeHash                 bool // CacheTreeHash determent whether tree hashes will be cached.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -69,13 +70,13 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Info("Enabled check block state root")
 		cfg.EnableCheckBlockStateRoot = true
 	}
-	if ctx.GlobalBool(EnableHistoricalStatePruningFlag.Name) {
-		log.Info("Enabled historical state pruning")
-		cfg.EnableHistoricalStatePruning = true
+	if ctx.GlobalBool(CacheTreeHashFlag.Name) {
+		log.Info("Cache tree hashes for ssz")
+		cfg.CacheTreeHash = true
 	}
-	if ctx.GlobalBool(EnableBlockAncestorCacheFlag.Name) {
-		log.Info("Enabled block ancestor cache")
-		cfg.EnableBlockAncestorCache = true
+	if ctx.GlobalBool(DisableHistoricalStatePruningFlag.Name) {
+		log.Info("Enabled historical state pruning")
+		cfg.DisableHistoricalStatePruning = true
 	}
 	if ctx.GlobalBool(DisableGossipSubFlag.Name) {
 		log.Info("Disabled gossipsub, using floodsub")
@@ -92,6 +93,10 @@ func ConfigureValidatorFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(VerifyAttestationSigsFlag.Name) {
 		log.Info("Verifying signatures for attestations")
 		cfg.VerifyAttestationSigs = true
+	}
+	if ctx.GlobalBool(CacheTreeHashFlag.Name) {
+		log.Info("Cache tree hashes for ssz")
+		cfg.CacheTreeHash = true
 	}
 
 	InitFeatureConfig(cfg)

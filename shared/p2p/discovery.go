@@ -37,17 +37,21 @@ func startDHTDiscovery(ctx context.Context, host host.Host, bootstrapAddr string
 	ctx, span := trace.StartSpan(ctx, "p2p_startDHTDiscovery")
 	defer span.End()
 
-	addr, err := iaddr.ParseString(bootstrapAddr)
-	if err != nil {
-		return err
-	}
-	peerinfo, err := ps.InfoFromP2pAddr(addr.Multiaddr())
+	peerinfo, err := peerInfoFromAddr(bootstrapAddr)
 	if err != nil {
 		return err
 	}
 
 	err = host.Connect(ctx, *peerinfo)
 	return err
+}
+
+func peerInfoFromAddr(address string) (*ps.PeerInfo, error) {
+	addr, err := iaddr.ParseString(address)
+	if err != nil {
+		return nil, err
+	}
+	return ps.InfoFromP2pAddr(addr.Multiaddr())
 }
 
 // Discovery implements mDNS notifee interface.
@@ -69,6 +73,6 @@ func (d *discovery) HandlePeerFound(pi ps.PeerInfo) {
 	}
 
 	log.WithFields(logrus.Fields{
-		"peers": d.host.Peerstore().Peers(),
+		"peers": d.host.Network().Peers(),
 	}).Debug("Peers are now")
 }

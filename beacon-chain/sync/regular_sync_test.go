@@ -12,8 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,6 +27,9 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
 }
 
 type mockP2P struct {
@@ -44,7 +49,6 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 }
 
 type mockChainService struct {
-	bFeed           *event.Feed
 	sFeed           *event.Feed
 	cFeed           *event.Feed
 	db              *db.BeaconDB
@@ -92,6 +96,10 @@ func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return true
 }
 
+func (ms *mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
+	return nil
+}
+
 func (ms mockChainService) InsertsCanonical(slot uint64, hash []byte) {
 	ms.canonicalBlocks[slot] = hash
 }
@@ -116,7 +124,7 @@ func (ma *mockAttestationService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func setupService(t *testing.T, db *db.BeaconDB) *RegularSync {
+func setupService(db *db.BeaconDB) *RegularSync {
 	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
@@ -174,7 +182,7 @@ func TestProcessBlock_OK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
+	deposits, _ := setupInitialDeposits(t)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -249,7 +257,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
+	deposits, _ := setupInitialDeposits(t)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +351,7 @@ func TestBlockRequest_InvalidMsg(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ss := setupService(t, db)
+	ss := setupService(db)
 
 	malformedRequest := &pb.BeaconBlockAnnounce{
 		Hash: []byte{'t', 'e', 's', 't'},
@@ -366,7 +374,7 @@ func TestBlockRequest_OK(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ss := setupService(t, db)
+	ss := setupService(db)
 
 	request1 := &pb.BeaconBlockRequestBySlotNumber{
 		SlotNumber: 20,
@@ -396,10 +404,20 @@ func TestReceiveAttestation_OK(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	if err := db.SaveState(ctx, &pb.BeaconState{
+	beaconState := &pb.BeaconState{
 		Slot: 2,
-	}); err != nil {
+	}
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
+	}
+	beaconBlock := &pb.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+	if err := db.SaveBlock(beaconBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.UpdateChainHead(ctx, beaconBlock, beaconState); err != nil {
+		t.Fatal(err)
 	}
 	cfg := &RegularSyncConfig{
 		ChainService:     ms,
@@ -656,10 +674,10 @@ func TestHandleStateReq_NOState(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	ss := setupService(t, db)
+	ss := setupService(db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
+	deposits, _ := setupInitialDeposits(t)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -708,7 +726,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 		t.Fatalf("could not hash beacon state: %v", err)
 	}
 
-	ss := setupService(t, db)
+	ss := setupService(db)
 
 	request1 := &pb.BeaconStateRequest{
 		FinalizedStateRootHash32S: stateRoot[:],

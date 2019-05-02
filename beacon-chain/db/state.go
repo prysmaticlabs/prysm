@@ -46,7 +46,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	blockEnc, _ := proto.Marshal(genesisBlock)
 	zeroBinary := encodeSlotNumber(0)
 
-	db.currentState = beaconState
+	db.serializedState = stateEnc
 	db.stateHash = stateHash
 
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -100,11 +100,15 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	lockSpan.End()
 
 	// Return in-memory cached state, if available.
-	if db.currentState != nil {
-		_, span := trace.StartSpan(ctx, "proto.Clone")
+	if db.serializedState != nil {
+		_, span := trace.StartSpan(ctx, "proto.Marshal")
 		defer span.End()
-		cachedState := proto.Clone(db.currentState).(*pb.BeaconState)
-		return cachedState, nil
+		newState := &pb.BeaconState{}
+		// For each READ we unmarshal the serialized state into a new state struct and return that.
+		if err := proto.Unmarshal(db.serializedState, newState); err != nil {
+			return nil, err
+		}
+		return newState, nil
 	}
 
 	var beaconState *pb.BeaconState
@@ -117,9 +121,13 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 		var err error
 		beaconState, err = createState(enc)
+
 		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
 			db.highestBlockSlot = beaconState.Slot
 		}
+		db.serializedState = enc
+		db.stateHash = hashutil.Hash(enc)
+
 		return err
 	})
 
@@ -141,21 +149,19 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	defer db.stateLock.Unlock()
 	lockSpan.End()
 
-	// Clone to prevent mutations of the cached copy
-	ctx, cloneSpan := trace.StartSpan(ctx, "proto.Clone")
-	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
-	if !ok {
-		cloneSpan.End()
-		return errors.New("could not clone beacon state")
-	}
-	db.currentState = currentState
-	cloneSpan.End()
-
-	stateHash, err := hashutil.HashProto(beaconState)
+	// For each WRITE of the state, we serialize the inputted state and save it in memory,
+	// and then the state is saved to disk.
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
 		return err
 	}
+	stateHash := hashutil.Hash(enc)
+	tempState := &pb.BeaconState{}
+	tempState.ValidatorRegistry = beaconState.ValidatorRegistry
 
+	copy(db.validatorBalances, beaconState.ValidatorBalances)
+	db.validatorRegistry = proto.Clone(tempState).(*pb.BeaconState).ValidatorRegistry
+	db.serializedState = enc
 	db.stateHash = stateHash
 
 	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
@@ -165,16 +171,9 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 
-		_, marshalSpan := trace.StartSpan(ctx, "proto.Marshal")
-		beaconStateEnc, err := proto.Marshal(beaconState)
-		if err != nil {
-			return err
-		}
-		marshalSpan.End()
-
-		stateBytes.Set(float64(len(beaconStateEnc)))
+		stateBytes.Set(float64(len(enc)))
 		reportStateMetrics(beaconState)
-		return chainInfo.Put(stateLookupKey, beaconStateEnc)
+		return chainInfo.Put(stateLookupKey, enc)
 	})
 }
 
@@ -330,14 +329,14 @@ func (db *BeaconDB) ValidatorRegistry(ctx context.Context) ([]*pb.Validator, err
 	defer db.stateLock.RUnlock()
 
 	// Return in-memory cached state, if available.
-	if db.currentState != nil {
+	if db.validatorRegistry != nil {
 		_, span := trace.StartSpan(ctx, "proto.Clone.ValidatorRegistry")
 		defer span.End()
-		newRegistry := make([]*pb.Validator, len(db.currentState.ValidatorRegistry))
-		for i, v := range db.currentState.ValidatorRegistry {
-			newRegistry[i] = proto.Clone(v).(*pb.Validator)
+		tempState := &pb.BeaconState{
+			ValidatorRegistry: db.validatorRegistry,
 		}
-		return newRegistry, nil
+		newState := proto.Clone(tempState).(*pb.BeaconState)
+		return newState.ValidatorRegistry, nil
 	}
 
 	var beaconState *pb.BeaconState
@@ -359,20 +358,61 @@ func (db *BeaconDB) ValidatorRegistry(ctx context.Context) ([]*pb.Validator, err
 	return beaconState.ValidatorRegistry, err
 }
 
+// ValidatorFromState fetches the validator with the desired index from the cached registry.
+func (db *BeaconDB) ValidatorFromState(ctx context.Context, index uint64) (*pb.Validator, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorFromState")
+	defer span.End()
+
+	db.stateLock.RLock()
+	defer db.stateLock.RUnlock()
+
+	if db.validatorRegistry != nil {
+		// return error if it's an invalid validator index.
+		if index >= uint64(len(db.validatorRegistry)) {
+			return nil, fmt.Errorf("invalid validator index %d", index)
+		}
+		validator := proto.Clone(db.validatorRegistry[index]).(*pb.Validator)
+		return validator, nil
+	}
+
+	var beaconState *pb.BeaconState
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		enc := chainInfo.Get(stateLookupKey)
+		if enc == nil {
+			return nil
+		}
+
+		var err error
+		beaconState, err = createState(enc)
+		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {
+			db.highestBlockSlot = beaconState.Slot
+		}
+		return err
+	})
+
+	// return error if it's an invalid validator index.
+	if index >= uint64(len(db.validatorRegistry)) {
+		return nil, fmt.Errorf("invalid validator index %d", index)
+	}
+
+	return beaconState.ValidatorRegistry[index], err
+}
+
 // ValidatorBalances fetches the current validator balances stored in state.
 func (db *BeaconDB) ValidatorBalances(ctx context.Context) ([]uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorRegistry")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorBalances")
 	defer span.End()
 
 	db.stateLock.RLock()
 	defer db.stateLock.RUnlock()
 
 	// Return in-memory cached state, if available.
-	if db.currentState != nil {
-		_, span := trace.StartSpan(ctx, "proto.Clone.ValidatorRegistry")
+	if db.validatorBalances != nil {
+		_, span := trace.StartSpan(ctx, "BeaconDB.Copy.Balances")
 		defer span.End()
-		newBalances := make([]uint64, len(db.currentState.ValidatorBalances))
-		copy(newBalances, db.currentState.ValidatorBalances)
+		newBalances := make([]uint64, len(db.validatorBalances))
+		copy(newBalances, db.validatorBalances)
 		return newBalances, nil
 	}
 
@@ -405,7 +445,7 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 }
 
 func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
-	if !featureconfig.FeatureConfig().EnableHistoricalStatePruning {
+	if featureconfig.FeatureConfig().DisableHistoricalStatePruning {
 		return nil
 	}
 	return db.update(func(tx *bolt.Tx) error {

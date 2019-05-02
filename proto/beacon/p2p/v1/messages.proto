@@ -36,7 +36,7 @@ message BeaconBlockRequest {
   bytes hash = 1;
 }
 
-message BeaconBlockRequestBySlotNumber{
+message BeaconBlockRequestBySlotNumber {
   uint64 slot_number = 1;
 }
 
@@ -47,9 +47,9 @@ message BeaconBlockResponse {
 
 message BatchedBeaconBlockRequest {
   uint64 start_slot = 1;
-  uint64 end_slot =2;
+  uint64 end_slot = 2;
 }
- 
+
 message BatchedBeaconBlockResponse {
   repeated BeaconBlock batched_blocks = 1;
 }
@@ -137,4 +137,8 @@ message ExitRequest {
 message ExitResponse {
   bytes hash = 1;
   VoluntaryExit voluntary_exit = 2;
+}
+
+message Handshake {
+  string deposit_contract_address = 1;
 }

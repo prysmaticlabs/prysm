@@ -31,9 +31,10 @@ type ValidatorServer struct {
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
+	beaconState, err := vs.beaconDB.HeadState(stream.Context())
 
 	reply := func() error {
-		beaconState, err := vs.beaconDB.HeadState(stream.Context())
+		beaconState, err = vs.beaconDB.HeadState(stream.Context())
 		if err != nil {
 			return fmt.Errorf("could not retrieve beacon state: %v", err)
 		}
@@ -45,13 +46,21 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 
 	}
 
-	if vs.beaconDB.HasAnyValidators(req.PublicKeys) {
+	hasAny, err := vs.beaconDB.HasAnyValidators(beaconState, req.PublicKeys)
+	if err != nil {
+		return err
+	}
+	if hasAny {
 		return reply()
 	}
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-			if !vs.beaconDB.HasAnyValidators(req.PublicKeys) {
+			hasAny, err := vs.beaconDB.HasAnyValidators(beaconState, req.PublicKeys)
+			if err != nil {
+				return err
+			}
+			if !hasAny {
 				continue
 			}
 			return reply()
@@ -109,7 +118,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	1.) The list of validators in the committee.
 //	2.) The shard to which the committee is assigned.
 //	3.) The slot at which the committee is assigned.
-//	4.) The bool signalling if the validator is expected to propose a block at the assigned slot.
+//	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) CommitteeAssignment(
 	ctx context.Context,
 	req *pb.CommitteeAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {

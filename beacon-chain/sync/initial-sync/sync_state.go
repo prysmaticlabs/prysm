@@ -3,6 +3,8 @@ package initialsync
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -34,6 +36,20 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if err := s.db.SaveBlock(finalizedState.LatestBlock); err != nil {
 		log.Errorf("Could not save block %v", err)
+		return
+	}
+
+	root, err := hashutil.HashBeaconBlock(finalizedState.LatestBlock)
+	if err != nil {
+		log.Errorf("Could not hash finalized block %v", err)
+		return
+	}
+	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       finalizedState.LatestBlock.Slot,
+		BlockRoot:  root[:],
+		ParentRoot: finalizedState.LatestBlock.ParentRootHash32,
+	}); err != nil {
+		log.Errorf("Could not to save attestation target: %v", err)
 		return
 	}
 
@@ -85,5 +101,5 @@ func (s *InitialSync) requestStateFromPeer(ctx context.Context, lastFinalizedRoo
 	stateReq.Inc()
 	return s.p2p.Send(ctx, &pb.BeaconStateRequest{
 		FinalizedStateRootHash32S: lastFinalizedRoot[:],
-	}, p2p.AnyPeer)
+	}, s.bestPeer)
 }

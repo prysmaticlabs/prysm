@@ -8,8 +8,9 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -21,6 +22,14 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
+
+var (
+	ejectedCount          float64
+	validatorEjectedGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "validator_ejected_count",
+		Help: "Total number of ejected validators",
+	})
+)
 
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
@@ -260,6 +269,12 @@ func ProcessEjections(state *pb.BeaconState, enableLogging bool) (*pb.BeaconStat
 					"index":  index}).Info("Validator ejected")
 			}
 			state = validators.ExitValidator(state, index)
+			// Verify the validator has properly exited due to ejection before setting the
+			// ejection count for gauge.
+			if state.ValidatorRegistry[index].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+				ejectedCount++
+				validatorEjectedGauge.Set(ejectedCount)
+			}
 		}
 	}
 	return state, nil

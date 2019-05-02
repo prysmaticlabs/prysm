@@ -25,6 +25,16 @@ spec:
       containers:
       - name: site
         image: gcr.io/prysmaticlabs/prysm/contract-addr:latest
+        readinessProbe:
+          httpGet:
+            path: /contract
+            port: 8080
+          initialDelaySeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /contract
+            port: 8080 
+          initialDelaySeconds: 10
         args:
           - --address-path=/etc/address/DEPOSIT_CONTRACT_ADDRESS
         ports: 
@@ -37,6 +47,24 @@ spec:
       - name: config-volume
         configMap:
           name: beacon-config
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: contract-address-http
+  namespace: beacon-chain
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: contract-address-http
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 80
 ---
 kind: Service
 apiVersion: v1
@@ -72,3 +100,9 @@ spec:
         port:
           number: 8080
         host: contract-address-http.beacon-chain.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+      - '*'
+      allowMethods:
+      - GET
+      maxAge: '24h'

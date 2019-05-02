@@ -419,38 +419,30 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":       fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
-		"justifiedEpoch": attestation.Data.JustifiedEpoch - 0,
+		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRootHash32)),
+		"justifiedEpoch": attestation.Data.JustifiedEpoch,
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
 	hasAttestation := rs.db.HasAttestation(attestationRoot)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", attestationRoot)).
+		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(attestationRoot[:]))).
 			Debug("Received, skipping attestation")
 		return nil
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	beaconState, err := rs.db.HeadState(ctx)
-	if err != nil {
-		log.Errorf("Failed to get beacon state: %v", err)
-		return err
-	}
+	highestSlot := rs.db.HighestBlockSlot()
 
 	span.AddAttributes(
 		trace.Int64Attribute("attestation.Data.Slot", int64(attestation.Data.Slot)),
-		trace.Int64Attribute("finalized state slot", int64(beaconState.Slot-params.BeaconConfig().SlotsPerEpoch)),
+		trace.Int64Attribute("finalized state slot", int64(highestSlot-params.BeaconConfig().SlotsPerEpoch)),
 	)
-
-	// Only accept attestations within the last epoch length.
-	if attestation.Data.Slot < beaconState.Slot-params.BeaconConfig().SlotsPerEpoch &&
-		// Edge case: do not reject any attestation in first epoch.
-		!(attestation.Data.Slot < beaconState.Slot && beaconState.Slot <= params.BeaconConfig().SlotsPerEpoch) {
+	if attestation.Data.Slot < highestSlot-params.BeaconConfig().SlotsPerEpoch {
 		log.WithFields(logrus.Fields{
 			"receivedSlot": attestation.Data.Slot,
-			"epochSlot":    beaconState.Slot - params.BeaconConfig().SlotsPerEpoch},
+			"epochSlot":    highestSlot - params.BeaconConfig().SlotsPerEpoch},
 		).Debug("Skipping received attestation with slot smaller than one epoch ago")
 		return nil
 	}
@@ -604,13 +596,13 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) error {
 	}
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", att == nil))
 	if att == nil {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", root)).
+		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).
 			Debug("Attestation not in db")
 		return nil
 	}
 
 	log.WithFields(logrus.Fields{
-		"attestationRoot": fmt.Sprintf("%#x", root),
+		"attestationRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"peer":            msg.Peer},
 	).Debug("Sending attestation to peer")
 	if err := rs.p2p.Send(ctx, &pb.AttestationResponse{
@@ -657,7 +649,7 @@ func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) error {
 func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb.BeaconBlockAnnounce) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
 	defer span.End()
-	log.WithField("blockRoot", fmt.Sprintf("%#x", announce.Hash)).
+	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(announce.Hash))).
 		Debug("Announcing canonical block")
 	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()

@@ -15,6 +15,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+const noMsgData = "message contains no data"
+
 func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.checkBlockValidity")
 	defer span.End()
@@ -41,7 +43,7 @@ func (s *InitialSync) doesParentExist(block *pb.BeaconBlock) bool {
 func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
 	defer func() {
 		if r := recover(); r != nil {
-			printedMsg := "message contains no data"
+			printedMsg := noMsgData
 			if msg.Data != nil {
 				printedMsg = proto.MarshalTextString(msg.Data)
 			}

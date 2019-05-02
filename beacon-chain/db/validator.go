@@ -2,10 +2,12 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 
 	"github.com/boltdb/bolt"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -37,13 +39,28 @@ func (db *BeaconDB) SaveValidatorIndexBatch(pubKey []byte, index int) error {
 }
 
 // ValidatorIndex accepts a public key and returns the corresponding validator index.
+// If the validator index is not found in DB, as a fail over, it searches the state and
+// saves it to the DB when found.
 func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 	if !db.HasValidator(pubKey) {
+		state, err := db.HeadState(context.Background())
+		if err != nil {
+			return 0, err
+		}
+		for i := 0; i < len(state.ValidatorRegistry); i++ {
+			v := state.ValidatorRegistry[i]
+			if bytes.Equal(v.Pubkey, pubKey) {
+				if err := db.SaveValidatorIndex(pubKey, i); err != nil {
+					return 0, err
+				}
+				return uint64(i), nil
+			}
+		}
 		return 0, fmt.Errorf("validator %#x does not exist", pubKey)
 	}
+
 	var index uint64
 	h := hashutil.Hash(pubKey)
-
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorBucket)
 
@@ -85,19 +102,9 @@ func (db *BeaconDB) HasValidator(pubKey []byte) bool {
 	return exists
 }
 
-// HasAllValidators returns true if all validators in a list of public keys
-// are in the bucket.
-func (db *BeaconDB) HasAllValidators(pubKeys [][]byte) bool {
-	return db.hasValidators(pubKeys, true /* requireAll */)
-}
-
 // HasAnyValidators returns true if any validator in a list of public keys
 // are in the bucket.
-func (db *BeaconDB) HasAnyValidators(pubKeys [][]byte) bool {
-	return db.hasValidators(pubKeys, false /* requireAll */)
-}
-
-func (db *BeaconDB) hasValidators(pubKeys [][]byte, requireAll bool) bool {
+func (db *BeaconDB) HasAnyValidators(state *pb.BeaconState, pubKeys [][]byte) (bool, error) {
 	exists := false
 	// #nosec G104, similar to HasBlock, HasAttestation... etc
 	db.view(func(tx *bolt.Tx) error {
@@ -105,14 +112,23 @@ func (db *BeaconDB) hasValidators(pubKeys [][]byte, requireAll bool) bool {
 		for _, pk := range pubKeys {
 			h := hashutil.Hash(pk)
 			exists = bkt.Get(h[:]) != nil
-			if !exists && requireAll {
-				break
-			} else if exists && !requireAll {
-				break
-			}
+			break
 		}
 		return nil
 	})
 
-	return exists
+	if !exists {
+		for _, pubKey := range pubKeys {
+			for i := 0; i < len(state.ValidatorRegistry); i++ {
+				v := state.ValidatorRegistry[i]
+				if bytes.Equal(v.Pubkey, pubKey) {
+					if err := db.SaveValidatorIndex(pubKey, i); err != nil {
+						return false, err
+					}
+					exists = true
+				}
+			}
+		}
+	}
+	return exists, nil
 }

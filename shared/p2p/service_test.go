@@ -32,23 +32,21 @@ var _ = shared.Service(&Server{})
 var _ = Broadcaster(&Server{})
 var _ = Sender(&Server{})
 
+const bar = "bar"
+const testTopic = "test_topic"
+
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-func TestStartDialRelayNode_InvalidMultiaddress(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	s, err := NewServer(&ServerConfig{
+func TestNewServer_InvalidMultiaddress(t *testing.T) {
+	_, err := NewServer(&ServerConfig{
 		RelayNodeAddr: "bad",
 	})
 
-	if err != nil {
-		t.Fatalf("Unable to create server: %v", err)
+	if err.Error() != "invalid multiaddr, must begin with /" {
+		t.Fatal("expected invalid multiaddr err")
 	}
-
-	s.Start()
-	logContains(t, hook, "Could not dial relay node: invalid multiaddr, must begin with /", logrus.ErrorLevel)
 }
 
 func TestP2P_PortTaken(t *testing.T) {
@@ -84,7 +82,7 @@ func TestBroadcast_OK(t *testing.T) {
 
 func TestEmit_OK(t *testing.T) {
 	s, _ := NewServer(&ServerConfig{})
-	p := &testpb.TestMessage{Foo: "bar"}
+	p := &testpb.TestMessage{Foo: bar}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -302,8 +300,8 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-	topic := "test_topic"
-	testMessage := &testpb.TestMessage{Foo: "bar"}
+	topic := testTopic
+	testMessage := &testpb.TestMessage{Foo: bar}
 
 	s.RegisterTopic(topic, testMessage)
 
@@ -316,8 +314,8 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 		defer close(wait)
 		msg := <-ch
 		tmsg := msg.Data.(*testpb.TestMessage)
-		if tmsg.Foo != "bar" {
-			t.Errorf("Expected test message Foo: \"bar\". Got: %v", tmsg)
+		if tmsg.Foo != bar {
+			t.Errorf("Expected test message foo:\"bar\". Got: %v", tmsg)
 		}
 	}()
 
@@ -338,8 +336,8 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-	topic := "test_topic"
-	testMessage := &testpb.TestMessage{Foo: "bar"}
+	topic := testTopic
+	testMessage := &testpb.TestMessage{Foo: bar}
 
 	i := 0
 	var testAdapter Adapter = func(next Handler) Handler {
@@ -368,7 +366,7 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 		defer close(wait)
 		msg := <-ch
 		tmsg := msg.Data.(*testpb.TestMessage)
-		if tmsg.Foo != "bar" {
+		if tmsg.Foo != bar {
 			t.Errorf("Expected test message Foo: \"bar\". Got: %v", tmsg)
 		}
 	}()
@@ -395,8 +393,8 @@ func TestRegisterTopic_HandlesPanic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-	topic := "test_topic"
-	testMessage := &testpb.TestMessage{Foo: "bar"}
+	topic := testTopic
+	testMessage := &testpb.TestMessage{Foo: bar}
 
 	var panicAdapter Adapter = func(next Handler) Handler {
 		return func(msg Message) {
@@ -444,6 +442,8 @@ func TestStatus_MinimumPeers(t *testing.T) {
 func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Message) error {
 	ctx := context.Background()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+
+	setHandshakeHandler(h, "")
 
 	gsub, err := pubsub.NewFloodSub(ctx, h)
 	if err != nil {

@@ -14,14 +14,22 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		CacheTreeHash: false,
+	})
+	logrus.SetLevel(logrus.DebugLevel)
+}
+
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -84,7 +92,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 }
 
 func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
+	hook := logTest.NewGlobal()
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -119,7 +127,14 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	}
 
 	testAcc.txOpts.Value = amount32Eth
+	badData := []byte("bad data")
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to deposit contract %v", err)
+	}
+
+	// A deposit with bad data should also be correctly processed and added to the
+	// db in the pending deposits bucket.
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, badData); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -139,14 +154,16 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	web3Service.chainStarted = true
 
 	web3Service.ProcessDepositLog(logs[0])
+	web3Service.ProcessDepositLog(logs[1])
 	pendingDeposits := web3Service.beaconDB.PendingDeposits(context.Background(), nil /*blockNum*/)
-	if len(pendingDeposits) != 1 {
+	if len(pendingDeposits) != 2 {
 		t.Errorf("Unexpected number of deposits. Wanted 1 deposit, got %+v", pendingDeposits)
 	}
+	testutil.AssertLogsContain(t, hook, "Invalid deposit registered in deposit contract")
+	hook.Reset()
 }
 
 func TestUnpackDepositLogData_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -230,7 +247,6 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -297,7 +313,7 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	}
 
 	cachedDeposits := web3Service.ChainStartDeposits()
-	if len(cachedDeposits) != 1 {
+	if len(cachedDeposits) != depositsReqForChainStart {
 		t.Errorf(
 			"Did not cache the chain start deposits correctly, received %d, wanted %d",
 			len(cachedDeposits),
@@ -316,7 +332,6 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 
 func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -401,7 +416,6 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 }
 
 func TestUnpackChainStartLogData_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -470,7 +484,6 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 }
 
 func TestHasChainStartLogOccurred_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -531,7 +544,6 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 }
 
 func TestETH1DataGenesis_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
