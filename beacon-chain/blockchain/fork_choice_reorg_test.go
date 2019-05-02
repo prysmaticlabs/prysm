@@ -35,8 +35,8 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	ctx := context.Background()
 	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	justifiedState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -114,13 +114,13 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       blocks[5].Slot,
 		BlockRoot:  roots[5][:],
-		ParentRoot: blocks[5].ParentRootHash32,
+		ParentRoot: blocks[5].ParentBlockRoot,
 	}
 	for i := 1; i < len(deposits); i++ {
 		voteTargets[uint64(i)] = &pb.AttestationTarget{
 			Slot:       blocks[4].Slot,
 			BlockRoot:  roots[4][:],
-			ParentRoot: blocks[4].ParentRootHash32,
+			ParentRoot: blocks[4].ParentBlockRoot,
 		}
 	}
 	attHandler := &mockAttestationHandler{
@@ -163,9 +163,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	roots := make([][32]byte, 6)
 	var err error
 	blocks[0] = &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		ParentRootHash32: []byte{'A'},
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            beaconState.Slot,
+		ParentBlockRoot: []byte{'A'},
+		Body:            &pb.BeaconBlockBody{},
 	}
 	roots[0], err = hashutil.HashBeaconBlock(blocks[0])
 	if err != nil {
@@ -173,9 +173,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[1] = &pb.BeaconBlock{
-		Slot:             beaconState.Slot + 2,
-		ParentRootHash32: roots[0][:],
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            beaconState.Slot + 2,
+		ParentBlockRoot: roots[0][:],
+		Body:            &pb.BeaconBlockBody{},
 	}
 	roots[1], err = hashutil.HashBeaconBlock(blocks[1])
 	if err != nil {
@@ -183,9 +183,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[2] = &pb.BeaconBlock{
-		Slot:             beaconState.Slot + 1,
-		ParentRootHash32: roots[0][:],
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            beaconState.Slot + 1,
+		ParentBlockRoot: roots[0][:],
+		Body:            &pb.BeaconBlockBody{},
 	}
 	roots[2], err = hashutil.HashBeaconBlock(blocks[2])
 	if err != nil {
@@ -193,9 +193,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[3] = &pb.BeaconBlock{
-		Slot:             beaconState.Slot + 3,
-		ParentRootHash32: roots[1][:],
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            beaconState.Slot + 3,
+		ParentBlockRoot: roots[1][:],
+		Body:            &pb.BeaconBlockBody{},
 	}
 	roots[3], err = hashutil.HashBeaconBlock(blocks[3])
 	if err != nil {
@@ -203,9 +203,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[4] = &pb.BeaconBlock{
-		Slot:             beaconState.Slot + 4,
-		ParentRootHash32: roots[2][:],
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            beaconState.Slot + 4,
+		ParentBlockRoot: roots[2][:],
+		Body:            &pb.BeaconBlockBody{},
 	}
 	roots[4], err = hashutil.HashBeaconBlock(blocks[4])
 	if err != nil {
@@ -213,9 +213,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[5] = &pb.BeaconBlock{
-		Slot:             beaconState.Slot + 5,
-		ParentRootHash32: roots[3][:],
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            beaconState.Slot + 5,
+		ParentBlockRoot: roots[3][:],
+		Body:            &pb.BeaconBlockBody{},
 	}
 	roots[5], err = hashutil.HashBeaconBlock(blocks[5])
 	if err != nil {

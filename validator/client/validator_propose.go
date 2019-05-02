@@ -97,9 +97,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 
 	// 2. Construct block.
 	block := &pbp2p.BeaconBlock{
-		Slot:             slot,
-		ParentRootHash32: parentTreeRoot[:],
-		Eth1Data:         eth1DataResp.Eth1Data,
+		Slot:            slot,
+		ParentBlockRoot: parentTreeRoot[:],
+		Eth1Data:        eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
 			RandaoReveal:      epochSignature.Marshal(),
 			Attestations:      attResp.PendingAttestations,
@@ -119,7 +119,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 		}).WithError(err).Error("Not proposing! Unable to compute state root")
 		return
 	}
-	block.StateRootHash32 = resp.GetStateRoot()
+	block.StateRoot = resp.GetStateRoot()
 
 	// 4. Sign the complete block.
 	// TODO(1366): BLS sign block

@@ -84,8 +84,8 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 
 	deposit := &pb.Deposit{
-		DepositData:     depositData,
-		MerkleTreeIndex: index,
+		DepositData: depositData,
+		Index:       index,
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.
@@ -130,8 +130,8 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	}
 
 	w.chainStartETH1Data = &pb.Eth1Data{
-		BlockHash32:       depositLog.BlockHash[:],
-		DepositRootHash32: chainStartDepositRoot[:],
+		BlockRoot:   depositLog.BlockHash[:],
+		DepositRoot: chainStartDepositRoot[:],
 	}
 
 	timestamp := binary.LittleEndian.Uint64(timestampData)

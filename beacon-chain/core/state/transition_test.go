@@ -92,8 +92,8 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -135,8 +135,8 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -203,8 +203,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -267,7 +267,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	beaconState.LatestBlockRootHash32S = blockRoots
+	beaconState.LatestBlockRoots = blockRoots
 	beaconState.LatestCrosslinks = []*pb.Crosslink{
 		{
 			CrosslinkDataRootHash32: []byte{1},
@@ -281,7 +281,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+			CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -295,8 +295,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot + 10,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -360,7 +360,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	beaconState.LatestBlockRootHash32S = blockRoots
+	beaconState.LatestBlockRoots = blockRoots
 	beaconState.LatestCrosslinks = []*pb.Crosslink{
 		{
 			CrosslinkDataRootHash32: []byte{1},
@@ -374,7 +374,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+			CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -390,8 +390,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot + 10,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -444,14 +444,14 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 
 	crosslinkRecord := make([]*pb.Crosslink, 64)
 	newState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
-		LatestAttestations:     attestations,
-		Balances:               validatorBalances,
-		ValidatorRegistry:      validatorRegistry,
-		LatestBlockRootHash32S: blockRoots,
-		LatestCrosslinks:       crosslinkRecord,
-		LatestRandaoMixes:      randaoHashes,
-		LatestIndexRootHash32S: make([][]byte,
+		Slot:               params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
+		LatestAttestations: attestations,
+		Balances:           validatorBalances,
+		ValidatorRegistry:  validatorRegistry,
+		LatestBlockRoots:   blockRoots,
+		LatestCrosslinks:   crosslinkRecord,
+		LatestRandaoMixes:  randaoHashes,
+		LatestActiveIndexRoots: make([][]byte,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,
 			params.BeaconConfig().LatestSlashedExitLength),
@@ -504,14 +504,14 @@ func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
 
 	crosslinkRecord := make([]*pb.Crosslink, 64)
 	newState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
-		LatestAttestations:     attestations,
-		Balances:               validatorBalances,
-		ValidatorRegistry:      validatorRegistry,
-		LatestBlockRootHash32S: blockRoots,
-		LatestCrosslinks:       crosslinkRecord,
-		LatestRandaoMixes:      randaoHashes,
-		LatestIndexRootHash32S: make([][]byte,
+		Slot:               params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
+		LatestAttestations: attestations,
+		Balances:           validatorBalances,
+		ValidatorRegistry:  validatorRegistry,
+		LatestBlockRoots:   blockRoots,
+		LatestCrosslinks:   crosslinkRecord,
+		LatestRandaoMixes:  randaoHashes,
+		LatestActiveIndexRoots: make([][]byte,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,
 			params.BeaconConfig().LatestSlashedExitLength),
@@ -575,14 +575,14 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	crosslinkRecord := make([]*pb.Crosslink, 64)
 
 	newState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
-		LatestAttestations:     attestations,
-		Balances:               validatorBalances,
-		ValidatorRegistry:      validatorRegistry,
-		LatestBlockRootHash32S: blockRoots,
-		LatestCrosslinks:       crosslinkRecord,
-		LatestRandaoMixes:      randaoHashes,
-		LatestIndexRootHash32S: make([][]byte,
+		Slot:               params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
+		LatestAttestations: attestations,
+		Balances:           validatorBalances,
+		ValidatorRegistry:  validatorRegistry,
+		LatestBlockRoots:   blockRoots,
+		LatestCrosslinks:   crosslinkRecord,
+		LatestRandaoMixes:  randaoHashes,
+		LatestActiveIndexRoots: make([][]byte,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,
 			params.BeaconConfig().LatestSlashedExitLength),
@@ -631,9 +631,9 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	}
 
 	newState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
-		LatestAttestations:     attestations,
-		LatestBlockRootHash32S: latestBlockRoots,
+		Slot:               params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+		LatestAttestations: attestations,
+		LatestBlockRoots:   latestBlockRoots,
 	}
 
 	wanted := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 0, 1)

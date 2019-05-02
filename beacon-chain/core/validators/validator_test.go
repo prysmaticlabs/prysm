@@ -102,9 +102,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot + 3,
-			Shard:                   6,
-			CrosslinkDataRootHash32: []byte{'B'},
+			Slot:              params.BeaconConfig().GenesisSlot + 3,
+			Shard:             6,
+			CrosslinkDataRoot: []byte{'B'},
 		},
 		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
 	}
@@ -140,9 +140,9 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    0,
-			Shard:                   1,
-			CrosslinkDataRootHash32: []byte{'B'},
+			Slot:              0,
+			Shard:             1,
+			CrosslinkDataRoot: []byte{'B'},
 		},
 		AggregationBitfield: []byte{'A'}, // 01000001 = 1,7
 	}
@@ -184,8 +184,8 @@ func TestProcessDeposit_BadWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{0},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{0},
 		},
 	}
 	beaconState := &pb.BeaconState{
@@ -215,8 +215,8 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{0, 0}
@@ -251,8 +251,8 @@ func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{0, 50}
@@ -284,12 +284,12 @@ func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{1000, 1000}
@@ -324,12 +324,12 @@ func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{0, 1000}
@@ -488,11 +488,11 @@ func TestSlashValidator_AlreadyWithdrawn(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 100,
 		ValidatorRegistry: []*pb.Validator{
-			{WithdrawalEpoch: 1},
+			{WithdrawableEpoch: 1},
 		},
 	}
 	want := fmt.Sprintf("withdrawn validator 0 could not get slashed, current slot: %d, withdrawn slot %d",
-		state.Slot, helpers.StartSlot(state.ValidatorRegistry[0].WithdrawalEpoch))
+		state.Slot, helpers.StartSlot(state.ValidatorRegistry[0].WithdrawableEpoch))
 	if _, err := SlashValidator(state, 0); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
