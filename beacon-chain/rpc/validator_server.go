@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -214,14 +215,69 @@ func (vs *ValidatorServer) ValidatorStatus(
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
+	_, eth1BlockNumBigInt, err := vs.beaconDB.DepositByPubkey(ctx, req.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	if eth1BlockNumBigInt == nil {
+		return &pb.ValidatorStatusResponse{
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
+			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+		}, nil
+	}
+
+	currEpoch := helpers.CurrentEpoch(beaconState)
+	eth1BlockNum := eth1BlockNumBigInt.Uint64()
+	timeToInclusion := (eth1BlockNum + params.BeaconConfig().Eth1FollowDistance) * params.BeaconConfig().GoerliBlockTime
+	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
+	depositBlockSlot := (timeToInclusion / params.BeaconConfig().SecondsPerSlot) + votingPeriodSlots
+
+	var validatorInState *pbp2p.Validator
+	var validatorIndex uint64
+	for idx, val := range beaconState.ValidatorRegistry {
+		if bytes.Equal(val.Pubkey, req.PublicKey) {
+			if helpers.IsActiveValidator(val, currEpoch) {
+				return &pb.ValidatorStatusResponse{
+					Status:                 pb.ValidatorStatus_ACTIVE,
+					ActivationEpoch:        val.ActivationEpoch,
+					Eth1DepositBlockNumber: eth1BlockNum,
+					DepositInclusionSlot:   depositBlockSlot,
+				}, nil
+			}
+			validatorInState = val
+			validatorIndex = uint64(idx)
+			break
+		}
+	}
+
+	var positionInQueue uint64
+	// If the validator has deposited and has been added to the state:
+	if validatorInState != nil {
+		var lastActivatedValidatorIdx uint64
+		for j := len(beaconState.ValidatorRegistry) - 1; j >= 0; j-- {
+			if helpers.IsActiveValidator(beaconState.ValidatorRegistry[j], currEpoch) {
+				lastActivatedValidatorIdx = uint64(j)
+				break
+			}
+		}
+		// Our position in the activation queue is the above index - our validator index.
+		positionInQueue = lastActivatedValidatorIdx - validatorIndex
+	}
+
 	status, err := vs.validatorStatus(req.PublicKey, beaconState)
 	if err != nil {
 		return nil, err
 	}
+	res := &pb.ValidatorStatusResponse{
+		Status:                    status,
+		Eth1DepositBlockNumber:    eth1BlockNum,
+		PositionInActivationQueue: positionInQueue,
+		DepositInclusionSlot:      depositBlockSlot,
+		ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
+	}
 
-	return &pb.ValidatorStatusResponse{
-		Status: status,
-	}, nil
+	return res, nil
 }
 
 func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.BeaconState) (pb.ValidatorStatus, error) {
