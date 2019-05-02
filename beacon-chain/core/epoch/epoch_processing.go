@@ -575,7 +575,7 @@ func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := helpers.CurrentEpoch(state) + 1
 	for slot := helpers.StartSlot(prevEpoch); slot < helpers.StartSlot(nextEpoch); slot++ {
 		epoch := helpers.SlotToEpoch(slot)
-		committees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registery change */)
+		committees, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false /* registry change */)
 		if err != nil {
 			return nil, err
 		}
