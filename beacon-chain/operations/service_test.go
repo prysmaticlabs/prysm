@@ -133,7 +133,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
+				Slot:                    uint64(i),
 				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		}
@@ -142,9 +142,9 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		}
 	}
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 64,
+		Slot: 64,
 		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch,
+			Epoch:                   0,
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
+				Slot:                    uint64(i),
 				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		}
@@ -180,9 +180,9 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 
 	// At slot 200 only attestations up to from slot 137 to 139 are valid attestations.
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 200,
+		Slot: 200,
 		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch + 2,
+			Epoch:                   2,
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
+				Slot:                    uint64(i),
 				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		}
@@ -222,9 +222,9 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		}
 	}
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 15,
+		Slot: 15,
 		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch,
+			Epoch:                   0,
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -292,7 +292,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
+				Slot:                    uint64(i),
 				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		}
@@ -302,9 +302,9 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	}
 
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 15,
+		Slot: 15,
 		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch,
+			Epoch:                   0,
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -87,8 +86,8 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	if chainHead.Slot != justifiedState.Slot+5 {
 		t.Errorf(
 			"Expected chain head with slot %d, received %d",
-			justifiedState.Slot+5-params.BeaconConfig().GenesisSlot,
-			chainHead.Slot-params.BeaconConfig().GenesisSlot,
+			justifiedState.Slot+5,
+			chainHead.Slot,
 		)
 	}
 
@@ -150,7 +149,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	}
 	want := fmt.Sprintf(
 		"Reorg happened, last head at slot %d, new head block at slot %d",
-		blocks[5].Slot-params.BeaconConfig().GenesisSlot, blocks[4].Slot-params.BeaconConfig().GenesisSlot,
+		blocks[5].Slot, blocks[4].Slot,
 	)
 	testutil.AssertLogsContain(t, hook, want)
 }

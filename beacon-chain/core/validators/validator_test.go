@@ -430,7 +430,7 @@ func TestExitValidator_OK(t *testing.T) {
 
 func TestExitValidator_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisEpoch + 1000,
+		Slot: 1000,
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},

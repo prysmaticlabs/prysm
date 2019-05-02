@@ -85,8 +85,8 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	}
 	log.WithFields(logrus.Fields{
 		"headRoot":  fmt.Sprintf("0x%x", bytesutil.Trunc(h[:])),
-		"headSlot":  blk.Slot - params.BeaconConfig().GenesisSlot,
-		"stateSlot": beaconState.Slot - params.BeaconConfig().GenesisSlot,
+		"headSlot":  blk.Slot,
+		"stateSlot": beaconState.Slot,
 	}).Info("Chain head block and state updated")
 
 	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {

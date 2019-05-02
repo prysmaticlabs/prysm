@@ -44,7 +44,6 @@ type BeaconChainConfig struct {
 	EjectionBalance            uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	HighBalanceIncrement       uint64 // HighBalanceIncrement is used for converting the high balance into the low balance for validators.
 	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
-	//Deprecated: Do not use.
 
 	// Initial value constants.
 	FarFutureEpoch          uint64   // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
@@ -55,7 +54,6 @@ type BeaconChainConfig struct {
 	GenesisStartShard uint64 // GenesisStartShard is the first shard to assign validators.
 	// Deprecated: Do not use.
 	EmptySignature [96]byte // EmptySignature is used to represent a zeroed out BLS Signature.
-	// Deprecated: Do not use.
 
 	// Time parameters constants.
 	SecondsPerSlot               uint64 // SecondsPerSlot is how many seconds are in a single slot.
@@ -70,14 +68,6 @@ type BeaconChainConfig struct {
 	MaxCrosslinkEpochs           uint64 // MaxCrosslinkEpochs defines the max epoch from current a crosslink can be formed at.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	EpochsPerEth1VotingPeriod    uint64 // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
-	// Deprecated: Do not use.
-
-	// State list lengths
-	LatestRandaoMixesLength      uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	LatestActiveIndexRootsLength uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
-	LatestSlashedExitLength      uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
-	LatestBlockRootsLength       uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
-	// Deprecated: Do not use.
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient                 uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
@@ -86,7 +76,7 @@ type BeaconChainConfig struct {
 	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
 	MinPenaltyQuotient                 uint64 // MinPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
 	AttestationInclusionRewardQuotient uint64 // AttestationInclusionRewardQuotient defines the reward quotient of proposer for including attestations.
-	// Deprecated: Do not use.
+	GweiPerEth                         uint64 // GweiPerEth is the amount of gwei corresponding to 1 eth.
 
 	// Max operations per block constants.
 	MaxProposerSlashings uint64 // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
@@ -95,14 +85,6 @@ type BeaconChainConfig struct {
 	MaxDeposits          uint64 // MaxVoluntaryExits defines the maximum number of validator deposits in a block.
 	MaxVoluntaryExits    uint64 // MaxVoluntaryExits defines the maximum number of validator exits in a block.
 	MaxTransfers         uint64 // MaxTransfers defines the maximum number of balance transfers in a block.
-
-	// BLS domain values.
-	DomainBeaconProposer uint64 // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
-	DomainRandao         uint64 // DomainRandao defines the BLS signature domain for randao verification.
-	DomainAttestation    uint64 // DomainAttestation defines the BLS signature domain for attestation verification.
-	DomainDeposit        uint64 // DomainDeposit defines the BLS signature domain for deposit verification.
-	DomainVoluntaryExit  uint64 // DomainVoluntaryExit defines the BLS signature domain for exit verification.
-	DomainTransfer       uint64 // DomainTransfer defines the BLS signature domain for transfer verification.
 
 	// Prysm constants.
 	DepositsForChainStart   uint64        // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
@@ -183,20 +165,13 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EpochsPerEth1VotingPeriod:    16,
 	Eth1FollowDistance:           1024,
 
-	// State list length constants.
-	LatestRandaoMixesLength:      8192,
-	LatestActiveIndexRootsLength: 8192,
-	LatestSlashedExitLength:      8192,
-
-	// Deprecated.
-	LatestBlockRootsLength: 8192,
-
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:                 32,
 	WhistleBlowingRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
 	InactivityPenaltyQuotient:          1 << 24,
 	MinPenaltyQuotient:                 32,
+	GweiPerEth:                         1000000000,
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
@@ -206,13 +181,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 	MaxTransfers:         16,
 
-	// BLS domain values.
-	DomainBeaconProposer: 0,
-	DomainRandao:         1,
-	DomainAttestation:    2,
-	DomainDeposit:        3,
-	DomainVoluntaryExit:  4,
-	DomainTransfer:       5,
 
 	// Prysm constants.
 	DepositsForChainStart: 16384,
