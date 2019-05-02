@@ -1133,7 +1133,64 @@ func TestProcessCrosslink_NoUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Since there has been no attestation, crosslink stayed the same.
 	if !reflect.DeepEqual(oldCrosslink, newState.CurrentCrosslinks[0]) {
 		t.Errorf("Did not get correct crosslink back")
+	}
+}
+
+func TestProcessCrosslink_SuccessfulUpdate(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+	ge := params.BeaconConfig().GenesisEpoch
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	blockRoots := make([][]byte, 128)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i + 1)}
+	}
+
+	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks[i] = &pb.Crosslink{
+			Epoch:                   ge,
+			CrosslinkDataRootHash32: []byte{'B'},
+		}
+	}
+	var atts []*pb.PendingAttestation
+	for s := uint64(0); s < params.BeaconConfig().ShardCount; s++ {
+		atts = append(atts, &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:              gs + 1 + (s % e),
+				Shard:             s,
+				CrosslinkDataRoot: []byte{'B'},
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
+				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
+		})
+	}
+	state := &pb.BeaconState{
+		Slot:                      gs + e + 2,
+		ValidatorRegistry:         validators,
+		PreviousEpochAttestations: atts,
+		Balances:                  balances,
+		LatestBlockRoots:          blockRoots,
+		CurrentCrosslinks:         crosslinks,
+	}
+	newState, err := ProcessCrosslink(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(crosslinks[0], newState.CurrentCrosslinks[0]) {
+		t.Errorf("Crosslink is not the same")
 	}
 }

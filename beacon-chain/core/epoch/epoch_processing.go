@@ -654,7 +654,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	}
 
 	// Convert shard attestations to shard crosslinks.
-	shardCrosslinks := make([]*pb.Crosslink, len(matchedAtts.source))
+	shardCrosslinks := make([]*pb.Crosslink, len(shardAtts))
 	for i := 0; i < len(shardCrosslinks); i++ {
 		shardCrosslinks[i] = CrosslinkFromAttsData(state, shardAtts[i].Data)
 	}
@@ -688,7 +688,6 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	crosslinkAtts = attsForCrosslink(state, candidateCrosslinks[0], shardAtts)
 	winnerBalance, err = AttestingBalance(state, crosslinkAtts)
 	winnerCrosslink = candidateCrosslinks[0]
-
 	for _, c := range candidateCrosslinks {
 		crosslinkAtts := crosslinkAtts[:0]
 		crosslinkAtts = attsForCrosslink(state, c, shardAtts)

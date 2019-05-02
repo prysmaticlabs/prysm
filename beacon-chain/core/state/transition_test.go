@@ -636,7 +636,8 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 		LatestBlockRootHash32S: latestBlockRoots,
 	}
 
-	wanted := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 0, 1)
+	wanted := fmt.Sprintf("could not process justification and finalization of state: slot %d is not within expected range of %d to %d",
+		64, 0, 64)
 	if _, err := state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, state.DefaultConfig()); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %v", wanted, err)
 	}

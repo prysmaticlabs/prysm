@@ -286,6 +286,10 @@ func AttestationParticipants(
 		}
 	}
 
+	if len(selectedCommittee) == 0 {
+		return nil, nil
+	}
+
 	if isValidated, err := VerifyBitfield(bitfield, len(selectedCommittee)); !isValidated || err != nil {
 		if err != nil {
 			return nil, err
