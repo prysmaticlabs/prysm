@@ -174,8 +174,6 @@ message BeaconBlock {
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
-  bytes parent_root_hash32 = 1001;
-  bytes state_root_hash32 = 1002;
   bytes randao_reveal = 1003;
   Eth1Data eth1_data = 1004;
 }

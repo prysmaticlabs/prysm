@@ -426,8 +426,8 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if !bytes.Equal(broadcastedBlock.StateRootHash32, computedStateRoot) {
-		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRootHash32)
+	if !bytes.Equal(broadcastedBlock.StateRoot, computedStateRoot) {
+		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRoot)
 	}
 }
 

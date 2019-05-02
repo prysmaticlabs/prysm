@@ -210,8 +210,8 @@ func TestProcessBlock_OK(t *testing.T) {
 			DepositRootHash32: []byte{1, 2, 3, 4, 5},
 			BlockHash32:       []byte{6, 7, 8, 9, 10},
 		},
-		ParentRootHash32: parentRoot[:],
-		Slot:             params.BeaconConfig().GenesisSlot,
+		ParentBlockRoot: parentRoot[:],
+		Slot:            params.BeaconConfig().GenesisSlot,
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
@@ -285,8 +285,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 			DepositRootHash32: []byte{1, 2, 3, 4, 5},
 			BlockHash32:       []byte{6, 7, 8, 9, 10},
 		},
-		ParentRootHash32: parentRoot[:],
-		Slot:             params.BeaconConfig().GenesisSlot + 1,
+		ParentBlockRoot: parentRoot[:],
+		Slot:            params.BeaconConfig().GenesisSlot + 1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -310,8 +310,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 			DepositRootHash32: []byte{11, 12, 13, 14, 15},
 			BlockHash32:       []byte{16, 17, 18, 19, 20},
 		},
-		ParentRootHash32: []byte{},
-		Slot:             1,
+		ParentBlockRoot: []byte{},
+		Slot:            1,
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{

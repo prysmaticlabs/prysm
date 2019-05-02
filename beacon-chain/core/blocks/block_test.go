@@ -16,7 +16,7 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 	stateHash := []byte{0}
 	b1 := NewGenesisBlock(stateHash)
 
-	if b1.ParentRootHash32 == nil {
+	if b1.ParentBlockRoot == nil {
 		t.Error("genesis block missing ParentHash field")
 	}
 
@@ -28,7 +28,7 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 		t.Error("genesis block missing RandaoReveal field")
 	}
 
-	if !bytes.Equal(b1.StateRootHash32, stateHash) {
+	if !bytes.Equal(b1.StateRoot, stateHash) {
 		t.Error("genesis block StateRootHash32 isn't initialized correctly")
 	}
 	expectedEth1 := &pb.Eth1Data{
