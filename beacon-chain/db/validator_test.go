@@ -96,43 +96,6 @@ func TestHasValidator(t *testing.T) {
 	}
 }
 
-func TestHasAllValidators(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-
-	knownPubKeys := [][]byte{
-		[]byte("pk1"),
-		[]byte("pk2"),
-	}
-	unknownPubKeys := [][]byte{
-		[]byte("pk3"),
-		[]byte("pk4"),
-	}
-
-	// Populate the db with some public key
-	if err := db.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(validatorBucket)
-		for _, pk := range knownPubKeys {
-			h := hashutil.Hash(pk)
-			if err := bkt.Put(h[:], []byte("data")); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if !db.HasAllValidators(knownPubKeys) {
-		t.Error("Database did not have expected validators")
-	}
-
-	if db.HasAllValidators(append(knownPubKeys, unknownPubKeys...)) {
-		t.Error("Database returned true when there are pubkeys that did not exist")
-	}
-}
-
 func TestHasAnyValidator(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
@@ -161,11 +124,23 @@ func TestHasAnyValidator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !db.HasAnyValidators(append(knownPubKeys, unknownPubKeys...)) {
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: []*pb.Validator{},
+	}
+
+	has, err := db.HasAnyValidators(beaconState, append(knownPubKeys, unknownPubKeys...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has {
 		t.Error("Database did not have expected validators")
 	}
 
-	if db.HasAnyValidators(unknownPubKeys) {
+	has, err = db.HasAnyValidators(beaconState, unknownPubKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has {
 		t.Error("Database returned true when there are only pubkeys that did not exist")
 	}
 }

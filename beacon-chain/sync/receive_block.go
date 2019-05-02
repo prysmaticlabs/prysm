@@ -197,9 +197,6 @@ func (rs *RegularSync) validateAndProcessBlock(
 			log.Errorf("Could not save historical state %v", err)
 			return nil, nil, false, err
 		}
-	} else {
-		forkedBlock.Inc()
-		log.Warnf("Received Block from a Forked Chain with root %#x and slot %d", blockRoot, block.Slot)
 	}
 
 	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {

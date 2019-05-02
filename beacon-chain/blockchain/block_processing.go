@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -27,6 +28,7 @@ type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
 	IsCanonical(slot uint64, hash []byte) bool
 	InsertsCanonical(slot uint64, hash []byte)
+	RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
