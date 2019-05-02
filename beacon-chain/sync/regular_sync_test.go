@@ -207,8 +207,8 @@ func TestProcessBlock_OK(t *testing.T) {
 
 	data := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1, 2, 3, 4, 5},
-			BlockHash32:       []byte{6, 7, 8, 9, 10},
+			DepositRoot: []byte{1, 2, 3, 4, 5},
+			BlockRoot:   []byte{6, 7, 8, 9, 10},
 		},
 		ParentBlockRoot: parentRoot[:],
 		Slot:            params.BeaconConfig().GenesisSlot,
@@ -282,8 +282,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 
 	data1 := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1, 2, 3, 4, 5},
-			BlockHash32:       []byte{6, 7, 8, 9, 10},
+			DepositRoot: []byte{1, 2, 3, 4, 5},
+			BlockRoot:   []byte{6, 7, 8, 9, 10},
 		},
 		ParentBlockRoot: parentRoot[:],
 		Slot:            params.BeaconConfig().GenesisSlot + 1,
@@ -307,8 +307,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 
 	data2 := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{11, 12, 13, 14, 15},
-			BlockHash32:       []byte{16, 17, 18, 19, 20},
+			DepositRoot: []byte{11, 12, 13, 14, 15},
+			BlockRoot:   []byte{16, 17, 18, 19, 20},
 		},
 		ParentBlockRoot: []byte{},
 		Slot:            1,

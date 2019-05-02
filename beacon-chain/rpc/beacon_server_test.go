@@ -304,7 +304,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("0x0"),
+			BlockRoot: []byte("0x0"),
 		},
 		DepositIndex: 2,
 	}
@@ -384,7 +384,7 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("0x0"),
+			BlockRoot: []byte("0x0"),
 		},
 		DepositIndex: 10,
 	}
@@ -462,7 +462,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("0x0"),
+			BlockRoot: []byte("0x0"),
 		},
 		DepositIndex: 2,
 	}
@@ -530,7 +530,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte{'a'},
+			BlockRoot: []byte{'a'},
 		},
 		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
 	}
@@ -566,8 +566,8 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	depositRoot := depositTrie.Root()
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32:       []byte("hash0"),
-			DepositRootHash32: depositRoot[:],
+			BlockRoot:   []byte("hash0"),
+			DepositRoot: depositRoot[:],
 		},
 		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
 	}
@@ -576,7 +576,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 		latestBlockNumber: height,
 		hashesByHeight: map[int][]byte{
 			0: []byte("hash0"),
-			1: beaconState.LatestEth1Data.BlockHash32,
+			1: beaconState.LatestEth1Data.BlockRoot,
 		},
 	}
 	beaconServer := &BeaconServer{
@@ -593,10 +593,10 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	}
 	// If the data vote objects are empty, the deposit root should be the one corresponding
 	// to the deposit contract in the powchain service, fetched using powChainService.DepositRoot()
-	if !bytes.Equal(result.Eth1Data.DepositRootHash32, depositRoot[:]) {
+	if !bytes.Equal(result.Eth1Data.DepositRoot, depositRoot[:]) {
 		t.Errorf(
 			"Expected deposit roots to match, received %#x == %#x",
-			result.Eth1Data.DepositRootHash32,
+			result.Eth1Data.DepositRoot,
 			depositRoot,
 		)
 	}
@@ -611,15 +611,15 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		{
 			VoteCount: 1,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32:       []byte("block0"),
-				DepositRootHash32: []byte("deposit0"),
+				BlockRoot:   []byte("block0"),
+				DepositRoot: []byte("deposit0"),
 			},
 		},
 		{
 			VoteCount: 2,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32:       []byte("block1"),
-				DepositRootHash32: []byte("deposit1"),
+				BlockRoot:   []byte("block1"),
+				DepositRoot: []byte("deposit1"),
 			},
 		},
 		// We include the case in which the vote counts might match and in that
@@ -628,22 +628,22 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		{
 			VoteCount: 3,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32:       []byte("block2"),
-				DepositRootHash32: []byte("deposit2"),
+				BlockRoot:   []byte("block2"),
+				DepositRoot: []byte("deposit2"),
 			},
 		},
 		{
 			VoteCount: 3,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32:       []byte("block4"),
-				DepositRootHash32: []byte("deposit3"),
+				BlockRoot:   []byte("block4"),
+				DepositRoot: []byte("deposit3"),
 			},
 		},
 	}
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: eth1DataVotes,
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("stub"),
+			BlockRoot: []byte("stub"),
 		},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -655,13 +655,13 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		powChainService: &mockPOWChainService{
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
 			hashesByHeight: map[int][]byte{
-				0: beaconState.LatestEth1Data.BlockHash32,
-				1: beaconState.Eth1DataVotes[0].Eth1Data.BlockHash32,
-				2: beaconState.Eth1DataVotes[1].Eth1Data.BlockHash32,
-				3: beaconState.Eth1DataVotes[3].Eth1Data.BlockHash32,
+				0: beaconState.LatestEth1Data.BlockRoot,
+				1: beaconState.Eth1DataVotes[0].Eth1Data.BlockRoot,
+				2: beaconState.Eth1DataVotes[1].Eth1Data.BlockRoot,
+				3: beaconState.Eth1DataVotes[3].Eth1Data.BlockRoot,
 				// We will give the hash at index 2 in the beacon state's latest eth1 votes
 				// priority in being selected as the best vote by giving it the highest block number.
-				4: beaconState.Eth1DataVotes[2].Eth1Data.BlockHash32,
+				4: beaconState.Eth1DataVotes[2].Eth1Data.BlockRoot,
 			},
 		},
 	}
@@ -671,18 +671,18 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	}
 	// Vote at index 2 should have won the best vote selection mechanism as it had the highest block number
 	// despite being tied at vote count with the vote at index 3.
-	if !bytes.Equal(result.Eth1Data.BlockHash32, beaconState.Eth1DataVotes[2].Eth1Data.BlockHash32) {
+	if !bytes.Equal(result.Eth1Data.BlockRoot, beaconState.Eth1DataVotes[2].Eth1Data.BlockRoot) {
 		t.Errorf(
 			"Expected block hashes to match, received %#x == %#x",
-			result.Eth1Data.BlockHash32,
-			beaconState.Eth1DataVotes[2].Eth1Data.BlockHash32,
+			result.Eth1Data.BlockRoot,
+			beaconState.Eth1DataVotes[2].Eth1Data.BlockRoot,
 		)
 	}
-	if !bytes.Equal(result.Eth1Data.DepositRootHash32, beaconState.Eth1DataVotes[2].Eth1Data.DepositRootHash32) {
+	if !bytes.Equal(result.Eth1Data.DepositRoot, beaconState.Eth1DataVotes[2].Eth1Data.DepositRoot) {
 		t.Errorf(
 			"Expected deposit roots to match, received %#x == %#x",
-			result.Eth1Data.DepositRootHash32,
-			beaconState.Eth1DataVotes[2].Eth1Data.DepositRootHash32,
+			result.Eth1Data.DepositRoot,
+			beaconState.Eth1DataVotes[2].Eth1Data.DepositRoot,
 		)
 	}
 }
@@ -697,7 +697,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("stub"),
+			BlockRoot: []byte("stub"),
 		},
 	}
 	numOfVotes := 1000
@@ -708,8 +708,8 @@ func Benchmark_Eth1Data(b *testing.B) {
 			&pbp2p.Eth1DataVote{
 				VoteCount: uint64(i),
 				Eth1Data: &pbp2p.Eth1Data{
-					BlockHash32:       blockhash,
-					DepositRootHash32: deposit,
+					BlockRoot:   blockhash,
+					DepositRoot: deposit,
 				},
 			})
 		hashesByHeight[i] = blockhash

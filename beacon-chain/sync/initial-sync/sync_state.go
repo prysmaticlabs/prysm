@@ -64,7 +64,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
+	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockRoot))
 	if err != nil {
 		log.Errorf("Unable to get powchain block %v", err)
 	}

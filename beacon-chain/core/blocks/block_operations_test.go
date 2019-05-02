@@ -136,8 +136,8 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{1},
-					BlockHash32:       []byte{2},
+					DepositRoot: []byte{1},
+					BlockRoot:   []byte{2},
 				},
 				VoteCount: 5,
 			},
@@ -145,8 +145,8 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1},
-			BlockHash32:       []byte{2},
+			DepositRoot: []byte{1},
+			BlockRoot:   []byte{2},
 		},
 	}
 	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
@@ -161,8 +161,8 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{0},
-					BlockHash32:       []byte{1},
+					DepositRoot: []byte{0},
+					BlockRoot:   []byte{1},
 				},
 				VoteCount: 5,
 			},
@@ -171,8 +171,8 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 	}
 
@@ -187,11 +187,11 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 			newETH1DataVotes[1].VoteCount,
 		)
 	}
-	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRootHash32, []byte{2}) {
+	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRoot, []byte{2}) {
 		t.Errorf(
 			"expected new ETH1 data votes to have a new element with deposit root = %#x, received deposit root = %#x",
 			[]byte{1},
-			newETH1DataVotes[1].Eth1Data.DepositRootHash32,
+			newETH1DataVotes[1].Eth1Data.DepositRoot,
 		)
 	}
 }
@@ -1185,8 +1185,8 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{0},
-			BlockHash32:       []byte{1},
+			DepositRoot: []byte{0},
+			BlockRoot:   []byte{1},
 		},
 	}
 	want := "merkle branch of deposit root did not verify"
@@ -1271,8 +1271,8 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		ValidatorRegistry: registry,
 		Balances:          balances,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: root[:],
-			BlockHash32:       root[:],
+			DepositRoot: root[:],
+			BlockRoot:   root[:],
 		},
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),
@@ -1423,8 +1423,8 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		ValidatorRegistry: registry,
 		Balances:          balances,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: root[:],
-			BlockHash32:       root[:],
+			DepositRoot: root[:],
+			BlockRoot:   root[:],
 		},
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),
@@ -1585,8 +1585,8 @@ func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented
 		Balances:          balances,
 		DepositIndex:      0,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: root[:],
-			BlockHash32:       root[:],
+			DepositRoot: root[:],
+			BlockRoot:   root[:],
 		},
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),

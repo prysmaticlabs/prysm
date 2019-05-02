@@ -44,8 +44,8 @@ func generateSimulatedBlock(
 		ParentBlockRoot: prevBlockRoot[:],
 		StateRoot:       stateRoot[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1},
-			BlockHash32:       []byte{2},
+			DepositRoot: []byte{1},
+			BlockRoot:   []byte{2},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      epochSignature.Marshal(),
@@ -84,7 +84,7 @@ func generateSimulatedBlock(
 		}
 
 		root := newTrie.Root()
-		block.Eth1Data.DepositRootHash32 = root[:]
+		block.Eth1Data.DepositRoot = root[:]
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			DepositData: data,
 			Proof:       proof,

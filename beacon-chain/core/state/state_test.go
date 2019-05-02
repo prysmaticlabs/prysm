@@ -92,8 +92,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		deposits,
 		genesisTime,
 		&pb.Eth1Data{
-			DepositRootHash32: processedPowReceiptRoot,
-			BlockHash32:       []byte{},
+			DepositRoot: processedPowReceiptRoot,
+			BlockRoot:   []byte{},
 		})
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
@@ -180,8 +180,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// deposit root checks.
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, processedPowReceiptRoot) {
-		t.Error("LatestEth1Data DepositRootHash32 was not correctly initialized")
+	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, processedPowReceiptRoot) {
+		t.Error("LatestEth1Data DepositRoot was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.Eth1DataVotes, []*pb.Eth1DataVote{}) {
 		t.Error("Eth1DataVotes was not correctly initialized")

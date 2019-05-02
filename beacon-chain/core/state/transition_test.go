@@ -92,8 +92,8 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -135,8 +135,8 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -203,8 +203,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -295,8 +295,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot + 10,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -390,8 +390,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot + 10,
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRoot: []byte{2},
+			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,

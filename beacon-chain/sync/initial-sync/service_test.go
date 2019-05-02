@@ -148,7 +148,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 			Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
-			BlockHash32: []byte{},
+			BlockRoot: []byte{},
 		},
 	}
 
@@ -163,7 +163,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 			Slot: params.BeaconConfig().GenesisSlot + 4*params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
-			BlockHash32: []byte{},
+			BlockRoot: []byte{},
 		},
 	}
 
@@ -180,8 +180,8 @@ func TestSavingBlock_InSync(t *testing.T) {
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
 			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte{1, 2, 3},
-				BlockHash32:       []byte{4, 5, 6},
+				DepositRoot: []byte{1, 2, 3},
+				BlockRoot:   []byte{4, 5, 6},
 			},
 			ParentBlockRoot: genericHash,
 			Slot:            Slot,

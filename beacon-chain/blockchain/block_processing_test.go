@@ -83,8 +83,8 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		Slot:            2,
 		ParentBlockRoot: parentRoot[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{},
 	}
@@ -106,8 +106,8 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -141,8 +141,8 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: randaoReveal,
@@ -177,8 +177,8 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -203,8 +203,8 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{},
@@ -232,8 +232,8 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -259,8 +259,8 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{},
@@ -315,8 +315,8 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -360,8 +360,8 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	ctx := context.Background()
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -408,8 +408,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -455,7 +455,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		pendingDeposits[i].Proof = proof
 	}
 	depositRoot := depositTrie.Root()
-	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
+	beaconState.LatestEth1Data.DepositRoot = depositRoot[:]
 	if err := db.SaveHistoricalState(context.Background(), beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -465,8 +465,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: randaoReveal,
@@ -570,8 +570,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -731,8 +731,8 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	}
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: []byte{2},
-		BlockHash32:       []byte{3},
+		DepositRoot: []byte{2},
+		BlockRoot:   []byte{3},
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot
 
@@ -745,8 +745,8 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentRoot[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: randaoReveal,

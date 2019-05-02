@@ -35,8 +35,8 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	ctx := context.Background()
 	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	justifiedState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {

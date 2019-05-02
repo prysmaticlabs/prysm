@@ -112,8 +112,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			StateRoot:       stateRoot[:],
 			ParentBlockRoot: genesisRoot[:],
 			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte("a"),
-				BlockHash32:       []byte("b"),
+				DepositRoot: []byte("a"),
+				BlockRoot:   []byte("b"),
 			},
 		}
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {

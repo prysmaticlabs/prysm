@@ -130,8 +130,8 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	}
 
 	w.chainStartETH1Data = &pb.Eth1Data{
-		BlockHash32:       depositLog.BlockHash[:],
-		DepositRootHash32: chainStartDepositRoot[:],
+		BlockRoot:   depositLog.BlockHash[:],
+		DepositRoot: chainStartDepositRoot[:],
 	}
 
 	timestamp := binary.LittleEndian.Uint64(timestampData)

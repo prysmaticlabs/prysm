@@ -113,29 +113,29 @@ func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 15 * params.BeaconConfig().SlotsPerEpoch,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: nil,
-			BlockHash32:       nil,
+			DepositRoot: nil,
+			BlockRoot:   nil,
 		},
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'A'},
-					BlockHash32:       []byte{'B'},
+					DepositRoot: []byte{'A'},
+					BlockRoot:   []byte{'B'},
 				},
 				VoteCount: 0,
 			},
-			// DepositRootHash32 ['B'] gets to process with sufficient vote count.
+			// DepositRoot ['B'] gets to process with sufficient vote count.
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'C'},
-					BlockHash32:       []byte{'D'},
+					DepositRoot: []byte{'C'},
+					BlockRoot:   []byte{'D'},
 				},
 				VoteCount: requiredVoteCount/2 + 1,
 			},
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'E'},
-					BlockHash32:       []byte{'F'},
+					DepositRoot: []byte{'E'},
+					BlockRoot:   []byte{'F'},
 				},
 				VoteCount: requiredVoteCount / 2,
 			},
@@ -143,25 +143,25 @@ func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
 	}
 
 	newState := ProcessEth1Data(state)
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'C'}) {
-		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
-			[]byte{'C'}, newState.LatestEth1Data.DepositRootHash32)
+	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, []byte{'C'}) {
+		t.Errorf("Incorrect DepositRoot. Wanted: %v, got: %v",
+			[]byte{'C'}, newState.LatestEth1Data.DepositRoot)
 	}
 
 	// Adding a new receipt root ['D'] which should be the new processed receipt root.
 	state.Eth1DataVotes = append(state.Eth1DataVotes,
 		&pb.Eth1DataVote{
 			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte{'G'},
-				BlockHash32:       []byte{'H'},
+				DepositRoot: []byte{'G'},
+				BlockRoot:   []byte{'H'},
 			},
 			VoteCount: requiredVoteCount,
 		},
 	)
 	newState = ProcessEth1Data(state)
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'G'}) {
-		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
-			[]byte{'G'}, newState.LatestEth1Data.DepositRootHash32)
+	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, []byte{'G'}) {
+		t.Errorf("Incorrect DepositRoot. Wanted: %v, got: %v",
+			[]byte{'G'}, newState.LatestEth1Data.DepositRoot)
 	}
 
 	if len(newState.Eth1DataVotes) != 0 {
@@ -175,28 +175,28 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 4,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{'A'},
-			BlockHash32:       []byte{'B'},
+			DepositRoot: []byte{'A'},
+			BlockRoot:   []byte{'B'},
 		},
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'C'},
-					BlockHash32:       []byte{'D'},
+					DepositRoot: []byte{'C'},
+					BlockRoot:   []byte{'D'},
 				},
 				VoteCount: requiredVoteCount/2 + 1,
 			},
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'E'},
-					BlockHash32:       []byte{'F'},
+					DepositRoot: []byte{'E'},
+					BlockRoot:   []byte{'F'},
 				},
 				VoteCount: requiredVoteCount / 2,
 			},
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'G'},
-					BlockHash32:       []byte{'H'},
+					DepositRoot: []byte{'G'},
+					BlockRoot:   []byte{'H'},
 				},
 				VoteCount: requiredVoteCount,
 			},
@@ -205,9 +205,9 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 
 	// Adding a new receipt root ['D'] which should be the new processed receipt root.
 	newState := ProcessEth1Data(state)
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'A'}) {
-		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
-			[]byte{'A'}, newState.LatestEth1Data.DepositRootHash32)
+	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, []byte{'A'}) {
+		t.Errorf("Incorrect DepositRoot. Wanted: %v, got: %v",
+			[]byte{'A'}, newState.LatestEth1Data.DepositRoot)
 	}
 }
 
