@@ -347,9 +347,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 1,
-			SlashedEpoch:    params.BeaconConfig().GenesisEpoch + 1,
-			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch + 1,
+			ExitEpoch:         params.BeaconConfig().GenesisEpoch + 1,
+			SlashedEpoch:      params.BeaconConfig().GenesisEpoch + 1,
+			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -616,10 +616,10 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().SlotsPerEpoch,
+			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:      params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().SlotsPerEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -1261,8 +1261,8 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// the one specified in the deposit input, causing a failure.
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{4, 5, 6},
+			Pubkey:                []byte{1},
+			WithdrawalCredentials: []byte{4, 5, 6},
 		},
 	}
 	balances := []uint64{0}
@@ -1334,8 +1334,8 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	}
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+			Pubkey:                []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
 		},
 	}
 	balances := []uint64{0}
@@ -1413,8 +1413,8 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+			Pubkey:                []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
 		},
 	}
 	balances := []uint64{0}
@@ -1485,8 +1485,8 @@ func TestProcessValidatorDeposits_InvalidSSZ_DepositIndexIncremented(t *testing.
 	}
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+			Pubkey:                []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
 		},
 	}
 	balances := []uint64{0}
@@ -1574,8 +1574,8 @@ func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented
 	}
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+			Pubkey:                []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
 		},
 	}
 	balances := []uint64{0}

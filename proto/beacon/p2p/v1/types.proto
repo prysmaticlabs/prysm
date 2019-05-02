@@ -146,7 +146,6 @@ message Validator {
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
-  uint64 withdrawal_epoch = 1001 [deprecated=true];
   uint64 slashed_epoch = 1002 [deprecated=true];
   enum StatusFlags {
     INITIAL = 0 [deprecated=true]; // validator status initial value.
@@ -154,7 +153,6 @@ message Validator {
     WITHDRAWABLE = 2 [deprecated=true]; // validator deposit is withdrawable.
   }
   StatusFlags status_flags = 1003 [deprecated=true];
-  bytes withdrawal_credentials_hash32 = 1004 [deprecated=true];
 }
 
 message ShardReassignmentRecord {

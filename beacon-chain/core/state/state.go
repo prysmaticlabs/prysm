@@ -61,12 +61,12 @@ func GenesisBeaconState(
 		}
 
 		validator := &pb.Validator{
-			Pubkey:                      depositInput.Pubkey,
-			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
-			ActivationEpoch:             params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
+			Pubkey:                depositInput.Pubkey,
+			WithdrawalCredentials: depositInput.WithdrawalCredentialsHash32,
+			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:          params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator
