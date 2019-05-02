@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -168,4 +169,34 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 		t.Errorf("saved merkle root is not equal to expected merkle root"+
 			"\n expected %#x but got %#x", expectedRoot, newState.BatchedBlockRootHash32S[0])
 	}
+}
+
+func TestProcessBlockHeader_OK(t *testing.T) {
+	var registry []*pb.Validator
+
+	for i := 0; i < 20; i++ {
+		registry = append(registry, &pb.Validator{
+			Pubkey: []byte(strconv.Itoa(i)),
+		})
+	}
+
+	state := &pb.BeaconState{
+		Slot:              10,
+		ValidatorRegistry: registry,
+	}
+
+	block := &pb.BeaconBlock{
+		Slot:            10,
+		ParentBlockRoot: []byte{'A', 'B'},
+		Body: &pb.BeaconBlockBody{
+			Transfers: []*pb.Transfer{{
+				Pubkey: []byte{'B', 'E'},
+			}},
+		},
+	}
+
+	if err := ProcessBlockHeader(state, block); err != nil {
+		t.Error(err)
+	}
+
 }
