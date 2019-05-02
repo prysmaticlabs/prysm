@@ -173,8 +173,8 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 			t.Fatalf("Cannot encode data: %v", err)
 		}
 		deposits[i] = &pb.Deposit{
-			DepositData:     depositData,
-			MerkleTreeIndex: uint64(i),
+			DepositData: depositData,
+			Index:       uint64(i),
 		}
 		privKeys[i] = priv
 	}
@@ -188,7 +188,7 @@ func createPreChainStartDeposit(t *testing.T, pk []byte, index uint64) *pb.Depos
 	if err != nil {
 		t.Fatalf("Cannot encode data: %v", err)
 	}
-	return &pb.Deposit{DepositData: depositData, MerkleTreeIndex: index}
+	return &pb.Deposit{DepositData: depositData, Index: index}
 }
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
