@@ -32,7 +32,10 @@ type ValidatorServer struct {
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
 	beaconState, err := vs.beaconDB.HeadState(stream.Context())
-	statuses := vs.determineActivationStatuses(beaconState, req.PublicKeys)
+	statuses, err := vs.determineActivationStatuses(beaconState, req.PublicKeys)
+	if err != nil {
+		return err
+	}
 	res := &pb.ValidatorActivationResponse{
 		Statuses: statuses,
 	}
@@ -47,7 +50,10 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 			if err != nil {
 				return fmt.Errorf("could not retrieve beacon state: %v", err)
 			}
-			statuses := vs.determineActivationStatuses(beaconState, req.PublicKeys)
+			statuses, err := vs.determineActivationStatuses(beaconState, req.PublicKeys)
+			if err != nil {
+				return err
+			}
 			res := &pb.ValidatorActivationResponse{
 				Statuses: statuses,
 			}
@@ -171,7 +177,7 @@ func (vs *ValidatorServer) assignment(
 	if err != nil {
 		return nil, err
 	}
-	status, err := vs.validatorStatus(pubkey, beaconState)
+	activationStatus, err := vs.validatorStatus(pubkey, beaconState)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +187,7 @@ func (vs *ValidatorServer) assignment(
 		Slot:       slot,
 		IsProposer: isProposer,
 		PublicKey:  pubkey,
-		Status:     status,
+		Status:     activationStatus.Status,
 	}, nil
 }
 
@@ -202,20 +208,16 @@ func (vs *ValidatorServer) ValidatorStatus(
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
-	status, err := vs.validatorStatus(req.PublicKey, beaconState)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.ValidatorStatusResponse{
-		Status: status,
-	}, nil
+	return vs.validatorStatus(req.PublicKey, beaconState)
 }
 
-func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.BeaconState) (pb.ValidatorStatus, error) {
+func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.BeaconState) (*pb.ValidatorStatusResponse, error) {
 	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
 	if err != nil {
-		return pb.ValidatorStatus_UNKNOWN_STATUS, fmt.Errorf("could not get active validator index: %v", err)
+		res := &pb.ValidatorStatusResponse{
+			Status: pb.ValidatorStatus_UNKNOWN_STATUS,
+		}
+		return res, fmt.Errorf("could not get active validator index: %v", err)
 	}
 
 	var status pb.ValidatorStatus
@@ -239,26 +241,33 @@ func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.Bea
 		status = pb.ValidatorStatus_UNKNOWN_STATUS
 	}
 
-	return status, nil
+	res := &pb.ValidatorStatusResponse{
+		Status: status,
+	}
+	return res, nil
 }
 
 // determineActivationStatuses for a list of validator public keys.
 func (vs *ValidatorServer) determineActivationStatuses(
 	beaconState *pbp2p.BeaconState, pubKeys [][]byte,
-) []*pb.ValidatorStatusResponse {
+) ([]*pb.ValidatorActivationResponse_Status, error) {
 	// We construct a map of pubKey => deposit container objects once.
 	depositsByPubKey := make(map[string]*pbp2p.Deposit)
 
-	statuses := []*pb.ValidatorStatusResponse{}
+	res := []*pb.ValidatorActivationResponse_Status{}
 	// We then loop through public keys and create a response.
-	for idx := range pubKeys {
-		status := &pb.ValidatorStatusResponse{
-			Eth1DepositBlockNumber: uint64(idx),
+	for _, key := range pubKeys {
+		status, err := vs.validatorStatus(key, beaconState)
+		if err != nil {
+			return nil, err
 		}
-		statuses = append(statuses, status)
+		res = append(res, &pb.ValidatorActivationResponse_Status{
+			PublicKey: key,
+			Status: status,
+		})
 	}
 
-	return statuses
+	return res
 }
 
 // filterActivePublicKeys takes a list of validator public keys and returns
