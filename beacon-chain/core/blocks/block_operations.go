@@ -461,19 +461,19 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
-		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
+		if att.Data.JustifiedEpoch != beaconState.CurrentJustifiedEpoch {
 			return fmt.Errorf(
-				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
+				"expected attestation.JustifiedEpoch == state.CurrentJustifiedEpoch, received %d == %d",
 				att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
-				beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				beaconState.CurrentJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
 
-		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.JustifiedRoot) {
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.CurrentJustifiedRoot) {
 			return fmt.Errorf(
-				"expected attestation.JustifiedRoot == state.JustifiedRoot, received %#x == %#x",
+				"expected attestation.JustifiedRoot == state.CurrentJustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
-				beaconState.JustifiedRoot,
+				beaconState.CurrentJustifiedRoot,
 			)
 		}
 	} else {
@@ -488,7 +488,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			return fmt.Errorf(
 				"expected attestation.JustifiedRoot == state.PreviousJustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
-				beaconState.JustifiedRoot,
+				beaconState.CurrentJustifiedRoot,
 			)
 		}
 	}

@@ -134,7 +134,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if newState.PreviousJustifiedEpoch != genesisEpochNumber {
 		t.Error("PreviousJustifiedEpoch was not correctly initialized")
 	}
-	if newState.JustifiedEpoch != genesisEpochNumber {
+	if newState.CurrentJustifiedEpoch != genesisEpochNumber {
 		t.Error("JustifiedEpoch was not correctly initialized")
 	}
 	if newState.FinalizedEpoch != genesisEpochNumber {

@@ -224,7 +224,7 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Slot:                   300 + params.BeaconConfig().GenesisSlot,
-		JustifiedEpoch:         3,
+		CurrentJustifiedEpoch:  3,
 		JustificationBitfield:  4,
 		LatestBlockRootHash32S: latestBlockRoots,
 	}
@@ -241,12 +241,12 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 
 	if newState.PreviousJustifiedEpoch != 3 {
 		t.Errorf("New state's prev justified slot %d != old state's justified slot %d",
-			newState.PreviousJustifiedEpoch, state.JustifiedEpoch)
+			newState.PreviousJustifiedEpoch, state.CurrentJustifiedEpoch)
 	}
 	// Since this epoch was justified (not prev), justified_epoch = slot_to_epoch(state.slot) -1.
-	if newState.JustifiedEpoch != helpers.CurrentEpoch(state) {
+	if newState.CurrentJustifiedEpoch != helpers.CurrentEpoch(state) {
 		t.Errorf("New state's justified epoch %d != state's slot - SLOTS_PER_EPOCH: %d",
-			newState.JustifiedEpoch, helpers.CurrentEpoch(state))
+			newState.CurrentJustifiedEpoch, helpers.CurrentEpoch(state))
 	}
 	// The new JustificationBitfield is 11, it went from 0100 to 1011. Two 1's were appended because both
 	// prev epoch and this epoch were justified.
@@ -266,9 +266,9 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not process justification and finalization of state %v", err)
 	}
-	if newState.JustifiedEpoch != helpers.CurrentEpoch(state)-1 {
+	if newState.CurrentJustifiedEpoch != helpers.CurrentEpoch(state)-1 {
 		t.Errorf("New state's justified epoch %d != state's epoch -2: %d",
-			newState.JustifiedEpoch, helpers.CurrentEpoch(state)-1)
+			newState.CurrentJustifiedEpoch, helpers.CurrentEpoch(state)-1)
 	}
 }
 

@@ -261,7 +261,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		Slot:                   currentSlot + params.BeaconConfig().MinAttestationInclusionDelay,
-		JustifiedEpoch:         expectedEpoch,
+		CurrentJustifiedEpoch:  expectedEpoch,
 		PreviousJustifiedEpoch: expectedEpoch,
 		LatestCrosslinks: []*pbp2p.Crosslink{{
 			Epoch:                   params.BeaconConfig().GenesisEpoch + 9,

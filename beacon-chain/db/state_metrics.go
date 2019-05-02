@@ -92,7 +92,7 @@ func reportStateMetrics(state *pb.BeaconState) {
 	// Slot number
 	lastSlotGauge.Set(float64(state.Slot - s))
 	// Last justified slot
-	lastJustifiedEpochGauge.Set(float64(state.JustifiedEpoch - e))
+	lastJustifiedEpochGauge.Set(float64(state.CurrentJustifiedEpoch - e))
 	// Last previous justified slot
 	lastPrevJustifiedEpochGauge.Set(float64(state.PreviousJustifiedEpoch - e))
 	// Last finalized slot

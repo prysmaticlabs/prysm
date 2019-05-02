@@ -70,8 +70,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		{
 			blockSlot: params.BeaconConfig().GenesisSlot + 64,
 			state: &pb.BeaconState{
-				FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
-				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
+				FinalizedEpoch:        params.BeaconConfig().GenesisEpoch,
+				CurrentJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -1268,11 +1268,11 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gState.JustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.CurrentJustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, gState.JustifiedEpoch)
-	domain := forkutil.DomainVersion(gState.Fork, gState.JustifiedEpoch, params.BeaconConfig().DomainRandao)
+	binary.LittleEndian.PutUint64(buf, gState.CurrentJustifiedEpoch)
+	domain := forkutil.DomainVersion(gState.Fork, gState.CurrentJustifiedEpoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:             genesisSlot + offset,
@@ -1431,7 +1431,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gState.JustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.CurrentJustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, params.BeaconConfig().GenesisEpoch)

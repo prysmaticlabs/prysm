@@ -88,7 +88,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
 	// If the last justified boundary slot is the same as state current slot (ex: slot 0),
 	// we set justified block root to an empty root.
-	justifiedBlockRoot := headState.JustifiedRoot
+	justifiedBlockRoot := headState.CurrentJustifiedRoot
 
 	// If an attester has to attest for genesis block.
 	if headState.Slot == params.BeaconConfig().GenesisSlot {
@@ -100,7 +100,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 		HeadSlot:                 headState.Slot,
 		BeaconBlockRootHash32:    headRoot[:],
 		EpochBoundaryRootHash32:  epochBoundaryRoot,
-		JustifiedEpoch:           headState.JustifiedEpoch,
+		JustifiedEpoch:           headState.CurrentJustifiedEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot,
 		LatestCrosslink:          headState.LatestCrosslinks[req.Shard],
 	}, nil

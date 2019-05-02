@@ -59,14 +59,14 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot:                   3*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
-		JustifiedEpoch:         2 + params.BeaconConfig().GenesisEpoch,
+		CurrentJustifiedEpoch:  2 + params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
 				CrosslinkDataRootHash32: []byte("A"),
 			},
 		},
-		JustifiedRoot: justifiedBlockRoot[:],
+		CurrentJustifiedRoot: justifiedBlockRoot[:],
 	}
 	beaconState.LatestBlockRootHash32S[1] = blockRoot[:]
 	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
@@ -154,14 +154,14 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		Slot:                   10000 + params.BeaconConfig().GenesisSlot,
-		JustifiedEpoch:         helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot),
+		CurrentJustifiedEpoch:  helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot),
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
 				CrosslinkDataRootHash32: []byte("A"),
 			},
 		},
-		JustifiedRoot: justifiedBlockRoot[:],
+		CurrentJustifiedRoot: justifiedBlockRoot[:],
 	}
 	beaconState.LatestBlockRootHash32S[1] = blockRoot[:]
 	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]

@@ -157,8 +157,8 @@ func TestSavingBlock_InSync(t *testing.T) {
 	}
 
 	incorrectState := &pb.BeaconState{
-		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
+		FinalizedEpoch:        params.BeaconConfig().GenesisEpoch,
+		CurrentJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		LatestBlock: &pb.BeaconBlock{
 			Slot: params.BeaconConfig().GenesisSlot + 4*params.BeaconConfig().SlotsPerEpoch,
 		},

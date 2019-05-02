@@ -789,12 +789,12 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:           params.BeaconConfig().GenesisSlot + 158,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
+		Slot:                  params.BeaconConfig().GenesisSlot + 158,
+		CurrentJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 	}
 
 	want := fmt.Sprintf(
-		"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
+		"expected attestation.JustifiedEpoch == state.CurrentJustifiedEpoch, received %d == %d",
 		2,
 		1,
 	)

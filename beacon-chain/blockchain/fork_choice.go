@@ -36,7 +36,7 @@ type ForkChoice interface {
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
 func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconState) error {
-	lastJustifiedSlot := helpers.StartSlot(state.JustifiedEpoch)
+	lastJustifiedSlot := helpers.StartSlot(state.CurrentJustifiedEpoch)
 	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
 		return err
