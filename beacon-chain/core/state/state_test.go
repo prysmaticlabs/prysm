@@ -165,10 +165,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
-	if !bytes.Equal(newState.LatestIndexRootHash32S[0], genesisActiveIndexRoot[:]) {
+	if !bytes.Equal(newState.LatestActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.LatestIndexRootHash32S[0],
+			newState.LatestActiveIndexRoots[0],
 		)
 	}
 	seed, err := helpers.GenerateSeed(newState, params.BeaconConfig().GenesisEpoch)
@@ -206,17 +206,17 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	s, _ := state.GenesisBeaconState(nil, 0, nil)
-	want, got := len(s.LatestBlockRootHash32S), int(params.BeaconConfig().LatestBlockRootsLength)
+	want, got := len(s.LatestBlockRoots), int(params.BeaconConfig().LatestBlockRootsLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
 
-	want = cap(s.LatestBlockRootHash32S)
+	want = cap(s.LatestBlockRoots)
 	if want != got {
 		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}
 
-	for _, h := range s.LatestBlockRootHash32S {
+	for _, h := range s.LatestBlockRoots {
 		if !bytes.Equal(h, params.BeaconConfig().ZeroHash[:]) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}

@@ -50,7 +50,7 @@ func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
-		LatestBlockRootHash32S: blockRoots,
+		LatestBlockRoots: blockRoots,
 	}
 
 	tests := []struct {
@@ -110,7 +110,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
-		LatestBlockRootHash32S: blockRoots,
+		LatestBlockRoots: blockRoots,
 	}
 
 	tests := []struct {
@@ -144,15 +144,15 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 	state := &pb.BeaconState{}
 
-	state.LatestBlockRootHash32S = make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
+	state.LatestBlockRoots = make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	state.Slot = params.BeaconConfig().LatestBlockRootsLength + 1
 
 	testRoot := [32]byte{'a'}
 
 	newState := ProcessBlockRoots(state, testRoot)
-	if !bytes.Equal(newState.LatestBlockRootHash32S[0], testRoot[:]) {
+	if !bytes.Equal(newState.LatestBlockRoots[0], testRoot[:]) {
 		t.Fatalf("Latest Block root hash not saved."+
-			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRootHash32S[0])
+			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRoots[0])
 	}
 
 	newState.Slot = newState.Slot - 1

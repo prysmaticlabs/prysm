@@ -381,7 +381,7 @@ func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	indexRoot := hashutil.Hash(indicesBytes)
-	state.LatestIndexRootHash32S[nextEpoch%params.BeaconConfig().LatestActiveIndexRootsLength] =
+	state.LatestActiveIndexRoots[nextEpoch%params.BeaconConfig().LatestActiveIndexRootsLength] =
 		indexRoot[:]
 	return state, nil
 }

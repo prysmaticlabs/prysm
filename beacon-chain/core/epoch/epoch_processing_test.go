@@ -223,10 +223,10 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   300 + params.BeaconConfig().GenesisSlot,
-		CurrentJustifiedEpoch:  3,
-		JustificationBitfield:  4,
-		LatestBlockRootHash32S: latestBlockRoots,
+		Slot:                  300 + params.BeaconConfig().GenesisSlot,
+		CurrentJustifiedEpoch: 3,
+		JustificationBitfield: 4,
+		LatestBlockRoots:      latestBlockRoots,
 	}
 	newState, err := ProcessJustificationAndFinalization(
 		state,
@@ -433,7 +433,7 @@ func TestProcessPartialValidatorRegistry_CorrectShufflingEpoch(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,
 		LatestRandaoMixes:      [][]byte{{'A'}, {'B'}, {'C'}},
-		LatestIndexRootHash32S: [][]byte{{'D'}, {'E'}, {'F'}},
+		LatestActiveIndexRoots: [][]byte{{'D'}, {'E'}, {'F'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
 	newState, err := ProcessPartialValidatorRegistry(copiedState)
@@ -577,7 +577,7 @@ func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 		params.BeaconConfig().LatestActiveIndexRootsLength)
 	state := &pb.BeaconState{
 		Slot:                   epoch * params.BeaconConfig().SlotsPerEpoch,
-		LatestIndexRootHash32S: latestActiveIndexRoots}
+		LatestActiveIndexRoots: latestActiveIndexRoots}
 	newState, err := UpdateLatestActiveIndexRoots(state)
 	if err != nil {
 		t.Fatalf("could not update latest index roots: %v", err)
@@ -591,11 +591,11 @@ func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	indexRoot := hashutil.Hash(indicesBytes)
-	if !bytes.Equal(newState.LatestIndexRootHash32S[nextEpoch], indexRoot[:]) {
+	if !bytes.Equal(newState.LatestActiveIndexRoots[nextEpoch], indexRoot[:]) {
 		t.Errorf(
-			"LatestIndexRootHash32S didn't update for epoch %d,"+
+			"LatestActiveIndexRoots didn't update for epoch %d,"+
 				"wanted: %v, got: %v", nextEpoch, indexRoot,
-			newState.LatestIndexRootHash32S[nextEpoch],
+			newState.LatestActiveIndexRoots[nextEpoch],
 		)
 	}
 }

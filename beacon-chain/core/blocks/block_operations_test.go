@@ -858,7 +858,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + 70,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
-		LatestBlockRootHash32S: blockRoots,
+		LatestBlockRoots:       blockRoots,
 		PreviousJustifiedRoot:  blockRoots[0],
 		LatestCrosslinks:       stateLatestCrosslinks,
 	}
@@ -906,7 +906,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + 70,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
-		LatestBlockRootHash32S: blockRoots,
+		LatestBlockRoots:       blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
 		PreviousJustifiedRoot:  blockRoots[0],
 	}
@@ -955,7 +955,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + 70,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
-		LatestBlockRootHash32S: blockRoots,
+		LatestBlockRoots:       blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
 		PreviousJustifiedRoot:  blockRoots[0],
 	}

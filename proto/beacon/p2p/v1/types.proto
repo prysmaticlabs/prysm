@@ -53,8 +53,6 @@ message BeaconState {
   uint64 current_shuffling_epoch = 8006 [deprecated=true];
   bytes previous_shuffling_seed_hash32 = 8007 [deprecated=true];
   bytes current_shuffling_seed_hash32 = 8008 [deprecated=true];
-  repeated bytes latest_index_root_hash32s = 8011 [deprecated=true];
-  repeated bytes latest_block_root_hash32s = 8012 [deprecated=true];
   repeated bytes batched_block_root_hash32s = 8013 [deprecated=true];
   repeated Crosslink latest_crosslinks = 8014 [deprecated=true];
   repeated PendingAttestation latest_attestations = 8015 [deprecated=true];

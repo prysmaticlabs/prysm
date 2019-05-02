@@ -111,8 +111,8 @@ func GenesisBeaconState(
 
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,
-		LatestBlockRootHash32S:  latestBlockRoots,
-		LatestIndexRootHash32S:  latestActiveIndexRoots,
+		LatestBlockRoots:        latestBlockRoots,
+		LatestActiveIndexRoots:  latestActiveIndexRoots,
 		LatestSlashedBalances:   latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},
@@ -166,7 +166,7 @@ func GenesisBeaconState(
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().LatestActiveIndexRootsLength; i++ {
-		state.LatestIndexRootHash32S[i] = genesisActiveIndexRoot[:]
+		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot[:]
 	}
 	seed, err := helpers.GenerateSeed(state, params.BeaconConfig().GenesisEpoch)
 	if err != nil {

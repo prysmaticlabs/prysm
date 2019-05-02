@@ -1512,9 +1512,9 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	}
 	gState := &pb.BeaconState{
 		Slot:                   genesisSlot,
-		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestBlockRoots:       make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestRandaoMixes:      latestRandaoMixes,
-		LatestIndexRootHash32S: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 		LatestCrosslinks:       crosslinks,
 		ValidatorRegistry:      validatorRegistry,
