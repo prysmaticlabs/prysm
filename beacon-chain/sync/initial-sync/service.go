@@ -238,8 +238,29 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	//Add peer to the blacklist
 	pbl.Add(peer.ID)
 
-	//drop a peer
+	/*
+	drop a peer options:
+	I have investigated libp2p github issues, there are some ways to disconnect from peer
+	1)	host.Network().ClosePeer(peer.ID)
+	
+	
+	2)  using libp2p daemon d.host.Network().ClosePeer(p)
+  take a look doDisconnect
+	https://github.com/libp2p/go-libp2p-daemon/blob/25f6394e882412ae557d810430768818f4f5b338/conn.go#L190
+
+	
+	questions:
+	`1) how can I get a current peer.ID to disconnnect from ?
+	    I dont think so , pbl.Add(peer.ID) will work.
+	 2) which is the most suitable option for dropping a peer ?
+
+
+
+	*/
+	
+  //https://github.com/vyzo/gerbil-libp2p/pull/3
 	//https://github.com/libp2p/go-libp2p-host/issues/13
+	//https://github.com/libp2p/go-libp2p-daemon/issues/22
 	host.Network().ClosePeer(peer.ID)
 	
 
