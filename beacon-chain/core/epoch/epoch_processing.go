@@ -683,6 +683,7 @@ func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb
 }
 
 // totalActiveBalance returns the combined balances of all the active validators.
+//
 // Spec pseudocode definition:
 //	def get_total_active_balance(state: BeaconState) -> Gwei:
 //    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
