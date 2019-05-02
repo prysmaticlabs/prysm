@@ -87,7 +87,7 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 // DepositByPubkey looks through historical deposits and finds one which contains
 // a certain public key within its deposit data.
 func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Deposit, *big.Int, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDeposits")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositByPubkey")
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
