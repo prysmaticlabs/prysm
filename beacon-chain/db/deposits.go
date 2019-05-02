@@ -1,9 +1,13 @@
 package db
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"math/big"
 	"sort"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -84,5 +88,23 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 // DepositByPubkey looks through historical deposits and finds one which contains
 // a certain public key within its deposit data.
 func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Deposit, *big.Int, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDeposits")
+	defer span.End()
+	db.depositsLock.RLock()
+	defer db.depositsLock.RUnlock()
 
+	var deposit *pb.Deposit
+	var blockNum *big.Int
+	for _, ctnr := range db.deposits {
+		depositInput, err := helpers.DecodeDepositInput(ctnr.deposit.DepositData)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not decode deposit input: %v", err)
+		}
+		if bytes.Equal(depositInput.Pubkey, pubKey) {
+			deposit = ctnr.deposit
+			blockNum = ctnr.block
+			break
+		}
+	}
+	return deposit, blockNum, nil
 }
