@@ -560,14 +560,13 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 // with enough state to make it canonical in state.
 //
 // Spec pseudocode definition:
-//	def process_crosslinks(state: BeaconState) -> None:
+// def process_crosslinks(state: BeaconState) -> None:
 //    state.previous_crosslinks = [c for c in state.current_crosslinks]
-//    previous_epoch = get_previous_epoch(state)
-//    next_epoch = get_current_epoch(state) + 1
-//    for slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)):
-//        epoch = slot_to_epoch(slot)
-//        for crosslink_committee, shard in get_crosslink_committees_at_slot(state, slot):
-//            winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, shard, epoch)
+//    for epoch in (get_previous_epoch(state), get_current_epoch(state)):
+//        for offset in range(get_epoch_committee_count(state, epoch)):
+//            shard = (get_epoch_start_shard(state, epoch) + offset) % SHARD_COUNT
+//            crosslink_committee = get_crosslink_committee(state, epoch, shard)
+//            winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, epoch, shard)
 //            if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
 //                state.current_crosslinks[shard] = winning_crosslink
 func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
@@ -587,6 +586,8 @@ func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
 			}
 			attestedBalance := TotalBalance(state, indices)
 			totalBalance := TotalBalance(state, committee.Committee)
+			// In order for a crosslink to get included in state, the attesting balance needs to
+			// be greater than 2/3 of the total balance.
 			if 3*attestedBalance >= 2*totalBalance {
 				state.CurrentCrosslinks[committee.Shard] = crosslink
 			}
