@@ -221,13 +221,17 @@ func (vs *ValidatorServer) ValidatorStatus(
 	}
 	if eth1BlockNumBigInt == nil {
 		return &pb.ValidatorStatusResponse{
-			Status:          pb.ValidatorStatus_UNKNOWN_STATUS,
-			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
+			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 		}, nil
 	}
 
 	currEpoch := helpers.CurrentEpoch(beaconState)
 	eth1BlockNum := eth1BlockNumBigInt.Uint64()
+	timeToInclusion := (eth1BlockNum + params.BeaconConfig().Eth1FollowDistance) * params.BeaconConfig().GoerliBlockTime
+	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
+	depositBlockSlot := (timeToInclusion / params.BeaconConfig().SecondsPerSlot) + votingPeriodSlots
 
 	var validatorInState *pbp2p.Validator
 	var validatorIndex uint64
@@ -238,6 +242,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 					Status:                 pb.ValidatorStatus_ACTIVE,
 					ActivationEpoch:        val.ActivationEpoch,
 					Eth1DepositBlockNumber: eth1BlockNum,
+					DepositInclusionSlot:   depositBlockSlot,
 				}, nil
 			}
 			validatorInState = val
@@ -245,10 +250,6 @@ func (vs *ValidatorServer) ValidatorStatus(
 			break
 		}
 	}
-
-	timeToInclusion := (eth1BlockNum + params.BeaconConfig().Eth1FollowDistance) * params.BeaconConfig().GoerliBlockTime
-	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
-	depositBlockSlot := (timeToInclusion / params.BeaconConfig().SecondsPerSlot) + votingPeriodSlots
 
 	var positionInQueue uint64
 	// If the validator has deposited and has been added to the state:
