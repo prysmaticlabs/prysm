@@ -1174,9 +1174,9 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 
 	deposit := &pb.Deposit{
-		DepositData:        data,
-		MerkleProofHash32S: proof,
-		MerkleTreeIndex:    0,
+		DepositData: data,
+		Proof:       proof,
+		Index:       0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1248,9 +1248,9 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		t.Fatalf("Could not generate proof: %v", err)
 	}
 	deposit := &pb.Deposit{
-		DepositData:        data,
-		MerkleProofHash32S: proof,
-		MerkleTreeIndex:    0,
+		DepositData: data,
+		Proof:       proof,
+		Index:       0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1323,9 +1323,9 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	deposit := &pb.Deposit{
-		DepositData:        data,
-		MerkleProofHash32S: [][]byte{{0}},
-		MerkleTreeIndex:    1,
+		DepositData: data,
+		Proof:       [][]byte{{0}},
+		Index:       1,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1402,9 +1402,9 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 
 	deposit := &pb.Deposit{
-		DepositData:        data,
-		MerkleProofHash32S: proof,
-		MerkleTreeIndex:    0,
+		DepositData: data,
+		Proof:       proof,
+		Index:       0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1475,8 +1475,8 @@ func TestProcessValidatorDeposits_InvalidSSZ_DepositIndexIncremented(t *testing.
 	data = append(data, encodedInput...)
 
 	deposit := &pb.Deposit{
-		DepositData:     data,
-		MerkleTreeIndex: 0,
+		DepositData: data,
+		Index:       0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1563,9 +1563,9 @@ func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented
 	}
 
 	deposit := &pb.Deposit{
-		DepositData:        data,
-		MerkleProofHash32S: proof,
-		MerkleTreeIndex:    0,
+		DepositData: data,
+		Proof:       proof,
+		Index:       0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{

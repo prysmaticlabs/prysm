@@ -682,11 +682,11 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Deposits must be processed in order
-	if deposit.MerkleTreeIndex != beaconState.DepositIndex {
+	if deposit.Index != beaconState.DepositIndex {
 		return fmt.Errorf(
 			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
 			beaconState.DepositIndex,
-			deposit.MerkleTreeIndex,
+			deposit.Index,
 		)
 	}
 
@@ -695,8 +695,8 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,
 		deposit.DepositData,
-		int(deposit.MerkleTreeIndex),
-		deposit.MerkleProofHash32S,
+		int(deposit.Index),
+		deposit.Proof,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",

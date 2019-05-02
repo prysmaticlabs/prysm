@@ -447,12 +447,12 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatalf("Could not generate deposit trie: %v", err)
 	}
 	for i := range pendingDeposits {
-		pendingDeposits[i].MerkleTreeIndex = 0
-		proof, err := depositTrie.MerkleProof(int(pendingDeposits[i].MerkleTreeIndex))
+		pendingDeposits[i].Index = 0
+		proof, err := depositTrie.MerkleProof(int(pendingDeposits[i].Index))
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}
-		pendingDeposits[i].MerkleProofHash32S = proof
+		pendingDeposits[i].Proof = proof
 	}
 	depositRoot := depositTrie.Root()
 	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]

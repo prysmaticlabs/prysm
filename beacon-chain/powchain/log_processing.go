@@ -84,8 +84,8 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 
 	deposit := &pb.Deposit{
-		DepositData:     depositData,
-		MerkleTreeIndex: index,
+		DepositData: depositData,
+		Index:       index,
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.

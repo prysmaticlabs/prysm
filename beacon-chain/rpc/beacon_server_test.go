@@ -315,30 +315,30 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	// Using the merkleTreeIndex as the block number for this test...
 	readyDeposits := []*pbp2p.Deposit{
 		{
-			MerkleTreeIndex: 0,
-			DepositData:     []byte("a"),
+			Index:       0,
+			DepositData: []byte("a"),
 		},
 		{
-			MerkleTreeIndex: 1,
-			DepositData:     []byte("b"),
+			Index:       1,
+			DepositData: []byte("b"),
 		},
 	}
 
 	recentDeposits := []*pbp2p.Deposit{
 		{
-			MerkleTreeIndex: 2,
-			DepositData:     []byte("c"),
+			Index:       2,
+			DepositData: []byte("c"),
 		},
 		{
-			MerkleTreeIndex: 3,
-			DepositData:     []byte("d"),
+			Index:       3,
+			DepositData: []byte("d"),
 		},
 	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
 	}
 
 	bs := &BeaconServer{
@@ -394,28 +394,28 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 
 	readyDeposits := []*pbp2p.Deposit{
 		{
-			MerkleTreeIndex: 0,
-			DepositData:     []byte("a"),
+			Index:       0,
+			DepositData: []byte("a"),
 		},
 		{
-			MerkleTreeIndex: 1,
-			DepositData:     []byte("b"),
+			Index:       1,
+			DepositData: []byte("b"),
 		},
 	}
 
 	var recentDeposits []*pbp2p.Deposit
 	for i := 2; i < 16; i++ {
 		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
-			MerkleTreeIndex: uint64(i),
-			DepositData:     []byte{byte(i)},
+			Index:       uint64(i),
+			DepositData: []byte{byte(i)},
 		})
 	}
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
 	}
 
 	bs := &BeaconServer{
@@ -439,10 +439,10 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 			expectedDeposits,
 		)
 	}
-	if allResp.PendingDeposits[0].MerkleTreeIndex != beaconState.DepositIndex {
+	if allResp.PendingDeposits[0].Index != beaconState.DepositIndex {
 		t.Errorf(
 			"Received unexpected merkle index: %d, wanted: %d",
-			allResp.PendingDeposits[0].MerkleTreeIndex,
+			allResp.PendingDeposits[0].Index,
 			beaconState.DepositIndex,
 		)
 	}
@@ -472,28 +472,28 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	readyDeposits := []*pbp2p.Deposit{
 		{
-			MerkleTreeIndex: 0,
-			DepositData:     []byte("a"),
+			Index:       0,
+			DepositData: []byte("a"),
 		},
 		{
-			MerkleTreeIndex: 1,
-			DepositData:     []byte("b"),
+			Index:       1,
+			DepositData: []byte("b"),
 		},
 	}
 
 	var recentDeposits []*pbp2p.Deposit
 	for i := 2; i < 22; i++ {
 		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
-			MerkleTreeIndex: uint64(i),
-			DepositData:     []byte{byte(i)},
+			Index:       uint64(i),
+			DepositData: []byte{byte(i)},
 		})
 	}
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
 	}
 
 	bs := &BeaconServer{
@@ -550,8 +550,8 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	deps := []*pbp2p.Deposit{
-		{MerkleTreeIndex: 0, DepositData: []byte("a")},
-		{MerkleTreeIndex: 1, DepositData: []byte("b")},
+		{Index: 0, DepositData: []byte("a")},
+		{Index: 1, DepositData: []byte("b")},
 	}
 	depsData := [][]byte{}
 	for _, dp := range deps {

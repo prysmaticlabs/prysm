@@ -86,9 +86,9 @@ func generateSimulatedBlock(
 		root := newTrie.Root()
 		block.Eth1Data.DepositRootHash32 = root[:]
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
-			DepositData:        data,
-			MerkleProofHash32S: proof,
-			MerkleTreeIndex:    simObjects.simDeposit.MerkleIndex,
+			DepositData: data,
+			Proof:       proof,
+			Index:       simObjects.simDeposit.MerkleIndex,
 		})
 	}
 	if simObjects.simProposerSlashing != nil {
@@ -163,7 +163,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
 		}
-		deposits[i] = &pb.Deposit{DepositData: depositData, MerkleTreeIndex: uint64(i)}
+		deposits[i] = &pb.Deposit{DepositData: depositData, Index: uint64(i)}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys, nil

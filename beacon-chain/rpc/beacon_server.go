@@ -250,7 +250,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*pbp2p.Deposit
 	for _, dep := range allPendingDeps {
-		if dep.MerkleTreeIndex >= beaconState.DepositIndex {
+		if dep.Index >= beaconState.DepositIndex {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}
@@ -306,17 +306,17 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 }
 
 func constructMerkleProof(trie *trieutil.MerkleTrie, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
-	proof, err := trie.MerkleProof(int(deposit.MerkleTreeIndex))
+	proof, err := trie.MerkleProof(int(deposit.Index))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"could not generate merkle proof for deposit at index %d: %v",
-			deposit.MerkleTreeIndex,
+			deposit.Index,
 			err,
 		)
 	}
 	// For every deposit, we construct a Merkle proof using the powchain service's
 	// in-memory deposits trie, which is updated only once the state's LatestETH1Data
 	// property changes during a state transition after a voting period.
-	deposit.MerkleProofHash32S = proof
+	deposit.Proof = proof
 	return deposit, nil
 }
