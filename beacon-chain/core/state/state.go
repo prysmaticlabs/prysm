@@ -190,12 +190,8 @@ func GenesisBeaconState(
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().LatestActiveIndexRootsLength; i++ {
+		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot[:]
 		state.LatestIndexRootHash32S[i] = genesisActiveIndexRoot[:]
 	}
-	seed, err := helpers.GenerateSeed(state, params.BeaconConfig().GenesisEpoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate initial seed: %v", err)
-	}
-	state.CurrentShufflingSeedHash32 = seed[:]
 	return state, nil
 }
