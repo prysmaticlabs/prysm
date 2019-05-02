@@ -56,6 +56,14 @@ func GenesisBeaconState(
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 
+	latestActiveIndexRootsOld := make(
+		[][]byte,
+		params.BeaconConfig().LatestActiveIndexRootsLength,
+	)
+	for i := 0; i < len(latestActiveIndexRootsOld); i++ {
+		latestActiveIndexRootsOld[i] = zeroHash
+	}
+
 	latestActiveIndexRoots := make(
 		[][]byte,
 		params.BeaconConfig().LatestActiveIndexRootsLength,
@@ -136,7 +144,8 @@ func GenesisBeaconState(
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,
 		LatestBlockRootHash32S:  latestBlockRoots,
-		LatestIndexRootHash32S:  latestActiveIndexRoots,
+		LatestIndexRootHash32S:  latestActiveIndexRootsOld,
+		LatestActiveIndexRoots:  latestActiveIndexRoots,
 		LatestSlashedBalances:   latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},

@@ -171,14 +171,12 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 			newState.LatestIndexRootHash32S[0],
 		)
 	}
-	seed, err := helpers.GenerateSeed(newState, params.BeaconConfig().GenesisEpoch)
-	if err != nil {
-		t.Fatalf("Could not generate initial seed: %v", err)
+	if !bytes.Equal(newState.LatestActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
+		t.Errorf(
+			"Expected index roots to be the tree hash root of active validator indices, received %#x",
+			newState.LatestActiveIndexRoots[0],
+		)
 	}
-	if !bytes.Equal(seed[:], newState.CurrentShufflingSeedHash32) {
-		t.Errorf("Expected current epoch seed to be %#x, received %#x", seed[:], newState.CurrentShufflingSeedHash32)
-	}
-
 	// deposit root checks.
 	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, processedPowReceiptRoot) {
 		t.Error("LatestEth1Data DepositRootHash32 was not correctly initialized")
