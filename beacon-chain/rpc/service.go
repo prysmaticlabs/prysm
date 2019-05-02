@@ -25,7 +25,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 var log logrus.FieldLogger
@@ -51,7 +50,7 @@ type powChainService interface {
 	LatestBlockHeight() *big.Int
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
-	BlockByHeight(ctx context.Context, height *big.Int) (*gethTypes.Block, error)
+	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
 	DepositRoot() [32]byte
 	DepositTrie() *trieutil.MerkleTrie
 	ChainStartDeposits() [][]byte
@@ -173,6 +172,7 @@ func (s *Service) Start() {
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
+		powChainService:    s.powChainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

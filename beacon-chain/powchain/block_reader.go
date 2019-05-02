@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.opencensus.io/trace"
 )
 
@@ -58,13 +57,13 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 	return block.Hash(), nil
 }
 
-// BlockByHeight fetches an eth1.0 block by its height.
-func (w *Web3Service) BlockByHeight(ctx context.Context, height *big.Int) (*gethTypes.Block, error) {
+// BlockTimeByHeight fetches an eth1.0 block timestamp by its height.
+func (w *Web3Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByHeight")
 	defer span.End()
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
-		return nil, fmt.Errorf("could not query block with given height: %v", err)
+		return 0, fmt.Errorf("could not query block with given height: %v", err)
 	}
-	return block, nil
+	return block.Time(), nil
 }

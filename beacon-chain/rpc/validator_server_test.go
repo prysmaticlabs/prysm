@@ -340,8 +340,14 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
 
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -382,7 +388,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		GenesisTime: uint64(time.Unix(0, 0).Unix()),
+		Slot:        params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
@@ -391,8 +398,14 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("could not save state: %v", err)
 	}
 
+	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -402,10 +415,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("Could not get validator status %v", err)
 	}
 
-	timeToInclusion := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().GoerliBlockTime
-	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
-	depositBlockSlot := (timeToInclusion / params.BeaconConfig().SecondsPerSlot) + votingPeriodSlots
-
+	depositBlockSlot := uint64(1194)
 	expected := &pb.ValidatorStatusResponse{
 		Status:                 pb.ValidatorStatus_ACTIVE,
 		ActivationEpoch:        params.BeaconConfig().GenesisEpoch,
@@ -415,10 +425,6 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if !proto.Equal(resp, expected) {
 		t.Errorf("Wanted %v, got %v", expected, resp)
 	}
-}
-
-func TestValidatorStatus_PendingStateActivation(t *testing.T) {
-
 }
 
 func TestValidatorStatus_InitiatedExit(t *testing.T) {
@@ -454,8 +460,14 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		DepositData: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -502,8 +514,14 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		DepositData: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -549,8 +567,14 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 		DepositData: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -597,8 +621,14 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		DepositData: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -646,8 +676,14 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 		DepositData: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,

@@ -27,7 +27,7 @@ type ValidatorServer struct {
 	beaconDB           *db.BeaconDB
 	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
-	powChainService     powChainService
+	powChainService    powChainService
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -231,20 +231,19 @@ func (vs *ValidatorServer) ValidatorStatus(
 
 	eth1BlockNum := eth1BlockNumBigInt.Uint64()
 	blocksToInclusion := (eth1BlockNum + params.BeaconConfig().Eth1FollowDistance)
-	eth1Block, err := vs.powChainService.BlockByHeight(ctx, big.NewInt(int64(blocksToInclusion)))
+	eth1Timestamp, err := vs.powChainService.BlockTimeByHeight(ctx, big.NewInt(int64(blocksToInclusion)))
 	if err != nil {
 		return nil, err
 	}
 
-
 	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
-	votingPeriodSeconds := time.Duration(votingPeriodSlots*params.BeaconConfig().SecondsPerSlot)*time.Second
+	votingPeriodSeconds := time.Duration(votingPeriodSlots*params.BeaconConfig().SecondsPerSlot) * time.Second
 
-    eth1UnixTime := time.Unix(int64(eth1Block.Time()), 0)
-    timeToInclusion := eth1UnixTime.Add(votingPeriodSeconds)
+	eth1UnixTime := time.Unix(int64(eth1Timestamp), 0)
+	timeToInclusion := eth1UnixTime.Add(votingPeriodSeconds)
 
-    eth2Genesis := time.Unix(int64(beaconState.GenesisTime), 0)
-    eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
+	eth2Genesis := time.Unix(int64(beaconState.GenesisTime), 0)
+	eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
 	depositBlockSlot := uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
 
 	currEpoch := helpers.CurrentEpoch(beaconState)
