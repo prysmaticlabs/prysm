@@ -32,39 +32,26 @@ type ValidatorServer struct {
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
 	beaconState, err := vs.beaconDB.HeadState(stream.Context())
-
-	reply := func() error {
-		beaconState, err = vs.beaconDB.HeadState(stream.Context())
-		if err != nil {
-			return fmt.Errorf("could not retrieve beacon state: %v", err)
-		}
-		activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
-		statuses := vs.determineActivationStatuses(beaconstate, req.PublicKeys)
-		res := &pb.ValidatorActivationResponse{
-			ActivatedPublicKeys: activeKeys,
-			Statuses: statuses,
-		}
-		return stream.Send(res)
+	statuses := vs.determineActivationStatuses(beaconState, req.PublicKeys)
+	res := &pb.ValidatorActivationResponse{
+		Statuses: statuses,
 	}
-
-	hasAny, err := vs.beaconDB.HasAnyValidators(beaconState, req.PublicKeys)
-	if err != nil {
+	if err := stream.Send(res); err != nil {
 		return err
 	}
-	if hasAny {
-		return reply()
-	}
+
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-			hasAny, err := vs.beaconDB.HasAnyValidators(beaconState, req.PublicKeys)
+			beaconState, err = vs.beaconDB.HeadState(stream.Context())
 			if err != nil {
-				return err
+				return fmt.Errorf("could not retrieve beacon state: %v", err)
 			}
-			if !hasAny {
-				continue
+			statuses := vs.determineActivationStatuses(beaconState, req.PublicKeys)
+			res := &pb.ValidatorActivationResponse{
+				Statuses: statuses,
 			}
-			return reply()
+			return stream.Send(res)
 		case <-vs.ctx.Done():
 			return errors.New("rpc context closed, exiting goroutine")
 		}
