@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -26,6 +27,7 @@ type ValidatorServer struct {
 	beaconDB           *db.BeaconDB
 	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
+	powChainService     powChainService
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -227,12 +229,25 @@ func (vs *ValidatorServer) ValidatorStatus(
 		}, nil
 	}
 
-	currEpoch := helpers.CurrentEpoch(beaconState)
 	eth1BlockNum := eth1BlockNumBigInt.Uint64()
-	timeToInclusion := (eth1BlockNum + params.BeaconConfig().Eth1FollowDistance) * params.BeaconConfig().GoerliBlockTime
-	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
-	depositBlockSlot := (timeToInclusion / params.BeaconConfig().SecondsPerSlot) + votingPeriodSlots
+	blocksToInclusion := (eth1BlockNum + params.BeaconConfig().Eth1FollowDistance)
+	eth1Block, err := vs.powChainService.BlockByHeight(ctx, big.NewInt(int64(blocksToInclusion)))
+	if err != nil {
+		return nil, err
+	}
 
+
+	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
+	votingPeriodSeconds := time.Duration(votingPeriodSlots*params.BeaconConfig().SecondsPerSlot)*time.Second
+
+    eth1UnixTime := time.Unix(int64(eth1Block.Time()), 0)
+    timeToInclusion := eth1UnixTime.Add(votingPeriodSeconds)
+
+    eth2Genesis := time.Unix(int64(beaconState.GenesisTime), 0)
+    eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
+	depositBlockSlot := uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
+
+	currEpoch := helpers.CurrentEpoch(beaconState)
 	var validatorInState *pbp2p.Validator
 	var validatorIndex uint64
 	for idx, val := range beaconState.ValidatorRegistry {

@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 var log logrus.FieldLogger
@@ -50,6 +51,7 @@ type powChainService interface {
 	LatestBlockHeight() *big.Int
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
+	BlockByHeight(ctx context.Context, height *big.Int) (*gethTypes.Block, error)
 	DepositRoot() [32]byte
 	DepositTrie() *trieutil.MerkleTrie
 	ChainStartDeposits() [][]byte
