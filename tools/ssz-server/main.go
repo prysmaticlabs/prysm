@@ -32,7 +32,7 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-type DeserializationRequest struct {
+type deserializationRequest struct {
 	Data string `json:"data"`
 }
 
@@ -49,7 +49,7 @@ func decodeDepositData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	requestData := &DeserializationRequest{}
+	requestData := &deserializationRequest{}
 	if err := json.Unmarshal(data, requestData); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Unable to unmarshal JSON: %v\n", err)
