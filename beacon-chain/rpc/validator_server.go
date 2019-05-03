@@ -216,10 +216,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
-	_, eth1BlockNumBigInt, err := vs.beaconDB.DepositByPubkey(ctx, req.PublicKey)
-	if err != nil {
-		return nil, err
-	}
+	_, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, req.PublicKey)
 	if eth1BlockNumBigInt == nil {
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
@@ -300,10 +297,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 			PublicKey: key,
 			Status:    &pb.ValidatorStatusResponse{},
 		}
-		dep, eth1BlockNumBigInt, err := vs.beaconDB.DepositByPubkey(ctx, key)
-		if err != nil {
-			return activeValidatorExists, nil, err
-		}
+		dep, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, key)
 		if eth1BlockNumBigInt == nil {
 			statusResponses[i].Status = &pb.ValidatorStatusResponse{
 				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
@@ -352,10 +346,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 		}
 
 		lastValidator := beaconState.ValidatorRegistry[lastValidatorIndex]
-		lastValidatorDeposit, _, err := vs.beaconDB.DepositByPubkey(ctx, lastValidator.Pubkey)
-		if err != nil {
-			return activeValidatorExists, nil, err
-		}
+		lastValidatorDeposit, _ := vs.beaconDB.DepositByPubkey(ctx, lastValidator.Pubkey)
 
 		var positionInQueue uint64
 		if dep.MerkleTreeIndex > lastValidatorDeposit.MerkleTreeIndex {

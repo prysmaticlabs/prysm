@@ -3,7 +3,6 @@ package db
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"math/big"
 	"sort"
 
@@ -86,7 +85,7 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 
 // DepositByPubkey looks through historical deposits and finds one which contains
 // a certain public key within its deposit data.
-func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Deposit, *big.Int, error) {
+func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Deposit, *big.Int) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositByPubkey")
 	defer span.End()
 	db.depositsLock.RLock()
@@ -97,7 +96,8 @@ func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Dep
 	for _, ctnr := range db.deposits {
 		depositInput, err := helpers.DecodeDepositInput(ctnr.deposit.DepositData)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not decode deposit input: %v", err)
+			log.Debugf("Could not decode deposit input: %v", err)
+			continue
 		}
 		if bytes.Equal(depositInput.Pubkey, pubKey) {
 			deposit = ctnr.deposit
@@ -105,5 +105,5 @@ func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Dep
 			break
 		}
 	}
-	return deposit, blockNum, nil
+	return deposit, blockNum
 }
