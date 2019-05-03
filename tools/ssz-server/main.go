@@ -20,7 +20,7 @@ import (
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthz)
-	mux.HandleFunc("/decodeDepositData", decodeDepositData)
+	mux.HandleFunc("/api/decodeDepositData", decodeDepositData)
 
 	log.Println("Starting on port 4000")
 	if err := http.ListenAndServe(":4000", mux); err != nil {

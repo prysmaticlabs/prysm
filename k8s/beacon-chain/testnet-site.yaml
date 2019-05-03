@@ -102,6 +102,16 @@ spec:
   http:
   - match:
     - uri:
+        prefix: /ssz
+    rewrite:
+      uri: /api
+    route:
+    - destination:
+        port:
+          number: 4000
+        host: ssz-server.beacon-chain.svc.cluster.local
+  - match:
+    - uri:
         prefix: /
     route:
     - destination:

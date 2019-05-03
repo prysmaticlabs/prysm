@@ -1,0 +1,70 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata: 
+  name: ssz-server
+  namespace: beacon-chain
+  labels:
+    app: beacon-chain
+    component: ssz-server
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: beacon-chain
+      component: ssz-server
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: beacon-chain
+        component: ssz-server
+        version: v1
+    spec:
+      priorityClassName: production-priority
+      containers:
+      - name: site
+        image: gcr.io/prysmaticlabs/prysm/ssz-server:latest
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 4000 
+        resources:
+          requests:
+            cpu: "100m"
+        ports: 
+        - containerPort: 4000
+          name: http
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ssz-server
+  namespace: beacon-chain
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: ssz-server
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 80
+---
+kind: Service
+apiVersion: v1
+metadata: 
+  name: ssz-server
+  namespace: beacon-chain
+spec:
+  selector:
+    app: beacon-chain
+    component: ssz-server
+  ports:
+  - port: 4000
+    targetPort: 4000
+    name: http
+  type: ClusterIP
