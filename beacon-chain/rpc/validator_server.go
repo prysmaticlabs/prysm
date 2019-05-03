@@ -36,50 +36,36 @@ type ValidatorServer struct {
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
-	beaconState, err := vs.beaconDB.HeadState(stream.Context())
-
-	reply := func() error {
-		beaconState, err = vs.beaconDB.HeadState(stream.Context())
-		if err != nil {
-			return fmt.Errorf("could not retrieve beacon state: %v", err)
-		}
-		activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
-		res := &pb.ValidatorActivationResponse{
-			ActivatedPublicKeys: activeKeys,
-		}
-		return stream.Send(res)
-
-	}
-
-	hasAny, err := vs.beaconDB.HasAnyValidators(beaconState, req.PublicKeys)
+	activeValidatorExists, validatorStatus, err := vs.MultipleValidatorStatus(stream.Context(), req.PublicKeys)
 	if err != nil {
 		return err
 	}
-	if hasAny {
-		return reply()
+	res := &pb.ValidatorActivationResponse{
+		Statuses: validatorStatus,
 	}
+	if activeValidatorExists {
+		return stream.Send(res)
+	}
+	if err := stream.Send(res); err != nil {
+		return err
+	}
+
 	for {
 		select {
-		case <-time.After(3 * time.Second):
-			hasAny, err := vs.beaconDB.HasAnyValidators(beaconState, req.PublicKeys)
+		case <-time.After(6 * time.Second):
+			activeValidatorExists, validatorStatus, err := vs.MultipleValidatorStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
 				return err
 			}
-			if !hasAny {
-				validatorStatus, err := vs.MultipleValidatorStatus(stream.Context(), req.PublicKeys)
-				if err != nil {
-					return err
-				}
-				res := &pb.ValidatorActivationResponse{
-					Statuses: validatorStatus,
-				}
-				if err := stream.Send(res); err != nil {
-					return err
-				}
-
-				continue
+			res := &pb.ValidatorActivationResponse{
+				Statuses: validatorStatus,
 			}
-			return reply()
+			if activeValidatorExists {
+				return stream.Send(res)
+			}
+			if err := stream.Send(res); err != nil {
+				return err
+			}
 		case <-stream.Context().Done():
 			return errors.New("stream context closed,exiting gorutine")
 		case <-vs.ctx.Done():
@@ -277,7 +263,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 			}
 		}
 		// Our position in the activation queue is the above index - our validator index.
-		positionInQueue = lastActivatedValidatorIdx - validatorIndex
+		positionInQueue = validatorIndex - lastActivatedValidatorIdx
 	}
 
 	status := vs.validatorStatus(req.PublicKey, beaconState)
@@ -295,28 +281,27 @@ func (vs *ValidatorServer) ValidatorStatus(
 
 func (vs *ValidatorServer) MultipleValidatorStatus(
 	ctx context.Context,
-	pubkeys [][]byte) ([]*pb.ValidatorActivationResponse_Status, error) {
+	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
+
+	activeValidatorExists := false
 
 	beaconState, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+		return activeValidatorExists, nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
 	validatorMap := stateutils.ValidatorIndexMap(beaconState)
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
 
 	for i, key := range pubkeys {
-		log.Error("1")
 		statusResponses[i] = &pb.ValidatorActivationResponse_Status{
 			PublicKey: key,
 			Status:    &pb.ValidatorStatusResponse{},
 		}
-		log.Error("2")
 		_, eth1BlockNumBigInt, err := vs.beaconDB.DepositByPubkey(ctx, key)
 		if err != nil {
-			return nil, err
+			return activeValidatorExists, nil, err
 		}
-		log.Error("3")
 		if eth1BlockNumBigInt == nil {
 			statusResponses[i].Status = &pb.ValidatorStatusResponse{
 				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
@@ -325,7 +310,6 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 			}
 			continue
 		}
-		log.Error("4")
 
 		depositBlockSlot, err := vs.depositBlockSlot(ctx, eth1BlockNumBigInt, beaconState)
 		if err != nil {
@@ -337,8 +321,6 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 			continue
 		}
 
-		log.Error("5")
-
 		currEpoch := helpers.CurrentEpoch(beaconState)
 		var validatorInState *pbp2p.Validator
 		var validatorIndex uint64
@@ -346,6 +328,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 		if ok {
 			validator := beaconState.ValidatorRegistry[valIndex]
 			if helpers.IsActiveValidator(validator, currEpoch) {
+				activeValidatorExists = true
 				statusResponses[i].Status = &pb.ValidatorStatusResponse{
 					Status:                 pb.ValidatorStatus_ACTIVE,
 					ActivationEpoch:        validator.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
@@ -357,7 +340,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 			validatorInState = validator
 			validatorIndex = uint64(valIndex)
 		}
-		log.Error("6")
+
 		var positionInQueue uint64
 		// If the validator has deposited and has been added to the state:
 		if validatorInState != nil {
@@ -369,9 +352,8 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 				}
 			}
 			// Our position in the activation queue is the above index - our validator index.
-			positionInQueue = lastActivatedValidatorIdx - validatorIndex
+			positionInQueue = validatorIndex - lastActivatedValidatorIdx
 		}
-		log.Error("7")
 
 		status := vs.validatorStatus(key, beaconState)
 		statusResponses[i].Status = &pb.ValidatorStatusResponse{
@@ -384,7 +366,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 
 	}
 
-	return statusResponses, nil
+	return activeValidatorExists, statusResponses, nil
 }
 
 func (vs *ValidatorServer) validatorStatus(pubkey []byte, beaconState *pbp2p.BeaconState) pb.ValidatorStatus {
