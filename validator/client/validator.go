@@ -132,18 +132,18 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 		if status.Status.ActivationEpoch == (params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch) {
 			log.WithFields(logrus.Fields{
 				"PublicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-				"Status":                    fmt.Sprintf("%s", status.Status.Status.String()),
-				"DepositInclusionSlot":      fmt.Sprintf("%d", status.Status.DepositInclusionSlot),
-				"PositionInActivationQueue": fmt.Sprintf("%d", status.Status.PositionInActivationQueue),
+				"Status":                    status.Status.Status.String(),
+				"DepositInclusionSlot":      status.Status.DepositInclusionSlot,
+				"PositionInActivationQueue": status.Status.PositionInActivationQueue,
 			}).Info("Waiting to be Activated")
 			continue
 		}
 		log.WithFields(logrus.Fields{
 			"PublicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-			"Status":                    fmt.Sprintf("%s", status.Status.Status.String()),
-			"DepositInclusionSlot":      fmt.Sprintf("%d", status.Status.DepositInclusionSlot),
-			"ActivationEpoch":           fmt.Sprintf("%d", status.Status.ActivationEpoch),
-			"PositionInActivationQueue": fmt.Sprintf("%d", status.Status.PositionInActivationQueue),
+			"Status":                    status.Status.Status.String(),
+			"DepositInclusionSlot":      status.Status.DepositInclusionSlot,
+			"ActivationEpoch":           status.Status.ActivationEpoch,
+			"PositionInActivationQueue": status.Status.PositionInActivationQueue,
 		}).Info("Validator Status")
 	}
 	return activatedKeys

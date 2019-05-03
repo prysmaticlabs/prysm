@@ -36,12 +36,12 @@ type ValidatorServer struct {
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
-	activeValidatorExists, validatorStatus, err := vs.MultipleValidatorStatus(stream.Context(), req.PublicKeys)
+	activeValidatorExists, validatorStatuses, err := vs.MultipleValidatorStatus(stream.Context(), req.PublicKeys)
 	if err != nil {
 		return err
 	}
 	res := &pb.ValidatorActivationResponse{
-		Statuses: validatorStatus,
+		Statuses: validatorStatuses,
 	}
 	if activeValidatorExists {
 		return stream.Send(res)
@@ -53,12 +53,12 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 	for {
 		select {
 		case <-time.After(6 * time.Second):
-			activeValidatorExists, validatorStatus, err := vs.MultipleValidatorStatus(stream.Context(), req.PublicKeys)
+			activeValidatorExists, validatorStatuses, err := vs.MultipleValidatorStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
 				return err
 			}
 			res := &pb.ValidatorActivationResponse{
-				Statuses: validatorStatus,
+				Statuses: validatorStatuses,
 			}
 			if activeValidatorExists {
 				return stream.Send(res)
