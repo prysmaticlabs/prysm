@@ -513,7 +513,9 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	// of current epoch & previous epoch.
 	if epoch != currentEpoch && epoch != previousEpoch {
 		return nil, fmt.Errorf("input epoch: %d != current epoch: %d or previous epoch: %d",
-			epoch, currentEpoch, previousEpoch)
+			epoch-params.BeaconConfig().GenesisEpoch,
+			currentEpoch-params.BeaconConfig().GenesisEpoch,
+			previousEpoch-params.BeaconConfig().GenesisEpoch)
 	}
 
 	// Decide if the source attestations are coming from current or previous epoch.
@@ -526,7 +528,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 
 	targetRoot, err := helpers.BlockRoot(state, epoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
+		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch-params.BeaconConfig().GenesisEpoch, err)
 	}
 
 	tgtAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
@@ -717,6 +719,9 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	totalBalance := totalActiveBalance(state)
 	rewards := make([]uint64, len(state.ValidatorRegistry))
 	penalties := make([]uint64, len(state.ValidatorRegistry))
+
+	// Filter out the list of eligible validator indices. The eligible validator
+	// has to be active or slashed but before can withdrawn.
 	var eligible []uint64
 	for i, v := range state.ValidatorRegistry {
 		isActive := helpers.IsActiveValidator(v, prevEpoch)
@@ -725,21 +730,25 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			eligible = append(eligible, uint64(i))
 		}
 	}
+
+	// Construct a list that contains source, target and head attestations.
 	atts, err := MatchAttestations(state, prevEpoch)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("could not get source, target and head attestations: %v", err)
 	}
-	var matchedAtts [][]*pb.PendingAttestation
-	matchedAtts = append(matchedAtts, atts.source)
-	matchedAtts = append(matchedAtts, atts.target)
-	matchedAtts = append(matchedAtts, atts.head)
+	var attsPackage [][]*pb.PendingAttestation
+	attsPackage = append(attsPackage, atts.source)
+	attsPackage = append(attsPackage, atts.target)
+	attsPackage = append(attsPackage, atts.head)
 
-	for _, matchAtt := range matchedAtts {
+	// Compute rewards / penalties for each attestation in the list.
+	for _, matchAtt := range attsPackage {
 		indices, err := UnslashedAttestingIndices(state, matchAtt)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
 		}
 		attested := make(map[uint64]bool)
+		// Construct a map to look up validators that voted.
 		for _, index := range indices {
 			attested[index] = true
 		}
@@ -747,6 +756,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		if err != nil {
 			return nil, nil, err
 		}
+		// Update rewards and penalties lists for every eligible validator index.
 		for _, index := range eligible {
 			if _, ok := attested[index]; ok {
 				rewards[index] += BaseReward(state, index) * attestedBalance / totalBalance
