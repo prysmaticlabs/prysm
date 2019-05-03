@@ -298,7 +298,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 			PublicKey: key,
 			Status:    &pb.ValidatorStatusResponse{},
 		}
-		_, eth1BlockNumBigInt, err := vs.beaconDB.DepositByPubkey(ctx, key)
+		dep, eth1BlockNumBigInt, err := vs.beaconDB.DepositByPubkey(ctx, key)
 		if err != nil {
 			return activeValidatorExists, nil, err
 		}
@@ -321,9 +321,8 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 			continue
 		}
 
+		validatorInState := false
 		currEpoch := helpers.CurrentEpoch(beaconState)
-		var validatorInState *pbp2p.Validator
-		var validatorIndex uint64
 		valIndex, ok := validatorMap[bytesutil.ToBytes32(key)]
 		if ok {
 			validator := beaconState.ValidatorRegistry[valIndex]
@@ -337,22 +336,34 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 				}
 				continue
 			}
-			validatorInState = validator
-			validatorIndex = uint64(valIndex)
+			validatorInState = true
+		}
+
+		lastValidatorIndex := len(beaconState.ValidatorRegistry) - 1
+
+		var lastActivatedValidatorIdx uint64
+		for j := lastValidatorIndex; j >= 0; j-- {
+			if helpers.IsActiveValidator(beaconState.ValidatorRegistry[j], currEpoch) {
+				lastActivatedValidatorIdx = uint64(j)
+				break
+			}
+		}
+
+		lastValidator := beaconState.ValidatorRegistry[lastValidatorIndex]
+		lastValidatorDeposit, _, err := vs.beaconDB.DepositByPubkey(ctx, lastValidator.Pubkey)
+		if err != nil {
+			return activeValidatorExists, nil, err
 		}
 
 		var positionInQueue uint64
+		if dep.MerkleTreeIndex > lastValidatorDeposit.MerkleTreeIndex {
+			positionInQueue = dep.MerkleTreeIndex - lastValidatorDeposit.MerkleTreeIndex
+		}
+
 		// If the validator has deposited and has been added to the state:
-		if validatorInState != nil {
-			var lastActivatedValidatorIdx uint64
-			for j := len(beaconState.ValidatorRegistry) - 1; j >= 0; j-- {
-				if helpers.IsActiveValidator(beaconState.ValidatorRegistry[j], currEpoch) {
-					lastActivatedValidatorIdx = uint64(j)
-					break
-				}
-			}
+		if validatorInState {
 			// Our position in the activation queue is the above index - our validator index.
-			positionInQueue = validatorIndex - lastActivatedValidatorIdx
+			positionInQueue += uint64(lastValidatorIndex) - lastActivatedValidatorIdx
 		}
 
 		status := vs.validatorStatus(key, beaconState)
