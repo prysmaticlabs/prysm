@@ -467,7 +467,7 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 //    ], key=lambda a: a.inclusion_slot)
 func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, index uint64) (*pb.PendingAttestation, error) {
 	earliest := &pb.PendingAttestation{
-		InclusionSlot: params.BeaconConfig().FarFutureEpoch,
+		InclusionDelay: params.BeaconConfig().FarFutureEpoch,
 	}
 	for _, att := range atts {
 		indices, err := helpers.AttestationParticipants(state, att.Data, att.AggregationBitfield)
@@ -476,7 +476,7 @@ func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, in
 		}
 		for _, i := range indices {
 			if index == i {
-				if earliest.InclusionSlot > att.InclusionSlot {
+				if earliest.InclusionDelay > att.InclusionDelay {
 					earliest = att
 				}
 			}
@@ -754,7 +754,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		}
 		attestedBalance, err := AttestingBalance(state, matchAtt)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("could not get attesting balance: %v", err)
 		}
 		// Update rewards and penalties lists for every eligible validator index.
 		for _, index := range eligible {
@@ -768,34 +768,28 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 	indices, err := UnslashedAttestingIndices(state, atts.source)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
 	}
 	// For every index, filter the matching source attestation that correspond to the index,
 	// sort by inclusion delay and get the one that was included on chain first.
 	for _, index := range indices {
-		smallestDelay := &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
-		for _, a := range atts.source {
-			indices, err := helpers.AttestationParticipants(state, a.Data, a.AggregationBitfield)
-			if err != nil {
-				return nil, nil, err
-			}
-			for _, i := range indices {
-				if index == i {
-					if smallestDelay.InclusionDelay > a.InclusionDelay {
-						smallestDelay = a
-					}
-				}
-			}
+		att, err := EarlistAttestation(state, atts.source, index)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get the lowest inclusion delay attestation: %v", err)
 		}
-		rewards[smallestDelay.ProposerIndex] += BaseReward(state, index) / params.BeaconConfig().ProposerRewardQuotient
-		rewards[index] += BaseReward(state, index) * params.BeaconConfig().MinAttestationInclusionDelay / smallestDelay.InclusionDelay
+		// The reward for the proposer is based upon the value toward finality of the attestation
+		// they included which is based upon the index of the attestation signer.
+		rewards[att.ProposerIndex] += BaseReward(state, index) / params.BeaconConfig().ProposerRewardQuotient
+		rewards[index] += BaseReward(state, index) * params.BeaconConfig().MinAttestationInclusionDelay / att.InclusionDelay
 	}
 
+	// When epoch since finality exceeds inactivity penalty constant, the penalty gets increased
+	// based on the finality delay.
 	finalityDelay := prevEpoch - state.FinalizedEpoch
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
 		targetIndices, err := UnslashedAttestingIndices(state, atts.target)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
 		}
 		attestedTarget := make(map[uint64]bool)
 		for _, index := range targetIndices {
