@@ -39,6 +39,16 @@ func (pbl *PeerBlackList) Size() int {
 	return len(pbl.pb)
 }
 
+func (pbl *PeerBlackList) BlackListedPeers() []peer.ID {
+	pbl.lk.Lock()
+	out := make([]peer.ID, 0, len(pbl.pb))
+	for p, _ := range ps.pb {
+		out = append(out, p)
+	}
+	pbl.lk.Unlock()
+	return out
+}
+
 
 
 	
