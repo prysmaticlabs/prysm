@@ -80,6 +80,8 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 				continue
 			}
 			return reply()
+		case <-stream.Context().Done():
+			return errors.New("stream context closed,exiting gorutine")
 		case <-vs.ctx.Done():
 			return errors.New("rpc context closed, exiting goroutine")
 		}
