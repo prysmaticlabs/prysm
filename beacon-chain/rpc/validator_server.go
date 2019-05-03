@@ -218,10 +218,11 @@ func (vs *ValidatorServer) ValidatorStatus(
 
 	_, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, req.PublicKey)
 	if eth1BlockNumBigInt == nil {
+		status := vs.validatorStatus(req.PublicKey, beaconState)
 		return &pb.ValidatorStatusResponse{
-			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+			Status:                 status,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
-			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+			Eth1DepositBlockNumber: 0,
 		}, nil
 	}
 
