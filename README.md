@@ -33,7 +33,7 @@ You can now participate in our public testnet release for Ethereum 2.0 phase 0. 
 
 ### Installation Options
 You can either choose to run our system via:
-- Our latest release **(Easiest)**
+- Our latest [release](https://github.com/prysmaticlabs/prysm/releases) **(Easiest)**
 - Using Docker **(Recommended)**
 - Using Our Build Tool, Bazel
 
