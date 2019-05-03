@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+    "github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
 // receiveBlockAnnounce accepts a block hash, determines if we do not contain
@@ -28,6 +29,8 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("isEvilBlock", isEvilBlock))
 
 	if isEvilBlock {
+		pbl := p2p.GetPeerBlackList()
+		pbl.Add(msg.Peer)
 		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).
 			Debug("Received blacklisted block")
 		return nil

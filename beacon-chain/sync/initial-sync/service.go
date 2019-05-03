@@ -250,15 +250,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
 	
-    // initialize PeerBlackList
-	pbl := p2p.GetPeerBlackList()
-
-	//how to get a peer.ID 
-
-	//Add peer to the blacklist
-	pbl.Add(peer.ID)
-
-	/*
+    /*
 	drop a peer options:
 	I have investigated libp2p github issues, there are some ways to disconnect from peer
 	1)	host.Network().ClosePeer(peer.ID)
