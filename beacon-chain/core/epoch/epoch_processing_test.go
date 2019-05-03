@@ -932,8 +932,10 @@ func TestMatchAttestations_CurrentEpoch(t *testing.T) {
 }
 
 func TestMatchAttestations_EpochOutOfBound(t *testing.T) {
-	_, err := MatchAttestations(&pb.BeaconState{Slot: 1}, 2 /* epoch */)
+	_, err := MatchAttestations(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 1},
+		params.BeaconConfig().GenesisEpoch+2 /* epoch */)
 	if !strings.Contains(err.Error(), "input epoch: 2 != current epoch: 0") {
+		t.Log(err)
 		t.Fatal("Did not receive wanted error")
 	}
 }
@@ -1032,8 +1034,8 @@ func TestCrosslinkAttestingIndices_CanGetIndices(t *testing.T) {
 
 func TestWinningCrosslink_CantGetMatchingAtts(t *testing.T) {
 	wanted := fmt.Sprintf("could not get matching attestations: input epoch: %d != current epoch: %d or previous epoch: %d",
-		100, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().GenesisEpoch)
-	_, err := WinningCrosslink(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, 0, 100)
+		100, 0, 0)
+	_, err := WinningCrosslink(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, 0, params.BeaconConfig().GenesisEpoch+100)
 	if err.Error() != wanted {
 		t.Fatal(err)
 	}
