@@ -725,6 +725,8 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
 	mockStream.EXPECT().Context().Return(context.Background())
+	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
+	mockStream.EXPECT().Context().Return(context.Background())
 	exitRoutine := make(chan bool)
 	go func(tt *testing.T) {
 		want := "context closed"
@@ -765,6 +767,17 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
+	depData, err := helpers.EncodeDepositData(&pbp2p.DepositInput{
+		Pubkey: []byte{'A'},
+	}, 10, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dep := &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(context.Background(), dep, big.NewInt(10))
+
 	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
@@ -776,6 +789,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		ctx:                context.Background(),
 		chainService:       newMockChainService(),
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		powChainService:    &mockPOWChainService{},
 	}
 	req := &pb.ValidatorActivationRequest{
 		PublicKeys: pubKeys,
@@ -785,10 +799,22 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
 	mockStream.EXPECT().Context().Return(context.Background())
-	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Send(
 		&pb.ValidatorActivationResponse{
-			ActivatedPublicKeys: pubKeys,
+			Statuses: []*pb.ValidatorActivationResponse_Status{
+				{PublicKey: []byte{'A'},
+					Status: &pb.ValidatorStatusResponse{
+						Status:                 pb.ValidatorStatus_ACTIVE,
+						Eth1DepositBlockNumber: 10,
+						DepositInclusionSlot:   1024,
+					},
+				},
+				{PublicKey: []byte{'B'},
+					Status: &pb.ValidatorStatusResponse{
+						ActivationEpoch: params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+					},
+				},
+			},
 		},
 	).Return(nil)
 

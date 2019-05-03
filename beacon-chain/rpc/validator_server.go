@@ -287,7 +287,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 
 	beaconState, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return activeValidatorExists, nil, fmt.Errorf("could not fetch beacon state: %v", err)
+		return false, nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
 	validatorMap := stateutils.ValidatorIndexMap(beaconState)
