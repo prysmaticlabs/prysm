@@ -38,19 +38,6 @@ func publicKeys(keys map[string]*keystore.Key) [][]byte {
 	return pks
 }
 
-func generateMockStatusResponse(pubkeys [][]byte) *pb.ValidatorActivationResponse {
-	multipleStatus := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
-	for i, key := range pubkeys {
-		multipleStatus[i] = &pb.ValidatorActivationResponse_Status{
-			PublicKey: key,
-			Status: &pb.ValidatorStatusResponse{
-				Status: pb.ValidatorStatus_UNKNOWN_STATUS,
-			},
-		}
-	}
-	return &pb.ValidatorActivationResponse{Statuses: multipleStatus}
-}
-
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -261,8 +248,6 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		validatorClient: client,
 	}
 	v.pubkeys = publicKeys(v.keys)
-	resp := generateMockStatusResponse(v.pubkeys)
-	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
@@ -271,7 +256,9 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		resp,
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: publicKeys(v.keys),
+		},
 		nil,
 	)
 	if err := v.WaitForActivation(context.Background()); err != nil {
@@ -329,9 +316,6 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		validatorClient: client,
 	}
 	v.pubkeys = publicKeys(v.keys)
-	resp := generateMockStatusResponse(v.pubkeys)
-	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
-	resp.Statuses[1].Status.Status = pb.ValidatorStatus_ACTIVE
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
@@ -340,7 +324,9 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		resp,
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: v.pubkeys,
+		},
 		nil,
 	)
 	if err := v.WaitForActivation(context.Background()); err != nil {
@@ -358,8 +344,6 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		validatorClient: client,
 		pubkeys:         publicKeys(keyMapThreeValidators),
 	}
-	resp := generateMockStatusResponse(v.pubkeys)
-	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
@@ -372,7 +356,9 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		nil,
 	)
 	clientStream.EXPECT().Recv().Return(
-		resp,
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: publicKeys(v.keys),
+		},
 		nil,
 	)
 	if err := v.WaitForActivation(context.Background()); err != nil {
