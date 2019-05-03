@@ -418,7 +418,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	depositBlockSlot := uint64(1194)
 	expected := &pb.ValidatorStatusResponse{
 		Status:                 pb.ValidatorStatus_ACTIVE,
-		ActivationEpoch:        params.BeaconConfig().GenesisEpoch,
+		ActivationEpoch:        0,
 		DepositInclusionSlot:   depositBlockSlot,
 		Eth1DepositBlockNumber: 0,
 	}
