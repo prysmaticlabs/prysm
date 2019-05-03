@@ -5,13 +5,16 @@
 package main
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func main() {
@@ -53,10 +56,24 @@ func decodeDepositData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Decoding %s\n", requestData.Data)
+	if len(requestData.Data) < 2 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-	di, err := helpers.DecodeDepositInput([]byte(requestData.Data))
+	encodedData, err := hex.DecodeString(requestData.Data[2:])
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err = fmt.Fprintf(w, "Failed to decode hex string")
+		if err != nil {
+			log.Printf("Failed to write data to client: %v\n", err)
+		}
+		return
+	}
+
+	di := &pb.DepositInput{}
+
+	if err := ssz.Decode(bytes.NewReader(encodedData), di); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := fmt.Fprintf(w, "Failed to decode SSZ data: %v", err)
 		if err != nil {
@@ -70,6 +87,7 @@ func decodeDepositData(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Failed to marshal deposit data: %v\n", err)
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(b)
 	if err != nil {
