@@ -434,7 +434,7 @@ func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error
 //        state.finalized_root = get_block_root(state, state.finalized_epoch)
 func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (
 	*pb.BeaconState, error) {
-	// There's no reason to process justification until the 2nd epoch.
+	// There's no reason to process justification until the 3rd epoch.
 	currentEpoch := helpers.CurrentEpoch(state)
 	if currentEpoch <= params.BeaconConfig().GenesisEpoch+1 {
 		return state, nil
