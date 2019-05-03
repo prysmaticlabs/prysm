@@ -100,6 +100,9 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not receive validator activation from stream: %v", err)
 		}
+
+		v.logValidatorStatus(res.Statuses)
+
 		if len(res.ActivatedPublicKeys) > 0 {
 			validatorActivatedRecords = res.ActivatedPublicKeys
 			break
@@ -111,6 +114,18 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		}).Info("Validator activated")
 	}
 	return nil
+}
+
+func (v *validator) logValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) {
+	for _, status := range validatorStatuses {
+		log.WithFields(logrus.Fields{
+			"PublicKey":                 fmt.Sprintf("%#x", status.PublicKey),
+			"Status":                    fmt.Sprintf("%s", status.Status.Status.String()),
+			"DepositInclusionSlot":      fmt.Sprintf("%d", status.Status.DepositInclusionSlot),
+			"ActivationEpoch":           fmt.Sprintf("%d", status.Status.ActivationEpoch),
+			"PositionInActivationQueue": fmt.Sprintf("%d", status.Status.PositionInActivationQueue),
+		}).Info("Validator Status")
+	}
 }
 
 // CanonicalHeadSlot returns the slot of canonical block currently found in the
