@@ -5,11 +5,14 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/big"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/golang/mock/gomock"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -306,26 +309,6 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	}
 }
 
-func TestValidatorStatus_CantFindValidatorIdx(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
-
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{ValidatorRegistry: []*pbp2p.Validator{}}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-	vs := &ValidatorServer{
-		beaconDB: db,
-	}
-	req := &pb.ValidatorIndexRequest{
-		PublicKey: []byte{'B'},
-	}
-	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey)
-	if _, err := vs.ValidatorStatus(context.Background(), req); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
-}
-
 func TestValidatorStatus_PendingActive(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -342,9 +325,29 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
+	depositInput := &pbp2p.DepositInput{
+		Pubkey:                      pubKey,
+		ProofOfPossession:           []byte("hi"),
+		WithdrawalCredentialsHash32: []byte("hey"),
+	}
+	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	deposit := &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -368,9 +371,25 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
+	depositInput := &pbp2p.DepositInput{
+		Pubkey:                      pubKey,
+		ProofOfPossession:           []byte("hi"),
+		WithdrawalCredentialsHash32: []byte("hey"),
+	}
+	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deposit := &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+
 	// Active because activation epoch <= current epoch < exit epoch.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		GenesisTime: uint64(time.Unix(0, 0).Unix()),
+		Slot:        params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
@@ -379,8 +398,14 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("could not save state: %v", err)
 	}
 
+	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -389,8 +414,16 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != pb.ValidatorStatus_ACTIVE {
-		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_ACTIVE, resp.Status)
+
+	depositBlockSlot := uint64(1194)
+	expected := &pb.ValidatorStatusResponse{
+		Status:                 pb.ValidatorStatus_ACTIVE,
+		ActivationEpoch:        0,
+		DepositInclusionSlot:   depositBlockSlot,
+		Eth1DepositBlockNumber: 0,
+	}
+	if !proto.Equal(resp, expected) {
+		t.Errorf("Wanted %v, got %v", expected, resp)
 	}
 }
 
@@ -413,9 +446,28 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
+	depositInput := &pbp2p.DepositInput{
+		Pubkey:                      pubKey,
+		ProofOfPossession:           []byte("hi"),
+		WithdrawalCredentialsHash32: []byte("hey"),
+	}
+	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	deposit := &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -448,9 +500,28 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
+	depositInput := &pbp2p.DepositInput{
+		Pubkey:                      pubKey,
+		ProofOfPossession:           []byte("hi"),
+		WithdrawalCredentialsHash32: []byte("hey"),
+	}
+	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	deposit := &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -482,9 +553,28 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
+	depositInput := &pbp2p.DepositInput{
+		Pubkey:                      pubKey,
+		ProofOfPossession:           []byte("hi"),
+		WithdrawalCredentialsHash32: []byte("hey"),
+	}
+	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	deposit := &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -517,9 +607,28 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
+	depositInput := &pbp2p.DepositInput{
+		Pubkey:                      pubKey,
+		ProofOfPossession:           []byte("hi"),
+		WithdrawalCredentialsHash32: []byte("hey"),
+	}
+	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	deposit := &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -553,8 +662,28 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 		t.Fatalf("could not save state: %v", err)
 	}
 
+	depositInput := &pbp2p.DepositInput{
+		Pubkey:                      pubKey,
+		ProofOfPossession:           []byte("hi"),
+		WithdrawalCredentialsHash32: []byte("hey"),
+	}
+	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deposit := &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			blockTimeByHeight: map[int]uint64{
+				0: uint64(height),
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -574,7 +703,8 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -594,6 +724,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
 	exitRoutine := make(chan bool)
 	go func(tt *testing.T) {
 		want := "context closed"
@@ -653,6 +784,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Send(
 		&pb.ValidatorActivationResponse{

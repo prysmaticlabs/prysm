@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -47,7 +48,7 @@ func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Me
 	return nil
 }
 
-func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error) {
+func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
 	}
@@ -112,6 +113,10 @@ func (m mockChainService) InsertsCanonical(slot uint64, hash []byte) {
 	m.canonicalBlocks[slot] = hash
 }
 
+func (m mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
+	return nil
+}
+
 func newMockChainService() *mockChainService {
 	return &mockChainService{
 		blockFeed:            new(event.Feed),
@@ -121,12 +126,20 @@ func newMockChainService() *mockChainService {
 	}
 }
 
+type mockSyncService struct {
+}
+
+func (ms *mockSyncService) Status() error {
+	return nil
+}
+
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:     "7348",
-		CertFlag: "alice.crt",
-		KeyFlag:  "alice.key",
+		Port:        "7348",
+		CertFlag:    "alice.crt",
+		KeyFlag:     "alice.key",
+		SyncService: &mockSyncService{},
 	})
 
 	rpcService.Start()
@@ -150,7 +163,8 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewLocal(fl.Logger)
 
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port: "ralph merkle!!!",
+		Port:        "ralph merkle!!!",
+		SyncService: &mockSyncService{},
 	})
 
 	if val, ok := log.(*TestLogger).testMap["error"]; ok {
@@ -179,7 +193,8 @@ func TestStatus_CredentialError(t *testing.T) {
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port: "7777",
+		Port:        "7777",
+		SyncService: &mockSyncService{},
 	})
 
 	rpcService.Start()

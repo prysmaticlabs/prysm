@@ -206,11 +206,10 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	validator := state.ValidatorRegistry[idx]
 
-	exitEpoch := entryExitEffectEpoch(helpers.CurrentEpoch(state))
-	if validator.ExitEpoch <= exitEpoch {
+	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state
 	}
-	validator.ExitEpoch = exitEpoch
+	validator.ExitEpoch = entryExitEffectEpoch(helpers.CurrentEpoch(state))
 	return state
 }
 

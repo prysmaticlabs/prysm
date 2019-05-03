@@ -348,6 +348,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var syncService *rbcsync.Service
+	if err := b.services.FetchService(&syncService); err != nil {
+		return err
+	}
+
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
@@ -359,6 +364,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,
+		SyncService:      syncService,
 	})
 
 	return b.services.RegisterService(rpcService)
