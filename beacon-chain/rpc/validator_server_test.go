@@ -823,6 +823,97 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 }
 
+func TestMultipleValidatorStatus_OK(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	pubKeys := [][]byte{{'A'}, {'B'}, {'C'}}
+	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+	if err := db.SaveValidatorIndex(pubKeys[1], 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	beaconState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			Pubkey:          pubKeys[0]},
+			{
+				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+				Pubkey:          pubKeys[1]},
+			{
+				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+				Pubkey:          pubKeys[2]},
+		},
+	}
+	if err := db.SaveState(ctx, beaconState); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+	depData, err := helpers.EncodeDepositData(&pbp2p.DepositInput{
+		Pubkey: []byte{'A'},
+	}, 10, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dep := &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(context.Background(), dep, big.NewInt(10))
+	depData, err = helpers.EncodeDepositData(&pbp2p.DepositInput{
+		Pubkey: []byte{'C'},
+	}, 10, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dep = &pbp2p.Deposit{
+		DepositData: depData,
+	}
+	db.InsertDeposit(context.Background(), dep, big.NewInt(15))
+
+	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
+		t.Fatalf("could not save validator index: %v", err)
+	}
+	if err := db.SaveValidatorIndex(pubKeys[1], 1); err != nil {
+		t.Fatalf("could not save validator index: %v", err)
+	}
+	if err := db.SaveValidatorIndex(pubKeys[2], 2); err != nil {
+		t.Fatalf("could not save validator index: %v", err)
+	}
+	vs := &ValidatorServer{
+		beaconDB:           db,
+		ctx:                context.Background(),
+		chainService:       newMockChainService(),
+		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		powChainService:    &mockPOWChainService{},
+	}
+	activeExists, response, err := vs.MultipleValidatorStatus(context.Background(), pubKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !activeExists {
+		t.Fatal("No activated validator exists when there was supposed to be 2")
+	}
+	if response[0].Status.Status != pb.ValidatorStatus_ACTIVE {
+		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
+			response[0].PublicKey, response[0].Status.Status.String())
+	}
+
+	if response[1].Status.Status == pb.ValidatorStatus_ACTIVE {
+		t.Errorf("Validator with pubkey %#x is activated despite not supposed to be", response[1].PublicKey)
+	}
+
+	if response[2].Status.Status != pb.ValidatorStatus_ACTIVE {
+		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
+			response[2].PublicKey, response[2].Status.Status.String())
+	}
+}
+
 func TestFilterActivePublicKeys(t *testing.T) {
 	currentEpoch := uint64(15)
 	beaconState := &pbp2p.BeaconState{
