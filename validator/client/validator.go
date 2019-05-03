@@ -87,7 +87,6 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
 	}
 	var validatorActivatedRecords [][]byte
-	log.Info("Waiting for validator to be activated in the beacon chain")
 	for {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
@@ -101,7 +100,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not receive validator activation from stream: %v", err)
 		}
-
+		log.Info("Waiting for validator to be activated in the beacon chain")
 		activatedKeys := v.checkAndLogValidatorStatus(res.Statuses)
 
 		if len(activatedKeys) > 0 {
