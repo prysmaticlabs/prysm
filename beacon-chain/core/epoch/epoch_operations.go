@@ -35,7 +35,7 @@ func TotalBalance(
 	return totalBalance
 }
 
-// InclusionSlot returns the slot number of when the validator's
+// InclusionDelay returns the slot number of when the validator's
 // attestation gets included in the beacon chain.
 //
 // Spec pseudocode definition:
@@ -44,7 +44,7 @@ func TotalBalance(
 //    get_attestation_participants(state, a.data, a.participation_bitfield)
 //    If multiple attestations are applicable, the attestation with
 //    lowest `slot_included` is considered.
-func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
+func InclusionDelay(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 	lowestSlotIncluded := uint64(math.MaxUint64)
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
@@ -53,8 +53,8 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error)
 		}
 		for _, index := range participatedValidators {
 			if index == validatorIndex {
-				if attestation.InclusionSlot < lowestSlotIncluded {
-					lowestSlotIncluded = attestation.InclusionSlot
+				if attestation.InclusionDelay < lowestSlotIncluded {
+					lowestSlotIncluded = attestation.InclusionDelay
 				}
 			}
 		}

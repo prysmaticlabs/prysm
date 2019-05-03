@@ -252,7 +252,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 
 		for _, participant := range attesterIndices {
 			inclusionDistanceByAttester[participant] = state.Slot - attestation.Data.Slot
-			inclusionSlotByAttester[participant] = attestation.InclusionSlot
+			inclusionSlotByAttester[participant] = attestation.InclusionDelay
 		}
 
 		// We extract the attestations from the current epoch.

@@ -202,7 +202,7 @@ func TestTotalBalance_CorrectBalance(t *testing.T) {
 	}
 }
 
-func TestInclusionSlot_GetsCorrectSlot(t *testing.T) {
+func TestInclusionDelay_GetsCorrectSlot(t *testing.T) {
 	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
 	var participationBitfield []byte
 	for i := 0; i < 16; i++ {
@@ -212,17 +212,17 @@ func TestInclusionSlot_GetsCorrectSlot(t *testing.T) {
 	state.LatestAttestations = []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       101},
+			InclusionDelay:       101},
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       100},
+			InclusionDelay:       100},
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       102},
+			InclusionDelay:       102},
 	}
-	slot, err := InclusionSlot(state, 251)
+	slot, err := InclusionDelay(state, 251)
 	if err != nil {
-		t.Fatalf("Could not execute InclusionSlot: %v", err)
+		t.Fatalf("Could not execute InclusionDelay: %v", err)
 	}
 	// validator 45's attestation got included in slot 100.
 	if slot != 100 {
@@ -230,27 +230,27 @@ func TestInclusionSlot_GetsCorrectSlot(t *testing.T) {
 	}
 }
 
-func TestInclusionSlot_InvalidBitfield(t *testing.T) {
+func TestInclusionDelay_InvalidBitfield(t *testing.T) {
 	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			AggregationBitfield: []byte{},
-			InclusionSlot:       100},
+			InclusionDelay:       100},
 	}
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
-	if _, err := InclusionSlot(state, 0); !strings.Contains(err.Error(), want) {
+	if _, err := InclusionDelay(state, 0); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestInclusionSlot_SlotNotFound(t *testing.T) {
+func TestInclusionDelay_SlotNotFound(t *testing.T) {
 	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().SlotsPerEpoch)
 
 	badIndex := uint64(10000)
 	want := fmt.Sprintf("could not find inclusion slot for validator index %d", badIndex)
-	if _, err := InclusionSlot(state, badIndex); !strings.Contains(err.Error(), want) {
+	if _, err := InclusionDelay(state, badIndex); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }

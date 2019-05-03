@@ -738,7 +738,7 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
 				Shard: uint64(i + 1),
 			},
-			InclusionSlot: uint64(i + 100),
+			InclusionDelay: uint64(i + 100),
 			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
 		}
@@ -766,8 +766,8 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantedInclusion := uint64(100)
-	if att.InclusionSlot != wantedInclusion {
-		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionSlot)
+	if att.InclusionDelay != wantedInclusion {
+		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionDelay)
 
 	}
 }

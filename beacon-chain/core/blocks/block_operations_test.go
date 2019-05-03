@@ -994,11 +994,11 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			pendingAttestations[0].Data,
 		)
 	}
-	if pendingAttestations[0].InclusionSlot != params.BeaconConfig().GenesisSlot+70 {
+	if pendingAttestations[0].InclusionDelay != params.BeaconConfig().GenesisSlot+70 {
 		t.Errorf(
 			"Pending attestation not included at correct slot: wanted %v, received %v",
 			64,
-			pendingAttestations[0].InclusionSlot,
+			pendingAttestations[0].InclusionDelay,
 		)
 	}
 }

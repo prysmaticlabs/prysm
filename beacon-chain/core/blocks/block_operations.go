@@ -423,7 +423,7 @@ func ProcessBlockAttestations(
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
 			CustodyBitfield:     attestation.CustodyBitfield,
-			InclusionSlot:       beaconState.Slot,
+			InclusionDelay:       beaconState.Slot,
 		})
 	}
 

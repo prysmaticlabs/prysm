@@ -148,7 +148,7 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 			CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
 		},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       params.BeaconConfig().GenesisSlot + 5,
+			InclusionDelay:       params.BeaconConfig().GenesisSlot + 5,
 		},
 	}
 
@@ -408,7 +408,7 @@ func TestInactivityInclusionPenalty_AccuratePenalties(t *testing.T) {
 	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       5},
+			InclusionDelay:       5},
 	}
 
 	tests := []struct {
@@ -504,7 +504,7 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 	pendingAtts := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       params.BeaconConfig().GenesisSlot},
+			InclusionDelay:       params.BeaconConfig().GenesisSlot},
 	}
 
 	tests := []struct {
@@ -559,7 +559,7 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 	}
 }
 
-func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
+func TestAttestationInclusionRewards_NoInclusionDelay(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -599,7 +599,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 			AggregationBitfield: []byte{0xff},
-			InclusionSlot:       0},
+			InclusionDelay:       0},
 	}
 
 	tests := []struct {
@@ -655,7 +655,7 @@ func TestCrosslinksRewardsPenalties_AccurateBalances(t *testing.T) {
 		attestation := []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 				AggregationBitfield: tt.voted,
-				InclusionSlot:       0},
+				InclusionDelay:       0},
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry:  validators,
