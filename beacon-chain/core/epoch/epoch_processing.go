@@ -761,6 +761,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		return nil, nil, err
 	}
 	for _, index := range indices {
+		// Get the attestation with the lowest inclusion delay.
 
 	}
 	//    # Proposer and inclusion delay micro-rewards
