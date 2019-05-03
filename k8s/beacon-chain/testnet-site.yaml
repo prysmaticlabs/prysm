@@ -110,6 +110,15 @@ spec:
         port:
           number: 4000
         host: ssz-server.beacon-chain.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+      - '*'
+      allowMethods:
+      - POST
+      allowHeaders: 
+      - content-type
+      maxAge: '24h'
+
   - match:
     - uri:
         prefix: /
