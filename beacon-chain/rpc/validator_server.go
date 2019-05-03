@@ -364,7 +364,8 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 
 		// If the validator has deposited and has been added to the state:
 		if validatorInState {
-			// Our position in the activation queue is the above index - our validator index.
+			// Our position in the activation queue is our previous position added with the
+			// difference between the last added validator and the last activated validator.
 			positionInQueue += uint64(lastValidatorIndex) - lastActivatedValidatorIdx
 		}
 
