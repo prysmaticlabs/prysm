@@ -666,9 +666,9 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 }
 
 // AttestationDelta calculates the rewards and penalties of individual
-// attester for voting the correct FFG source, FFG target, and head. It
+// validator for voting the correct FFG source, FFG target, and head. It
 // also calculates proposer delay inclusion and inactivity rewards
-// and penalties.
+// and penalties. Individual rewards and penalties are returned in list.
 //
 // Spec pseudocode definition:
 //	def get_attestation_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
@@ -760,19 +760,46 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	// For every index, filter the matching source attestation that correspond to the index,
+	// sort by inclusion delay and get the one that was included on chain first.
 	for _, index := range indices {
-		// Get the attestation with the lowest inclusion delay.
-
+		smallestDelay := &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
+		for _, a := range atts.source {
+			indices, err := helpers.AttestationParticipants(state, a.Data, a.AggregationBitfield)
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, i := range indices {
+				if index == i {
+					if smallestDelay.InclusionDelay > a.InclusionDelay {
+						smallestDelay = a
+					}
+				}
+			}
+		}
+		rewards[smallestDelay.ProposerIndex] += BaseReward(state, index) / params.BeaconConfig().ProposerRewardQuotient
+		rewards[index] += BaseReward(state, index) * params.BeaconConfig().MinAttestationInclusionDelay / smallestDelay.InclusionDelay
 	}
-	//    # Proposer and inclusion delay micro-rewards
-	//    for index in get_unslashed_attesting_indices(state, matching_source_attestations):
-	//        attestation = min([
-	//            a for a in attestations if index in get_attesting_indices(state, a.data, a.aggregation_bitfield)
-	//        ], key=lambda a: a.inclusion_delay)
-	//        rewards[attestation.proposer_index] += get_base_reward(state, index) // PROPOSER_REWARD_QUOTIENT
-	//        rewards[index] += get_base_reward(state, index) * MIN_ATTESTATION_INCLUSION_DELAY // attestation.inclusion_delay
 
-	return nil, nil, nil
+	finalityDelay := prevEpoch - state.FinalizedEpoch
+	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
+		targetIndices, err := UnslashedAttestingIndices(state, atts.target)
+		if err != nil {
+			return nil, nil, err
+		}
+		attestedTarget := make(map[uint64]bool)
+		for _, index := range targetIndices {
+			attestedTarget[index] = true
+		}
+		for _, index := range eligible {
+			penalties[index] += params.BeaconConfig().BaseRewardsPerEpoch * BaseReward(state, index)
+			if _, ok := attestedTarget[index]; !ok {
+				penalties[index] += state.ValidatorRegistry[index].EffectiveBalance * finalityDelay /
+					params.BeaconConfig().InactivityPenaltyQuotient
+			}
+		}
+	}
+	return rewards, penalties, nil
 }
 
 // CrosslinkAttestingIndices returns the attesting indices of the input crosslink.
