@@ -141,7 +141,7 @@ func ProcessJustificationAndFinalization(
 	totalBalance uint64,
 ) (*pb.BeaconState, error) {
 
-	newJustifiedEpoch := state.JustifiedEpoch
+	newJustifiedEpoch := state.CurrentJustifiedEpoch
 	newFinalizedEpoch := state.FinalizedEpoch
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -175,25 +175,25 @@ func ProcessJustificationAndFinalization(
 	}
 	// When the 1st, 2nd and 3rd most epochs are all justified, the 1st can finalize the 3rd epoch
 	// as a source.
-	if state.JustifiedEpoch == prevEpoch-1 &&
+	if state.CurrentJustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>0)%8 == 7 {
-		newFinalizedEpoch = state.JustifiedEpoch
+		newFinalizedEpoch = state.CurrentJustifiedEpoch
 	}
 	// When the 1st and 2nd most epochs are all justified, the 1st can finalize the 2nd epoch
 	// as a source.
-	if state.JustifiedEpoch == prevEpoch &&
+	if state.CurrentJustifiedEpoch == prevEpoch &&
 		(state.JustificationBitfield>>0)%4 == 3 {
-		newFinalizedEpoch = state.JustifiedEpoch
+		newFinalizedEpoch = state.CurrentJustifiedEpoch
 	}
-	state.PreviousJustifiedEpoch = state.JustifiedEpoch
-	state.PreviousJustifiedRoot = state.JustifiedRoot
-	if newJustifiedEpoch != state.JustifiedEpoch {
-		state.JustifiedEpoch = newJustifiedEpoch
+	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
+	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
+	if newJustifiedEpoch != state.CurrentJustifiedEpoch {
+		state.CurrentJustifiedEpoch = newJustifiedEpoch
 		newJustifedRoot, err := blocks.BlockRoot(state, helpers.StartSlot(newJustifiedEpoch))
 		if err != nil {
 			return state, err
 		}
-		state.JustifiedRoot = newJustifedRoot
+		state.CurrentJustifiedRoot = newJustifedRoot
 	}
 	if newFinalizedEpoch != state.FinalizedEpoch {
 		state.FinalizedEpoch = newFinalizedEpoch
@@ -381,7 +381,7 @@ func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	indexRoot := hashutil.Hash(indicesBytes)
-	state.LatestIndexRootHash32S[nextEpoch%params.BeaconConfig().LatestActiveIndexRootsLength] =
+	state.LatestActiveIndexRoots[nextEpoch%params.BeaconConfig().LatestActiveIndexRootsLength] =
 		indexRoot[:]
 	return state, nil
 }

@@ -75,7 +75,7 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 	}
 	// Sort the deposits by Merkle index.
 	sort.SliceStable(deposits, func(i, j int) bool {
-		return deposits[i].MerkleTreeIndex < deposits[j].MerkleTreeIndex
+		return deposits[i].Index < deposits[j].Index
 	})
 
 	return deposits

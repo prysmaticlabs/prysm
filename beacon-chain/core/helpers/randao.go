@@ -56,7 +56,7 @@ func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) 
 		return nil, fmt.Errorf("input indexRoot epoch %d out of bounds: %d <= epoch < %d",
 			wantedEpoch, earliestEpoch, currentEpoch+params.BeaconConfig().ActivationExitDelay)
 	}
-	return state.LatestIndexRootHash32S[wantedEpoch%params.BeaconConfig().LatestActiveIndexRootsLength], nil
+	return state.LatestActiveIndexRoots[wantedEpoch%params.BeaconConfig().LatestActiveIndexRootsLength], nil
 }
 
 // RandaoMix returns the randao mix (xor'ed seed)
