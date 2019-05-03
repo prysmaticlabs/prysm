@@ -118,7 +118,6 @@ spec:
       allowHeaders: 
       - content-type
       maxAge: '24h'
-
   - match:
     - uri:
         prefix: /

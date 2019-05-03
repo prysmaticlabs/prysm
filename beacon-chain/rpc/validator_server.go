@@ -224,7 +224,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if eth1BlockNumBigInt == nil {
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
-			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 		}, nil
 	}
@@ -254,7 +254,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 			if helpers.IsActiveValidator(val, currEpoch) {
 				return &pb.ValidatorStatusResponse{
 					Status:                 pb.ValidatorStatus_ACTIVE,
-					ActivationEpoch:        val.ActivationEpoch,
+					ActivationEpoch:        val.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
 					Eth1DepositBlockNumber: eth1BlockNum,
 					DepositInclusionSlot:   depositBlockSlot,
 				}, nil
@@ -288,7 +288,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 		Eth1DepositBlockNumber:    eth1BlockNum,
 		PositionInActivationQueue: positionInQueue,
 		DepositInclusionSlot:      depositBlockSlot,
-		ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
+		ActivationEpoch:           params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 	}
 
 	return res, nil
