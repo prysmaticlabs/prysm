@@ -721,7 +721,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	penalties := make([]uint64, len(state.ValidatorRegistry))
 
 	// Filter out the list of eligible validator indices. The eligible validator
-	// has to be active or slashed but before can withdrawn.
+	// has to be active or slashed but before withdrawn.
 	var eligible []uint64
 	for i, v := range state.ValidatorRegistry {
 		isActive := helpers.IsActiveValidator(v, prevEpoch)
@@ -731,7 +731,8 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		}
 	}
 
-	// Construct a list that contains source, target and head attestations.
+	// Apply rewards and penalties for voting correct source target and head.
+	// Construct a attestations list contains source, target and head attestations.
 	atts, err := MatchAttestations(state, prevEpoch)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get source, target and head attestations: %v", err)
@@ -740,15 +741,15 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	attsPackage = append(attsPackage, atts.source)
 	attsPackage = append(attsPackage, atts.target)
 	attsPackage = append(attsPackage, atts.head)
-
-	// Compute rewards / penalties for each attestation in the list.
+	// Compute rewards / penalties for each attestation in the list and update
+	// the rewards and penalties lists.
 	for _, matchAtt := range attsPackage {
 		indices, err := UnslashedAttestingIndices(state, matchAtt)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
 		}
 		attested := make(map[uint64]bool)
-		// Construct a map to look up validators that voted.
+		// Construct a map to look up validators that voted for source, target or head.
 		for _, index := range indices {
 			attested[index] = true
 		}
@@ -756,7 +757,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get attesting balance: %v", err)
 		}
-		// Update rewards and penalties lists for every eligible validator index.
+		// Update rewards and penalties to each eligible validator index.
 		for _, index := range eligible {
 			if _, ok := attested[index]; ok {
 				rewards[index] += BaseReward(state, index) * attestedBalance / totalBalance
@@ -766,6 +767,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		}
 	}
 
+	// Apply rewards for proposer including attestations promptly.
 	indices, err := UnslashedAttestingIndices(state, atts.source)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
@@ -783,6 +785,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		rewards[index] += BaseReward(state, index) * params.BeaconConfig().MinAttestationInclusionDelay / att.InclusionDelay
 	}
 
+	// Apply penalties for quadratic leaks.
 	// When epoch since finality exceeds inactivity penalty constant, the penalty gets increased
 	// based on the finality delay.
 	finalityDelay := prevEpoch - state.FinalizedEpoch
