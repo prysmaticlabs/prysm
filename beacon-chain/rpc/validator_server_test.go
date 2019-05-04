@@ -806,7 +806,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 					Status: &pb.ValidatorStatusResponse{
 						Status:                 pb.ValidatorStatus_ACTIVE,
 						Eth1DepositBlockNumber: 10,
-						DepositInclusionSlot:   1024,
+						DepositInclusionSlot:   3413,
 					},
 				},
 				{PublicKey: []byte{'B'},
