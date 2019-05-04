@@ -452,17 +452,15 @@ func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(
 
 func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int,
 	beaconState *pbp2p.BeaconState) (uint64, error) {
-	eth1BlockNum := eth1BlockNumBigInt.Uint64()
-	addFollowDistance := eth1BlockNum + params.BeaconConfig().Eth1FollowDistance
-	eth1Timestamp, err := vs.powChainService.BlockTimeByHeight(ctx, big.NewInt(int64(addFollowDistance)))
+	blockTimeStamp, err := vs.powChainService.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
 		return 0, err
 	}
+	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().GoerliBlockTime) * time.Second
+	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
 
 	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
 	votingPeriodSeconds := time.Duration(votingPeriodSlots*params.BeaconConfig().SecondsPerSlot) * time.Second
-
-	eth1UnixTime := time.Unix(int64(eth1Timestamp), 0)
 	timeToInclusion := eth1UnixTime.Add(votingPeriodSeconds)
 
 	eth2Genesis := time.Unix(int64(beaconState.GenesisTime), 0)
