@@ -415,7 +415,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("Could not get validator status %v", err)
 	}
 
-	depositBlockSlot := uint64(1194)
+	depositBlockSlot := uint64(3413)
 	expected := &pb.ValidatorStatusResponse{
 		Status:                 pb.ValidatorStatus_ACTIVE,
 		ActivationEpoch:        0,
