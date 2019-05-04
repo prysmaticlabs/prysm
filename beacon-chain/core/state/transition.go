@@ -532,10 +532,10 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		highestBalance := float32(state.ValidatorBalances[0])
 		for i, val := range state.ValidatorBalances {
 			isActive := helpers.IsActiveValidator(state.ValidatorRegistry[i], currentEpoch)
-			if (float32(val) < lowestBalance) && isActive {
+			if float32(val) < lowestBalance && isActive {
 				lowestBalance = float32(val)
 			}
-			if (float32(val) > highestBalance) && isActive {
+			if float32(val) > highestBalance && isActive {
 				highestBalance = float32(val)
 			}
 			totalBalance += float32(val)
