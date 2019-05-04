@@ -216,7 +216,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
-	dep, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, req.PublicKey)
+	_, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, req.PublicKey)
 	if eth1BlockNumBigInt == nil {
 		status := vs.validatorStatus(req.PublicKey, beaconState)
 		return &pb.ValidatorStatusResponse{
@@ -226,7 +226,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 		}, nil
 	}
 
-	depositBlockSlot, err := vs.depositBlockSlot(ctx, dep, beaconState.Slot, eth1BlockNumBigInt, beaconState)
+	depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
 	if err != nil {
 		status := vs.validatorStatus(req.PublicKey, beaconState)
 		return &pb.ValidatorStatusResponse{
@@ -313,7 +313,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 			continue
 		}
 
-		depositBlockSlot, err := vs.depositBlockSlot(ctx, dep, beaconState.Slot, eth1BlockNumBigInt, beaconState)
+		depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
 		if err != nil {
 			statusResponses[i].Status = &pb.ValidatorStatusResponse{
 				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
@@ -455,7 +455,7 @@ func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(
 	return assignments
 }
 
-func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, deposit *pbp2p.Deposit, currentSlot uint64,
+func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uint64,
 	eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (uint64, error) {
 	blockTimeStamp, err := vs.powChainService.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
