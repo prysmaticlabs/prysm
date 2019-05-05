@@ -533,16 +533,16 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			"activeValidators", len(activeValidatorIndices),
 		).Info("Active validators")
 		totalBalance := float32(0)
-		lowestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
-		highestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
+		lowestBalance := float32(state.Balances[activeValidatorIndices[0]])
+		highestBalance := float32(state.Balances[activeValidatorIndices[0]])
 		for _, idx := range activeValidatorIndices {
-			if float32(state.ValidatorBalances[idx]) < lowestBalance {
-				lowestBalance = float32(state.ValidatorBalances[idx])
+			if float32(state.Balances[idx]) < lowestBalance {
+				lowestBalance = float32(state.Balances[idx])
 			}
-			if float32(state.ValidatorBalances[idx]) > highestBalance {
-				highestBalance = float32(state.ValidatorBalances[idx])
+			if float32(state.Balances[idx]) > highestBalance {
+				highestBalance = float32(state.Balances[idx])
 			}
-			totalBalance += float32(state.ValidatorBalances[idx])
+			totalBalance += float32(state.Balances[idx])
 		}
 		avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
 		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
