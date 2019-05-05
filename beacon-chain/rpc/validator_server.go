@@ -230,9 +230,13 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	}
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for i, key := range pubkeys {
-		resp := vs.validatorStatus(ctx, key, validatorIndexMap, beaconState)
-		statusResponses[i].Status = resp
-		if resp.Status == pb.ValidatorStatus_ACTIVE {
+		status := vs.validatorStatus(ctx, key, validatorIndexMap, beaconState)
+		resp := &pb.ValidatorActivationResponse_Status{
+			Status: status,
+			PublicKey: key,
+		}
+		statusResponses[i] = resp
+		if status.Status == pb.ValidatorStatus_ACTIVE {
 			activeValidatorExists = true
 		}
 	}
@@ -379,6 +383,9 @@ func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(
 		hexPk := bytesutil.ToBytes32(pk)
 		if valIdx, ok := validatorMap[hexPk]; !ok || !helpers.IsActiveValidator(beaconState.ValidatorRegistry[validatorMap[hexPk]], currentEpoch) {
 			status := vs.lookupValidatorStatusFlag(uint64(valIdx), beaconState) //nolint:gosec
+			if !ok {
+				status = pb.ValidatorStatus_UNKNOWN_STATUS
+			}
 			a := &pb.CommitteeAssignmentResponse_CommitteeAssignment{
 				PublicKey: pk,
 				Status:    status,
