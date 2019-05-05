@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 // ProposerServer defines a server implementation of the gRPC Proposer service,
@@ -82,8 +83,11 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
-	log.WithField("headRoot", fmt.Sprintf("0x%x", bytesutil.Trunc(h[:]))).Info(
-		"Chain head block and state updated")
+	log.WithFields(logrus.Fields{
+		"headRoot":  fmt.Sprintf("0x%x", bytesutil.Trunc(h[:])),
+		"headSlot":  blk.Slot - params.BeaconConfig().GenesisSlot,
+		"stateSlot": beaconState.Slot - params.BeaconConfig().GenesisSlot,
+	}).Info("Chain head block and state updated")
 
 	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
@@ -160,7 +164,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	parentHash := bytesutil.ToBytes32(req.ParentRootHash32)
+	parentHash := bytesutil.ToBytes32(req.ParentBlockRoot)
 	// Check for skipped slots.
 	for beaconState.Slot < req.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(

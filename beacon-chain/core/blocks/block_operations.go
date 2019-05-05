@@ -461,19 +461,19 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
-		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
+		if att.Data.JustifiedEpoch != beaconState.CurrentJustifiedEpoch {
 			return fmt.Errorf(
-				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
+				"expected attestation.JustifiedEpoch == state.CurrentJustifiedEpoch, received %d == %d",
 				att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
-				beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				beaconState.CurrentJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
 
-		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.JustifiedRoot) {
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.CurrentJustifiedRoot) {
 			return fmt.Errorf(
-				"expected attestation.JustifiedRoot == state.JustifiedRoot, received %#x == %#x",
+				"expected attestation.JustifiedRoot == state.CurrentJustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
-				beaconState.JustifiedRoot,
+				beaconState.CurrentJustifiedRoot,
 			)
 		}
 	} else {
@@ -488,7 +488,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			return fmt.Errorf(
 				"expected attestation.JustifiedRoot == state.PreviousJustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
-				beaconState.JustifiedRoot,
+				beaconState.CurrentJustifiedRoot,
 			)
 		}
 	}
@@ -500,7 +500,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// 	equals state.latest_crosslinks[attestation.data.shard]
 	shard := att.Data.Shard
 	crosslink := &pb.Crosslink{
-		CrosslinkDataRootHash32: att.Data.CrosslinkDataRootHash32,
+		CrosslinkDataRootHash32: att.Data.CrosslinkDataRoot,
 		Epoch:                   helpers.SlotToEpoch(att.Data.Slot),
 	}
 	crosslinkFromAttestation := att.Data.LatestCrosslink
@@ -515,11 +515,11 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.Data.CrosslinkDataRootHash32, params.BeaconConfig().ZeroHash[:]) {
+	if !bytes.Equal(att.Data.CrosslinkDataRoot, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
 			"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
 			params.BeaconConfig().ZeroHash[:],
-			att.Data.CrosslinkDataRootHash32,
+			att.Data.CrosslinkDataRoot,
 		)
 	}
 	if verifySignatures {
@@ -682,21 +682,21 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Deposits must be processed in order
-	if deposit.MerkleTreeIndex != beaconState.DepositIndex {
+	if deposit.Index != beaconState.DepositIndex {
 		return fmt.Errorf(
 			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
 			beaconState.DepositIndex,
-			deposit.MerkleTreeIndex,
+			deposit.Index,
 		)
 	}
 
 	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := beaconState.LatestEth1Data.DepositRootHash32
+	receiptRoot := beaconState.LatestEth1Data.DepositRoot
 	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,
 		deposit.DepositData,
-		int(deposit.MerkleTreeIndex),
-		deposit.MerkleProofHash32S,
+		int(deposit.Index),
+		deposit.Proof,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",

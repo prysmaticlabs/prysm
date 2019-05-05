@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -93,6 +94,10 @@ func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *p
 
 func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return true
+}
+
+func (ms *mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
+	return nil
 }
 
 func (ms mockChainService) InsertsCanonical(slot uint64, hash []byte) {
@@ -207,17 +212,17 @@ func TestProcessBlock_OK(t *testing.T) {
 
 	data := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1, 2, 3, 4, 5},
-			BlockHash32:       []byte{6, 7, 8, 9, 10},
+			DepositRoot: []byte{1, 2, 3, 4, 5},
+			BlockRoot:   []byte{6, 7, 8, 9, 10},
 		},
-		ParentRootHash32: parentRoot[:],
-		Slot:             params.BeaconConfig().GenesisSlot,
+		ParentBlockRoot: parentRoot[:],
+		Slot:            params.BeaconConfig().GenesisSlot,
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Slot:                    0,
-			Shard:                   0,
-			CrosslinkDataRootHash32: []byte{'A'},
+			Slot:              0,
+			Shard:             0,
+			CrosslinkDataRoot: []byte{'A'},
 		},
 	}
 
@@ -282,19 +287,19 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 
 	data1 := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1, 2, 3, 4, 5},
-			BlockHash32:       []byte{6, 7, 8, 9, 10},
+			DepositRoot: []byte{1, 2, 3, 4, 5},
+			BlockRoot:   []byte{6, 7, 8, 9, 10},
 		},
-		ParentRootHash32: parentRoot[:],
-		Slot:             params.BeaconConfig().GenesisSlot + 1,
+		ParentBlockRoot: parentRoot[:],
+		Slot:            params.BeaconConfig().GenesisSlot + 1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
 		Block: data1,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				CrosslinkDataRootHash32: []byte{},
-				Slot:                    params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRoot: []byte{},
+				Slot:              params.BeaconConfig().GenesisSlot,
 			},
 		},
 	}
@@ -307,19 +312,19 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 
 	data2 := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{11, 12, 13, 14, 15},
-			BlockHash32:       []byte{16, 17, 18, 19, 20},
+			DepositRoot: []byte{11, 12, 13, 14, 15},
+			BlockRoot:   []byte{16, 17, 18, 19, 20},
 		},
-		ParentRootHash32: []byte{},
-		Slot:             1,
+		ParentBlockRoot: []byte{},
+		Slot:            1,
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
 		Block: data2,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				CrosslinkDataRootHash32: []byte{},
-				Slot:                    0,
+				CrosslinkDataRoot: []byte{},
+				Slot:              0,
 			},
 		},
 	}

@@ -61,12 +61,12 @@ func GenesisBeaconState(
 		}
 
 		validator := &pb.Validator{
-			Pubkey:                      depositInput.Pubkey,
-			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
-			ActivationEpoch:             params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
+			Pubkey:                depositInput.Pubkey,
+			WithdrawalCredentials: depositInput.WithdrawalCredentialsHash32,
+			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:          params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator
@@ -103,15 +103,15 @@ func GenesisBeaconState(
 		// Finality.
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
-		JustifiedRoot:          params.BeaconConfig().ZeroHash[:],
+		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
+		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
 		JustificationBitfield:  0,
 		FinalizedEpoch:         params.BeaconConfig().GenesisEpoch,
 		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
 
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,
-		LatestBlockRootHash32S:  latestBlockRoots,
+		LatestBlockRoots:        latestBlockRoots,
 		LatestActiveIndexRoots:  latestActiveIndexRoots,
 		LatestSlashedBalances:   latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},

@@ -103,7 +103,7 @@ func TestActiveIndexRoot_OutOfBoundActivationExitDelay(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestIndexRootHash32S: activeIndexRoots}
+	state := &pb.BeaconState{LatestActiveIndexRoots: activeIndexRoots}
 	tests := []struct {
 		epoch         uint64
 		earliestEpoch uint64

@@ -79,13 +79,13 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	validData := true
 	depositInput, err := helpers.DecodeDepositInput(depositData)
 	if err != nil {
-		log.Errorf("Could not decode deposit input %v", err)
+		log.Debugf("Could not decode deposit input %v", err)
 		validData = false
 	}
 
 	deposit := &pb.Deposit{
-		DepositData:     depositData,
-		MerkleTreeIndex: index,
+		DepositData: depositData,
+		Index:       index,
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.
@@ -110,7 +110,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		log.WithFields(logrus.Fields{
 			"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 			"merkleTreeIndex": index,
-		}).Info("Deposit registered from deposit contract")
+		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
 	} else {
 		log.WithFields(logrus.Fields{
@@ -130,8 +130,8 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	}
 
 	w.chainStartETH1Data = &pb.Eth1Data{
-		BlockHash32:       depositLog.BlockHash[:],
-		DepositRootHash32: chainStartDepositRoot[:],
+		BlockRoot:   depositLog.BlockHash[:],
+		DepositRoot: chainStartDepositRoot[:],
 	}
 
 	timestamp := binary.LittleEndian.Uint64(timestampData)

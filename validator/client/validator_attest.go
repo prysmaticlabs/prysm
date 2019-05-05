@@ -9,6 +9,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -37,7 +38,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	// First the validator should construct attestation_data, an AttestationData
 	// object based upon the state at the assigned slot.
 	attData := &pbp2p.AttestationData{
-		CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
+		CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
 	}
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
@@ -138,13 +139,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"headHash":        fmt.Sprintf("%#x", attData.BeaconBlockRootHash32),
-		"sourceHash":      fmt.Sprintf("%#x", attData.JustifiedBlockRootHash32),
-		"targetHash":      fmt.Sprintf("%#x", attData.EpochBoundaryRootHash32),
-		"slot":            attData.Slot - params.BeaconConfig().GenesisSlot,
-		"shard":           attData.Shard,
-		"attestationHash": fmt.Sprintf("%#x", attResp.AttestationHash),
-		"validator":       truncatedPk,
+		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attData.BeaconBlockRootHash32)),
+		"slot":      attData.Slot - params.BeaconConfig().GenesisSlot,
+		"shard":     attData.Shard,
+		"validator": truncatedPk,
 	}).Info("Attested latest head")
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)),

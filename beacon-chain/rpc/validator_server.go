@@ -31,9 +31,10 @@ type ValidatorServer struct {
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
+	beaconState, err := vs.beaconDB.HeadState(stream.Context())
 
 	reply := func() error {
-		beaconState, err := vs.beaconDB.HeadState(stream.Context())
+		beaconState, err = vs.beaconDB.HeadState(stream.Context())
 		if err != nil {
 			return fmt.Errorf("could not retrieve beacon state: %v", err)
 		}
@@ -45,13 +46,21 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 
 	}
 
-	if vs.beaconDB.HasAnyValidators(req.PublicKeys) {
+	hasAny, err := vs.beaconDB.HasAnyValidators(beaconState, req.PublicKeys)
+	if err != nil {
+		return err
+	}
+	if hasAny {
 		return reply()
 	}
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-			if !vs.beaconDB.HasAnyValidators(req.PublicKeys) {
+			hasAny, err := vs.beaconDB.HasAnyValidators(beaconState, req.PublicKeys)
+			if err != nil {
+				return err
+			}
+			if !hasAny {
 				continue
 			}
 			return reply()

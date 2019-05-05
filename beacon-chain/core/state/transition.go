@@ -7,7 +7,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -24,6 +27,15 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
+
+var (
+	correctAttestedValidatorGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "correct_attested_validator_rate",
+		Help: "The % of validators correctly attested for source and target",
+	}, []string{
+		"epoch",
+	})
+)
 
 // TransitionConfig defines important configuration options
 // for executing a state transition, which can have logging and signature
@@ -488,18 +500,23 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
 
+	// Log the useful metrics via prometheus.
+	correctAttestedValidatorGauge.WithLabelValues(
+		strconv.Itoa(int(currentEpoch)),
+	).Set(float64(len(currentBoundaryAttesterIndices) / len(activeValidatorIndices)))
+
 	if config.Logging {
 		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")
 		log.WithField("attesterIndices", currentBoundaryAttesterIndices).Debug("Current epoch boundary attester indices")
-		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of prev epoch attestations")
+		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of previous epoch attestations")
 		log.WithField("attesterIndices", prevEpochAttesterIndices).Debug("Previous epoch attester indices")
-		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of prev epoch boundary attestations")
+		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of previous epoch boundary attestations")
 		log.WithField("attesterIndices", prevEpochBoundaryAttesterIndices).Debug("Previous epoch boundary attester indices")
 		log.WithField(
 			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Previous justified epoch")
 		log.WithField(
-			"justifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+			"justifiedEpoch", state.CurrentJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Justified epoch")
 		log.WithField(
 			"finalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,

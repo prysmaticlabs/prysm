@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -55,22 +56,22 @@ func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.At
 		{
 			AggregationBitfield: []byte("A"),
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
 			AggregationBitfield: []byte("B"),
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
 			AggregationBitfield: []byte("C"),
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 	}, nil
@@ -110,6 +111,10 @@ func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 
 func (m mockChainService) InsertsCanonical(slot uint64, hash []byte) {
 	m.canonicalBlocks[slot] = hash
+}
+
+func (m mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
+	return nil
 }
 
 func newMockChainService() *mockChainService {
