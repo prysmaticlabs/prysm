@@ -110,10 +110,10 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	avgBalance := totalActiveBalance / float32(len(activeIndices))
 	balance := validatorBalances[index]
 	return &pb.ValidatorPerformanceResponse{
-		Balance:                 balance,
+		Balance:                       balance,
 		AverageActiveValidatorBalance: avgBalance,
-		TotalValidators:         uint64(len(validatorRegistry)),
-		TotalActiveValidators:   uint64(len(activeIndices)),
+		TotalValidators:               uint64(len(validatorRegistry)),
+		TotalActiveValidators:         uint64(len(activeIndices)),
 	}, nil
 }
 
