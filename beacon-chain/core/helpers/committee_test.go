@@ -41,9 +41,16 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 		{32 * validatorsPerEpoch, 16 * params.BeaconConfig().SlotsPerEpoch},
 	}
 	for _, test := range tests {
-		if test.committeeCount != EpochCommitteeCount(test.validatorCount) {
+		validators := make([]*pb.Validator, test.validatorCount)
+		for i := 0; i < len(validators); i++ {
+			validators[i] = &pb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+		state := &pb.BeaconState{ValidatorRegistry: validators}
+		if test.committeeCount != EpochCommitteeCount(state, params.BeaconConfig().GenesisEpoch) {
 			t.Errorf("wanted: %d, got: %d",
-				test.committeeCount, EpochCommitteeCount(test.validatorCount))
+				test.committeeCount, EpochCommitteeCount(state, params.BeaconConfig().GenesisEpoch))
 		}
 	}
 }
@@ -57,9 +64,16 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 		TargetCommitteeSize: 2,
 	}
 	params.OverrideBeaconConfig(testConfig)
-	if EpochCommitteeCount(validatorCount) != validatorCount/testConfig.TargetCommitteeSize {
+	validators := make([]*pb.Validator, validatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{ValidatorRegistry: validators}
+	if EpochCommitteeCount(state, params.BeaconConfig().GenesisEpoch) != validatorCount/testConfig.TargetCommitteeSize {
 		t.Errorf("wanted: %d, got: %d",
-			validatorCount/testConfig.TargetCommitteeSize, EpochCommitteeCount(validatorCount))
+			validatorCount/testConfig.TargetCommitteeSize, EpochCommitteeCount(state, params.BeaconConfig().GenesisEpoch))
 	}
 	params.OverrideBeaconConfig(productionConfig)
 }
@@ -143,9 +157,12 @@ func TestShuffling_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not shuffle validators: %v", err)
 	}
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}
 
 	// Verify shuffled list is correctly split into committees_per_slot pieces.
-	committeesPerEpoch = EpochCommitteeCount(uint64(len(validators)))
+	committeesPerEpoch = EpochCommitteeCount(state, params.BeaconConfig().GenesisEpoch)
 	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().SlotsPerEpoch
 	if committeesPerSlot != committeesPerSlot {
 		t.Errorf("Incorrect committee count after splitting. Wanted: %d, got: %d",
