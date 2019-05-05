@@ -530,7 +530,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 
 		activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 		log.WithField(
-			"numActiveValidators", len(activeValidatorIndices),
+			"activeValidators", len(activeValidatorIndices),
 		).Info("Active validators")
 		totalBalance := float32(0)
 		lowestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
