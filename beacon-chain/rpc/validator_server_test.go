@@ -811,6 +811,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 				},
 				{PublicKey: []byte{'B'},
 					Status: &pb.ValidatorStatusResponse{
+						Status:                 pb.ValidatorStatus_ACTIVE,
 						ActivationEpoch: params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 					},
 				},
@@ -904,8 +905,9 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 			response[0].PublicKey, response[0].Status.Status.String())
 	}
 
-	if response[1].Status.Status == pb.ValidatorStatus_ACTIVE {
-		t.Errorf("Validator with pubkey %#x is activated despite not supposed to be", response[1].PublicKey)
+	if response[1].Status.Status != pb.ValidatorStatus_ACTIVE {
+		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
+			response[1].PublicKey, response[1].Status.Status.String())
 	}
 
 	if response[2].Status.Status != pb.ValidatorStatus_ACTIVE {
