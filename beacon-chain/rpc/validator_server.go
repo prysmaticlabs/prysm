@@ -218,12 +218,11 @@ func (vs *ValidatorServer) ValidatorStatus(
 
 	validatorMap := stateutils.ValidatorIndexMap(beaconState)
 	pk := bytesutil.ToBytes32(req.PublicKey)
-
+	valIdx, ok := validatorMap[pk]
 	_, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, req.PublicKey)
-	if eth1BlockNumBigInt == nil {
-		status := vs.validatorStatus(uint64(validatorMap[pk]), beaconState)
+	if eth1BlockNumBigInt == nil || !ok {
 		return &pb.ValidatorStatusResponse{
-			Status:                 status,
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 			Eth1DepositBlockNumber: 0,
 		}, nil
@@ -231,7 +230,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 
 	depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
 	if err != nil {
-		status := vs.validatorStatus(uint64(validatorMap[pk]), beaconState)
+		status := vs.validatorStatus(uint64(valIdx), beaconState)
 		return &pb.ValidatorStatusResponse{
 			Status:                 status,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
@@ -240,7 +239,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	}
 
 	if depositBlockSlot == 0 {
-		status := vs.validatorStatus(uint64(validatorMap[pk]), beaconState)
+		status := vs.validatorStatus(uint64(valIdx), beaconState)
 		return &pb.ValidatorStatusResponse{
 			Status:                 status,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
@@ -281,7 +280,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 		positionInQueue = validatorIndex - lastActivatedValidatorIdx
 	}
 
-	status := vs.validatorStatus(uint64(validatorMap[pk]), beaconState)
+	status := vs.validatorStatus(uint64(valIdx), beaconState)
 	res := &pb.ValidatorStatusResponse{
 		Status:                    status,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
@@ -298,104 +297,16 @@ func (vs *ValidatorServer) ValidatorStatus(
 func (vs *ValidatorServer) MultipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
-
 	activeValidatorExists := false
-
-	beaconState, err := vs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return false, nil, fmt.Errorf("could not fetch beacon state: %v", err)
-	}
-
-	validatorMap := stateutils.ValidatorIndexMap(beaconState)
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
-
 	for i, key := range pubkeys {
-		pk := bytesutil.ToBytes32(key)
-		statusResponses[i] = &pb.ValidatorActivationResponse_Status{
-			PublicKey: key,
-			Status:    &pb.ValidatorStatusResponse{},
-		}
-		dep, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, key)
-		if eth1BlockNumBigInt == nil {
-			status := vs.validatorStatus(uint64(validatorMap[pk]), beaconState)
-			statusResponses[i].Status = &pb.ValidatorStatusResponse{
-				Status:                 status,
-				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
-				Eth1DepositBlockNumber: 0,
-			}
-			continue
-		}
-
-		depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
+		resp, err := vs.ValidatorStatus(ctx, &pb.ValidatorIndexRequest{PublicKey: key})
 		if err != nil {
-			status := vs.validatorStatus(uint64(validatorMap[pk]), beaconState)
-			statusResponses[i].Status = &pb.ValidatorStatusResponse{
-				Status:                 status,
-				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
-				Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
-			}
-			continue
+			return false, nil, err
 		}
-
-		if depositBlockSlot == 0 {
-			statusResponses[i].Status = &pb.ValidatorStatusResponse{
-				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
-				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
-				Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
-			}
-			continue
-		}
-
-		validatorInState := false
-		currEpoch := helpers.CurrentEpoch(beaconState)
-		valIndex, ok := validatorMap[bytesutil.ToBytes32(key)]
-		if ok {
-			validator := beaconState.ValidatorRegistry[valIndex]
-			if helpers.IsActiveValidator(validator, currEpoch) {
-				activeValidatorExists = true
-				statusResponses[i].Status = &pb.ValidatorStatusResponse{
-					Status:                 pb.ValidatorStatus_ACTIVE,
-					ActivationEpoch:        validator.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
-					Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
-					DepositInclusionSlot:   depositBlockSlot,
-				}
-				continue
-			}
-			validatorInState = true
-		}
-
-		lastValidatorIndex := len(beaconState.ValidatorRegistry) - 1
-
-		var lastActivatedValidatorIdx uint64
-		for j := lastValidatorIndex; j >= 0; j-- {
-			if helpers.IsActiveValidator(beaconState.ValidatorRegistry[j], currEpoch) {
-				lastActivatedValidatorIdx = uint64(j)
-				break
-			}
-		}
-
-		lastValidator := beaconState.ValidatorRegistry[lastValidatorIndex]
-		lastValidatorDeposit, _ := vs.beaconDB.DepositByPubkey(ctx, lastValidator.Pubkey)
-
-		var positionInQueue uint64
-		if dep.MerkleTreeIndex > lastValidatorDeposit.MerkleTreeIndex {
-			positionInQueue = dep.MerkleTreeIndex - lastValidatorDeposit.MerkleTreeIndex
-		}
-
-		// If the validator has deposited and has been added to the state:
-		if validatorInState {
-			// Our position in the activation queue is our previous position added with the
-			// difference between the last added validator and the last activated validator.
-			positionInQueue += uint64(lastValidatorIndex) - lastActivatedValidatorIdx
-		}
-
-		status := vs.validatorStatus(uint64(validatorMap[pk]), beaconState)
-		statusResponses[i].Status = &pb.ValidatorStatusResponse{
-			Status:                    status,
-			Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
-			PositionInActivationQueue: positionInQueue,
-			DepositInclusionSlot:      depositBlockSlot,
-			ActivationEpoch:           params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+		statusResponses[i].Status = resp
+		if resp.Status == pb.ValidatorStatus_ACTIVE {
+			activeValidatorExists = true
 		}
 	}
 
