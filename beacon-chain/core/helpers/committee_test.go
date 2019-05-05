@@ -700,3 +700,32 @@ func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 		)
 	}
 }
+
+func TestShardDelta_Ok(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	min := params.BeaconConfig().ShardCount - params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
+	tests := []struct {
+		validatorCount uint64
+		shardDelta     uint64
+	}{
+		{0, params.BeaconConfig().SlotsPerEpoch},
+		{1000, params.BeaconConfig().SlotsPerEpoch},
+		{2 * validatorsPerEpoch, 2 * params.BeaconConfig().SlotsPerEpoch},
+		{5 * validatorsPerEpoch, 5 * params.BeaconConfig().SlotsPerEpoch},
+		{16 * validatorsPerEpoch, min},
+		{32 * validatorsPerEpoch, min},
+	}
+	for _, test := range tests {
+		validators := make([]*pb.Validator, test.validatorCount)
+		for i := 0; i < len(validators); i++ {
+			validators[i] = &pb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+		state := &pb.BeaconState{ValidatorRegistry: validators}
+		if test.shardDelta != ShardDelta(state, params.BeaconConfig().GenesisEpoch) {
+			t.Errorf("wanted: %d, got: %d",
+				test.shardDelta, ShardDelta(state, params.BeaconConfig().GenesisEpoch))
+		}
+	}
+}
