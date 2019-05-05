@@ -232,7 +232,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	for i, key := range pubkeys {
 		status := vs.validatorStatus(ctx, key, validatorIndexMap, beaconState)
 		resp := &pb.ValidatorActivationResponse_Status{
-			Status: status,
+			Status:    status,
 			PublicKey: key,
 		}
 		statusResponses[i] = resp
