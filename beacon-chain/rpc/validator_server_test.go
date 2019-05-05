@@ -415,12 +415,9 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("Could not get validator status %v", err)
 	}
 
-	depositBlockSlot := uint64(1194)
 	expected := &pb.ValidatorStatusResponse{
-		Status:                 pb.ValidatorStatus_ACTIVE,
-		ActivationEpoch:        0,
-		DepositInclusionSlot:   depositBlockSlot,
-		Eth1DepositBlockNumber: 0,
+		Status:          pb.ValidatorStatus_ACTIVE,
+		ActivationEpoch: params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 	}
 	if !proto.Equal(resp, expected) {
 		t.Errorf("Wanted %v, got %v", expected, resp)
@@ -753,7 +750,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: params.BeaconConfig().GenesisSlot + 4000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
@@ -806,7 +803,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 					Status: &pb.ValidatorStatusResponse{
 						Status:                 pb.ValidatorStatus_ACTIVE,
 						Eth1DepositBlockNumber: 10,
-						DepositInclusionSlot:   1024,
+						DepositInclusionSlot:   3413,
 					},
 				},
 				{PublicKey: []byte{'B'},
@@ -838,7 +835,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: params.BeaconConfig().GenesisSlot + 4000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
