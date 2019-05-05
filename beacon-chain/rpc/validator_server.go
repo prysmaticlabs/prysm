@@ -236,6 +236,15 @@ func (vs *ValidatorServer) ValidatorStatus(
 		}, nil
 	}
 
+	if depositBlockSlot == 0 {
+		status := vs.validatorStatus(req.PublicKey, beaconState)
+		return &pb.ValidatorStatusResponse{
+			Status:                 status,
+			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+		}, nil
+	}
+
 	currEpoch := helpers.CurrentEpoch(beaconState)
 	var validatorInState *pbp2p.Validator
 	var validatorIndex uint64
@@ -315,6 +324,15 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 
 		depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
 		if err != nil {
+			statusResponses[i].Status = &pb.ValidatorStatusResponse{
+				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+				Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+			}
+			continue
+		}
+
+		if depositBlockSlot == 0 {
 			statusResponses[i].Status = &pb.ValidatorStatusResponse{
 				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
@@ -473,7 +491,7 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	depositBlockSlot := uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
 
 	if depositBlockSlot > currentSlot-params.BeaconConfig().GenesisSlot {
-		return 0, errors.New("estimated Slot is in the future not the past")
+		return 0, nil
 	}
 
 	return depositBlockSlot, nil
