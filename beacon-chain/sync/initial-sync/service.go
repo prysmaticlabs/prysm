@@ -222,6 +222,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}
 	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
+		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
 		switch err.(type) {
 		case *blockchain.BlockFailedProcessingErr:
 			// If the block fails processing, we delete it from our DB.
@@ -244,6 +245,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
+		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
 		log.Fatalf(
 			"Canonical state root %#x does not match highest observed root from peer %#x",
 			stateRoot,
