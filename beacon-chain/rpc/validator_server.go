@@ -329,12 +329,11 @@ func (vs *ValidatorServer) validatorStatus(
 func (vs *ValidatorServer) lookupValidatorStatusFlag(validatorIdx uint64, beaconState *pbp2p.BeaconState) pb.ValidatorStatus {
 	var status pb.ValidatorStatus
 	v := beaconState.ValidatorRegistry[validatorIdx]
-	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	epoch := helpers.CurrentEpoch(beaconState)
 
-	if v.ActivationEpoch == farFutureEpoch {
+	if v.ActivationEpoch > epoch {
 		status = pb.ValidatorStatus_PENDING_ACTIVE
-	} else if v.ActivationEpoch <= helpers.EntryExitEffectEpoch(epoch) && epoch < v.ExitEpoch {
+	} else if v.ActivationEpoch >= helpers.EntryExitEffectEpoch(epoch) && epoch < v.ExitEpoch {
 		status = pb.ValidatorStatus_ACTIVE
 	} else if v.StatusFlags == pbp2p.Validator_INITIATED_EXIT {
 		status = pb.ValidatorStatus_INITIATED_EXIT
