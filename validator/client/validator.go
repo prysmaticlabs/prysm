@@ -113,6 +113,8 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 			"publicKey": fmt.Sprintf("%#x", pk),
 		}).Info("Validator activated")
 	}
+	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+
 	return nil
 }
 
