@@ -5,7 +5,7 @@
 
 This is the main repository for the Go implementation of the Ethereum 2.0 Serenity [Prysmatic Labs](https://prysmaticlabs.com).
 
-Before you begin, check out our [Contribution Guidelines](#contributing) and join our active chat room on Discord or Gitter below:
+Before you begin, check out our [official documentation portal](https://prysmaticlabs.gitbook.io/prysm/) and join our active chat room on Discord or Gitter below:
 
 [![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/KSA7rPr)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
@@ -15,152 +15,88 @@ Also, read our [Roadmap Reference Implementation Doc](https://github.com/prysmat
 
 # Table of Contents
 
- - [Installation](#installation)
-    - [Run Via the Go Tool](#run-via-the-go-tool)
-    - [Run Via Bazel (Recommended)](#run-via-bazel-recommended)
-    - [Running The Beacon Chain](#running-the-beacon-chain)
-    - [Running an ETH2.0 Validator Client](#running-an-eth20-validator-client)
-    - [Running Via Docker](#running-via-docker)
-    - [Running Under Windows](#running-under-windows)
+- [Join Our Testnet](#join-our-testnet)
+- [Installation](#installation)
+    - [Run Via Docker](#run-via-docker-recommended)
+    - [Run Via Bazel](#run-via-bazel)
+  - [Prysm Main Components](#prysm-main-components)
+    - [Running an Ethereum 2.0 Beacon Node](#running-an-ethereum-20-beacon-node)
+    - [Staking ETH: Running a Validator Client](#staking-eth-running-a-validator-client)
 -   [Testing](#testing)
 -   [Contributing](#contributing)
 -   [License](#license)
 
-## Installation
+# Join Our Testnet
 
+You can now participate in our public testnet release for Ethereum 2.0 phase 0. Visit [prylabs.net](https://prylabs.net) 💎 to participate!
+
+# Installing Prysm
+
+### Installation Options
 You can either choose to run our system via:
+- Our latest [release](https://github.com/prysmaticlabs/prysm/releases) **(Easiest)**
+- Using Docker **(Recommended)**
+- Using Our Build Tool, Bazel
 
-- Use Our Build Tool, Bazel **(Recommended)**
-- Use Docker
+### Fetching via Docker (Recommended)
+Docker is a convenient way to run Prysm, as all you need to do is fetch the latest images:
 
-## Run Via Bazel (Recommended)
+```
+docker pull gcr.io/prysmaticlabs/prysm/validator:latest
+docker pull gcr.io/prysmaticlabs/prysm/beacon-chain:latest
+```
 
+### Build Via Bazel
 First, clone our repository:
 
 ```
 git clone https://github.com/prysmaticlabs/prysm
 ```
 
-Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing:
+Download the Bazel build tool by Google here and ensure it works by typing:
 
 ```
 bazel version
 ```
 
-Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build prysm.
-
-
-### Building
-
-You can prepare our entire repo for a local build by simply running:
+Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build prysm. Then, build both parts of our system: a beacon chain node implementation, and a validator client:
 
 ```
-bazel build //...
+bazel build //beacon-chain:beacon-chain
+bazel build //validator:validator
 ```
 
-## Deploying a Validator Deposit Contract
+# Prysm Main Components
+Prysm ships with two important components: a beacon node and a validator client. The beacon node is the server that performs the heavy lifting of Ethereum 2.0., A validator client is another piece of software that securely connects to the beacon node and allows you to stake 3.2 Goerli ETH in order to secure the network. You'll be mostly interacting with the validator client to manage your stake.
+Another critical component of Ethereum 2.0 is the Validator Deposit Contract, which is a smart contract deployed on the Ethereum 1.0 chain which can be used for current holders of ETH to do a one-way transfer into Ethereum 2.0.
 
-If you want to run our system locally, you'll need to have a **Validator Deposit Contract** deployed on the Goerli Ethereum 1.0 [testnet](https://github.com/goerli/testnet). You'll need to acquire some Goerli ETH first and then you can easily deploy our deposit contract with Bazel:
+### Running an Ethereum 2.0 Beacon Node
+With docker:
 
 ```
-bazel run //contracts/deposit-contract/deployContract -- --httpPath=https://goerli.prylabs.net
- --privKey=${YOUR_GOERLI_PRIV_KEY}
+docker run -v /tmp/prysm-data:/data -p 4000:4000 \
+  gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
+  --datadir=/data
+  --clear-db
 ```
-
-You'll see the deposit contract address printed out, which we'll use when running our Eth 2.0 beacon nodes below:
-
-```bash
-INFO: Build completed successfully, 1 total action
-[2019-03-17 11:54:27]  INFO main: New contract deployed address=0x1be4cbd38AC5b68727dCD2B73fc0553c1832ca42
-```
-
-Copy the address, you'll need it in the next step:
-
-## Running The Beacon Chain
 
 To start your beacon node with bazel:
 
 ```
-bazel run //beacon-chain -- --deposit-contract=DEPOSIT_CONTRACT_ADDRESS
+bazel run //beacon-chain -- --clear-db --datadir=/tmp/prysm-data
 ```
 
-The chain will then be waiting for the **Validator Deposit Contract** to reach a deposit threshold before it begins! Now, you'll need to spin up enough validator clients that can reach the threshold with the following next steps:
+This will sync you up with the latest head block in the network, and then you'll have a ready beacon node.
+The chain will then be waiting for you to deposit 3.2 Goerli ETH into the Validator Deposit Contract before your validator can become active! Now, you'll need to create a validator client to connect to this node and stake 3.2 Goerli ETH to participate as a validator in Ethereum 2.0's Proof of Stake system.
 
-## Running an ETH2.0 Validator Client
+### Staking ETH: Running a Validator Client
+Once your beacon node is up, you'll need to attach a validator client as a separate process. Each validator represents 3.2 Goerli ETH being staked in the system, so you can spin up as many as you want to have more at stake in the network
 
-Once your beacon node is up, you'll need to attach a validator client as a separate process. Each validator represents 32ETH being staked in the system, so you can spin up as many as you want to have more at stake in the network.
+**Activating Your Validator: Depositing 3.2 Goerli ETH**
 
-To get started, you'll need to create a new validator account with a unique password and data directory to store your encrypted private keys:
+Using your validator deposit data from the previous step, use the instructions in https://alpha.prylabs.net/participate to deposit.
 
-```
-bazel run //validator --\
-  accounts create --password YOUR_PASSWORD \
-  --keystore-path /path/to/validator/keystore/dir
-```
-
-Once you create your validator account, you'll see a special piece of information printed out below:
-
-```bash
-[2019-03-17 11:57:55]  INFO accounts: Account creation complete! Copy and paste the deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client
-
-========================Deposit Data=======================
-
-0xbc00000060000000814eb687f39e9a0be79552cd51711dfb1711274a892e4ccae1e61d0bb28ef82c85e81b68b4911f73ca06e6694133c9610a6677d512df7a6a0289ecd1a218a8b2de29fa298c24c9e17dac4d7fb268992e8d08d74fafa076757d28ffa29ea7a36b30000000996e3494661110bf9c72f1bacee84d1b64039092bf1e6856eaf8d87b1a992999d4bff9c3701ded7714e8421c8ec1fd4520000000001e1ba7155f64eda1d1a87f3ed4eaf0280b86bef90b2cd1d9b905e370650251
-
-===========================================================
-```
-
-Keep this deposit data string, as you'll need it in the next section.
-
-```
-bazel run //validator --\
-  --password YOUR_PASSWORD \
-  --keystore-path /path/to/validator/keystore/dir
-```
-
-This will connect you to your running beacon node and listen for validator assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks. To then run the validator, use the command:
-
-Given this is a local network, you'll need to create and run enough validators to reach the deposit contract threshold so your chain can begin.
-
-## Depositing 32ETH and Starting the Eth 2.0 Network
-
-Once you launch your beacon chain and validators, your nodes won't do much and will simply listen for the deposit contract to reach a valid threshold. You'll need an Eth 1.0 wallet that can send transactions via the Goerli network such as Metamask loaded with enough Ether to make deposits into the contract. Using the deposit contract address from earlier and your validator deposit data from the previous step, send a transactions with the validator deposit data as the `data` parameter in your web3 provider such as Metamask to kick things off. Once you make enough deposits, your beacon node will start and your system will begin running the phase 0 beacon chain!
-
-## Running Via Docker
-
-```
-docker run -p 4000:4000 -v gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
-  --rpc-port 4000 \
-  --deposit-contract DEPOSIT_CONTRACT_ADDRESS
-```
-
-Then, to run a validator client, use:
-
-```
-docker run gcr.io/prysmaticlabs/prysm/validator:latest \
-  --beacon-rpc-provider http://{YOUR_LOCAL_IP}:4000 \
-  --password YOUR_PASSWORD \
-  --keystore-path /path/to/your/validator/keystore/dir
-```
-
-This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
-
-## Running Under Windows
-
-The best way to run under Windows is to clone the repository and then run the node with go run from the Windows command line. Go 1.10 fails due to documented permission errors so be sure you are running Go 1.11 or later. Go through the source code and resolve any dependencies. Create two empty files for use as data directories by the beacon chain and validator respectively. The contents of these files should be deleted each time you run the software. After cloning the Prsym repository, run the node as follows:
-
-```
-go run ./beacon-chain main.go \
-  --deposit-contract DEPOSIT_CONTRACT_ADDRESS
-```
-
-After the beacon chain is up and running, run the validator client as a separate process as follows:
-
-```
-go run ./validator/main.go \
-  --password YOUR_PASSWORD \
-  --keystore-path /path/to/your/validator/keystore/dir
-```
+It'll take a while for the nodes in the network to process your deposit, but once you're active, your validator will begin doing its responsibility! In your validator client, you'll be able to frequently see your validator balance as it goes up. If you ever go offline for a while, you'll start gradually losing your deposit until you get kicked out of the system. Congratulations, you are now running Ethereum 2.0 Phase 0 :).
 
 # Testing
 
