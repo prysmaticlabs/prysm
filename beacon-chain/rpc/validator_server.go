@@ -226,8 +226,8 @@ func (vs *ValidatorServer) ValidatorStatus(
 		}, nil
 	}
 
-	depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
-	if err != nil {
+	blockExists, depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
+	if err != nil || !blockExists {
 		status := vs.validatorStatus(req.PublicKey, beaconState)
 		return &pb.ValidatorStatusResponse{
 			Status:                 status,
@@ -313,8 +313,8 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 			continue
 		}
 
-		depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
-		if err != nil {
+		blockExists, depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
+		if err != nil || !blockExists {
 			statusResponses[i].Status = &pb.ValidatorStatusResponse{
 				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
@@ -456,10 +456,10 @@ func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(
 }
 
 func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uint64,
-	eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (uint64, error) {
+	eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (bool, uint64, error) {
 	blockTimeStamp, err := vs.powChainService.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
-		return 0, err
+		return false, 0, err
 	}
 	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().GoerliBlockTime) * time.Second
 	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
@@ -473,8 +473,8 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	depositBlockSlot := uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
 
 	if depositBlockSlot > currentSlot-params.BeaconConfig().GenesisSlot {
-		return 0, errors.New("estimated Slot is in the future not the past")
+		return false, 0, nil
 	}
 
-	return depositBlockSlot, nil
+	return true, depositBlockSlot, nil
 }
