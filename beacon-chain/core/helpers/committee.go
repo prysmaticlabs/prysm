@@ -471,6 +471,23 @@ func prevEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 		})
 }
 
+// ShardDelta returns the number of shards to increment for the start shard when
+// process crosslink.
+//
+// Spec pseudocode definition:
+//   def get_shard_delta(state: BeaconState, epoch: Epoch) -> int:
+//    """
+//    Return the number of shards to increment ``state.latest_start_shard`` during ``epoch``.
+//    """
+//    return min(get_epoch_committee_count(state, epoch), SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH)
+func ShardDelta(state *pb.BeaconState, epoch uint64) uint64 {
+	minDelta := params.BeaconConfig().ShardCount - params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
+	if minDelta > EpochCommitteeCount(state, epoch) {
+		minDelta = EpochCommitteeCount(state, epoch)
+	}
+	return minDelta
+}
+
 // currEpochCommitteesAtSlot returns a list of crosslink committees of the current epoch.
 //
 // Spec pseudocode definition:
