@@ -416,6 +416,38 @@ func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
+// CrosslinkDelta calculates the rewards and penalties of individual
+// validator for submitting the correct crosslink.
+// Individual rewards and penalties are returned in list.
+//
+// Spec pseudocode definition:
+//	def get_crosslink_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
+//    rewards = [0 for index in range(len(state.validator_registry))]
+//    penalties = [0 for index in range(len(state.validator_registry))]
+//    epoch = get_previous_epoch(state)
+//    for offset in range(get_epoch_committee_count(state, epoch)):
+//        shard = (get_epoch_start_shard(state, epoch) + offset) % SHARD_COUNT
+//        crosslink_committee = get_crosslink_committee(state, epoch, shard)
+//        winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, epoch, shard)
+//        attesting_balance = get_total_balance(state, attesting_indices)
+//        committee_balance = get_total_balance(state, crosslink_committee)
+//        for index in crosslink_committee:
+//            base_reward = get_base_reward(state, index)
+//            if index in attesting_indices:
+//                rewards[index] += base_reward * attesting_balance // committee_balance
+//            else:
+//                penalties[index] += base_reward
+//    return rewards, penalties
+func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
+	prevEpoch := helpers.PrevEpoch(state)
+	rewards := make([]uint64, len(state.ValidatorRegistry))
+	penalties := make([]uint64, len(state.ValidatorRegistry))
+	committeeCount := helpers.PrevEpochCommitteeCount(state)
+	for i := uint64(0); i < committeeCount; i++ {
+		shard := helpers.Epoch
+	}
+}
+
 // UnslashedAttestingIndices returns all the attesting indices from a list of attestations,
 // it sorts the indices and filters out the slashed ones.
 //
