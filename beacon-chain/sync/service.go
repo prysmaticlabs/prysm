@@ -94,7 +94,7 @@ func (ss *Service) Stop() error {
 // Status checks the status of the node. It returns nil if it's synced
 // with the rest of the network and no errors occurred. Otherwise, it returns an error.
 func (ss *Service) Status() error {
-	if !ss.querierFinished {
+	if !ss.querierFinished && !ss.Querier.atGenesis {
 		return errors.New("querier is still running")
 	}
 
