@@ -139,6 +139,26 @@ func (mr *MockBeaconServiceClientMockRecorder) PendingDeposits(arg0, arg1 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingDeposits", reflect.TypeOf((*MockBeaconServiceClient)(nil).PendingDeposits), varargs...)
 }
 
+// RecentBlockRoots mocks base method
+func (m *MockBeaconServiceClient) RecentBlockRoots(arg0 context.Context, arg1 *v10.BlockRootsRequest, arg2 ...grpc.CallOption) (*v10.BlockRootsRespond, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RecentBlockRoots", varargs...)
+	ret0, _ := ret[0].(*v10.BlockRootsRespond)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecentBlockRoots indicates an expected call of RecentBlockRoots
+func (mr *MockBeaconServiceClientMockRecorder) RecentBlockRoots(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecentBlockRoots", reflect.TypeOf((*MockBeaconServiceClient)(nil).RecentBlockRoots), varargs...)
+}
+
 // WaitForChainStart mocks base method
 func (m *MockBeaconServiceClient) WaitForChainStart(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (v10.BeaconService_WaitForChainStartClient, error) {
 	m.ctrl.T.Helper()

@@ -49,10 +49,10 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"numActiveValidators": resp.TotalActiveValidators,
 			}).Info("Validator registry information")
 			log.Info("Generating validator performance report from the previous epoch...")
-			avgBalance := resp.AverageValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
+			avgBalance := resp.AverageActiveValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
 			log.WithField(
 				"averageEthBalance", fmt.Sprintf("%f", avgBalance),
-			).Info("Average eth balance per validator in the beacon chain")
+			).Info("Average eth balance per active validator in the beacon chain")
 			reported = true
 		}
 		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
@@ -64,8 +64,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				log.WithFields(logrus.Fields{
 					"prevBalance":   prevBalance,
 					"newBalance":    newBalance,
-					"delta":         fmt.Sprintf("%f", newBalance-prevBalance),
-					"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
+					"delta":         fmt.Sprintf("%.8f", newBalance-prevBalance),
+					"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
 					"pubKey":        tpk,
 				}).Info("Net gains/losses in eth")
 			}

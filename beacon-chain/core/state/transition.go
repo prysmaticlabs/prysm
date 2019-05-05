@@ -7,7 +7,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -24,6 +27,15 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
+
+var (
+	correctAttestedValidatorGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "correct_attested_validator_rate",
+		Help: "The % of validators correctly attested for source and target",
+	}, []string{
+		"epoch",
+	})
+)
 
 // TransitionConfig defines important configuration options
 // for executing a state transition, which can have logging and signature
@@ -488,12 +500,17 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
 
+	// Log the useful metrics via prometheus.
+	correctAttestedValidatorGauge.WithLabelValues(
+		strconv.Itoa(int(currentEpoch)),
+	).Set(float64(len(currentBoundaryAttesterIndices) / len(activeValidatorIndices)))
+
 	if config.Logging {
 		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")
 		log.WithField("attesterIndices", currentBoundaryAttesterIndices).Debug("Current epoch boundary attester indices")
-		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of prev epoch attestations")
+		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of previous epoch attestations")
 		log.WithField("attesterIndices", prevEpochAttesterIndices).Debug("Previous epoch attester indices")
-		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of prev epoch boundary attestations")
+		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of previous epoch boundary attestations")
 		log.WithField("attesterIndices", prevEpochBoundaryAttesterIndices).Debug("Previous epoch boundary attester indices")
 		log.WithField(
 			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
@@ -510,26 +527,31 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		log.WithField(
 			"numValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
+
+		activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+		log.WithField(
+			"activeValidators", len(activeValidatorIndices),
+		).Info("Active validators")
 		totalBalance := float32(0)
-		lowestBalance := float32(state.Balances[0])
-		highestBalance := float32(state.Balances[0])
-		for _, val := range state.Balances {
-			if float32(val) < lowestBalance {
-				lowestBalance = float32(val)
+		lowestBalance := float32(state.Balances[activeValidatorIndices[0]])
+		highestBalance := float32(state.Balances[activeValidatorIndices[0]])
+		for _, idx := range activeValidatorIndices {
+			if float32(state.Balances[idx]) < lowestBalance {
+				lowestBalance = float32(state.Balances[idx])
 			}
-			if float32(val) > highestBalance {
-				highestBalance = float32(val)
+			if float32(state.Balances[idx]) > highestBalance {
+				highestBalance = float32(state.Balances[idx])
 			}
-			totalBalance += float32(val)
+			totalBalance += float32(state.Balances[idx])
 		}
-		avgBalance := totalBalance / float32(len(state.Balances)) / float32(params.BeaconConfig().GweiPerEth)
+		avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
 		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
 		highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
 		log.WithFields(logrus.Fields{
 			"averageBalance": avgBalance,
 			"lowestBalance":  lowestBalance,
 			"highestBalance": highestBalance,
-		}).Info("Validator balances")
+		}).Info("Active validator balances")
 	}
 
 	return state, nil

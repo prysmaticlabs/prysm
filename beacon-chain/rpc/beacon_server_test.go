@@ -53,6 +53,10 @@ func (f *faultyPOWChainService) BlockHashByHeight(_ context.Context, height *big
 	return [32]byte{}, errors.New("failed")
 }
 
+func (f *faultyPOWChainService) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64, error) {
+	return 0, errors.New("failed")
+}
+
 func (f *faultyPOWChainService) DepositRoot() [32]byte {
 	return [32]byte{}
 }
@@ -69,6 +73,7 @@ type mockPOWChainService struct {
 	chainStartFeed    *event.Feed
 	latestBlockNumber *big.Int
 	hashesByHeight    map[int][]byte
+	blockTimeByHeight map[int]uint64
 }
 
 func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, uint64, error) {
@@ -106,6 +111,11 @@ func (m *mockPOWChainService) BlockHashByHeight(_ context.Context, height *big.I
 		return [32]byte{}, fmt.Errorf("could not fetch hash for height: %v", height)
 	}
 	return bytesutil.ToBytes32(val), nil
+}
+
+func (m *mockPOWChainService) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64, error) {
+	h := int(height.Int64())
+	return m.blockTimeByHeight[h], nil
 }
 
 func (m *mockPOWChainService) DepositRoot() [32]byte {

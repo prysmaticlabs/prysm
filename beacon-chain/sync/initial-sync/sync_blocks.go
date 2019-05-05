@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -116,10 +117,12 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 		"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
 		"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
 	).Debug("Requesting batched blocks")
-	s.p2p.Broadcast(ctx, &pb.BatchedBeaconBlockRequest{
+	if err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
 		StartSlot: startSlot,
 		EndSlot:   endSlot,
-	})
+	}, s.bestPeer); err != nil {
+		log.Errorf("Could not send batch block request to peer %s: %v", s.bestPeer.Pretty(), err)
+	}
 }
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
@@ -138,7 +141,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"root": fmt.Sprintf("%#x", root),
+		"root": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"slot": block.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Saving block")
 	s.currentSlot = block.Slot

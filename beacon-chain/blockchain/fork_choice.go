@@ -196,7 +196,9 @@ func (c *ChainService) ApplyForkChoiceRule(
 		return fmt.Errorf("could not hash head: %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot": fmt.Sprintf("#%x", bytesutil.Trunc(h[:])),
+		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headSlot":  newHead.Slot - params.BeaconConfig().GenesisSlot,
+		"stateSlot": newState.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Chain head block and state updated")
 
 	return nil
@@ -257,7 +259,16 @@ func (c *ChainService) lmdGhost(
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
-			if candidateChildVotes > maxChildVotes {
+			maxChildRoot, err := hashutil.HashBeaconBlock(maxChild)
+			if err != nil {
+				return nil, err
+			}
+			candidateChildRoot, err := hashutil.HashBeaconBlock(children[i])
+			if err != nil {
+				return nil, err
+			}
+			if candidateChildVotes > maxChildVotes ||
+				(candidateChildVotes == maxChildVotes && bytesutil.LowerThan(maxChildRoot[:], candidateChildRoot[:])) {
 				maxChild = children[i]
 			}
 		}
