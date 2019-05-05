@@ -300,8 +300,9 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 		}
 		dep, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, key)
 		if eth1BlockNumBigInt == nil {
+			status := vs.validatorStatus(key, beaconState)
 			statusResponses[i].Status = &pb.ValidatorStatusResponse{
-				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+				Status:                 status,
 				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 				Eth1DepositBlockNumber: 0,
 			}
@@ -310,8 +311,9 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 
 		depositBlockSlot, err := vs.depositBlockSlot(ctx, eth1BlockNumBigInt, beaconState)
 		if err != nil {
+			status := vs.validatorStatus(key, beaconState)
 			statusResponses[i].Status = &pb.ValidatorStatusResponse{
-				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+				Status:                 status,
 				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 				Eth1DepositBlockNumber: 0,
 			}
