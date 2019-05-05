@@ -811,7 +811,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 				},
 				{PublicKey: []byte{'B'},
 					Status: &pb.ValidatorStatusResponse{
-						Status:                 pb.ValidatorStatus_ACTIVE,
+						Status:          pb.ValidatorStatus_ACTIVE,
 						ActivationEpoch: params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 					},
 				},
