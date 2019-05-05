@@ -98,22 +98,22 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
+	activeIndices := helpers.ActiveValidatorIndices(validatorRegistry, helpers.SlotToEpoch(req.Slot))
 	validatorBalances, err := vs.beaconDB.ValidatorBalances(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve validator balances %v", err)
 	}
-	totalBalance := float32(0)
-	for _, val := range validatorBalances {
-		totalBalance += float32(val)
+	totalActiveBalance := float32(0)
+	for _, idx := range activeIndices {
+		totalActiveBalance += float32(validatorBalances[idx])
 	}
-	avgBalance := totalBalance / float32(len(validatorBalances))
+	avgBalance := totalActiveBalance / float32(len(activeIndices))
 	balance := validatorBalances[index]
-	activeIndices := helpers.ActiveValidatorIndices(validatorRegistry, helpers.SlotToEpoch(req.Slot))
 	return &pb.ValidatorPerformanceResponse{
-		Balance:                 balance,
-		AverageValidatorBalance: avgBalance,
-		TotalValidators:         uint64(len(validatorRegistry)),
-		TotalActiveValidators:   uint64(len(activeIndices)),
+		Balance:                       balance,
+		AverageActiveValidatorBalance: avgBalance,
+		TotalValidators:               uint64(len(validatorRegistry)),
+		TotalActiveValidators:         uint64(len(activeIndices)),
 	}, nil
 }
 
@@ -218,16 +218,31 @@ func (vs *ValidatorServer) ValidatorStatus(
 
 	_, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, req.PublicKey)
 	if eth1BlockNumBigInt == nil {
+		status := vs.validatorStatus(req.PublicKey, beaconState)
 		return &pb.ValidatorStatusResponse{
-			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+			Status:                 status,
+			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+			Eth1DepositBlockNumber: 0,
+		}, nil
+	}
+
+	depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
+	if err != nil {
+		status := vs.validatorStatus(req.PublicKey, beaconState)
+		return &pb.ValidatorStatusResponse{
+			Status:                 status,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 		}, nil
 	}
 
-	depositBlockSlot, err := vs.depositBlockSlot(ctx, eth1BlockNumBigInt, beaconState)
-	if err != nil {
-		return nil, err
+	if depositBlockSlot == 0 {
+		status := vs.validatorStatus(req.PublicKey, beaconState)
+		return &pb.ValidatorStatusResponse{
+			Status:                 status,
+			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+		}, nil
 	}
 
 	currEpoch := helpers.CurrentEpoch(beaconState)
@@ -299,20 +314,31 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 		}
 		dep, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, key)
 		if eth1BlockNumBigInt == nil {
+			status := vs.validatorStatus(key, beaconState)
 			statusResponses[i].Status = &pb.ValidatorStatusResponse{
-				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+				Status:                 status,
 				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 				Eth1DepositBlockNumber: 0,
 			}
 			continue
 		}
 
-		depositBlockSlot, err := vs.depositBlockSlot(ctx, eth1BlockNumBigInt, beaconState)
+		depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
 		if err != nil {
+			status := vs.validatorStatus(key, beaconState)
+			statusResponses[i].Status = &pb.ValidatorStatusResponse{
+				Status:                 status,
+				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+				Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+			}
+			continue
+		}
+
+		if depositBlockSlot == 0 {
 			statusResponses[i].Status = &pb.ValidatorStatusResponse{
 				Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 				ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
-				Eth1DepositBlockNumber: 0,
+				Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 			}
 			continue
 		}
@@ -449,24 +475,26 @@ func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(
 	return assignments
 }
 
-func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int,
-	beaconState *pbp2p.BeaconState) (uint64, error) {
-	eth1BlockNum := eth1BlockNumBigInt.Uint64()
-	addFollowDistance := eth1BlockNum + params.BeaconConfig().Eth1FollowDistance
-	eth1Timestamp, err := vs.powChainService.BlockTimeByHeight(ctx, big.NewInt(int64(addFollowDistance)))
+func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uint64,
+	eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (uint64, error) {
+	blockTimeStamp, err := vs.powChainService.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
 		return 0, err
 	}
+	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().GoerliBlockTime) * time.Second
+	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
 
 	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
 	votingPeriodSeconds := time.Duration(votingPeriodSlots*params.BeaconConfig().SecondsPerSlot) * time.Second
-
-	eth1UnixTime := time.Unix(int64(eth1Timestamp), 0)
 	timeToInclusion := eth1UnixTime.Add(votingPeriodSeconds)
 
 	eth2Genesis := time.Unix(int64(beaconState.GenesisTime), 0)
 	eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
 	depositBlockSlot := uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
+
+	if depositBlockSlot > currentSlot-params.BeaconConfig().GenesisSlot {
+		return 0, nil
+	}
 
 	return depositBlockSlot, nil
 }
