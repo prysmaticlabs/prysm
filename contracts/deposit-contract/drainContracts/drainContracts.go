@@ -181,7 +181,7 @@ func allDepositContractAddresses(client *ethclient.Client) ([]common.Address, er
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{},
 		Topics: [][]common.Hash{
-			[]common.Hash{depositTopicHash},
+			{depositTopicHash},
 		},
 		FromBlock: big.NewInt(400000), // Contracts before this may not have drain().
 	}
