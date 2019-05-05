@@ -47,7 +47,8 @@ message ValidatorPerformanceResponse {
   uint64 balance = 1;
   uint64 total_validators = 2;
   uint64 total_active_validators = 3;
-  float average_validator_balance = 4;
+  float average_validator_balance = 4 [deprecated = true];
+  float average_active_validator_balance = 5 [deprecated = true];
 }
 
 message ValidatorActivationRequest {
