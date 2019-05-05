@@ -527,27 +527,31 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		log.WithField(
 			"numValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
+
+		activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+		log.WithField(
+			"activeValidators", len(activeValidatorIndices),
+		).Info("Active validators")
 		totalBalance := float32(0)
-		lowestBalance := float32(state.ValidatorBalances[0])
-		highestBalance := float32(state.ValidatorBalances[0])
-		for i, val := range state.ValidatorBalances {
-			isActive := helpers.IsActiveValidator(state.ValidatorRegistry[i], currentEpoch)
-			if float32(val) < lowestBalance && isActive {
-				lowestBalance = float32(val)
+		lowestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
+		highestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
+		for _, idx := range activeValidatorIndices {
+			if float32(state.ValidatorBalances[idx]) < lowestBalance {
+				lowestBalance = float32(state.ValidatorBalances[idx])
 			}
-			if float32(val) > highestBalance && isActive {
-				highestBalance = float32(val)
+			if float32(state.ValidatorBalances[idx]) > highestBalance {
+				highestBalance = float32(state.ValidatorBalances[idx])
 			}
-			totalBalance += float32(val)
+			totalBalance += float32(state.ValidatorBalances[idx])
 		}
-		avgBalance := totalBalance / float32(len(state.ValidatorBalances)) / float32(params.BeaconConfig().GweiPerEth)
+		avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
 		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
 		highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
 		log.WithFields(logrus.Fields{
 			"averageBalance": avgBalance,
 			"lowestBalance":  lowestBalance,
 			"highestBalance": highestBalance,
-		}).Info("Validator balances")
+		}).Info("Active validator balances")
 	}
 
 	return state, nil
