@@ -260,17 +260,16 @@ func (vs *ValidatorServer) validatorStatus(
 
 	if !ok {
 		return &pb.ValidatorStatusResponse{
-			Status:                 pb.ValidatorStatus_PENDING_ACTIVE,
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 		}
 	}
 
-	status := vs.lookupValidatorStatusFlag(uint64(valIdx), beaconState)
 	depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
 	if err != nil {
 		return &pb.ValidatorStatusResponse{
-			Status:                 status,
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 		}
@@ -278,7 +277,7 @@ func (vs *ValidatorServer) validatorStatus(
 
 	if depositBlockSlot == 0 {
 		return &pb.ValidatorStatusResponse{
-			Status:                 status,
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 		}
@@ -317,6 +316,7 @@ func (vs *ValidatorServer) validatorStatus(
 		positionInQueue = validatorIndex - lastActivatedValidatorIdx
 	}
 
+	status := vs.lookupValidatorStatusFlag(uint64(valIdx), beaconState)
 	return &pb.ValidatorStatusResponse{
 		Status:                    status,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
@@ -329,12 +329,11 @@ func (vs *ValidatorServer) validatorStatus(
 func (vs *ValidatorServer) lookupValidatorStatusFlag(validatorIdx uint64, beaconState *pbp2p.BeaconState) pb.ValidatorStatus {
 	var status pb.ValidatorStatus
 	v := beaconState.ValidatorRegistry[validatorIdx]
-	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	epoch := helpers.CurrentEpoch(beaconState)
 
-	if v.ActivationEpoch == farFutureEpoch {
+	if v.ActivationEpoch > epoch {
 		status = pb.ValidatorStatus_PENDING_ACTIVE
-	} else if v.ActivationEpoch <= epoch && epoch < v.ExitEpoch {
+	} else if v.ActivationEpoch >= helpers.EntryExitEffectEpoch(epoch) && epoch < v.ExitEpoch {
 		status = pb.ValidatorStatus_ACTIVE
 	} else if v.StatusFlags == pbp2p.Validator_INITIATED_EXIT {
 		status = pb.ValidatorStatus_INITIATED_EXIT
