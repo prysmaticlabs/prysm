@@ -358,7 +358,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jbenet_goprocess",
-    commit = "b497e2f366b8624394fb2e89c10ab607bebdde0b",
+    commit = "2daecc40f7c1ff1b047f22eda49239ca58f4bc2d",  # v0.1.0
     importpath = "github.com/jbenet/goprocess",
 )
 
