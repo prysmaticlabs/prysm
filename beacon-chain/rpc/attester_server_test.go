@@ -13,10 +13,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+type mockBroadcaster struct{}
+
+func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
+}
+
 func TestAttestHead_OK(t *testing.T) {
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
+		p2p:              &mockBroadcaster{},
 	}
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
@@ -73,6 +79,7 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
+		p2p:      &mockBroadcaster{},
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
@@ -168,6 +175,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
+		p2p:      &mockBroadcaster{},
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
