@@ -104,10 +104,6 @@ func (ms *mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoo
 	return nil
 }
 
-func (ms mockChainService) InsertsCanonical(slot uint64, hash []byte) {
-	ms.canonicalBlocks[slot] = hash
-}
-
 type mockOperationService struct{}
 
 func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
