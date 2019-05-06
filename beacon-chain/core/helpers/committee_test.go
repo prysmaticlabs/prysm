@@ -729,3 +729,12 @@ func TestShardDelta_Ok(t *testing.T) {
 		}
 	}
 }
+
+func TestEpochStartShard_EpochOutOfBound(t *testing.T) {
+	_, err := EpochStartShard(&pb.BeaconState{}, 2)
+	want := "epoch 2 can't be greater than 1"
+	if err.Error() != want {
+		t.Fatalf("Did not generate correct error. Want: %s, got: %s",
+			err.Error(), want)
+	}
+}
