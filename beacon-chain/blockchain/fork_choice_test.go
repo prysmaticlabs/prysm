@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/binary"
@@ -650,6 +651,183 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	}
 	if !reflect.DeepEqual(block4, head) {
 		t.Errorf("Expected head to equal %v, received %v", block4, head)
+	}
+}
+
+func TestLMDGhost_3WayChainSplitsEqualVotes(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	beaconState := &pb.BeaconState{
+		Slot: 10,
+	}
+
+	chainService := setupBeaconChain(t, beaconDB, nil)
+
+	// Construct the following chain:
+	//    /- B2 (0 vote)
+	// B1  - B3 (0 vote)
+	//    \- B4 (0 vote)
+	block1 := &pb.BeaconBlock{
+		Slot:             1,
+		ParentRootHash32: []byte{'A'},
+	}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block2 := &pb.BeaconBlock{
+		Slot:             2,
+		ParentRootHash32: root1[:],
+	}
+	root2, _ := hashutil.HashBeaconBlock(block2)
+	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block3 := &pb.BeaconBlock{
+		Slot:             3,
+		ParentRootHash32: root1[:],
+	}
+	root3, _ := hashutil.HashBeaconBlock(block3)
+	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block4 := &pb.BeaconBlock{
+		Slot:             4,
+		ParentRootHash32: root1[:],
+	}
+	root4, _ := hashutil.HashBeaconBlock(block4)
+	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(ctx, block4, beaconState); err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	head, err := chainService.lmdGhost(ctx, block1, beaconState, nil)
+	if err != nil {
+		t.Fatalf("Could not run LMD GHOST: %v", err)
+	}
+
+	// Don't assign any vote to blocks 2, 3 and 4.
+	// Find which has a lexicographically higher root between block 2, 3 and 4.
+	higherRoot := root2
+	if bytesutil.LowerThan(root2[:], root3[:]) {
+		higherRoot = root3
+	}
+	if bytesutil.LowerThan(higherRoot[:], root4[:]) {
+		higherRoot = root4
+	}
+	// Compare the highest root with head root.
+	headRoot, _ := hashutil.HashBeaconBlock(head)
+	if !bytes.Equal(headRoot[:], higherRoot[:]) {
+		t.Errorf("Expected head root to equal %v, received %v", higherRoot, headRoot)
+	}
+}
+
+func TestIsDescendant_Ok(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	chainService := setupBeaconChain(t, beaconDB, nil)
+
+	// Construct the following chain:
+	// B1  - B2 - B3
+	//    \- B4 - B5
+	// Prove the following:
+	// 	B5 is not a descendant of B2
+	// 	B3 is not a descendant of B4
+	//  B5 and B3 are descendants of B1
+
+	block1 := &pb.BeaconBlock{
+		Slot:             1,
+		ParentRootHash32: []byte{'A'},
+	}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block2 := &pb.BeaconBlock{
+		Slot:             2,
+		ParentRootHash32: root1[:],
+	}
+	root2, err := hashutil.HashBeaconBlock(block2)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block3 := &pb.BeaconBlock{
+		Slot:             3,
+		ParentRootHash32: root2[:],
+	}
+	_, err = hashutil.HashBeaconBlock(block3)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block4 := &pb.BeaconBlock{
+		Slot:             4,
+		ParentRootHash32: root1[:],
+	}
+	root4, err := hashutil.HashBeaconBlock(block4)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block5 := &pb.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: root4[:],
+	}
+	_, err = hashutil.HashBeaconBlock(block5)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(block5); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+
+	isDescendant, err := chainService.isDescendant(block2, block5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isDescendant {
+		t.Errorf("block%d can't be descendant of block%d", block5.Slot, block2.Slot)
+	}
+	isDescendant, _ = chainService.isDescendant(block4, block3)
+	if isDescendant {
+		t.Errorf("block%d can't be descendant of block%d", block3.Slot, block4.Slot)
+	}
+	isDescendant, _ = chainService.isDescendant(block1, block5)
+	if !isDescendant {
+		t.Errorf("block%d is the descendant of block%d", block3.Slot, block1.Slot)
+	}
+	isDescendant, _ = chainService.isDescendant(block1, block3)
+	if !isDescendant {
+		t.Errorf("block%d is the descendant of block%d", block3.Slot, block1.Slot)
 	}
 }
 

@@ -140,50 +140,67 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified head: %v", err)
 	}
-	head, err := c.lmdGhost(ctx, justifiedHead, justifiedState, attestationTargets)
+
+	newHead, err := c.lmdGhost(ctx, justifiedHead, justifiedState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
+	newHeadRoot, err := hashutil.HashBeaconBlock(newHead)
 	if err != nil {
 		return fmt.Errorf("could not hash head block: %v", err)
 	}
 	c.canonicalBlocksLock.Lock()
 	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[head.Slot] = headRoot[:]
+	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]
+
+	currentHead, err := c.beaconDB.ChainHead()
+	if err != nil {
+		return fmt.Errorf("could not retrieve chain head: %v", err)
+	}
+
+	isDescendant, err := c.isDescendant(currentHead, newHead)
+	if err != nil {
+		return fmt.Errorf("could not check if block is descendant: %v", err)
+	}
 
 	newState := postState
-	if head.Slot != block.Slot {
-		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
-			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
+	if !isDescendant {
+		log.Warnf("Reorg happened, last head at slot %d, new head block at slot %d",
+			currentHead.Slot-params.BeaconConfig().GenesisSlot, newHead.Slot-params.BeaconConfig().GenesisSlot)
 
 		// Only regenerate head state if there was a reorg.
-		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, head.Slot)
+		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot)
 		if err != nil {
 			return fmt.Errorf("could not gen state: %v", err)
 		}
 
-		if newState.Slot != postState.Slot {
-			log.Warnf("Reorg happened, post state slot at %d, new head state at slot %d",
-				postState.Slot-params.BeaconConfig().GenesisSlot, newState.Slot-params.BeaconConfig().GenesisSlot)
-		}
-
-		for revertedSlot := block.Slot; revertedSlot > head.Slot; revertedSlot-- {
+		for revertedSlot := currentHead.Slot; revertedSlot > newHead.Slot; revertedSlot-- {
 			delete(c.canonicalBlocks, revertedSlot)
 		}
 		reorgCount.Inc()
 	}
 
-	if err := c.beaconDB.UpdateChainHead(ctx, head, newState); err != nil {
+	// If we receive forked blocks.
+	if newHead.Slot != newState.Slot {
+		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot)
+		if err != nil {
+			return fmt.Errorf("could not gen state: %v", err)
+		}
+	}
+
+	if err := c.beaconDB.UpdateChainHead(ctx, newHead, newState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
-	h, err := hashutil.HashBeaconBlock(head)
+	h, err := hashutil.HashBeaconBlock(newHead)
 	if err != nil {
 		return fmt.Errorf("could not hash head: %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot": fmt.Sprintf("0x%x", h),
+		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headSlot":  newHead.Slot - params.BeaconConfig().GenesisSlot,
+		"stateSlot": newState.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Chain head block and state updated")
+
 	return nil
 }
 
@@ -242,7 +259,16 @@ func (c *ChainService) lmdGhost(
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
-			if candidateChildVotes > maxChildVotes {
+			maxChildRoot, err := hashutil.HashBeaconBlock(maxChild)
+			if err != nil {
+				return nil, err
+			}
+			candidateChildRoot, err := hashutil.HashBeaconBlock(children[i])
+			if err != nil {
+				return nil, err
+			}
+			if candidateChildVotes > maxChildVotes ||
+				(candidateChildVotes == maxChildVotes && bytesutil.LowerThan(maxChildRoot[:], candidateChildRoot[:])) {
 				maxChild = children[i]
 			}
 		}
@@ -286,6 +312,27 @@ func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock,
 		}
 	}
 	return children, nil
+}
+
+// isDescendant checks if the new head block is a descendant block of the current head.
+func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.BeaconBlock) (bool, error) {
+	currentHeadRoot, err := hashutil.HashBeaconBlock(currentHead)
+	if err != nil {
+		return false, nil
+	}
+	for newHead.Slot > currentHead.Slot {
+		if bytesutil.ToBytes32(newHead.ParentRootHash32) == currentHeadRoot {
+			return true, nil
+		}
+		newHead, err = c.beaconDB.Block(bytesutil.ToBytes32(newHead.ParentRootHash32))
+		if err != nil {
+			return false, err
+		}
+		if newHead == nil {
+			return false, nil
+		}
+	}
+	return false, nil
 }
 
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,

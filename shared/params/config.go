@@ -88,6 +88,7 @@ type BeaconChainConfig struct {
 	LogBlockDelay           int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	RPCSyncCheck            time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
 	TestnetContractEndpoint string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
+	GoerliBlockTime         uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
 }
 
 // DepositContractConfig contains the deposits for
@@ -178,6 +179,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
 	RPCSyncCheck:          1,
+	GoerliBlockTime:       14, // 14 seconds on average for a goerli block to be created.
 
 	// Testnet misc values.
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
@@ -213,8 +215,8 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.SlotsPerEpoch = 8
 	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
 	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxDepositAmount = 3200000
-	demoConfig.EjectionBalance = 1600000
+	demoConfig.MaxDepositAmount = 3.2 * 1e9
+	demoConfig.EjectionBalance = 3.175 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.EpochsPerEth1VotingPeriod = 1

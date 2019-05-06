@@ -56,3 +56,14 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 	}
 	return block.Hash(), nil
 }
+
+// BlockTimeByHeight fetches an eth1.0 block timestamp by its height.
+func (w *Web3Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByHeight")
+	defer span.End()
+	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
+	if err != nil {
+		return 0, fmt.Errorf("could not query block with given height: %v", err)
+	}
+	return block.Time(), nil
+}

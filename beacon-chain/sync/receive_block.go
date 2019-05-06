@@ -28,7 +28,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("isEvilBlock", isEvilBlock))
 
 	if isEvilBlock {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", h)).
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).
 			Debug("Received blacklisted block")
 		return nil
 	}
@@ -45,11 +45,11 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 
 	if hasBlock {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debug("Already processed")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debug("Already processed")
 		return nil
 	}
 
-	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debug("Received incoming block root, requesting full block data from sender")
+	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debug("Received incoming block root, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
 	if err := rs.p2p.Send(ctx, &pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer); err != nil {
 		log.Error(err)
@@ -91,7 +91,7 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2
 	}
 
 	if rs.db.IsEvilBlockHash(blockRoot) {
-		log.WithField("blockHash", blockRoot).Debug("Skipping blacklisted block")
+		log.WithField("blockRoot", bytesutil.Trunc(blockRoot[:])).Debug("Skipping blacklisted block")
 		return nil
 	}
 
@@ -121,7 +121,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).
+	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).
 		Debug("Processing response to block request")
 	hasBlock := rs.db.HasBlock(blockRoot)
 	if hasBlock {
@@ -163,7 +163,8 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, nil
 	}
 
-	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
+	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).Debug(
+		"Sending newly received block to chain service")
 	// We then process the block by passing it through the ChainService and running
 	// a fork choice rule.
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
@@ -185,19 +186,12 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	// only run fork choice if the block has the chain head as the parent
-	if headRoot == bytesutil.ToBytes32(block.ParentRootHash32) {
-		if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
-			log.Errorf("Could not run fork choice on block %v", err)
-			return nil, nil, false, err
-		}
-
-	} else {
+	if headRoot != bytesutil.ToBytes32(block.ParentRootHash32) {
 		// Save historical state from forked block.
 		forkedBlock.Inc()
 		log.WithFields(logrus.Fields{
 			"slot": block.Slot,
-			"root": fmt.Sprintf("%#x", blockRoot)},
+			"root": fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))},
 		).Warn("Received Block from a forked chain")
 		if err := rs.db.SaveHistoricalState(ctx, beaconState); err != nil {
 			log.Errorf("Could not save historical state %v", err)
@@ -205,6 +199,10 @@ func (rs *RegularSync) validateAndProcessBlock(
 		}
 	}
 
+	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+		log.WithError(err).Error("Could not run fork choice on block")
+		return nil, nil, false, err
+	}
 	sentBlocks.Inc()
 	// We update the last observed slot to the received canonical block's slot.
 	if block.Slot > rs.highestObservedSlot {

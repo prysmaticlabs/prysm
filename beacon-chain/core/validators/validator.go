@@ -111,8 +111,6 @@ func ProcessDeposit(
 	var publicKeyExists bool
 	var existingValidatorIdx int
 
-	state.DepositIndex++
-
 	existingValidatorIdx, publicKeyExists = validatorIdxMap[bytesutil.ToBytes32(pubkey)]
 	if !publicKeyExists {
 		// If public key does not exist in the registry, we add a new validator
@@ -133,7 +131,7 @@ func ProcessDeposit(
 			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
 			withdrawalCredentials,
 		) {
-			return nil, fmt.Errorf(
+			return state, fmt.Errorf(
 				"expected withdrawal credentials to match, received %#x == %#x",
 				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
 				withdrawalCredentials,
@@ -141,6 +139,8 @@ func ProcessDeposit(
 		}
 		state.ValidatorBalances[existingValidatorIdx] += amount
 	}
+	state.DepositIndex++
+
 	return state, nil
 }
 
@@ -206,11 +206,10 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	validator := state.ValidatorRegistry[idx]
 
-	exitEpoch := entryExitEffectEpoch(helpers.CurrentEpoch(state))
-	if validator.ExitEpoch <= exitEpoch {
+	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state
 	}
-	validator.ExitEpoch = exitEpoch
+	validator.ExitEpoch = entryExitEffectEpoch(helpers.CurrentEpoch(state))
 	return state
 }
 
