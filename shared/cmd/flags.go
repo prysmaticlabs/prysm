@@ -74,7 +74,7 @@ var (
 	}
 	// P2PHost defines the host IP to be used by libp2p.
 	P2PHost = cli.StringFlag{
-		Name: "p2p-host-ip",
+		Name:  "p2p-host-ip",
 		Usage: "The IP address advertised by libp2p. This may be used to advertise an external IP.",
 		Value: "",
 	}
