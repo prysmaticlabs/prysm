@@ -738,3 +738,35 @@ func TestEpochStartShard_EpochOutOfBound(t *testing.T) {
 			err.Error(), want)
 	}
 }
+
+func TestEpochStartShard_AccurateShard(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	min := params.BeaconConfig().ShardCount - params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
+	tests := []struct {
+		validatorCount uint64
+		startShard     uint64
+	}{
+		{0, 676},
+		{1000, 676},
+		{2 * validatorsPerEpoch, 228},
+		{5 * validatorsPerEpoch, 932},
+		{16 * validatorsPerEpoch, 212},
+		{32 * validatorsPerEpoch, 212},
+	}
+	for _, test := range tests {
+		validators := make([]*pb.Validator, test.validatorCount)
+		for i := 0; i < len(validators); i++ {
+			validators[i] = &pb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+		state := &pb.BeaconState{ValidatorRegistry: validators, LatestStartShard: 100, Slot: 500}
+		startShard, err := EpochStartShard(state, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.startShard != startShard {
+			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
+		}
+	}
+}
