@@ -120,10 +120,6 @@ proto_library(
     sha256 = "86c31c309192c4680995baefc8ca95101bc8291a21fbb7b7c5370564cda16efd",
     strip_prefix = "prysm-testnet-site-b6c498382eef7052fbde220834a361f6b27d0d24",
     url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/b6c498382eef7052fbde220834a361f6b27d0d24.tar.gz",
-)""",
-    sha256 = "d57cbb11cbd8126d31385064315df731132401f5c5ea110e05ed86da350c9523",
-    strip_prefix = "prysm-testnet-site-3848e91aab9332a0b2c15291f65f09c94db1a84d",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/3848e91aab9332a0b2c15291f65f09c94db1a84d.tar.gz",
 )
 
 http_archive(
@@ -380,7 +376,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_nat",
-    commit = "7790752804f5e7c2356fed9352686f1e45939459",  # v0.0.4
+    commit = "3efa307896b71a07705d8d0cf7f19a4595c62d4f",  # v0.0.2
     importpath = "github.com/libp2p/go-libp2p-nat",
 )
 
