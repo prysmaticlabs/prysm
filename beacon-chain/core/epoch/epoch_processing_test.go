@@ -1033,7 +1033,7 @@ func TestCrosslinkAttestingIndices_CanGetIndices(t *testing.T) {
 func TestWinningCrosslink_CantGetMatchingAtts(t *testing.T) {
 	wanted := fmt.Sprintf("could not get matching attestations: input epoch: %d != current epoch: %d or previous epoch: %d",
 		100, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().GenesisEpoch)
-	_, err := WinningCrosslink(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, 0, 100)
+	_, _, err := WinningCrosslink(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, 0, 100)
 	if err.Error() != wanted {
 		t.Fatal(err)
 	}
@@ -1057,9 +1057,12 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 		PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 	}
 
-	crosslink, err := WinningCrosslink(state, 0, ge)
+	crosslink, indices, err := WinningCrosslink(state, 0, ge)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if len(indices) != 0 {
+		t.Errorf("gensis crosslink indices is not 0, got: %d", len(indices))
 	}
 	if !reflect.DeepEqual(crosslink, gCrosslink) {
 		t.Errorf("Did not get genesis crosslink, got: %v", crosslink)
@@ -1089,13 +1092,105 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		CurrentCrosslinks:         []*pb.Crosslink{{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}},
 	}
 
-	winner, err := WinningCrosslink(state, 0, ge)
+	winner, indices, err := WinningCrosslink(state, 0, ge)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(indices) != 0 {
+		t.Errorf("gensis crosslink indices is not 0, got: %d", len(indices))
+	}
+	want := &pb.Crosslink{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}
+	if !reflect.DeepEqual(winner, want) {
+		t.Errorf("Did not get genesis crosslink, got: %v", winner)
+	}
+}
+
+func TestProcessCrosslink_NoUpdate(t *testing.T) {
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	blockRoots := make([][]byte, 128)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i + 1)}
+	}
+	oldCrosslink := &pb.Crosslink{
+		Epoch:                   params.BeaconConfig().GenesisEpoch,
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+		LatestBlockRoots:  blockRoots,
+		CurrentCrosslinks: []*pb.Crosslink{oldCrosslink},
+	}
+	newState, err := ProcessCrosslink(state)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	want := &pb.Crosslink{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}
-	if !reflect.DeepEqual(winner, want) {
-		t.Errorf("Did not get genesis crosslink, got: %v", winner)
+	// Since there has been no attestation, crosslink stayed the same.
+	if !reflect.DeepEqual(oldCrosslink, newState.CurrentCrosslinks[0]) {
+		t.Errorf("Did not get correct crosslink back")
+	}
+}
+
+func TestProcessCrosslink_SuccessfulUpdate(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+	ge := params.BeaconConfig().GenesisEpoch
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	blockRoots := make([][]byte, 128)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i + 1)}
+	}
+
+	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks[i] = &pb.Crosslink{
+			Epoch:                   ge,
+			CrosslinkDataRootHash32: []byte{'B'},
+		}
+	}
+	var atts []*pb.PendingAttestation
+	for s := uint64(0); s < params.BeaconConfig().ShardCount; s++ {
+		atts = append(atts, &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:              gs + 1 + (s % e),
+				Shard:             s,
+				CrosslinkDataRoot: []byte{'B'},
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
+				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
+		})
+	}
+	state := &pb.BeaconState{
+		Slot:                      gs + e + 2,
+		ValidatorRegistry:         validators,
+		PreviousEpochAttestations: atts,
+		Balances:                  balances,
+		LatestBlockRoots:          blockRoots,
+		CurrentCrosslinks:         crosslinks,
+	}
+	newState, err := ProcessCrosslink(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(crosslinks[0], newState.CurrentCrosslinks[0]) {
+		t.Errorf("Crosslink is not the same")
 	}
 }
