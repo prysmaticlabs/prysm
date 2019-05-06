@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -18,7 +19,7 @@ import (
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
-	p2p p2p.Broadcaster
+	p2p              p2p.Broadcaster
 	beaconDB         *db.BeaconDB
 	operationService operationService
 }

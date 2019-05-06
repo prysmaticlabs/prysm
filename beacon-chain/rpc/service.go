@@ -4,10 +4,11 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"math/big"
 	"net"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
@@ -78,7 +79,7 @@ type Service struct {
 	canonicalStateChan  chan *pbp2p.BeaconState
 	incomingAttestation chan *pbp2p.Attestation
 	credentialError     error
-	p2p p2p.Broadcaster
+	p2p                 p2p.Broadcaster
 }
 
 // Config options for the beacon node RPC server.
@@ -91,7 +92,7 @@ type Config struct {
 	POWChainService  powChainService
 	OperationService operationService
 	SyncService      syncService
-	Broadcaster p2p.Broadcaster
+	Broadcaster      p2p.Broadcaster
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -102,7 +103,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		ctx:                 ctx,
 		cancel:              cancel,
 		beaconDB:            cfg.BeaconDB,
-		p2p: cfg.Broadcaster,
+		p2p:                 cfg.Broadcaster,
 		chainService:        cfg.ChainService,
 		powChainService:     cfg.POWChainService,
 		operationService:    cfg.OperationService,
@@ -170,7 +171,7 @@ func (s *Service) Start() {
 	attesterServer := &AttesterServer{
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
-		p2p: s.p2p,
+		p2p:              s.p2p,
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,

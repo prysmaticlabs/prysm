@@ -366,7 +366,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		CertFlag:         cert,
 		KeyFlag:          key,
 		BeaconDB:         b.db,
-		Broadcaster: p2pService,
+		Broadcaster:      p2pService,
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,
