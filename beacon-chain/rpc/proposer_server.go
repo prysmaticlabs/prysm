@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
 
 // ProposerServer defines a server implementation of the gRPC Proposer service,
@@ -80,20 +79,9 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
-	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
+	if err := ps.chainService.ApplyForkChoiceRule(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
-	log.WithFields(logrus.Fields{
-		"headRoot":  fmt.Sprintf("0x%x", bytesutil.Trunc(h[:])),
-		"headSlot":  blk.Slot - params.BeaconConfig().GenesisSlot,
-		"stateSlot": beaconState.Slot - params.BeaconConfig().GenesisSlot,
-	}).Info("Chain head block and state updated")
-
-	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
-	}
-
-	ps.chainService.InsertsCanonical(blk.Slot, h[:])
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
