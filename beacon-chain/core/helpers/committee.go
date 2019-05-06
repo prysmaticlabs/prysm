@@ -488,6 +488,33 @@ func ShardDelta(state *pb.BeaconState, epoch uint64) uint64 {
 	return minDelta
 }
 
+// EpochStartShard returns the start shard used to process crosslink
+// of a given epoch.
+//
+// Spec pseudocode definition:
+//   def get_epoch_start_shard(state: BeaconState, epoch: Epoch) -> Shard:
+//    assert epoch <= get_current_epoch(state) + 1
+//    check_epoch = get_current_epoch(state) + 1
+//    shard = (state.latest_start_shard + get_shard_delta(state, get_current_epoch(state))) % SHARD_COUNT
+//    while check_epoch > epoch:
+//        check_epoch -= 1
+//        shard = (shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT
+//    return shard
+func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	currentEpoch := CurrentEpoch(state)
+	checkEpoch := currentEpoch + 1
+	if epoch > checkEpoch {
+		return 0, fmt.Errorf("epoch %d can't be greater than %d",
+			epoch, checkEpoch)
+	}
+	shard := (state.LatestStartShard + ShardDelta(state, currentEpoch)) % params.BeaconConfig().ShardCount
+	for checkEpoch > epoch {
+		checkEpoch--
+		shard = (shard + params.BeaconConfig().ShardCount - ShardDelta(state, checkEpoch)) % params.BeaconConfig().ShardCount
+	}
+	return shard, nil
+}
+
 // currEpochCommitteesAtSlot returns a list of crosslink committees of the current epoch.
 //
 // Spec pseudocode definition:
