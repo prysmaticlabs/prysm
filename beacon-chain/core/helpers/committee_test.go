@@ -741,7 +741,6 @@ func TestEpochStartShard_EpochOutOfBound(t *testing.T) {
 
 func TestEpochStartShard_AccurateShard(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
-	min := params.BeaconConfig().ShardCount - params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
 	tests := []struct {
 		validatorCount uint64
 		startShard     uint64
