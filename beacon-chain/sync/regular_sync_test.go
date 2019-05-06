@@ -52,7 +52,6 @@ type mockChainService struct {
 	sFeed           *event.Feed
 	cFeed           *event.Feed
 	db              *db.BeaconDB
-	canonicalBlocks map[uint64][]byte
 }
 
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
