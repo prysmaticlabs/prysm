@@ -2,11 +2,11 @@
 : '
 # *** Instructions ***
 
-# Build beacon chain
-bazel build //beacon-chain
+# Build beacon chain for linux
+bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //beacon-chain
 
 # Tar the binary
-tar czvf /tmp/beacon-chain.tar.gz --directory=bazel-bin/beacon-chain/$(echo `uname` | tr '[A-Z]' '[a-z]')_amd64_stripped beacon-chain
+tar czvf /tmp/beacon-chain.tar.gz --directory=bazel-bin/beacon-chain/linux_amd64_stripped beacon-chain
 
 # Copy to cloud storage
 gsutil cp /tmp/beacon-chain.tar.gz gs://prysmaticlabs/beacon-chain-deployment.tar.gz
