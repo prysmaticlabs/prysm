@@ -444,7 +444,14 @@ func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	penalties := make([]uint64, len(state.ValidatorRegistry))
 	committeeCount := helpers.PrevEpochCommitteeCount(state)
 	for i := uint64(0); i < committeeCount; i++ {
-		shard := helpers.Epoch
+		startShard, err := helpers.EpochStartShard(state, prevEpoch)
+		if err != nil {
+			return nil, nil, err
+		}
+		shard := (startShard + i) % params.BeaconConfig().ShardCount
+		// Need to update get_crosslink_committee in spec.
+		crosslinkCommittee, err := helpers.CrosslinkCommitteesAtSlot(state, helpers.StartSlot(prevEpoch), false)
+		WinningCrosslink(state, prevEpoch, shard)
 	}
 }
 
