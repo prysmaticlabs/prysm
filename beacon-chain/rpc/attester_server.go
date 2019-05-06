@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,6 +18,7 @@ import (
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
+	p2p p2p.Broadcaster
 	beaconDB         *db.BeaconDB
 	operationService operationService
 }
@@ -32,7 +34,9 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 	if err := as.operationService.HandleAttestations(ctx, att); err != nil {
 		return nil, err
 	}
-
+	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{
+		Hash: h[:],
+	})
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
 
