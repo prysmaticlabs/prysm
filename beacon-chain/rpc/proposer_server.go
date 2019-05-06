@@ -92,6 +92,8 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 	}
+
+	ps.chainService.InsertsCanonical(blk.Slot, h[:])
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
