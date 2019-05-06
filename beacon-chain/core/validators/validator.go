@@ -159,6 +159,7 @@ func ProcessDeposit(
 func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[idx]
 	if genesis {
+		validator.ActivationEligibilityEpoch = params.BeaconConfig().GenesisEpoch
 		validator.ActivationEpoch = params.BeaconConfig().GenesisEpoch
 	} else {
 		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
