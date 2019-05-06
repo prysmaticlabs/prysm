@@ -41,6 +41,7 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 		NoDiscovery:            ctx.GlobalBool(cmd.NoDiscovery.Name),
 		BootstrapNodeAddr:      ctx.GlobalString(cmd.BootstrapNode.Name),
 		RelayNodeAddr:          ctx.GlobalString(cmd.RelayNode.Name),
+		HostAddress:            ctx.GlobalString(cmd.P2PHost.Name),
 		Port:                   ctx.GlobalInt(cmd.P2PPort.Name),
 		DepositContractAddress: contractAddress,
 	})
