@@ -56,6 +56,7 @@ func main() {
 		cmd.BootstrapNode,
 		cmd.RelayNode,
 		cmd.P2PPort,
+		cmd.P2PHost,
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
 		cmd.EnableTracingFlag,

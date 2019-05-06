@@ -38,6 +38,7 @@ func init() {
 type chainService interface {
 	StateInitializedFeed() *event.Feed
 	blockchain.BlockReceiver
+	blockchain.ForkChoice
 }
 
 type operationService interface {

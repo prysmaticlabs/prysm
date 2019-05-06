@@ -557,13 +557,14 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	response := make([]*pb.BeaconBlock, 0, blockRange)
 	for i := startSlot; i <= endSlot; i++ {
-		retBlock, err := rs.db.BlockBySlot(ctx, i)
+		retBlock, err := rs.chainService.CanonicalBlock(i)
 		if err != nil {
-			log.Errorf("Unable to retrieve block from db %v", err)
+			log.Errorf("Unable to retrieve canonical block %v", err)
 			continue
 		}
 		if retBlock == nil {
-			log.Debug("Block does not exist in db")
+			log.WithField("slot", i).
+				Debug("Canonical block does not exist")
 			continue
 		}
 		response = append(response, retBlock)

@@ -27,7 +27,7 @@ type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
 	IsCanonical(slot uint64, hash []byte) bool
-	InsertsCanonical(slot uint64, hash []byte)
+	CanonicalBlock(slot uint64) (*pb.BeaconBlock, error)
 	RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot
 }
 

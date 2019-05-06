@@ -109,12 +109,12 @@ func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return bytes.Equal(m.canonicalBlocks[slot], hash)
 }
 
-func (m mockChainService) InsertsCanonical(slot uint64, hash []byte) {
-	m.canonicalBlocks[slot] = hash
-}
-
 func (m mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
 	return nil
+}
+
+func (m *mockChainService) CanonicalBlock(slot uint64) (*pb.BeaconBlock, error) {
+	return nil, nil
 }
 
 func newMockChainService() *mockChainService {

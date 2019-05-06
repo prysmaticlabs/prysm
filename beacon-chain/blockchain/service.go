@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -238,6 +239,18 @@ func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return false
 }
 
+// CanonicalBlock returns canonical block of a given slot, it returns nil
+// if there's no canonical block saved of a given slot.
+func (c *ChainService) CanonicalBlock(slot uint64) (*pb.BeaconBlock, error) {
+	c.canonicalBlocksLock.RLock()
+	defer c.canonicalBlocksLock.RUnlock()
+	root, exists := c.canonicalBlocks[slot]
+	if !exists {
+		return nil, nil
+	}
+	return c.beaconDB.Block(bytesutil.ToBytes32(root))
+}
+
 // RecentCanonicalRoots returns the latest block slot and root of the canonical block chain,
 // the block slots and roots are sorted and in descending order. Input count determines
 // the number of block slots and roots to return.
@@ -266,12 +279,4 @@ func (c *ChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
 		}
 	}
 	return blockRoots
-}
-
-// InsertsCanonical inserts a canonical block hash to its corresponding slot.
-// This is used for testing purpose.
-func (c *ChainService) InsertsCanonical(slot uint64, hash []byte) {
-	c.canonicalBlocksLock.Lock()
-	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[slot] = hash
 }
