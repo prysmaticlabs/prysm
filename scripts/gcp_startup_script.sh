@@ -11,7 +11,7 @@ tar czvf /tmp/beacon-chain.tar.gz --directory=bazel-bin/beacon-chain/linux_amd64
 # Copy to cloud storage
 gsutil cp /tmp/beacon-chain.tar.gz gs://prysmaticlabs/beacon-chain-deployment.tar.gz
 
-# Deploy template instance
+# Create template instance
 gcloud compute instance-templates create beacon-chain \
     --project=prysmaticlabs \
     --image-family=debian-9 \
