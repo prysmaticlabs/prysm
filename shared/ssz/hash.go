@@ -67,7 +67,7 @@ func SignedRoot(val interface{}) ([32]byte, error) {
 		}
 		lastField := deRefVal.Field(fields[len(fields)-1].index)
 		if lastField.Kind() == reflect.Slice {
-			return TreeHash(lastField)
+			return TreeHash(lastField.Interface().([]byte))
 		}
 	}
 

@@ -169,7 +169,6 @@ var merkleHashTests = []merkleHashTest{
 }
 
 var signatureRootTests = []signatureRootTest{
-	{val: []byte{'A'}, output: "testing"},
 	{val: &pb.BeaconBlockHeader{Signature: []byte{'A', 'B'}}, output: "testing"},
 	{val: &pb.BeaconBlockHeader{Signature: []byte{'A', 'B'}}, output: "testing"},
 }
