@@ -299,7 +299,7 @@ func TestCrosslinkCommitteesAtSlot_EpochSinceLastUpdatePow2(t *testing.T) {
 		ValidatorRegistry:            validators,
 		Slot:                         params.BeaconConfig().GenesisSlot + 128,
 		LatestActiveIndexRoots:       [][]byte{{'A'}, {'B'}, {'C'}, {'D'}},
-		LatestRandaoMixes:            [][]byte{{'E'}, {'F'}, {'G'}, {'H'}},
+		LatestRandaoMixes:            [][]byte{{'D'}, {'E'}, {'F'}},
 		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 	}
 
@@ -362,7 +362,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
 			shard:           3,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{35, 2},
+			wanted:          []uint64{2, 35},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
@@ -376,7 +376,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           11,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{92, 49},
+			wanted:          []uint64{49, 92},
 		},
 	}
 
@@ -611,7 +611,7 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted := []uint64{92, 49}
+	wanted := []uint64{49, 92}
 	if !reflect.DeepEqual(wanted, result) {
 		t.Errorf(
 			"Result indices was an unexpected value. Wanted %d, got %d",

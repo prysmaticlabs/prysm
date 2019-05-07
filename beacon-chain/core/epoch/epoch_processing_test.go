@@ -211,67 +211,6 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 	}
 }
 
-func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	var latestBlockRoots [][]byte
-
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		latestBlockRoots = append(latestBlockRoots, []byte("a"))
-	}
-
-	state := &pb.BeaconState{
-		Slot:                  300 + params.BeaconConfig().GenesisSlot,
-		CurrentJustifiedEpoch: 3,
-		JustificationBitfield: 4,
-		LatestBlockRoots:      latestBlockRoots,
-	}
-	newState, err := ProcessJustificationAndFinalization(
-		state,
-		1,
-		1,
-		1,
-		1,
-	)
-	if err != nil {
-		t.Errorf("Could not process justification and finalization of state %v", err)
-	}
-
-	if newState.PreviousJustifiedEpoch != 3 {
-		t.Errorf("New state's prev justified slot %d != old state's justified slot %d",
-			newState.PreviousJustifiedEpoch, state.CurrentJustifiedEpoch)
-	}
-	// Since this epoch was justified (not prev), justified_epoch = slot_to_epoch(state.slot) -1.
-	if newState.CurrentJustifiedEpoch != helpers.CurrentEpoch(state) {
-		t.Errorf("New state's justified epoch %d != state's slot - SLOTS_PER_EPOCH: %d",
-			newState.CurrentJustifiedEpoch, helpers.CurrentEpoch(state))
-	}
-	// The new JustificationBitfield is 11, it went from 0100 to 1011. Two 1's were appended because both
-	// prev epoch and this epoch were justified.
-	if newState.JustificationBitfield != 11 {
-		t.Errorf("New state's justification bitfield %d != 11", newState.JustificationBitfield)
-	}
-
-	// Assume for the case where only prev epoch got justified. Verify
-	// justified_epoch = slot_to_epoch(state.slot) -2.
-	newState, err = ProcessJustificationAndFinalization(
-		state,
-		0,
-		1,
-		1,
-		1,
-	)
-	if err != nil {
-		t.Errorf("Could not process justification and finalization of state %v", err)
-	}
-	if newState.CurrentJustifiedEpoch != helpers.CurrentEpoch(state)-1 {
-		t.Errorf("New state's justified epoch %d != state's epoch -2: %d",
-			newState.CurrentJustifiedEpoch, helpers.CurrentEpoch(state)-1)
-	}
-}
-
 func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	t.Skip()
 	// TODO(#2307) unskip after ProcessCrosslinks is finished
@@ -1140,5 +1079,148 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	want := &pb.Crosslink{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}
 	if !reflect.DeepEqual(winner, want) {
 		t.Errorf("Did not get genesis crosslink, got: %v", winner)
+	}
+}
+
+func TestProcessJustificationFinalization_LessThan2ndEpoch(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: params.BeaconConfig().SlotsPerEpoch,
+	}
+	newState, err := ProcessJustificationFinalization(state, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(state, newState) {
+		t.Error("Did not get the original state")
+	}
+}
+
+func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
+	e := params.BeaconConfig().FarFutureEpoch
+	a := params.BeaconConfig().MaxDepositAmount
+	state := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
+		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
+		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
+	}
+	// Since Attested balances are less than total balances, nothing happened.
+	newState, err := ProcessJustificationFinalization(state, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(state, newState) {
+		t.Error("Did not get the original state")
+	}
+}
+
+func TestProcessJustificationFinalization_NoBlockRootCurrentEpoch(t *testing.T) {
+	e := params.BeaconConfig().FarFutureEpoch
+	a := params.BeaconConfig().MaxDepositAmount
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i)}
+	}
+	state := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
+		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
+		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		JustificationBitfield:  3,
+		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
+		LatestBlockRoots:       blockRoots,
+	}
+	attestedBalance := 4 * e * 3 / 2
+	_, err := ProcessJustificationFinalization(state, 0, attestedBalance)
+	want := "could not get block root for current epoch"
+	if !strings.Contains(err.Error(), want) {
+		t.Fatal("Did not receive correct error")
+	}
+}
+
+func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
+	e := params.BeaconConfig().FarFutureEpoch
+	a := params.BeaconConfig().MaxDepositAmount
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i)}
+	}
+	state := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2 + 1,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
+		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
+		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		JustificationBitfield:  3,
+		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
+		LatestBlockRoots:       blockRoots,
+	}
+	attestedBalance := 4 * e * 3 / 2
+	newState, err := ProcessJustificationFinalization(state, 0, attestedBalance)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(newState.CurrentJustifiedRoot, []byte{byte(128)}) {
+		t.Errorf("Wanted current justified root: %v, got: %v",
+			[]byte{byte(128)}, newState.CurrentJustifiedRoot)
+	}
+	if newState.CurrentJustifiedEpoch != params.BeaconConfig().GenesisEpoch+2 {
+		t.Errorf("Wanted justified epoch: %d, got: %d",
+			params.BeaconConfig().GenesisEpoch+2, newState.CurrentJustifiedEpoch)
+	}
+	if !bytes.Equal(newState.FinalizedRoot, params.BeaconConfig().ZeroHash[:]) {
+		t.Errorf("Wanted current finalized root: %v, got: %v",
+			params.BeaconConfig().ZeroHash, newState.FinalizedRoot)
+	}
+	if newState.FinalizedEpoch != params.BeaconConfig().GenesisEpoch {
+		t.Errorf("Wanted finalized epoch: %d, got: %d",
+			params.BeaconConfig().GenesisEpoch, newState.FinalizedEpoch)
+	}
+}
+
+func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
+	e := params.BeaconConfig().FarFutureEpoch
+	a := params.BeaconConfig().MaxDepositAmount
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i)}
+	}
+	state := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2 + 1,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
+		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
+		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		JustificationBitfield:  3,
+		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
+		LatestBlockRoots:       blockRoots,
+	}
+	attestedBalance := 4 * e * 3 / 2
+	newState, err := ProcessJustificationFinalization(state, attestedBalance, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(newState.CurrentJustifiedRoot, []byte{byte(64)}) {
+		t.Errorf("Wanted current justified root: %v, got: %v",
+			[]byte{byte(128)}, newState.CurrentJustifiedRoot)
+	}
+	if newState.CurrentJustifiedEpoch != params.BeaconConfig().GenesisEpoch+1 {
+		t.Errorf("Wanted justified epoch: %d, got: %d",
+			params.BeaconConfig().GenesisEpoch+2, newState.CurrentJustifiedEpoch)
+	}
+	if !bytes.Equal(newState.FinalizedRoot, params.BeaconConfig().ZeroHash[:]) {
+		t.Errorf("Wanted current finalized root: %v, got: %v",
+			params.BeaconConfig().ZeroHash, newState.FinalizedRoot)
+	}
+	if newState.FinalizedEpoch != params.BeaconConfig().GenesisEpoch {
+		t.Errorf("Wanted finalized epoch: %d, got: %d",
+			params.BeaconConfig().GenesisEpoch, newState.FinalizedEpoch)
 	}
 }
