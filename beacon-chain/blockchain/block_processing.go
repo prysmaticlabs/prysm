@@ -349,4 +349,3 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
 	return nil
 }
-
