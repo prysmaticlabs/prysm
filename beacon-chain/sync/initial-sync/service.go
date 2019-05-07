@@ -284,15 +284,12 @@ func (s *InitialSync) checkInMemoryBlocks() {
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
 func (s *InitialSync) run() {
-	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
 	batchedBlocksub := s.p2p.Subscribe(&pb.BatchedBeaconBlockResponse{}, s.batchedBlockBuf)
 	beaconStateSub := s.p2p.Subscribe(&pb.BeaconStateResponse{}, s.stateBuf)
 	defer func() {
-		blockSub.Unsubscribe()
 		beaconStateSub.Unsubscribe()
 		batchedBlocksub.Unsubscribe()
 		close(s.batchedBlockBuf)
-		close(s.blockBuf)
 		close(s.stateBuf)
 	}()
 
@@ -306,11 +303,6 @@ func (s *InitialSync) run() {
 		case <-s.ctx.Done():
 			log.Debug("Exiting goroutine")
 			return
-		case msg := <-s.blockBuf:
-			safelyHandleMessage(func(message p2p.Message) {
-				data := message.Data.(*pb.BeaconBlockResponse)
-				s.processBlock(message.Ctx, data.Block)
-			}, msg)
 		case msg := <-s.stateBuf:
 			safelyHandleMessage(s.processState, msg)
 		case msg := <-s.batchedBlockBuf:
