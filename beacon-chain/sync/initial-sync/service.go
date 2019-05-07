@@ -96,7 +96,6 @@ type InitialSync struct {
 	highestObservedRoot [32]byte
 	beaconStateSlot     uint64
 	syncPollingInterval time.Duration
-	inMemoryBlocks      map[uint64]*pb.BeaconBlock
 	syncedFeed          *event.Feed
 	stateReceived       bool
 	lastRequestedSlot   uint64
@@ -130,7 +129,6 @@ func NewInitialSyncService(ctx context.Context,
 		stateBuf:            stateBuf,
 		batchedBlockBuf:     batchedBlockBuf,
 		syncPollingInterval: cfg.SyncPollingInterval,
-		inMemoryBlocks:      map[uint64]*pb.BeaconBlock{},
 		syncedFeed:          new(event.Feed),
 		stateReceived:       false,
 		mutex:               new(sync.Mutex),
@@ -145,7 +143,6 @@ func (s *InitialSync) Start() {
 	}
 	s.currentSlot = cHead.Slot
 	go s.run()
-	go s.checkInMemoryBlocks()
 }
 
 // Stop kills the initial sync goroutine.
@@ -247,27 +244,6 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	s.cancel()
 	s.nodeIsSynced = true
 	return nil
-}
-
-// checkInMemoryBlocks is another routine which will run concurrently with the
-// main routine for initial sync, where it checks the blocks saved in memory regularly
-// to see if the blocks are valid enough to be processed.
-func (s *InitialSync) checkInMemoryBlocks() {
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		default:
-			if s.currentSlot == s.highestObservedSlot {
-				return
-			}
-			s.mutex.Lock()
-			if block, ok := s.inMemoryBlocks[s.currentSlot+1]; ok && s.currentSlot+1 <= s.highestObservedSlot {
-				s.processBlock(s.ctx, block)
-			}
-			s.mutex.Unlock()
-		}
-	}
 }
 
 // run is the main goroutine for the initial sync service.
