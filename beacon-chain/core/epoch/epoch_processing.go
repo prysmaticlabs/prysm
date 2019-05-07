@@ -451,8 +451,29 @@ func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		shard := (startShard + i) % params.BeaconConfig().ShardCount
 		// Need to update get_crosslink_committee in spec.
 		crosslinkCommittee, err := helpers.CrosslinkCommitteesAtSlot(state, helpers.StartSlot(prevEpoch), false)
-		WinningCrosslink(state, prevEpoch, shard)
+		if err != nil {
+			return nil, nil, err
+		}
+		_, attestingIndices, err := WinningCrosslink(state, prevEpoch, shard)
+		if err != nil {
+			return nil, nil, err
+		}
+		attested := make(map[uint64]bool)
+		// Construct a map to look up validators that voted for crosslink.
+		for _, index := range attestingIndices {
+			attested[index] = true
+		}
+		committeeBalance := TotalBalance(state, crosslinkCommittee[0].Committee)
+		attestingBalance := TotalBalance(state, attestingIndices)
+		for _, index := range crosslinkCommittee[0].Committee {
+			if _, ok := attested[index]; ok {
+				rewards[index] += BaseReward(state, index) * attestingBalance / committeeBalance
+			} else {
+				penalties[index] -= BaseReward(state, index)
+			}
+		}
 	}
+	return rewards, penalties, nil
 }
 
 // UnslashedAttestingIndices returns all the attesting indices from a list of attestations,
@@ -754,6 +775,25 @@ func CrosslinkAttestingIndices(state *pb.BeaconState, crosslink *pb.Crosslink, a
 	return UnslashedAttestingIndices(state, crosslinkAtts)
 }
 
+// BaseReward takes state and validator index and calculate
+// individual validator's base reward quotient.
+//
+// Spec pseudocode definition:
+//	def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//    adjusted_quotient = integer_squareroot(get_total_active_balance(state)) // BASE_REWARD_QUOTIENT
+//    if adjusted_quotient == 0:
+//        return 0
+//    return state.validator_registry[index].effective_balance // adjusted_quotient // BASE_REWARDS_PER_EPOCH
+func BaseReward(state *pb.BeaconState, index uint64) uint64 {
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalActiveBalance(state) /
+		params.BeaconConfig().BaseRewardQuotient)
+	if adjustedQuotient == 0 {
+		return 0
+	}
+	baseReward := state.ValidatorRegistry[index].EffectiveBalance / adjustedQuotient
+	return baseReward / params.BeaconConfig().BaseRewardsPerEpoch
+}
+
 // attsForCrosslink returns the attestations of the input crosslink.
 func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
 	var crosslinkAtts []*pb.PendingAttestation
@@ -763,4 +803,13 @@ func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb
 		}
 	}
 	return crosslinkAtts
+}
+
+// totalActiveBalance returns the combined balances of all the active validators.
+//
+// Spec pseudocode definition:
+//	def get_total_active_balance(state: BeaconState) -> Gwei:
+//    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
+func totalActiveBalance(state *pb.BeaconState) uint64 {
+	return TotalBalance(state, helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state)))
 }
