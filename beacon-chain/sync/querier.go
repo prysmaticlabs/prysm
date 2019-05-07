@@ -59,6 +59,7 @@ type Querier struct {
 	chainStarted              bool
 	atGenesis                 bool
 	bestPeer                  peer.ID
+	peerMap                   map[peer.ID]uint64
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -79,8 +80,10 @@ func NewQuerierService(ctx context.Context,
 		responseBuf:     responseBuf,
 		currentHeadSlot: cfg.CurrentHeadSlot,
 		chainStarted:    false,
+		atGenesis:       true,
 		powchain:        cfg.PowChain,
 		chainStartBuf:   make(chan time.Time, 1),
+		peerMap:         make(map[peer.ID]uint64),
 	}
 }
 
@@ -181,12 +184,14 @@ func (q *Querier) run() {
 				hasReceivedResponse = true
 			}
 			response := msg.Data.(*pb.ChainHeadResponse)
-			queryLog.WithFields(logrus.Fields{
-				"peerID":      msg.Peer.Pretty(),
-				"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
-			}).Info("Received chain head from peer")
+			if _, ok := q.peerMap[msg.Peer]; !ok {
+				queryLog.WithFields(logrus.Fields{
+					"peerID":      msg.Peer.Pretty(),
+					"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
+				}).Info("Received chain head from peer")
+				q.peerMap[msg.Peer] = response.CanonicalSlot
+			}
 			if response.CanonicalSlot > q.currentHeadSlot {
-				q.currentHeadSlot = response.CanonicalSlot
 				q.bestPeer = msg.Peer
 				q.currentHeadSlot = response.CanonicalSlot
 				q.currentStateRoot = response.CanonicalStateRootHash32

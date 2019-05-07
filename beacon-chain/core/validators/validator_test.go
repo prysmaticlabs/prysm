@@ -77,9 +77,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{123, 65}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{65, 123}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{123, 65}, attesterIndices)
+			[]uint64{65, 123}, attesterIndices)
 	}
 }
 
@@ -119,9 +119,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{1131, 1015}) {
+	if !reflect.DeepEqual(indices, []uint64{1015, 1131}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{1131, 1015}, indices)
+			[]uint64{1015, 1131}, indices)
 	}
 }
 
@@ -373,8 +373,12 @@ func TestActivateValidatorGenesis_OK(t *testing.T) {
 		t.Fatalf("could not execute activateValidator:%v", err)
 	}
 	if newState.ValidatorRegistry[0].ActivationEpoch != params.BeaconConfig().GenesisEpoch {
-		t.Errorf("Wanted activation slot = genesis slot, got %d",
+		t.Errorf("Wanted activation epoch = genesis epoch, got %d",
 			newState.ValidatorRegistry[0].ActivationEpoch)
+	}
+	if newState.ValidatorRegistry[0].ActivationEligibilityEpoch != params.BeaconConfig().GenesisEpoch {
+		t.Errorf("Wanted activation eligibility epoch = genesis epoch, got %d",
+			newState.ValidatorRegistry[0].ActivationEligibilityEpoch)
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -87,7 +88,6 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	}
 	var validatorActivatedRecords [][]byte
 	for {
-		log.Info("Waiting for validator to be activated in the beacon chain")
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
@@ -100,8 +100,11 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not receive validator activation from stream: %v", err)
 		}
-		if len(res.ActivatedPublicKeys) > 0 {
-			validatorActivatedRecords = res.ActivatedPublicKeys
+		log.Info("Waiting for validator to be activated in the beacon chain")
+		activatedKeys := v.checkAndLogValidatorStatus(res.Statuses)
+
+		if len(activatedKeys) > 0 {
+			validatorActivatedRecords = activatedKeys
 			break
 		}
 	}
@@ -110,7 +113,42 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 			"publicKey": fmt.Sprintf("%#x", pk),
 		}).Info("Validator activated")
 	}
+	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+
 	return nil
+}
+
+func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
+	var activatedKeys [][]byte
+	for _, status := range validatorStatuses {
+		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
+			activatedKeys = append(activatedKeys, status.PublicKey)
+		}
+		if status.Status.DepositInclusionSlot == 0 {
+			log.WithFields(logrus.Fields{
+				"PublicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+				"Status":    fmt.Sprintf("%s", status.Status.Status.String()),
+			}).Info("Not Deposited Yet")
+			continue
+		}
+		if status.Status.ActivationEpoch == (params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch) {
+			log.WithFields(logrus.Fields{
+				"PublicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+				"Status":                    status.Status.Status.String(),
+				"DepositInclusionSlot":      status.Status.DepositInclusionSlot,
+				"PositionInActivationQueue": status.Status.PositionInActivationQueue,
+			}).Info("Waiting to be Activated")
+			continue
+		}
+		log.WithFields(logrus.Fields{
+			"PublicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+			"Status":                    status.Status.Status.String(),
+			"DepositInclusionSlot":      status.Status.DepositInclusionSlot,
+			"ActivationEpoch":           status.Status.ActivationEpoch,
+			"PositionInActivationQueue": status.Status.PositionInActivationQueue,
+		}).Info("Validator Status")
+	}
+	return activatedKeys
 }
 
 // CanonicalHeadSlot returns the slot of canonical block currently found in the
