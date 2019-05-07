@@ -1031,28 +1031,28 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		Slot:              params.BeaconConfig().GenesisSlot + 5,
 	}
 	tests := []struct {
-		aggregationBitfield       []byte
-		custodyBitfield           []byte
-		wantedCustodyBit_0Indices []uint64
-		wantedCustodyBit_1Indices []uint64
+		aggregationBitfield      []byte
+		custodyBitfield          []byte
+		wantedCustodyBit0Indices []uint64
+		wantedCustodyBit1Indices []uint64
 	}{
 		{
-			aggregationBitfield:       []byte{0x03},
-			custodyBitfield:           []byte{0x01},
-			wantedCustodyBit_0Indices: []uint64{14},
-			wantedCustodyBit_1Indices: []uint64{11},
+			aggregationBitfield:      []byte{0x03},
+			custodyBitfield:          []byte{0x01},
+			wantedCustodyBit0Indices: []uint64{14},
+			wantedCustodyBit1Indices: []uint64{11},
 		},
 		{
-			aggregationBitfield:       []byte{0x03},
-			custodyBitfield:           []byte{0x02},
-			wantedCustodyBit_0Indices: []uint64{11},
-			wantedCustodyBit_1Indices: []uint64{14},
+			aggregationBitfield:      []byte{0x03},
+			custodyBitfield:          []byte{0x02},
+			wantedCustodyBit0Indices: []uint64{11},
+			wantedCustodyBit1Indices: []uint64{14},
 		},
 		{
-			aggregationBitfield:       []byte{0x03},
-			custodyBitfield:           []byte{0x03},
-			wantedCustodyBit_0Indices: []uint64{},
-			wantedCustodyBit_1Indices: []uint64{11, 14},
+			aggregationBitfield:      []byte{0x03},
+			custodyBitfield:          []byte{0x03},
+			wantedCustodyBit0Indices: []uint64{},
+			wantedCustodyBit1Indices: []uint64{11, 14},
 		},
 	}
 
@@ -1067,8 +1067,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		attestation.AggregationBitfield = tt.aggregationBitfield
 		attestation.CustodyBitfield = tt.custodyBitfield
 		wanted := &pb.IndexedAttestation{
-			CustodyBit_0Indices: tt.wantedCustodyBit_0Indices,
-			CustodyBit_1Indices: tt.wantedCustodyBit_1Indices,
+			CustodyBit_0Indices: tt.wantedCustodyBit0Indices,
+			CustodyBit_1Indices: tt.wantedCustodyBit1Indices,
 			Data:                attestation.Data,
 			Signature:           attestation.AggregateSignature,
 		}
