@@ -1,0 +1,48 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/ssz-server",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/ssz:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "ssz-server",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "image",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/ssz-server",
+    visibility = ["//visibility:private"],
+    static = "on",
+    tags = ["manual"],
+    goarch = "amd64",
+    goos = "linux",
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/ssz:go_default_library",
+    ],
+    race = "off",
+    pure = "on",
+)
+
+container_push(
+    name = "push_image",
+    format = "Docker",
+    image = ":image",
+    registry = "gcr.io",
+    repository = "prysmaticlabs/prysm/ssz-server",
+    tag = "latest",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)

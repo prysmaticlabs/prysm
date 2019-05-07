@@ -387,8 +387,12 @@ func TestActivateValidatorGenesis_OK(t *testing.T) {
 		t.Fatalf("could not execute activateValidator:%v", err)
 	}
 	if newState.ValidatorRegistry[0].ActivationEpoch != params.BeaconConfig().GenesisEpoch {
-		t.Errorf("Wanted activation slot = genesis slot, got %d",
+		t.Errorf("Wanted activation epoch = genesis epoch, got %d",
 			newState.ValidatorRegistry[0].ActivationEpoch)
+	}
+	if newState.ValidatorRegistry[0].ActivationEligibilityEpoch != params.BeaconConfig().GenesisEpoch {
+		t.Errorf("Wanted activation eligibility epoch = genesis epoch, got %d",
+			newState.ValidatorRegistry[0].ActivationEligibilityEpoch)
 	}
 }
 
