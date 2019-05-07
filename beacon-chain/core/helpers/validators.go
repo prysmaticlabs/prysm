@@ -48,8 +48,7 @@ func IsSlashableValidator(validator *pb.Validator, epoch uint64) bool {
 //    Get active validator indices at ``epoch``.
 //    """
 //    return [i for i, v in enumerate(state.validator_registry) if is_active_validator(v, epoch)]
-func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) []uint64 {
-	validatorRegistry := state.ValidatorRegistry
+func ActiveValidatorIndices(validatorRegistry []*pb.Validator, epoch uint64) []uint64 {
 	indices := make([]uint64, 0, len(validatorRegistry))
 	for i, v := range validatorRegistry {
 		if IsActiveValidator(v, epoch) {
@@ -82,7 +81,7 @@ func DelayedActivationExitEpoch(epoch uint64) uint64 {
 //        len(get_active_validator_indices(state, get_current_epoch(state))) // CHURN_LIMIT_QUOTIENT
 //    )
 func ChurnLimit(state *pb.BeaconState) uint64 {
-	validatorCount := uint64(len(ActiveValidatorIndices(state, CurrentEpoch(state))))
+	validatorCount := uint64(len(ActiveValidatorIndices(state.ValidatorRegistry, CurrentEpoch(state))))
 	if validatorCount/params.BeaconConfig().ChurnLimitQuotient > params.BeaconConfig().MinPerEpochChurnLimit {
 		return validatorCount / params.BeaconConfig().ChurnLimitQuotient
 	}

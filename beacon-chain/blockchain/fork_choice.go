@@ -339,7 +339,7 @@ func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.Bea
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
 func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
-	indices := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
+	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	attestationTargets := make(map[uint64]*pb.AttestationTarget)
 	for i, index := range indices {
 		target, err := c.attsService.LatestAttestationTarget(state, index)

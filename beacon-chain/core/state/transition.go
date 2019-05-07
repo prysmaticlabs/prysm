@@ -218,7 +218,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	prevEpoch := helpers.PrevEpoch(state)
 
 	// Calculate total balances of active validators of the current epoch.
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
 	// We require the current epoch attestations, current epoch boundary attestations,
@@ -305,7 +305,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 
 	// Calculate the attesting balances for previous and current epoch.
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
-	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(state, prevEpoch)
+	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, prevEpoch)
 	prevTotalBalance := e.TotalBalance(state, previousActiveValidatorIndices)
 	prevEpochAttestingBalance := e.TotalBalance(state, prevEpochAttesterIndices)
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)

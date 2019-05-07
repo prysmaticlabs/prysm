@@ -51,7 +51,7 @@ type shufflingInput struct {
 //    ) * SLOTS_PER_EPOCH
 func EpochCommitteeCount(beaconState *pb.BeaconState, epoch uint64) uint64 {
 	var minCommitteePerSlot = uint64(1)
-	activeValidatorCount := uint64(len(ActiveValidatorIndices(beaconState, epoch)))
+	activeValidatorCount := uint64(len(ActiveValidatorIndices(beaconState.ValidatorRegistry, epoch)))
 	// Max committee count per slot will be 0 when shard count is less than epoch length, this
 	// covers the special case to ensure there's always 1 max committee count per slot.
 	var maxCommitteePerSlot = minCommitteePerSlot
@@ -236,7 +236,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 		return nil, fmt.Errorf("could not generate seed: %v", err)
 	}
 
-	indices := ActiveValidatorIndices(state, wantedEpoch)
+	indices := ActiveValidatorIndices(state.ValidatorRegistry, wantedEpoch)
 	committees := make([]*CrosslinkCommittee, committeesPerSlot)
 	for i := uint64(0); i < committeesPerSlot; i++ {
 		committee, err := ComputeCommittee(indices, seed, committeesPerSlot*offset+i, committeesPerEpoch)
@@ -281,7 +281,7 @@ func Shuffling(
 
 	// Figure out how many committees can be in a single epoch.
 	s := &pb.BeaconState{ValidatorRegistry: validators}
-	activeIndices := ActiveValidatorIndices(s, epoch)
+	activeIndices := ActiveValidatorIndices(s.ValidatorRegistry, epoch)
 	committeesPerEpoch := EpochCommitteeCount(s, epoch)
 
 	// Convert slot to bytes and xor it with seed.

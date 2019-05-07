@@ -358,7 +358,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	updatedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
 
 	// The maximum balance churn in Gwei (for deposits and exits separately).
@@ -455,7 +455,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //            break
 func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
 
 	for idx, validator := range state.ValidatorRegistry {
@@ -502,7 +502,7 @@ func InitializeValidatorStore(bState *pb.BeaconState) {
 	defer vStore.Unlock()
 
 	currentEpoch := helpers.CurrentEpoch(bState)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(bState, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(bState.ValidatorRegistry, currentEpoch)
 	vStore.activatedValidators[currentEpoch] = activeValidatorIndices
 
 }
