@@ -119,9 +119,9 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	beaconState.Slot++
 
 	var attsReadyForInclusion []*pbp2p.Attestation
-	for _, val := range atts {
-		if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
-			attsReadyForInclusion = append(attsReadyForInclusion, val)
+	for _, att := range atts {
+		if att.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
+			attsReadyForInclusion = append(attsReadyForInclusion, att)
 		}
 	}
 
