@@ -582,20 +582,14 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(state)
-	if err != nil {
-		t.Fatalf("could not update validator registry:%v", err)
-	}
+	newState := UpdateRegistry(state)
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
 				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
 		}
 	}
-	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
-		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryUpdateEpoch)
-	}
+	
 }
 
 func TestUpdateRegistry_Activations(t *testing.T) {
@@ -612,20 +606,14 @@ func TestUpdateRegistry_Activations(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(state)
-	if err != nil {
-		t.Fatalf("could not update validator registry:%v", err)
-	}
+	newState := UpdateRegistry(state)
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
 				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
 		}
 	}
-	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
-		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryUpdateEpoch)
-	}
+	
 }
 
 func TestUpdateRegistry_Exits(t *testing.T) {
@@ -646,10 +634,7 @@ func TestUpdateRegistry_Exits(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(state)
-	if err != nil {
-		t.Fatalf("could not update validator registry:%v", err)
-	}
+	newState := UpdateRegistry(state)
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ExitEpoch != exitEpoch {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
@@ -658,10 +643,7 @@ func TestUpdateRegistry_Exits(t *testing.T) {
 				validator.ExitEpoch)
 		}
 	}
-	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
-		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryUpdateEpoch)
-	}
+
 }
 
 func TestMaxBalanceChurn_OK(t *testing.T) {

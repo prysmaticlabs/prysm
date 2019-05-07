@@ -7,6 +7,7 @@ package validators
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -18,6 +19,11 @@ import (
 )
 
 var log = logrus.WithField("prefix", "validator")
+
+type queueElement struct {
+	idx int
+	aEE uint64
+}
 
 type validatorStore struct {
 	sync.RWMutex
@@ -310,105 +316,70 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 }
 
 // UpdateRegistry rotates validators in and out of active pool.
-// the amount to rotate is determined by max validator balance churn.
+// the amount to rotate is determined churn limit.
 //
 // Spec pseudocode definition:
-// def update_validator_registry(state: BeaconState) -> None:
-//    """
-//    Update validator registry.
-//    Note that this function mutates ``state``.
-//    """
-//    current_epoch = get_current_epoch(state)
-//    # The active validators
-//    active_validator_indices = get_active_validator_indices(state.validator_registry, current_epoch)
-//    # The total effective balance of active validators
-//    total_balance = sum([get_effective_balance(state, i) for i in active_validator_indices])
-//
-//    # The maximum balance churn in Gwei (for deposits and exits separately)
-//    max_balance_churn = max(
-//        MAX_DEPOSIT_AMOUNT,
-//        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT)
-//    )
-//
-//    # Activate validators within the allowable balance churn
-//    balance_churn = 0
-//    for index, validator in enumerate(state.validator_registry):
-//        if validator.activation_epoch > get_entry_exit_effect_epoch(current_epoch) and state.validator_balances[index] >= MAX_DEPOSIT_AMOUNT:
-//            # Check the balance churn would be within the allowance
-//            balance_churn += get_effective_balance(state, index)
-//            if balance_churn > max_balance_churn:
-//                break
-//
-//            # Activate validator
-//            activate_validator(state, index, is_genesis=False)
-//
-//    # Exit validators within the allowable balance churn
-//    balance_churn = 0
-//    for index, validator in enumerate(state.validator_registry):
-//        if validator.exit_epoch > get_entry_exit_effect_epoch(current_epoch) and validator.status_flags & INITIATED_EXIT:
-//            # Check the balance churn would be within the allowance
-//            balance_churn += get_effective_balance(state, index)
-//            if balance_churn > max_balance_churn:
-//                break
-//
-//            # Exit validator
-//            exit_validator(state, index)
-//
-//    state.validator_registry_update_epoch = current_epoch
-func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
+//   def process_registry_updates(state: BeaconState) -> None:
+//     # Process activation eligibility and ejections
+//     for index, validator in enumerate(state.validator_registry):
+//         if validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH and validator.effective_balance >= MAX_EFFECTIVE_BALANCE:
+//             validator.activation_eligibility_epoch = get_current_epoch(state)
+//         if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
+//             initiate_validator_exit(state, index)
+//     # Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
+//     activation_queue = sorted([
+//         index for index, validator in enumerate(state.validator_registry) if
+//         validator.activation_eligibility_epoch != FAR_FUTURE_EPOCH and
+//         validator.activation_epoch >= get_delayed_activation_exit_epoch(state.finalized_epoch)
+//     ], key=lambda index: state.validator_registry[index].activation_eligibility_epoch)
+//     # Dequeued validators for activation up to churn limit (without resetting activation epoch)
+//     for index in activation_queue[:get_churn_limit(state)]:
+//         validator = state.validator_registry[index]
+//         if validator.activation_epoch == FAR_FUTURE_EPOCH:
+//             validator.activation_epoch = get_delayed_activation_exit_epoch(get_current_epoch(state))
+func UpdateRegistry(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-	updatedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
-	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
-
-	// The maximum balance churn in Gwei (for deposits and exits separately).
-	maxBalChurn := maxBalanceChurn(totalBalance)
-
-	var balChurn uint64
-	var err error
 	vStore.Lock()
 	defer vStore.Unlock()
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
-		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
-			state.Balances[idx] >= params.BeaconConfig().MaxDepositAmount &&
-			!helpers.IsActiveValidator(validator, currentEpoch) {
-			balChurn += helpers.EffectiveBalance(state, uint64(idx))
-			log.WithFields(logrus.Fields{
-				"index":               idx,
-				"currentBalanceChurn": balChurn,
-				"maxBalanceChurn":     maxBalChurn,
-				"currentEpoch":        currentEpoch - params.BeaconConfig().GenesisEpoch,
-			}).Info("Attempting to activate validator")
-
-			if balChurn > maxBalChurn {
-				break
-			}
-			state, err = ActivateValidator(state, uint64(idx), false)
-			if err != nil {
-				return nil, fmt.Errorf("could not activate validator %d: %v", idx, err)
-			}
-			vStore.activatedValidators[updatedEpoch] =
-				append(vStore.activatedValidators[updatedEpoch], uint64(idx))
+		if validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
+			validator.EffectiveBalance >= params.BeaconConfig().MaxEffectiveBalance {
+			validator.ActivationEligibilityEpoch = currentEpoch
 		}
-	}
-
-	balChurn = 0
-	for idx, validator := range state.ValidatorRegistry {
-		// Exit validators within the allowable balance churn.
-		if validator.ExitEpoch == params.BeaconConfig().FarFutureEpoch &&
-			validator.StatusFlags == pb.Validator_INITIATED_EXIT {
-			balChurn += helpers.EffectiveBalance(state, uint64(idx))
-			if balChurn > maxBalChurn {
-				break
-			}
+		if helpers.IsActiveValidator(validator, currentEpoch) &&
+			validator.EffectiveBalance <= params.BeaconConfig().EjectionBalance {
 			state = ExitValidator(state, uint64(idx))
-			vStore.exitedValidators[updatedEpoch] =
-				append(vStore.exitedValidators[updatedEpoch], uint64(idx))
 		}
 	}
-	state.ValidatorRegistryUpdateEpoch = currentEpoch
-	return state, nil
+	// queue validators eligible for activation and not dequeued for activation prior to finalized epoch
+
+	activationQueue := []queueElement{}
+	for idx, validator := range state.ValidatorRegistry {
+		if validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch &&
+			validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(state.FinalizedEpoch) {
+			qe := queueElement{idx: idx,
+				aEE: validator.ActivationEligibilityEpoch}
+			activationQueue = append(activationQueue, qe)
+		}
+	}
+	sort.Slice(activationQueue, func(i, j int) bool { return activationQueue[i].aEE < activationQueue[j].aEE })
+	// dequeued validators for activation up to churn limit (without resetting activation epoch)
+	limit := uint64(len(activationQueue))
+	if helpers.ChurnLimit(state) < limit {
+		limit = helpers.ChurnLimit(state)
+	}
+	for _, qe := range activationQueue[:] {
+		validator := state.ValidatorRegistry[qe.idx]
+		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+			validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
+			log.WithFields(logrus.Fields{
+				"index":           qe.idx,
+				"activationEpoch": validator.ActivationEpoch,
+			}).Info("Validator activated")
+		}
+	}
+	return state
 }
 
 // ProcessPenaltiesAndExits prepares the validators and the slashed validators

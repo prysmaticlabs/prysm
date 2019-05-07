@@ -34,6 +34,7 @@ type BeaconChainConfig struct {
 	// Gwei value constants.
 	MinDepositAmount          uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
 	MaxDepositAmount          uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxEffectiveBalance       uint64 // MaxEffectiveBalance is the maximal amount of Gwie that is effective for staking.
 	EjectionBalance           uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	EffectiveBalanceIncrement uint64 // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 	// TODO(2307): Remove deprecated fields
@@ -160,6 +161,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Gwei value constants.
 	MinDepositAmount:           1 * 1e9,
 	MaxDepositAmount:           32 * 1e9,
+	MaxEffectiveBalance:        32 * 1e9,
 	EjectionBalance:            16 * 1e9,
 	EffectiveBalanceIncrement:  1 * 1e9,
 	ForkChoiceBalanceIncrement: 1 * 1e9,
