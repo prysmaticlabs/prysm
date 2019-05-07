@@ -37,8 +37,6 @@ var debugError = "debug:"
 //
 type Config struct {
 	SyncPollingInterval     time.Duration
-	BlockBufferSize         int
-	BlockAnnounceBufferSize int
 	BatchedBlockBufferSize  int
 	StateBufferSize         int
 	BeaconDB                *db.BeaconDB
@@ -55,9 +53,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
-		BlockBufferSize:         params.BeaconConfig().DefaultBufferSize,
 		BatchedBlockBufferSize:  params.BeaconConfig().DefaultBufferSize,
-		BlockAnnounceBufferSize: params.BeaconConfig().DefaultBufferSize,
 		StateBufferSize:         params.BeaconConfig().DefaultBufferSize,
 	}
 }
@@ -95,7 +91,6 @@ type InitialSync struct {
 	powchain            powChainService
 	blockAnnounceBuf    chan p2p.Message
 	batchedBlockBuf     chan p2p.Message
-	blockBuf            chan p2p.Message
 	stateBuf            chan p2p.Message
 	currentSlot         uint64
 	highestObservedSlot uint64
@@ -119,9 +114,7 @@ func NewInitialSyncService(ctx context.Context,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
-	blockBuf := make(chan p2p.Message, cfg.BlockBufferSize)
 	stateBuf := make(chan p2p.Message, cfg.StateBufferSize)
-	blockAnnounceBuf := make(chan p2p.Message, cfg.BlockAnnounceBufferSize)
 	batchedBlockBuf := make(chan p2p.Message, cfg.BatchedBlockBufferSize)
 
 	return &InitialSync{
@@ -135,10 +128,8 @@ func NewInitialSyncService(ctx context.Context,
 		currentSlot:         params.BeaconConfig().GenesisSlot,
 		highestObservedSlot: params.BeaconConfig().GenesisSlot,
 		beaconStateSlot:     params.BeaconConfig().GenesisSlot,
-		blockBuf:            blockBuf,
 		stateBuf:            stateBuf,
 		batchedBlockBuf:     batchedBlockBuf,
-		blockAnnounceBuf:    blockAnnounceBuf,
 		syncPollingInterval: cfg.SyncPollingInterval,
 		inMemoryBlocks:      map[uint64]*pb.BeaconBlock{},
 		syncedFeed:          new(event.Feed),
