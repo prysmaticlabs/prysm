@@ -315,7 +315,7 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 	if len(bitfield) != mathutil.CeilDiv8(committeeSize) {
 		return false, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
-			(committeeSize+7)>>3,
+			mathutil.CeilDiv8(committeeSize),
 			len(bitfield))
 	}
 	bitLength := len(bitfield) << 3
