@@ -2,13 +2,11 @@ package initialsync
 
 import (
 	"context"
-	"math/big"
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-peer"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -49,12 +47,6 @@ func (ms *mockSyncService) IsSyncedWithNetwork() bool {
 
 func (ms *mockSyncService) ResumeSync() {
 
-}
-
-type mockPowchain struct{}
-
-func (mp *mockPowchain) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
-	return true, nil, nil
 }
 
 type mockChainService struct{}

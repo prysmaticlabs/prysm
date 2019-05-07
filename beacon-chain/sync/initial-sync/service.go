@@ -89,7 +89,6 @@ type InitialSync struct {
 	chainService        chainService
 	db                  *db.BeaconDB
 	powchain            powChainService
-	blockAnnounceBuf    chan p2p.Message
 	batchedBlockBuf     chan p2p.Message
 	stateBuf            chan p2p.Message
 	currentSlot         uint64
