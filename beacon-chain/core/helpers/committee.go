@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -227,28 +228,16 @@ func Shuffling(
 // AttestationParticipants returns the attesting participants indices.
 //
 // Spec pseudocode definition:
-//   def get_attestation_participants(state: BeaconState,
+//   def get_attesting_indices(state: BeaconState,
 //     attestation_data: AttestationData,
-//     bitfield: bytes) -> List[ValidatorIndex]:
+// 	   bitfield: bytes) -> List[ValidatorIndex]:
 //     """
-//     Returns the participant indices at for the ``attestation_data`` and ``bitfield``.
+//     Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
 //     """
-//     # Find the committee in the list with the desired shard
 //     crosslink_committees = get_crosslink_committees_at_slot(state, attestation_data.slot)
-//
-//	   assert attestation_data.shard in [shard for _, shard in crosslink_committees]
-//     crosslink_committee = [committee for committee,
-//     		shard in crosslink_committees if shard == attestation_data.shard][0]
-//
-//	   assert verify_bitfield(bitfield, len(crosslink_committee))
-//
-//     # Find the participating attesters in the committee
-//     participants = []
-//     for i, validator_index in enumerate(crosslink_committee):
-//         aggregation_bit = get_bitfield_bit(bitfield, i)
-//         if aggregation_bit == 0b1:
-//            participants.append(validator_index)
-//    return participants
+//     crosslink_committee = [committee for committee, shard in crosslink_committees if shard == attestation_data.shard][0]
+//     assert verify_bitfield(bitfield, len(crosslink_committee))
+//     return sorted([index for i, index in enumerate(crosslink_committee) if get_bitfield_bit(bitfield, i) == 0b1])
 func AttestationParticipants(
 	state *pb.BeaconState,
 	attestationData *pb.AttestationData,
@@ -304,6 +293,7 @@ func AttestationParticipants(
 			participants = append(participants, validatorIndex)
 		}
 	}
+	sort.Slice(participants, func(i, j int) bool { return participants[i] < participants[j] })
 	return participants, nil
 }
 
@@ -325,7 +315,7 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 	if len(bitfield) != mathutil.CeilDiv8(committeeSize) {
 		return false, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
-			(committeeSize+7)>>3,
+			mathutil.CeilDiv8(committeeSize),
 			len(bitfield))
 	}
 	bitLength := len(bitfield) << 3

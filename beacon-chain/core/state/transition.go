@@ -305,8 +305,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 
 	// Calculate the attesting balances for previous and current epoch.
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
-	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, prevEpoch)
-	prevTotalBalance := e.TotalBalance(state, previousActiveValidatorIndices)
 	prevEpochAttestingBalance := e.TotalBalance(state, prevEpochAttesterIndices)
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)
 	prevEpochHeadAttestingBalances := e.TotalBalance(state, prevEpochHeadAttesterIndices)
@@ -317,12 +315,10 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	}
 
 	// Update justification and finality.
-	state, err := e.ProcessJustificationAndFinalization(
+	state, err := e.ProcessJustificationFinalization(
 		state,
 		currentBoundaryAttestingBalances,
 		prevEpochAttestingBalance,
-		prevTotalBalance,
-		totalBalance,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not process justification and finalization of state: %v", err)
@@ -527,26 +523,31 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		log.WithField(
 			"numValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
+
+		activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+		log.WithField(
+			"activeValidators", len(activeValidatorIndices),
+		).Info("Active validators")
 		totalBalance := float32(0)
-		lowestBalance := float32(state.Balances[0])
-		highestBalance := float32(state.Balances[0])
-		for _, val := range state.Balances {
-			if float32(val) < lowestBalance {
-				lowestBalance = float32(val)
+		lowestBalance := float32(state.Balances[activeValidatorIndices[0]])
+		highestBalance := float32(state.Balances[activeValidatorIndices[0]])
+		for _, idx := range activeValidatorIndices {
+			if float32(state.Balances[idx]) < lowestBalance {
+				lowestBalance = float32(state.Balances[idx])
 			}
-			if float32(val) > highestBalance {
-				highestBalance = float32(val)
+			if float32(state.Balances[idx]) > highestBalance {
+				highestBalance = float32(state.Balances[idx])
 			}
-			totalBalance += float32(val)
+			totalBalance += float32(state.Balances[idx])
 		}
-		avgBalance := totalBalance / float32(len(state.Balances)) / float32(params.BeaconConfig().GweiPerEth)
+		avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
 		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
 		highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
 		log.WithFields(logrus.Fields{
 			"averageBalance": avgBalance,
 			"lowestBalance":  lowestBalance,
 			"highestBalance": highestBalance,
-		}).Info("Validator balances")
+		}).Info("Active validator balances")
 	}
 
 	return state, nil
