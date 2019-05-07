@@ -40,6 +40,18 @@ func TreeHash(val interface{}) ([32]byte, error) {
 	return paddedOutput, nil
 }
 
+// SignedRoot returns the signed root of the last element in the container.
+func SignedRoot(val interface{}) ([32]byte, error) {
+	typeVal := reflect.TypeOf(val)
+
+	if typeVal.Kind() != reflect.Struct {
+		return [32]byte{}, fmt.Errorf("object type is not struct but is a %v", typeVal.Kind())
+	}
+
+	field := typeVal.Field(typeVal.NumField())
+	return TreeHash(field)
+}
+
 type hashError struct {
 	msg string
 	typ reflect.Type
