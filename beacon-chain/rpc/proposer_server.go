@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -79,9 +80,14 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
-	if err := ps.chainService.ApplyForkChoiceRule(ctx, blk, beaconState); err != nil {
+	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
+	ps.chainService.UpdateCanonicalRoots(blk, h)
+	log.WithFields(logrus.Fields{
+		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headSlot":  blk.Slot - params.BeaconConfig().GenesisSlot,
+	}).Info("Chain head block and state updated")
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 

@@ -29,6 +29,7 @@ type BlockReceiver interface {
 	IsCanonical(slot uint64, hash []byte) bool
 	CanonicalBlock(slot uint64) (*pb.BeaconBlock, error)
 	RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot
+	UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte)
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
@@ -255,6 +256,13 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 	return nil
 }
 
+// UpdateCanonicalRoots --
+func (c *ChainService) UpdateCanonicalRoots(newHead *pb.BeaconBlock, newHeadRoot [32]byte) {
+	c.canonicalBlocksLock.Lock()
+	defer c.canonicalBlocksLock.Unlock()
+	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]
+}
+
 // runStateTransition executes the Ethereum 2.0 core state transition for the beacon chain and
 // updates important checkpoints and local persistent data during epoch transitions. It serves as a wrapper
 // around the more low-level, core state transition function primitive.
@@ -341,3 +349,4 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
 	return nil
 }
+
