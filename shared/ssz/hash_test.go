@@ -169,8 +169,9 @@ var merkleHashTests = []merkleHashTest{
 }
 
 var signatureRootTests = []signatureRootTest{
-	{val: &pb.BeaconBlock{Signature: []byte{'A', 'B'}}, output: "testing"},
-	{val: &pb.BeaconBlock{Signature: []byte{'A', 'B'}}, output: "testing"},
+	{val: []byte{'A'}, output: "testing"},
+	{val: &pb.BeaconBlockHeader{Signature: []byte{'A', 'B'}}, output: "testing"},
+	{val: &pb.BeaconBlockHeader{Signature: []byte{'A', 'B'}}, output: "testing"},
 }
 
 func runHashTests(t *testing.T, hash func(val interface{}) ([32]byte, error)) {

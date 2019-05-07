@@ -57,14 +57,17 @@ func SignedRoot(val interface{}) ([32]byte, error) {
 			return [32]byte{}, errors.New("invalid type")
 		}
 		deRefTyp := deRefVal.Type()
-
-		for i := 0; i < deRefTyp.NumField(); i++ {
-			if deRefTyp.Field(i).Name == "Signature" ||
-				deRefTyp.Field(i).Name == "signature" {
-				if deRefTyp.Field(i).Type.Kind() == reflect.Slice {
-					return TreeHash(deRefVal.Field(i).Bytes())
-				}
-			}
+		fields, err := structFields(deRefTyp)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		lastfieldName := fields[len(fields)-1].name
+		if lastfieldName != "signature" && lastfieldName != "Signature" {
+			return [32]byte{}, fmt.Errorf("field name is invalid wanted Signature but got %s", lastfieldName)
+		}
+		lastField := deRefVal.Field(fields[len(fields)-1].index)
+		if lastField.Kind() == reflect.Slice {
+			return TreeHash(lastField)
 		}
 	}
 
