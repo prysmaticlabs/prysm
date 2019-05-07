@@ -1030,28 +1030,55 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		ValidatorRegistry: validators,
 		Slot:              params.BeaconConfig().GenesisSlot + 5,
 	}
+	tests := []struct {
+		aggregationBitfield       []byte
+		custodyBitfield           []byte
+		wantedCustodyBit_0Indices []uint64
+		wantedCustodyBit_1Indices []uint64
+	}{
+		{
+			aggregationBitfield:       []byte{0x03},
+			custodyBitfield:           []byte{0x01},
+			wantedCustodyBit_0Indices: []uint64{14},
+			wantedCustodyBit_1Indices: []uint64{11},
+		},
+		{
+			aggregationBitfield:       []byte{0x03},
+			custodyBitfield:           []byte{0x02},
+			wantedCustodyBit_0Indices: []uint64{11},
+			wantedCustodyBit_1Indices: []uint64{14},
+		},
+		{
+			aggregationBitfield:       []byte{0x03},
+			custodyBitfield:           []byte{0x03},
+			wantedCustodyBit_0Indices: []uint64{},
+			wantedCustodyBit_1Indices: []uint64{11, 14},
+		},
+	}
 
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x03},
-		CustodyBitfield:     []byte{0x01},
-		AggregateSignature:  []byte("signed"),
+		AggregateSignature: []byte("signed"),
 		Data: &pb.AttestationData{
 			Slot:  params.BeaconConfig().GenesisSlot + 2,
 			Shard: 2,
 		},
 	}
-	wanted := &pb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{14},
-		CustodyBit_1Indices: []uint64{11},
-		Data:                attestation.Data,
-		Signature:           attestation.AggregateSignature,
-	}
-	ia, err := blocks.ConvertToIndexed(state, attestation)
-	if err != nil {
-		t.Errorf("failed to convert attestation to indexed attestation: %v", err)
-	}
-	if !reflect.DeepEqual(wanted, ia) {
-		t.Errorf("convert attestation to indexed attestation didn't result as wanted: %v got: %v", wanted, ia)
+	for _, tt := range tests {
+		attestation.AggregationBitfield = tt.aggregationBitfield
+		attestation.CustodyBitfield = tt.custodyBitfield
+		wanted := &pb.IndexedAttestation{
+			CustodyBit_0Indices: tt.wantedCustodyBit_0Indices,
+			CustodyBit_1Indices: tt.wantedCustodyBit_1Indices,
+			Data:                attestation.Data,
+			Signature:           attestation.AggregateSignature,
+		}
+		ia, err := blocks.ConvertToIndexed(state, attestation)
+		if err != nil {
+			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
+		}
+		if !reflect.DeepEqual(wanted, ia) {
+			t.Errorf("convert attestation to indexed attestation didn't result as wanted: %v got: %v", wanted, ia)
+		}
 	}
 
 }
