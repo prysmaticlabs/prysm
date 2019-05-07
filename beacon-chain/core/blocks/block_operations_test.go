@@ -1013,11 +1013,13 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		t.Errorf("indexed attestation failed to verify: %v", err)
 	}
 }
+
 func TestConvertToIndexed_OK(t *testing.T) {
-	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
-	committeesPerEpoch := uint64(1)
-	// Set epoch total validators count to 6 committees per slot.
-	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1026,19 +1028,21 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot + 200,
+		Slot:              params.BeaconConfig().GenesisSlot + 5,
 	}
+
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x01},
-		CustodyBitfield:     []byte{0x00},
+		AggregationBitfield: []byte{0x03},
+		CustodyBitfield:     []byte{0x01},
+		AggregateSignature:  []byte("signed"),
 		Data: &pb.AttestationData{
-			Slot:  params.BeaconConfig().GenesisSlot + 200,
-			Shard: 8,
+			Slot:  params.BeaconConfig().GenesisSlot + 2,
+			Shard: 2,
 		},
 	}
 	wanted := &pb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{1, 3, 5, 10, 12},
-		CustodyBit_1Indices: []uint64{},
+		CustodyBit_0Indices: []uint64{14},
+		CustodyBit_1Indices: []uint64{11},
 		Data:                attestation.Data,
 		Signature:           attestation.AggregateSignature,
 	}
