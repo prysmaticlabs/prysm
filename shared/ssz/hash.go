@@ -3,6 +3,7 @@ package ssz
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -42,24 +43,32 @@ func TreeHash(val interface{}) ([32]byte, error) {
 
 // SignedRoot returns the signed root of the last element in the container.
 func SignedRoot(val interface{}) ([32]byte, error) {
-	typeVal := reflect.TypeOf(val)
-	kind := typeVal.Kind()
+	valObj := reflect.ValueOf(val)
+	kind := valObj.Kind()
 
 	switch {
 	case kind == reflect.Struct:
 	case kind == reflect.Ptr:
-		deRefVal := unsafe
-		typeVal := reflect.TypeOf(deRefVal)
-		field := typeVal.Field(typeVal.NumField())
+		if valObj.IsNil() {
+			return [32]byte{}, errors.New("nil pointer given")
+		}
+		deRefVal := valObj.Elem()
+		if deRefVal.Kind() != reflect.Struct {
+			return [32]byte{}, errors.New("invalid type")
+		}
+		deRefTyp := deRefVal.Type()
 
-		return TreeHash(field)
+		for i := 0; i < deRefTyp.NumField(); i++ {
+			if deRefTyp.Field(i).Name == "Signature" ||
+				deRefTyp.Field(i).Name == "signature" {
+				if deRefTyp.Field(i).Type.Kind() == reflect.Slice {
+					return TreeHash(deRefVal.Field(i).Bytes())
+				}
+			}
+		}
 	}
-	if typeVal.Kind() != reflect.Struct {
-		return [32]byte{}, fmt.Errorf("object type is not struct but is a %v", typeVal.Kind())
-	}
-	field := typeVal.Field(typeVal.NumField())
 
-	return TreeHash(field)
+	return [32]byte{}, nil
 }
 
 type hashError struct {

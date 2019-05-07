@@ -235,7 +235,7 @@ func runSignedRootTests(t *testing.T, signedRoot func(val interface{}) ([32]byte
 			continue
 		}
 		// Check expected output
-		if err == nil && !bytes.Equal(output[:], unhex(test.output)) {
+		if err == nil && !bytes.Equal(output[:], []byte(test.output)) {
 			t.Errorf("test %d: output mismatch:\ngot   %X\nwant  %s\nvalue %#v\ntype  %T",
 				i, output, stripSpace(test.output), test.val, test.val)
 		}
