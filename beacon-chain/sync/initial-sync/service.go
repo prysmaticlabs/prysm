@@ -36,14 +36,14 @@ var debugError = "debug:"
 // Config defines the configurable properties of InitialSync.
 //
 type Config struct {
-	SyncPollingInterval     time.Duration
-	BatchedBlockBufferSize  int
-	StateBufferSize         int
-	BeaconDB                *db.BeaconDB
-	P2P                     p2pAPI
-	SyncService             syncService
-	ChainService            chainService
-	PowChain                powChainService
+	SyncPollingInterval    time.Duration
+	BatchedBlockBufferSize int
+	StateBufferSize        int
+	BeaconDB               *db.BeaconDB
+	P2P                    p2pAPI
+	SyncService            syncService
+	ChainService           chainService
+	PowChain               powChainService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -52,9 +52,9 @@ type Config struct {
 // StateBufferSize determines the buffer size of the `stateBuf` channel.
 func DefaultConfig() *Config {
 	return &Config{
-		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
-		BatchedBlockBufferSize:  params.BeaconConfig().DefaultBufferSize,
-		StateBufferSize:         params.BeaconConfig().DefaultBufferSize,
+		SyncPollingInterval:    time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
+		BatchedBlockBufferSize: params.BeaconConfig().DefaultBufferSize,
+		StateBufferSize:        params.BeaconConfig().DefaultBufferSize,
 	}
 }
 
