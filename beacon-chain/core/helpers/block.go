@@ -30,7 +30,6 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 			state.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
-
 	return state.LatestBlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot], nil
 }
 

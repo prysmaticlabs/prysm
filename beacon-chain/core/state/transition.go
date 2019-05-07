@@ -305,8 +305,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 
 	// Calculate the attesting balances for previous and current epoch.
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
-	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, prevEpoch)
-	prevTotalBalance := e.TotalBalance(state, previousActiveValidatorIndices)
 	prevEpochAttestingBalance := e.TotalBalance(state, prevEpochAttesterIndices)
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)
 	prevEpochHeadAttestingBalances := e.TotalBalance(state, prevEpochHeadAttesterIndices)
@@ -317,12 +315,10 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	}
 
 	// Update justification and finality.
-	state, err := e.ProcessJustificationAndFinalization(
+	state, err := e.ProcessJustificationFinalization(
 		state,
 		currentBoundaryAttestingBalances,
 		prevEpochAttestingBalance,
-		prevTotalBalance,
-		totalBalance,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not process justification and finalization of state: %v", err)
