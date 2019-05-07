@@ -256,13 +256,6 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 	return nil
 }
 
-// UpdateCanonicalRoots --
-func (c *ChainService) UpdateCanonicalRoots(newHead *pb.BeaconBlock, newHeadRoot [32]byte) {
-	c.canonicalBlocksLock.Lock()
-	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]
-}
-
 // runStateTransition executes the Ethereum 2.0 core state transition for the beacon chain and
 // updates important checkpoints and local persistent data during epoch transitions. It serves as a wrapper
 // around the more low-level, core state transition function primitive.
