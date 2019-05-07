@@ -13,7 +13,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -110,100 +109,6 @@ func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
 	}
 	state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
 	return state
-}
-
-// ProcessJustificationAndFinalization processes for justified slot by comparing
-// epoch boundary balance and total balance.
-//   First, update the justification bitfield:
-//     Let new_justified_epoch = state.justified_epoch.
-//     Set state.justification_bitfield = state.justification_bitfield << 1.
-//     Set state.justification_bitfield |= 2 and new_justified_epoch = previous_epoch if
-//       3 * previous_epoch_boundary_attesting_balance >= 2 * previous_total_balance.
-//     Set state.justification_bitfield |= 1 and new_justified_epoch = current_epoch if
-//       3 * current_epoch_boundary_attesting_balance >= 2 * current_total_balance.
-//   Next, update last finalized epoch if possible:
-//     Set state.finalized_epoch = state.previous_justified_epoch if (state.justification_bitfield >> 1) % 8
-//       == 0b111 and state.previous_justified_epoch == previous_epoch - 2.
-//     Set state.finalized_epoch = state.previous_justified_epoch if (state.justification_bitfield >> 1) % 4
-//       == 0b11 and state.previous_justified_epoch == previous_epoch - 1.
-//     Set state.finalized_epoch = state.justified_epoch if (state.justification_bitfield >> 0) % 8
-//       == 0b111 and state.justified_epoch == previous_epoch - 1.
-//     Set state.finalized_epoch = state.justified_epoch if (state.justification_bitfield >> 0) % 4
-//       == 0b11 and state.justified_epoch == previous_epoch.
-//   Finally, update the following:
-//     Set state.previous_justified_epoch = state.justified_epoch.
-//     Set state.justified_epoch = new_justified_epoch
-func ProcessJustificationAndFinalization(
-	state *pb.BeaconState,
-	thisEpochBoundaryAttestingBalance uint64,
-	prevEpochBoundaryAttestingBalance uint64,
-	prevTotalBalance uint64,
-	totalBalance uint64,
-) (*pb.BeaconState, error) {
-
-	newJustifiedEpoch := state.CurrentJustifiedEpoch
-	newFinalizedEpoch := state.FinalizedEpoch
-	prevEpoch := helpers.PrevEpoch(state)
-	currentEpoch := helpers.CurrentEpoch(state)
-	// Shifts all the bits over one to create a new bit for the recent epoch.
-	state.JustificationBitfield <<= 1
-	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
-	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
-	if 3*prevEpochBoundaryAttestingBalance >= 2*prevTotalBalance {
-		state.JustificationBitfield |= 2
-		newJustifiedEpoch = prevEpoch
-	}
-	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
-	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
-	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
-		state.JustificationBitfield |= 1
-		newJustifiedEpoch = currentEpoch
-	}
-
-	// Process finality.
-	// When the 2nd, 3rd and 4th most epochs are all justified, the 2nd can finalize the 4th epoch
-	// as a source.
-	if state.PreviousJustifiedEpoch == prevEpoch-2 &&
-		(state.JustificationBitfield>>1)%8 == 7 {
-		newFinalizedEpoch = state.PreviousJustifiedEpoch
-	}
-	// When the 2nd and 3rd most epochs are all justified, the 2nd can finalize the 3rd epoch
-	// as a source.
-	if state.PreviousJustifiedEpoch == prevEpoch-1 &&
-		(state.JustificationBitfield>>1)%4 == 3 {
-		newFinalizedEpoch = state.PreviousJustifiedEpoch
-	}
-	// When the 1st, 2nd and 3rd most epochs are all justified, the 1st can finalize the 3rd epoch
-	// as a source.
-	if state.CurrentJustifiedEpoch == prevEpoch-1 &&
-		(state.JustificationBitfield>>0)%8 == 7 {
-		newFinalizedEpoch = state.CurrentJustifiedEpoch
-	}
-	// When the 1st and 2nd most epochs are all justified, the 1st can finalize the 2nd epoch
-	// as a source.
-	if state.CurrentJustifiedEpoch == prevEpoch &&
-		(state.JustificationBitfield>>0)%4 == 3 {
-		newFinalizedEpoch = state.CurrentJustifiedEpoch
-	}
-	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
-	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
-	if newJustifiedEpoch != state.CurrentJustifiedEpoch {
-		state.CurrentJustifiedEpoch = newJustifiedEpoch
-		newJustifedRoot, err := blocks.BlockRoot(state, helpers.StartSlot(newJustifiedEpoch))
-		if err != nil {
-			return state, err
-		}
-		state.CurrentJustifiedRoot = newJustifedRoot
-	}
-	if newFinalizedEpoch != state.FinalizedEpoch {
-		state.FinalizedEpoch = newFinalizedEpoch
-		newFinalizedRoot, err := blocks.BlockRoot(state, helpers.StartSlot(newFinalizedEpoch))
-		if err != nil {
-			return state, err
-		}
-		state.FinalizedRoot = newFinalizedRoot
-	}
-	return state, nil
 }
 
 // ProcessCrosslinks goes through each crosslink committee and check

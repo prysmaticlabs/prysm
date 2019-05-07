@@ -211,67 +211,6 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 	}
 }
 
-func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	var latestBlockRoots [][]byte
-
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		latestBlockRoots = append(latestBlockRoots, []byte("a"))
-	}
-
-	state := &pb.BeaconState{
-		Slot:                  300 + params.BeaconConfig().GenesisSlot,
-		CurrentJustifiedEpoch: 3,
-		JustificationBitfield: 4,
-		LatestBlockRoots:      latestBlockRoots,
-	}
-	newState, err := ProcessJustificationAndFinalization(
-		state,
-		1,
-		1,
-		1,
-		1,
-	)
-	if err != nil {
-		t.Errorf("Could not process justification and finalization of state %v", err)
-	}
-
-	if newState.PreviousJustifiedEpoch != 3 {
-		t.Errorf("New state's prev justified slot %d != old state's justified slot %d",
-			newState.PreviousJustifiedEpoch, state.CurrentJustifiedEpoch)
-	}
-	// Since this epoch was justified (not prev), justified_epoch = slot_to_epoch(state.slot) -1.
-	if newState.CurrentJustifiedEpoch != helpers.CurrentEpoch(state) {
-		t.Errorf("New state's justified epoch %d != state's slot - SLOTS_PER_EPOCH: %d",
-			newState.CurrentJustifiedEpoch, helpers.CurrentEpoch(state))
-	}
-	// The new JustificationBitfield is 11, it went from 0100 to 1011. Two 1's were appended because both
-	// prev epoch and this epoch were justified.
-	if newState.JustificationBitfield != 11 {
-		t.Errorf("New state's justification bitfield %d != 11", newState.JustificationBitfield)
-	}
-
-	// Assume for the case where only prev epoch got justified. Verify
-	// justified_epoch = slot_to_epoch(state.slot) -2.
-	newState, err = ProcessJustificationAndFinalization(
-		state,
-		0,
-		1,
-		1,
-		1,
-	)
-	if err != nil {
-		t.Errorf("Could not process justification and finalization of state %v", err)
-	}
-	if newState.CurrentJustifiedEpoch != helpers.CurrentEpoch(state)-1 {
-		t.Errorf("New state's justified epoch %d != state's epoch -2: %d",
-			newState.CurrentJustifiedEpoch, helpers.CurrentEpoch(state)-1)
-	}
-}
-
 func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
