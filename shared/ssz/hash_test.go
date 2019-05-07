@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 type hashTest struct {
@@ -13,6 +15,11 @@ type hashTest struct {
 
 type merkleHashTest struct {
 	val           [][]byte
+	output, error string
+}
+
+type signatureRootTest struct {
+	val           interface{}
 	output, error string
 }
 
@@ -161,6 +168,11 @@ var merkleHashTests = []merkleHashTest{
 	}, output: "55DC6699E7B5713DD9102224C302996F931836C6DAE9A4EC6AB49C966F394685"},
 }
 
+var signatureRootTests = []signatureRootTest{
+	{val: &pb.BeaconBlock{Signature: []byte{'A', 'B'}}, output: "testing"},
+	{val: &pb.BeaconBlock{Signature: []byte{'A', 'B'}}, output: "testing"},
+}
+
 func runHashTests(t *testing.T, hash func(val interface{}) ([32]byte, error)) {
 	for i, test := range hashTests {
 		output, err := hash(test.val)
@@ -207,6 +219,29 @@ func runMerkleHashTests(t *testing.T, merkleHash func([][]byte) ([]byte, error))
 	}
 }
 
+func runSignedRootTests(t *testing.T, signedRoot func(val interface{}) ([32]byte, error)) {
+	for i, test := range signatureRootTests {
+		output, err := signedRoot(test.val)
+		// Check unexpected error
+		if test.error == "" && err != nil {
+			t.Errorf("test %d: unexpected error: %v\nvalue %#v\ntype %T",
+				i, err, test.val, test.val)
+			continue
+		}
+		// Check expected error
+		if test.error != "" && fmt.Sprint(err) != test.error {
+			t.Errorf("test %d: error mismatch\ngot   %v\nwant  %v\nvalue %#v\ntype  %T",
+				i, err, test.error, test.val, test.val)
+			continue
+		}
+		// Check expected output
+		if err == nil && !bytes.Equal(output[:], unhex(test.output)) {
+			t.Errorf("test %d: output mismatch:\ngot   %X\nwant  %s\nvalue %#v\ntype  %T",
+				i, output, stripSpace(test.output), test.val, test.val)
+		}
+	}
+}
+
 func TestHash(t *testing.T) {
 	runHashTests(t, func(val interface{}) ([32]byte, error) {
 		return TreeHash(val)
@@ -216,5 +251,11 @@ func TestHash(t *testing.T) {
 func TestMerkleHash(t *testing.T) {
 	runMerkleHashTests(t, func(val [][]byte) ([]byte, error) {
 		return merkleHash(val)
+	})
+}
+
+func TestSignedRoot(t *testing.T) {
+	runSignedRootTests(t, func(val interface{}) ([32]byte, error) {
+		return SignedRoot(val)
 	})
 }

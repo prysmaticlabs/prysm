@@ -43,12 +43,22 @@ func TreeHash(val interface{}) ([32]byte, error) {
 // SignedRoot returns the signed root of the last element in the container.
 func SignedRoot(val interface{}) ([32]byte, error) {
 	typeVal := reflect.TypeOf(val)
+	kind := typeVal.Kind()
 
+	switch {
+	case kind == reflect.Struct:
+	case kind == reflect.Ptr:
+		deRefVal := unsafe
+		typeVal := reflect.TypeOf(deRefVal)
+		field := typeVal.Field(typeVal.NumField())
+
+		return TreeHash(field)
+	}
 	if typeVal.Kind() != reflect.Struct {
 		return [32]byte{}, fmt.Errorf("object type is not struct but is a %v", typeVal.Kind())
 	}
-
 	field := typeVal.Field(typeVal.NumField())
+
 	return TreeHash(field)
 }
 
