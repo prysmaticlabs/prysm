@@ -175,7 +175,7 @@ func (s *InitialSync) InitializeBestPeer(p peer.ID) {
 }
 
 // InitializeBlockRoots sets canonical and finalized block roots for batch request.
-func (s *InitialSync) InitializeBlockRoots(canonicalRoot []byte, finalizedRoot []byte) {
+func (s *InitialSync) InitializeBlockRoots(finalizedRoot []byte, canonicalRoot []byte) {
 	s.canonicalBlockRoot = canonicalRoot
 	s.finalizedBlockRoot = finalizedRoot
 }
