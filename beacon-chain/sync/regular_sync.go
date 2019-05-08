@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
@@ -576,7 +577,11 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 		copy(peerID[:], msg.Peer)
 		canonicalListReq := rs.chainHeadReqMap[peerID]
 
-		response, err = rs.buildCanonicalBlockList(canonicalListReq[0], canonicalListReq[1])
+		// To prevent circuit in the chain and the potentiality peer can bomb a node building block list.
+		ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		response, err = rs.buildCanonicalBlockList(ctx, canonicalListReq[0], canonicalListReq[1])
+		cancel()
+
 		if err != nil {
 			return fmt.Errorf("could not build canonical block list %v", err)
 		}
@@ -682,7 +687,7 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 	sentBlockAnnounce.Inc()
 }
 
-func (rs *RegularSync) buildCanonicalBlockList(finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+func (rs *RegularSync) buildCanonicalBlockList(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
 	b, err := rs.db.Block(bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return nil, err
@@ -695,6 +700,10 @@ func (rs *RegularSync) buildCanonicalBlockList(finalizedRoot []byte, headRoot []
 	}
 
 	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		b, err = rs.db.Block(bytesutil.ToBytes32(b.ParentRootHash32))
 		if err != nil {
 			return nil, err
