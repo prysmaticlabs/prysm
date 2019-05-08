@@ -605,7 +605,6 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 		Shard: 11,
 		Slot:  params.BeaconConfig().GenesisSlot + slotOffset,
 	}
-
 	result, err := AttestationParticipants(state, attestationData, []byte{0x03})
 	if err != nil {
 		t.Fatal(err)
