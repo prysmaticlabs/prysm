@@ -95,10 +95,6 @@ func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return true
 }
 
-func (ms *mockChainService) CanonicalBlock(slot uint64) (*pb.BeaconBlock, error) {
-	return nil, nil
-}
-
 func (ms *mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
 	return nil
 }
