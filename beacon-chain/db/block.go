@@ -273,7 +273,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 
 // CanonicalBlockBySlot accepts a slot number and returns the corresponding canonical block.
 func (db *BeaconDB) CanonicalBlockBySlot(ctx context.Context, slot uint64) (*pb.BeaconBlock, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.CanonicalBlockBySlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)))
 
