@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -67,6 +68,10 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	}
 
 	log.Debug("Processing batched block response")
+	// Sort batchBlocks in ascending order.
+	sort.Slice(batchedBlocks, func(i, j int) bool {
+		return batchedBlocks[i].Slot < batchedBlocks[j].Slot
+	})
 	for _, block := range batchedBlocks {
 		s.processBlock(ctx, block)
 	}
