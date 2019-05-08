@@ -73,7 +73,6 @@ type RegularSync struct {
 	blockAnnouncementFeed        *event.Feed
 	announceBlockBuf             chan p2p.Message
 	blockBuf                     chan p2p.Message
-	blockRequestBySlot           chan p2p.Message
 	blockRequestByHash           chan p2p.Message
 	batchedRequestBuf            chan p2p.Message
 	stateRequestBuf              chan p2p.Message
@@ -95,7 +94,6 @@ type RegularSync struct {
 type RegularSyncConfig struct {
 	BlockAnnounceBufferSize     int
 	BlockBufferSize             int
-	BlockReqSlotBufferSize      int
 	BlockReqHashBufferSize      int
 	BatchedBufferSize           int
 	StateReqBufferSize          int
@@ -117,7 +115,6 @@ func DefaultRegularSyncConfig() *RegularSyncConfig {
 	return &RegularSyncConfig{
 		BlockAnnounceBufferSize:     params.BeaconConfig().DefaultBufferSize,
 		BlockBufferSize:             params.BeaconConfig().DefaultBufferSize,
-		BlockReqSlotBufferSize:      params.BeaconConfig().DefaultBufferSize,
 		BlockReqHashBufferSize:      params.BeaconConfig().DefaultBufferSize,
 		BatchedBufferSize:           params.BeaconConfig().DefaultBufferSize,
 		StateReqBufferSize:          params.BeaconConfig().DefaultBufferSize,
@@ -144,7 +141,6 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		blockAnnouncementFeed:    new(event.Feed),
 		announceBlockBuf:         make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:                 make(chan p2p.Message, cfg.BlockBufferSize),
-		blockRequestBySlot:       make(chan p2p.Message, cfg.BlockReqSlotBufferSize),
 		blockRequestByHash:       make(chan p2p.Message, cfg.BlockReqHashBufferSize),
 		batchedRequestBuf:        make(chan p2p.Message, cfg.BatchedBufferSize),
 		stateRequestBuf:          make(chan p2p.Message, cfg.StateReqBufferSize),
