@@ -14,6 +14,7 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -172,6 +173,7 @@ func (s *Service) Start() {
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
 		p2p:              s.p2p,
+		cache:            cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
