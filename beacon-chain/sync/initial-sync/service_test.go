@@ -128,6 +128,9 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 			Slot: params.BeaconConfig().GenesisSlot + uint64(i),
 		}
 	}
+	// edge case: handle out of order block list. Specifically with the highest
+	// block first. This is swapping the first and last blocks in the list.
+	batchedBlocks[0], batchedBlocks[batchSize-1] = batchedBlocks[batchSize-1], batchedBlocks[0]
 
 	msg := p2p.Message{
 		Ctx: context.Background(),
