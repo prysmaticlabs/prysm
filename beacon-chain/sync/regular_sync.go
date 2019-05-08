@@ -692,6 +692,9 @@ func (rs *RegularSync) buildCanonicalBlockList(ctx context.Context, finalizedRoo
 	if err != nil {
 		return nil, err
 	}
+	if b == nil {
+		return nil, fmt.Errorf("nil block %#x from db", bytesutil.Trunc(headRoot))
+	}
 	bList := []*pb.BeaconBlock{b}
 
 	// if head block was the same as the finalized block.
@@ -703,10 +706,13 @@ func (rs *RegularSync) buildCanonicalBlockList(ctx context.Context, finalizedRoo
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-
-		b, err = rs.db.Block(bytesutil.ToBytes32(b.ParentRootHash32))
+		parentRoot := bytesutil.ToBytes32(b.ParentRootHash32)
+		b, err = rs.db.Block(parentRoot)
 		if err != nil {
 			return nil, err
+		}
+		if b == nil {
+			return nil, fmt.Errorf("nil parent block %#x from db", bytesutil.Trunc(parentRoot[:]))
 		}
 
 		// Prepend parent to the beginning of the list.
