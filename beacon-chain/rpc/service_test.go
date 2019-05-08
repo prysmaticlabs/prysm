@@ -101,6 +101,10 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (m *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
+
+}
+
 func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
 	return nil
 }
