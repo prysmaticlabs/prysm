@@ -2,7 +2,9 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -690,4 +692,99 @@ func TestHandleStateReq_OK(t *testing.T) {
 		t.Error(err)
 	}
 	testutil.AssertLogsContain(t, hook, "Sending finalized, justified, and canonical states to peer")
+}
+
+func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ss := setupService(db)
+
+	// Construct the following chain:
+	//    /- B3
+	//	 B1  - B2 - B4
+	block1 := &pb.BeaconBlock{Slot: 1, ParentRootHash32: []byte{'A'}}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = ss.db.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block2 := &pb.BeaconBlock{Slot: 2, ParentRootHash32: root1[:]}
+	root2, _ := hashutil.HashBeaconBlock(block2)
+	if err = ss.db.SaveBlock(block2); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block3 := &pb.BeaconBlock{Slot: 3, ParentRootHash32: root1[:]}
+	if err = ss.db.SaveBlock(block3); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block4 := &pb.BeaconBlock{Slot: 4, ParentRootHash32: root2[:]}
+	root4, _ := hashutil.HashBeaconBlock(block4)
+	if err = ss.db.SaveBlock(block4); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+
+	// Verify passing in roots of B4 and B1 give us the canonical lists.
+	list, err := ss.buildCanonicalBlockList(context.Background(), root1[:], root4[:])
+	wantList := []*pb.BeaconBlock{block1, block2, block4}
+	if !reflect.DeepEqual(list, wantList) {
+		t.Error("Did not retrieve the correct canonical lists")
+	}
+}
+
+func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ss := setupService(db)
+
+	// Construct the following chain:
+	//	 B1 (finalized and head)
+	block1 := &pb.BeaconBlock{Slot: 1, ParentRootHash32: []byte{'A'}}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = ss.db.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+
+	// Verify passing in roots of B1 and B1 give us the canonical lists.
+	list, err := ss.buildCanonicalBlockList(context.Background(), root1[:], root1[:])
+	wantList := []*pb.BeaconBlock{block1}
+	if !reflect.DeepEqual(list, wantList) {
+		t.Error("Did not retrieve the correct canonical lists")
+	}
+}
+
+func TestCanonicalBlockList_NilBlock(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ss := setupService(db)
+
+	want := "nil block 0x42 from db"
+	if _, err := ss.buildCanonicalBlockList(context.Background(), []byte{'A'}, []byte{'B'}); err.Error() != want {
+		t.Fatal(err)
+	}
+}
+
+func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ss := setupService(db)
+
+	block1 := &pb.BeaconBlock{Slot: 1, ParentRootHash32: []byte{'B'}}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = ss.db.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+
+	b := bytesutil.ToBytes32([]byte{'B'})
+	want := fmt.Sprintf("nil parent block %#x from db", bytesutil.Trunc(b[:]))
+	if _, err := ss.buildCanonicalBlockList(context.Background(), []byte{}, root1[:]); err.Error() != want {
+		t.Fatal(err)
+	}
 }
