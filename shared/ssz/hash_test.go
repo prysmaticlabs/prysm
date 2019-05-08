@@ -169,8 +169,14 @@ var merkleHashTests = []merkleHashTest{
 }
 
 var signatureRootTests = []signatureRootTest{
-	{val: &pb.BeaconBlockHeader{Signature: []byte{'A', 'B'}}, output: "testing"},
-	{val: &pb.BeaconBlockHeader{Signature: []byte{'A', 'B'}}, output: "testing"},
+	{val: &pb.BeaconBlockHeader{Slot: 20, Signature: []byte{'A', 'B'}}, output: "15DE30A770592FAD0AC0AE262DBEF783AA747DA5103275F651E41DF1E8CC653F"},
+	{val: &pb.BeaconBlockHeader{Slot: 10, Signature: []byte("TESTING")}, output: "85AA0ABF2B8CEC5DB303320328B691FA125B3A4D3106365A29EAE44C9E60BF07"},
+	{val: &pb.IndexedAttestation{Signature: []byte("SigningAttestation")}, output: "F00354BFA20B0CFBBE623A1AE36D9CE0D29FF65C3D69BF133C264B0707579E3B"},
+	{val: &pb.VoluntaryExit{Signature: []byte("SigningExit")}, output: "C940F7E42FF91F069939264514E6F88F690615FF452B76BECFFD5D36063EAAE4"},
+	{val: pb.BeaconBlockHeader{Slot: 20, Signature: []byte{'A', 'B'}}, output: "15DE30A770592FAD0AC0AE262DBEF783AA747DA5103275F651E41DF1E8CC653F"},
+	{val: pb.BeaconBlockHeader{Slot: 10, Signature: []byte("TESTING")}, output: "85AA0ABF2B8CEC5DB303320328B691FA125B3A4D3106365A29EAE44C9E60BF07"},
+	{val: pb.IndexedAttestation{Signature: []byte("SigningAttestation")}, output: "F00354BFA20B0CFBBE623A1AE36D9CE0D29FF65C3D69BF133C264B0707579E3B"},
+	{val: pb.VoluntaryExit{Signature: []byte("SigningExit")}, output: "C940F7E42FF91F069939264514E6F88F690615FF452B76BECFFD5D36063EAAE4"},
 }
 
 func runHashTests(t *testing.T, hash func(val interface{}) ([32]byte, error)) {
@@ -235,7 +241,7 @@ func runSignedRootTests(t *testing.T, signedRoot func(val interface{}) ([32]byte
 			continue
 		}
 		// Check expected output
-		if err == nil && !bytes.Equal(output[:], []byte(test.output)) {
+		if err == nil && !bytes.Equal(output[:], unhex(test.output)) {
 			t.Errorf("test %d: output mismatch:\ngot   %X\nwant  %s\nvalue %#v\ntype  %T",
 				i, output, stripSpace(test.output), test.val, test.val)
 		}
