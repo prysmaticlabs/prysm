@@ -294,7 +294,7 @@ func (db *BeaconDB) CanonicalBlockBySlot(ctx context.Context, slot uint64) (*pb.
 }
 
 // BlocksBySlot accepts a slot number and returns the corresponding blocks in the db.
-// Returns nil if no blocks were recorded for the given slot.
+// Returns empty list if no blocks were recorded for the given slot.
 func (db *BeaconDB) BlocksBySlot(ctx context.Context, slot uint64) ([]*pb.BeaconBlock, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
 	defer span.End()
