@@ -158,7 +158,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	block, err := db.CanonicalBlockBySlot(ctx, params.BeaconConfig().GenesisSlot)
+	block, err := db.ChainHead()
 	if err != nil {
 		t.Fatalf("failed to get genesis block: %v", err)
 	}
