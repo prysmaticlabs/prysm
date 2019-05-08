@@ -48,6 +48,20 @@ func SignedRoot(val interface{}) ([32]byte, error) {
 
 	switch {
 	case kind == reflect.Struct:
+		valTyp := valObj.Type()
+		fields, err := structFields(valTyp)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		lastfieldName := fields[len(fields)-1].name
+		if lastfieldName != "signature" && lastfieldName != "Signature" {
+			return [32]byte{}, fmt.Errorf("field name is invalid wanted Signature but got %s", lastfieldName)
+		}
+		lastField := valObj.Field(fields[len(fields)-1].index)
+		if lastField.Kind() == reflect.Slice && lastField.Elem().Kind() == reflect.Uint8 {
+			return TreeHash(lastField.Interface().([]byte))
+		}
+		return [32]byte{}, errors.New("signature field is of an invalid type")
 	case kind == reflect.Ptr:
 		if valObj.IsNil() {
 			return [32]byte{}, errors.New("nil pointer given")
@@ -66,9 +80,12 @@ func SignedRoot(val interface{}) ([32]byte, error) {
 			return [32]byte{}, fmt.Errorf("field name is invalid wanted Signature but got %s", lastfieldName)
 		}
 		lastField := deRefVal.Field(fields[len(fields)-1].index)
-		if lastField.Kind() == reflect.Slice {
+		if lastField.Kind() == reflect.Slice && lastField.Elem().Kind() == reflect.Uint8 {
 			return TreeHash(lastField.Interface().([]byte))
 		}
+		return [32]byte{}, errors.New("signature field is of an invalid type")
+	default:
+		return [32]byte{}, fmt.Errorf("given object is neither a struct or a pointer but is %v", kind)
 	}
 
 	return [32]byte{}, nil
