@@ -7,6 +7,7 @@ go_library(
     srcs = [
         "allocations.go",
         "db.go",
+        "keyChecker.go",
         "logger.go",
         "main.go",
         "server.go",
@@ -16,6 +17,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//contracts/deposit-contract:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
         "//proto/cluster:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/keystore:go_default_library",
@@ -35,6 +37,7 @@ go_library(
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
         "@io_k8s_client_go//rest:go_default_library",
+        "@io_opencensus_go//plugin/ocgrpc:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
 )
