@@ -33,4 +33,13 @@ func (k *keyChecker) checkKeys() {
 	if err != nil {
 		log.Error(err)
 	}
+
+	req := &pbBeacon.ExitedValidatorsRequest{
+		PublicKeys: pubkeys,
+	}
+
+	exitedKeys, err := k.client.ExitedValidators(context.Background(), req)
+	if err != nil {
+		log.Error(err)
+	}
 }
