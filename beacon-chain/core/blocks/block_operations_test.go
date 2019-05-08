@@ -1014,6 +1014,75 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 }
 
+func TestConvertToIndexed_OK(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().GenesisSlot + 5,
+	}
+	tests := []struct {
+		aggregationBitfield      []byte
+		custodyBitfield          []byte
+		wantedCustodyBit0Indices []uint64
+		wantedCustodyBit1Indices []uint64
+	}{
+		{
+			aggregationBitfield:      []byte{0x03},
+			custodyBitfield:          []byte{0x01},
+			wantedCustodyBit0Indices: []uint64{14},
+			wantedCustodyBit1Indices: []uint64{11},
+		},
+		{
+			aggregationBitfield:      []byte{0x03},
+			custodyBitfield:          []byte{0x02},
+			wantedCustodyBit0Indices: []uint64{11},
+			wantedCustodyBit1Indices: []uint64{14},
+		},
+		{
+			aggregationBitfield:      []byte{0x03},
+			custodyBitfield:          []byte{0x03},
+			wantedCustodyBit0Indices: []uint64{},
+			wantedCustodyBit1Indices: []uint64{11, 14},
+		},
+	}
+
+	attestation := &pb.Attestation{
+		AggregateSignature: []byte("signed"),
+		Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot + 2,
+			Shard: 2,
+		},
+	}
+	for _, tt := range tests {
+		attestation.AggregationBitfield = tt.aggregationBitfield
+		attestation.CustodyBitfield = tt.custodyBitfield
+		wanted := &pb.IndexedAttestation{
+			CustodyBit_0Indices: tt.wantedCustodyBit0Indices,
+			CustodyBit_1Indices: tt.wantedCustodyBit1Indices,
+			Data:                attestation.Data,
+			Signature:           attestation.AggregateSignature,
+		}
+		ia, err := blocks.ConvertToIndexed(state, attestation)
+		if err != nil {
+			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
+		}
+		if !reflect.DeepEqual(wanted, ia) {
+			t.Errorf("convert attestation to indexed attestation didn't result as wanted: %v got: %v", wanted, ia)
+		}
+	}
+
+}
+
 func TestVerifyIndexedAttestation_Intersecting(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
 		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
