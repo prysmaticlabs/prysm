@@ -55,7 +55,6 @@ func (db *BeaconDB) DeleteAttestation(attestation *pb.Attestation) error {
 
 	return db.update(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
-
 		return a.Delete(hash[:])
 	})
 }
