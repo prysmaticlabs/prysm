@@ -1648,3 +1648,46 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 		t.Errorf("Expected sender balance %d, received %d", newState.Balances[0], expectedSender)
 	}
 }
+
+func TestProcessBlockHeader_OK(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              10,
+	}
+	exits := []*pb.VoluntaryExit{
+		{
+			ValidatorIndex: 0,
+			Epoch:          0,
+		},
+	}
+	block := &pb.BeaconBlock{
+		Slot: 10,
+		Body: &pb.BeaconBlockBody{
+			VoluntaryExits: exits,
+		},
+		ParentBlockRoot: []byte{'A'},
+	}
+	newState, err := blocks.ProcessBlockHeader(state, block)
+	if err != nil {
+		t.Error(err)
+	}
+	bBytes, err := block.Body.Marshal()
+	if err != nil {
+		t.Error(err)
+	}
+	bHash := hashutil.Hash(bBytes)
+	wanted := &pb.BeaconBlockHeader{
+		Slot:              block.Slot,
+		PreviousBlockRoot: block.ParentBlockRoot,
+		BlockBodyRoot:     bHash[:],
+	}
+	if reflect.DeepEqual(newState.LatestBlockHeader, wanted) {
+		t.Errorf("failed to update latest block header wanted: %v got: %v", wanted, newState.LatestBlockHeader)
+	}
+
+}

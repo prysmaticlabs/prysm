@@ -59,6 +59,66 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 	return beaconState
 }
 
+// ProcessBlockHeader validates a block by its header and commits it as latest block.
+//
+// Spec pseudocode definition:
+// def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+//     # Verify that the slots match
+//     assert block.slot == state.slot
+//     # Verify that the parent matches
+//     assert block.previous_block_root == signing_root(state.latest_block_header)
+//     # Save current block as the new latest block
+//     state.latest_block_header = BeaconBlockHeader(
+//         slot=block.slot,
+//         previous_block_root=block.previous_block_root,
+//         block_body_root=hash_tree_root(block.body),
+//     )
+//     # Verify proposer is not slashed
+//     proposer = state.validator_registry[get_beacon_proposer_index(state)]
+//     assert not proposer.slashed
+//     # Verify proposer signature
+//     assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
+func ProcessBlockHeader(
+	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
+)(*pb.BeaconState,error){
+	currentEpoch:=helpers.CurrentEpoch(beaconState)
+	if beaconState.Slot != block.Slot{
+		return nil,fmt.Errorf("state slot: %d is different then block slot: %d",beaconState.Slot,block.Slot)
+	}
+	//if block.ParentBlockRoot != //signing_root()
+	bBytes,err:= block.Body.Marshal()
+	if err!=nil{
+		return nil,err
+	}
+	bHash:=hashutil.Hash(bBytes)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot: block.Slot,
+		PreviousBlockRoot: block.ParentBlockRoot,
+		BlockBodyRoot: bHash[:],
+	}
+	idx,err:=helpers.BeaconProposerIndex(beaconState,beaconState.Slot)
+	if err!=nil{
+		return nil,err
+	}
+	proposer:= beaconState.ValidatorRegistry[idx]
+	if proposer.Slashed{
+		return nil,fmt.Errorf("proposer id: %d was slashed",idx)
+	}
+	//verify proposer signature
+	sig ,err:= bls.SignatureFromBytes(block.Signature)
+	if err!=nil{
+		return nil,err
+	}
+	dt:= forkutil.DomainVersion(beaconState.Fork,currentEpoch,params.BeaconConfig().DomainBeaconProposer)
+	fmt.Print(dt)
+	fmt.Print(sig)
+	// if sig.Verify(signing_root(block),proposer.Pubkey,dt){
+	// 	return nil,fmt.Errorf("verify signature failed)
+	// }
+	return beaconState,nil
+}
+
 // ProcessRandao checks the block proposer's
 // randao commitment and generates a new randao mix to update
 // in the beacon state's latest randao mixes slice.
