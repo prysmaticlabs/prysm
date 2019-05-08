@@ -37,6 +37,7 @@ var (
 type keyMap struct {
 	podName    string
 	privateKey []byte
+	index      int
 }
 
 type db struct {
@@ -242,7 +243,7 @@ func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
 			if err := proto.Unmarshal(v, pks); err != nil {
 				return err
 			}
-			for _, pk := range pks.PrivateKeys {
+			for i, pk := range pks.PrivateKeys {
 				seckey, err := bls.SecretKeyFromBytes(pk)
 				if err != nil {
 					return err
@@ -252,6 +253,7 @@ func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
 				m[keytoSet] = keyMap{
 					podName:    string(k),
 					privateKey: pk,
+					index:      i,
 				}
 				pubkeys = append(pubkeys, keytoSet[:])
 
@@ -264,4 +266,29 @@ func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
 	}
 
 	return pubkeys, m, nil
+}
+
+// RemovePKAssignments from pod and put the private keys into the unassigned
+// bucket.
+func (d *db) RemovePKFromDB(kMap keyMap) error {
+	return d.db.Update(func(tx *bolt.Tx) error {
+		data := tx.Bucket(assignedPkBucket).Get([]byte(kMap.podName))
+		if data == nil {
+			log.WithField("podName", kMap.podName).Warn("Nil private key returned from db")
+			return nil
+		}
+		pks := &pb.PrivateKeys{}
+		if err := proto.Unmarshal(data, pks); err != nil {
+			return err
+		}
+		newpks := append(pks.PrivateKeys[:kMap.index-1], pks.PrivateKeys[kMap.index:]...)
+		nks := &pb.PrivateKeys{
+			PrivateKeys: newpks,
+		}
+		marshalled, err := proto.Marshal(nks)
+		if err != nil {
+			return err
+		}
+		return tx.Bucket(assignedPkBucket).Put([]byte(kMap.podName), marshalled)
+	})
 }

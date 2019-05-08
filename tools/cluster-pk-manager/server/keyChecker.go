@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"time"
 
 	pbBeacon "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 )
+
+var keyInterval = 3 * time.Second
 
 type keyChecker struct {
 	db     *db
@@ -28,18 +32,34 @@ func newkeyChecker(db *db, beaconRPCAddr string) *keyChecker {
 	}
 }
 
-func (k *keyChecker) checkKeys() {
+func (k *keyChecker) checkKeys() error {
 	pubkeys, keyMap, err := k.db.KeyMap()
 	if err != nil {
-		log.Error(err)
+		return err
 	}
 
 	req := &pbBeacon.ExitedValidatorsRequest{
 		PublicKeys: pubkeys,
 	}
 
-	exitedKeys, err := k.client.ExitedValidators(context.Background(), req)
+	resp, err := k.client.ExitedValidators(context.Background(), req)
 	if err != nil {
-		log.Error(err)
+		return err
+	}
+	for _, key := range resp.PublicKeys {
+		kMap := keyMap[bytesutil.ToBytes48(key)]
+		if err := k.db.RemovePKFromDB(kMap); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (k *keyChecker) run() {
+	for {
+		time.Sleep(keyInterval)
+		if err := k.checkKeys; err != nil {
+			log.WithField("error", err).Error("Failed to check keys")
+		}
 	}
 }
