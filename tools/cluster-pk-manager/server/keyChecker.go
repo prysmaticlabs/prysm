@@ -29,7 +29,7 @@ func newkeyChecker(db *db, beaconRPCAddr string) *keyChecker {
 }
 
 func (k *keyChecker) checkKeys() {
-	allocatedPubKeys, err := k.db.Allocations()
+	pubkeys, keyMap, err := k.db.KeyMap()
 	if err != nil {
 		log.Error(err)
 	}

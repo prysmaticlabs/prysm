@@ -233,8 +233,9 @@ func (d *db) Allocations() (map[string][][]byte, error) {
 	return m, nil
 }
 
-func (d *db) KeyMap() (map[[48]byte]*keyMap, error) {
-	m := make(map[[48]byte]*keyMap)
+func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
+	m := make(map[[48]byte]keyMap)
+	pubkeys := make([][]byte, 0)
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		return tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {
 			pks := &pb.PrivateKeys{}
@@ -242,24 +243,25 @@ func (d *db) KeyMap() (map[[48]byte]*keyMap, error) {
 				return err
 			}
 			for _, pk := range pks.PrivateKeys {
-				pubkey, err := bls.SecretKeyFromBytes(pk)
+				seckey, err := bls.SecretKeyFromBytes(pk)
 				if err != nil {
 					return err
 				}
 
-				keytoSet := bytesutil.ToBytes48(pubkey.PublicKey().Marshal())
-				m[keytoSet] = &keyMap{
+				keytoSet := bytesutil.ToBytes48(seckey.PublicKey().Marshal())
+				m[keytoSet] = keyMap{
 					podName:    string(k),
 					privateKey: pk,
 				}
+				pubkeys = append(pubkeys, keytoSet[:])
 
 			}
 			return nil
 		})
 	}); err != nil {
 		// do something
-		return nil, err
+		return nil, nil, err
 	}
 
-	return m, nil
+	return pubkeys, m, nil
 }
