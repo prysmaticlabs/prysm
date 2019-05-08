@@ -119,7 +119,7 @@ func TestBlocksBySlotEmptyChain_OK(t *testing.T) {
 	ctx := context.Background()
 
 	blocks, _ := db.BlocksBySlot(ctx, 0)
-	if blocks != nil {
+	if len(blocks) > 0 {
 		t.Error("BlockBySlot should return nil for an empty chain")
 	}
 }

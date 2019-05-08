@@ -171,13 +171,15 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	db.serializedState = enc
 	db.stateHash = stateHash
 
-	blockRoot, err := hashutil.HashBeaconBlock(beaconState.LatestBlock)
-	if err != nil {
-		return err
-	}
+	if beaconState.LatestBlock != nil {
+		blockRoot, err := hashutil.HashBeaconBlock(beaconState.LatestBlock)
+		if err != nil {
+			return err
+		}
 
-	if err := db.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
-		return err
+		if err := db.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
+			return err
+		}
 	}
 
 	return db.update(func(tx *bolt.Tx) error {

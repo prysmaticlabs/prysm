@@ -241,15 +241,25 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 		return fmt.Errorf("failed to save beacon state as canonical: %v", err)
 	}
 
+	blockEnc, err := proto.Marshal(block)
+	if err != nil {
+		return err
+	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		blockBucket := tx.Bucket(blockBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
+		mainChainBucket := tx.Bucket(mainChainBucket)
 
 		if blockBucket.Get(blockRoot[:]) == nil {
 			return fmt.Errorf("expected block %#x to have already been saved before updating head: %v", blockRoot, err)
 		}
 
 		if err := chainInfo.Put(mainChainHeightKey, slotBinary); err != nil {
+			return err
+		}
+
+		if err := mainChainBucket.Put(slotBinary, blockEnc); err != nil {
 			return err
 		}
 
