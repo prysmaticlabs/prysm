@@ -850,7 +850,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 
 	// Construct the following chain:
 	//    /- B2 - B4 - B6
-	//	// B1  - B3 - B5 (State is slot 10)
+	// B1  - B3 - B5 (State is slot 10)
 	block1 := &pb.BeaconBlock{
 		Slot:             1,
 		ParentRootHash32: []byte{'A'},
