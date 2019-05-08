@@ -60,6 +60,8 @@ type Querier struct {
 	atGenesis                 bool
 	bestPeer                  peer.ID
 	peerMap                   map[peer.ID]uint64
+	canonicalBlockRoot        []byte
+	finalizedBlockRoot        []byte
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -196,6 +198,8 @@ func (q *Querier) run() {
 				q.currentHeadSlot = response.CanonicalSlot
 				q.currentStateRoot = response.CanonicalStateRootHash32
 				q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
+				q.canonicalBlockRoot = response.CanonicalBlockRoot
+				q.finalizedBlockRoot = response.FinalizedBlockRoot
 			}
 		}
 	}
