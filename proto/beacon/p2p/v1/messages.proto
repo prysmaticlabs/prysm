@@ -47,7 +47,7 @@ message BeaconBlockResponse {
 
 message BatchedBeaconBlockRequest {
   bytes finalized_root = 1;
-  bytes head_root = 2;
+  bytes canonical_root = 2;
 }
 
 message BatchedBeaconBlockResponse {

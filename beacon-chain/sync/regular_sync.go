@@ -535,7 +535,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	// To prevent circuit in the chain and the potentiality peer can bomb a node building block list.
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	response, err := rs.buildCanonicalBlockList(ctx, req.FinalizedRoot, req.HeadRoot)
+	response, err := rs.buildCanonicalBlockList(ctx, req.FinalizedRoot, req.CanonicalRoot)
 	cancel()
 	if err != nil {
 		return fmt.Errorf("could not build canonical block list %v", err)

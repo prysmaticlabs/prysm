@@ -91,7 +91,7 @@ func (s *InitialSync) requestBatchedBlocks(finalizedRoot []byte, canonicalRoot [
 	).Debug("Requesting batched blocks")
 	if err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
 		FinalizedRoot: finalizedRoot,
-		HeadRoot:      canonicalRoot,
+		CanonicalRoot: canonicalRoot,
 	}, s.bestPeer); err != nil {
 		log.Errorf("Could not send batch block request to peer %s: %v", s.bestPeer.Pretty(), err)
 	}
