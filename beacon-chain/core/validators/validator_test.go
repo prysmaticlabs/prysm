@@ -603,12 +603,12 @@ func TestInitializeValidatoreStore(t *testing.T) {
 		Slot:              params.BeaconConfig().GenesisSlot,
 	}
 
-	if _, ok := vStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {
+	if _, ok := VStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {
 		t.Fatalf("Validator store already has indices saved in this epoch")
 	}
 
 	InitializeValidatorStore(bState)
-	retrievedIndices := vStore.activatedValidators[helpers.CurrentEpoch(bState)]
+	retrievedIndices := VStore.activatedValidators[helpers.CurrentEpoch(bState)]
 
 	if !reflect.DeepEqual(retrievedIndices, indices) {
 		t.Errorf("Saved active indices are not the same as the one in the validator store, got %v but expected %v", retrievedIndices, indices)
