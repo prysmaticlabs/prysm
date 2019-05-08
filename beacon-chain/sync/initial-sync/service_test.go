@@ -2,11 +2,9 @@ package initialsync
 
 import (
 	"context"
-	"math/big"
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -49,12 +47,6 @@ func (ms *mockSyncService) IsSyncedWithNetwork() bool {
 
 func (ms *mockSyncService) ResumeSync() {
 
-}
-
-type mockPowchain struct{}
-
-func (mp *mockPowchain) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
-	return true, nil, nil
 }
 
 type mockChainService struct{}
@@ -112,125 +104,6 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	if err := beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		t.Fatalf("could not set chain head, %v", err)
 	}
-}
-
-func TestSavingBlock_InSync(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	setUpGenesisStateAndBlock(db, t)
-
-	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		ChainService: &mockChainService{},
-		BeaconDB:     db,
-		PowChain:     &mockPowchain{},
-	}
-	ss := NewInitialSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-
-	defer func() {
-		close(exitRoutine)
-	}()
-
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	genericHash := make([]byte, 32)
-	genericHash[0] = 'a'
-
-	fState := &pb.BeaconState{
-		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
-		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
-		},
-		LatestEth1Data: &pb.Eth1Data{
-			BlockHash32: []byte{},
-		},
-	}
-
-	stateResponse := &pb.BeaconStateResponse{
-		FinalizedState: fState,
-	}
-
-	incorrectState := &pb.BeaconState{
-		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
-		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot + 4*params.BeaconConfig().SlotsPerEpoch,
-		},
-		LatestEth1Data: &pb.Eth1Data{
-			BlockHash32: []byte{},
-		},
-	}
-
-	incorrectStateResponse := &pb.BeaconStateResponse{
-		FinalizedState: incorrectState,
-	}
-
-	stateRoot, err := hashutil.HashProto(fState)
-	if err != nil {
-		t.Fatalf("unable to tree hash state: %v", err)
-	}
-	beaconStateRootHash32 := stateRoot
-
-	getBlockResponseMsg := func(Slot uint64) p2p.Message {
-		block := &pb.BeaconBlock{
-			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte{1, 2, 3},
-				BlockHash32:       []byte{4, 5, 6},
-			},
-			ParentRootHash32: genericHash,
-			Slot:             Slot,
-			StateRootHash32:  beaconStateRootHash32[:],
-		}
-
-		blockResponse := &pb.BeaconBlockResponse{
-			Block: block,
-		}
-
-		return p2p.Message{
-			Peer: "",
-			Data: blockResponse,
-			Ctx:  context.Background(),
-		}
-	}
-
-	if err != nil {
-		t.Fatalf("Unable to hash block %v", err)
-	}
-
-	msg1 := getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
-
-	// saving genesis block
-	ss.blockBuf <- msg1
-
-	msg2 := p2p.Message{
-		Peer: "",
-		Data: incorrectStateResponse,
-		Ctx:  context.Background(),
-	}
-
-	ss.stateBuf <- msg2
-
-	msg2.Data = stateResponse
-
-	ss.stateBuf <- msg2
-
-	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
-	ss.blockBuf <- msg1
-
-	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 2)
-	ss.blockBuf <- msg1
-
-	ss.cancel()
-	<-exitRoutine
-
-	hook.Reset()
-	internal.TeardownDB(t, db)
 }
 
 func TestProcessingBatchedBlocks_OK(t *testing.T) {

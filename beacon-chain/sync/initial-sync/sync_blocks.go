@@ -36,29 +36,6 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 		return
 	}
 
-	// if it isn't the block in the next slot we check if it is a skipped slot.
-	// if it isn't skipped we save it in memory.
-	if block.Slot != (s.currentSlot + 1) {
-		// if parent exists we validate the block.
-		if s.doesParentExist(block) {
-			if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
-				// Debug error so as not to have noisy error logs
-				if strings.HasPrefix(err.Error(), debugError) {
-					log.Debug(strings.TrimPrefix(err.Error(), debugError))
-					return
-				}
-				log.Errorf("Unable to save block: %v", err)
-			}
-			return
-		}
-		s.mutex.Lock()
-		defer s.mutex.Unlock()
-		if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
-			s.inMemoryBlocks[block.Slot] = block
-		}
-		return
-	}
-
 	if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
 		// Debug error so as not to have noisy error logs
 		if strings.HasPrefix(err.Error(), debugError) {
@@ -148,10 +125,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	// delete block from memory.
-	if _, ok := s.inMemoryBlocks[block.Slot]; ok {
-		delete(s.inMemoryBlocks, block.Slot)
-	}
 	state, err := s.db.HeadState(ctx)
 	if err != nil {
 		return err
