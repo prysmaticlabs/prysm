@@ -2,6 +2,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -78,6 +80,7 @@ type RegularSync struct {
 	batchedRequestBuf            chan p2p.Message
 	stateRequestBuf              chan p2p.Message
 	chainHeadReqBuf              chan p2p.Message
+	chainHeadReqMap              map[[32]byte][][]byte
 	attestationBuf               chan p2p.Message
 	attestationReqByHashBuf      chan p2p.Message
 	announceAttestationBuf       chan p2p.Message
@@ -153,6 +156,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		announceAttestationBuf:   make(chan p2p.Message, cfg.AttestationsAnnounceBufSize),
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
+		chainHeadReqMap:          make(map[[32]byte][][]byte),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
 		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
 		blockAnnouncements:       make(map[uint64][]byte),
@@ -369,9 +373,14 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		return errors.New("incoming message is not *pb.ChainHeadRequest")
 	}
 
-	block, err := rs.db.ChainHead()
+	head, err := rs.db.ChainHead()
 	if err != nil {
 		log.Errorf("Could not retrieve chain head %v", err)
+		return err
+	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		log.Errorf("Could not hash head %v", err)
 		return err
 	}
 
@@ -388,8 +397,14 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		return err
 	}
 
+	// Save what is responded (head root and finalized root) to the requester.
+	// This is needed later to construct & respond canonical batch block list.
+	var peerID [32]byte
+	copy(peerID[:], msg.Peer)
+	rs.chainHeadReqMap[peerID] = [][]byte{finalizedRoot[:], headRoot[:]}
+
 	req := &pb.ChainHeadResponse{
-		CanonicalSlot:             block.Slot,
+		CanonicalSlot:             head.Slot,
 		CanonicalStateRootHash32:  stateRoot[:],
 		FinalizedStateRootHash32S: finalizedRoot[:],
 	}
@@ -555,18 +570,30 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 		return err
 	}
 
-	response := make([]*pb.BeaconBlock, 0, blockRange)
-	for i := startSlot; i <= endSlot; i++ {
-		retBlock, err := rs.db.BlockBySlot(ctx, i)
+	var response []*pb.BeaconBlock
+	if featureconfig.FeatureConfig().SyncProvideCanonicalList {
+		var peerID [32]byte
+		copy(peerID[:], msg.Peer)
+		canonicalListReq := rs.chainHeadReqMap[peerID]
+
+		response, err = rs.buildCanonicalBlockList(canonicalListReq[0], canonicalListReq[1])
 		if err != nil {
-			log.Errorf("Unable to retrieve block from db %v", err)
-			continue
+			return fmt.Errorf("could not build canonical block list %v", err)
 		}
-		if retBlock == nil {
-			log.Debug("Block does not exist in db")
-			continue
+	} else {
+		response = make([]*pb.BeaconBlock, 0, blockRange)
+		for i := startSlot; i <= endSlot; i++ {
+			retBlock, err := rs.db.BlockBySlot(ctx, i)
+			if err != nil {
+				log.Errorf("Unable to retrieve block from db %v", err)
+				continue
+			}
+			if retBlock == nil {
+				log.Debug("Block does not exist in db")
+				continue
+			}
+			response = append(response, retBlock)
 		}
-		response = append(response, retBlock)
 	}
 
 	log.WithField("peer", msg.Peer).
@@ -653,4 +680,32 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 		Debug("Announcing canonical block")
 	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()
+}
+
+func (rs *RegularSync) buildCanonicalBlockList(finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+	b, err := rs.db.Block(bytesutil.ToBytes32(headRoot))
+	if err != nil {
+		return nil, err
+	}
+	bList := []*pb.BeaconBlock{b}
+
+	for {
+		b, err = rs.db.Block(bytesutil.ToBytes32(b.ParentRootHash32))
+		if err != nil {
+			return nil, err
+		}
+
+		// Prepend parent to the beginning of the list.
+		bList = append([]*pb.BeaconBlock{b}, bList...)
+
+		// Stop if we reach the finalized root.
+		root, err := hashutil.HashBeaconBlock(b)
+		if err != nil {
+			return nil, err
+		}
+		if bytes.Equal(root[:], finalizedRoot) {
+			break
+		}
+	}
+	return bList, nil
 }

@@ -33,6 +33,7 @@ type FeatureFlagConfig struct {
 	DisableGossipSub              bool // DisableGossipSub in p2p messaging.
 	EnableCommitteesCache         bool // EnableCommitteesCache for state transition.
 	CacheTreeHash                 bool // CacheTreeHash determent whether tree hashes will be cached.
+	SyncProvideCanonicalList      bool // SyncProvideCanonicalList determines how sync service responds blocks by building canonical list.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -81,6 +82,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(DisableGossipSubFlag.Name) {
 		log.Info("Disabled gossipsub, using floodsub")
 		cfg.DisableGossipSub = true
+	}
+	if ctx.GlobalBool(SyncProvideCanonicalList.Name) {
+		log.Info("Enabled sync respond with canonical block list")
+		cfg.SyncProvideCanonicalList = true
 	}
 
 	InitFeatureConfig(cfg)
