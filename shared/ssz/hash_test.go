@@ -24,9 +24,6 @@ type signatureRootTest struct {
 	output, error string
 }
 
-var x = 0
-var y = &x
-
 // Notice: spaces in the output string will be ignored.
 var hashTests = []hashTest{
 	// boolean
