@@ -27,3 +27,10 @@ func newkeyChecker(db *db, beaconRPCAddr string) *keyChecker {
 		client: valClient,
 	}
 }
+
+func (k *keyChecker) checkKeys() {
+	allocatedPubKeys, err := k.db.Allocations()
+	if err != nil {
+		log.Error(err)
+	}
+}

@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 )
 
@@ -32,6 +33,11 @@ var (
 	unassignedPkBucket = []byte("unassigned_pks")
 	dummyVal           = []byte{1}
 )
+
+type keyMap struct {
+	podName    string
+	privateKey []byte
+}
 
 type db struct {
 	db *bolt.DB
@@ -217,6 +223,37 @@ func (d *db) Allocations() (map[string][][]byte, error) {
 			}
 			m[string(k)] = pubkeys
 
+			return nil
+		})
+	}); err != nil {
+		// do something
+		return nil, err
+	}
+
+	return m, nil
+}
+
+func (d *db) KeyMap() (map[[48]byte]*keyMap, error) {
+	m := make(map[[48]byte]*keyMap)
+	if err := d.db.View(func(tx *bolt.Tx) error {
+		return tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {
+			pks := &pb.PrivateKeys{}
+			if err := proto.Unmarshal(v, pks); err != nil {
+				return err
+			}
+			for _, pk := range pks.PrivateKeys {
+				pubkey, err := bls.SecretKeyFromBytes(pk)
+				if err != nil {
+					return err
+				}
+
+				keytoSet := bytesutil.ToBytes48(pubkey.PublicKey().Marshal())
+				m[keytoSet] = &keyMap{
+					podName:    string(k),
+					privateKey: pk,
+				}
+
+			}
 			return nil
 		})
 	}); err != nil {
