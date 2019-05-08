@@ -255,6 +255,10 @@ func (vs *ValidatorServer) ExitedValidators(
 	exitedKeys := make([][]byte, 0)
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for _, key := range req.PublicKeys {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		status := vs.validatorStatus(ctx, key, validatorIndexMap, beaconState)
 		if status.Status == pb.ValidatorStatus_EXITED {
 			exitedKeys = append(exitedKeys, key)

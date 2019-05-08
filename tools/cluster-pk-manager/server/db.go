@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"path"
 	"time"
 
@@ -259,8 +260,7 @@ func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
 					privateKey: pk,
 					index:      i,
 				}
-				pubkeys = append(pubkeys, keytoSet[:])
-
+				pubkeys = append(pubkeys, seckey.PublicKey().Marshal())
 			}
 			return nil
 		})
@@ -272,28 +272,34 @@ func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
 	return pubkeys, m, nil
 }
 
-// RemovePKAssignments from pod and put the private keys into the unassigned
-// bucket.
-func (d *db) RemovePKFromDB(kMap keyMap) error {
+// RemovePKFromPod and throw it away.
+func (d *db) RemovePKFromPod(podName string, key []byte) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
-		data := tx.Bucket(assignedPkBucket).Get([]byte(kMap.podName))
+		data := tx.Bucket(assignedPkBucket).Get([]byte(podName))
 		if data == nil {
-			log.WithField("podName", kMap.podName).Warn("Nil private key returned from db")
+			log.WithField("podName", podName).Warn("Nil private key returned from db")
 			return nil
 		}
 		pks := &pb.PrivateKeys{}
 		if err := proto.Unmarshal(data, pks); err != nil {
 			return err
 		}
-		newpks := append(pks.PrivateKeys[:kMap.index-1], pks.PrivateKeys[kMap.index:]...)
-		nks := &pb.PrivateKeys{
-			PrivateKeys: newpks,
+		found := false
+		for i, k := range pks.PrivateKeys {
+			if bytes.Equal(k, key) {
+				found = true
+				pks.PrivateKeys = append(pks.PrivateKeys[:i], pks.PrivateKeys[i+1:]...)
+				break
+			}
 		}
-		marshalled, err := proto.Marshal(nks)
+		if !found {
+			return errors.New("private key not assigned to pod")
+		}
+		marshalled, err := proto.Marshal(pks)
 		if err != nil {
 			return err
 		}
 		blacklistedPKCount.Inc()
-		return tx.Bucket(assignedPkBucket).Put([]byte(kMap.podName), marshalled)
+		return tx.Bucket(assignedPkBucket).Put([]byte(podName), marshalled)
 	})
 }

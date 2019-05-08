@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	pbBeacon "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -42,13 +43,23 @@ func (k *keyChecker) checkKeys() error {
 		PublicKeys: pubkeys,
 	}
 
-	resp, err := k.client.ExitedValidators(context.Background(), req)
+	ctx, cancel := context.WithTimeout(context.Background(), keyInterval)
+	defer cancel()
+	resp, err := k.client.ExitedValidators(ctx, req)
 	if err != nil {
 		return err
 	}
+
+	log.WithField(
+		"resp_keys", len(resp.PublicKeys),
+	).WithField(
+		"req_keys", len(req.PublicKeys),
+	).Debug("Received EXITED key list")
+
 	for _, key := range resp.PublicKeys {
+		log.WithField("key", fmt.Sprintf("%#x", key)).Debug("Removing EXITED key")
 		kMap := keyMap[bytesutil.ToBytes48(key)]
-		if err := k.db.RemovePKFromDB(kMap); err != nil {
+		if err := k.db.RemovePKFromPod(kMap.podName, kMap.privateKey); err != nil {
 			return err
 		}
 	}

@@ -34,10 +34,11 @@ func main() {
 	srv := newServer(db, *rpcPath, *depositContractAddr, *privateKey, *depositAmount)
 	if !*disableWatchtower {
 		wt := newWatchtower(db)
-		kc := newkeyChecker(db, *beaconRPCPath)
 		go wt.WatchPods()
-		go kc.run()
 	}
+
+	kc := newkeyChecker(db, *beaconRPCPath)
+	go kc.run()
 
 	s := grpc.NewServer()
 	pb.RegisterPrivateKeyServiceServer(s, srv)
