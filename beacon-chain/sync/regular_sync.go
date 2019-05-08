@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
@@ -270,6 +271,11 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 			}
 		}
 	}()
+
+	// messages received in sync should be processed in a timely manner
+	ctx, cancel := context.WithTimeout(msg.Ctx, 30*time.Second)
+	defer cancel()
+	msg.Ctx = ctx
 
 	// Fingers crossed that it doesn't panic...
 	if err := fn(msg); err != nil {
