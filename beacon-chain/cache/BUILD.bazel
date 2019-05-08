@@ -21,10 +21,17 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
+        "attestation_data_test.go",
         "block_test.go",
         "committee_test.go",
     ],
     embed = [":go_default_library"],
-    deps = ["//proto/beacon/p2p/v1:go_default_library"],
+    race = "on",
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+    ],
 )

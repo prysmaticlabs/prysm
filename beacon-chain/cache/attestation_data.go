@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -13,6 +15,11 @@ import (
 )
 
 var (
+	// Delay parameters
+	minDelay    = float64(10)        // 10 nanoseconds
+	maxDelay    = float64(100000000) // 0.1 second
+	delayFactor = 1.1
+
 	// Metrics
 	attestationCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "attestation_cache_miss",
@@ -51,6 +58,8 @@ func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationDataReque
 		return nil, e
 	}
 
+	delay := minDelay
+
 	for {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -62,6 +71,10 @@ func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationDataReque
 			break
 		}
 		c.lock.RUnlock()
+
+		time.Sleep(time.Duration(delay) * time.Nanosecond)
+		delay *= delayFactor
+		delay = math.Min(delay, maxDelay)
 	}
 
 	item, exists, err := c.cache.GetByKey(s)
