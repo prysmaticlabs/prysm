@@ -133,6 +133,7 @@ func (ss *Service) run() {
 	ss.InitialSync.InitializeObservedStateRoot(bytesutil.ToBytes32(ss.Querier.currentStateRoot))
 	// Sets the state root of the highest observed slot.
 	ss.InitialSync.InitializeFinalizedStateRoot(ss.Querier.currentFinalizedStateRoot)
+	ss.InitialSync.InitializeBlockRoots(ss.Querier.finalizedBlockRoot, ss.Querier.canonicalBlockRoot)
 
 	if synced {
 		ss.RegularSync.Start()
