@@ -46,6 +46,11 @@ message BeaconBlockResponse {
 }
 
 message BatchedBeaconBlockRequest {
+  uint64 start_slot = 1 [deprecated=true];
+  uint64 end_slot = 2 [deprecated=true];
+  bytes finalized_root = 3;
+  bytes canonical_root = 4;
+}
   bytes finalized_root = 1;
   bytes canonical_root = 2;
 }
