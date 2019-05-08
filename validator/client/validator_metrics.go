@@ -20,6 +20,10 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		// Do nothing if we are not at the start of a new epoch.
 		return nil
 	}
+	if !v.logValidatorBalances {
+		return nil
+	}
+
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	if epoch == params.BeaconConfig().GenesisEpoch {
 		v.prevBalance = params.BeaconConfig().MaxDepositAmount
@@ -60,15 +64,13 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if v.prevBalance > 0 {
 			prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
-			if v.logValidatorBalances {
-				log.WithFields(logrus.Fields{
-					"prevBalance":   prevBalance,
-					"newBalance":    newBalance,
-					"delta":         fmt.Sprintf("%.8f", newBalance-prevBalance),
-					"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
-					"pubKey":        tpk,
-				}).Info("Net gains/losses in eth")
-			}
+			log.WithFields(logrus.Fields{
+				"prevBalance":   prevBalance,
+				"newBalance":    newBalance,
+				"delta":         fmt.Sprintf("%.8f", newBalance-prevBalance),
+				"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
+				"pubKey":        tpk,
+			}).Info("Net gains/losses in eth")
 		}
 		totalPrevBalance += resp.Balance
 	}
