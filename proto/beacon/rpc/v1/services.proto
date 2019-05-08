@@ -169,7 +169,11 @@ message Eth1DataResponse {
 }
 
 message BlockTreeResponse {
-  repeated ethereum.beacon.p2p.v1.BeaconBlock tree = 1;
+  repeated TreeNode tree = 1;
+  message TreeNode {
+    ethereum.beacon.p2p.v1.BeaconBlock block = 1;
+    uint64 votes = 2;
+  }
 }
 
 enum ValidatorStatus {

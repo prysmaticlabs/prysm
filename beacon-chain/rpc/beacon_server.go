@@ -27,6 +27,7 @@ type BeaconServer struct {
 	powChainService     powChainService
 	chainService        chainService
 	childFetcher        blockchain.ChildFetcher
+	targetsFetcher blockchain.TargetsFetcher
 	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -276,8 +277,16 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
 }
 
-// BlockTree returns the current tree of saved blocks starting from the justified state.
+// BlockTree returns the current tree of saved blocks and their votes starting from the justified state.
 func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.BlockTreeResponse, error) {
+	justifiedState, err := bs.beaconDB.JustifiedState()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
+	}
+	attestationTargets, err := bs.targetsFetcher.AttestationTargets(justifiedState)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+	}
 	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
 	if err != nil {
 		return nil, err
@@ -287,8 +296,19 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	if err != nil {
 		return nil, err
 	}
+	tree := []*pb.BlockTreeResponse_TreeNode{}
+	for _, kid := range kids {
+		votes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
+		if err != nil {
+			return nil, err
+		}
+		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
+			Block: kid,
+			Votes: uint64(votes),
+		})
+	}
 	return &pb.BlockTreeResponse{
-		Tree: kids,
+		Tree: tree,
 	}, nil
 }
 

@@ -38,6 +38,12 @@ type ChildFetcher interface {
 	BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error)
 }
 
+// TargetsFetcher defines a struct which can retrieve latest attestation targets
+// from a given justified state.
+type TargetsFetcher interface {
+	AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error)
+}
+
 // updateFFGCheckPts checks whether the existing FFG check points saved in DB
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
@@ -138,7 +144,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve justified state: %v", err)
 	}
-	attestationTargets, err := c.attestationTargets(justifiedState)
+	attestationTargets, err := c.AttestationTargets(justifiedState)
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
@@ -341,10 +347,10 @@ func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.Bea
 	return false, nil
 }
 
-// attestationTargets retrieves the list of attestation targets since last finalized epoch,
+// AttestationTargets retrieves the list of attestation targets since last finalized epoch,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
-func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
+func (c *ChainService) AttestationTargets(state *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
 	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	attestationTargets := make(map[uint64]*pb.AttestationTarget)
 	for i, index := range indices {
