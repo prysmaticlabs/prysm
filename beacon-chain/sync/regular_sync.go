@@ -2,17 +2,18 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"runtime/debug"
 	"sync"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -369,29 +370,43 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		return errors.New("incoming message is not *pb.ChainHeadRequest")
 	}
 
-	block, err := rs.db.ChainHead()
+	head, err := rs.db.ChainHead()
 	if err != nil {
-		log.Errorf("Could not retrieve chain head %v", err)
+		log.Errorf("Could not retrieve chain head: %v", err)
 		return err
+	}
+	headBlkRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		log.Errorf("Could not hash chain head: %v", err)
+	}
+	finalizedBlk, err := rs.db.FinalizedBlock()
+	if err != nil {
+		log.Errorf("Could not retrieve finalized block: %v", err)
+		return err
+	}
+	finalizedBlkRoot, err := hashutil.HashBeaconBlock(finalizedBlk)
+	if err != nil {
+		log.Errorf("Could not hash finalized block: %v", err)
 	}
 
 	stateRoot := rs.db.HeadStateRoot()
 	finalizedState, err := rs.db.FinalizedState()
 	if err != nil {
-		log.Errorf("Could not retrieve finalized state %v", err)
+		log.Errorf("Could not retrieve finalized state: %v", err)
 		return err
 	}
-
 	finalizedRoot, err := hashutil.HashProto(finalizedState)
 	if err != nil {
-		log.Errorf("Could not tree hash block %v", err)
+		log.Errorf("Could not tree hash block: %v", err)
 		return err
 	}
 
 	req := &pb.ChainHeadResponse{
-		CanonicalSlot:             block.Slot,
+		CanonicalSlot:             head.Slot,
 		CanonicalStateRootHash32:  stateRoot[:],
 		FinalizedStateRootHash32S: finalizedRoot[:],
+		CanonicalBlockRoot:        headBlkRoot[:],
+		FinalizedBlockRoot:        finalizedBlkRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
 	defer ChainHead.End()
@@ -516,61 +531,17 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBatchedBlockRequest")
 	defer span.End()
 	batchedBlockReq.Inc()
-	data := msg.Data.(*pb.BatchedBeaconBlockRequest)
-	startSlot, endSlot := data.StartSlot, data.EndSlot
+	req := msg.Data.(*pb.BatchedBeaconBlockRequest)
 
-	block, err := rs.db.ChainHead()
+	// To prevent circuit in the chain and the potentiality peer can bomb a node building block list.
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	response, err := rs.buildCanonicalBlockList(ctx, req.FinalizedRoot, req.CanonicalRoot)
+	cancel()
 	if err != nil {
-		log.Errorf("Could not retrieve chain head %v", err)
-		return err
+		return fmt.Errorf("could not build canonical block list %v", err)
 	}
 
-	bState, err := rs.db.HeadState(ctx)
-	if err != nil {
-		log.Errorf("Could not retrieve last finalized slot %v", err)
-		return err
-	}
-
-	finalizedSlot := helpers.StartSlot(bState.FinalizedEpoch)
-
-	currentSlot := block.Slot
-	if currentSlot < startSlot || finalizedSlot > endSlot {
-		log.WithFields(logrus.Fields{
-			"currentSlot":   currentSlot,
-			"startSlot":     startSlot,
-			"endSlot":       endSlot,
-			"finalizedSlot": finalizedSlot},
-		).Debug("invalid batch request: current slot < start slot || finalized slot > end slot")
-		return err
-	}
-
-	blockRange := endSlot - startSlot
-	// Handle overflows
-	if startSlot > endSlot {
-		// Do not process requests with invalid slot ranges
-		log.WithFields(logrus.Fields{
-			"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
-			"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
-		).Debug("Invalid batched block range")
-		return err
-	}
-
-	response := make([]*pb.BeaconBlock, 0, blockRange)
-	for i := startSlot; i <= endSlot; i++ {
-		retBlock, err := rs.db.BlockBySlot(ctx, i)
-		if err != nil {
-			log.Errorf("Unable to retrieve block from db %v", err)
-			continue
-		}
-		if retBlock == nil {
-			log.Debug("Block does not exist in db")
-			continue
-		}
-		response = append(response, retBlock)
-	}
-
-	log.WithField("peer", msg.Peer).
-		Debug("Sending response for batch blocks")
+	log.WithField("peer", msg.Peer).Debug("Sending response for batch blocks")
 
 	defer sentBatchedBlocks.Inc()
 	if err := rs.p2p.Send(ctx, &pb.BatchedBeaconBlockResponse{
@@ -653,4 +624,47 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 		Debug("Announcing canonical block")
 	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()
+}
+
+func (rs *RegularSync) buildCanonicalBlockList(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+	b, err := rs.db.Block(bytesutil.ToBytes32(headRoot))
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, fmt.Errorf("nil block %#x from db", bytesutil.Trunc(headRoot))
+	}
+	bList := []*pb.BeaconBlock{b}
+
+	// if head block was the same as the finalized block.
+	if bytes.Equal(headRoot, finalizedRoot) {
+		return bList, nil
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		parentRoot := bytesutil.ToBytes32(b.ParentRootHash32)
+		b, err = rs.db.Block(parentRoot)
+		if err != nil {
+			return nil, err
+		}
+		if b == nil {
+			return nil, fmt.Errorf("nil parent block %#x from db", bytesutil.Trunc(parentRoot[:]))
+		}
+
+		// Prepend parent to the beginning of the list.
+		bList = append([]*pb.BeaconBlock{b}, bList...)
+
+		// Stop if we reach the finalized root.
+		root, err := hashutil.HashBeaconBlock(b)
+		if err != nil {
+			return nil, err
+		}
+		if bytes.Equal(root[:], finalizedRoot) {
+			break
+		}
+	}
+	return bList, nil
 }
