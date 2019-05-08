@@ -46,6 +46,9 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 	for beaconState.Slot < req.SlotNumber {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		beaconState, err = state.ExecuteStateTransition(
 			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
