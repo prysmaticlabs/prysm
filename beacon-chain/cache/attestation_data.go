@@ -35,12 +35,14 @@ var (
 	})
 )
 
+// AttestationCache is used to store the cached results of an AttestationData request.
 type AttestationCache struct {
 	cache      *cache.FIFO
 	lock       sync.RWMutex
 	inProgress map[string]bool
 }
 
+// NewAttestationCache initializes the map and underlying cache.
 func NewAttestationCache() *AttestationCache {
 	return &AttestationCache{
 		cache:      cache.NewFIFO(wrapperToKey),
@@ -48,6 +50,8 @@ func NewAttestationCache() *AttestationCache {
 	}
 }
 
+// Get waits for any in progress calculation to complete before returning a
+// cached response, if any.
 func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationDataRequest) (*pb.AttestationDataResponse, error) {
 	if req == nil {
 		return nil, errors.New("nil attestation data request")
@@ -91,6 +95,8 @@ func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationDataReque
 	}
 }
 
+// MarkInProgress a request so that any other similar requests will block on
+// Get until MarkNotInProgress is called.
 func (c *AttestationCache) MarkInProgress(req *pb.AttestationDataRequest) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -105,6 +111,8 @@ func (c *AttestationCache) MarkInProgress(req *pb.AttestationDataRequest) error 
 	return nil
 }
 
+// MarkNotInProgress will release the lock on a given request. This should be
+// called after put.
 func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationDataRequest) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -116,6 +124,7 @@ func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationDataRequest) err
 	return nil
 }
 
+// Puts the response in the cache.
 func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationDataRequest, res *pb.AttestationDataResponse) error {
 	attestationCacheSize.Inc()
 	data := &attestationReqResWrapper{
