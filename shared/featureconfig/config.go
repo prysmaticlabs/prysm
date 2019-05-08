@@ -33,7 +33,6 @@ type FeatureFlagConfig struct {
 	DisableGossipSub              bool // DisableGossipSub in p2p messaging.
 	EnableCommitteesCache         bool // EnableCommitteesCache for state transition.
 	CacheTreeHash                 bool // CacheTreeHash determent whether tree hashes will be cached.
-	SyncProvideCanonicalList      bool // SyncProvideCanonicalList determines how sync service responds blocks by building canonical list.
 }
 
 var featureConfig *FeatureFlagConfig
