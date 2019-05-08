@@ -89,10 +89,9 @@ func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationDataReque
 	if exists && item != nil && item.(*attestationReqResWrapper).res != nil {
 		attestationCacheHit.Inc()
 		return item.(*attestationReqResWrapper).res, nil
-	} else {
-		attestationCacheMiss.Inc()
-		return nil, nil
 	}
+	attestationCacheMiss.Inc()
+	return nil, nil
 }
 
 // MarkInProgress a request so that any other similar requests will block on
@@ -124,7 +123,7 @@ func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationDataRequest) err
 	return nil
 }
 
-// Puts the response in the cache.
+// Put the response in the cache.
 func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationDataRequest, res *pb.AttestationDataResponse) error {
 	data := &attestationReqResWrapper{
 		req,
