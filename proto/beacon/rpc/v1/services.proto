@@ -15,7 +15,7 @@ service BeaconService {
   rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
   rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
   rpc ForkData(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.Fork);
-  rpc RecentBlockRoots(BlockRootsRequest) returns (BlockRootsRespond);
+  rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse);
 }
 
 service AttesterService {
@@ -168,17 +168,8 @@ message Eth1DataResponse {
   ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
 }
 
-message BlockRootsRequest {
-  uint64 count = 1;
-}
-
-message BlockRoot {
-  uint64 slot = 1;
-  bytes root = 2;
-}
-
-message BlockRootsRespond {
-  repeated BlockRoot block_roots = 1;
+message BlockTreeResponse {
+  repeated ethereum.beacon.p2p.v1.BeaconBlock tree = 1;
 }
 
 enum ValidatorStatus {

@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -24,6 +26,7 @@ type BeaconServer struct {
 	ctx                 context.Context
 	powChainService     powChainService
 	chainService        chainService
+	childFetcher        blockchain.ChildFetcher
 	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -273,12 +276,19 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
 }
 
-// RecentBlockRoots returns the list of canonical slots and roots. It starts from the head
-// and go down the canonical block list.
-func (bs *BeaconServer) RecentBlockRoots(ctx context.Context, request *pb.BlockRootsRequest) (*pb.BlockRootsRespond, error) {
-	blockRoots := bs.chainService.RecentCanonicalRoots(request.Count)
-	return &pb.BlockRootsRespond{
-		BlockRoots: blockRoots,
+// BlockTree returns the current tree of saved blocks starting from the justified state.
+func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.BlockTreeResponse, error) {
+	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
+	if err != nil {
+		return nil, err
+	}
+	highestSlot := bs.beaconDB.HighestBlockSlot()
+	kids, err := bs.childFetcher.BlockChildren(ctx, justifiedBlock, highestSlot)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.BlockTreeResponse{
+		Tree: kids,
 	}, nil
 }
 

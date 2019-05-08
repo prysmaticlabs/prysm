@@ -697,6 +697,11 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	}
 }
 
+func TestBlockTree_OK(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+}
+
 func Benchmark_Eth1Data(b *testing.B) {
 	db := internal.SetupDB(b)
 	defer internal.TeardownDB(b, db)

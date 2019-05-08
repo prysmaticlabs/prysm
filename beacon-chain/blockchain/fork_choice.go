@@ -32,6 +32,12 @@ type ForkChoice interface {
 	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
+// ChildFetcher defines a struct which can retrieve block children starting
+// from a given block root and ending at the highest observed slot.
+type ChildFetcher interface {
+	BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error)
+}
+
 // updateFFGCheckPts checks whether the existing FFG check points saved in DB
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
@@ -241,7 +247,7 @@ func (c *ChainService) lmdGhost(
 	highestSlot := c.beaconDB.HighestBlockSlot()
 	head := startBlock
 	for {
-		children, err := c.blockChildren(ctx, head, highestSlot)
+		children, err := c.BlockChildren(ctx, head, highestSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
@@ -276,7 +282,7 @@ func (c *ChainService) lmdGhost(
 	}
 }
 
-// blockChildren returns the child blocks of the given block up to a given
+// BlockChildren returns the child blocks of the given block up to a given
 // highest slot.
 //
 // ex:
@@ -288,7 +294,7 @@ func (c *ChainService) lmdGhost(
 // Spec pseudocode definition:
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
-func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
+func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
 
 	currentRoot, err := hashutil.HashBeaconBlock(block)
