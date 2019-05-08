@@ -101,16 +101,16 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (m *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
+
+}
+
 func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
 	return nil
 }
 
 func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return bytes.Equal(m.canonicalBlocks[slot], hash)
-}
-
-func (m mockChainService) InsertsCanonical(slot uint64, hash []byte) {
-	m.canonicalBlocks[slot] = hash
 }
 
 func (m mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {

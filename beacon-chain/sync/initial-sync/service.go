@@ -36,16 +36,14 @@ var debugError = "debug:"
 // Config defines the configurable properties of InitialSync.
 //
 type Config struct {
-	SyncPollingInterval     time.Duration
-	BlockBufferSize         int
-	BlockAnnounceBufferSize int
-	BatchedBlockBufferSize  int
-	StateBufferSize         int
-	BeaconDB                *db.BeaconDB
-	P2P                     p2pAPI
-	SyncService             syncService
-	ChainService            chainService
-	PowChain                powChainService
+	SyncPollingInterval    time.Duration
+	BatchedBlockBufferSize int
+	StateBufferSize        int
+	BeaconDB               *db.BeaconDB
+	P2P                    p2pAPI
+	SyncService            syncService
+	ChainService           chainService
+	PowChain               powChainService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -54,11 +52,9 @@ type Config struct {
 // StateBufferSize determines the buffer size of the `stateBuf` channel.
 func DefaultConfig() *Config {
 	return &Config{
-		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
-		BlockBufferSize:         params.BeaconConfig().DefaultBufferSize,
-		BatchedBlockBufferSize:  params.BeaconConfig().DefaultBufferSize,
-		BlockAnnounceBufferSize: params.BeaconConfig().DefaultBufferSize,
-		StateBufferSize:         params.BeaconConfig().DefaultBufferSize,
+		SyncPollingInterval:    time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
+		BatchedBlockBufferSize: params.BeaconConfig().DefaultBufferSize,
+		StateBufferSize:        params.BeaconConfig().DefaultBufferSize,
 	}
 }
 
@@ -93,16 +89,13 @@ type InitialSync struct {
 	chainService        chainService
 	db                  *db.BeaconDB
 	powchain            powChainService
-	blockAnnounceBuf    chan p2p.Message
 	batchedBlockBuf     chan p2p.Message
-	blockBuf            chan p2p.Message
 	stateBuf            chan p2p.Message
 	currentSlot         uint64
 	highestObservedSlot uint64
 	highestObservedRoot [32]byte
 	beaconStateSlot     uint64
 	syncPollingInterval time.Duration
-	inMemoryBlocks      map[uint64]*pb.BeaconBlock
 	syncedFeed          *event.Feed
 	stateReceived       bool
 	lastRequestedSlot   uint64
@@ -119,9 +112,7 @@ func NewInitialSyncService(ctx context.Context,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
-	blockBuf := make(chan p2p.Message, cfg.BlockBufferSize)
 	stateBuf := make(chan p2p.Message, cfg.StateBufferSize)
-	blockAnnounceBuf := make(chan p2p.Message, cfg.BlockAnnounceBufferSize)
 	batchedBlockBuf := make(chan p2p.Message, cfg.BatchedBlockBufferSize)
 
 	return &InitialSync{
@@ -135,12 +126,9 @@ func NewInitialSyncService(ctx context.Context,
 		currentSlot:         params.BeaconConfig().GenesisSlot,
 		highestObservedSlot: params.BeaconConfig().GenesisSlot,
 		beaconStateSlot:     params.BeaconConfig().GenesisSlot,
-		blockBuf:            blockBuf,
 		stateBuf:            stateBuf,
 		batchedBlockBuf:     batchedBlockBuf,
-		blockAnnounceBuf:    blockAnnounceBuf,
 		syncPollingInterval: cfg.SyncPollingInterval,
-		inMemoryBlocks:      map[uint64]*pb.BeaconBlock{},
 		syncedFeed:          new(event.Feed),
 		stateReceived:       false,
 		mutex:               new(sync.Mutex),
@@ -155,7 +143,6 @@ func (s *InitialSync) Start() {
 	}
 	s.currentSlot = cHead.Slot
 	go s.run()
-	go s.checkInMemoryBlocks()
 }
 
 // Stop kills the initial sync goroutine.
@@ -222,6 +209,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}
 	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
+		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
 		switch err.(type) {
 		case *blockchain.BlockFailedProcessingErr:
 			// If the block fails processing, we delete it from our DB.
@@ -244,6 +232,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 
 	if stateRoot != s.highestObservedRoot {
 		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
+		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
 		log.Fatalf(
 			"Canonical state root %#x does not match highest observed root from peer %#x",
 			stateRoot,
@@ -257,40 +246,16 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	return nil
 }
 
-// checkInMemoryBlocks is another routine which will run concurrently with the
-// main routine for initial sync, where it checks the blocks saved in memory regularly
-// to see if the blocks are valid enough to be processed.
-func (s *InitialSync) checkInMemoryBlocks() {
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		default:
-			if s.currentSlot == s.highestObservedSlot {
-				return
-			}
-			s.mutex.Lock()
-			if block, ok := s.inMemoryBlocks[s.currentSlot+1]; ok && s.currentSlot+1 <= s.highestObservedSlot {
-				s.processBlock(s.ctx, block)
-			}
-			s.mutex.Unlock()
-		}
-	}
-}
-
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
 func (s *InitialSync) run() {
-	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
 	batchedBlocksub := s.p2p.Subscribe(&pb.BatchedBeaconBlockResponse{}, s.batchedBlockBuf)
 	beaconStateSub := s.p2p.Subscribe(&pb.BeaconStateResponse{}, s.stateBuf)
 	defer func() {
-		blockSub.Unsubscribe()
 		beaconStateSub.Unsubscribe()
 		batchedBlocksub.Unsubscribe()
 		close(s.batchedBlockBuf)
-		close(s.blockBuf)
 		close(s.stateBuf)
 	}()
 
@@ -304,11 +269,6 @@ func (s *InitialSync) run() {
 		case <-s.ctx.Done():
 			log.Debug("Exiting goroutine")
 			return
-		case msg := <-s.blockBuf:
-			safelyHandleMessage(func(message p2p.Message) {
-				data := message.Data.(*pb.BeaconBlockResponse)
-				s.processBlock(message.Ctx, data.Block)
-			}, msg)
 		case msg := <-s.stateBuf:
 			safelyHandleMessage(s.processState, msg)
 		case msg := <-s.batchedBlockBuf:

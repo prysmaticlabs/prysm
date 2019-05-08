@@ -22,6 +22,7 @@ import (
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	"github.com/multiformats/go-multiaddr"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -63,6 +64,7 @@ type ServerConfig struct {
 	NoDiscovery            bool
 	BootstrapNodeAddr      string
 	RelayNodeAddr          string
+	HostAddress            string
 	Port                   int
 	DepositContractAddress string
 }
@@ -73,6 +75,16 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	opts := buildOptions(cfg.Port)
 	if cfg.RelayNodeAddr != "" {
 		opts = append(opts, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
+	} else if cfg.HostAddress != "" {
+		opts = append(opts, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
+			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.HostAddress, cfg.Port))
+			if err != nil {
+				log.WithError(err).Error("Unable to create external multiaddress")
+			} else {
+				addrs = append(addrs, external)
+			}
+			return addrs
+		}))
 	}
 	if !checkAvailablePort(cfg.Port) {
 		cancel()

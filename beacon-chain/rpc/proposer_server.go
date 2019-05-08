@@ -83,15 +83,11 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
+	ps.chainService.UpdateCanonicalRoots(blk, h)
 	log.WithFields(logrus.Fields{
-		"headRoot":  fmt.Sprintf("0x%x", bytesutil.Trunc(h[:])),
-		"headSlot":  blk.Slot - params.BeaconConfig().GenesisSlot,
-		"stateSlot": beaconState.Slot - params.BeaconConfig().GenesisSlot,
+		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headSlot": blk.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Chain head block and state updated")
-
-	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
-	}
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
@@ -120,7 +116,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 
 	for beaconState.Slot < req.ProposalBlockSlot-1 {
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
+			ctx, beaconState, nil /* block */, blockRoot, state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
@@ -129,18 +125,22 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	beaconState.Slot++
 
 	var attsReadyForInclusion []*pbp2p.Attestation
-	for _, val := range atts {
-		if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
-			attsReadyForInclusion = append(attsReadyForInclusion, val)
+	for _, att := range atts {
+		if att.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
+			attsReadyForInclusion = append(attsReadyForInclusion, att)
 		}
 	}
 
 	validAtts := make([]*pbp2p.Attestation, 0, len(attsReadyForInclusion))
 	for _, att := range attsReadyForInclusion {
 		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
-			log.WithError(err).WithField(
-				"slot", att.Data.Slot-params.BeaconConfig().GenesisSlot).Warn(
-				"Skipping, pending attestation failed verification")
+			log.WithError(err).WithFields(logrus.Fields{
+				"slot":     att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"headRoot": bytesutil.Trunc(att.Data.BeaconBlockRootHash32)}).Warn(
+				"Deleting failed pending attestation from DB")
+			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
+			}
 			continue
 		}
 		validAtts = append(validAtts, att)
