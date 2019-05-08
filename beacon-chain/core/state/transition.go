@@ -70,6 +70,10 @@ func ExecuteStateTransition(
 	headRoot [32]byte,
 	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.StateTransition")
 	defer span.End()
 	var err error
