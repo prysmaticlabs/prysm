@@ -39,6 +39,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "db_test.go",
+        "schema_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

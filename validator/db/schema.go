@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -23,38 +24,58 @@ var (
 	attestationBucket   = []byte("attestation-bucket")
 )
 
-func getBucket(tx *bolt.Tx, pubKey *bls.PublicKey, forkVersion uint64, subBucket []byte) *bolt.Bucket {
-	bucket := tx.Bucket(
-		//reducing the nesting level of buckets, increased speed
-		append(pubKey.Marshal(), bytesutil.Bytes8(forkVersion)...),
-	)
-	if bucket == nil {
-		return nil
+func getBucket(tx *bolt.Tx, pubKey *bls.PublicKey, forkVersion uint64, subBucketKey []byte, createIfNotExists bool) *bolt.Bucket {
+	//reducing the nesting level of buckets, increased speed
+	parentBucketKey := append(pubKey.Marshal(), bytesutil.Bytes8(forkVersion)...)
+	parentBucket := tx.Bucket(parentBucketKey)
+	if parentBucket == nil {
+		fmt.Printf("parentBucket == nil\n")
+		if createIfNotExists {
+			var err error
+			parentBucket, err = tx.CreateBucket(parentBucketKey)
+			if err != nil {
+				log.WithError(err).Error("don't can create bucket")
+				return nil
+			}
+		} else {
+			return nil
+		}
+	} else {
+		fmt.Printf("parentBucket != nil\n")
 	}
-	return bucket.Bucket(subBucket)
+	subBucket := parentBucket.Bucket(subBucketKey)
+	if subBucket == nil && createIfNotExists {
+		var err error
+		subBucket, err = parentBucket.CreateBucket(subBucketKey)
+		if err != nil {
+			log.WithError(err).Error("don't can create bucket")
+			return nil
+		}
+	}
+	return subBucket
 }
 
-func (db *ValidatorDB) lastInAllForks(pubKey *bls.PublicKey, subBucket []byte, fn func([]byte) error) error {
+func (db *ValidatorDB) lastInAllForks(pubKey *bls.PublicKey, subBucketKey []byte, fn func([]byte, []byte) error) error {
 	return db.db.View(func(tx *bolt.Tx) error {
 		c := tx.Cursor()
 
 		pubKeyBytes := pubKey.Marshal()
+		var maxKey, valueForMaxKey []byte
 		for k, v := c.Seek(pubKeyBytes); k != nil && bytes.HasPrefix(k, pubKeyBytes); k, v = c.Next() {
 			if v != nil {
 				log.Debug("found value, not bucket")
 				continue
 			}
 			bucket := tx.Bucket(k)
-			subBucket := bucket.Bucket(proposedBlockBucket)
+			subBucket := bucket.Bucket(subBucketKey)
 
-			// TODO test that the last() returns the maximum key, regardless of the order of push()
-			_, lastInForkEnc := subBucket.Cursor().Last()
-			if lastInForkEnc != nil {
-				if err := fn(lastInForkEnc); err != nil {
-					return err
-				}
+			key, value := subBucket.Cursor().Last()
+			if bytes.Compare(maxKey, key) < 0 {
+				maxKey = key
+				valueForMaxKey = value
 			}
+
 		}
-		return nil
+		return fn(maxKey, valueForMaxKey)
 	})
 }

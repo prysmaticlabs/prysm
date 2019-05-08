@@ -29,7 +29,7 @@ func setupDB(t testing.TB) *ValidatorDB {
 	return db
 }
 
-// teardownDB cleans up a test BeaconDB instance.
+// teardownDB cleans up a test ValidatorDB instance.
 func teardownDB(t testing.TB, db *ValidatorDB) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
@@ -40,13 +40,13 @@ func teardownDB(t testing.TB, db *ValidatorDB) {
 }
 
 func TestClearDB(t *testing.T) {
-	beaconDB := setupDB(t)
-	path := strings.TrimSuffix(beaconDB.DatabasePath, "beaconchain.db")
+	validatorDB := setupDB(t)
+	path := strings.TrimSuffix(validatorDB.DatabasePath, "validator.db")
 	if err := ClearDB(path); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(beaconDB.DatabasePath); !os.IsNotExist(err) {
+	if _, err := os.Stat(validatorDB.DatabasePath); !os.IsNotExist(err) {
 		t.Fatalf("db wasnt cleared %v", err)
 	}
 }

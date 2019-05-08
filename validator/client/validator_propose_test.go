@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -22,6 +23,21 @@ type mocks struct {
 	beaconClient    *internal.MockBeaconServiceClient
 	validatorClient *internal.MockValidatorServiceClient
 	attesterClient  *internal.MockAttesterServiceClient
+}
+
+type testWraper struct {
+	t    *testing.T
+	db   *db.ValidatorDB
+	ctrl *gomock.Controller
+}
+
+func (w *testWraper) finish() {
+	if w.db != nil {
+		internal.TeardownDB(w.t, w.db)
+	}
+	if w.ctrl != nil {
+		w.ctrl.Finish()
+	}
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
@@ -38,9 +54,16 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		attesterClient:  m.attesterClient,
 		validatorClient: m.validatorClient,
 		keys:            keyMap,
+		db:              internal.SetupDB(t),
 	}
 
-	return validator, m, ctrl.Finish
+	var testWraper = &testWraper{
+		t:    t,
+		db:   validator.db,
+		ctrl: ctrl,
+	}
+
+	return validator, m, testWraper.finish
 }
 
 func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
