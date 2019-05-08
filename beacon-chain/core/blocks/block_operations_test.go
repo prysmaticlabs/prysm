@@ -1057,7 +1057,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	}
 
 	attestation := &pb.Attestation{
-		AggregateSignature: []byte("signed"),
+		Signature: []byte("signed"),
 		Data: &pb.AttestationData{
 			Slot:  params.BeaconConfig().GenesisSlot + 2,
 			Shard: 2,
@@ -1070,7 +1070,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			CustodyBit_0Indices: tt.wantedCustodyBit0Indices,
 			CustodyBit_1Indices: tt.wantedCustodyBit1Indices,
 			Data:                attestation.Data,
-			Signature:           attestation.AggregateSignature,
+			Signature:           attestation.Signature,
 		}
 		ia, err := blocks.ConvertToIndexed(state, attestation)
 		if err != nil {
