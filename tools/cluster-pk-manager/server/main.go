@@ -36,6 +36,7 @@ func main() {
 		wt := newWatchtower(db)
 		kc := newkeyChecker(db, *beaconRPCPath)
 		go wt.WatchPods()
+		go kc.run()
 	}
 
 	s := grpc.NewServer()
