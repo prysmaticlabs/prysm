@@ -65,4 +65,5 @@ var BeaconChainFlags = []cli.Flag{
 	DisableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
 	CacheTreeHashFlag,
+	SyncProvideCanonicalList,
 }
