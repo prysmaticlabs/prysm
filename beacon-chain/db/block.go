@@ -267,7 +267,7 @@ func (db *BeaconDB) CanonicalBlockBySlot(ctx context.Context, slot uint64) (*pb.
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)))
 
-    var block *pb.BeaconBlock
+	var block *pb.BeaconBlock
 	slotEnc := encodeSlotNumber(slot)
 
 	err := db.view(func(tx *bolt.Tx) error {

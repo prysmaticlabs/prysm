@@ -286,8 +286,12 @@ func (c *ChainService) runStateTransition(
 			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Block transition successfully processed")
 
+		blockRoot, err := hashutil.HashBeaconBlock(block)
+		if err != nil {
+			return nil, err
+		}
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
 	}

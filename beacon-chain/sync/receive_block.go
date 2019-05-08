@@ -193,7 +193,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 			"slot": block.Slot,
 			"root": fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))},
 		).Warn("Received Block from a forked chain")
-		if err := rs.db.SaveHistoricalState(ctx, beaconState); err != nil {
+		if err := rs.db.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 			log.Errorf("Could not save historical state %v", err)
 			return nil, nil, false, err
 		}

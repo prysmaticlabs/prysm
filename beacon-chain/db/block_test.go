@@ -113,13 +113,13 @@ func TestDeleteBlock_OK(t *testing.T) {
 	}
 }
 
-func TestBlockBySlotEmptyChain_OK(t *testing.T) {
+func TestBlocksBySlotEmptyChain_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
-	block, _ := db.BlockBySlot(ctx, 0)
-	if block != nil {
+	blocks, _ := db.BlocksBySlot(ctx, 0)
+	if blocks != nil {
 		t.Error("BlockBySlot should return nil for an empty chain")
 	}
 }
@@ -158,7 +158,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	block, err := db.BlockBySlot(ctx, 0)
+	block, err := db.CanonicalBlockBySlot(ctx, params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatalf("failed to get genesis block: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:             1,
+		Slot:             params.BeaconConfig().GenesisSlot + 1,
 		ParentRootHash32: bHash[:],
 	}
 	b2Hash, err := hashutil.HashBeaconBlock(block2)
@@ -187,7 +187,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to record the new head of the main chain: %v", err)
 	}
 
-	b2Prime, err := db.BlockBySlot(ctx, 1)
+	b2Prime, err := db.CanonicalBlockBySlot(ctx, params.BeaconConfig().GenesisSlot+1)
 	if err != nil {
 		t.Fatalf("failed to retrieve slot 1: %v", err)
 	}

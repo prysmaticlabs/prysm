@@ -128,7 +128,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	}
 	chainService.attsService = attHandler
 
-	block4State, err := chainService.beaconDB.HistoricalStateFromSlot(ctx, blocks[4].Slot)
+	block4State, err := chainService.beaconDB.HistoricalStateFromSlot(ctx, blocks[4].Slot, roots[4])
 	if err != nil {
 		t.Fatal(err)
 	}

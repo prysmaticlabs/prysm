@@ -45,7 +45,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 	// the slot of justified block saved in DB.
 	if lastJustifiedSlot > savedJustifiedBlock.Slot {
 		// Retrieve the new justified block from DB using the new justified slot and save it.
-		newJustifiedBlock, err := c.beaconDB.BlockBySlot(ctx, lastJustifiedSlot)
+		newJustifiedBlock, err := c.beaconDB.CanonicalBlockBySlot(ctx, lastJustifiedSlot)
 		if err != nil {
 			return err
 		}
@@ -55,14 +55,18 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		for newJustifiedBlock == nil {
 			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
-			newJustifiedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
+			newJustifiedBlock, err = c.beaconDB.CanonicalBlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
 				return err
 			}
 		}
 
+		newJustifiedRoot, err := hashutil.HashBeaconBlock(newJustifiedBlock)
+		if err != nil {
+			return err
+		}
 		// Fetch justified state from historical states db.
-		newJustifiedState, err := c.beaconDB.HistoricalStateFromSlot(ctx, newJustifiedBlock.Slot)
+		newJustifiedState, err := c.beaconDB.HistoricalStateFromSlot(ctx, newJustifiedBlock.Slot, newJustifiedRoot)
 		if err != nil {
 			return err
 		}
@@ -83,7 +87,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 	}
 	if lastFinalizedSlot > savedFinalizedBlock.Slot {
 		// Retrieve the new finalized block from DB using the new finalized slot and save it.
-		newFinalizedBlock, err := c.beaconDB.BlockBySlot(ctx, lastFinalizedSlot)
+		newFinalizedBlock, err := c.beaconDB.CanonicalBlockBySlot(ctx, lastFinalizedSlot)
 		if err != nil {
 			return err
 		}
@@ -93,15 +97,19 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		for newFinalizedBlock == nil {
 			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
-			newFinalizedBlock, err = c.beaconDB.BlockBySlot(ctx, lastAvailBlkSlot)
+			newFinalizedBlock, err = c.beaconDB.CanonicalBlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
 				return err
 			}
 		}
 
+		newFinalizedRoot, err := hashutil.HashBeaconBlock(newFinalizedBlock)
+		if err != nil {
+			return err
+		}
 		// Generate the new finalized state with using new finalized block and
 		// save it.
-		newFinalizedState, err := c.beaconDB.HistoricalStateFromSlot(ctx, lastFinalizedSlot)
+		newFinalizedState, err := c.beaconDB.HistoricalStateFromSlot(ctx, lastFinalizedSlot, newFinalizedRoot)
 		if err != nil {
 			return err
 		}
@@ -169,7 +177,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 			currentHead.Slot-params.BeaconConfig().GenesisSlot, newHead.Slot-params.BeaconConfig().GenesisSlot)
 
 		// Only regenerate head state if there was a reorg.
-		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot)
+		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot, newHeadRoot)
 		if err != nil {
 			return fmt.Errorf("could not gen state: %v", err)
 		}
@@ -182,7 +190,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 
 	// If we receive forked blocks.
 	if newHead.Slot != newState.Slot {
-		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot)
+		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot, newHeadRoot)
 		if err != nil {
 			return fmt.Errorf("could not gen state: %v", err)
 		}
@@ -297,12 +305,12 @@ func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock,
 	}
 	startSlot := block.Slot + 1
 	for i := startSlot; i <= highestSlot; i++ {
-		block, err := c.beaconDB.BlockBySlot(ctx, i)
+		children, err := c.beaconDB.BlockChildrenBySlot(ctx, i, block.ParentRootHash32)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block by slot: %v", err)
 		}
 		// Continue if there's a skip block.
-		if block == nil {
+		if children == nil {
 			continue
 		}
 

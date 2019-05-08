@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/boltdb/bolt"
@@ -170,7 +171,12 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	db.serializedState = enc
 	db.stateHash = stateHash
 
-	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
+	blockRoot, err := hashutil.HashBeaconBlock(beaconState.LatestBlock)
+	if err != nil {
+		return err
+	}
+
+	if err := db.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 		return err
 	}
 
@@ -213,11 +219,11 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 }
 
 // SaveHistoricalState saves the last finalized state in the db.
-func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.BeaconState) error {
+func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.SaveHistoricalState")
 	defer span.End()
 
-	slotBinary := encodeSlotNumber(beaconState.Slot)
+	slotRootBinary := encodeSlotNumberRoot(beaconState.Slot, blockRoot)
 	stateHash, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return err
@@ -226,7 +232,7 @@ func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.Bea
 	return db.update(func(tx *bolt.Tx) error {
 		histState := tx.Bucket(histStateBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
-		if err := histState.Put(slotBinary, stateHash[:]); err != nil {
+		if err := histState.Put(slotRootBinary, stateHash[:]); err != nil {
 			return err
 		}
 		beaconStateEnc, err := proto.Marshal(beaconState)
@@ -293,7 +299,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64, bl
 			blockRootBinary := k[8:]
 			slotNumber := decodeToSlotNumber(slotBinary)
 
-			if slotNumber == slot && bytes.Equal(blockRootBinary, blockRoot[:]){
+			if slotNumber == slot && bytes.Equal(blockRootBinary, blockRoot[:]) {
 				stateExists = true
 				highestStateSlot = slotNumber
 				histStateKey = v
@@ -463,7 +469,8 @@ func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
 		hsCursor := histState.Cursor()
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
-			keySlotNumber := decodeToSlotNumber(k)
+			slotBinary := k[:8]
+			keySlotNumber := decodeToSlotNumber(slotBinary)
 			if keySlotNumber < slot {
 				if err := histState.Delete(k); err != nil {
 					return err

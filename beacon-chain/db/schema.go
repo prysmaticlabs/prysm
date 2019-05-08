@@ -25,7 +25,7 @@ var (
 	validatorBucket         = []byte("validator")
 
 	mainChainHeightKey      = []byte("chain-height")
-	canonicalHeadKey = []byte("canonical-head")
+	canonicalHeadKey        = []byte("canonical-head")
 	stateLookupKey          = []byte("state")
 	finalizedStateLookupKey = []byte("finalized-state")
 	justifiedStateLookupKey = []byte("justified-state")
