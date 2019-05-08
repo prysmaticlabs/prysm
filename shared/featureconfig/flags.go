@@ -45,11 +45,6 @@ var (
 		Name:  "disable-gossip-sub",
 		Usage: "Disable gossip sub messaging and use floodsub messaging",
 	}
-	// SyncProvideCanonicalList allows sync respond back canonical block lists without using slots and ranges.
-	SyncProvideCanonicalList = cli.BoolFlag{
-		Name:  "sync-provide-canonical-list-only",
-		Usage: "Respond init sync request with canonical block list",
-	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -65,5 +60,4 @@ var BeaconChainFlags = []cli.Flag{
 	DisableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
 	CacheTreeHashFlag,
-	SyncProvideCanonicalList,
 }

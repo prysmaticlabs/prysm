@@ -46,8 +46,8 @@ message BeaconBlockResponse {
 }
 
 message BatchedBeaconBlockRequest {
-  uint64 start_slot = 1;
-  uint64 end_slot = 2;
+  bytes finalized_root = 1;
+  bytes head_root = 2;
 }
 
 message BatchedBeaconBlockResponse {

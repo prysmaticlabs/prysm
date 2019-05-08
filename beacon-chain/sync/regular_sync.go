@@ -14,13 +14,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -81,7 +79,6 @@ type RegularSync struct {
 	batchedRequestBuf            chan p2p.Message
 	stateRequestBuf              chan p2p.Message
 	chainHeadReqBuf              chan p2p.Message
-	chainHeadReqMap              map[[32]byte][][]byte
 	attestationBuf               chan p2p.Message
 	attestationReqByHashBuf      chan p2p.Message
 	announceAttestationBuf       chan p2p.Message
@@ -157,7 +154,6 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		announceAttestationBuf:   make(chan p2p.Message, cfg.AttestationsAnnounceBufSize),
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
-		chainHeadReqMap:          make(map[[32]byte][][]byte),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
 		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
 		blockAnnouncements:       make(map[uint64][]byte),
@@ -379,11 +375,6 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve chain head %v", err)
 		return err
 	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		log.Errorf("Could not hash head %v", err)
-		return err
-	}
 
 	stateRoot := rs.db.HeadStateRoot()
 	finalizedState, err := rs.db.FinalizedState()
@@ -397,12 +388,6 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not tree hash block %v", err)
 		return err
 	}
-
-	// Save what is responded (head root and finalized root) to the requester.
-	// This is needed later to construct & respond canonical batch block list.
-	var peerID [32]byte
-	copy(peerID[:], msg.Peer)
-	rs.chainHeadReqMap[peerID] = [][]byte{finalizedRoot[:], headRoot[:]}
 
 	req := &pb.ChainHeadResponse{
 		CanonicalSlot:             head.Slot,
@@ -532,77 +517,17 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBatchedBlockRequest")
 	defer span.End()
 	batchedBlockReq.Inc()
-	data := msg.Data.(*pb.BatchedBeaconBlockRequest)
-	startSlot, endSlot := data.StartSlot, data.EndSlot
+	req := msg.Data.(*pb.BatchedBeaconBlockRequest)
 
-	block, err := rs.db.ChainHead()
+	// To prevent circuit in the chain and the potentiality peer can bomb a node building block list.
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	response, err := rs.buildCanonicalBlockList(ctx, req.FinalizedRoot, req.HeadRoot)
+	cancel()
 	if err != nil {
-		log.Errorf("Could not retrieve chain head %v", err)
-		return err
+		return fmt.Errorf("could not build canonical block list %v", err)
 	}
 
-	bState, err := rs.db.HeadState(ctx)
-	if err != nil {
-		log.Errorf("Could not retrieve last finalized slot %v", err)
-		return err
-	}
-
-	finalizedSlot := helpers.StartSlot(bState.FinalizedEpoch)
-
-	currentSlot := block.Slot
-	if currentSlot < startSlot || finalizedSlot > endSlot {
-		log.WithFields(logrus.Fields{
-			"currentSlot":   currentSlot,
-			"startSlot":     startSlot,
-			"endSlot":       endSlot,
-			"finalizedSlot": finalizedSlot},
-		).Debug("invalid batch request: current slot < start slot || finalized slot > end slot")
-		return err
-	}
-
-	blockRange := endSlot - startSlot
-	// Handle overflows
-	if startSlot > endSlot {
-		// Do not process requests with invalid slot ranges
-		log.WithFields(logrus.Fields{
-			"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
-			"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
-		).Debug("Invalid batched block range")
-		return err
-	}
-
-	var response []*pb.BeaconBlock
-	if featureconfig.FeatureConfig().SyncProvideCanonicalList {
-		var peerID [32]byte
-		copy(peerID[:], msg.Peer)
-		canonicalListReq := rs.chainHeadReqMap[peerID]
-
-		// To prevent circuit in the chain and the potentiality peer can bomb a node building block list.
-		ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-		response, err = rs.buildCanonicalBlockList(ctx, canonicalListReq[0], canonicalListReq[1])
-		cancel()
-
-		if err != nil {
-			return fmt.Errorf("could not build canonical block list %v", err)
-		}
-	} else {
-		response = make([]*pb.BeaconBlock, 0, blockRange)
-		for i := startSlot; i <= endSlot; i++ {
-			retBlock, err := rs.db.BlockBySlot(ctx, i)
-			if err != nil {
-				log.Errorf("Unable to retrieve block from db %v", err)
-				continue
-			}
-			if retBlock == nil {
-				log.Debug("Block does not exist in db")
-				continue
-			}
-			response = append(response, retBlock)
-		}
-	}
-
-	log.WithField("peer", msg.Peer).
-		Debug("Sending response for batch blocks")
+	log.WithField("peer", msg.Peer).Debug("Sending response for batch blocks")
 
 	defer sentBatchedBlocks.Inc()
 	if err := rs.p2p.Send(ctx, &pb.BatchedBeaconBlockResponse{

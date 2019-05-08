@@ -83,10 +83,6 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Info("Disabled gossipsub, using floodsub")
 		cfg.DisableGossipSub = true
 	}
-	if ctx.GlobalBool(SyncProvideCanonicalList.Name) {
-		log.Info("Enabled sync respond with canonical block list")
-		cfg.SyncProvideCanonicalList = true
-	}
 
 	InitFeatureConfig(cfg)
 }
