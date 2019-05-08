@@ -700,6 +700,21 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 func TestBlockTree_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	// We want to ensure that if our block tree looks as follows, the RPC response
+	// returns the correct information.
+	//                   /->[A, Slot 3, 5 Votes]->[B, Slot 4, 6 Votes]
+	// [Justified Block]->[C, Slot 3, 4 Votes]
+	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
+	justifiedState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+	}
+	justifiedBlock := &pbp2p.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot,
+	}
+	ctx := context.Background()
+	if err := db.UpdateChainHead(ctx, justifiedBlock, justifiedState); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func Benchmark_Eth1Data(b *testing.B) {
