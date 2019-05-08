@@ -80,9 +80,14 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
-	if err := ps.chainService.ApplyForkChoiceRule(ctx, blk, beaconState); err != nil {
+	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
+	ps.chainService.UpdateCanonicalRoots(blk, h)
+	log.WithFields(logrus.Fields{
+		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headSlot": blk.Slot - params.BeaconConfig().GenesisSlot,
+	}).Info("Chain head block and state updated")
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
@@ -111,7 +116,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 
 	for beaconState.Slot < req.ProposalBlockSlot-1 {
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
+			ctx, beaconState, nil /* block */, blockRoot, state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)

@@ -99,6 +99,9 @@ func (ms *mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoo
 	return nil
 }
 
+func (ms *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
+}
+
 type mockOperationService struct{}
 
 func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
