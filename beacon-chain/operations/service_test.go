@@ -21,11 +21,9 @@ import (
 var _ = OperationFeeds(&Service{})
 
 type mockBroadcaster struct {
-	broadcastCalled bool
 }
 
 func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
-	mb.broadcastCalled = true
 }
 
 func init() {
@@ -115,10 +113,6 @@ func TestIncomingAttestation_OK(t *testing.T) {
 		}}
 	if err := service.HandleAttestations(context.Background(), attestation); err != nil {
 		t.Error(err)
-	}
-
-	if !broadcaster.broadcastCalled {
-		t.Error("Attestation was not broadcasted")
 	}
 }
 

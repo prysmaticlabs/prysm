@@ -267,11 +267,3 @@ func (c *ChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
 	}
 	return blockRoots
 }
-
-// InsertsCanonical inserts a canonical block hash to its corresponding slot.
-// This is used for testing purpose.
-func (c *ChainService) InsertsCanonical(slot uint64, hash []byte) {
-	c.canonicalBlocksLock.Lock()
-	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[slot] = hash
-}

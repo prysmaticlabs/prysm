@@ -333,7 +333,7 @@ func (vs *ValidatorServer) lookupValidatorStatusFlag(validatorIdx uint64, beacon
 
 	if v.ActivationEpoch > epoch {
 		status = pb.ValidatorStatus_PENDING_ACTIVE
-	} else if v.ActivationEpoch >= helpers.EntryExitEffectEpoch(epoch) && epoch < v.ExitEpoch {
+	} else if epoch >= v.ActivationEpoch && epoch < v.ExitEpoch {
 		status = pb.ValidatorStatus_ACTIVE
 	} else if v.StatusFlags == pbp2p.Validator_INITIATED_EXIT {
 		status = pb.ValidatorStatus_INITIATED_EXIT

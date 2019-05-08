@@ -13,16 +13,37 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+type mockBroadcaster struct{}
+
+func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
+}
+
 func TestAttestHead_OK(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
+		p2p:              &mockBroadcaster{},
+		beaconDB:         db,
+	}
+	head := &pbp2p.BeaconBlock{
+		Slot:             999,
+		ParentRootHash32: []byte{'a'},
+	}
+	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
+		t.Fatal(err)
+	}
+	root, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		t.Fatal(err)
 	}
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
 			Slot:                    999,
 			Shard:                   1,
 			CrosslinkDataRootHash32: []byte{'a'},
+			BeaconBlockRootHash32:   root[:],
 		},
 	}
 	if _, err := attesterServer.AttestHead(context.Background(), req); err != nil {
@@ -73,6 +94,7 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
+		p2p:      &mockBroadcaster{},
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
@@ -168,6 +190,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
+		p2p:      &mockBroadcaster{},
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)

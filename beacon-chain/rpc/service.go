@@ -18,6 +18,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -36,6 +37,7 @@ func init() {
 type chainService interface {
 	StateInitializedFeed() *event.Feed
 	blockchain.BlockReceiver
+	blockchain.ForkChoice
 }
 
 type operationService interface {
@@ -77,6 +79,7 @@ type Service struct {
 	canonicalStateChan  chan *pbp2p.BeaconState
 	incomingAttestation chan *pbp2p.Attestation
 	credentialError     error
+	p2p                 p2p.Broadcaster
 }
 
 // Config options for the beacon node RPC server.
@@ -89,6 +92,7 @@ type Config struct {
 	POWChainService  powChainService
 	OperationService operationService
 	SyncService      syncService
+	Broadcaster      p2p.Broadcaster
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -99,6 +103,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		ctx:                 ctx,
 		cancel:              cancel,
 		beaconDB:            cfg.BeaconDB,
+		p2p:                 cfg.Broadcaster,
 		chainService:        cfg.ChainService,
 		powChainService:     cfg.POWChainService,
 		operationService:    cfg.OperationService,
@@ -166,6 +171,7 @@ func (s *Service) Start() {
 	attesterServer := &AttesterServer{
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
+		p2p:              s.p2p,
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,

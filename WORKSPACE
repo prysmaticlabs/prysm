@@ -21,9 +21,9 @@ http_archive(
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "723f53b4ea6d1524c921b2bc373d3fc7d37322311d9b3bac011314f6d6a56d0d",
-    strip_prefix = "bazel-tools-20cbdb188d18c5470697783258cd2ec2b531b710",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/20cbdb188d18c5470697783258cd2ec2b531b710.tar.gz"],
+    sha256 = "af4908ea16b43e0c88007742a5c54997ee068fc393f9850ade2d59b1d5f49f55",
+    strip_prefix = "bazel-tools-31382b2267b0bc3d9771085e3503473a061593e1",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/31382b2267b0bc3d9771085e3503473a061593e1.tar.gz"],
 )
 
 http_archive(
@@ -41,9 +41,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "42148736ab3e5852f0f7003ba45397aa6ca463e5ec493e75a25c2fd526addd6c",
-    strip_prefix = "rules_k8s-94e92d11da6fa178d035cedf9041bae9a104b948",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/94e92d11da6fa178d035cedf9041bae9a104b948.tar.gz",
+    sha256 = "00606b1de959028881220e2cdc1186068242de491f8782e30922e8285b5f3ad1",
+    strip_prefix = "rules_k8s-c1daa04ce0a83fbaa4396fb4987d7675cd24f25e",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/c1daa04ce0a83fbaa4396fb4987d7675cd24f25e.tar.gz",
 )
 
 load(
@@ -117,9 +117,9 @@ proto_library(
   srcs = ["src/proto/faucet.proto"],
   visibility = ["//visibility:public"],
 )""",
-    sha256 = "86c31c309192c4680995baefc8ca95101bc8291a21fbb7b7c5370564cda16efd",
-    strip_prefix = "prysm-testnet-site-b6c498382eef7052fbde220834a361f6b27d0d24",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/b6c498382eef7052fbde220834a361f6b27d0d24.tar.gz",
+    sha256 = "d57cbb11cbd8126d31385064315df731132401f5c5ea110e05ed86da350c9523",
+    strip_prefix = "prysm-testnet-site-3848e91aab9332a0b2c15291f65f09c94db1a84d",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/3848e91aab9332a0b2c15291f65f09c94db1a84d.tar.gz",
 )
 
 http_archive(
@@ -182,7 +182,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "bd0f8953cf5cb16e1f9d0a420ad20ebc08ffd344",  # v0.0.22
+    commit = "4d4f98f9ae7a78727e76c0cf5609bfa09e70715a",  # v0.0.20
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -195,7 +195,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_crypto",
     build_file_proto_mode = "disable_global",
-    commit = "b5d56559c07acc725b7c790138d8b66a9c6e0569",  # v0.0.2
+    commit = "b0ed0e663e8b6832bad3f4502b2f6551ff2686cd",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-crypto",
 )
 
@@ -237,7 +237,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_circuit",
-    commit = "b91a58921038f6bd3cdf18d7a88ec6d0e0acc391",  # v0.0.5
+    commit = "d07cd5f739a7878121b10e54a8ead734f93e2ddf",  # v0.0.4
     importpath = "github.com/libp2p/go-libp2p-circuit",
 )
 
@@ -358,13 +358,13 @@ go_repository(
 
 go_repository(
     name = "com_github_jbenet_goprocess",
-    commit = "2daecc40f7c1ff1b047f22eda49239ca58f4bc2d",  # v0.1.0
+    commit = "b497e2f366b8624394fb2e89c10ab607bebdde0b",
     importpath = "github.com/jbenet/goprocess",
 )
 
 go_repository(
     name = "com_github_multiformats_go_multistream",
-    commit = "7fe63401b47b8ee414fc16619e08a6abc1c5cf2b",  # v0.0.2
+    commit = "f3f44044ac2444cd3a017c0b269f8da65b0012f1",  # v0.0.1
     importpath = "github.com/multiformats/go-multistream",
 )
 
@@ -739,7 +739,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
-    commit = "9db3dbdde90f44d1c420192c5cefd60682fbdbb9",  # v0.0.2
+    commit = "25cbf38777e869acb77e8079c3c76d6b430e66ad",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-pubsub",
 )
 
@@ -949,7 +949,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "8c41231e01b2085512d98153bcffb847ff9b4b9f",  # v0.38.0
+    commit = "fcb9a2d5f791d07be64506ab54434de65989d370",  # v0.37.4
     importpath = "cloud.google.com/go",
 )
 
@@ -1003,7 +1003,7 @@ go_repository(
 
 go_repository(
     name = "com_github_pkg_errors",
-    commit = "05ac58a23b8798a296fa64f7d9c1559904db4b98",  # v0.8.1
+    commit = "27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7",
     importpath = "github.com/pkg/errors",
 )
 

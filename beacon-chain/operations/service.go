@@ -205,9 +205,6 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
 		return err
 	}
-	s.p2p.Broadcast(ctx, &pb.AttestationAnnounce{
-		Hash: hash[:],
-	})
 	return nil
 }
 

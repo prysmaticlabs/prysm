@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -33,29 +34,6 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 	}
 
 	if block.Slot < s.currentSlot {
-		return
-	}
-
-	// if it isn't the block in the next slot we check if it is a skipped slot.
-	// if it isn't skipped we save it in memory.
-	if block.Slot != (s.currentSlot + 1) {
-		// if parent exists we validate the block.
-		if s.doesParentExist(block) {
-			if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
-				// Debug error so as not to have noisy error logs
-				if strings.HasPrefix(err.Error(), debugError) {
-					log.Debug(strings.TrimPrefix(err.Error(), debugError))
-					return
-				}
-				log.Errorf("Unable to save block: %v", err)
-			}
-			return
-		}
-		s.mutex.Lock()
-		defer s.mutex.Unlock()
-		if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
-			s.inMemoryBlocks[block.Slot] = block
-		}
 		return
 	}
 
@@ -90,6 +68,10 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	}
 
 	log.Debug("Processing batched block response")
+	// Sort batchBlocks in ascending order.
+	sort.Slice(batchedBlocks, func(i, j int) bool {
+		return batchedBlocks[i].Slot < batchedBlocks[j].Slot
+	})
 	for _, block := range batchedBlocks {
 		s.processBlock(ctx, block)
 	}
@@ -148,10 +130,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	// delete block from memory.
-	if _, ok := s.inMemoryBlocks[block.Slot]; ok {
-		delete(s.inMemoryBlocks, block.Slot)
-	}
 	state, err := s.db.HeadState(ctx)
 	if err != nil {
 		return err

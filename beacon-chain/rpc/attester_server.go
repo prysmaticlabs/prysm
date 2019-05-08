@@ -10,13 +10,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
+	p2p              p2p.Broadcaster
 	beaconDB         *db.BeaconDB
 	operationService operationService
 }
@@ -33,6 +36,24 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 		return nil, err
 	}
 
+	// Update attestation target for RPC server to run necessary fork choice.
+	// We need to retrieve the head block to get its parent root.
+	blk, err := as.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRootHash32))
+	if err != nil {
+		return nil, err
+	}
+	attTarget := &pbp2p.AttestationTarget{
+		Slot:       att.Data.Slot,
+		BlockRoot:  att.Data.BeaconBlockRootHash32,
+		ParentRoot: blk.ParentRootHash32,
+	}
+	if err := as.beaconDB.SaveAttestationTarget(ctx, attTarget); err != nil {
+		return nil, fmt.Errorf("could not save attestation target")
+	}
+
+	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{
+		Hash: h[:],
+	})
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
 
