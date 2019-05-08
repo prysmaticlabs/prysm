@@ -15,19 +15,23 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	pbBeacon "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"go.opencensus.io/plugin/ocgrpc"
+	"google.golang.org/grpc"
 )
 
 var gasLimit = uint64(4000000)
 
 type server struct {
-	contract      *contracts.DepositContract
-	db            *db
-	depositAmount *big.Int
-	txPk          *ecdsa.PrivateKey
-	client        *ethclient.Client
+	contract        *contracts.DepositContract
+	db              *db
+	depositAmount   *big.Int
+	txPk            *ecdsa.PrivateKey
+	client          *ethclient.Client
+	validatorClient pbBeacon.ValidatorServiceClient
 
 	clientLock sync.Mutex
 }
@@ -35,6 +39,7 @@ type server struct {
 func newServer(
 	db *db,
 	rpcAddr string,
+	beaconRPCAddr string,
 	depositContractAddr string,
 	funderPK string,
 	validatorDepositAmount int64,
@@ -57,12 +62,21 @@ func newServer(
 
 	depositAmount := big.NewInt(validatorDepositAmount)
 
+	// connect to the beacon node
+	dialOpt := grpc.WithInsecure()
+	conn, err := grpc.DialContext(context.Background(), beaconRPCAddr, dialOpt, grpc.WithStatsHandler(&ocgrpc.ClientHandler{}))
+	if err != nil {
+		log.Errorf("Could not dial endpoint: %s, %v", beaconRPCAddr, err)
+	}
+	valClient := pbBeacon.NewValidatorServiceClient(conn)
+
 	return &server{
-		contract:      contract,
-		client:        client,
-		db:            db,
-		depositAmount: depositAmount,
-		txPk:          txPk,
+		contract:        contract,
+		client:          client,
+		db:              db,
+		depositAmount:   depositAmount,
+		txPk:            txPk,
+		validatorClient: valClient,
 	}
 }
 
