@@ -126,7 +126,6 @@ func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationDataRequest) err
 
 // Puts the response in the cache.
 func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationDataRequest, res *pb.AttestationDataResponse) error {
-	attestationCacheSize.Inc()
 	data := &attestationReqResWrapper{
 		req,
 		res,
@@ -135,6 +134,8 @@ func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationDataReque
 		return err
 	}
 	trim(c.cache, maxCacheSize)
+
+	attestationCacheSize.Set(float64(len(c.cache.List())))
 	return nil
 }
 
