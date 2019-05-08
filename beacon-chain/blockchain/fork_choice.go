@@ -297,30 +297,28 @@ func (c *ChainService) lmdGhost(
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
 func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, err
+	}
 	var children []*pb.BeaconBlock
-
-	//currentRoot, err := hashutil.HashBeaconBlock(block)
-	//if err != nil {
-	//	return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
-	//}
 	startSlot := block.Slot + 1
 	for i := startSlot; i <= highestSlot; i++ {
 		kids, err := c.beaconDB.BlocksBySlot(ctx, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block by slot: %v", err)
 		}
-		//// Continue if there's a skip block.
-		//if children == nil {
-		//	continue
-		//}
-		//
-		//parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-		//if currentRoot == parentRoot {
-		//	children = append(children, block)
-		//}
 		children = append(children, kids...)
 	}
-	return children, nil
+
+	filteredChildren := []*pb.BeaconBlock{}
+	for _, kid := range children {
+		parentRoot := bytesutil.ToBytes32(kid.ParentRootHash32)
+		if blockRoot == parentRoot {
+			filteredChildren = append(filteredChildren, kid)
+		}
+	}
+	return filteredChildren, nil
 }
 
 // isDescendant checks if the new head block is a descendant block of the current head.

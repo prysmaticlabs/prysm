@@ -312,7 +312,8 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64, bl
 		// If no historical state exists, retrieve and decode the finalized state.
 		if !stateExists {
 			for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
-				slotNumber := decodeToSlotNumber(k)
+				slotBinary := k[:8]
+				slotNumber := decodeToSlotNumber(slotBinary)
 				// find the state with slot closest to the requested slot
 				if slotNumber > highestStateSlot && slotNumber <= slot {
 					stateExists = true

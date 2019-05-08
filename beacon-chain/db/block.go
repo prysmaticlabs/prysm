@@ -284,7 +284,9 @@ func (db *BeaconDB) CanonicalBlockBySlot(ctx context.Context, slot uint64) (*pb.
 		bkt := tx.Bucket(mainChainBucket)
 		blockEnc := bkt.Get(slotEnc)
 		var err error
-		block, err = createBlock(blockEnc)
+		if blockEnc != nil {
+			block, err = createBlock(blockEnc)
+		}
 		return err
 	})
 

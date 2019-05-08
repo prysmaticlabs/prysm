@@ -473,6 +473,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		},
 	}
 
+	beaconState.LatestBlock = block
 	beaconState.Slot--
 	beaconState.DepositIndex = 0
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
@@ -581,6 +582,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
+	beaconState.LatestBlock = genesisBlock
 	if err := db.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -611,6 +613,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err = db.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
+		computedState.LatestBlock = block
 		if err = db.UpdateChainHead(ctx, block, computedState); err != nil {
 			t.Fatal(err)
 		}
@@ -646,6 +649,10 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		StateRootHash32:  stateRoot[:],
 		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
 		Body:             &pb.BeaconBlockBody{},
+	}
+	rootF, _ := hashutil.HashBeaconBlock(blockF)
+	if err := db.SaveHistoricalState(ctx, beaconState, rootF); err != nil {
+		t.Fatal(err)
 	}
 	initBlockStateRoot(t, blockF, chainService)
 
