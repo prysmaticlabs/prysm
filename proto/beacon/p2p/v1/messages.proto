@@ -51,9 +51,6 @@ message BatchedBeaconBlockRequest {
   bytes finalized_root = 3;
   bytes canonical_root = 4;
 }
-  bytes finalized_root = 1;
-  bytes canonical_root = 2;
-}
 
 message BatchedBeaconBlockResponse {
   repeated BeaconBlock batched_blocks = 1;
