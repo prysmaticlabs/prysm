@@ -372,20 +372,32 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 
 	head, err := rs.db.ChainHead()
 	if err != nil {
-		log.Errorf("Could not retrieve chain head %v", err)
+		log.Errorf("Could not retrieve chain head: %v", err)
 		return err
+	}
+	headBlkRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		log.Errorf("Could not hash chain head: %v", err)
+	}
+	finalizedBlk, err := rs.db.FinalizedBlock()
+	if err != nil {
+		log.Errorf("Could not retrieve finalized block: %v", err)
+		return err
+	}
+	finalizedBlkRoot, err := hashutil.HashBeaconBlock(finalizedBlk)
+	if err != nil {
+		log.Errorf("Could not hash finalized block: %v", err)
 	}
 
 	stateRoot := rs.db.HeadStateRoot()
 	finalizedState, err := rs.db.FinalizedState()
 	if err != nil {
-		log.Errorf("Could not retrieve finalized state %v", err)
+		log.Errorf("Could not retrieve finalized state: %v", err)
 		return err
 	}
-
 	finalizedRoot, err := hashutil.HashProto(finalizedState)
 	if err != nil {
-		log.Errorf("Could not tree hash block %v", err)
+		log.Errorf("Could not tree hash block: %v", err)
 		return err
 	}
 
@@ -393,6 +405,8 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		CanonicalSlot:             head.Slot,
 		CanonicalStateRootHash32:  stateRoot[:],
 		FinalizedStateRootHash32S: finalizedRoot[:],
+		CanonicalBlockRoot:        headBlkRoot[:],
+		FinalizedBlockRoot:        finalizedBlkRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
 	defer ChainHead.End()

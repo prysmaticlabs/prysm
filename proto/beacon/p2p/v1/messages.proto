@@ -60,6 +60,8 @@ message ChainHeadResponse {
   uint64 canonical_slot = 1;
   bytes canonical_state_root_hash32 = 2;
   bytes finalized_state_root_hash32s = 3;
+  bytes canonical_block_root = 4;
+  bytes finalized_block_root = 5;
 }
 
 message BeaconStateHashAnnounce {

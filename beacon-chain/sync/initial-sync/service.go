@@ -103,6 +103,8 @@ type InitialSync struct {
 	mutex               *sync.Mutex
 	nodeIsSynced        bool
 	bestPeer            peer.ID
+	canonicalBlockRoot  []byte
+	finalizedBlockRoot  []byte
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -170,6 +172,12 @@ func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 // InitializeBestPeer sets the peer ID of the highest observed peer.
 func (s *InitialSync) InitializeBestPeer(p peer.ID) {
 	s.bestPeer = p
+}
+
+// InitializeBlockRoots sets canonical and finalized block roots for batch request.
+func (s *InitialSync) InitializeBlockRoots(canonicalRoot []byte, finalizedRoot []byte) {
+	s.canonicalBlockRoot = canonicalRoot
+	s.finalizedBlockRoot = finalizedRoot
 }
 
 // HighestObservedSlot returns the highest observed slot.
