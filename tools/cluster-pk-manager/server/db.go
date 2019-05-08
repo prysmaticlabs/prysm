@@ -25,6 +25,10 @@ var (
 		Name: "assigned_pk_count",
 		Help: "The number of private keys currently assigned to alive pods",
 	})
+	blacklistedPKCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "blacklisted_pk_count",
+		Help: "The number of private keys which have been removed that are of exited validators",
+	})
 )
 
 var (
@@ -289,6 +293,7 @@ func (d *db) RemovePKFromDB(kMap keyMap) error {
 		if err != nil {
 			return err
 		}
+		blacklistedPKCount.Inc()
 		return tx.Bucket(assignedPkBucket).Put([]byte(kMap.podName), marshalled)
 	})
 }
