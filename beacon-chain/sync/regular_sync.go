@@ -186,7 +186,6 @@ func (rs *RegularSync) BlockAnnouncementFeed() *event.Feed {
 func (rs *RegularSync) run() {
 	announceBlockSub := rs.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, rs.announceBlockBuf)
 	blockSub := rs.p2p.Subscribe(&pb.BeaconBlockResponse{}, rs.blockBuf)
-	blockRequestSub := rs.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, rs.blockRequestBySlot)
 	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
 	batchedBlockRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
 	stateRequestSub := rs.p2p.Subscribe(&pb.BeaconStateRequest{}, rs.stateRequestBuf)
@@ -199,7 +198,6 @@ func (rs *RegularSync) run() {
 
 	defer announceBlockSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
-	defer blockRequestSub.Unsubscribe()
 	defer blockRequestHashSub.Unsubscribe()
 	defer batchedBlockRequestSub.Unsubscribe()
 	defer stateRequestSub.Unsubscribe()
@@ -227,8 +225,6 @@ func (rs *RegularSync) run() {
 			go safelyHandleMessage(rs.receiveExitRequest, msg)
 		case msg := <-rs.blockBuf:
 			go safelyHandleMessage(rs.receiveBlock, msg)
-		case msg := <-rs.blockRequestBySlot:
-			go safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
 		case msg := <-rs.blockRequestByHash:
 			go safelyHandleMessage(rs.handleBlockRequestByHash, msg)
 		case msg := <-rs.batchedRequestBuf:
@@ -520,7 +516,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	response := make([]*pb.BeaconBlock, 0, blockRange)
 	for i := startSlot; i <= endSlot; i++ {
-		retBlock, err := rs.db.BlockBySlot(ctx, i)
+		retBlock, err := rs.db.CanonicalBlockBySlot(ctx, i)
 		if err != nil {
 			log.Errorf("Unable to retrieve block from db %v", err)
 			continue

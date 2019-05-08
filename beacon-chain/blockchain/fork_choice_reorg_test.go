@@ -104,7 +104,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		if err := chainService.beaconDB.SaveBlock(blocks[forkIndex]); err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.beaconDB.SaveHistoricalState(ctx, forkState); err != nil {
+		if err := chainService.beaconDB.SaveHistoricalState(ctx, forkState, roots[forkIndex]); err != nil {
 			t.Fatal(err)
 		}
 	}

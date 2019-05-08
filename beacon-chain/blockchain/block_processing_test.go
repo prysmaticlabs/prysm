@@ -367,10 +367,10 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	beaconState.Slot++
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
@@ -455,7 +455,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	depositRoot := depositTrie.Root()
 	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
-	if err := db.SaveHistoricalState(context.Background(), beaconState); err != nil {
+	if err := db.SaveHistoricalState(context.Background(), beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 
@@ -504,7 +504,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHistoricalState(context.Background(), beaconState); err != nil {
+	if err := db.SaveHistoricalState(context.Background(), beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	computedState, err := chainService.ReceiveBlock(context.Background(), block)

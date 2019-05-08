@@ -344,56 +344,6 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	hook.Reset()
 }
 
-func TestBlockRequest_InvalidMsg(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ss := setupService(db)
-
-	malformedRequest := &pb.BeaconBlockAnnounce{
-		Hash: []byte{'t', 'e', 's', 't'},
-	}
-
-	invalidmsg := p2p.Message{
-		Ctx:  context.Background(),
-		Data: malformedRequest,
-		Peer: "",
-	}
-
-	if err := ss.handleBlockRequestBySlot(invalidmsg); err == nil {
-		t.Error("Expected error, received nil")
-	}
-	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
-}
-
-func TestBlockRequest_OK(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ss := setupService(db)
-
-	request1 := &pb.BeaconBlockRequestBySlotNumber{
-		SlotNumber: 20,
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Data: request1,
-		Peer: "",
-	}
-	if err := db.SaveBlock(&pb.BeaconBlock{Slot: 20}); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := ss.handleBlockRequestBySlot(msg1); err != nil {
-		t.Error(err)
-	}
-
-	testutil.AssertLogsContain(t, hook, "Sending requested block to peer")
-}
-
 func TestReceiveAttestation_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}

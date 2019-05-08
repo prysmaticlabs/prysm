@@ -299,25 +299,26 @@ func (c *ChainService) lmdGhost(
 func (c *ChainService) blockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
 
-	currentRoot, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
-	}
+	//currentRoot, err := hashutil.HashBeaconBlock(block)
+	//if err != nil {
+	//	return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
+	//}
 	startSlot := block.Slot + 1
 	for i := startSlot; i <= highestSlot; i++ {
-		children, err := c.beaconDB.BlockChildrenBySlot(ctx, i, block.ParentRootHash32)
+		kids, err := c.beaconDB.BlocksBySlot(ctx, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block by slot: %v", err)
 		}
-		// Continue if there's a skip block.
-		if children == nil {
-			continue
-		}
-
-		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-		if currentRoot == parentRoot {
-			children = append(children, block)
-		}
+		//// Continue if there's a skip block.
+		//if children == nil {
+		//	continue
+		//}
+		//
+		//parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+		//if currentRoot == parentRoot {
+		//	children = append(children, block)
+		//}
+		children = append(children, kids...)
 	}
 	return children, nil
 }
