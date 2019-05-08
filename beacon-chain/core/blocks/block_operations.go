@@ -541,6 +541,51 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	return nil
 }
 
+// ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
+//
+// Spec pseudocode definition:
+//   def convert_to_indexed(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
+//     """
+//     Convert ``attestation`` to (almost) indexed-verifiable form.
+//     """
+//     attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bitfield)
+//     custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bitfield)
+//     custody_bit_0_indices = [index for index in attesting_indices if index not in custody_bit_1_indices]
+//     return IndexedAttestation(
+//         custody_bit_0_indices=custody_bit_0_indices,
+//         custody_bit_1_indices=custody_bit_1_indices,
+//         data=attestation.data,
+//         signature=attestation.signature,
+//     )
+func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
+	attI, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
+	if err != nil {
+		return nil, err
+	}
+	cb1i, err := helpers.AttestationParticipants(state, attestation.Data, attestation.CustodyBitfield)
+	if err != nil {
+		return nil, err
+	}
+	cb1iMap := make(map[uint64]bool)
+	for _, in := range cb1i {
+		cb1iMap[in] = true
+	}
+	cb0i := []uint64{}
+	for _, index := range attI {
+		_, ok := cb1iMap[index]
+		if !ok {
+			cb0i = append(cb0i, index)
+		}
+	}
+	inAtt := &pb.IndexedAttestation{
+		Data:                attestation.Data,
+		Signature:           attestation.AggregateSignature,
+		CustodyBit_0Indices: cb0i,
+		CustodyBit_1Indices: cb1i,
+	}
+	return inAtt, nil
+}
+
 // VerifyIndexedAttestation determines the validity of an indexed attestation.
 // WIP - signing is not implemented until BLS is integrated into Prysm.
 //
