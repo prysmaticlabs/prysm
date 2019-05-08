@@ -78,30 +78,20 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	log.Debug("Finished processing batched blocks")
 }
 
-// requestBatchedBlocks sends out a request for multiple blocks till a
-// specified bound slot number.
-func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
+// requestBatchedBlocks sends out a request for multiple blocks that's between finalized roots
+// and head roots.
+func (s *InitialSync) requestBatchedBlocks(finalizedRoot []byte, canonicalRoot []byte) {
 	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.sync.initial-sync.requestBatchedBlocks")
 	defer span.End()
 	sentBatchedBlockReq.Inc()
-	if startSlot > endSlot {
-		log.WithFields(logrus.Fields{
-			"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
-			"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
-		).Debug("Invalid batched block request")
-		return
-	}
-	blockLimit := params.BeaconConfig().BatchBlockLimit
-	if startSlot+blockLimit < endSlot {
-		endSlot = startSlot + blockLimit
-	}
+
 	log.WithFields(logrus.Fields{
-		"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
-		"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+		"finalizedBlkRoot": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedRoot[:])),
+		"headBlkRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(canonicalRoot[:]))},
 	).Debug("Requesting batched blocks")
 	if err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
-		StartSlot: startSlot,
-		EndSlot:   endSlot,
+		FinalizedRoot: finalizedRoot,
+		CanonicalRoot: canonicalRoot,
 	}, s.bestPeer); err != nil {
 		log.Errorf("Could not send batch block request to peer %s: %v", s.bestPeer.Pretty(), err)
 	}
