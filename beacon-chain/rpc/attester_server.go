@@ -79,6 +79,10 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	}
 
 	for headState.Slot < req.Slot {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		headState, err = state.ExecuteStateTransition(
 			ctx, headState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
