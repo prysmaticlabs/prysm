@@ -624,6 +624,7 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	wanted = []uint64{92, 49}
 	if !reflect.DeepEqual(wanted, fetchedCommittees.Committees[0].Committee) {
 		t.Errorf(
 			"Result indices was an unexpected value. Wanted %d, got %d",
