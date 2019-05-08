@@ -44,7 +44,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
 	blockEnc, _ := proto.Marshal(genesisBlock)
-	zeroBinary := encodeSlotNumber(0)
+	zeroBinary := encodeSlotNumberRoot(0, blockRoot)
 
 	db.serializedState = stateEnc
 	db.stateHash = stateHash
@@ -63,8 +63,12 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 			return fmt.Errorf("failed to record block height: %v", err)
 		}
 
-		if err := mainChain.Put(zeroBinary, blockRoot[:]); err != nil {
+		if err := mainChain.Put(zeroBinary, blockEnc); err != nil {
 			return fmt.Errorf("failed to record block hash: %v", err)
+		}
+
+		if err := chainInfo.Put(canonicalHeadKey, blockRoot[:]); err != nil {
+			return fmt.Errorf("failed to record block as canonical: %v", err)
 		}
 
 		if err := blockBkt.Put(blockRoot[:], blockEnc); err != nil {

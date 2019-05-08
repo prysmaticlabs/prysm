@@ -25,6 +25,7 @@ var (
 	validatorBucket         = []byte("validator")
 
 	mainChainHeightKey      = []byte("chain-height")
+	canonicalHeadKey = []byte("canonical-head")
 	stateLookupKey          = []byte("state")
 	finalizedStateLookupKey = []byte("finalized-state")
 	justifiedStateLookupKey = []byte("justified-state")
@@ -34,6 +35,10 @@ var (
 	// DB internal use
 	cleanupHistoryBucket = []byte("cleanup-history-bucket")
 )
+
+func encodeSlotNumberRoot(number uint64, root [32]byte) []byte {
+	return append(bytesutil.Bytes8(number), root[:]...)
+}
 
 // encodeSlotNumber encodes a slot number as little-endian uint32.
 func encodeSlotNumber(number uint64) []byte {

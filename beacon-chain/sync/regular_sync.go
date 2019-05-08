@@ -283,43 +283,6 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 	}
 }
 
-// handleBlockRequestBySlot processes a block request from the p2p layer.
-// if found, the block is sent to the requesting peer.
-func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) error {
-	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBlockRequestBySlot")
-	defer span.End()
-	blockReqSlot.Inc()
-
-	request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
-	if !ok {
-		log.Error("Received malformed beacon block request p2p message")
-		return errors.New("incoming message is not type *pb.BeaconBlockRequestBySlotNumber")
-	}
-
-	block, err := rs.db.BlockBySlot(ctx, request.SlotNumber)
-	if err != nil || block == nil {
-		if block == nil {
-			log.WithField("slot", request.SlotNumber-params.BeaconConfig().GenesisSlot).Debug(
-				"block does not exist")
-			return errors.New("block does not exist")
-		}
-		log.Errorf("Error retrieving block from db: %v", err)
-		return err
-	}
-
-	log.WithField("slot",
-		fmt.Sprintf("%d", request.SlotNumber-params.BeaconConfig().GenesisSlot)).Debug("Sending requested block to peer")
-
-	defer sentBlocks.Inc()
-	if err := rs.p2p.Send(ctx, &pb.BeaconBlockResponse{
-		Block: block,
-	}, msg.Peer); err != nil {
-		log.Error(err)
-		return err
-	}
-	return nil
-}
-
 func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleStateRequest")
 	defer span.End()

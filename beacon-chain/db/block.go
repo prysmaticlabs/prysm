@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -100,7 +101,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode block: %v", err)
 	}
-	slotBinary := encodeSlotNumber(block.Slot)
+	slotRootBinary := encodeSlotNumberRoot(block.Slot, root)
 
 	if block.Slot > db.highestBlockSlot {
 		db.highestBlockSlot = block.Slot
@@ -109,7 +110,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 		mainChain := tx.Bucket(mainChainBucket)
-		if err := mainChain.Put(slotBinary, root[:]); err != nil {
+		if err := mainChain.Put(slotRootBinary, enc); err != nil {
 			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
 		}
 		return bucket.Put(root[:], enc)
@@ -122,12 +123,12 @@ func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
 	if err != nil {
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
-	slotBinary := encodeSlotNumber(block.Slot)
+	slotRootBinary := encodeSlotNumberRoot(block.Slot, root)
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 		mainChain := tx.Bucket(mainChainBucket)
-		if err := mainChain.Delete(slotBinary); err != nil {
+		if err := mainChain.Delete(slotRootBinary); err != nil {
 			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
 		}
 		return bucket.Delete(root[:])
@@ -197,7 +198,6 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
-		mainChain := tx.Bucket(mainChainBucket)
 		blockBkt := tx.Bucket(blockBucket)
 
 		height := chainInfo.Get(mainChainHeightKey)
@@ -205,7 +205,7 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 			return errors.New("unable to determine chain height")
 		}
 
-		blockRoot := mainChain.Get(height)
+		blockRoot := chainInfo.Get(canonicalHeadKey)
 		if blockRoot == nil {
 			return fmt.Errorf("root at the current height not found: %d", height)
 		}
@@ -246,17 +246,16 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 	return db.update(func(tx *bolt.Tx) error {
 		blockBucket := tx.Bucket(blockBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
-		mainChain := tx.Bucket(mainChainBucket)
 
 		if blockBucket.Get(blockRoot[:]) == nil {
 			return fmt.Errorf("expected block %#x to have already been saved before updating head: %v", blockRoot, err)
 		}
 
-		if err := mainChain.Put(slotBinary, blockRoot[:]); err != nil {
-			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
+		if err := chainInfo.Put(mainChainHeightKey, slotBinary); err != nil {
+			return err
 		}
 
-		if err := chainInfo.Put(mainChainHeightKey, slotBinary); err != nil {
+		if err := chainInfo.Put(canonicalHeadKey, blockRoot[:]); err != nil {
 			return fmt.Errorf("failed to record the block as the head of the main chain: %v", err)
 		}
 
@@ -264,36 +263,33 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 	})
 }
 
-// BlockBySlot accepts a slot number and returns the corresponding block in the main chain.
-// Returns nil if a block was not recorded for the given slot.
-func (db *BeaconDB) BlockBySlot(ctx context.Context, slot uint64) (*pb.BeaconBlock, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.BlockBySlot")
+// BlocksBySlot accepts a slot number and returns the corresponding blocks in the main chain.
+// Returns nil if no blocks were recorded for the given slot.
+func (db *BeaconDB) BlocksBySlot(ctx context.Context, slot uint64) ([]*pb.BeaconBlock, error) {
+	_, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)))
 
-	var block *pb.BeaconBlock
+	blocks := []*pb.BeaconBlock{}
 	slotEnc := encodeSlotNumber(slot)
 
 	err := db.view(func(tx *bolt.Tx) error {
-		mainChain := tx.Bucket(mainChainBucket)
-		blockBkt := tx.Bucket(blockBucket)
-
-		blockRoot := mainChain.Get(slotEnc)
-		if blockRoot == nil {
-			return nil
-		}
-
-		enc := blockBkt.Get(blockRoot)
-		if enc == nil {
-			return nil
-		}
+		c := tx.Bucket(mainChainBucket).Cursor()
 
 		var err error
-		block, err = createBlock(enc)
+		prefix := slotEnc
+		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
+			block, err := createBlock(v)
+			if err != nil {
+				return err
+			}
+			blocks = append(blocks, block)
+		}
+
 		return err
 	})
 
-	return block, err
+	return blocks, err
 }
 
 // HighestBlockSlot returns the in-memory value for the highest block we've

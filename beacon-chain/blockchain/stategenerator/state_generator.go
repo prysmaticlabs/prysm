@@ -54,10 +54,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	// from input slot, retrieve its corresponding block and call that the most recent block.
-	mostRecentBlock, err := db.BlockBySlot(ctx, slot)
+	mostRecentBlocks, err := db.BlocksBySlot(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
+	mostRecentBlock := mostRecentBlocks[0]
 
 	// if the most recent block is a skip block, we get its parent block.
 	// ex:
@@ -66,10 +67,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	lastSlot := slot
 	for mostRecentBlock == nil {
 		lastSlot--
-		mostRecentBlock, err = db.BlockBySlot(ctx, lastSlot)
+		blocks, err := db.BlocksBySlot(ctx, lastSlot)
 		if err != nil {
 			return nil, err
 		}
+		mostRecentBlock = blocks[0]
 	}
 
 	// retrieve the block list to recompute state of the input slot.
