@@ -109,8 +109,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
-		mainChain := tx.Bucket(mainChainBucket)
-		if err := mainChain.Put(slotRootBinary, enc); err != nil {
+		if err := bucket.Put(slotRootBinary, enc); err != nil {
 			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
 		}
 		return bucket.Put(root[:], enc)
@@ -127,8 +126,7 @@ func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
-		mainChain := tx.Bucket(mainChainBucket)
-		if err := mainChain.Delete(slotRootBinary); err != nil {
+		if err := bucket.Delete(slotRootBinary); err != nil {
 			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
 		}
 		return bucket.Delete(root[:])
@@ -263,7 +261,27 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 	})
 }
 
-// BlocksBySlot accepts a slot number and returns the corresponding blocks in the main chain.
+// CanonicalBlockBySlot accepts a slot number and returns the corresponding canonical block.
+func (db *BeaconDB) CanonicalBlockBySlot(ctx context.Context, slot uint64) (*pb.BeaconBlock, error) {
+	_, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)))
+
+    var block *pb.BeaconBlock
+	slotEnc := encodeSlotNumber(slot)
+
+	err := db.view(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(mainChainBucket)
+		blockEnc := bkt.Get(slotEnc)
+		var err error
+		block, err = createBlock(blockEnc)
+		return err
+	})
+
+	return block, err
+}
+
+// BlocksBySlot accepts a slot number and returns the corresponding blocks in the db.
 // Returns nil if no blocks were recorded for the given slot.
 func (db *BeaconDB) BlocksBySlot(ctx context.Context, slot uint64) ([]*pb.BeaconBlock, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
@@ -274,7 +292,7 @@ func (db *BeaconDB) BlocksBySlot(ctx context.Context, slot uint64) ([]*pb.Beacon
 	slotEnc := encodeSlotNumber(slot)
 
 	err := db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(mainChainBucket).Cursor()
+		c := tx.Bucket(blockBucket).Cursor()
 
 		var err error
 		prefix := slotEnc

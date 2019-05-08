@@ -1,10 +1,12 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -44,7 +46,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
 	blockEnc, _ := proto.Marshal(genesisBlock)
-	zeroBinary := encodeSlotNumberRoot(0, blockRoot)
+	zeroBinary := encodeSlotNumberRoot(params.BeaconConfig().GenesisSlot, blockRoot)
 
 	db.serializedState = stateEnc
 	db.stateHash = stateHash
@@ -271,7 +273,7 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 
 // HistoricalStateFromSlot retrieves the state that is closest to the input slot,
 // while being smaller than or equal to the input slot.
-func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
+func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64, blockRoot [32]byte) (*pb.BeaconState, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.HistoricalStateFromSlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slotSinceGenesis", int64(slot)))
@@ -287,8 +289,11 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 		hsCursor := histState.Cursor()
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
-			slotNumber := decodeToSlotNumber(k)
-			if slotNumber == slot {
+			slotBinary := k[:8]
+			blockRootBinary := k[8:]
+			slotNumber := decodeToSlotNumber(slotBinary)
+
+			if slotNumber == slot && bytes.Equal(blockRootBinary, blockRoot[:]){
 				stateExists = true
 				highestStateSlot = slotNumber
 				histStateKey = v
