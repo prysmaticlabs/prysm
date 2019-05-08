@@ -31,9 +31,10 @@ func main() {
 	}
 
 	db := newDB(*dbPath)
-	srv := newServer(db, *rpcPath, *beaconRPCPath, *depositContractAddr, *privateKey, *depositAmount)
+	srv := newServer(db, *rpcPath, *depositContractAddr, *privateKey, *depositAmount)
 	if !*disableWatchtower {
 		wt := newWatchtower(db)
+		kc := newkeyChecker(db, *beaconRPCPath)
 		go wt.WatchPods()
 	}
 
