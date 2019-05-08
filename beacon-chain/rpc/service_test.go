@@ -113,10 +113,6 @@ func (m mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot 
 	return nil
 }
 
-func (m *mockChainService) CanonicalBlock(slot uint64) (*pb.BeaconBlock, error) {
-	return nil, nil
-}
-
 func newMockChainService() *mockChainService {
 	return &mockChainService{
 		blockFeed:            new(event.Feed),
