@@ -579,7 +579,7 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 	}
 	inAtt := &pb.IndexedAttestation{
 		Data:                attestation.Data,
-		Signature:           attestation.AggregateSignature,
+		Signature:           attestation.Signature,
 		CustodyBit_0Indices: cb0i,
 		CustodyBit_1Indices: cb1i,
 	}

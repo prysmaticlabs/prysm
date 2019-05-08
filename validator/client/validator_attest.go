@@ -125,7 +125,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	attestation.AggregationBitfield = aggregationBitfield
 
 	// TODO(#1366): Use BLS to generate an aggregate signature.
-	attestation.AggregateSignature = []byte("signed")
+	attestation.Signature = []byte("signed")
 
 	log.WithFields(logrus.Fields{
 		"shard":     attData.Shard,
