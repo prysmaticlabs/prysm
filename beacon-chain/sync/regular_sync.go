@@ -689,6 +689,11 @@ func (rs *RegularSync) buildCanonicalBlockList(finalizedRoot []byte, headRoot []
 	}
 	bList := []*pb.BeaconBlock{b}
 
+	// if head block was the same as the finalized block.
+	if bytes.Equal(headRoot, finalizedRoot) {
+		return bList, nil
+	}
+
 	for {
 		b, err = rs.db.Block(bytesutil.ToBytes32(b.ParentRootHash32))
 		if err != nil {
