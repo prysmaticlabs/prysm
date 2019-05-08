@@ -131,7 +131,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
 			log.WithError(err).WithFields(logrus.Fields{
 				"slot":     att.Data.Slot - params.BeaconConfig().GenesisSlot,
-				"headRoot": bytesutil.Trunc(att.Data.BeaconBlockRootHash32)}).Warn(
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Warn(
 				"Deleting failed pending attestation from DB")
 			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
