@@ -38,6 +38,8 @@ type chainService interface {
 	StateInitializedFeed() *event.Feed
 	blockchain.BlockReceiver
 	blockchain.ForkChoice
+	blockchain.TargetsFetcher
+	blockchain.ChildFetcher
 }
 
 type operationService interface {

@@ -5,12 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"io/ioutil"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -83,6 +85,8 @@ type mockChainService struct {
 	attestationFeed      *event.Feed
 	stateInitializedFeed *event.Feed
 	canonicalBlocks      map[uint64][]byte
+	targets map[uint64]*pb.AttestationTarget
+	beaconDB *db.BeaconDB
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
@@ -113,8 +117,33 @@ func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return bytes.Equal(m.canonicalBlocks[slot], hash)
 }
 
-func (m mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
-	return nil
+func (m *mockChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
+	var children []*pb.BeaconBlock
+
+	currentRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, err
+	}
+	startSlot := block.Slot + 1
+	for i := startSlot; i <= highestSlot; i++ {
+		block, err := m.beaconDB.BlockBySlot(ctx, i)
+		if err != nil {
+			return nil, err
+		}
+		if block == nil {
+			continue
+		}
+
+		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+		if currentRoot == parentRoot {
+			children = append(children, block)
+		}
+	}
+	return children, nil
+}
+
+func (m *mockChainService) AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
+	return m.targets, nil
 }
 
 func newMockChainService() *mockChainService {

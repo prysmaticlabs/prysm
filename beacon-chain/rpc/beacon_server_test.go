@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
@@ -702,18 +704,170 @@ func TestBlockTree_OK(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.
-	//                   /->[A, Slot 3, 5 Votes]->[B, Slot 4, 6 Votes]
-	// [Justified Block]->[C, Slot 3, 4 Votes]
+	//                   /->[A, Slot 3, 3 Votes]->[B, Slot 4, 3 Votes]
+	// [Justified Block]->[C, Slot 3, 2 Votes]
 	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
 	justifiedState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorBalances: make([]uint64, 11),
+	}
+    for i := 0; i < len(justifiedState.ValidatorBalances); i++ {
+		justifiedState.ValidatorBalances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	if err := db.SaveJustifiedState(justifiedState); err != nil {
+		t.Fatal(err)
 	}
 	justifiedBlock := &pbp2p.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot,
 	}
-	ctx := context.Background()
-	if err := db.UpdateChainHead(ctx, justifiedBlock, justifiedState); err != nil {
+	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
+	}
+	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
+	b1 := &pbp2p.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot+3,
+		ParentRootHash32: justifiedRoot[:],
+		Signature: []byte("A"),
+	}
+	b1Root, _ := hashutil.HashBeaconBlock(b1)
+	b2 := &pbp2p.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot+3,
+		ParentRootHash32: justifiedRoot[:],
+		Signature: []byte("C"),
+	}
+	b2Root, _ := hashutil.HashBeaconBlock(b2)
+	b3 := &pbp2p.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot+3,
+		ParentRootHash32: justifiedRoot[:],
+		Signature: []byte("D"),
+	}
+	b3Root, _ := hashutil.HashBeaconBlock(b1)
+	b4 := &pbp2p.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot+4,
+		ParentRootHash32: b1Root[:],
+		Signature: []byte("B"),
+	}
+	b4Root, _ := hashutil.HashBeaconBlock(b4)
+	b5 := &pbp2p.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot+5,
+		ParentRootHash32: b3Root[:],
+		Signature: []byte("E"),
+	}
+	b5Root, _ := hashutil.HashBeaconBlock(b5)
+
+	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
+	// We give block A 3 votes.
+	attestationTargets[0] = &pbp2p.AttestationTarget{
+		Slot: b1.Slot,
+		ParentRoot: b1.ParentRootHash32,
+		BlockRoot: b1Root[:],
+	}
+	attestationTargets[1] = &pbp2p.AttestationTarget{
+		Slot: b1.Slot,
+		ParentRoot: b1.ParentRootHash32,
+		BlockRoot: b1Root[:],
+	}
+	attestationTargets[2] = &pbp2p.AttestationTarget{
+		Slot: b1.Slot,
+		ParentRoot: b1.ParentRootHash32,
+		BlockRoot: b1Root[:],
+	}
+
+	// We give block C 2 votes.
+	attestationTargets[3] = &pbp2p.AttestationTarget{
+		Slot: b2.Slot,
+		ParentRoot: b2.ParentRootHash32,
+		BlockRoot: b2Root[:],
+	}
+	attestationTargets[4] = &pbp2p.AttestationTarget{
+		Slot: b2.Slot,
+		ParentRoot: b2.ParentRootHash32,
+		BlockRoot: b2Root[:],
+	}
+
+	// We give block D 2 votes.
+	attestationTargets[5] = &pbp2p.AttestationTarget{
+		Slot: b3.Slot,
+		ParentRoot: b3.ParentRootHash32,
+		BlockRoot: b3Root[:],
+	}
+	attestationTargets[6] = &pbp2p.AttestationTarget{
+		Slot: b3.Slot,
+		ParentRoot: b3.ParentRootHash32,
+		BlockRoot: b3Root[:],
+	}
+
+	// We give block B 3 votes.
+	attestationTargets[7] = &pbp2p.AttestationTarget{
+		Slot: b4.Slot,
+		ParentRoot: b4.ParentRootHash32,
+		BlockRoot: b4Root[:],
+	}
+	attestationTargets[8] = &pbp2p.AttestationTarget{
+		Slot: b4.Slot,
+		ParentRoot: b4.ParentRootHash32,
+		BlockRoot: b4Root[:],
+	}
+	attestationTargets[9] = &pbp2p.AttestationTarget{
+		Slot: b4.Slot,
+		ParentRoot: b4.ParentRootHash32,
+		BlockRoot: b4Root[:],
+	}
+
+	// We give block E 1 vote.
+	attestationTargets[10] = &pbp2p.AttestationTarget{
+		Slot: b5.Slot,
+		ParentRoot: b5.ParentRootHash32,
+		BlockRoot: b5Root[:],
+	}
+
+	tree := []*pb.BlockTreeResponse_TreeNode{
+		{
+			Block: b1,
+			Votes: 3,
+		},
+		{
+			Block: b2,
+			Votes: 2,
+		},
+		{
+			Block: b3,
+			Votes: 2,
+		},
+		{
+			Block: b4,
+			Votes: 3,
+		},
+		{
+			Block: b5,
+			Votes: 1,
+		},
+	}
+	for _, node := range tree {
+		if err := db.SaveBlock(node.Block); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	headState := &pbp2p.BeaconState{
+		Slot: b4.Slot,
+	}
+	ctx := context.Background()
+	if err := db.UpdateChainHead(ctx, b4, headState); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconServer{
+		beaconDB: db,
+		targetsFetcher: &mockChainService{targets: attestationTargets},
+		childFetcher: &mockChainService{beaconDB: db},
+	}
+	resp, err := bs.BlockTree(ctx, &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(resp.Tree, tree) {
+		t.Errorf("Expected %v, received %v", tree, resp.Tree)
 	}
 }
 
