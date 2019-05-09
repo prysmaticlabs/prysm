@@ -105,8 +105,9 @@ func (bs *BeaconServer) DomainData(ctx context.Context, request *pb.DomainReques
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
+	dv := helpers.DomainVersion(state, request.Epoch, params.BeaconConfig().DomainRandao)
 	return &pb.DomainResponse{
-		SignatureDomain:helpers.DomainVersion(state, request.Epoch, params.BeaconConfig().DomainRandao),
+		SignatureDomain: dv,
 	}, nil
 
 }
