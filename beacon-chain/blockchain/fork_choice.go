@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -176,7 +177,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	}
 
 	newState := postState
-	if !isDescendant {
+	if !isDescendant && !proto.Equal(currentHead, newHead) {
 		log.WithFields(logrus.Fields{
 			"currentSlot": currentHead.Slot - params.BeaconConfig().GenesisSlot,
 			"currentRoot": fmt.Sprintf("%#x", bytesutil.Trunc(currentHeadRoot[:])),
@@ -193,6 +194,13 @@ func (c *ChainService) ApplyForkChoiceRule(
 			delete(c.canonicalBlocks, revertedSlot)
 		}
 		reorgCount.Inc()
+	}
+
+	if proto.Equal(currentHead, newHead) {
+		log.WithFields(logrus.Fields{
+			"currentSlot": currentHead.Slot - params.BeaconConfig().GenesisSlot,
+			"currentRoot": fmt.Sprintf("%#x", bytesutil.Trunc(currentHeadRoot[:])),
+		}).Warn("Head did not change after fork choice, current head has the most votes")
 	}
 
 	// If we receive forked blocks.
