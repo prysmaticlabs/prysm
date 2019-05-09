@@ -15,7 +15,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (s *InitialSync) processState(msg p2p.Message) error {
+func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processState")
 	defer span.End()
 	data := msg.Data.(*pb.BeaconStateResponse)
@@ -37,20 +37,20 @@ func (s *InitialSync) processState(msg p2p.Message) error {
 		return nil
 	}
 
-	root, err := hashutil.HashBeaconBlock(finalizedState.LatestBlock)
+	finalizedBlockRoot, err := hashutil.HashBeaconBlock(finalizedState.LatestBlock)
 	if err != nil {
 		log.Errorf("Could not hash finalized block %v", err)
 		return nil
 	}
 
-	if err := s.db.SaveHistoricalState(ctx, finalizedState, root); err != nil {
+	if err := s.db.SaveHistoricalState(ctx, finalizedState, finalizedBlockRoot); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 		return nil
 	}
 
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       finalizedState.LatestBlock.Slot,
-		BlockRoot:  root[:],
+		BlockRoot:  finalizedBlockRoot[:],
 		ParentRoot: finalizedState.LatestBlock.ParentRootHash32,
 	}); err != nil {
 		log.Errorf("Could not to save attestation target: %v", err)
@@ -86,17 +86,13 @@ func (s *InitialSync) processState(msg p2p.Message) error {
 
 	validators.InitializeValidatorStore(finalizedState)
 
-	// sets the current slot to the last finalized slot of the
-	// beacon state to begin our sync from.
-	s.currentSlot = finalizedState.Slot
 	s.stateReceived = true
 	log.Debugf(
 		"Successfully saved beacon state with the last finalized slot: %d",
 		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
 	)
 	log.WithField("peer", msg.Peer.Pretty()).Info("Requesting batch blocks from peer")
-	s.requestBatchedBlocks(ctx, s.finalizedBlockRoot, s.canonicalBlockRoot, msg.Peer)
-	s.lastRequestedSlot = s.highestObservedSlot
+	s.requestBatchedBlocks(ctx, finalizedBlockRoot[:], chainHead.CanonicalBlockRoot, msg.Peer)
 
 	return nil
 }
