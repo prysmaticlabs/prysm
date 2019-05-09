@@ -540,7 +540,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	// To prevent circuit in the chain and the potentiality peer can bomb a node building block list.
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	response, err := rs.buildCanonicalBlockList(ctx, req.FinalizedRoot, req.CanonicalRoot)
+	response, err := rs.respondBatchedBlocks(ctx, req.FinalizedRoot, req.CanonicalRoot)
 	cancel()
 	if err != nil {
 		return fmt.Errorf("could not build canonical block list %v", err)
@@ -631,7 +631,14 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 	sentBlockAnnounce.Inc()
 }
 
-func (rs *RegularSync) buildCanonicalBlockList(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+// respondBatchedBlocks returns the requested block list inclusive of head block but not inclusive of the finalized block.
+// the return should look like (finalizedBlock... headBlock].
+func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+	// if head block was the same as the finalized block.
+	if bytes.Equal(headRoot, finalizedRoot) {
+		return nil, nil
+	}
+
 	b, err := rs.db.Block(bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return nil, err
@@ -639,19 +646,14 @@ func (rs *RegularSync) buildCanonicalBlockList(ctx context.Context, finalizedRoo
 	if b == nil {
 		return nil, fmt.Errorf("nil block %#x from db", bytesutil.Trunc(headRoot))
 	}
+
 	bList := []*pb.BeaconBlock{b}
-
-	// if head block was the same as the finalized block.
-	if bytes.Equal(headRoot, finalizedRoot) {
-		return bList, nil
-	}
-
-	for {
+	parentRoot := b.ParentRootHash32
+	for !bytes.Equal(parentRoot, finalizedRoot) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		parentRoot := bytesutil.ToBytes32(b.ParentRootHash32)
-		b, err = rs.db.Block(parentRoot)
+		b, err = rs.db.Block(bytesutil.ToBytes32(parentRoot))
 		if err != nil {
 			return nil, err
 		}
@@ -662,14 +664,7 @@ func (rs *RegularSync) buildCanonicalBlockList(ctx context.Context, finalizedRoo
 		// Prepend parent to the beginning of the list.
 		bList = append([]*pb.BeaconBlock{b}, bList...)
 
-		// Stop if we reach the finalized root.
-		root, err := hashutil.HashBeaconBlock(b)
-		if err != nil {
-			return nil, err
-		}
-		if bytes.Equal(root[:], finalizedRoot) {
-			break
-		}
+		parentRoot = b.ParentRootHash32
 	}
 	return bList, nil
 }

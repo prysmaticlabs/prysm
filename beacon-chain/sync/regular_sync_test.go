@@ -776,8 +776,8 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	}
 
 	// Verify passing in roots of B4 and B1 give us the canonical lists.
-	list, err := ss.buildCanonicalBlockList(context.Background(), root1[:], root4[:])
-	wantList := []*pb.BeaconBlock{block1, block2, block4}
+	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root4[:])
+	wantList := []*pb.BeaconBlock{block2, block4}
 	if !reflect.DeepEqual(list, wantList) {
 		t.Error("Did not retrieve the correct canonical lists")
 	}
@@ -799,10 +799,9 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 
-	// Verify passing in roots of B1 and B1 give us the canonical lists.
-	list, err := ss.buildCanonicalBlockList(context.Background(), root1[:], root1[:])
-	wantList := []*pb.BeaconBlock{block1}
-	if !reflect.DeepEqual(list, wantList) {
+	// Verify passing in roots of B1 and B1 give us the canonical lists which should be an empty list.
+	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root1[:])
+	if len(list) != 0 {
 		t.Error("Did not retrieve the correct canonical lists")
 	}
 }
@@ -813,7 +812,7 @@ func TestCanonicalBlockList_NilBlock(t *testing.T) {
 	ss := setupService(db)
 
 	want := "nil block 0x42 from db"
-	if _, err := ss.buildCanonicalBlockList(context.Background(), []byte{'A'}, []byte{'B'}); err.Error() != want {
+	if _, err := ss.respondBatchedBlocks(context.Background(), []byte{'A'}, []byte{'B'}); err.Error() != want {
 		t.Fatal(err)
 	}
 }
@@ -832,9 +831,9 @@ func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 
-	b := bytesutil.ToBytes32([]byte{'B'})
-	want := fmt.Sprintf("nil parent block %#x from db", bytesutil.Trunc(b[:]))
-	if _, err := ss.buildCanonicalBlockList(context.Background(), []byte{}, root1[:]); err.Error() != want {
+	want := fmt.Sprintf("nil parent block %#x from db", []byte{'B'})
+	if _, err := ss.respondBatchedBlocks(context.Background(), []byte{}, root1[:]); err.Error() != want {
+		t.Log(want)
 		t.Fatal(err)
 	}
 }
