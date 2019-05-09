@@ -366,5 +366,35 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	if canonical {
 		t.Error("Attestation should not be canonical")
 	}
+}
 
+func TestIsCanonical_NilBlocks(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
+
+	canonical, err := s.IsAttCanonical(context.Background(), &pb.Attestation{Data: &pb.AttestationData{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonical {
+		t.Error("Attestation shouldn't be canonical")
+	}
+
+	cb1 := &pb.BeaconBlock{Slot: 999, ParentRootHash32: []byte{'A'}}
+	if err := s.beaconDB.SaveBlock(cb1); err != nil {
+		t.Fatal(err)
+	}
+	r1, err := hashutil.HashBeaconBlock(cb1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	att1 := &pb.Attestation{Data: &pb.AttestationData{BeaconBlockRootHash32: r1[:]}}
+	canonical, err = s.IsAttCanonical(context.Background(), att1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonical {
+		t.Error("Attestation shouldn't be canonical")
+	}
 }
