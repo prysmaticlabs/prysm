@@ -27,7 +27,7 @@ type BeaconServer struct {
 	powChainService     powChainService
 	chainService        chainService
 	childFetcher        blockchain.ChildFetcher
-	targetsFetcher blockchain.TargetsFetcher
+	targetsFetcher      blockchain.TargetsFetcher
 	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -139,6 +139,9 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	bestVote := &pbp2p.Eth1DataVote{}
 	bestVoteHeight := big.NewInt(0)
 	for _, vote := range beaconState.Eth1DataVotes {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
@@ -296,8 +299,16 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	if err != nil {
 		return nil, err
 	}
+	fullBlockTree := kids
+	for _, k := range kids {
+		nextLayer, err := bs.childFetcher.BlockChildren(ctx, k, highestSlot)
+		if err != nil {
+			return nil, err
+		}
+		fullBlockTree = append(fullBlockTree, nextLayer...)
+	}
 	tree := []*pb.BlockTreeResponse_TreeNode{}
-	for _, kid := range kids {
+	for _, kid := range fullBlockTree {
 		votes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
 		if err != nil {
 			return nil, err

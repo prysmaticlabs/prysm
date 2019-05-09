@@ -66,7 +66,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if parent == nil {
 		return nil, errors.New("parent does not exist in DB")
 	}
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -284,8 +284,12 @@ func (c *ChainService) runStateTransition(
 			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Block transition successfully processed")
 
+		blockRoot, err := hashutil.HashBeaconBlock(block)
+		if err != nil {
+			return nil, err
+		}
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
 	}

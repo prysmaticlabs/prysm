@@ -25,11 +25,6 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.SaveHistoricalState(ctx, finalizedState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
-		return
-	}
-
 	if err := s.db.SaveFinalizedBlock(finalizedState.LatestBlock); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
 		return
@@ -45,6 +40,12 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		log.Errorf("Could not hash finalized block %v", err)
 		return
 	}
+
+	if err := s.db.SaveHistoricalState(ctx, finalizedState, root); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
+		return
+	}
+
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       finalizedState.LatestBlock.Slot,
 		BlockRoot:  root[:],
@@ -91,7 +92,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		"Successfully saved beacon state with the last finalized slot: %d",
 		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
 	)
-	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+	s.requestBatchedBlocks(s.finalizedBlockRoot, s.canonicalBlockRoot)
 	s.lastRequestedSlot = s.highestObservedSlot
 }
 

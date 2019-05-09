@@ -46,6 +46,10 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 	for beaconState.Slot < req.SlotNumber {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		beaconState, err = state.ExecuteStateTransition(
 			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
@@ -115,6 +119,10 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	}
 
 	for beaconState.Slot < req.ProposalBlockSlot-1 {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		beaconState, err = state.ExecuteStateTransition(
 			ctx, beaconState, nil /* block */, blockRoot, state.DefaultConfig(),
 		)
@@ -134,6 +142,10 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	validAtts := make([]*pbp2p.Attestation, 0, len(attsReadyForInclusion))
 	for _, att := range attsReadyForInclusion {
 		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+
 			log.WithError(err).WithFields(logrus.Fields{
 				"slot":     att.Data.Slot - params.BeaconConfig().GenesisSlot,
 				"headRoot": bytesutil.Trunc(att.Data.BeaconBlockRootHash32)}).Warn(
@@ -167,6 +179,10 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 	parentHash := bytesutil.ToBytes32(req.ParentRootHash32)
 	// Check for skipped slots.
 	for beaconState.Slot < req.Slot-1 {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		beaconState, err = state.ExecuteStateTransition(
 			ctx,
 			beaconState,

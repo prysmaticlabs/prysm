@@ -329,4 +329,3 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
 }
-

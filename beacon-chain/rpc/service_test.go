@@ -5,11 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"testing"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"io/ioutil"
-	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -85,8 +86,8 @@ type mockChainService struct {
 	attestationFeed      *event.Feed
 	stateInitializedFeed *event.Feed
 	canonicalBlocks      map[uint64][]byte
-	targets map[uint64]*pb.AttestationTarget
-	beaconDB *db.BeaconDB
+	targets              map[uint64]*pb.AttestationTarget
+	beaconDB             *db.BeaconDB
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
@@ -118,28 +119,28 @@ func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 }
 
 func (m *mockChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
-	var children []*pb.BeaconBlock
-
-	currentRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, err
 	}
+	var children []*pb.BeaconBlock
 	startSlot := block.Slot + 1
 	for i := startSlot; i <= highestSlot; i++ {
-		block, err := m.beaconDB.BlockBySlot(ctx, i)
+		kids, err := m.beaconDB.BlocksBySlot(ctx, i)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not get block by slot: %v", err)
 		}
-		if block == nil {
-			continue
-		}
+		children = append(children, kids...)
+	}
 
-		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-		if currentRoot == parentRoot {
-			children = append(children, block)
+	filteredChildren := []*pb.BeaconBlock{}
+	for _, kid := range children {
+		parentRoot := bytesutil.ToBytes32(kid.ParentRootHash32)
+		if blockRoot == parentRoot {
+			filteredChildren = append(filteredChildren, kid)
 		}
 	}
-	return children, nil
+	return filteredChildren, nil
 }
 
 func (m *mockChainService) AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
