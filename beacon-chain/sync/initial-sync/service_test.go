@@ -177,11 +177,11 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	batchSize := 20
 	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
 	ss.highestObservedSlot = expectedSlot
-	blk, err := ss.db.BlockBySlot(ctx, params.BeaconConfig().GenesisSlot)
+	blks, err := ss.db.BlocksBySlot(ctx, params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
-	h, err := hashutil.HashBeaconBlock(blk)
+	h, err := hashutil.HashBeaconBlock(blks[0])
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
