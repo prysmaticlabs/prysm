@@ -45,6 +45,7 @@ type chainService interface {
 
 type operationService interface {
 	PendingAttestations(ctx context.Context) ([]*pbp2p.Attestation, error)
+	IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool, error)
 	HandleAttestations(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
