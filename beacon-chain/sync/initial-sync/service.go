@@ -308,7 +308,7 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 		log.Errorf("Could not request state from peer %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(s.ctx, 20*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	for {
@@ -320,11 +320,14 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 			log.WithFields(fields).Info("Received state resp from peer")
 			safelyHandleMessage(s.processState, msg)
 		case msg := <-s.batchedBlockBuf:
+			if msg.Peer != peer {
+				continue
+			}
 			log.WithFields(fields).Info("Received batched blocks from peer")
 			if err := s.processBatchedBlocks(msg); err != nil {
 				log.WithError(err).WithField("peer", peer).Error("Failed to sync with peer.")
-				s.p2p.Reputation(peer, p2p.RepPenalityInitialSyncFailure)
-				s.p2p.Disconnect(peer)
+				s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
+				s.p2p.Disconnect(msg.Peer)
 				continue
 			}
 			if !s.nodeIsSynced {
