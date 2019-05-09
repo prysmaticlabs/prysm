@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -26,6 +27,7 @@ func TestAttestHead_OK(t *testing.T) {
 		operationService: mockOperationService,
 		p2p:              &mockBroadcaster{},
 		beaconDB:         db,
+		cache:            cache.NewAttestationCache(),
 	}
 	head := &pbp2p.BeaconBlock{
 		Slot:             999,
@@ -95,6 +97,7 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 		p2p:      &mockBroadcaster{},
+		cache:    cache.NewAttestationCache(),
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
@@ -191,6 +194,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 		p2p:      &mockBroadcaster{},
+		cache:    cache.NewAttestationCache(),
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)

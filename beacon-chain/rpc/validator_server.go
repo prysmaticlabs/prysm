@@ -140,6 +140,9 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	}
 
 	for beaconState.Slot < req.EpochStart {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		beaconState, err = state.ExecuteStateTransition(
 			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
@@ -151,6 +154,10 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
 	activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
 	for _, pk := range activeKeys {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		a, err := vs.assignment(pk, beaconState, req.EpochStart)
 		if err != nil {
 			return nil, err
@@ -250,6 +257,9 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for i, key := range pubkeys {
 		status := vs.validatorStatus(ctx, key, chainStarted, chainStartKeys, validatorIndexMap, beaconState)
+		if ctx.Err() != nil {
+			return false, nil, ctx.Err()
+		}
 		resp := &pb.ValidatorActivationResponse_Status{
 			Status:    status,
 			PublicKey: key,
@@ -324,6 +334,10 @@ func (vs *ValidatorServer) validatorStatus(
 	var validatorInState *pbp2p.Validator
 	var validatorIndex uint64
 	for idx, val := range beaconState.ValidatorRegistry {
+		if ctx.Err() != nil {
+			return nil
+		}
+
 		if bytes.Equal(val.Pubkey, pubKey) {
 			if helpers.IsActiveValidator(val, currEpoch) {
 				return &pb.ValidatorStatusResponse{

@@ -91,7 +91,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		"Successfully saved beacon state with the last finalized slot: %d",
 		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
 	)
-	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+	s.requestBatchedBlocks(s.finalizedBlockRoot, s.canonicalBlockRoot)
 	s.lastRequestedSlot = s.highestObservedSlot
 }
 
