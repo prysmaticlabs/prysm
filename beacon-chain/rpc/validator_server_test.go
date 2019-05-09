@@ -714,6 +714,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		beaconDB:           db,
 		ctx:                ctx,
 		chainService:       newMockChainService(),
+		powChainService:    &mockPOWChainService{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
 	req := &pb.ValidatorActivationRequest{
