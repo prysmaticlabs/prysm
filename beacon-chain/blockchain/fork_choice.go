@@ -155,7 +155,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	}
 	newHeadRoot, err := hashutil.HashBeaconBlock(newHead)
 	if err != nil {
-		return fmt.Errorf("could not hash head block: %v", err)
+		return fmt.Errorf("could not hash new head block: %v", err)
 	}
 	c.canonicalBlocksLock.Lock()
 	defer c.canonicalBlocksLock.Unlock()
@@ -165,6 +165,10 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve chain head: %v", err)
 	}
+	currentHeadRoot, err := hashutil.HashBeaconBlock(currentHead)
+	if err != nil {
+		return fmt.Errorf("could not hash current head block: %v", err)
+	}
 
 	isDescendant, err := c.isDescendant(currentHead, newHead)
 	if err != nil {
@@ -173,9 +177,12 @@ func (c *ChainService) ApplyForkChoiceRule(
 
 	newState := postState
 	if !isDescendant {
-		log.Warnf("Reorg happened, last head at slot %d, new head block at slot %d",
-			currentHead.Slot-params.BeaconConfig().GenesisSlot, newHead.Slot-params.BeaconConfig().GenesisSlot)
-
+		log.WithFields(logrus.Fields{
+			"currentSlot": currentHead.Slot - params.BeaconConfig().GenesisSlot,
+			"currentRoot": fmt.Sprintf("%#x", bytesutil.Trunc(currentHeadRoot[:])),
+			"newSlot":     newHead.Slot - params.BeaconConfig().GenesisSlot,
+			"newRoot":     fmt.Sprintf("%#x", bytesutil.Trunc(newHeadRoot[:])),
+		}).Warn("Reorg happened")
 		// Only regenerate head state if there was a reorg.
 		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot, newHeadRoot)
 		if err != nil {

@@ -98,6 +98,10 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 
 // HeadState fetches the canonical beacon chain's head state from the DB.
 func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
 	defer span.End()
 
@@ -282,6 +286,9 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 // HistoricalStateFromSlot retrieves the state that is closest to the input slot,
 // while being smaller than or equal to the input slot.
 func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64, blockRoot [32]byte) (*pb.BeaconState, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	_, span := trace.StartSpan(ctx, "BeaconDB.HistoricalStateFromSlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slotSinceGenesis", int64(slot)))
