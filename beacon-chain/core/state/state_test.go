@@ -32,8 +32,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	genesisEpochNumber := params.BeaconConfig().GenesisEpoch
 
-	if params.BeaconConfig().GenesisForkVersion != 0 {
-		t.Error("GenesisSlot( should be 0 for these tests to pass")
+	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, []byte{0, 0, 0, 0}) {
+		t.Error("GenesisSlot( should be {0,0,0,0} for these tests to pass")
 	}
 	genesisForkVersion := params.BeaconConfig().GenesisForkVersion
 

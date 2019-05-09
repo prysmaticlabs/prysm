@@ -59,6 +59,26 @@ func (mr *MockBeaconServiceClientMockRecorder) CanonicalHead(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHead", reflect.TypeOf((*MockBeaconServiceClient)(nil).CanonicalHead), varargs...)
 }
 
+// DomainData mocks base method
+func (m *MockBeaconServiceClient) DomainData(arg0 context.Context, arg1 *v10.DomainRequest, arg2 ...grpc.CallOption) (*v10.DomainResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DomainData", varargs...)
+	ret0, _ := ret[0].(*v10.DomainResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DomainData indicates an expected call of DomainData
+func (mr *MockBeaconServiceClientMockRecorder) DomainData(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainData", reflect.TypeOf((*MockBeaconServiceClient)(nil).DomainData), varargs...)
+}
+
 // Eth1Data mocks base method
 func (m *MockBeaconServiceClient) Eth1Data(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v10.Eth1DataResponse, error) {
 	m.ctrl.T.Helper()
@@ -77,26 +97,6 @@ func (mr *MockBeaconServiceClientMockRecorder) Eth1Data(arg0, arg1 interface{}, 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eth1Data", reflect.TypeOf((*MockBeaconServiceClient)(nil).Eth1Data), varargs...)
-}
-
-// ForkData mocks base method
-func (m *MockBeaconServiceClient) ForkData(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v1.Fork, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ForkData", varargs...)
-	ret0, _ := ret[0].(*v1.Fork)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ForkData indicates an expected call of ForkData
-func (mr *MockBeaconServiceClientMockRecorder) ForkData(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForkData", reflect.TypeOf((*MockBeaconServiceClient)(nil).ForkData), varargs...)
 }
 
 // LatestAttestation mocks base method

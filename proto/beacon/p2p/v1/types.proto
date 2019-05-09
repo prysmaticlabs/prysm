@@ -60,8 +60,8 @@ message BeaconState {
 }
 
 message Fork {
-  uint64 previous_version = 1;
-  uint64 current_version = 2;
+  bytes previous_version = 1;
+  bytes current_version = 2;
   uint64 epoch = 3;
 }
 
@@ -76,7 +76,7 @@ message Attestation {
   AttestationData data = 1;
   bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
-  bytes aggregate_signature = 4; // bytes96
+  bytes signature = 4; // bytes96
 }
 
 message AttestationData {
@@ -206,7 +206,7 @@ message SlashableAttestation {
   repeated uint64 validator_indices = 1;
   bytes custody_bitfield = 2;
   AttestationData data = 3;
-  bytes aggregate_signature = 4; // bytes96
+  bytes signature = 4; // bytes96
 }
 
 message DepositData {
