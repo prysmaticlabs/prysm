@@ -50,6 +50,10 @@ func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Me
 	return nil
 }
 
+func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *pb.Attestation) (bool, error) {
+	return true, nil
+}
+
 func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
