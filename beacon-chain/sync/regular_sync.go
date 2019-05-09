@@ -49,6 +49,7 @@ type p2pAPI interface {
 	p2p.Broadcaster
 	p2p.Sender
 	p2p.Subscriber
+	p2p.ReputationManager
 }
 
 // RegularSync is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -204,6 +205,8 @@ func (rs *RegularSync) run() {
 	defer announceAttestationSub.Unsubscribe()
 	defer exitSub.Unsubscribe()
 	defer canonicalBlockSub.Unsubscribe()
+
+	log.Info("Listening for regular sync messages from peers")
 
 	for {
 		select {

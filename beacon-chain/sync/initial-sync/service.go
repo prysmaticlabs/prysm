@@ -12,17 +12,19 @@ package initialsync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -31,7 +33,10 @@ import (
 )
 
 var log = logrus.WithField("prefix", "initial-sync")
-var debugError = "debug:"
+
+var (
+	ErrCanonicalStateMismatch = errors.New("canonical state did not match after syncing with peer")
+)
 
 // Config defines the configurable properties of InitialSync.
 //
@@ -60,7 +65,8 @@ func DefaultConfig() *Config {
 
 type p2pAPI interface {
 	p2p.Sender
-	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	p2p.ReputationManager
+	p2p.Subscriber
 }
 
 type powChainService interface {
@@ -102,7 +108,6 @@ type InitialSync struct {
 	finalizedStateRoot  [32]byte
 	mutex               *sync.Mutex
 	nodeIsSynced        bool
-	bestPeer            peer.ID
 	canonicalBlockRoot  []byte
 	finalizedBlockRoot  []byte
 }
@@ -138,13 +143,13 @@ func NewInitialSyncService(ctx context.Context,
 }
 
 // Start begins the goroutine.
-func (s *InitialSync) Start() {
+func (s *InitialSync) Start(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
 	cHead, err := s.db.ChainHead()
 	if err != nil {
 		log.Errorf("Unable to get chain head %v", err)
 	}
 	s.currentSlot = cHead.Slot
-	go s.run()
+	go s.run(chainHeadResponses)
 }
 
 // Stop kills the initial sync goroutine.
@@ -167,11 +172,6 @@ func (s *InitialSync) InitializeObservedStateRoot(root [32]byte) {
 // InitializeFinalizedStateRoot sets the state root of the last finalized state.
 func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
-}
-
-// InitializeBestPeer sets the peer ID of the highest observed peer.
-func (s *InitialSync) InitializeBestPeer(p peer.ID) {
-	s.bestPeer = p
 }
 
 // InitializeBlockRoots sets canonical and finalized block roots for batch request.
@@ -239,13 +239,13 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	stateRoot := s.db.HeadStateRoot()
 
 	if stateRoot != s.highestObservedRoot {
-		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
-		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
-		log.Fatalf(
+		log.Errorf(
 			"Canonical state root %#x does not match highest observed root from peer %#x",
 			stateRoot,
 			s.highestObservedRoot,
 		)
+
+		return ErrCanonicalStateMismatch
 	}
 	log.WithField("canonicalStateSlot", state.Slot-params.BeaconConfig().GenesisSlot).Info("Exiting init sync and starting regular sync")
 	s.syncService.ResumeSync()
@@ -257,7 +257,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
-func (s *InitialSync) run() {
+func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
 	batchedBlocksub := s.p2p.Subscribe(&pb.BatchedBeaconBlockResponse{}, s.batchedBlockBuf)
 	beaconStateSub := s.p2p.Subscribe(&pb.BeaconStateResponse{}, s.stateBuf)
 	defer func() {
@@ -267,20 +267,72 @@ func (s *InitialSync) run() {
 		close(s.stateBuf)
 	}()
 
-	// We send out a state request to all peers.
-	if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot); err != nil {
+	ctx := s.ctx
+
+	var peers []peer.ID
+	for k, _ := range chainHeadResponses {
+		peers = append(peers, k)
+	}
+
+	// Sort peers in descending order.
+	sort.Slice(peers, func(i, j int) bool {
+		return chainHeadResponses[peers[i]].CanonicalSlot > chainHeadResponses[peers[j]].CanonicalSlot
+	})
+
+	for _, peer := range peers {
+		chainHead := chainHeadResponses[peer]
+		if err := s.syncToPeer(ctx, chainHead, peer); err != nil {
+			log.WithError(err).WithField("peer", peer.Pretty()).Warn("Failed to sync with peer, trying next best peer")
+			continue
+		}
+		log.WithField("peer", peer.Pretty()).Info("Synced!")
+		break
+	}
+
+	if !s.nodeIsSynced {
+		log.Error("Failed to sync with anyone...")
+	}
+}
+
+func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.ChainHeadResponse, peer peer.ID) error {
+	fields := logrus.Fields{
+		"peer":          peer.Pretty(),
+		"canonicalSlot": chainHeadResponse.CanonicalSlot - params.BeaconConfig().GenesisSlot,
+	}
+
+	s.highestObservedSlot = chainHeadResponse.CanonicalSlot
+	s.highestObservedRoot = bytesutil.ToBytes32(chainHeadResponse.CanonicalStateRootHash32)
+
+	log.WithFields(fields).Info("Requesting state from peer")
+	if err := s.requestStateFromPeer(ctx, bytesutil.ToBytes32(chainHeadResponse.FinalizedStateRootHash32S), peer); err != nil {
 		log.Errorf("Could not request state from peer %v", err)
 	}
 
+	ctx, cancel := context.WithTimeout(s.ctx, 20*time.Second)
+	defer cancel()
+
 	for {
 		select {
-		case <-s.ctx.Done():
-			log.Debug("Exiting goroutine")
-			return
+		case <-ctx.Done():
+
+			return ctx.Err()
 		case msg := <-s.stateBuf:
+			log.WithFields(fields).Info("Received state resp from peer")
 			safelyHandleMessage(s.processState, msg)
 		case msg := <-s.batchedBlockBuf:
-			safelyHandleMessage(s.processBatchedBlocks, msg)
+			if msg.Peer != peer {
+				continue
+			}
+			log.WithFields(fields).Info("Received batched blocks from peer")
+			if err := s.processBatchedBlocks(msg); err != nil {
+				log.WithError(err).WithField("peer", peer).Error("Failed to sync with peer.")
+				s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
+				continue
+			}
+			if !s.nodeIsSynced {
+				return errors.New("node still not in sync after receiving batch blocks")
+			}
+			return nil
 		}
 	}
 }
