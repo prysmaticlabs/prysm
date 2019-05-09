@@ -266,11 +266,11 @@ func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 		if err := db.SaveFinalizedState(tt.state); err != nil {
 			t.Fatalf("could not save finalized state: %v", err)
 		}
-		if err := db.SaveHistoricalState(context.Background(), tt.state); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), tt.state, [32]byte{}); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 
-		retState, err := db.HistoricalStateFromSlot(ctx, tt.state.Slot)
+		retState, err := db.HistoricalStateFromSlot(ctx, tt.state.Slot, [32]byte{})
 		if err != nil {
 			t.Fatalf("Unable to retrieve state %v", err)
 		}
@@ -346,10 +346,11 @@ func TestHistoricalState_Pruning(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if err := db.SaveHistoricalState(context.Background(), tt.histState1); err != nil {
+		root := [32]byte{}
+		if err := db.SaveHistoricalState(context.Background(), tt.histState1, root); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
-		if err := db.SaveHistoricalState(context.Background(), tt.histState2); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), tt.histState2, root); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 
@@ -359,11 +360,11 @@ func TestHistoricalState_Pruning(t *testing.T) {
 		}
 
 		// Save a dummy genesis state so that db doesnt return an error.
-		if err := db.SaveHistoricalState(context.Background(), &pb.BeaconState{Slot: slotGen(0), FinalizedEpoch: 1}); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), &pb.BeaconState{Slot: slotGen(0), FinalizedEpoch: 1}, root); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 
-		retState, err := db.HistoricalStateFromSlot(ctx, tt.histState1.Slot)
+		retState, err := db.HistoricalStateFromSlot(ctx, tt.histState1.Slot, root)
 		if err != nil {
 			t.Fatalf("Unable to retrieve state %v", err)
 		}
@@ -372,7 +373,7 @@ func TestHistoricalState_Pruning(t *testing.T) {
 			t.Errorf("Saved and retrieved states are equal when they supposed to be different %d", tt.histState1.Slot-params.BeaconConfig().GenesisSlot)
 		}
 
-		retState, err = db.HistoricalStateFromSlot(ctx, tt.histState2.Slot)
+		retState, err = db.HistoricalStateFromSlot(ctx, tt.histState2.Slot, root)
 		if err != nil {
 			t.Fatalf("Unable to retrieve state %v", err)
 		}
