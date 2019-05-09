@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
