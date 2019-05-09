@@ -4,12 +4,10 @@ import (
 	"context"
 
 	"github.com/libp2p/go-libp2p-peer"
-
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"

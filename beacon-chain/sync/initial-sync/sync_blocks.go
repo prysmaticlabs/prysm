@@ -8,13 +8,12 @@ import (
 
 	"github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // processBlock is the main method that validates each block which is received
