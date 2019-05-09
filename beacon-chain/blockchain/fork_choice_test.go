@@ -269,7 +269,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	attsService.InsertAttestationIntoStore(pubKey48, att)
 
 	chainService := setupBeaconChain(t, beaconDB, attsService)
-	attestationTargets, err := chainService.attestationTargets(beaconState)
+	attestationTargets, err := chainService.AttestationTargets(beaconState)
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
 	}
@@ -332,7 +332,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(ctx, block1, beaconState.Slot)
+	childrenBlock, err := chainService.BlockChildren(ctx, block1, beaconState.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -407,7 +407,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(ctx, block1, beaconState.Slot)
+	childrenBlock, err := chainService.BlockChildren(ctx, block1, beaconState.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -473,7 +473,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(ctx, block1, beaconState.Slot)
+	childrenBlock, err := chainService.BlockChildren(ctx, block1, beaconState.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
