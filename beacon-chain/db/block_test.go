@@ -124,6 +124,40 @@ func TestBlocksBySlotEmptyChain_OK(t *testing.T) {
 	}
 }
 
+func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	slotNum := params.BeaconConfig().GenesisSlot + 3
+	b1 := &pb.BeaconBlock{
+		Slot:         slotNum,
+		RandaoReveal: []byte("A"),
+	}
+	b2 := &pb.BeaconBlock{
+		Slot:         slotNum,
+		RandaoReveal: []byte("B"),
+	}
+	b3 := &pb.BeaconBlock{
+		Slot:         slotNum,
+		RandaoReveal: []byte("C"),
+	}
+	if err := db.SaveBlock(b1); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(b2); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(b3); err != nil {
+		t.Fatal(err)
+	}
+
+	blocks, _ := db.BlocksBySlot(ctx, params.BeaconConfig().GenesisSlot+3)
+	if len(blocks) != 3 {
+		t.Errorf("Wanted %d blocks, received %d", 3, len(blocks))
+	}
+}
+
 func TestUpdateChainHead_NoBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
