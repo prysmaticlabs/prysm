@@ -3,6 +3,8 @@ package initialsync
 import (
 	"context"
 
+	"github.com/libp2p/go-libp2p-peer"
+
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -13,7 +15,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (s *InitialSync) processState(msg p2p.Message) {
+func (s *InitialSync) processState(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processState")
 	defer span.End()
 	data := msg.Data.(*pb.BeaconStateResponse)
@@ -22,28 +24,28 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if err := s.db.SaveFinalizedState(finalizedState); err != nil {
 		log.Errorf("Unable to set received last finalized state in db: %v", err)
-		return
+		return nil
 	}
 
 	if err := s.db.SaveHistoricalState(ctx, finalizedState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
-		return
+		return nil
 	}
 
 	if err := s.db.SaveFinalizedBlock(finalizedState.LatestBlock); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
-		return
+		return nil
 	}
 
 	if err := s.db.SaveBlock(finalizedState.LatestBlock); err != nil {
 		log.Errorf("Could not save block %v", err)
-		return
+		return nil
 	}
 
 	root, err := hashutil.HashBeaconBlock(finalizedState.LatestBlock)
 	if err != nil {
 		log.Errorf("Could not hash finalized block %v", err)
-		return
+		return nil
 	}
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       finalizedState.LatestBlock.Slot,
@@ -51,17 +53,17 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		ParentRoot: finalizedState.LatestBlock.ParentRootHash32,
 	}); err != nil {
 		log.Errorf("Could not to save attestation target: %v", err)
-		return
+		return nil
 	}
 
 	if err := s.db.SaveJustifiedState(finalizedState); err != nil {
 		log.Errorf("Could not set beacon state for initial sync %v", err)
-		return
+		return nil
 	}
 
 	if err := s.db.SaveJustifiedBlock(finalizedState.LatestBlock); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
-		return
+		return nil
 	}
 
 	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
@@ -71,14 +73,14 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if !exists {
 		log.Error("Latest ETH1 block doesn't exist in the pow chain")
-		return
+		return nil
 	}
 
 	s.db.PrunePendingDeposits(ctx, finalizedState.DepositIndex)
 
 	if err := s.db.UpdateChainHead(ctx, finalizedState.LatestBlock, finalizedState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)
-		return
+		return nil
 	}
 
 	validators.InitializeValidatorStore(finalizedState)
@@ -91,16 +93,19 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		"Successfully saved beacon state with the last finalized slot: %d",
 		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
 	)
-	s.requestBatchedBlocks(s.finalizedBlockRoot, s.canonicalBlockRoot)
+	log.WithField("peer", msg.Peer.Pretty()).Info("Requesting batch blocks from peer")
+	s.requestBatchedBlocks(ctx, s.finalizedBlockRoot, s.canonicalBlockRoot, msg.Peer)
 	s.lastRequestedSlot = s.highestObservedSlot
+
+	return nil
 }
 
 // requestStateFromPeer requests for the canonical state, finalized state, and justified state from a peer.
-func (s *InitialSync) requestStateFromPeer(ctx context.Context, lastFinalizedRoot [32]byte) error {
+func (s *InitialSync) requestStateFromPeer(ctx context.Context, lastFinalizedRoot [32]byte, peer peer.ID) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
 	defer span.End()
 	stateReq.Inc()
 	return s.p2p.Send(ctx, &pb.BeaconStateRequest{
 		FinalizedStateRootHash32S: lastFinalizedRoot[:],
-	}, s.bestPeer)
+	}, peer)
 }

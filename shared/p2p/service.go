@@ -128,6 +128,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 			return nil, err
 		}
 		exclusions = append(exclusions, info.ID)
+		h.ConnManager().Protect(info.ID, TagReputation)
 	}
 	setupPeerNegotiation(h, cfg.DepositContractAddress, exclusions)
 	setHandshakeHandler(h, cfg.DepositContractAddress)
@@ -263,6 +264,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 		data := proto.Clone(message)
 		if err := proto.Unmarshal(msg.Payload, data); err != nil {
 			log.Error("Could not unmarshal payload")
+			s.Reputation(peerID, RepPenalityInvalidProtobuf)
 		}
 		pMsg := Message{Ctx: ctx, Data: data, Peer: peerID}
 		for _, adapter := range adapters {

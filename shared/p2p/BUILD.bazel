@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "addr_factory.go",
+        "connection_manager.go",
         "dial_relay_node.go",
         "discovery.go",
         "feed.go",
@@ -32,6 +33,7 @@ go_library(
         "@com_github_libp2p_go_libp2p//config:go_default_library",
         "@com_github_libp2p_go_libp2p//p2p/discovery:go_default_library",
         "@com_github_libp2p_go_libp2p//p2p/host/routed:go_default_library",
+        "@com_github_libp2p_go_libp2p_connmgr//:go_default_library",
         "@com_github_libp2p_go_libp2p_host//:go_default_library",
         "@com_github_libp2p_go_libp2p_kad_dht//:go_default_library",
         "@com_github_libp2p_go_libp2p_net//:go_default_library",

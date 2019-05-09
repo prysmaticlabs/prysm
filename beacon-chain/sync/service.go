@@ -127,9 +127,10 @@ func (ss *Service) run() {
 	}
 	ss.querierFinished = true
 
+	// TODO: Probably don't need all of this stuff, it can be determined from
+	// the chain head responses.
 	// Sets the highest observed slot from querier.
 	ss.InitialSync.InitializeObservedSlot(ss.Querier.currentHeadSlot)
-	ss.InitialSync.InitializeBestPeer(ss.Querier.bestPeer)
 	ss.InitialSync.InitializeObservedStateRoot(bytesutil.ToBytes32(ss.Querier.currentStateRoot))
 	// Sets the state root of the highest observed slot.
 	ss.InitialSync.InitializeFinalizedStateRoot(ss.Querier.currentFinalizedStateRoot)
@@ -140,5 +141,5 @@ func (ss *Service) run() {
 		return
 	}
 
-	ss.InitialSync.Start()
+	ss.InitialSync.Start(ss.Querier.chainHeadResponses)
 }

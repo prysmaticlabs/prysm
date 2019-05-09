@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-peer"
+
 	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
@@ -19,4 +21,9 @@ type Broadcaster interface {
 // method.
 type Subscriber interface {
 	Subscribe(msg proto.Message, channel chan Message) event.Subscription
+}
+
+type ReputationManager interface {
+	Reputation(peer peer.ID, val int)
+	Disconnect(peer peer.ID)
 }

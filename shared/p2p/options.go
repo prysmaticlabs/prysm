@@ -3,8 +3,9 @@ package p2p
 import (
 	"fmt"
 
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	ma "github.com/multiformats/go-multiaddr"
+
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
@@ -26,5 +27,6 @@ func buildOptions(port int) []libp2p.Option {
 	return []libp2p.Option{
 		libp2p.ListenAddrs(listen),
 		libp2p.EnableRelay(), // Allows dialing to peers via relay.
+		optionConnectionManager(),
 	}
 }
