@@ -136,7 +136,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		}
 	}
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 64,
+		Slot:        params.BeaconConfig().GenesisSlot + 64,
+		LatestBlock: &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
 		LatestCrosslinks: []*pb.Crosslink{{
 			Epoch:                   params.BeaconConfig().GenesisEpoch,
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {

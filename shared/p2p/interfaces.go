@@ -25,5 +25,4 @@ type Subscriber interface {
 
 type ReputationManager interface {
 	Reputation(peer peer.ID, val int)
-	Disconnect(peer peer.ID)
 }

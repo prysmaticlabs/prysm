@@ -194,7 +194,12 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	if s.nodeIsSynced {
 		return nil
 	}
-	state, err := s.db.HeadState(ctx)
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parent, err := s.db.Block(parentRoot)
+	if err != nil {
+		return err
+	}
+	state, err := s.db.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
 		return err
 	}
@@ -285,12 +290,12 @@ func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) 
 			log.WithError(err).WithField("peer", peer.Pretty()).Warn("Failed to sync with peer, trying next best peer")
 			continue
 		}
-		log.WithField("peer", peer.Pretty()).Info("Synced!")
+		log.Info("Synced!")
 		break
 	}
 
 	if !s.nodeIsSynced {
-		log.Error("Failed to sync with anyone...")
+		log.Fatal("Failed to sync with anyone...")
 	}
 }
 
@@ -332,6 +337,7 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 			if !s.nodeIsSynced {
 				return errors.New("node still not in sync after receiving batch blocks")
 			}
+			s.p2p.Reputation(msg.Peer, p2p.RepRewardValidBlock)
 			return nil
 		}
 	}

@@ -32,6 +32,10 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 	return nil
 }
 
+func (mp *mockP2P) Reputation(_ peer.ID, _ int) {
+
+}
+
 type mockSyncService struct {
 	hasStarted bool
 	isSynced   bool
@@ -177,11 +181,11 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	batchSize := 20
 	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
 	ss.highestObservedSlot = expectedSlot
-	blk, err := ss.db.BlockBySlot(ctx, params.BeaconConfig().GenesisSlot)
+	blks, err := ss.db.BlocksBySlot(ctx, params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
-	h, err := hashutil.HashBeaconBlock(blk)
+	h, err := hashutil.HashBeaconBlock(blks[0])
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
@@ -242,7 +246,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 func TestSafelyHandleMessage(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	safelyHandleMessage(func(_ p2p.Message) {
+	safelyHandleMessage(func(_ p2p.Message) error {
 		panic("bad!")
 	}, p2p.Message{
 		Data: &pb.BeaconBlock{},
@@ -254,7 +258,7 @@ func TestSafelyHandleMessage(t *testing.T) {
 func TestSafelyHandleMessage_NoData(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	safelyHandleMessage(func(_ p2p.Message) {
+	safelyHandleMessage(func(_ p2p.Message) error {
 		panic("bad!")
 	}, p2p.Message{})
 

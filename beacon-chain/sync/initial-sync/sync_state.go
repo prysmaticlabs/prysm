@@ -27,11 +27,6 @@ func (s *InitialSync) processState(msg p2p.Message) error {
 		return nil
 	}
 
-	if err := s.db.SaveHistoricalState(ctx, finalizedState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
-		return nil
-	}
-
 	if err := s.db.SaveFinalizedBlock(finalizedState.LatestBlock); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
 		return nil
@@ -47,6 +42,12 @@ func (s *InitialSync) processState(msg p2p.Message) error {
 		log.Errorf("Could not hash finalized block %v", err)
 		return nil
 	}
+
+	if err := s.db.SaveHistoricalState(ctx, finalizedState, root); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
+		return nil
+	}
+
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       finalizedState.LatestBlock.Slot,
 		BlockRoot:  root[:],

@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"math"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -18,8 +19,13 @@ const (
 	RepPenalityInvalidAttestation = -5
 )
 
-func optionConnectionManager() libp2p.Option {
-	cm := connmgr.NewConnManager(25, 30, 5*time.Minute)
+func optionConnectionManager(maxPeers int) libp2p.Option {
+	if maxPeers < 5 {
+		log.Warn("Max peers < 5. Defaulting to 5 max peers")
+		maxPeers = 5
+	}
+	minPeers := int(math.Max(5, float64(maxPeers-5)))
+	cm := connmgr.NewConnManager(minPeers, maxPeers, 5*time.Minute)
 
 	return libp2p.ConnectionManager(cm)
 }
