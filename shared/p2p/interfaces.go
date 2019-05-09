@@ -23,6 +23,8 @@ type Subscriber interface {
 	Subscribe(msg proto.Message, channel chan Message) event.Subscription
 }
 
+// ReputationManager represents a subset of the p2p.Server which enables
+// reputaiton reporting of peers.
 type ReputationManager interface {
 	Reputation(peer peer.ID, val int)
 }

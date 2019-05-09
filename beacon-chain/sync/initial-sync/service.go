@@ -35,6 +35,8 @@ import (
 var log = logrus.WithField("prefix", "initial-sync")
 
 var (
+	// ErrCanonicalStateMismatch can occur when the node has processed all blocks
+	// from a peer, but arrived at a different state root.
 	ErrCanonicalStateMismatch = errors.New("canonical state did not match after syncing with peer")
 )
 
@@ -233,7 +235,7 @@ func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) 
 	ctx := s.ctx
 
 	var peers []peer.ID
-	for k, _ := range chainHeadResponses {
+	for k := range chainHeadResponses {
 		peers = append(peers, k)
 	}
 
