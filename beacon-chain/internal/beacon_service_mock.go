@@ -82,21 +82,6 @@ func (mr *MockBeaconServiceServerMockRecorder) Eth1Data(arg0, arg1 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eth1Data", reflect.TypeOf((*MockBeaconServiceServer)(nil).Eth1Data), arg0, arg1)
 }
 
-// ForkData mocks base method
-func (m *MockBeaconServiceServer) ForkData(arg0 context.Context, arg1 *types.Empty) (*v1.Fork, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ForkData", arg0, arg1)
-	ret0, _ := ret[0].(*v1.Fork)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ForkData indicates an expected call of ForkData
-func (mr *MockBeaconServiceServerMockRecorder) ForkData(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForkData", reflect.TypeOf((*MockBeaconServiceServer)(nil).ForkData), arg0, arg1)
-}
-
 // LatestAttestation mocks base method
 func (m *MockBeaconServiceServer) LatestAttestation(arg0 *types.Empty, arg1 v10.BeaconService_LatestAttestationServer) error {
 	m.ctrl.T.Helper()
