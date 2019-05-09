@@ -71,7 +71,7 @@ func DelayedActivationExitEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }
 
-// ChurnLimit returns then number of validators that are allowed to
+// ChurnLimit returns the number of validators that are allowed to
 // enter and exit validator pool for an epoch.
 //
 // Spec pseudocode definition:
