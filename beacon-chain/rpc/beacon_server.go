@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -97,13 +99,17 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 	}
 }
 
-// ForkData fetches the current fork information from the beacon state.
-func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Fork, error) {
+// DomainData fetches the current domain version information from the beacon state.
+func (bs *BeaconServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
 	state, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	return state.Fork, nil
+	dv := helpers.DomainVersion(state, request.Epoch, params.BeaconConfig().DomainRandao)
+	return &pb.DomainResponse{
+		SignatureDomain: dv,
+	}, nil
+
 }
 
 // Eth1Data is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an

@@ -49,7 +49,7 @@ type BeaconChainConfig struct {
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
-	GenesisForkVersion uint64 // GenesisForkVersion is used to track fork version between state transitions.
+	GenesisForkVersion []byte // GenesisForkVersion is used to track fork version between state transitions.
 	// Deprecated: Do not use.
 	GenesisStartShard uint64 // GenesisStartShard is the first shard to assign validators.
 	// Deprecated: Do not use.
@@ -175,7 +175,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// TODO(2307): Remove deprecated fields
 	// Deprecated.
-	GenesisForkVersion: 0,
+	GenesisForkVersion: []byte{0, 0, 0, 0},
 	GenesisStartShard:  0,
 	EmptySignature:     [96]byte{},
 
