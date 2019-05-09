@@ -256,10 +256,10 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for i, key := range pubkeys {
-		status := vs.validatorStatus(ctx, key, chainStarted, chainStartKeys, validatorIndexMap, beaconState)
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
+		status := vs.validatorStatus(ctx, key, chainStarted, chainStartKeys, validatorIndexMap, beaconState)
 		resp := &pb.ValidatorActivationResponse_Status{
 			Status:    status,
 			PublicKey: key,
