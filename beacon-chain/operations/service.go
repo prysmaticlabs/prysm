@@ -210,7 +210,7 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	return nil
 }
 
-// IsAttCanonical returns true if the input attestation is voting the canonical chain, false
+// IsAttCanonical returns true if the input attestation is voting on the canonical chain, false
 // otherwise. The steps to verify are:
 //	1.) retrieve the voted block
 //	2.) retrieve the canonical block by using voted block's slot number
