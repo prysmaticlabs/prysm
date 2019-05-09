@@ -211,7 +211,10 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 }
 
 // IsAttCanonical returns true if the input attestation is voting the canonical chain, false
-// otherwise.
+// otherwise. The steps to verify are:
+//	1.) retrieve the voted block
+//	2.) retrieve the canonical block by using voted block's slot number
+//	3.) return true if voted block root and the canonical block root are the same
 func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool, error) {
 	votedBlk, err := s.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRootHash32))
 	if err != nil {
