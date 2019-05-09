@@ -36,10 +36,6 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 		return nil, err
 	}
 
-	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{
-		Hash: h[:],
-	})
-
 	// Update attestation target for RPC server to run necessary fork choice.
 	// We need to retrieve the head block to get its parent root.
 	head, err := as.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRootHash32))
@@ -48,7 +44,7 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 	}
 	// If the head block is nil, we can't save the attestation target.
 	if head == nil {
-		return nil, nil
+		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))
 	}
 	attTarget := &pbp2p.AttestationTarget{
 		Slot:       att.Data.Slot,
@@ -59,6 +55,9 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 		return nil, fmt.Errorf("could not save attestation target")
 	}
 
+	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{
+		Hash: h[:],
+	})
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
 
