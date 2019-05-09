@@ -97,11 +97,9 @@ type InitialSync struct {
 	powchain            powChainService
 	batchedBlockBuf     chan p2p.Message
 	stateBuf            chan p2p.Message
-	beaconStateSlot     uint64
 	syncPollingInterval time.Duration
 	syncedFeed          *event.Feed
 	stateReceived       bool
-	lastRequestedSlot   uint64
 	mutex               *sync.Mutex
 	nodeIsSynced        bool
 }
