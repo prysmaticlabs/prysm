@@ -191,6 +191,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		PublicKeys: v.pubkeys,
 	}
 
+	log.Error("1")
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
 		v.assignments = nil // Clear assignments so we know to retry the request.
@@ -201,6 +202,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		for _, assignment := range v.assignments.Assignment {
+			log.Error("2")
 			var proposerSlot uint64
 			var attesterSlot uint64
 			assignmentKey := hex.EncodeToString(assignment.PublicKey)
