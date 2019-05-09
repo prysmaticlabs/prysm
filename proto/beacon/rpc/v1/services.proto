@@ -172,7 +172,8 @@ message BlockTreeResponse {
   repeated TreeNode tree = 1;
   message TreeNode {
     ethereum.beacon.p2p.v1.BeaconBlock block = 1;
-    uint64 votes = 2;
+    bytes block_root = 2;
+    uint64 votes = 3;
   }
 }
 

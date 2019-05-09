@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -318,9 +320,14 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		if err != nil {
 			return nil, err
 		}
+		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		if err != nil {
+			return nil, err
+		}
 		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
-			Block: kid,
-			Votes: uint64(votes),
+			BlockRoot: blockRoot[:],
+			Block:     kid,
+			Votes:     uint64(votes),
 		})
 	}
 	return &pb.BlockTreeResponse{
