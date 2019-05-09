@@ -5,7 +5,7 @@ import (
 )
 
 func TestBuildOptions(t *testing.T) {
-	opts := buildOptions(1)
+	opts := buildOptions(1, 10)
 
 	_ = opts
 }

@@ -49,6 +49,10 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 	return nil
 }
 
+func (mp *mockP2P) Reputation(_ peer.ID, val int) {
+
+}
+
 type mockChainService struct {
 	sFeed *event.Feed
 	cFeed *event.Feed

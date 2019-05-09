@@ -8,8 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -113,8 +111,8 @@ func (ss *Service) Status() error {
 	if blk == nil {
 		return errors.New("no chain head exists in db")
 	}
-	if blk.Slot < ss.InitialSync.HighestObservedSlot() {
-		return fmt.Errorf("node is not synced as the current chain head is at slot %d", blk.Slot-params.BeaconConfig().GenesisSlot)
+	if !ss.InitialSync.NodeIsSynced() {
+		return errors.New("not initially synced")
 	}
 	return nil
 }
@@ -127,18 +125,10 @@ func (ss *Service) run() {
 	}
 	ss.querierFinished = true
 
-	// Sets the highest observed slot from querier.
-	ss.InitialSync.InitializeObservedSlot(ss.Querier.currentHeadSlot)
-	ss.InitialSync.InitializeBestPeer(ss.Querier.bestPeer)
-	ss.InitialSync.InitializeObservedStateRoot(bytesutil.ToBytes32(ss.Querier.currentStateRoot))
-	// Sets the state root of the highest observed slot.
-	ss.InitialSync.InitializeFinalizedStateRoot(ss.Querier.currentFinalizedStateRoot)
-	ss.InitialSync.InitializeBlockRoots(ss.Querier.finalizedBlockRoot, ss.Querier.canonicalBlockRoot)
-
 	if synced {
 		ss.RegularSync.Start()
 		return
 	}
 
-	ss.InitialSync.Start()
+	ss.InitialSync.Start(ss.Querier.chainHeadResponses)
 }
