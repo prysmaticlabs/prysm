@@ -301,6 +301,9 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	}
 	fullBlockTree := kids
 	for _, k := range kids {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		nextLayer, err := bs.childFetcher.BlockChildren(ctx, k, highestSlot)
 		if err != nil {
 			return nil, err
@@ -309,6 +312,9 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	}
 	tree := []*pb.BlockTreeResponse_TreeNode{}
 	for _, kid := range fullBlockTree {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		votes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
 		if err != nil {
 			return nil, err
