@@ -105,6 +105,12 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err != nil {
 		return err
 	}
+	if s.db.HasBlock(root) {
+		log.WithField("block", fmt.Sprintf("%#x", root)).
+			Warn("Skipping block in db already")
+		return nil
+	}
+
 	if err := s.checkBlockValidity(ctx, block); err != nil {
 		return err
 	}

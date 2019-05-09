@@ -204,6 +204,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		rs.p2p.Reputation(blockMsg.Peer, p2p.RepPenalityInvalidBlock)
 		return nil, nil, false, err
 	}
+	rs.p2p.Reputation(blockMsg.Peer, p2p.RepRewardValidBlock)
 	sentBlocks.Inc()
 	// We update the last observed slot to the received canonical block's slot.
 	if block.Slot > rs.highestObservedSlot {
