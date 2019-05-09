@@ -57,6 +57,7 @@ func main() {
 		cmd.RelayNode,
 		cmd.P2PPort,
 		cmd.P2PHost,
+		cmd.P2PMaxPeers,
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
 		cmd.EnableTracingFlag,

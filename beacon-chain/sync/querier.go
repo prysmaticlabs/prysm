@@ -59,7 +59,7 @@ type Querier struct {
 	chainStarted              bool
 	atGenesis                 bool
 	bestPeer                  peer.ID
-	peerMap                   map[peer.ID]uint64
+	chainHeadResponses        map[peer.ID]*pb.ChainHeadResponse
 	canonicalBlockRoot        []byte
 	finalizedBlockRoot        []byte
 }
@@ -74,18 +74,18 @@ func NewQuerierService(ctx context.Context,
 	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
 
 	return &Querier{
-		ctx:             ctx,
-		cancel:          cancel,
-		p2p:             cfg.P2P,
-		db:              cfg.BeaconDB,
-		chainService:    cfg.ChainService,
-		responseBuf:     responseBuf,
-		currentHeadSlot: cfg.CurrentHeadSlot,
-		chainStarted:    false,
-		atGenesis:       true,
-		powchain:        cfg.PowChain,
-		chainStartBuf:   make(chan time.Time, 1),
-		peerMap:         make(map[peer.ID]uint64),
+		ctx:                ctx,
+		cancel:             cancel,
+		p2p:                cfg.P2P,
+		db:                 cfg.BeaconDB,
+		chainService:       cfg.ChainService,
+		responseBuf:        responseBuf,
+		currentHeadSlot:    cfg.CurrentHeadSlot,
+		chainStarted:       false,
+		atGenesis:          true,
+		powchain:           cfg.PowChain,
+		chainStartBuf:      make(chan time.Time, 1),
+		chainHeadResponses: make(map[peer.ID]*pb.ChainHeadResponse),
 	}
 }
 
@@ -186,15 +186,14 @@ func (q *Querier) run() {
 				hasReceivedResponse = true
 			}
 			response := msg.Data.(*pb.ChainHeadResponse)
-			if _, ok := q.peerMap[msg.Peer]; !ok {
+			if _, ok := q.chainHeadResponses[msg.Peer]; !ok {
 				queryLog.WithFields(logrus.Fields{
 					"peerID":      msg.Peer.Pretty(),
 					"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
 				}).Info("Received chain head from peer")
-				q.peerMap[msg.Peer] = response.CanonicalSlot
+				q.chainHeadResponses[msg.Peer] = response
 			}
 			if response.CanonicalSlot > q.currentHeadSlot {
-				q.bestPeer = msg.Peer
 				q.currentHeadSlot = response.CanonicalSlot
 				q.currentStateRoot = response.CanonicalStateRootHash32
 				q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)

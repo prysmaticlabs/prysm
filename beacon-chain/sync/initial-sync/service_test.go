@@ -32,6 +32,10 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 	return nil
 }
 
+func (mp *mockP2P) Reputation(_ peer.ID, _ int) {
+
+}
+
 type mockSyncService struct {
 	hasStarted bool
 	isSynced   bool
@@ -121,7 +125,6 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	batchSize := 20
 	batchedBlocks := make([]*pb.BeaconBlock, batchSize)
-	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
 
 	for i := 1; i <= batchSize; i++ {
 		batchedBlocks[i-1] = &pb.BeaconBlock{
@@ -139,25 +142,10 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 		},
 	}
 
-	ss.processBatchedBlocks(msg)
+	chainHead := &pb.ChainHeadResponse{}
 
-	state, err := db.HeadState(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	stateRoot, err := hashutil.HashProto(state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ss.highestObservedRoot = stateRoot
+	ss.processBatchedBlocks(msg, chainHead)
 
-	if ss.currentSlot != expectedSlot {
-		t.Errorf("Expected slot %d equal to current slot %d", expectedSlot, ss.currentSlot)
-	}
-
-	if ss.highestObservedSlot == expectedSlot {
-		t.Errorf("Expected slot %d not equal to highest observed slot slot %d", expectedSlot, ss.highestObservedSlot)
-	}
 }
 
 func TestProcessingBlocks_SkippedSlots(t *testing.T) {
@@ -175,8 +163,6 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	ss := NewInitialSyncService(context.Background(), cfg)
 
 	batchSize := 20
-	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
-	ss.highestObservedSlot = expectedSlot
 	blks, err := ss.db.BlocksBySlot(ctx, params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
@@ -186,15 +172,6 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		t.Fatalf("Unable to hash block %v", err)
 	}
 	parentHash := h[:]
-	state, err := db.HeadState(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	stateRoot, err := hashutil.HashProto(state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ss.highestObservedRoot = stateRoot
 
 	for i := 1; i <= batchSize; i++ {
 		// skip slots
@@ -206,7 +183,9 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			ParentRootHash32: parentHash,
 		}
 
-		ss.processBlock(context.Background(), block)
+		chainHead := &pb.ChainHeadResponse{}
+
+		ss.processBlock(context.Background(), block, chainHead)
 
 		// Save the block and set the parent hash of the next block
 		// as the hash of the current block.
@@ -219,30 +198,15 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Could not hash block %v", err)
 		}
 		parentHash = hash[:]
-		state, err := db.HeadState(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		stateRoot, err := hashutil.HashProto(state)
-		if err != nil {
-			t.Fatal(err)
-		}
-		ss.highestObservedRoot = stateRoot
+
 	}
 
-	if ss.currentSlot != expectedSlot {
-		t.Errorf("Expected slot %d equal to current slot %d", expectedSlot, ss.currentSlot)
-	}
-
-	if ss.highestObservedSlot != expectedSlot {
-		t.Errorf("Expected slot %d equal to highest observed slot %d", expectedSlot, ss.highestObservedSlot)
-	}
 }
 
 func TestSafelyHandleMessage(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	safelyHandleMessage(func(_ p2p.Message) {
+	safelyHandleMessage(func(_ p2p.Message) error {
 		panic("bad!")
 	}, p2p.Message{
 		Data: &pb.BeaconBlock{},
@@ -254,7 +218,7 @@ func TestSafelyHandleMessage(t *testing.T) {
 func TestSafelyHandleMessage_NoData(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	safelyHandleMessage(func(_ p2p.Message) {
+	safelyHandleMessage(func(_ p2p.Message) error {
 		panic("bad!")
 	}, p2p.Message{})
 
