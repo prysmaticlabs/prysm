@@ -6,13 +6,12 @@ package internal
 
 import (
 	context "context"
-	reflect "reflect"
-
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	v10 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	metadata "google.golang.org/grpc/metadata"
+	reflect "reflect"
 )
 
 // MockBeaconServiceServer is a mock of BeaconServiceServer interface
@@ -51,6 +50,21 @@ func (m *MockBeaconServiceServer) CanonicalHead(arg0 context.Context, arg1 *type
 func (mr *MockBeaconServiceServerMockRecorder) CanonicalHead(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHead", reflect.TypeOf((*MockBeaconServiceServer)(nil).CanonicalHead), arg0, arg1)
+}
+
+// DomainData mocks base method
+func (m *MockBeaconServiceServer) DomainData(arg0 context.Context, arg1 *v10.DomainRequest) (*v10.DomainResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DomainData", arg0, arg1)
+	ret0, _ := ret[0].(*v10.DomainResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DomainData indicates an expected call of DomainData
+func (mr *MockBeaconServiceServerMockRecorder) DomainData(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainData", reflect.TypeOf((*MockBeaconServiceServer)(nil).DomainData), arg0, arg1)
 }
 
 // Eth1Data mocks base method

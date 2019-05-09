@@ -15,6 +15,7 @@ service BeaconService {
   rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
   rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
   rpc ForkData(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.Fork);
+  rpc DomainData(DomainRequest) returns (DomainResponse);
   rpc RecentBlockRoots(BlockRootsRequest) returns (BlockRootsRespond);
 }
 
@@ -170,6 +171,14 @@ message Eth1DataResponse {
 
 message BlockRootsRequest {
   uint64 count = 1;
+}
+
+message DomainRequest {
+  uint64 epoch = 1;
+}
+
+message DomainResponse {
+  uint64 signature_domain = 1;
 }
 
 message BlockRoot {
