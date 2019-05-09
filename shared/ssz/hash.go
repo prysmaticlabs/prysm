@@ -70,7 +70,7 @@ func hashSignature(val reflect.Value) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	lastfieldName := fields[len(fields)-1].name
-	if lastfieldName != "signature" && lastfieldName != "Signature" {
+	if lastfieldName != "Signature" {
 		return [32]byte{}, fmt.Errorf("field name is invalid wanted Signature but got %s", lastfieldName)
 	}
 	lastField := val.Field(fields[len(fields)-1].index)
