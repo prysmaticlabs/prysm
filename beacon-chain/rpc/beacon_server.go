@@ -135,6 +135,9 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	bestVote := &pbp2p.Eth1DataVote{}
 	bestVoteHeight := big.NewInt(0)
 	for _, vote := range beaconState.Eth1DataVotes {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
