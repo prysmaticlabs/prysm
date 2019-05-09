@@ -19,21 +19,16 @@ import (
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
-func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) error {
+func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.processBlock")
 	defer span.End()
 	recBlock.Inc()
 
-	if block.Slot == s.highestObservedSlot {
-		s.currentSlot = s.highestObservedSlot
-		if err := s.exitInitialSync(s.ctx, block); err != nil {
+	if block.Slot == chainHead.CanonicalSlot {
+		if err := s.exitInitialSync(s.ctx, block, chainHead); err != nil {
 			log.Errorf("Could not exit initial sync: %v", err)
 			return err
 		}
-		return nil
-	}
-
-	if block.Slot < s.currentSlot {
 		return nil
 	}
 
@@ -46,7 +41,7 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) e
 
 // processBatchedBlocks processes all the received blocks from
 // the p2p message.
-func (s *InitialSync) processBatchedBlocks(msg p2p.Message) error {
+func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBatchedBlocks")
 	defer span.End()
 	batchedBlockReq.Inc()
@@ -65,7 +60,7 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) error {
 		return batchedBlocks[i].Slot < batchedBlocks[j].Slot
 	})
 	for _, block := range batchedBlocks {
-		if err := s.processBlock(ctx, block); err != nil {
+		if err := s.processBlock(ctx, block, chainHead); err != nil {
 			return err
 		}
 	}
@@ -117,7 +112,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		"root": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"slot": block.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Saving block")
-	s.currentSlot = block.Slot
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

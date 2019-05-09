@@ -35,6 +35,8 @@ import (
 var log = logrus.WithField("prefix", "initial-sync")
 
 var (
+	// ErrCanonicalStateMismatch can occur when the node has processed all blocks
+	// from a peer, but arrived at a different state root.
 	ErrCanonicalStateMismatch = errors.New("canonical state did not match after syncing with peer")
 )
 
@@ -97,19 +99,11 @@ type InitialSync struct {
 	powchain            powChainService
 	batchedBlockBuf     chan p2p.Message
 	stateBuf            chan p2p.Message
-	currentSlot         uint64
-	highestObservedSlot uint64
-	highestObservedRoot [32]byte
-	beaconStateSlot     uint64
 	syncPollingInterval time.Duration
 	syncedFeed          *event.Feed
 	stateReceived       bool
-	lastRequestedSlot   uint64
-	finalizedStateRoot  [32]byte
 	mutex               *sync.Mutex
 	nodeIsSynced        bool
-	canonicalBlockRoot  []byte
-	finalizedBlockRoot  []byte
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -130,9 +124,6 @@ func NewInitialSyncService(ctx context.Context,
 		db:                  cfg.BeaconDB,
 		powchain:            cfg.PowChain,
 		chainService:        cfg.ChainService,
-		currentSlot:         params.BeaconConfig().GenesisSlot,
-		highestObservedSlot: params.BeaconConfig().GenesisSlot,
-		beaconStateSlot:     params.BeaconConfig().GenesisSlot,
 		stateBuf:            stateBuf,
 		batchedBlockBuf:     batchedBlockBuf,
 		syncPollingInterval: cfg.SyncPollingInterval,
@@ -144,11 +135,6 @@ func NewInitialSyncService(ctx context.Context,
 
 // Start begins the goroutine.
 func (s *InitialSync) Start(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
-	cHead, err := s.db.ChainHead()
-	if err != nil {
-		log.Errorf("Unable to get chain head %v", err)
-	}
-	s.currentSlot = cHead.Slot
 	go s.run(chainHeadResponses)
 }
 
@@ -159,42 +145,21 @@ func (s *InitialSync) Stop() error {
 	return nil
 }
 
-// InitializeObservedSlot sets the highest observed slot.
-func (s *InitialSync) InitializeObservedSlot(slot uint64) {
-	s.highestObservedSlot = slot
-}
-
-// InitializeObservedStateRoot sets the highest observed state root.
-func (s *InitialSync) InitializeObservedStateRoot(root [32]byte) {
-	s.highestObservedRoot = root
-}
-
-// InitializeFinalizedStateRoot sets the state root of the last finalized state.
-func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
-	s.finalizedStateRoot = root
-}
-
-// InitializeBlockRoots sets canonical and finalized block roots for batch request.
-func (s *InitialSync) InitializeBlockRoots(finalizedRoot []byte, canonicalRoot []byte) {
-	s.canonicalBlockRoot = canonicalRoot
-	s.finalizedBlockRoot = finalizedRoot
-}
-
-// HighestObservedSlot returns the highest observed slot.
-func (s *InitialSync) HighestObservedSlot() uint64 {
-	return s.highestObservedSlot
-}
-
 // NodeIsSynced checks that the node has been caught up with the network.
-func (s *InitialSync) NodeIsSynced() (bool, uint64) {
-	return s.nodeIsSynced, s.currentSlot
+func (s *InitialSync) NodeIsSynced() bool {
+	return s.nodeIsSynced
 }
 
-func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock) error {
+func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
 	if s.nodeIsSynced {
 		return nil
 	}
-	state, err := s.db.HeadState(ctx)
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parent, err := s.db.Block(parentRoot)
+	if err != nil {
+		return err
+	}
+	state, err := s.db.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
 		return err
 	}
@@ -238,11 +203,11 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 
 	stateRoot := s.db.HeadStateRoot()
 
-	if stateRoot != s.highestObservedRoot {
+	if stateRoot != bytesutil.ToBytes32(chainHead.CanonicalStateRootHash32) {
 		log.Errorf(
 			"Canonical state root %#x does not match highest observed root from peer %#x",
 			stateRoot,
-			s.highestObservedRoot,
+			chainHead.CanonicalStateRootHash32,
 		)
 
 		return ErrCanonicalStateMismatch
@@ -270,11 +235,11 @@ func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) 
 	ctx := s.ctx
 
 	var peers []peer.ID
-	for k, _ := range chainHeadResponses {
+	for k := range chainHeadResponses {
 		peers = append(peers, k)
 	}
 
-	// Sort peers in descending order.
+	// Sort peers in descending order based on their canonical slot.
 	sort.Slice(peers, func(i, j int) bool {
 		return chainHeadResponses[peers[i]].CanonicalSlot > chainHeadResponses[peers[j]].CanonicalSlot
 	})
@@ -285,12 +250,12 @@ func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) 
 			log.WithError(err).WithField("peer", peer.Pretty()).Warn("Failed to sync with peer, trying next best peer")
 			continue
 		}
-		log.WithField("peer", peer.Pretty()).Info("Synced!")
+		log.Info("Synced!")
 		break
 	}
 
 	if !s.nodeIsSynced {
-		log.Error("Failed to sync with anyone...")
+		log.Fatal("Failed to sync with anyone...")
 	}
 }
 
@@ -299,9 +264,6 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 		"peer":          peer.Pretty(),
 		"canonicalSlot": chainHeadResponse.CanonicalSlot - params.BeaconConfig().GenesisSlot,
 	}
-
-	s.highestObservedSlot = chainHeadResponse.CanonicalSlot
-	s.highestObservedRoot = bytesutil.ToBytes32(chainHeadResponse.CanonicalStateRootHash32)
 
 	log.WithFields(fields).Info("Requesting state from peer")
 	if err := s.requestStateFromPeer(ctx, bytesutil.ToBytes32(chainHeadResponse.FinalizedStateRootHash32S), peer); err != nil {
@@ -318,13 +280,15 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 			return ctx.Err()
 		case msg := <-s.stateBuf:
 			log.WithFields(fields).Info("Received state resp from peer")
-			safelyHandleMessage(s.processState, msg)
+			if err := s.processState(msg, chainHeadResponse); err != nil {
+				return err
+			}
 		case msg := <-s.batchedBlockBuf:
 			if msg.Peer != peer {
 				continue
 			}
 			log.WithFields(fields).Info("Received batched blocks from peer")
-			if err := s.processBatchedBlocks(msg); err != nil {
+			if err := s.processBatchedBlocks(msg, chainHeadResponse); err != nil {
 				log.WithError(err).WithField("peer", peer).Error("Failed to sync with peer.")
 				s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
 				continue
@@ -332,6 +296,7 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 			if !s.nodeIsSynced {
 				return errors.New("node still not in sync after receiving batch blocks")
 			}
+			s.p2p.Reputation(msg.Peer, p2p.RepRewardValidBlock)
 			return nil
 		}
 	}
