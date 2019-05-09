@@ -64,6 +64,8 @@ func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationDataReque
 
 	delay := minDelay
 
+	// Another identical request may be in progress already. Let's wait until
+	// any in progress request resolves or our timeout is exceeded.
 	for {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -76,6 +78,8 @@ func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationDataReque
 		}
 		c.lock.RUnlock()
 
+		// This increasing backoff is to decrease the CPU cycles while waiting
+		// for the in progress boolean to flip to false.
 		time.Sleep(time.Duration(delay) * time.Nanosecond)
 		delay *= delayFactor
 		delay = math.Min(delay, maxDelay)
