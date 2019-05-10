@@ -871,6 +871,7 @@ func CrosslinkAttestingIndices(state *pb.BeaconState, crosslink *pb.Crosslink, a
 	return UnslashedAttestingIndices(state, crosslinkAtts)
 }
 
+// attsForCrosslink returns the attestations of the input crosslink.
 func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
 	var crosslinkAtts []*pb.PendingAttestation
 	for _, a := range atts {
