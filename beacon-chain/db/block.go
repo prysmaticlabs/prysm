@@ -58,7 +58,9 @@ func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
 	})
 
 	// Save block to the cache since it wasn't there before.
-	db.blocks[root] = block
+	if block != nil {
+		db.blocks[root] = block
+	}
 
 	return block, err
 }
