@@ -480,6 +480,112 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 	return state, nil
 }
 
+// ProcessFinalUpdates processes the final updates during epoch processing.
+//
+// Spec pseudocode definition:
+//	def process_final_updates(state: BeaconState) -> None:
+//    current_epoch = get_current_epoch(state)
+//    next_epoch = current_epoch + 1
+//    # Reset eth1 data votes
+//    if (state.slot + 1) % SLOTS_PER_ETH1_VOTING_PERIOD == 0:
+//        state.eth1_data_votes = []
+//    # Update effective balances with hysteresis
+//    for index, validator in enumerate(state.validator_registry):
+//        balance = state.balances[index]
+//        HALF_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // 2
+//        if balance < validator.effective_balance or validator.effective_balance + 3 * HALF_INCREMENT < balance:
+//            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
+//    # Update start shard
+//    state.latest_start_shard = (state.latest_start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT
+//    # Set active index root
+//    index_root_position = (next_epoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH
+//    state.latest_active_index_roots[index_root_position] = hash_tree_root(
+//        get_active_validator_indices(state, next_epoch + ACTIVATION_EXIT_DELAY)
+//    )
+//    # Set total slashed balances
+//    state.latest_slashed_balances[next_epoch % LATEST_SLASHED_EXIT_LENGTH] = (
+//        state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
+//    )
+//    # Set randao mix
+//    state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] = get_randao_mix(state, current_epoch)
+//    # Set historical root accumulator
+//    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
+//        historical_batch = HistoricalBatch(
+//            block_roots=state.latest_block_roots,
+//            state_roots=state.latest_state_roots,
+//        )
+//        state.historical_roots.append(hash_tree_root(historical_batch))
+//    # Rotate current/previous epoch attestations
+//    state.previous_epoch_attestations = state.current_epoch_attestations
+//    state.current_epoch_attestations = []
+func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
+	currentEpoch := helpers.CurrentEpoch(state)
+	nextEpoch := currentEpoch + 1
+
+	// Reset ETH1 data votes.
+	if (state.Slot+1)%params.BeaconConfig().SlotsPerHistoricalRoot == 0 {
+		state.Eth1DataVotes = nil
+	}
+
+	// Update effective balances with hysteresis.
+	for i, v := range state.ValidatorRegistry {
+		balance := state.Balances[i]
+		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
+		if balance < v.EffectiveBalance || v.EffectiveBalance+3*halfInc < balance {
+			v.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+			if v.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
+				v.EffectiveBalance = balance % params.BeaconConfig().EffectiveBalanceIncrement
+			}
+		}
+	}
+
+	// Update start shard.
+	state.LatestStartShard = (state.LatestStartShard + helpers.ShardDelta(state, currentEpoch)) %
+		params.BeaconConfig().ShardCount
+
+	// Set active index root.
+	activationDelay := params.BeaconConfig().ActivationExitDelay
+	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().LatestActiveIndexRootsLength
+	idxRoot, err := ssz.TreeHash(helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch+activationDelay))
+	if err != nil {
+		return nil, fmt.Errorf("could not tree hash active indices: %v", err)
+	}
+	state.LatestActiveIndexRoots[idxRootPosition] = idxRoot[:]
+
+	// Set total slashed balances.
+	slashedExitLength := params.BeaconConfig().LatestSlashedExitLength
+	state.LatestSlashedBalances[nextEpoch%slashedExitLength] =
+		state.LatestSlashedBalances[currentEpoch%slashedExitLength]
+
+	// Set RANDAO mix.
+	randaoMixLength := params.BeaconConfig().LatestRandaoMixesLength
+	mix, err := helpers.RandaoMix(state, currentEpoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get randao mix: %v", err)
+	}
+	state.LatestRandaoMixes[nextEpoch%randaoMixLength] = mix
+
+	// Set historical root accumulator.
+	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
+	if nextEpoch%epochsPerHistoricalRoot == 0 {
+		historicalBatch := &pb.HistoricalBatch{
+			BlockRoots: state.LatestBlockRoots,
+			StateRoots: state.LatestStateRoots,
+		}
+		batchRoot, err := hashutil.HashProto(historicalBatch)
+		if err != nil {
+			return nil, fmt.Errorf("could not hash historical batch: %v", err)
+		}
+		state.HistoricalRoots = append(state.HistoricalRoots, batchRoot[:])
+	}
+
+	// Rotate current and previous epoch attestations.
+	state.PreviousEpochAttestations = state.CurrentEpochAttestations
+	state.CurrentEpochAttestations = nil
+
+	return state, nil
+}
+
 // UpdateLatestSlashedBalances updates the latest slashed balances. It transfers
 // the amount from the current epoch index to next epoch index.
 //
@@ -765,110 +871,14 @@ func CrosslinkAttestingIndices(state *pb.BeaconState, crosslink *pb.Crosslink, a
 	return UnslashedAttestingIndices(state, crosslinkAtts)
 }
 
-// ProcessFinalUpdates processes the final updates during epoch processing.
-//
-// Spec pseudocode definition:
-//	def process_final_updates(state: BeaconState) -> None:
-//    current_epoch = get_current_epoch(state)
-//    next_epoch = current_epoch + 1
-//    # Reset eth1 data votes
-//    if (state.slot + 1) % SLOTS_PER_ETH1_VOTING_PERIOD == 0:
-//        state.eth1_data_votes = []
-//    # Update effective balances with hysteresis
-//    for index, validator in enumerate(state.validator_registry):
-//        balance = state.balances[index]
-//        HALF_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // 2
-//        if balance < validator.effective_balance or validator.effective_balance + 3 * HALF_INCREMENT < balance:
-//            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
-//    # Update start shard
-//    state.latest_start_shard = (state.latest_start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT
-//    # Set active index root
-//    index_root_position = (next_epoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH
-//    state.latest_active_index_roots[index_root_position] = hash_tree_root(
-//        get_active_validator_indices(state, next_epoch + ACTIVATION_EXIT_DELAY)
-//    )
-//    # Set total slashed balances
-//    state.latest_slashed_balances[next_epoch % LATEST_SLASHED_EXIT_LENGTH] = (
-//        state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
-//    )
-//    # Set randao mix
-//    state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] = get_randao_mix(state, current_epoch)
-//    # Set historical root accumulator
-//    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
-//        historical_batch = HistoricalBatch(
-//            block_roots=state.latest_block_roots,
-//            state_roots=state.latest_state_roots,
-//        )
-//        state.historical_roots.append(hash_tree_root(historical_batch))
-//    # Rotate current/previous epoch attestations
-//    state.previous_epoch_attestations = state.current_epoch_attestations
-//    state.current_epoch_attestations = []
-func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
-	currentEpoch := helpers.CurrentEpoch(state)
-	nextEpoch := currentEpoch + 1
-
-	// Reset ETH1 data votes.
-	if (state.Slot+1)%params.BeaconConfig().SlotsPerHistoricalRoot == 0 {
-		state.Eth1DataVotes = nil
-	}
-
-	// Update effective balances with hysteresis.
-	for i, v := range state.ValidatorRegistry {
-		balance := state.Balances[i]
-		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
-		if balance < v.EffectiveBalance || v.EffectiveBalance+3*halfInc < balance {
-			v.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-			if v.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
-				v.EffectiveBalance = balance % params.BeaconConfig().EffectiveBalanceIncrement
-			}
+func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
+	var crosslinkAtts []*pb.PendingAttestation
+	for _, a := range atts {
+		if proto.Equal(CrosslinkFromAttsData(state, a.Data), crosslink) {
+			crosslinkAtts = append(crosslinkAtts, a)
 		}
 	}
-
-	// Update start shard.
-	state.LatestStartShard = (state.LatestStartShard + helpers.ShardDelta(state, currentEpoch)) %
-		params.BeaconConfig().ShardCount
-
-	// Set active index root.
-	activationDelay := params.BeaconConfig().ActivationExitDelay
-	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().LatestActiveIndexRootsLength
-	idxRoot, err := ssz.TreeHash(helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch+activationDelay))
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash active indices: %v", err)
-	}
-	state.LatestActiveIndexRoots[idxRootPosition] = idxRoot[:]
-
-	// Set total slashed balances.
-	slashedExitLength := params.BeaconConfig().LatestSlashedExitLength
-	state.LatestSlashedBalances[nextEpoch%slashedExitLength] =
-		state.LatestSlashedBalances[currentEpoch%slashedExitLength]
-
-	// Set RANDAO mix.
-	randaoMixLength := params.BeaconConfig().LatestRandaoMixesLength
-	mix, err := helpers.RandaoMix(state, currentEpoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not get randao mix: %v", err)
-	}
-	state.LatestRandaoMixes[nextEpoch%randaoMixLength] = mix
-
-	// Set historical root accumulator.
-	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
-	if nextEpoch%epochsPerHistoricalRoot == 0 {
-		historicalBatch := &pb.HistoricalBatch{
-			BlockRoots: state.LatestBlockRoots,
-			StateRoots: state.LatestStateRoots,
-		}
-		batchRoot, err := hashutil.HashProto(historicalBatch)
-		if err != nil {
-			return nil, fmt.Errorf("could not hash historical batch: %v", err)
-		}
-		state.HistoricalRoots = append(state.HistoricalRoots, batchRoot[:])
-	}
-
-	// Rotate current and previous epoch attestations.
-	state.PreviousEpochAttestations = state.CurrentEpochAttestations
-	state.CurrentEpochAttestations = nil
-
-	return state, nil
+	return crosslinkAtts
 }
 
 // TotalActiveBalance returns the combined balances of all the active validators.
