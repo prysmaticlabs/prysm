@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
+	"github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -19,37 +19,29 @@ import (
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
-func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
+func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.processBlock")
 	defer span.End()
 	recBlock.Inc()
 
-	if block.Slot == s.highestObservedSlot {
-		s.currentSlot = s.highestObservedSlot
-		if err := s.exitInitialSync(s.ctx, block); err != nil {
+	if block.Slot == chainHead.CanonicalSlot {
+		if err := s.exitInitialSync(s.ctx, block, chainHead); err != nil {
 			log.Errorf("Could not exit initial sync: %v", err)
-			return
+			return err
 		}
-		return
-	}
-
-	if block.Slot < s.currentSlot {
-		return
+		return nil
 	}
 
 	if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
-		// Debug error so as not to have noisy error logs
-		if strings.HasPrefix(err.Error(), debugError) {
-			log.Debug(strings.TrimPrefix(err.Error(), debugError))
-			return
-		}
-		log.Errorf("Unable to save block: %v", err)
+		return err
 	}
+
+	return nil
 }
 
 // processBatchedBlocks processes all the received blocks from
 // the p2p message.
-func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
+func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBatchedBlocks")
 	defer span.End()
 	batchedBlockReq.Inc()
@@ -58,52 +50,40 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	batchedBlocks := response.BatchedBlocks
 	if len(batchedBlocks) == 0 {
 		// Do not process empty responses.
-		return
-	}
-	if msg.Peer != s.bestPeer {
-		// Only process batch block responses that come from the best peer
-		// we originally synced with.
-		log.WithField("peerID", msg.Peer.Pretty()).Debug("Received batch blocks from a different peer")
-		return
+		s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
+		return nil
 	}
 
-	log.Debug("Processing batched block response")
+	log.WithField("blocks", len(batchedBlocks)).Info("Processing batched block response")
 	// Sort batchBlocks in ascending order.
 	sort.Slice(batchedBlocks, func(i, j int) bool {
 		return batchedBlocks[i].Slot < batchedBlocks[j].Slot
 	})
 	for _, block := range batchedBlocks {
-		s.processBlock(ctx, block)
+		if err := s.processBlock(ctx, block, chainHead); err != nil {
+			return err
+		}
 	}
 	log.Debug("Finished processing batched blocks")
+	return nil
 }
 
-// requestBatchedBlocks sends out a request for multiple blocks till a
-// specified bound slot number.
-func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
-	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.sync.initial-sync.requestBatchedBlocks")
+// requestBatchedBlocks sends out a request for multiple blocks that's between finalized roots
+// and head roots.
+func (s *InitialSync) requestBatchedBlocks(ctx context.Context, finalizedRoot []byte, canonicalRoot []byte, peer peer.ID) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestBatchedBlocks")
 	defer span.End()
 	sentBatchedBlockReq.Inc()
-	if startSlot > endSlot {
-		log.WithFields(logrus.Fields{
-			"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
-			"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
-		).Debug("Invalid batched block request")
-		return
-	}
-	blockLimit := params.BeaconConfig().BatchBlockLimit
-	if startSlot+blockLimit < endSlot {
-		endSlot = startSlot + blockLimit
-	}
+
 	log.WithFields(logrus.Fields{
-		"slotSlot": startSlot - params.BeaconConfig().GenesisSlot,
-		"endSlot":  endSlot - params.BeaconConfig().GenesisSlot},
+		"finalizedBlkRoot": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedRoot[:])),
+		"headBlkRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(canonicalRoot[:]))},
 	).Debug("Requesting batched blocks")
 	if err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
-		StartSlot: startSlot,
-		EndSlot:   endSlot,
-	}, s.bestPeer); err != nil {
-		log.Errorf("Could not send batch block request to peer %s: %v", s.bestPeer.Pretty(), err)
+		FinalizedRoot: finalizedRoot,
+		CanonicalRoot: canonicalRoot,
+	}, peer); err != nil {
+		log.Errorf("Could not send batch block request to peer %s: %v", peer.Pretty(), err)
 	}
 }
 
@@ -119,6 +99,12 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err != nil {
 		return err
 	}
+	if s.db.HasBlock(root) {
+		log.WithField("block", fmt.Sprintf("%#x", root)).
+			Warn("Skipping block in db already")
+		return nil
+	}
+
 	if err := s.checkBlockValidity(ctx, block); err != nil {
 		return err
 	}
@@ -126,7 +112,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		"root": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"slot": block.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Saving block")
-	s.currentSlot = block.Slot
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

@@ -12,17 +12,19 @@ package initialsync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -31,7 +33,12 @@ import (
 )
 
 var log = logrus.WithField("prefix", "initial-sync")
-var debugError = "debug:"
+
+var (
+	// ErrCanonicalStateMismatch can occur when the node has processed all blocks
+	// from a peer, but arrived at a different state root.
+	ErrCanonicalStateMismatch = errors.New("canonical state did not match after syncing with peer")
+)
 
 // Config defines the configurable properties of InitialSync.
 //
@@ -60,7 +67,8 @@ func DefaultConfig() *Config {
 
 type p2pAPI interface {
 	p2p.Sender
-	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	p2p.ReputationManager
+	p2p.Subscriber
 }
 
 type powChainService interface {
@@ -91,18 +99,11 @@ type InitialSync struct {
 	powchain            powChainService
 	batchedBlockBuf     chan p2p.Message
 	stateBuf            chan p2p.Message
-	currentSlot         uint64
-	highestObservedSlot uint64
-	highestObservedRoot [32]byte
-	beaconStateSlot     uint64
 	syncPollingInterval time.Duration
 	syncedFeed          *event.Feed
 	stateReceived       bool
-	lastRequestedSlot   uint64
-	finalizedStateRoot  [32]byte
 	mutex               *sync.Mutex
 	nodeIsSynced        bool
-	bestPeer            peer.ID
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -123,9 +124,6 @@ func NewInitialSyncService(ctx context.Context,
 		db:                  cfg.BeaconDB,
 		powchain:            cfg.PowChain,
 		chainService:        cfg.ChainService,
-		currentSlot:         params.BeaconConfig().GenesisSlot,
-		highestObservedSlot: params.BeaconConfig().GenesisSlot,
-		beaconStateSlot:     params.BeaconConfig().GenesisSlot,
 		stateBuf:            stateBuf,
 		batchedBlockBuf:     batchedBlockBuf,
 		syncPollingInterval: cfg.SyncPollingInterval,
@@ -136,13 +134,8 @@ func NewInitialSyncService(ctx context.Context,
 }
 
 // Start begins the goroutine.
-func (s *InitialSync) Start() {
-	cHead, err := s.db.ChainHead()
-	if err != nil {
-		log.Errorf("Unable to get chain head %v", err)
-	}
-	s.currentSlot = cHead.Slot
-	go s.run()
+func (s *InitialSync) Start(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
+	go s.run(chainHeadResponses)
 }
 
 // Stop kills the initial sync goroutine.
@@ -152,41 +145,21 @@ func (s *InitialSync) Stop() error {
 	return nil
 }
 
-// InitializeObservedSlot sets the highest observed slot.
-func (s *InitialSync) InitializeObservedSlot(slot uint64) {
-	s.highestObservedSlot = slot
-}
-
-// InitializeObservedStateRoot sets the highest observed state root.
-func (s *InitialSync) InitializeObservedStateRoot(root [32]byte) {
-	s.highestObservedRoot = root
-}
-
-// InitializeFinalizedStateRoot sets the state root of the last finalized state.
-func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
-	s.finalizedStateRoot = root
-}
-
-// InitializeBestPeer sets the peer ID of the highest observed peer.
-func (s *InitialSync) InitializeBestPeer(p peer.ID) {
-	s.bestPeer = p
-}
-
-// HighestObservedSlot returns the highest observed slot.
-func (s *InitialSync) HighestObservedSlot() uint64 {
-	return s.highestObservedSlot
-}
-
 // NodeIsSynced checks that the node has been caught up with the network.
-func (s *InitialSync) NodeIsSynced() (bool, uint64) {
-	return s.nodeIsSynced, s.currentSlot
+func (s *InitialSync) NodeIsSynced() bool {
+	return s.nodeIsSynced
 }
 
-func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock) error {
+func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
 	if s.nodeIsSynced {
 		return nil
 	}
-	state, err := s.db.HeadState(ctx)
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parent, err := s.db.Block(parentRoot)
+	if err != nil {
+		return err
+	}
+	state, err := s.db.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
 		return err
 	}
@@ -230,14 +203,14 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 
 	stateRoot := s.db.HeadStateRoot()
 
-	if stateRoot != s.highestObservedRoot {
-		// TODO(#2155): Instead of a fatal call, drop the peer and restart the initial sync service.
-		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
-		log.Fatalf(
+	if stateRoot != bytesutil.ToBytes32(chainHead.CanonicalStateRootHash32) {
+		log.Errorf(
 			"Canonical state root %#x does not match highest observed root from peer %#x",
 			stateRoot,
-			s.highestObservedRoot,
+			chainHead.CanonicalStateRootHash32,
 		)
+
+		return ErrCanonicalStateMismatch
 	}
 	log.WithField("canonicalStateSlot", state.Slot-params.BeaconConfig().GenesisSlot).Info("Exiting init sync and starting regular sync")
 	s.syncService.ResumeSync()
@@ -249,7 +222,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
-func (s *InitialSync) run() {
+func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
 	batchedBlocksub := s.p2p.Subscribe(&pb.BatchedBeaconBlockResponse{}, s.batchedBlockBuf)
 	beaconStateSub := s.p2p.Subscribe(&pb.BeaconStateResponse{}, s.stateBuf)
 	defer func() {
@@ -259,20 +232,72 @@ func (s *InitialSync) run() {
 		close(s.stateBuf)
 	}()
 
-	// We send out a state request to all peers.
-	if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot); err != nil {
+	ctx := s.ctx
+
+	var peers []peer.ID
+	for k := range chainHeadResponses {
+		peers = append(peers, k)
+	}
+
+	// Sort peers in descending order based on their canonical slot.
+	sort.Slice(peers, func(i, j int) bool {
+		return chainHeadResponses[peers[i]].CanonicalSlot > chainHeadResponses[peers[j]].CanonicalSlot
+	})
+
+	for _, peer := range peers {
+		chainHead := chainHeadResponses[peer]
+		if err := s.syncToPeer(ctx, chainHead, peer); err != nil {
+			log.WithError(err).WithField("peer", peer.Pretty()).Warn("Failed to sync with peer, trying next best peer")
+			continue
+		}
+		log.Info("Synced!")
+		break
+	}
+
+	if !s.nodeIsSynced {
+		log.Fatal("Failed to sync with anyone...")
+	}
+}
+
+func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.ChainHeadResponse, peer peer.ID) error {
+	fields := logrus.Fields{
+		"peer":          peer.Pretty(),
+		"canonicalSlot": chainHeadResponse.CanonicalSlot - params.BeaconConfig().GenesisSlot,
+	}
+
+	log.WithFields(fields).Info("Requesting state from peer")
+	if err := s.requestStateFromPeer(ctx, bytesutil.ToBytes32(chainHeadResponse.FinalizedStateRootHash32S), peer); err != nil {
 		log.Errorf("Could not request state from peer %v", err)
 	}
 
+	ctx, cancel := context.WithTimeout(s.ctx, 20*time.Second)
+	defer cancel()
+
 	for {
 		select {
-		case <-s.ctx.Done():
-			log.Debug("Exiting goroutine")
-			return
+		case <-ctx.Done():
+
+			return ctx.Err()
 		case msg := <-s.stateBuf:
-			safelyHandleMessage(s.processState, msg)
+			log.WithFields(fields).Info("Received state resp from peer")
+			if err := s.processState(msg, chainHeadResponse); err != nil {
+				return err
+			}
 		case msg := <-s.batchedBlockBuf:
-			safelyHandleMessage(s.processBatchedBlocks, msg)
+			if msg.Peer != peer {
+				continue
+			}
+			log.WithFields(fields).Info("Received batched blocks from peer")
+			if err := s.processBatchedBlocks(msg, chainHeadResponse); err != nil {
+				log.WithError(err).WithField("peer", peer).Error("Failed to sync with peer.")
+				s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
+				continue
+			}
+			if !s.nodeIsSynced {
+				return errors.New("node still not in sync after receiving batch blocks")
+			}
+			s.p2p.Reputation(msg.Peer, p2p.RepRewardValidBlock)
+			return nil
 		}
 	}
 }

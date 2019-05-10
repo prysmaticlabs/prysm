@@ -22,7 +22,7 @@ func (db *BeaconDB) SaveAttestation(ctx context.Context, attestation *pb.Attesta
 	}
 	hash := hashutil.Hash(encodedAtt)
 
-	return db.update(func(tx *bolt.Tx) error {
+	return db.batch(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
 		return a.Put(hash[:], encodedAtt)
@@ -53,7 +53,7 @@ func (db *BeaconDB) DeleteAttestation(attestation *pb.Attestation) error {
 		return err
 	}
 
-	return db.update(func(tx *bolt.Tx) error {
+	return db.batch(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 		return a.Delete(hash[:])
 	})
