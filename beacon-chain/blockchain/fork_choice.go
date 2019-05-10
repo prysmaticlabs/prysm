@@ -33,12 +33,6 @@ type ForkChoice interface {
 	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
-// ChildFetcher defines a struct which can retrieve block children starting
-// from a given block root and ending at the highest observed slot.
-type ChildFetcher interface {
-	BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error)
-}
-
 // TargetsFetcher defines a struct which can retrieve latest attestation targets
 // from a given justified state.
 type TargetsFetcher interface {
