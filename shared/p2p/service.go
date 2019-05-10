@@ -442,8 +442,8 @@ func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	// Shorten message if it is too long to avoid
-	// polluting the logs.
-	if len(msg.String()) > 100 {
+	// polluting the logs, but only marshal to string if we are going to log.
+	if log.Level == logrus.DebugLevel && len(msg.String()) > 100 {
 		newMessage := msg.String()[:100]
 
 		log.WithFields(logrus.Fields{
