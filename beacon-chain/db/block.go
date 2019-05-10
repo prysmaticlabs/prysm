@@ -21,6 +21,18 @@ var (
 		Name: "bad_blocks",
 		Help: "Number of bad, blacklisted blocks received",
 	})
+	blockCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_block_cache_miss",
+		Help: "The number of block requests that aren't present in the cache.",
+	})
+	blockCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_block_cache_hit",
+		Help: "The number of block requests that are present in the cache.",
+	})
+	blockCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_block_cache_size",
+		Help: "The number of beacon blocks in the block cache",
+	})
 )
 
 func createBlock(enc []byte) (*pb.BeaconBlock, error) {
@@ -40,6 +52,7 @@ func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
 
 	// Return block from cache if it exists
 	if _, exists := db.blocks[root]; exists {
+		blockCacheHit.Inc()
 		return db.blocks[root], nil
 	}
 
@@ -60,6 +73,8 @@ func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
 	// Save block to the cache since it wasn't there before.
 	if block != nil {
 		db.blocks[root] = block
+		blockCacheMiss.Inc()
+		blockCacheSize.Set(float64(len(db.blocks)))
 	}
 
 	return block, err
@@ -128,6 +143,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	}
 	// Save it to the cache if it's not in the cache.
 	db.blocks[root] = block
+	blockCacheSize.Set(float64(len(db.blocks)))
 
 	enc, err := proto.Marshal(block)
 	if err != nil {
@@ -160,6 +176,7 @@ func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
 
 	// Delete the block from the cache.
 	delete(db.blocks, root)
+	blockCacheSize.Set(float64(len(db.blocks)))
 
 	slotRootBinary := encodeSlotNumberRoot(block.Slot, root)
 
@@ -373,4 +390,5 @@ func (db *BeaconDB) HighestBlockSlot() uint64 {
 // ClearBlockCache prunes the block cache. This is used on every new finalized epoch.
 func (db *BeaconDB) ClearBlockCache() {
 	db.blocks = make(map[[32]byte]*pb.BeaconBlock)
+	blockCacheSize.Set(float64(len(db.blocks)))
 }
