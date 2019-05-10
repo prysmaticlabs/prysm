@@ -167,6 +167,9 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 		// we only set the limit at 70% of the calculated amount to be safe so that relevant attestations
 		// arent carried over to the next batch.
 		a.poolLimit = attPerSlot * 7 / 10
+		if a.poolLimit == 0 {
+			a.poolLimit++
+		}
 		a.pooledAttestations = make([]*pb.Attestation, 0, a.poolLimit)
 	}
 	return nil
