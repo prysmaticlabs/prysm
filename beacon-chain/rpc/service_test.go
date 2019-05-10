@@ -9,11 +9,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -90,7 +87,6 @@ type mockChainService struct {
 	stateInitializedFeed *event.Feed
 	canonicalBlocks      map[uint64][]byte
 	targets              map[uint64]*pb.AttestationTarget
-	beaconDB             *db.BeaconDB
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
@@ -119,31 +115,6 @@ func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error
 
 func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return bytes.Equal(m.canonicalBlocks[slot], hash)
-}
-
-func (m *mockChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
-	blockRoot, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return nil, err
-	}
-	var children []*pb.BeaconBlock
-	startSlot := block.Slot + 1
-	for i := startSlot; i <= highestSlot; i++ {
-		kids, err := m.beaconDB.BlocksBySlot(ctx, i)
-		if err != nil {
-			return nil, fmt.Errorf("could not get block by slot: %v", err)
-		}
-		children = append(children, kids...)
-	}
-
-	filteredChildren := []*pb.BeaconBlock{}
-	for _, kid := range children {
-		parentRoot := bytesutil.ToBytes32(kid.ParentRootHash32)
-		if blockRoot == parentRoot {
-			filteredChildren = append(filteredChildren, kid)
-		}
-	}
-	return filteredChildren, nil
 }
 
 func (m *mockChainService) AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
