@@ -26,7 +26,6 @@ type BeaconServer struct {
 	ctx                 context.Context
 	powChainService     powChainService
 	chainService        chainService
-	childFetcher        blockchain.ChildFetcher
 	targetsFetcher      blockchain.TargetsFetcher
 	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
@@ -295,16 +294,12 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		return nil, err
 	}
 	highestSlot := bs.beaconDB.HighestBlockSlot()
-	kids, err := bs.childFetcher.BlockChildren(ctx, justifiedBlock, highestSlot)
-	if err != nil {
-		return nil, err
-	}
-	fullBlockTree := kids
-	for _, k := range kids {
+	fullBlockTree := []*pbp2p.BeaconBlock{}
+	for i := justifiedBlock.Slot + 1; i < highestSlot; i++ {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		nextLayer, err := bs.childFetcher.BlockChildren(ctx, k, highestSlot)
+		nextLayer, err := bs.beaconDB.BlocksBySlot(ctx, i)
 		if err != nil {
 			return nil, err
 		}

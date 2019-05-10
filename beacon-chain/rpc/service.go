@@ -40,7 +40,6 @@ type chainService interface {
 	blockchain.BlockReceiver
 	blockchain.ForkChoice
 	blockchain.TargetsFetcher
-	blockchain.ChildFetcher
 }
 
 type operationService interface {
@@ -161,7 +160,6 @@ func (s *Service) Start() {
 		powChainService:     s.powChainService,
 		chainService:        s.chainService,
 		targetsFetcher:      s.chainService,
-		childFetcher:        s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
