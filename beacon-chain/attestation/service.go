@@ -159,7 +159,9 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 			return err
 		}
 
-		// set pool limit
+		// This sets the pool limit, once the old pool is cleared out. It does by using the number of active
+		// validators per slot as an estimate. The active indices here are not used in the actual processing
+		// of attestations.
 		activeIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 		attPerSlot := len(activeIndices) / int(params.BeaconConfig().SlotsPerEpoch)
 		a.pooledAttestations = make([]*pb.Attestation, 0, attPerSlot)
