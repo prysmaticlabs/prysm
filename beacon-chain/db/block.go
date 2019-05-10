@@ -392,6 +392,8 @@ func (db *BeaconDB) HighestBlockSlot() uint64 {
 
 // ClearBlockCache prunes the block cache. This is used on every new finalized epoch.
 func (db *BeaconDB) ClearBlockCache() {
+	db.blocksLock.Lock()
+	defer db.blocksLock.Unlock()
 	db.blocks = make(map[[32]byte]*pb.BeaconBlock)
 	blockCacheSize.Set(float64(len(db.blocks)))
 }
