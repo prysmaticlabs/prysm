@@ -23,6 +23,8 @@ func setupDB(t testing.TB) *BeaconDB {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
 	db, err := NewDB(path)
+	//db.blocks = make(map[[32]byte]*pb.BeaconBlock)
+
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
