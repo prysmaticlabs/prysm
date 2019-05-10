@@ -47,11 +47,11 @@ func createBlock(enc []byte) (*pb.BeaconBlock, error) {
 // Block accepts a block root and returns the corresponding block.
 // Returns nil if the block does not exist.
 func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
-	db.blocksLock.Lock()
-	defer db.blocksLock.Unlock()
+	db.blocksLock.RLock()
 
 	// Return block from cache if it exists
 	if _, exists := db.blocks[root]; exists {
+		db.blocksLock.RUnlock()
 		blockCacheHit.Inc()
 		return db.blocks[root], nil
 	}
@@ -70,6 +70,9 @@ func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
 		return err
 	})
 
+	db.blocksLock.RUnlock()
+	db.blocksLock.Lock()
+	defer db.blocksLock.Unlock()
 	// Save block to the cache since it wasn't there before.
 	if block != nil {
 		db.blocks[root] = block
