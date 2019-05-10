@@ -164,8 +164,10 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 		// of attestations.
 		activeIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 		attPerSlot := len(activeIndices) / int(params.BeaconConfig().SlotsPerEpoch)
-		a.pooledAttestations = make([]*pb.Attestation, 0, attPerSlot)
-		a.poolLimit = attPerSlot
+		// we only set the limit at 70% of the calculated amount to be safe so that relevant attestations
+		// arent carried over to the next batch.
+		a.poolLimit = attPerSlot * 7 / 10
+		a.pooledAttestations = make([]*pb.Attestation, 0, a.poolLimit)
 	}
 	return nil
 }
