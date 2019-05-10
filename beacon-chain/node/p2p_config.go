@@ -43,6 +43,7 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 		RelayNodeAddr:          ctx.GlobalString(cmd.RelayNode.Name),
 		HostAddress:            ctx.GlobalString(cmd.P2PHost.Name),
 		Port:                   ctx.GlobalInt(cmd.P2PPort.Name),
+		MaxPeers:               ctx.GlobalInt(cmd.P2PMaxPeers.Name),
 		DepositContractAddress: contractAddress,
 	})
 	if err != nil {

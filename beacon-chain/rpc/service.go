@@ -14,6 +14,7 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -38,10 +39,12 @@ type chainService interface {
 	StateInitializedFeed() *event.Feed
 	blockchain.BlockReceiver
 	blockchain.ForkChoice
+	blockchain.TargetsFetcher
 }
 
 type operationService interface {
 	PendingAttestations(ctx context.Context) ([]*pbp2p.Attestation, error)
+	IsAttCanonical(ctx context.Context, att *pbp2p.Attestation) (bool, error)
 	HandleAttestations(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
@@ -156,6 +159,7 @@ func (s *Service) Start() {
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
 		chainService:        s.chainService,
+		targetsFetcher:      s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
@@ -172,6 +176,7 @@ func (s *Service) Start() {
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
 		p2p:              s.p2p,
+		cache:            cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,

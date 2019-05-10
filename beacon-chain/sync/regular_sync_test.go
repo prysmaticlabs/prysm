@@ -2,7 +2,9 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -12,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -46,6 +47,10 @@ func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {
 func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
 	mp.sentMsg = msg
 	return nil
+}
+
+func (mp *mockP2P) Reputation(_ peer.ID, val int) {
+
 }
 
 type mockChainService struct {
@@ -93,10 +98,6 @@ func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *p
 
 func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return true
-}
-
-func (ms *mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
-	return nil
 }
 
 func (ms *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
@@ -342,56 +343,6 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	hook.Reset()
-}
-
-func TestBlockRequest_InvalidMsg(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ss := setupService(db)
-
-	malformedRequest := &pb.BeaconBlockAnnounce{
-		Hash: []byte{'t', 'e', 's', 't'},
-	}
-
-	invalidmsg := p2p.Message{
-		Ctx:  context.Background(),
-		Data: malformedRequest,
-		Peer: "",
-	}
-
-	if err := ss.handleBlockRequestBySlot(invalidmsg); err == nil {
-		t.Error("Expected error, received nil")
-	}
-	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
-}
-
-func TestBlockRequest_OK(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ss := setupService(db)
-
-	request1 := &pb.BeaconBlockRequestBySlotNumber{
-		SlotNumber: 20,
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Data: request1,
-		Peer: "",
-	}
-	if err := db.SaveBlock(&pb.BeaconBlock{Slot: 20}); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := ss.handleBlockRequestBySlot(msg1); err != nil {
-		t.Error(err)
-	}
-
-	testutil.AssertLogsContain(t, hook, "Sending requested block to peer")
 }
 
 func TestReceiveAttestation_OK(t *testing.T) {
@@ -740,4 +691,98 @@ func TestHandleStateReq_OK(t *testing.T) {
 		t.Error(err)
 	}
 	testutil.AssertLogsContain(t, hook, "Sending finalized, justified, and canonical states to peer")
+}
+
+func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ss := setupService(db)
+
+	// Construct the following chain:
+	//    /- B3
+	//	 B1  - B2 - B4
+	block1 := &pb.BeaconBlock{Slot: 1, ParentRootHash32: []byte{'A'}}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = ss.db.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block2 := &pb.BeaconBlock{Slot: 2, ParentRootHash32: root1[:]}
+	root2, _ := hashutil.HashBeaconBlock(block2)
+	if err = ss.db.SaveBlock(block2); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block3 := &pb.BeaconBlock{Slot: 3, ParentRootHash32: root1[:]}
+	if err = ss.db.SaveBlock(block3); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	block4 := &pb.BeaconBlock{Slot: 4, ParentRootHash32: root2[:]}
+	root4, _ := hashutil.HashBeaconBlock(block4)
+	if err = ss.db.SaveBlock(block4); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+
+	// Verify passing in roots of B4 and B1 give us the canonical lists.
+	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root4[:])
+	wantList := []*pb.BeaconBlock{block2, block4}
+	if !reflect.DeepEqual(list, wantList) {
+		t.Error("Did not retrieve the correct canonical lists")
+	}
+}
+
+func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ss := setupService(db)
+
+	// Construct the following chain:
+	//	 B1 (finalized and head)
+	block1 := &pb.BeaconBlock{Slot: 1, ParentRootHash32: []byte{'A'}}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = ss.db.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+
+	// Verify passing in roots of B1 and B1 give us the canonical lists which should be an empty list.
+	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root1[:])
+	if len(list) != 0 {
+		t.Error("Did not retrieve the correct canonical lists")
+	}
+}
+
+func TestCanonicalBlockList_NilBlock(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ss := setupService(db)
+
+	want := "nil block 0x42 from db"
+	if _, err := ss.respondBatchedBlocks(context.Background(), []byte{'A'}, []byte{'B'}); err.Error() != want {
+		t.Fatal(err)
+	}
+}
+
+func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ss := setupService(db)
+
+	block1 := &pb.BeaconBlock{Slot: 1, ParentRootHash32: []byte{'B'}}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	if err = ss.db.SaveBlock(block1); err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+
+	want := fmt.Sprintf("nil parent block %#x from db", []byte{'B'})
+	if _, err := ss.respondBatchedBlocks(context.Background(), []byte{}, root1[:]); err.Error() != want {
+		t.Log(want)
+		t.Fatal(err)
+	}
 }
