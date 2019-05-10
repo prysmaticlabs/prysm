@@ -53,6 +53,11 @@ var (
 		Name:  "no-discovery",
 		Usage: "Enable only local network p2p and do not connect to cloud bootstrap nodes.",
 	}
+	// StaticPeers specifies a set of peers to connect to explicitly.
+	StaticPeers = cli.StringSliceFlag{
+		Name:  "peer",
+		Usage: "Connect with these peers.",
+	}
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
 	BootstrapNode = cli.StringFlag{
 		Name:  "bootstrap-node",

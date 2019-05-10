@@ -54,6 +54,8 @@ func main() {
 		utils.KeyFlag,
 		utils.EnableDBCleanup,
 		cmd.BootstrapNode,
+		cmd.NoDiscovery,
+		cmd.StaticPeers,
 		cmd.RelayNode,
 		cmd.P2PPort,
 		cmd.P2PHost,
