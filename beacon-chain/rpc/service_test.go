@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -88,7 +87,6 @@ type mockChainService struct {
 	stateInitializedFeed *event.Feed
 	canonicalBlocks      map[uint64][]byte
 	targets              map[uint64]*pb.AttestationTarget
-	beaconDB             *db.BeaconDB
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
