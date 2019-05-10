@@ -35,6 +35,14 @@ func createBlock(enc []byte) (*pb.BeaconBlock, error) {
 // Block accepts a block root and returns the corresponding block.
 // Returns nil if the block does not exist.
 func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
+	db.BlocksLock.RLock()
+	defer db.BlocksLock.RUnlock()
+
+	// Return block from cache if it exists
+	if _, exists := db.blocks[root]; exists {
+		return db.blocks[root], nil
+	}
+
 	var block *pb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
@@ -49,11 +57,24 @@ func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
 		return err
 	})
 
+	// Save block to the cache since it wasn't there before.
+	db.BlocksLock.Lock()
+	defer db.BlocksLock.Unlock()
+	db.blocks[root] = block
+
 	return block, err
 }
 
 // HasBlock accepts a block root and returns true if the block does not exist.
 func (db *BeaconDB) HasBlock(root [32]byte) bool {
+	db.BlocksLock.RLock()
+	defer db.BlocksLock.RUnlock()
+
+	// Check the cache first to see if block exists.
+	if _, exists := db.blocks[root]; exists {
+		return true
+	}
+
 	hasBlock := false
 	// #nosec G104
 	_ = db.view(func(tx *bolt.Tx) error {
@@ -93,10 +114,21 @@ func (db *BeaconDB) MarkEvilBlockHash(root [32]byte) {
 
 // SaveBlock accepts a block and writes it to disk.
 func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
+	db.BlocksLock.Lock()
+	defer db.BlocksLock.Unlock()
+
 	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
+
+	// Skip saving block to DB if it exists in the cache.
+	if _, exists := db.blocks[root]; exists {
+		return nil
+	}
+	// Save it to the cache if it's not in the cache.
+	db.blocks[root] = block
+
 	enc, err := proto.Marshal(block)
 	if err != nil {
 		return fmt.Errorf("failed to encode block: %v", err)
@@ -118,10 +150,17 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 
 // DeleteBlock deletes a block using the slot and its root as keys in their respective buckets.
 func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
+	db.BlocksLock.Lock()
+	defer db.BlocksLock.Unlock()
+
 	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
+
+	// Delete the block from the cache.
+	delete(db.blocks, root)
+
 	slotRootBinary := encodeSlotNumberRoot(block.Slot, root)
 
 	return db.update(func(tx *bolt.Tx) error {
@@ -329,4 +368,9 @@ func (db *BeaconDB) BlocksBySlot(ctx context.Context, slot uint64) ([]*pb.Beacon
 // seen in the database.
 func (db *BeaconDB) HighestBlockSlot() uint64 {
 	return db.highestBlockSlot
+}
+
+// ClearBlockCache prunes the block cache. This is used on every new finalized epoch.
+func (db *BeaconDB) ClearBlockCache() {
+	db.blocks = make(map[[32]byte]*pb.BeaconBlock)
 }
