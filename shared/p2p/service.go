@@ -17,6 +17,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	libp2pnet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
@@ -97,7 +98,18 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	dht := kaddht.NewDHT(ctx, h, dsync.MutexWrap(ds.NewMapDatastore()))
+	dopts := []dhtopts.Option{
+		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+		dhtopts.Protocols(
+			protocol.ID(prysmProtocolPrefix + "/dht"),
+		),
+	}
+
+	dht, err := kaddht.New(ctx, h, dopts...)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
 	// Wrap host with a routed host so that peers can be looked up in the
 	// distributed hash table by their peer ID.
 	h = rhost.Wrap(h, dht)

@@ -13,12 +13,14 @@ import (
 
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/libp2p/go-libp2p"
-	host "github.com/libp2p/go-libp2p-host"
-	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
+	"github.com/libp2p/go-libp2p-host"
 	dhtpb "github.com/libp2p/go-libp2p-kad-dht/pb"
-	net "github.com/libp2p/go-libp2p-net"
+	"github.com/libp2p/go-libp2p-net"
+
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
+
+const dhtProtocol = "/prysm/0.0.0/dht"
 
 func main() {
 	if len(os.Args) == 1 {
@@ -40,9 +42,9 @@ func main() {
 		log.Fatalf("Error: Failed to create peer from string: %v", err)
 	}
 
-	s, err := h.NewStream(ctx, pi.ID, dhtopts.ProtocolDHT)
+	s, err := h.NewStream(ctx, pi.ID, dhtProtocol)
 	if err != nil {
-		log.Printf("proto = %s", dhtopts.ProtocolDHT)
+		log.Printf("proto = %s", dhtProtocol)
 		log.Fatalf("Error: Failed to create ProtocolDHT stream: %v", err)
 	}
 
@@ -66,7 +68,7 @@ func pingPeer(ctx context.Context, h host.Host, p *dhtpb.Message_Peer) error {
 		return err
 	}
 
-	s, err := h.NewStream(ctx, pi.ID, dhtopts.ProtocolDHT)
+	s, err := h.NewStream(ctx, pi.ID, dhtProtocol)
 	if err != nil {
 		return err
 	}
