@@ -20,6 +20,8 @@ import (
 	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/libp2p/go-libp2p-kad-dht/opts"
+	"github.com/libp2p/go-libp2p-protocol"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/version"
 )
@@ -31,6 +33,8 @@ var (
 
 	log = logging.Logger("prysm-bootnode")
 )
+
+const dhtProtocol = "/prysm/0.0.0/dht"
 
 func main() {
 	flag.Parse()
@@ -51,13 +55,24 @@ func main() {
 	}
 	opts = addPrivateKeyOpt(opts)
 
-	host, err := libp2p.New(context.Background(), opts...)
+	ctx := context.Background()
+
+	host, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		log.Fatalf("Failed to create new host. %v", err)
 	}
 
-	dstore := dsync.MutexWrap(ds.NewMapDatastore())
-	dht := kaddht.NewDHT(context.Background(), host, dstore)
+	dopts := []dhtopts.Option{
+		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+		dhtopts.Protocols(
+			protocol.ID(dhtProtocol),
+		),
+	}
+
+	dht, err := kaddht.New(ctx, host, dopts...)
+	if err != nil {
+		log.Fatalf("Failed to create new dht: %v", err)
+	}
 	if err := dht.Bootstrap(context.Background()); err != nil {
 		log.Fatalf("Failed to bootstrap DHT. %v", err)
 	}
