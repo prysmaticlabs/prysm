@@ -47,7 +47,9 @@ type Service struct {
 	incomingChan chan *pb.Attestation
 	// store is the mapping of individual
 	// validator's public key to it's latest attestation.
-	store attestationStore
+	store              attestationStore
+	pooledAttestations []*pb.Attestation
+	poolLimit          int
 }
 
 // Config options for the service.
@@ -60,12 +62,14 @@ type Config struct {
 func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:          ctx,
-		cancel:       cancel,
-		beaconDB:     cfg.BeaconDB,
-		incomingFeed: new(event.Feed),
-		incomingChan: make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
-		store:        attestationStore{m: make(map[[48]byte]*pb.Attestation)},
+		ctx:                ctx,
+		cancel:             cancel,
+		beaconDB:           cfg.BeaconDB,
+		incomingFeed:       new(event.Feed),
+		incomingChan:       make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		store:              attestationStore{m: make(map[[48]byte]*pb.Attestation)},
+		pooledAttestations: make([]*pb.Attestation, 0, 10),
+		poolLimit:          10,
 	}
 }
 
@@ -145,8 +149,21 @@ func (a *Service) attestationPool() {
 
 func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) error {
 	attestation := msg.(*pb.Attestation)
-	if err := a.UpdateLatestAttestation(ctx, attestation); err != nil {
-		return fmt.Errorf("could not update attestation pool: %v", err)
+	a.pooledAttestations = append(a.pooledAttestations, attestation)
+	if len(a.pooledAttestations) > a.poolLimit {
+		if err := a.BatchUpdateLatestAttestation(ctx, a.pooledAttestations); err != nil {
+			return err
+		}
+		state, err := a.beaconDB.HeadState(ctx)
+		if err != nil {
+			return err
+		}
+
+		// set pool limit
+		activeIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+		attPerSlot := len(activeIndices) / int(params.BeaconConfig().SlotsPerEpoch)
+		a.pooledAttestations = make([]*pb.Attestation, 0, attPerSlot)
+		a.poolLimit = attPerSlot
 	}
 	return nil
 }
