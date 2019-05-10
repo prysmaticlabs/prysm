@@ -16,7 +16,6 @@ import (
 	"github.com/libp2p/go-libp2p-host"
 	dhtpb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	"github.com/libp2p/go-libp2p-net"
-
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
