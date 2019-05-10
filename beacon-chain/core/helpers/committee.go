@@ -47,15 +47,15 @@ func EpochCommitteeCount(beaconState *pb.BeaconState, epoch uint64) uint64 {
 	activeValidatorCount := uint64(len(ActiveValidatorIndices(beaconState.ValidatorRegistry, epoch)))
 	// Max committee count per slot will be 0 when shard count is less than epoch length, this
 	// covers the special case to ensure there's always 1 max committee count per slot.
-	var maxCommitteePerSlot = minCommitteePerSlot
+	var committeeSizesPerSlot = minCommitteePerSlot
 	if params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch > minCommitteePerSlot {
-		maxCommitteePerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().SlotsPerEpoch
+		committeeSizesPerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().SlotsPerEpoch
 	}
 
 	var currCommitteePerSlot = activeValidatorCount / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 
-	if currCommitteePerSlot > maxCommitteePerSlot {
-		return maxCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch
+	if currCommitteePerSlot > committeeSizesPerSlot {
+		return committeeSizesPerSlot * params.BeaconConfig().SlotsPerEpoch
 	}
 	if currCommitteePerSlot < 1 {
 		return minCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch

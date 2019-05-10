@@ -256,6 +256,62 @@ func TestCrosslinkCommitteesAtSlot_OK(t *testing.T) {
 	}
 }
 
+func TestComputeCommittee_OK(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	committeesPerEpoch := uint64(6)
+	// Set epoch total validators count to 6 committees per slot.
+	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot + 200,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+132)
+	if err != nil {
+		t.Fatalf("Could not get crosslink committee: %v", err)
+	}
+	if len(committees) != int(committeesPerEpoch) {
+		t.Errorf("Incorrect committee count per slot. Wanted: %d, got: %d",
+			committeesPerEpoch, len(committees))
+	}
+
+	wantedEpoch := SlotToEpoch(state.Slot)
+	shardCount := params.BeaconConfig().ShardCount
+	startShard := state.LatestStartShard
+
+	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().SlotsPerEpoch
+	offset := state.Slot % params.BeaconConfig().SlotsPerEpoch
+	slotStartShard := (startShard + committeesPerSlot + offset) % shardCount
+	seed, err := GenerateSeed(state, wantedEpoch)
+	if err != nil {
+		t.Errorf("could not generate seed: %v", err)
+	}
+
+	indices := ActiveValidatorIndices(state.ValidatorRegistry, wantedEpoch)
+	newCommittees := make([]*CrosslinkCommittee, committeesPerSlot)
+	for i := uint64(0); i < committeesPerSlot; i++ {
+		committee, err := ComputeCommittee(indices, seed, committeesPerSlot*offset+i, committeesPerEpoch)
+		if err != nil {
+			t.Errorf("could not compute committee: %v", err)
+		}
+		committees[i] = &CrosslinkCommittee{
+			Committee: committee,
+			Shard:     (slotStartShard + i) % shardCount,
+		}
+	}
+
+	if reflect.DeepEqual(committees, newCommittees) {
+		t.Error("Committees from different slot shall not be equal")
+	}
+}
+
 func TestCrosslinkCommitteesAtSlot_RegistryChange(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(4)
