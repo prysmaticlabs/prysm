@@ -124,6 +124,12 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
 		}
+		if status.Status.Status == pb.ValidatorStatus_EXITED {
+			log.WithFields(logrus.Fields{
+				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+				"status":    fmt.Sprintf("%s", status.Status.Status.String()),
+			}).Info("Validator has been ejected")
+		}
 		if status.Status.DepositInclusionSlot == 0 {
 			log.WithFields(logrus.Fields{
 				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
