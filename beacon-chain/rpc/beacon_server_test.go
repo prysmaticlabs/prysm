@@ -861,7 +861,6 @@ func TestBlockTree_OK(t *testing.T) {
 	bs := &BeaconServer{
 		beaconDB:       db,
 		targetsFetcher: &mockChainService{targets: attestationTargets},
-		childFetcher:   &mockChainService{beaconDB: db},
 	}
 	resp, err := bs.BlockTree(ctx, &ptypes.Empty{})
 	if err != nil {
