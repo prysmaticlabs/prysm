@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-connmgr"
+	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 
@@ -26,7 +26,7 @@ func optionConnectionManager(maxPeers int) libp2p.Option {
 		maxPeers = 5
 	}
 	minPeers := int(math.Max(5, float64(maxPeers-5)))
-	cm := connmgr.NewConnManager(minPeers, maxPeers, 5*time.Minute)
+	cm := connmgr.NewConnManager(minPeers, maxPeers, 20*time.Second)
 
 	return libp2p.ConnectionManager(cm)
 }
