@@ -443,17 +443,14 @@ func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
 
 	// Shorten message if it is too long to avoid
 	// polluting the logs, but only marshal to string if we are going to log.
-	if log.Level == logrus.DebugLevel && len(msg.String()) > 100 {
-		newMessage := msg.String()[:100]
-
+	if log.Level == logrus.DebugLevel {
+		loggableMessage := msg.String()
+		if len(loggableMessage) > 100 {
+			loggableMessage = loggableMessage[:100]
+		}
 		log.WithFields(logrus.Fields{
 			"topic": topic,
-		}).Debugf("Broadcasting msg %+v --Message too long to be displayed", newMessage)
-
-	} else {
-		log.WithFields(logrus.Fields{
-			"topic": topic,
-			"msg":   msg,
+			"msg":   loggableMessage,
 		}).Debug("Broadcasting msg")
 	}
 
