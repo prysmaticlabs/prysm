@@ -10,7 +10,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -62,12 +61,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 		return
 	}
 
-	// Retrieve the current fork data from the beacon node.
-	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
-	if err != nil {
-		log.WithError(err).Error("Failed to get fork data from beacon node's state")
-		return
-	}
 	// Then, we generate a RandaoReveal by signing the block's slot information using
 	// the validator's private key.
 	// epoch_signature = bls_sign(
@@ -79,11 +72,18 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	//	   domain_type=DOMAIN_RANDAO,
 	//   )
 	// )
+
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	// Retrieve the current fork data from the beacon node.
+	domain, err := v.beaconClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch})
+	if err != nil {
+		log.WithError(err).Error("Failed to get domain data from beacon node's state")
+		return
+	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
-	epochSignature := v.keys[idx].SecretKey.Sign(buf, domain)
+
+	epochSignature := v.keys[idx].SecretKey.Sign(buf, domain.SignatureDomain)
 
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{

@@ -457,10 +457,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	state = v.ProcessPenaltiesAndExits(state)
 	if e.CanProcessValidatorRegistry(state) {
 		if block != nil {
-			state, err = v.UpdateRegistry(state)
-			if err != nil {
-				return nil, fmt.Errorf("could not update validator registry: %v", err)
-			}
+			state = e.ProcessRegistryUpdates(state)
 		}
 		state, err = e.ProcessCurrSlotShardSeed(state)
 		if err != nil {

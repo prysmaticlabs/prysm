@@ -3,6 +3,7 @@ package ssz
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -38,6 +39,45 @@ func TreeHash(val interface{}) ([32]byte, error) {
 	// Right-pad with 0 to make 32 bytes long, if necessary
 	paddedOutput := bytesutil.ToBytes32(output)
 	return paddedOutput, nil
+}
+
+// SignedRoot returns the signed root of the last element in the container.
+func SignedRoot(val interface{}) ([32]byte, error) {
+	valObj := reflect.ValueOf(val)
+	kind := valObj.Kind()
+
+	switch {
+	case kind == reflect.Struct:
+		return hashSignature(valObj)
+	case kind == reflect.Ptr:
+		if valObj.IsNil() {
+			return [32]byte{}, errors.New("nil pointer given")
+		}
+		deRefVal := valObj.Elem()
+		if deRefVal.Kind() != reflect.Struct {
+			return [32]byte{}, errors.New("invalid type")
+		}
+		return hashSignature(deRefVal)
+	default:
+		return [32]byte{}, fmt.Errorf("given object is neither a struct or a pointer but is %v", kind)
+	}
+}
+
+func hashSignature(val reflect.Value) ([32]byte, error) {
+	valTyp := val.Type()
+	fields, err := structFields(valTyp)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	lastfieldName := fields[len(fields)-1].name
+	if lastfieldName != "Signature" {
+		return [32]byte{}, fmt.Errorf("field name is invalid wanted Signature but got %s", lastfieldName)
+	}
+	lastField := val.Field(fields[len(fields)-1].index)
+	if lastField.Kind() == reflect.Slice && lastField.Type().Elem().Kind() == reflect.Uint8 {
+		return TreeHash(lastField.Interface().([]byte))
+	}
+	return [32]byte{}, errors.New("signature field is of an invalid type")
 }
 
 type hashError struct {

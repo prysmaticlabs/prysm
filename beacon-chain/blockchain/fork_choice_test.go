@@ -20,7 +20,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -1272,7 +1271,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, gState.CurrentJustifiedEpoch)
-	domain := forkutil.DomainVersion(gState.Fork, gState.CurrentJustifiedEpoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(gState, gState.CurrentJustifiedEpoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:            genesisSlot + offset,
@@ -1355,7 +1354,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, gState.FinalizedEpoch)
-	domain := forkutil.DomainVersion(gState.Fork, gState.FinalizedEpoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(gState, gState.FinalizedEpoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:            genesisSlot + offset,
@@ -1435,7 +1434,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, params.BeaconConfig().GenesisEpoch)
-	domain := forkutil.DomainVersion(gState.Fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(gState, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:            genesisSlot + lastAvailableSlot,

@@ -40,7 +40,6 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/featureconfig:go_default_library",
-        "//shared/forkutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
     ],
