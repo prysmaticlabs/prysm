@@ -68,8 +68,8 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		incomingFeed:       new(event.Feed),
 		incomingChan:       make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		store:              attestationStore{m: make(map[[48]byte]*pb.Attestation)},
-		pooledAttestations: make([]*pb.Attestation, 0, 10),
-		poolLimit:          10,
+		pooledAttestations: make([]*pb.Attestation, 0, 1),
+		poolLimit:          1,
 	}
 }
 
