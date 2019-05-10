@@ -35,8 +35,8 @@ func createBlock(enc []byte) (*pb.BeaconBlock, error) {
 // Block accepts a block root and returns the corresponding block.
 // Returns nil if the block does not exist.
 func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
-	db.BlocksLock.Lock()
-	defer db.BlocksLock.Unlock()
+	db.blocksLock.Lock()
+	defer db.blocksLock.Unlock()
 
 	// Return block from cache if it exists
 	if _, exists := db.blocks[root]; exists {
@@ -65,8 +65,8 @@ func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
 
 // HasBlock accepts a block root and returns true if the block does not exist.
 func (db *BeaconDB) HasBlock(root [32]byte) bool {
-	db.BlocksLock.RLock()
-	defer db.BlocksLock.RUnlock()
+	db.blocksLock.RLock()
+	defer db.blocksLock.RUnlock()
 
 	// Check the cache first to see if block exists.
 	if _, exists := db.blocks[root]; exists {
@@ -112,8 +112,8 @@ func (db *BeaconDB) MarkEvilBlockHash(root [32]byte) {
 
 // SaveBlock accepts a block and writes it to disk.
 func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
-	db.BlocksLock.Lock()
-	defer db.BlocksLock.Unlock()
+	db.blocksLock.Lock()
+	defer db.blocksLock.Unlock()
 
 	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
@@ -148,8 +148,8 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 
 // DeleteBlock deletes a block using the slot and its root as keys in their respective buckets.
 func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
-	db.BlocksLock.Lock()
-	defer db.BlocksLock.Unlock()
+	db.blocksLock.Lock()
+	defer db.blocksLock.Unlock()
 
 	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {

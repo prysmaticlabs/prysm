@@ -35,7 +35,7 @@ type BeaconDB struct {
 	badBlockHashes map[[32]byte]bool
 	badBlocksLock  sync.RWMutex
 	blocks         map[[32]byte]*pb.BeaconBlock
-	BlocksLock     sync.RWMutex
+	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
 	pendingDeposits       []*depositContainer
