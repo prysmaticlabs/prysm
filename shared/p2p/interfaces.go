@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
@@ -19,4 +20,10 @@ type Broadcaster interface {
 // method.
 type Subscriber interface {
 	Subscribe(msg proto.Message, channel chan Message) event.Subscription
+}
+
+// ReputationManager represents a subset of the p2p.Server which enables
+// reputaiton reporting of peers.
+type ReputationManager interface {
+	Reputation(peer peer.ID, val int)
 }

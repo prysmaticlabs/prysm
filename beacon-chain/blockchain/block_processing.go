@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -27,8 +26,7 @@ type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
 	IsCanonical(slot uint64, hash []byte) bool
-	InsertsCanonical(slot uint64, hash []byte)
-	RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot
+	UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte)
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
@@ -68,7 +66,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if parent == nil {
 		return nil, errors.New("parent does not exist in DB")
 	}
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -286,8 +284,12 @@ func (c *ChainService) runStateTransition(
 			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Block transition successfully processed")
 
+		blockRoot, err := hashutil.HashBeaconBlock(block)
+		if err != nil {
+			return nil, err
+		}
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
 	}

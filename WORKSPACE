@@ -1078,3 +1078,9 @@ go_repository(
     commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",
     importpath = "github.com/karlseguin/ccache",
 )
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_connmgr",
+    commit = "5249ec107e4544863dd8c61a6417b640d03a62a2",
+    importpath = "github.com/libp2p/go-libp2p-connmgr",
+)
