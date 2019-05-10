@@ -151,10 +151,10 @@ func TestShardDelta_OK(t *testing.T) {
 		validatorCount uint64
 		shardCount     uint64
 	}{
-		{0, params.BeaconConfig().SlotsPerEpoch},
-		{1000, params.BeaconConfig().SlotsPerEpoch},
+		{0, params.BeaconConfig().SlotsPerEpoch},    // Empty minimum shards
+		{1000, params.BeaconConfig().SlotsPerEpoch}, // 1000 Validators minimum shards,
 		{100000, 768 /*len(active_validators) // TARGET_COMMITTEE_SIZE*/},
-		{500000, minShardDelta},
+		{500000, minShardDelta}, // 5 Mil, above shard delta
 	}
 	for _, test := range tests {
 		vals := make([]*pb.Validator, test.validatorCount)
