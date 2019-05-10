@@ -16,7 +16,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -67,7 +66,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
@@ -102,7 +101,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
@@ -1014,6 +1013,75 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	if ok, err := blocks.VerifyIndexedAttestation(&pb.BeaconState{}, indexedAtt1); !ok {
 		t.Errorf("indexed attestation failed to verify: %v", err)
 	}
+}
+
+func TestConvertToIndexed_OK(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().GenesisSlot + 5,
+	}
+	tests := []struct {
+		aggregationBitfield      []byte
+		custodyBitfield          []byte
+		wantedCustodyBit0Indices []uint64
+		wantedCustodyBit1Indices []uint64
+	}{
+		{
+			aggregationBitfield:      []byte{0x03},
+			custodyBitfield:          []byte{0x01},
+			wantedCustodyBit0Indices: []uint64{14},
+			wantedCustodyBit1Indices: []uint64{11},
+		},
+		{
+			aggregationBitfield:      []byte{0x03},
+			custodyBitfield:          []byte{0x02},
+			wantedCustodyBit0Indices: []uint64{11},
+			wantedCustodyBit1Indices: []uint64{14},
+		},
+		{
+			aggregationBitfield:      []byte{0x03},
+			custodyBitfield:          []byte{0x03},
+			wantedCustodyBit0Indices: []uint64{},
+			wantedCustodyBit1Indices: []uint64{11, 14},
+		},
+	}
+
+	attestation := &pb.Attestation{
+		Signature: []byte("signed"),
+		Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot + 2,
+			Shard: 2,
+		},
+	}
+	for _, tt := range tests {
+		attestation.AggregationBitfield = tt.aggregationBitfield
+		attestation.CustodyBitfield = tt.custodyBitfield
+		wanted := &pb.IndexedAttestation{
+			CustodyBit_0Indices: tt.wantedCustodyBit0Indices,
+			CustodyBit_1Indices: tt.wantedCustodyBit1Indices,
+			Data:                attestation.Data,
+			Signature:           attestation.Signature,
+		}
+		ia, err := blocks.ConvertToIndexed(state, attestation)
+		if err != nil {
+			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
+		}
+		if !reflect.DeepEqual(wanted, ia) {
+			t.Errorf("convert attestation to indexed attestation didn't result as wanted: %v got: %v", wanted, ia)
+		}
+	}
+
 }
 
 func TestVerifyIndexedAttestation_Intersecting(t *testing.T) {

@@ -26,6 +26,11 @@ import (
 
 var log = logrus.WithField("prefix", "core/state")
 
+type queueElement struct {
+	idx                        int
+	ActivationEligibilityEpoch uint64
+}
+
 // MatchedAttestations is an object that contains the correctly
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
@@ -108,6 +113,76 @@ func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
 		}
 	}
 	state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
+	return state
+}
+
+// ProcessRegistryUpdates rotates validators in and out of active pool.
+// the amount to rotate is determined churn limit.
+//
+// Spec pseudocode definition:
+//   def process_registry_updates(state: BeaconState) -> None:
+//     # Process activation eligibility and ejections
+//     for index, validator in enumerate(state.validator_registry):
+//         if validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH and validator.effective_balance >= MAX_EFFECTIVE_BALANCE:
+//             validator.activation_eligibility_epoch = get_current_epoch(state)
+//         if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
+//             initiate_validator_exit(state, index)
+//     # Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
+//     activation_queue = sorted([
+//         index for index, validator in enumerate(state.validator_registry) if
+//         validator.activation_eligibility_epoch != FAR_FUTURE_EPOCH and
+//         validator.activation_epoch >= get_delayed_activation_exit_epoch(state.finalized_epoch)
+//     ], key=lambda index: state.validator_registry[index].activation_eligibility_epoch)
+//     # Dequeued validators for activation up to churn limit (without resetting activation epoch)
+//     for index in activation_queue[:get_churn_limit(state)]:
+//         validator = state.validator_registry[index]
+//         if validator.activation_epoch == FAR_FUTURE_EPOCH:
+//             validator.activation_epoch = get_delayed_activation_exit_epoch(get_current_epoch(state))
+func ProcessRegistryUpdates(state *pb.BeaconState) *pb.BeaconState {
+	currentEpoch := helpers.CurrentEpoch(state)
+	validators.VStore.Lock()
+	defer validators.VStore.Unlock()
+	for idx, validator := range state.ValidatorRegistry {
+		// Activate validators within the allowable balance churn.
+		if validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
+			validator.EffectiveBalance >= params.BeaconConfig().MaxEffectiveBalance {
+			validator.ActivationEligibilityEpoch = currentEpoch
+		}
+		if helpers.IsActiveValidator(validator, currentEpoch) &&
+			validator.EffectiveBalance <= params.BeaconConfig().EjectionBalance {
+			state = validators.ExitValidator(state, uint64(idx))
+		}
+	}
+	// queue validators eligible for activation and not dequeued for activation prior to finalized epoch
+
+	activationQueue := []queueElement{}
+	for idx, validator := range state.ValidatorRegistry {
+		if validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch &&
+			validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(state.FinalizedEpoch) {
+			qe := queueElement{idx: idx,
+				ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch}
+			activationQueue = append(activationQueue, qe)
+		}
+	}
+	sort.Slice(activationQueue, func(i, j int) bool {
+		return activationQueue[i].ActivationEligibilityEpoch < activationQueue[j].ActivationEligibilityEpoch
+	})
+	// dequeued validators for activation up to churn limit (without resetting activation epoch)
+	limit := uint64(len(activationQueue))
+	cl := helpers.ChurnLimit(state)
+	if cl < limit {
+		limit = helpers.ChurnLimit(state)
+	}
+	for _, qe := range activationQueue[:limit] {
+		validator := state.ValidatorRegistry[qe.idx]
+		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+			validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
+			log.WithFields(logrus.Fields{
+				"index":           qe.idx,
+				"activationEpoch": validator.ActivationEpoch,
+			}).Info("Validator activated")
+		}
+	}
 	return state
 }
 
