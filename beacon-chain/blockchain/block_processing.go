@@ -328,7 +328,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 	var idxNotInState []uint64
 	for _, idx := range activatedValidators {
 		// If for some reason the activated validator indices is not in state,
-		// we skip them and save them for next epoch.
+		// we skip them and save them to process for next epoch.
 		if int(idx) >= len(state.ValidatorRegistry) {
 			idxNotInState = append(idxNotInState, idx)
 			continue
