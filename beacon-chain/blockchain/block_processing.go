@@ -338,7 +338,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 			return fmt.Errorf("could not save validator index: %v", err)
 		}
 	}
-	validators.InsertActivatedVal(nextEpoch+1, idxNotInState)
+	validators.InsertActivatedIndices(nextEpoch+1, idxNotInState)
 	validators.DeleteActivatedVal(helpers.CurrentEpoch(state))
 	return nil
 }

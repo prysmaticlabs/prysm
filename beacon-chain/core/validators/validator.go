@@ -459,7 +459,7 @@ func InitializeValidatorStore(bState *pb.BeaconState) {
 
 // InsertActivatedIndices locks the validator store, inserts the activated validator
 // indices corresponding to their activation epochs.
-func InsertActivatedVal(epoch uint64, indices []uint64) {
+func InsertActivatedIndices(epoch uint64, indices []uint64) {
 	vStore.Lock()
 	defer vStore.Unlock()
 	vStore.activatedValidators[epoch] = append(vStore.activatedValidators[epoch], indices...)
