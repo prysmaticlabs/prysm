@@ -47,7 +47,9 @@ type Service struct {
 	incomingChan chan *pb.Attestation
 	// store is the mapping of individual
 	// validator's public key to it's latest attestation.
-	store attestationStore
+	store              attestationStore
+	pooledAttestations []*pb.Attestation
+	poolLimit          int
 }
 
 // Config options for the service.
@@ -60,12 +62,14 @@ type Config struct {
 func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:          ctx,
-		cancel:       cancel,
-		beaconDB:     cfg.BeaconDB,
-		incomingFeed: new(event.Feed),
-		incomingChan: make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
-		store:        attestationStore{m: make(map[[48]byte]*pb.Attestation)},
+		ctx:                ctx,
+		cancel:             cancel,
+		beaconDB:           cfg.BeaconDB,
+		incomingFeed:       new(event.Feed),
+		incomingChan:       make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		store:              attestationStore{m: make(map[[48]byte]*pb.Attestation)},
+		pooledAttestations: make([]*pb.Attestation, 0, 1),
+		poolLimit:          1,
 	}
 }
 
@@ -145,9 +149,31 @@ func (a *Service) attestationPool() {
 
 func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) error {
 	attestation := msg.(*pb.Attestation)
-	if err := a.UpdateLatestAttestation(ctx, attestation); err != nil {
-		return fmt.Errorf("could not update attestation pool: %v", err)
+	a.pooledAttestations = append(a.pooledAttestations, attestation)
+	if len(a.pooledAttestations) > a.poolLimit {
+		if err := a.BatchUpdateLatestAttestation(ctx, a.pooledAttestations); err != nil {
+			return err
+		}
+		state, err := a.beaconDB.HeadState(ctx)
+		if err != nil {
+			return err
+		}
+
+		// This sets the pool limit, once the old pool is cleared out. It does by using the number of active
+		// validators per slot as an estimate. The active indices here are not used in the actual processing
+		// of attestations.
+		activeIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+		attPerSlot := len(activeIndices) / int(params.BeaconConfig().SlotsPerEpoch)
+		// we only set the limit at 70% of the calculated amount to be safe so that relevant attestations
+		// arent carried over to the next batch.
+		a.poolLimit = attPerSlot * 7 / 10
+		if a.poolLimit == 0 {
+			a.poolLimit++
+		}
+		attestationPoolLimit.Set(float64(a.poolLimit))
+		a.pooledAttestations = make([]*pb.Attestation, 0, a.poolLimit)
 	}
+	attestationPoolSize.Set(float64(len(a.pooledAttestations)))
 	return nil
 }
 
