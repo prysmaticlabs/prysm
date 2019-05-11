@@ -23,3 +23,8 @@ data:
         for: 1m
         annotations:
           summary: Some nodes are seeing more than 5 reorgs in 10 minutes
+      - alert: high_goroutines
+        expr: max_over_time(go_goroutines{component="beacon-chain"}[1m]) > 1000
+        for: 1m
+        annotations:
+          summary: Some nodes are experencing more than 1000 goroutines
