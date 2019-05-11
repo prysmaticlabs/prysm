@@ -389,12 +389,26 @@ func TestPendingAttestations_OK(t *testing.T) {
 		chainService:     &mockChainService{},
 		beaconDB:         db,
 	}
+
+	validators := make([]*pbp2p.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pbp2p.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	crosslinks := make([]*pbp2p.Crosslink, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := range crosslinks {
+		crosslinks[i] = &pbp2p.Crosslink{
+			Epoch:                   params.BeaconConfig().GenesisEpoch + 1,
+			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+		}
+	}
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot +
 			params.BeaconConfig().SlotsPerEpoch +
 			params.BeaconConfig().MinAttestationInclusionDelay,
-		LatestCrosslinks: []*pbp2p.Crosslink{{Epoch: params.BeaconConfig().GenesisEpoch + 1,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+		LatestCrosslinks:  crosslinks,
+		ValidatorRegistry: validators,
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
