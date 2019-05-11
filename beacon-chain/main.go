@@ -61,6 +61,7 @@ func main() {
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
 		cmd.EnableTracingFlag,
+		cmd.TracingProcessNameFlag,
 		cmd.TracingEndpointFlag,
 		cmd.TraceSampleFractionFlag,
 		cmd.MonitoringPortFlag,

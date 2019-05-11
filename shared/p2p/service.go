@@ -138,6 +138,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		}
 		info, err := peerInfoFromAddr(addr)
 		if err != nil {
+			cancel()
 			return nil, err
 		}
 		exclusions = append(exclusions, info.ID)
