@@ -82,6 +82,34 @@ func TestSaveBlock_OK(t *testing.T) {
 	}
 }
 
+func TestSaveBlock_NilBlkInCache(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	block := &pb.BeaconBlock{Slot: 999}
+	h1, _ := hashutil.HashBeaconBlock(block)
+
+	// Save a nil block to with block root.
+	db.blocks[h1] = nil
+
+	if err := db.SaveBlock(block); err != nil {
+		t.Fatalf("save block failed: %v", err)
+	}
+
+	savedBlock, err := db.Block(h1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, savedBlock) {
+		t.Error("Could not save block in DB")
+	}
+
+	// Verify we have the correct cached block
+	if !proto.Equal(db.blocks[h1], savedBlock) {
+		t.Error("Could not save block in cache")
+	}
+}
+
 func TestSaveBlockInCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
