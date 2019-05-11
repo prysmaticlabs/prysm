@@ -21,9 +21,13 @@ var (
 		Help: "Total number of attestations seen by the validators",
 	})
 
+	attestationPoolLimit = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "attestation_pool_limit",
+		Help: "The limit of the attestation pool",
+	})
 	attestationPoolSize = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "attestation_pool_size",
-		Help: "The size of the attestation pool",
+		Help: "The current size of the attestation pool",
 	})
 )
 

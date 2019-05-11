@@ -170,9 +170,10 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 		if a.poolLimit == 0 {
 			a.poolLimit++
 		}
-		attestationPoolSize.Set(float64(a.poolLimit))
+		attestationPoolLimit.Set(float64(a.poolLimit))
 		a.pooledAttestations = make([]*pb.Attestation, 0, a.poolLimit)
 	}
+	attestationPoolSize.Set(float64(len(a.pooledAttestations)))
 	return nil
 }
 
