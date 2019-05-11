@@ -3,6 +3,7 @@ apiVersion: apps/v1
 metadata:
   name: beacon-chain
   namespace: beacon-chain
+  app: beacon-chain
 spec:
   replicas: 3
   serviceName: beacon-chain
@@ -11,11 +12,13 @@ spec:
     matchLabels:
       component: beacon-chain
       universe: beacon-chain
+      app: beacon-chain
   template:
     metadata:
       labels:
         component: beacon-chain
         universe: beacon-chain
+        app: beacon-chain
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9090'
@@ -53,6 +56,7 @@ spec:
             - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK
             - --p2p-port=5000
             - --enable-tracing
+            - --tracing-process-name=$(POD_NAME)
             - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
             - --trace-sample-fraction=1.0
             - --datadir=/data
@@ -79,6 +83,10 @@ spec:
                 configMapKeyRef:
                   name: beacon-config
                   key: DEPOSIT_CONTRACT_ADDRESS
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           readinessProbe:
             initialDelaySeconds: 60
             httpGet:
