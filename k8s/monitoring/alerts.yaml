@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  namespace: istio-system
+data:
+  prometheus.rules.yml: |-
+    groups:
+    - name: prysm
+      rules:
+      - alert: stalled_chain
+        expr: delta(avg(state_last_slot > scalar(max(state_last_slot) - 100))[10m:30s]) < 50
+        for: 1m
+        annotations:
+          summary: No block slots advanced in 2 minutes
+      - alert: too_long_since_finality
+        expr: max(state_last_slot / 8) - floor(max(state_last_finalized_epoch)) > 10
+        for: 1m
+        annotations:
+          summary: No finality in 10 epochs
+      - alert: high_reorg_rate
+        expr: max(delta(reorg_counter[10m])) > 5
+        for: 1m
+        annotations:
+          summary: Some nodes are seeing more than 5 reorgs in 10 minutes
