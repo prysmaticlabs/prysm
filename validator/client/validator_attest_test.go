@@ -149,7 +149,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		CustodyBitfield:    make([]byte, (len(committee)+7)/8),
 		AggregateSignature: []byte("signed"),
 	}
-	aggregationBitfield := bitutil.SetBitfield(4, mathutil.CeilDiv8(len(committee)))
+	aggregationBitfield, err := bitutil.SetBitfield(4, mathutil.CeilDiv8(len(committee)))
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedAttestation.AggregationBitfield = aggregationBitfield
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
