@@ -23,10 +23,10 @@ var (
 		Name:  "enable-tracing",
 		Usage: "Enable request tracing.",
 	}
+	// TracingProcessNameFlag defines a flag to specify a process name.
 	TracingProcessNameFlag = cli.StringFlag{
 		Name:  "tracing-process-name",
 		Usage: "The name to apply to tracing tag \"process_name\"",
-		Value: "beacon-chain",
 	}
 	// TracingEndpointFlag flag defines the http endpoint for serving traces to Jaeger.
 	TracingEndpointFlag = cli.StringFlag{
