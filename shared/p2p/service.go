@@ -39,8 +39,6 @@ const prysmProtocolPrefix = "/prysm/0.0.0"
 // full beacon states over the wire for our current implementation.
 const maxMessageSize = 1 << 24
 
-const oneHour = time.Duration(1) * time.Hour
-
 // Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
 type Sender interface {
@@ -214,12 +212,14 @@ func (s *Server) Start() {
 		startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
 	}
 
+	maxTime := time.Duration(1 << 62)
+
 	for _, peer := range s.staticPeers {
 		peerInfo, err := peerInfoFromAddr(peer)
 		if err != nil {
 			log.Errorf("Invalid peer address: %v", err)
 		} else {
-			s.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, oneHour)
+			s.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, maxTime)
 		}
 	}
 }
