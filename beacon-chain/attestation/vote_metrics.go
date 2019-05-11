@@ -20,6 +20,11 @@ var (
 		Name: "total_seen_attestations",
 		Help: "Total number of attestations seen by the validators",
 	})
+
+	attestationPoolSize = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "attestation_pool_size",
+		Help: "The size of the attestation pool",
+	})
 )
 
 func reportVoteMetrics(index uint64, block *pb.BeaconBlock) {
