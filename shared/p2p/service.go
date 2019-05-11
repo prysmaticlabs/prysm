@@ -58,11 +58,13 @@ type Server struct {
 	bootstrapNode string
 	relayNodeAddr string
 	noDiscovery   bool
+	staticPeers   []string
 }
 
 // ServerConfig for peer to peer networking.
 type ServerConfig struct {
 	NoDiscovery            bool
+	StaticPeers            []string
 	BootstrapNodeAddr      string
 	RelayNodeAddr          string
 	HostAddress            string
@@ -159,6 +161,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		bootstrapNode: cfg.BootstrapNodeAddr,
 		relayNodeAddr: cfg.RelayNodeAddr,
 		noDiscovery:   cfg.NoDiscovery,
+		staticPeers:   cfg.StaticPeers,
 	}, nil
 }
 
@@ -186,29 +189,39 @@ func (s *Server) Start() {
 	defer span.End()
 	log.Info("Starting service")
 
-	if !s.noDiscovery && s.bootstrapNode != "" {
-		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
-			log.Errorf("Could not start peer discovery via DHT: %v", err)
-		}
-		bcfg := kaddht.DefaultBootstrapConfig
-		bcfg.Period = time.Duration(30 * time.Second)
-		if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
-			log.Errorf("Failed to bootstrap DHT: %v", err)
-		}
-	}
-	if !s.noDiscovery && s.relayNodeAddr != "" {
-		if err := dialRelayNode(ctx, s.host, s.relayNodeAddr); err != nil {
-			log.Errorf("Could not dial relay node: %v", err)
-		}
-	}
-
-	if err := startmDNSDiscovery(ctx, s.host); err != nil {
-		log.Errorf("Could not start peer discovery via mDNS: %v", err)
-		return
-	}
-
 	if !s.noDiscovery {
+		if s.bootstrapNode != "" {
+			if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
+				log.Errorf("Could not start peer discovery via DHT: %v", err)
+			}
+			bcfg := kaddht.DefaultBootstrapConfig
+			bcfg.Period = time.Duration(30 * time.Second)
+			if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
+				log.Errorf("Failed to bootstrap DHT: %v", err)
+			}
+		}
+		if s.relayNodeAddr != "" {
+			if err := dialRelayNode(ctx, s.host, s.relayNodeAddr); err != nil {
+				log.Errorf("Could not dial relay node: %v", err)
+			}
+		}
+
+		if err := startmDNSDiscovery(ctx, s.host); err != nil {
+			log.Errorf("Could not start peer discovery via mDNS: %v", err)
+		}
+
 		startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
+	}
+
+	maxTime := time.Duration(1 << 62)
+
+	for _, peer := range s.staticPeers {
+		peerInfo, err := peerInfoFromAddr(peer)
+		if err != nil {
+			log.Errorf("Invalid peer address: %v", err)
+		} else {
+			s.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, maxTime)
+		}
 	}
 }
 
