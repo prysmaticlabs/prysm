@@ -455,16 +455,14 @@ func InitializeValidatorStore(bState *pb.BeaconState) {
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
 		bState.ValidatorRegistry, currentEpoch)
 	vStore.activatedValidators[currentEpoch] = activeValidatorIndices
-
 }
 
-// InsertActivatedVal locks the validator store, inserts the activated validator
-// indices, then unlocks the store again. This method may be used by
-// external services in testing to populate the validator store.
-func InsertActivatedVal(epoch uint64, validators []uint64) {
+// InsertActivatedIndices locks the validator store, inserts the activated validator
+// indices corresponding to their activation epochs.
+func InsertActivatedVal(epoch uint64, indices []uint64) {
 	vStore.Lock()
 	defer vStore.Unlock()
-	vStore.activatedValidators[epoch] = validators
+	vStore.activatedValidators[epoch] = append(vStore.activatedValidators[epoch], indices...)
 }
 
 // InsertExitedVal locks the validator store, inserts the exited validator
