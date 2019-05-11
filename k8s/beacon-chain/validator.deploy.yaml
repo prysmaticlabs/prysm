@@ -29,6 +29,7 @@ spec:
         - --datadir=/data  
         - --beacon-rpc-provider=beacon-chain:4000 
         - --enable-tracing
+        - --tracing-process-name=$(POD_NAME)
         - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
         - --trace-sample-fraction=1.0
         volumeMounts:
@@ -41,6 +42,12 @@ spec:
           requests:
             cpu: "50m"
             memory: "100Mi"
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+
       initContainers:
       - name: init-pk
         image: gcr.io/prysmaticlabs/prysm/cluster-pk-manager/client:latest 

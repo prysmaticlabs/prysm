@@ -155,7 +155,22 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			}
 			continue
 		}
+		if valid, err := helpers.VerifyAttestationBitfield(beaconState, att); err != nil || !valid {
+			if err != nil {
+				log.WithError(err)
+			} else {
+				log.Error("invalid attestation bitfield")
+			}
 
+			log.WithFields(logrus.Fields{
+				"slot":     att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Info(
+				"Deleting failed pending attestation from DB")
+			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
+			}
+			continue
+		}
 		if featureconfig.FeatureConfig().EnableCanonicalAttestationFilter {
 			canonical, err := ps.operationService.IsAttCanonical(ctx, att)
 			if err != nil {
