@@ -277,20 +277,18 @@ func (vs *ValidatorServer) ExitedValidators(
 	ctx context.Context,
 	req *pb.ExitedValidatorsRequest) (*pb.ExitedValidatorsResponse, error) {
 
-	beaconState, err := vs.beaconDB.HeadState(ctx)
+	_, statuses, err := vs.MultipleValidatorStatus(ctx, req.PublicKeys)
 	if err != nil {
 		return nil, err
 	}
-	exitedKeys := make([][]byte, 0)
-	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
-	for _, key := range req.PublicKeys {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
 
-		status := vs.validatorStatus(ctx, key, validatorIndexMap, beaconState)
-		if status.Status == pb.ValidatorStatus_EXITED {
-			exitedKeys = append(exitedKeys, key)
+	exitedKeys := make([][]byte, 0)
+	for _, status := range statuses {
+		s := status.Status.Status
+		if s == pb.ValidatorStatus_EXITED ||
+			s == pb.ValidatorStatus_EXITED_SLASHED ||
+			s == pb.ValidatorStatus_INITIATED_EXIT {
+			exitedKeys = append(exitedKeys, status.PublicKey)
 		}
 	}
 
