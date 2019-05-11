@@ -8,7 +8,11 @@ import (
 )
 
 // SetBitfield takes an index and returns bitfield with the index flipped.
-func SetBitfield(index int, committeeLength int) []byte {
+func SetBitfield(index int, committeeLength int) ([]byte, error) {
+	if index >= committeeLength {
+		return nil, fmt.Errorf("invalid index, as index %d is more than"+
+			" or equal to committee length %d", index, committeeLength)
+	}
 	chunkLocation := index / 8
 	indexLocation := mathutil.PowerOf2(uint64(7 - (index % 8)))
 	var bitfield []byte
@@ -18,11 +22,11 @@ func SetBitfield(index int, committeeLength int) []byte {
 	}
 	bitfield = append(bitfield, byte(indexLocation))
 
-	for len(bitfield) < committeeLength {
+	for len(bitfield) < mathutil.CeilDiv8(committeeLength) {
 		bitfield = append(bitfield, byte(0))
 	}
 
-	return bitfield
+	return bitfield, nil
 }
 
 // CheckBit checks if a bit in a bit field (small endian) is one.

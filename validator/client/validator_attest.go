@@ -51,6 +51,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	for _, amnt := range v.assignments.Assignment {
 		if bytes.Equal(pubKey, amnt.PublicKey) {
 			assignment = amnt
+			break
 		}
 	}
 	idxReq := &pb.ValidatorIndexRequest{
@@ -121,7 +122,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		}
 	}
 
-	aggregationBitfield := bitutil.SetBitfield(indexInCommittee, committeeLength)
+	aggregationBitfield, err := bitutil.SetBitfield(indexInCommittee, len(assignment.Committee))
+	if err != nil {
+		log.Errorf("Could not set bitfield: %v", err)
+	}
 	attestation.AggregationBitfield = aggregationBitfield
 
 	// TODO(#1366): Use BLS to generate an aggregate signature.
