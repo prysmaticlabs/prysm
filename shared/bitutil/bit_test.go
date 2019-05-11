@@ -117,21 +117,3 @@ func TestSetBitfield_LargerCommitteesThanIndex(t *testing.T) {
 
 	}
 }
-
-func TestStuff(t *testing.T) {
-	for i := 0; i < 2000; i++ {
-		bfield, err := SetBitfield(i, 100)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		bitset, err := CheckBit(bfield, i)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		if !bitset {
-			t.Error("Bit not set")
-		}
-	}
-}
