@@ -262,6 +262,7 @@ func (c *ChainService) runStateTransition(
 	block *pb.BeaconBlock,
 	beaconState *pb.BeaconState,
 ) (*pb.BeaconState, error) {
+	finalizedEpoch := beaconState.FinalizedEpoch
 	newState, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
@@ -274,6 +275,10 @@ func (c *ChainService) runStateTransition(
 	)
 	if err != nil {
 		return beaconState, &BlockFailedProcessingErr{err}
+	}
+	// Prune the block cache on every new finalized epoch.
+	if newState.FinalizedEpoch > finalizedEpoch {
+		c.beaconDB.ClearBlockCache()
 	}
 	log.WithField(
 		"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
