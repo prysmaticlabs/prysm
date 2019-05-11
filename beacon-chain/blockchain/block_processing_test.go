@@ -854,7 +854,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(1)
 
-	// Tried to insert 4 active indices to DB with only 3 validators in state.
+	// Tried to insert 5 active indices to DB with only 3 validators in state.
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2, 3, 4})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
