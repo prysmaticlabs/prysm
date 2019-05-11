@@ -122,7 +122,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		}
 	}
 
-	aggregationBitfield, err := bitutil.SetBitfield(indexInCommittee, committeeLength)
+	aggregationBitfield, err := bitutil.SetBitfield(indexInCommittee, len(assignment.Committee))
 	if err != nil {
 		log.Errorf("Could not set bitfield: %v", err)
 	}
