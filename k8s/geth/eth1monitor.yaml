@@ -16,6 +16,7 @@ spec:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9090'
     spec:
+      priorityClassName: monitoring-priority
       containers:
       - name: monitor
         image: gcr.io/prysmaticlabs/eth1monitor:latest
