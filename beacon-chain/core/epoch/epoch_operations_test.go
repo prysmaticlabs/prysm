@@ -16,17 +16,35 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxDepositAmount,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
 		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
+	latestActiveIndexRoots := make(
+		[][]byte,
+		params.BeaconConfig().LatestActiveIndexRootsLength,
+	)
+	for i := 0; i < len(latestActiveIndexRoots); i++ {
+		latestActiveIndexRoots[i] = params.BeaconConfig().ZeroHash[:]
+	}
+	latestRandaoMixes := make(
+		[][]byte,
+		params.BeaconConfig().LatestRandaoMixesLength,
+	)
+	for i := 0; i < len(latestRandaoMixes); i++ {
+		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
+	}
 	return &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Balances:          validatorBalances,
-		Slot:              slot,
+		ValidatorRegistry:      validators,
+		Balances:               validatorBalances,
+		Slot:                   slot,
+		LatestActiveIndexRoots: latestActiveIndexRoots,
+		LatestRandaoMixes:      latestRandaoMixes,
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
 }
 
@@ -252,5 +270,56 @@ func TestInclusionSlot_SlotNotFound(t *testing.T) {
 	want := fmt.Sprintf("could not find inclusion slot for validator index %d", badIndex)
 	if _, err := InclusionSlot(state, badIndex); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessFinalUpdates_CanProcess(t *testing.T) {
+	s := buildState(params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch)
+	ce := helpers.CurrentEpoch(s)
+	ne := ce + 1
+	s.Eth1DataVotes = []*pb.Eth1DataVote{{VoteCount: 100}}
+	s.Balances[0] = 29 * 1e9
+	s.LatestSlashedBalances[ce] = 100
+	newS, err := ProcessFinalUpdates(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify we can reset ETH1 data votes.
+	if len(newS.Eth1DataVotes) != 0 {
+		t.Errorf("Eth1 data votes didnt get reset, got %d", len(newS.Eth1DataVotes))
+	}
+
+	// Verify effective balance is correctly updated.
+	if newS.ValidatorRegistry[0].EffectiveBalance != 29*1e9 {
+		t.Errorf("effective balance incorrectly updated, got %d", s.ValidatorRegistry[0].EffectiveBalance)
+	}
+
+	// Verify start shard is correctly updated.
+	if newS.LatestStartShard != 64 {
+		t.Errorf("start shard incorrectly updated, got %d", 64)
+	}
+
+	// Verify latest active index root is correctly updated in the right position.
+	pos := (ne + params.BeaconConfig().ActivationExitDelay) % params.BeaconConfig().LatestActiveIndexRootsLength
+	if bytes.Equal(newS.LatestActiveIndexRoots[pos], params.BeaconConfig().ZeroHash[:]) {
+		t.Error("latest active index roots still zero hashes")
+	}
+
+	// Verify slashed balances correctly updated.
+	if newS.LatestSlashedBalances[ce] != newS.LatestSlashedBalances[ne] {
+		t.Errorf("wanted slashed balance %d, got %d",
+			newS.LatestSlashedBalances[ce],
+			newS.LatestSlashedBalances[ne])
+	}
+
+	// Verify randao is correctly updated in the right position.
+	if bytes.Equal(newS.LatestRandaoMixes[ne], params.BeaconConfig().ZeroHash[:]) {
+		t.Error("latest randao still zero hashes")
+	}
+
+	// Verify historical root accumulator was appended.
+	if len(newS.HistoricalRoots[ce]) != 1 {
+		t.Errorf("wanted slashed balance %d, got %d", 1, len(newS.HistoricalRoots[ce]))
 	}
 }

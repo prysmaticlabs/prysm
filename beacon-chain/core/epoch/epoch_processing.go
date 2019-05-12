@@ -534,7 +534,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		if balance < v.EffectiveBalance || v.EffectiveBalance+3*halfInc < balance {
 			v.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
 			if v.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
-				v.EffectiveBalance = balance % params.BeaconConfig().EffectiveBalanceIncrement
+				v.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
 			}
 		}
 	}
