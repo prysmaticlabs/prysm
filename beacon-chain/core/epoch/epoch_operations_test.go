@@ -280,6 +280,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	s.Eth1DataVotes = []*pb.Eth1DataVote{{VoteCount: 100}}
 	s.Balances[0] = 29 * 1e9
 	s.LatestSlashedBalances[ce] = 100
+	s.LatestRandaoMixes[ce] = []byte{'A'}
 	newS, err := ProcessFinalUpdates(s)
 	if err != nil {
 		t.Fatal(err)
@@ -315,11 +316,11 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 
 	// Verify randao is correctly updated in the right position.
 	if bytes.Equal(newS.LatestRandaoMixes[ne], params.BeaconConfig().ZeroHash[:]) {
-		t.Error("latest randao still zero hashes")
+		t.Error("latest RANDAO still zero hashes")
 	}
 
 	// Verify historical root accumulator was appended.
-	if len(newS.HistoricalRoots[ce]) != 1 {
+	if len(newS.HistoricalRoots) != 1 {
 		t.Errorf("wanted slashed balance %d, got %d", 1, len(newS.HistoricalRoots[ce]))
 	}
 }
