@@ -124,29 +124,36 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
 		}
+		if status.Status.Status == pb.ValidatorStatus_EXITED {
+			log.WithFields(logrus.Fields{
+				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+				"status":    status.Status.Status.String(),
+			}).Info("Validator has been ejected")
+			continue
+		}
 		if status.Status.DepositInclusionSlot == 0 {
 			log.WithFields(logrus.Fields{
-				"PublicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-				"Status":    fmt.Sprintf("%s", status.Status.Status.String()),
-			}).Info("Not Deposited Yet")
+				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+				"status":    status.Status.Status.String(),
+			}).Info("Not yet included in state...")
 			continue
 		}
 		if status.Status.ActivationEpoch == (params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch) {
 			log.WithFields(logrus.Fields{
-				"PublicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-				"Status":                    status.Status.Status.String(),
-				"DepositInclusionSlot":      status.Status.DepositInclusionSlot,
-				"PositionInActivationQueue": status.Status.PositionInActivationQueue,
-			}).Info("Waiting to be Activated")
+				"publicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+				"status":                    status.Status.Status.String(),
+				"depositInclusionSlot":      status.Status.DepositInclusionSlot,
+				"positionInActivationQueue": status.Status.PositionInActivationQueue,
+			}).Info("Waiting to be activated")
 			continue
 		}
 		log.WithFields(logrus.Fields{
-			"PublicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-			"Status":                    status.Status.Status.String(),
-			"DepositInclusionSlot":      status.Status.DepositInclusionSlot,
-			"ActivationEpoch":           status.Status.ActivationEpoch,
-			"PositionInActivationQueue": status.Status.PositionInActivationQueue,
-		}).Info("Validator Status")
+			"publicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+			"status":                    status.Status.Status.String(),
+			"depositInclusionSlot":      status.Status.DepositInclusionSlot,
+			"activationEpoch":           status.Status.ActivationEpoch,
+			"positionInActivationQueue": status.Status.PositionInActivationQueue,
+		}).Info("Validator status")
 	}
 	return activatedKeys
 }
