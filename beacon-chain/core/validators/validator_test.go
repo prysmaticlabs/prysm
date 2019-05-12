@@ -671,3 +671,14 @@ func TestInitializeValidatoreStore(t *testing.T) {
 		t.Errorf("Saved active indices are not the same as the one in the validator store, got %v but expected %v", retrievedIndices, indices)
 	}
 }
+
+func TestInsertActivatedIndices_Works(t *testing.T) {
+	InsertActivatedIndices(100, []uint64{1, 2, 3})
+	if !reflect.DeepEqual(vStore.activatedValidators[100], []uint64{1, 2, 3}) {
+		t.Error("Activated validators aren't the same")
+	}
+	InsertActivatedIndices(100, []uint64{100})
+	if !reflect.DeepEqual(vStore.activatedValidators[100], []uint64{1, 2, 3, 100}) {
+		t.Error("Activated validators aren't the same")
+	}
+}
