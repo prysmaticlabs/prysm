@@ -20,7 +20,6 @@ import (
 
 var (
 	allWatching []*Watching
-	updates     string
 	loadSeconds float64
 	totalLoaded int64
 	eth         *ethclient.Client
