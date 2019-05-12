@@ -9,7 +9,7 @@ spec:
   servers:
   - port:
       number: 30002
-      name: grpc-beacon-chain 
+      name: grpc-beacon-chain
       protocol: GRPC
     hosts:
     - beacon.prylabs.net
@@ -61,6 +61,8 @@ metadata:
 spec:
   hosts:
   - beacon-chain.beacon-chain.svc.cluster.local
+  gateways:
+  - mesh
   http:
   - match:
     - port: 4000

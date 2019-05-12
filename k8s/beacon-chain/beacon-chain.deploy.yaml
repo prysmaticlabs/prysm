@@ -56,7 +56,7 @@ spec:
             - --p2p-port=5000
             - --enable-tracing
             - --tracing-process-name=$(POD_NAME)
-            - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
+            - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces
             - --trace-sample-fraction=1.0
             - --datadir=/data
             # Disabling gossip sub until a larger beacon chain deployment.

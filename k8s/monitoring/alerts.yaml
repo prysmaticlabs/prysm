@@ -24,10 +24,10 @@ data:
         annotations:
           summary: Some nodes are seeing more than 5 reorgs in 10 minutes
       - alert: high_goroutines
-        expr: max_over_time(go_goroutines{component="beacon-chain"}[1m]) > 1000
+        expr: max_over_time(go_goroutines{component="beacon-chain"}[1m]) > 2000
         for: 1m
         annotations:
-          summary: Pod {{ $labels.pod_name}} experencing more than 1000 goroutines
+          summary: Pod {{ $labels.pod_name}} experencing more than 2000 goroutines
           description: "{{ $labels.pod_name }} has {{ $value }} goroutines"
       - alert: low_disk_space_1gb
         expr: kubelet_volume_stats_available_bytes < 1e9
@@ -40,3 +40,15 @@ data:
         annotations:
           summary: ETH1 wallet has less than 200 ETH
           description: "{{ $labels.name }} ({{ $labels.address }}) has {{ $value }} ETH"
+      - alert: high_grpc_beacon_chain_error_rate
+        expr: sum(rate(istio_requests_total{reporter="destination",destination_service=~"beacon-chain.beacon-chain.svc.cluster.local",response_code!~"5.*"}[5m])) / sum(rate(istio_requests_total{reporter="destination",destination_service=~"beacon-chain.beacon-chain.svc.cluster.local"}[5m])) < 0.99
+        for: 1m
+        annotations:
+          summary: Beacon node global success rate is less than 99%.
+          description: Success rate = {{ $value }}
+      - alert: high_grpc_beacon_chain_method_error_rate
+        expr: sum(rate(grpc_server_handled_total{component="beacon-chain",grpc_code="OK"}[5m]))  by (grpc_method) / sum(rate(grpc_server_handled_total{component="beacon-chain"}[5m])) by (grpc_method) < 0.95
+        for: 1m
+        annotations:
+          summary: Beacon chain gRPC method success rate is less than 95%.
+          description: "{{ $labels.grpc_method }} {{ $value }}"
