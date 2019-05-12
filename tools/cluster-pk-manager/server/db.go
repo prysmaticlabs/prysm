@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	allocatedPkCount = promauto.NewCounter(prometheus.CounterOpts{
+	allocatedPkCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "allocated_pk_count",
 		Help: "The number of allocated private keys",
 	})
@@ -36,6 +36,7 @@ var (
 	dbFileName         = "pk.db"
 	assignedPkBucket   = []byte("assigned_pks")
 	unassignedPkBucket = []byte("unassigned_pks")
+	deletedKeysBucket  = []byte("deleted_pks")
 	dummyVal           = []byte{1}
 )
 
@@ -58,7 +59,7 @@ func newDB(dbPath string) *db {
 
 	// Initialize buckets
 	if err := boltdb.Update(func(tx *bolt.Tx) error {
-		for _, bkt := range [][]byte{assignedPkBucket, unassignedPkBucket} {
+		for _, bkt := range [][]byte{assignedPkBucket, unassignedPkBucket, deletedKeysBucket} {
 			if _, err := tx.CreateBucketIfNotExists(bkt); err != nil {
 				return err
 			}
@@ -68,7 +69,11 @@ func newDB(dbPath string) *db {
 		panic(err)
 	}
 
+	// Populate metrics on start.
 	if err := boltdb.View(func(tx *bolt.Tx) error {
+		// Populate blacklisted key count.
+		blacklistedPKCount.Set(float64(tx.Bucket(deletedKeysBucket).Stats().KeyN))
+
 		keys := 0
 
 		// Iterate over all of the pod assigned keys (one to many).
@@ -295,11 +300,20 @@ func (d *db) RemovePKFromPod(podName string, key []byte) error {
 		if !found {
 			return errors.New("private key not assigned to pod")
 		}
-		marshalled, err := proto.Marshal(pks)
+		marshaled, err := proto.Marshal(pks)
 		if err != nil {
 			return err
 		}
 		blacklistedPKCount.Inc()
-		return tx.Bucket(assignedPkBucket).Put([]byte(podName), marshalled)
+		allocatedPkCount.Dec()
+		assignedPkCount.Dec()
+		nowBytes, err := time.Now().MarshalBinary()
+		if err != nil {
+			return err
+		}
+		if err := tx.Bucket(deletedKeysBucket).Put(key, nowBytes); err != nil {
+			return err
+		}
+		return tx.Bucket(assignedPkBucket).Put([]byte(podName), marshaled)
 	})
 }

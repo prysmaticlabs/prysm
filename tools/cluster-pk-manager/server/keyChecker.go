@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var keyInterval = 3 * time.Second
+var keyInterval = 3 * time.Minute
 
 type keyChecker struct {
 	db     *db
@@ -38,6 +38,8 @@ func (k *keyChecker) checkKeys() error {
 	if err != nil {
 		return err
 	}
+
+	log.Debug("Requesting EXITED keys")
 
 	req := &pbBeacon.ExitedValidatorsRequest{
 		PublicKeys: pubkeys,
@@ -68,9 +70,9 @@ func (k *keyChecker) checkKeys() error {
 
 func (k *keyChecker) run() {
 	for {
-		time.Sleep(keyInterval)
 		if err := k.checkKeys(); err != nil {
 			log.WithField("error", err).Error("Failed to check keys")
 		}
+		time.Sleep(keyInterval)
 	}
 }

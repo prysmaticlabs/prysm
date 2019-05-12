@@ -260,6 +260,9 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 			return false, nil, ctx.Err()
 		}
 		status := vs.validatorStatus(ctx, key, chainStarted, chainStartKeys, validatorIndexMap, beaconState)
+		if status == nil {
+			continue
+		}
 		resp := &pb.ValidatorActivationResponse_Status{
 			Status:    status,
 			PublicKey: key,
