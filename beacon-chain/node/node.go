@@ -338,6 +338,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
 	var operationService *operations.Service
 	if err := b.services.FetchService(&operationService); err != nil {
 		return err
@@ -361,6 +366,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		CertFlag:         cert,
 		KeyFlag:          key,
 		BeaconDB:         b.db,
+		Broadcaster:      p2pService,
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,

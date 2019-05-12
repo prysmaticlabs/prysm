@@ -115,7 +115,14 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 				BlockRoot:   []byte("b"),
 			},
 		}
+		blockRoot, err := hashutil.HashBeaconBlock(block)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
+			t.Fatal(err)
+		}
+		if err := chainService.beaconDB.SaveHistoricalState(context.Background(), beaconState, blockRoot); err != nil {
 			t.Fatal(err)
 		}
 		if err := chainService.ApplyForkChoiceRule(context.Background(), block, tt.state); err != nil {
@@ -260,7 +267,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	attsService.InsertAttestationIntoStore(pubKey48, att)
 
 	chainService := setupBeaconChain(t, beaconDB, attsService)
-	attestationTargets, err := chainService.attestationTargets(beaconState)
+	attestationTargets, err := chainService.AttestationTargets(beaconState)
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
 	}
@@ -323,7 +330,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(ctx, block1, beaconState.Slot)
+	childrenBlock, err := chainService.BlockChildren(ctx, block1, beaconState.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -331,7 +338,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	// When we input block B1, we should get B2 back.
 	wanted := []*pb.BeaconBlock{block2}
 	if !reflect.DeepEqual(wanted, childrenBlock) {
-		t.Errorf("Wrong children block received")
+		t.Errorf("Wrong children block received, want %v, received %v", wanted, childrenBlock)
 	}
 }
 
@@ -398,7 +405,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(ctx, block1, beaconState.Slot)
+	childrenBlock, err := chainService.BlockChildren(ctx, block1, beaconState.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -464,7 +471,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(ctx, block1, beaconState.Slot)
+	childrenBlock, err := chainService.BlockChildren(ctx, block1, beaconState.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -517,6 +524,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
+	beaconState.LatestBlock = block2
 	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
@@ -535,7 +543,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
 	if !reflect.DeepEqual(block2, head) {
-		t.Errorf("Expected head to equal %v, received %v", block1, head)
+		t.Errorf("Expected head to equal %v, received %v", block2, head)
 	}
 }
 
@@ -1404,6 +1412,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)
 	}
+	gState.LatestBlock = gBlock
 	if err := chainSvc.beaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
 		t.Fatal(err)
 	}
@@ -1445,7 +1454,9 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.SaveState(ctx, &pb.BeaconState{Slot: genesisSlot + lastAvailableSlot}); err != nil {
+	computedState := &pb.BeaconState{Slot: genesisSlot + lastAvailableSlot}
+	computedState.LatestBlock = block
+	if err := chainSvc.beaconDB.SaveState(ctx, computedState); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
@@ -1467,7 +1478,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	}
 	if newJustifiedState.Slot-genesisSlot != lastAvailableSlot {
 		t.Errorf("Wanted justification state slot: %d, got: %d",
-			offset, newJustifiedState.Slot-genesisSlot)
+			lastAvailableSlot, newJustifiedState.Slot-genesisSlot)
 	}
 	if newJustifiedBlock.Slot-genesisSlot != lastAvailableSlot {
 		t.Errorf("Wanted justification block slot: %d, got: %d",

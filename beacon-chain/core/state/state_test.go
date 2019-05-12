@@ -122,7 +122,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
 	if len(newState.Balances) != depositsForChainStart {
-		t.Error("ValidatorBalances was not correctly initialized")
+		t.Error("Balances was not correctly initialized")
 	}
 
 	// Randomness and committees fields checks.

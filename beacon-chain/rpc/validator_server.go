@@ -99,7 +99,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 	activeIndices := helpers.ActiveValidatorIndices(validatorRegistry, helpers.SlotToEpoch(req.Slot))
-	validatorBalances, err := vs.beaconDB.ValidatorBalances(ctx)
+	validatorBalances, err := vs.beaconDB.Balances(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve validator balances %v", err)
 	}
@@ -140,6 +140,9 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	}
 
 	for beaconState.Slot < req.EpochStart {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		beaconState, err = state.ExecuteStateTransition(
 			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
@@ -151,6 +154,10 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
 	activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
 	for _, pk := range activeKeys {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		a, err := vs.assignment(pk, beaconState, req.EpochStart)
 		if err != nil {
 			return nil, err
@@ -213,8 +220,17 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
+	chainStarted, _, err := vs.powChainService.HasChainStartLogOccurred()
+	if err != nil {
+		return nil, err
+	}
+
+	chainStartKeys, err := vs.chainStartPubkeys()
+	if err != nil {
+		return nil, err
+	}
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
-	return vs.validatorStatus(ctx, req.PublicKey, validatorIndexMap, beaconState), nil
+	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
 }
 
 // MultipleValidatorStatus returns the validator status response for the set of validators
@@ -228,9 +244,22 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	if err != nil {
 		return false, nil, err
 	}
+	chainStarted, _, err := vs.powChainService.HasChainStartLogOccurred()
+	if err != nil {
+		return false, nil, err
+	}
+
+	chainStartKeys, err := vs.chainStartPubkeys()
+	if err != nil {
+		return false, nil, err
+	}
+
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for i, key := range pubkeys {
-		status := vs.validatorStatus(ctx, key, validatorIndexMap, beaconState)
+		if ctx.Err() != nil {
+			return false, nil, ctx.Err()
+		}
+		status := vs.validatorStatus(ctx, key, chainStarted, chainStartKeys, validatorIndexMap, beaconState)
 		resp := &pb.ValidatorActivationResponse_Status{
 			Status:    status,
 			PublicKey: key,
@@ -245,8 +274,9 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 }
 
 func (vs *ValidatorServer) validatorStatus(
-	ctx context.Context, pubKey []byte, idxMap map[[32]byte]int, beaconState *pbp2p.BeaconState,
-) *pb.ValidatorStatusResponse {
+	ctx context.Context, pubKey []byte, chainStarted bool,
+	chainStartKeys map[[96]byte]bool, idxMap map[[32]byte]int,
+	beaconState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	pk := bytesutil.ToBytes32(pubKey)
 	valIdx, ok := idxMap[pk]
 	_, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, pubKey)
@@ -260,17 +290,33 @@ func (vs *ValidatorServer) validatorStatus(
 
 	if !ok {
 		return &pb.ValidatorStatusResponse{
-			Status:                 pb.ValidatorStatus_PENDING_ACTIVE,
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 		}
 	}
 
-	status := vs.lookupValidatorStatusFlag(uint64(valIdx), beaconState)
+	if !chainStarted {
+		return &pb.ValidatorStatusResponse{
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+		}
+	}
+
+	if exists := chainStartKeys[bytesutil.ToBytes96(pubKey)]; exists {
+		return &pb.ValidatorStatusResponse{
+			Status:                 pb.ValidatorStatus_ACTIVE,
+			ActivationEpoch:        0,
+			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+			DepositInclusionSlot:   0,
+		}
+	}
+
 	depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
 	if err != nil {
 		return &pb.ValidatorStatusResponse{
-			Status:                 status,
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 		}
@@ -278,7 +324,7 @@ func (vs *ValidatorServer) validatorStatus(
 
 	if depositBlockSlot == 0 {
 		return &pb.ValidatorStatusResponse{
-			Status:                 status,
+			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
 			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 		}
@@ -288,6 +334,10 @@ func (vs *ValidatorServer) validatorStatus(
 	var validatorInState *pbp2p.Validator
 	var validatorIndex uint64
 	for idx, val := range beaconState.ValidatorRegistry {
+		if ctx.Err() != nil {
+			return nil
+		}
+
 		if bytes.Equal(val.Pubkey, pubKey) {
 			if helpers.IsActiveValidator(val, currEpoch) {
 				return &pb.ValidatorStatusResponse{
@@ -317,6 +367,7 @@ func (vs *ValidatorServer) validatorStatus(
 		positionInQueue = validatorIndex - lastActivatedValidatorIdx
 	}
 
+	status := vs.lookupValidatorStatusFlag(uint64(valIdx), beaconState)
 	return &pb.ValidatorStatusResponse{
 		Status:                    status,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
@@ -329,12 +380,11 @@ func (vs *ValidatorServer) validatorStatus(
 func (vs *ValidatorServer) lookupValidatorStatusFlag(validatorIdx uint64, beaconState *pbp2p.BeaconState) pb.ValidatorStatus {
 	var status pb.ValidatorStatus
 	v := beaconState.ValidatorRegistry[validatorIdx]
-	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	epoch := helpers.CurrentEpoch(beaconState)
 
-	if v.ActivationEpoch == farFutureEpoch {
+	if v.ActivationEpoch > epoch {
 		status = pb.ValidatorStatus_PENDING_ACTIVE
-	} else if v.ActivationEpoch <= epoch && epoch < v.ExitEpoch {
+	} else if epoch >= v.ActivationEpoch && epoch < v.ExitEpoch {
 		status = pb.ValidatorStatus_ACTIVE
 	} else if v.StatusFlags == pbp2p.Validator_INITIATED_EXIT {
 		status = pb.ValidatorStatus_INITIATED_EXIT
@@ -418,4 +468,17 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	}
 
 	return depositBlockSlot, nil
+}
+
+func (vs *ValidatorServer) chainStartPubkeys() (map[[96]byte]bool, error) {
+	pubkeys := make(map[[96]byte]bool)
+	deposits := vs.powChainService.ChainStartDeposits()
+	for _, dep := range deposits {
+		depInput, err := helpers.DecodeDepositInput(dep)
+		if err != nil {
+			return nil, err
+		}
+		pubkeys[bytesutil.ToBytes96(depInput.Pubkey)] = true
+	}
+	return pubkeys, nil
 }
