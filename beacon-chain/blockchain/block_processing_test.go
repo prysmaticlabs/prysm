@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"math/big"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -773,7 +774,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(2)
-	v.InsertActivatedVal(epoch+1, []uint64{0, 1, 2})
+	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	v.InsertExitedVal(epoch+1, []uint64{0, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
@@ -816,7 +817,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(1)
-	v.InsertActivatedVal(epoch+1, []uint64{0, 1, 2})
+	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -845,5 +846,48 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 
 	if v.ActivatedValFromEpoch(epoch) != nil {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
+	}
+}
+
+func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	epoch := uint64(100)
+
+	// Tried to insert 5 active indices to DB with only 3 validators in state.
+	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2, 3, 4})
+	var validators []*pb.Validator
+	for i := 0; i < 3; i++ {
+		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.PutUvarint(pubKeyBuf, uint64(i))
+		validators = append(validators, &pb.Validator{
+			Pubkey: pubKeyBuf,
+		})
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+	}
+	chainService := setupBeaconChain(t, db, nil)
+	if err := chainService.saveValidatorIdx(state); err != nil {
+		t.Fatalf("Could not save validator idx: %v", err)
+	}
+
+	wantedIdx := uint64(2)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	if err != nil {
+		t.Fatalf("Could not get validator index: %v", err)
+	}
+	if wantedIdx != idx {
+		t.Errorf("Wanted: %d, got: %d", wantedIdx, idx)
+	}
+
+	if v.ActivatedValFromEpoch(epoch) != nil {
+		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
+	}
+
+	// Verify the skipped validators are included in the next epoch.
+	if !reflect.DeepEqual(v.ActivatedValFromEpoch(epoch+2), []uint64{3, 4}) {
+		t.Error("Did not get wanted validator from activation queue")
 	}
 }

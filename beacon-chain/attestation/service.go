@@ -315,6 +315,7 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 
 		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
 			log.Errorf("Index doesn't exist in validator registry: index %d", committee[i])
+			continue
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the

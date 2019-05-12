@@ -23,6 +23,11 @@ var (
 		Name:  "enable-tracing",
 		Usage: "Enable request tracing.",
 	}
+	// TracingProcessNameFlag defines a flag to specify a process name.
+	TracingProcessNameFlag = cli.StringFlag{
+		Name:  "tracing-process-name",
+		Usage: "The name to apply to tracing tag \"process_name\"",
+	}
 	// TracingEndpointFlag flag defines the http endpoint for serving traces to Jaeger.
 	TracingEndpointFlag = cli.StringFlag{
 		Name:  "tracing-endpoint",
@@ -52,6 +57,11 @@ var (
 	NoDiscovery = cli.BoolFlag{
 		Name:  "no-discovery",
 		Usage: "Enable only local network p2p and do not connect to cloud bootstrap nodes.",
+	}
+	// StaticPeers specifies a set of peers to connect to explicitly.
+	StaticPeers = cli.StringSliceFlag{
+		Name:  "peer",
+		Usage: "Connect with this peer. This flag may be used multiple times.",
 	}
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
 	BootstrapNode = cli.StringFlag{
