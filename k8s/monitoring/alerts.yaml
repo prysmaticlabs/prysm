@@ -28,6 +28,7 @@ data:
         for: 1m
         annotations:
           summary: Pod {{ $labels.pod_name}} experencing more than 1000 goroutines
+          description: "{{ $labels.pod_name }} has {{ $value }} goroutines"
       - alert: low_disk_space_1gb
         expr: kubelet_volume_stats_available_bytes < 1e9
         for: 1m
