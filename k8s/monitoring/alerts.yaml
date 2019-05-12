@@ -27,4 +27,15 @@ data:
         expr: max_over_time(go_goroutines{component="beacon-chain"}[1m]) > 1000
         for: 1m
         annotations:
-          summary: Some nodes are experencing more than 1000 goroutines
+          summary: Pod {{ $labels.pod_name}} experencing more than 1000 goroutines
+      - alert: low_disk_space_1gb
+        expr: kubelet_volume_stats_available_bytes < 1e9
+        for: 1m
+        annotations:
+          summary: Pod has less than 1GB free disk space in their persistent disk.
+      - alert: balance_too_low
+        expr: eth_balance < 200
+        for: 1m
+        annotations:
+          summary: ETH1 wallet has less than 200 ETH
+          description: "{{ $labels.name }} ({{ $labels.address }}) has {{ $value }} ETH"
