@@ -53,6 +53,23 @@ spec:
           number: 4000
         host: beacon-chain.beacon-chain.svc.cluster.local
 ---
+kind: VirtualService
+apiVersion: networking.istio.io/v1alpha3
+metadata:
+  name: beacon-chain
+  namespace: beacon-chain
+spec:
+  hosts:
+  - beacon-chain.beacon-chain.svc.cluster.local
+  http:
+  - match:
+    - port: 4000
+    route:
+    - destination:
+        port:
+          number: 4000
+        host: beacon-chain.beacon-chain.svc.cluster.local
+---
  apiVersion: networking.istio.io/v1alpha3
  kind: DestinationRule
  metadata:

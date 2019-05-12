@@ -3,7 +3,6 @@ apiVersion: apps/v1
 metadata:
   name: beacon-chain
   namespace: beacon-chain
-  app: beacon-chain
 spec:
   replicas: 3
   serviceName: beacon-chain
