@@ -71,7 +71,7 @@ func (k *keyChecker) checkKeys() error {
 func (k *keyChecker) run() {
 	for {
 		if err := k.checkKeys(); err != nil {
-			log.WithField("error", err).Error("Failed to check keys")
+			log.WithError(err).Error("Failed to check keys")
 		}
 		time.Sleep(keyInterval)
 	}
