@@ -72,8 +72,8 @@ func main() {
 
 	fmt.Printf("ETHexporter has started on port %v using web3 server: %v at block #%v\n", *port, *web3URL, block)
 
-	http.HandleFunc("/metrics", MetricsHttp)
-	http.HandleFunc("/reload", ReloadHttp)
+	http.HandleFunc("/metrics", MetricsHTTP)
+	http.HandleFunc("/reload", ReloadHTTP)
 	panic(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", *port), nil))
 }
 
@@ -117,8 +117,8 @@ func ToEther(o *big.Int) *big.Float {
 	return pul
 }
 
-// MetricsHttp - HTTP response handler for /metrics.
-func MetricsHttp(w http.ResponseWriter, r *http.Request) {
+// MetricsHTTP - HTTP response handler for /metrics.
+func MetricsHTTP(w http.ResponseWriter, r *http.Request) {
 	var allOut []string
 	total := big.NewFloat(0)
 	for _, v := range allWatching {
@@ -137,8 +137,8 @@ func MetricsHttp(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, strings.Join(allOut, "\n"))
 }
 
-// ReloadHttp reloads the addresses from disk.
-func ReloadHttp(w http.ResponseWriter, _ *http.Request) {
+// ReloadHTTP reloads the addresses from disk.
+func ReloadHTTP(w http.ResponseWriter, _ *http.Request) {
 	if err := OpenAddresses(*addressFilePath); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
