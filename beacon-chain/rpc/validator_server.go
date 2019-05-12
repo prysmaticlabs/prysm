@@ -276,6 +276,8 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	return activeValidatorExists, statusResponses, nil
 }
 
+// ExitedValidators queries validator statuses for a give list of validators
+// and returns a filtered list of validator keys that are exited.
 func (vs *ValidatorServer) ExitedValidators(
 	ctx context.Context,
 	req *pb.ExitedValidatorsRequest) (*pb.ExitedValidatorsResponse, error) {
