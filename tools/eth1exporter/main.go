@@ -77,6 +77,7 @@ func main() {
 	panic(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", *port), nil))
 }
 
+// Watching address wrapper
 type Watching struct {
 	Name    string
 	Address string
