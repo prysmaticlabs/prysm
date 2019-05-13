@@ -120,9 +120,6 @@ proto_library(
     sha256 = "1626d546c696fd4fc093058d378787b8794f532acba729a9d1f5375c1f79f4a6",
     strip_prefix = "prysm-testnet-site-0438607f2c926108a1cca238eefb35725a2bcf76",
     url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/0438607f2c926108a1cca238eefb35725a2bcf76.tar.gz",
-    sha256 = "d57cbb11cbd8126d31385064315df731132401f5c5ea110e05ed86da350c9523",
-    strip_prefix = "prysm-testnet-site-3848e91aab9332a0b2c15291f65f09c94db1a84d",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/3848e91aab9332a0b2c15291f65f09c94db1a84d.tar.gz",
 )
 
 http_archive(
