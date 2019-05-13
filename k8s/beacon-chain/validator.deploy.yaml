@@ -30,12 +30,13 @@ spec:
         - --keystore-path=/keystore
         - --password=nopass
         - --datadir=/data  
-        - --beacon-rpc-provider=beacon-chain:4000
+        - --beacon-rpc-provider=beacon-chain.beacon-chain.svc.cluster.local:4000
         - --monitoring-port=9090
         - --enable-tracing
         - --tracing-process-name=$(POD_NAME)
         - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces
         - --trace-sample-fraction=1.0
+        - --disable-rewards-penalties-logging
         volumeMounts:
         - name: localdata
           mountPath: /data
@@ -59,6 +60,7 @@ spec:
         - --keystore-password=nopass
         - --pod-name=$(POD_NAME)
         - --server=cluster-pk-manager:8000
+        - --keys=64
         volumeMounts:
         - name: keystore
           mountPath: /keystore
