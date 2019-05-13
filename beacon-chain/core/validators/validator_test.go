@@ -61,14 +61,24 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot,
-		ValidatorRegistry: validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	boundaryAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot,
+				Shard: 1,
+			},
 			AggregationBitfield: []byte{0x03}}, // returns indices 242
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot,
+				Shard: 1,
+			},
 			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
 	}
 
@@ -77,9 +87,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{65, 123}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{9, 32}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{65, 123}, attesterIndices)
+			[]uint64{9, 32}, attesterIndices)
 	}
 }
 
@@ -96,8 +106,10 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	prevAttestation := &pb.PendingAttestation{
@@ -119,9 +131,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{1015, 1131}) {
+	if !reflect.DeepEqual(indices, []uint64{3641, 6307}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{1015, 1131}, indices)
+			[]uint64{278, 2292}, indices)
 	}
 }
 
@@ -134,8 +146,10 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              5,
+		Slot:                   5,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	attestation := &pb.PendingAttestation{

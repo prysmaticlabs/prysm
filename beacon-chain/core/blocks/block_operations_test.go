@@ -651,10 +651,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:     validators,
-		Slot:                  currentSlot,
-		Balances:              validatorBalances,
-		LatestSlashedBalances: make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		ValidatorRegistry:      validators,
+		Slot:                   currentSlot,
+		Balances:               validatorBalances,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1026,8 +1028,10 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot + 5,
+		Slot:                   params.BeaconConfig().GenesisSlot + 5,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	tests := []struct {
 		aggregationBitfield      []byte
@@ -1038,20 +1042,20 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x01},
-			wantedCustodyBit0Indices: []uint64{14},
-			wantedCustodyBit1Indices: []uint64{11},
+			wantedCustodyBit0Indices: []uint64{2},
+			wantedCustodyBit1Indices: []uint64{35},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x02},
-			wantedCustodyBit0Indices: []uint64{11},
-			wantedCustodyBit1Indices: []uint64{14},
+			wantedCustodyBit0Indices: []uint64{35},
+			wantedCustodyBit1Indices: []uint64{2},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{11, 14},
+			wantedCustodyBit1Indices: []uint64{2, 35},
 		},
 	}
 
@@ -1059,7 +1063,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		Signature: []byte("signed"),
 		Data: &pb.AttestationData{
 			Slot:  params.BeaconConfig().GenesisSlot + 2,
-			Shard: 2,
+			Shard: 3,
 		},
 	}
 	for _, tt := range tests {
