@@ -82,7 +82,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 		return false
 	}
 	if featureconfig.FeatureConfig().EnableCrosslinks {
-		shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().SlotsPerEpoch
+		shardsProcessed := helpers.EpochCommitteeCount(state, helpers.CurrentEpoch(state)) * params.BeaconConfig().SlotsPerEpoch
 		startShard := state.CurrentShufflingStartShard
 		for i := startShard; i < shardsProcessed; i++ {
 			if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
@@ -186,92 +186,6 @@ func ProcessRegistryUpdates(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
-// ProcessCrosslinks goes through each crosslink committee and check
-// crosslink committee's attested balance * 3 is greater than total balance *2.
-// If it's greater then beacon node updates crosslink committee with
-// the state epoch and wining root.
-//
-// Spec pseudocode definition:
-//	For every slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)),
-// 	let `crosslink_committees_at_slot = get_crosslink_committees_at_slot(state, slot)`.
-// 		For every `(crosslink_committee, shard)` in `crosslink_committees_at_slot`, compute:
-// 			Set state.latest_crosslinks[shard] = Crosslink(
-// 			epoch=slot_to_epoch(slot), crosslink_data_root=winning_root(crosslink_committee))
-// 			if 3 * total_attesting_balance(crosslink_committee) >= 2 * total_balance(crosslink_committee)
-func ProcessCrosslinks(
-	state *pb.BeaconState,
-	thisEpochAttestations []*pb.PendingAttestation,
-	prevEpochAttestations []*pb.PendingAttestation) (*pb.BeaconState, error) {
-
-	prevEpoch := helpers.PrevEpoch(state)
-	currentEpoch := helpers.CurrentEpoch(state)
-	nextEpoch := helpers.NextEpoch(state)
-	startSlot := helpers.StartSlot(prevEpoch)
-	endSlot := helpers.StartSlot(nextEpoch)
-
-	for i := startSlot; i < endSlot; i++ {
-		// RegistryChange is a no-op when requesting slot in current and previous epoch.
-		// ProcessCrosslinks will never ask for slot in next epoch.
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i)
-		if err != nil {
-			return nil, fmt.Errorf("could not get committees for slot %d: %v", i-params.BeaconConfig().GenesisSlot, err)
-		}
-		for _, crosslinkCommittee := range crosslinkCommittees {
-			shard := crosslinkCommittee.Shard
-			committee := crosslinkCommittee.Committee
-			attestingBalance, err := TotalAttestingBalance(state, shard, thisEpochAttestations, prevEpochAttestations)
-			if err != nil {
-				return nil, fmt.Errorf("could not get attesting balance for shard committee %d: %v", shard, err)
-			}
-			totalBalance := TotalBalance(state, committee)
-			if attestingBalance*3 >= totalBalance*2 {
-				winningRoot, err := winningRoot(state, shard, thisEpochAttestations, prevEpochAttestations)
-				if err != nil {
-					return nil, fmt.Errorf("could not get winning root: %v", err)
-				}
-				state.LatestCrosslinks[shard] = &pb.Crosslink{
-					Epoch:                   currentEpoch,
-					CrosslinkDataRootHash32: winningRoot,
-				}
-			}
-		}
-	}
-	return state, nil
-}
-
-// ProcessEjections iterates through every validator and find the ones below
-// ejection balance and eject them.
-//
-// Spec pseudocode definition:
-//	def process_ejections(state: BeaconState) -> None:
-//    """
-//    Iterate through the validator registry
-//    and eject active validators with balance below ``EJECTION_BALANCE``.
-//    """
-//    for index in get_active_validator_indices(state.validator_registry, current_epoch(state)):
-//        if state.validator_balances[index] < EJECTION_BALANCE:
-//            exit_validator(state, index)
-func ProcessEjections(state *pb.BeaconState, enableLogging bool) (*pb.BeaconState, error) {
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
-	for _, index := range activeValidatorIndices {
-		if state.Balances[index] < params.BeaconConfig().EjectionBalance {
-			if enableLogging {
-				log.WithFields(logrus.Fields{
-					"pubKey": fmt.Sprintf("%#x", state.ValidatorRegistry[index].Pubkey),
-					"index":  index}).Info("Validator ejected")
-			}
-			state = validators.ExitValidator(state, index)
-			// Verify the validator has properly exited due to ejection before setting the
-			// ejection count for gauge.
-			if state.ValidatorRegistry[index].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-				ejectedCount++
-				validatorEjectedGauge.Set(ejectedCount)
-			}
-		}
-	}
-	return state, nil
-}
-
 // ProcessPrevSlotShardSeed computes and sets current epoch's calculation slot
 // and start shard to previous epoch. Then it returns the updated state.
 //
@@ -284,20 +198,6 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 	state.PreviousShufflingStartShard = state.CurrentShufflingStartShard
 	state.PreviousShufflingSeedHash32 = state.CurrentShufflingSeedHash32
 	return state
-}
-
-// ProcessCurrSlotShardSeed sets the current shuffling information in the beacon state.
-//   Set state.current_shuffling_start_shard = (state.current_shuffling_start_shard +
-//     get_current_epoch_committee_count(state)) % SHARD_COUNT
-//   Set state.current_shuffling_epoch = next_epoch
-//   Set state.current_shuffling_seed = generate_seed(state, state.current_shuffling_epoch)
-func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.CurrentShufflingStartShard = (state.CurrentShufflingStartShard +
-		helpers.CurrentEpochCommitteeCount(state)) % params.BeaconConfig().ShardCount
-	// TODO(#2072)we have removed the generation of a new seed for the timebeing to get it stable for the testnet.
-	// this will be handled in Q2.
-	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
-	return state, nil
 }
 
 // ProcessPartialValidatorRegistry processes the portion of validator registry
@@ -353,7 +253,7 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 // 	next_epoch + ACTIVATION_EXIT_DELAY))
 func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
-	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
+	validatorIndices := helpers.ActiveValidatorIndices(state, nextEpoch)
 	indicesBytes := []byte{}
 	for _, val := range validatorIndices {
 		buf := make([]byte, 8)
@@ -780,5 +680,5 @@ func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb
 //	def get_total_active_balance(state: BeaconState) -> Gwei:
 //    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
 func totalActiveBalance(state *pb.BeaconState) uint64 {
-	return TotalBalance(state, helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state)))
+	return TotalBalance(state, helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state)))
 }

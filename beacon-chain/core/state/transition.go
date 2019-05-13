@@ -222,7 +222,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	prevEpoch := helpers.PrevEpoch(state)
 
 	// Calculate total balances of active validators of the current epoch.
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
 	// We require the current epoch attestations, current epoch boundary attestations,
@@ -328,17 +328,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		return nil, fmt.Errorf("could not process justification and finalization of state: %v", err)
 	}
 
-	// Process crosslinks records.
-	// TODO(#2072): Include an optimized process crosslinks version.
-	if featureconfig.FeatureConfig().EnableCrosslinks {
-		state, err = e.ProcessCrosslinks(
-			state,
-			currentEpochAttestations,
-			prevEpochAttestations)
-		if err != nil {
-			return nil, fmt.Errorf("could not process crosslink records: %v", err)
-		}
-	}
+	// TODO(#2307): Insert process crosslink from 0.6.
 
 	// Process attester rewards and penalties.
 	epochsSinceFinality := e.SinceFinality(state)
@@ -450,11 +440,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		}
 	}
 
-	// Process ejections.
-	state, err = e.ProcessEjections(state, config.Logging)
-	if err != nil {
-		return nil, fmt.Errorf("could not process ejections: %v", err)
-	}
+	// TODO(#2307): Insert process ejection from 0.6.
 
 	// Process validator registry.
 	state = e.ProcessPrevSlotShardSeed(state)
@@ -525,7 +511,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			"numValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
 
-		activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+		activeValidatorIndices := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
 		log.WithField(
 			"activeValidators", len(activeValidatorIndices),
 		).Info("Active validators")
