@@ -48,9 +48,9 @@ func IsSlashableValidator(validator *pb.Validator, epoch uint64) bool {
 //    Get active validator indices at ``epoch``.
 //    """
 //    return [i for i, v in enumerate(state.validator_registry) if is_active_validator(v, epoch)]
-func ActiveValidatorIndices(validatorRegistry []*pb.Validator, epoch uint64) []uint64 {
-	indices := make([]uint64, 0, len(validatorRegistry))
-	for i, v := range validatorRegistry {
+func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) []uint64 {
+	indices := make([]uint64, 0, len(state.ValidatorRegistry))
+	for i, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
