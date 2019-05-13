@@ -32,7 +32,7 @@ func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *Chain
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState, err := chainService.beaconDB.HistoricalStateFromSlot(context.Background(), parent.Slot)
+	beaconState, err := chainService.beaconDB.HistoricalStateFromSlot(context.Background(), parent.Slot, parentRoot)
 	if err != nil {
 		t.Fatalf("Unable to retrieve state %v", err)
 	}
@@ -117,10 +117,6 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
-		t.Fatal(err)
-	}
-
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
@@ -129,6 +125,11 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to get tree hash root of canonical head: %v", err)
 	}
+
+	if err := db.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -184,9 +185,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
-		t.Fatal(err)
-	}
+
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
@@ -196,7 +195,9 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
-
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
+		t.Fatal(err)
+	}
 	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
 	block := &pb.BeaconBlock{
 		Slot:            beaconState.Slot + 4,
@@ -243,12 +244,12 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
-		t.Fatal(err)
-	}
 
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 
@@ -322,10 +323,11 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	beaconState.Slot++
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
@@ -367,10 +369,10 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
+	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	beaconState.Slot++
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
@@ -456,7 +458,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	depositRoot := depositTrie.Root()
 	beaconState.LatestEth1Data.DepositRoot = depositRoot[:]
-	if err := db.SaveHistoricalState(context.Background(), beaconState); err != nil {
+	if err := db.SaveHistoricalState(context.Background(), beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 
@@ -474,6 +476,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		},
 	}
 
+	beaconState.LatestBlock = block
 	beaconState.Slot--
 	beaconState.DepositIndex = 0
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
@@ -505,7 +508,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHistoricalState(context.Background(), beaconState); err != nil {
+	if err := db.SaveHistoricalState(context.Background(), beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	computedState, err := chainService.ReceiveBlock(context.Background(), block)
@@ -582,6 +585,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
+	beaconState.LatestBlock = genesisBlock
 	if err := db.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -613,6 +617,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err = db.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
+		computedState.LatestBlock = block
 		if err = db.UpdateChainHead(ctx, block, computedState); err != nil {
 			t.Fatal(err)
 		}
@@ -623,7 +628,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 
 	// Common ancestor is block at slot 3
-	commonAncestor, err := db.BlockBySlot(ctx, genesisSlot+3)
+	commonAncestor, err := db.CanonicalBlockBySlot(ctx, genesisSlot+3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -633,7 +638,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	beaconState, err = db.HistoricalStateFromSlot(ctx, commonAncestor.Slot)
+	beaconState, err = db.HistoricalStateFromSlot(ctx, commonAncestor.Slot, parentHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -649,6 +654,10 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
 		},
+	}
+	rootF, _ := hashutil.HashBeaconBlock(blockF)
+	if err := db.SaveHistoricalState(ctx, beaconState, rootF); err != nil {
+		t.Fatal(err)
 	}
 	initBlockStateRoot(t, blockF, chainService)
 
