@@ -55,6 +55,7 @@ type BeaconNode struct {
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if err := tracing.Setup(
 		"beacon-chain", // service name
+		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
 		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
 		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
 		ctx.GlobalBool(cmd.EnableTracingFlag.Name),

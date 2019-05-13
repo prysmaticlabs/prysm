@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -27,7 +26,6 @@ type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
 	IsCanonical(slot uint64, hash []byte) bool
-	RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot
 	UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte)
 }
 
@@ -68,7 +66,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if parent == nil {
 		return nil, errors.New("parent does not exist in DB")
 	}
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -264,6 +262,7 @@ func (c *ChainService) runStateTransition(
 	block *pb.BeaconBlock,
 	beaconState *pb.BeaconState,
 ) (*pb.BeaconState, error) {
+	finalizedEpoch := beaconState.FinalizedEpoch
 	newState, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
@@ -277,6 +276,10 @@ func (c *ChainService) runStateTransition(
 	if err != nil {
 		return beaconState, &BlockFailedProcessingErr{err}
 	}
+	// Prune the block cache on every new finalized epoch.
+	if newState.FinalizedEpoch > finalizedEpoch {
+		c.beaconDB.ClearBlockCache()
+	}
 	log.WithField(
 		"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Slot transition successfully processed")
@@ -286,8 +289,12 @@ func (c *ChainService) runStateTransition(
 			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Block transition successfully processed")
 
+		blockRoot, err := hashutil.HashBeaconBlock(block)
+		if err != nil {
+			return nil, err
+		}
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
 	}
@@ -316,13 +323,24 @@ func (c *ChainService) runStateTransition(
 // validators were activated from current epoch. After it saves, current epoch key
 // is deleted from ActivatedValidators mapping.
 func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
-	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state) + 1)
+	nextEpoch := helpers.CurrentEpoch(state) + 1
+	activatedValidators := validators.ActivatedValFromEpoch(nextEpoch)
+	var idxNotInState []uint64
 	for _, idx := range activatedValidators {
+		// If for some reason the activated validator indices is not in state,
+		// we skip them and save them to process for next epoch.
+		if int(idx) >= len(state.ValidatorRegistry) {
+			idxNotInState = append(idxNotInState, idx)
+			continue
+		}
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
 			return fmt.Errorf("could not save validator index: %v", err)
 		}
 	}
+	// Since we are processing next epoch, save the can't processed validator indices
+	// to the epoch after that.
+	validators.InsertActivatedIndices(nextEpoch+1, idxNotInState)
 	validators.DeleteActivatedVal(helpers.CurrentEpoch(state))
 	return nil
 }

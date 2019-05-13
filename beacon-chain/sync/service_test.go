@@ -93,7 +93,7 @@ func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 func TestStatus_NotSynced(t *testing.T) {
 	serviceNotSynced, db := setupTestSyncService(t, false)
 	defer internal.TeardownDB(t, db)
-	synced, _ := serviceNotSynced.InitialSync.NodeIsSynced()
+	synced := serviceNotSynced.InitialSync.NodeIsSynced()
 	if synced {
 		t.Error("Wanted false, but got true")
 	}

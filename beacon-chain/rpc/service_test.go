@@ -10,7 +10,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -48,27 +47,32 @@ func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Me
 	return nil
 }
 
+func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *pb.Attestation) (bool, error) {
+	return true, nil
+}
+
 func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
 	}
 	return []*pb.Attestation{
 		{
-			AggregationBitfield: []byte("A"),
+			AggregationBitfield: []byte{0xC0},
+			Data: &pb.AttestationData{
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				Shard:                   0,
+			},
+		},
+		{
+			AggregationBitfield: []byte{0xC1},
 			Data: &pb.AttestationData{
 				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
-			AggregationBitfield: []byte("B"),
-			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
-			},
-		},
-		{
-			AggregationBitfield: []byte("C"),
+			AggregationBitfield: []byte{0xC2},
 			Data: &pb.AttestationData{
 				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
@@ -83,6 +87,7 @@ type mockChainService struct {
 	attestationFeed      *event.Feed
 	stateInitializedFeed *event.Feed
 	canonicalBlocks      map[uint64][]byte
+	targets              map[uint64]*pb.AttestationTarget
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
@@ -113,8 +118,8 @@ func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return bytes.Equal(m.canonicalBlocks[slot], hash)
 }
 
-func (m mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
-	return nil
+func (m *mockChainService) AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
+	return m.targets, nil
 }
 
 func newMockChainService() *mockChainService {

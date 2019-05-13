@@ -23,6 +23,11 @@ var (
 		Name:  "enable-tracing",
 		Usage: "Enable request tracing.",
 	}
+	// TracingProcessNameFlag defines a flag to specify a process name.
+	TracingProcessNameFlag = cli.StringFlag{
+		Name:  "tracing-process-name",
+		Usage: "The name to apply to tracing tag \"process_name\"",
+	}
 	// TracingEndpointFlag flag defines the http endpoint for serving traces to Jaeger.
 	TracingEndpointFlag = cli.StringFlag{
 		Name:  "tracing-endpoint",
@@ -53,6 +58,11 @@ var (
 		Name:  "no-discovery",
 		Usage: "Enable only local network p2p and do not connect to cloud bootstrap nodes.",
 	}
+	// StaticPeers specifies a set of peers to connect to explicitly.
+	StaticPeers = cli.StringSliceFlag{
+		Name:  "peer",
+		Usage: "Connect with this peer. This flag may be used multiple times.",
+	}
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
 	BootstrapNode = cli.StringFlag{
 		Name:  "bootstrap-node",
@@ -77,6 +87,12 @@ var (
 		Name:  "p2p-host-ip",
 		Usage: "The IP address advertised by libp2p. This may be used to advertise an external IP.",
 		Value: "",
+	}
+	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
+	P2PMaxPeers = cli.Int64Flag{
+		Name:  "p2p-max-peers",
+		Usage: "The max number of p2p peers to maintain.",
+		Value: 30,
 	}
 	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
 	ClearDB = cli.BoolFlag{

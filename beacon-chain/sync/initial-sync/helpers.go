@@ -8,7 +8,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -26,21 +25,16 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 	}
 
 	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
-		return errors.New(debugError + "discarding received block with a slot number smaller than the last finalized slot")
+		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer
 	// attestations.
 	return nil
 }
 
-func (s *InitialSync) doesParentExist(block *pb.BeaconBlock) bool {
-	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
-	return s.db.HasBlock(parentHash)
-}
-
 // safelyHandleMessage will recover and log any panic that occurs from the
 // function argument.
-func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
+func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 	defer func() {
 		if r := recover(); r != nil {
 			printedMsg := noMsgData
@@ -67,5 +61,7 @@ func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
 	}()
 
 	// Fingers crossed that it doesn't panic...
-	fn(msg)
+	if err := fn(msg); err != nil {
+		log.WithError(err).Error("Failed to process message")
+	}
 }

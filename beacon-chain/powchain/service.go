@@ -363,8 +363,10 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		case w.runError = <-headSub.Err():
 			log.Debugf("Unsubscribed to head events, exiting goroutine: %v", w.runError)
 			return
-		case header := <-w.headerChan:
-			w.processSubscribedHeaders(header)
+		case header, ok := <-w.headerChan:
+			if ok {
+				w.processSubscribedHeaders(header)
+			}
 		case <-ticker.C:
 			w.handleDelayTicker()
 		}
