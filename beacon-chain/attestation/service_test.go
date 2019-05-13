@@ -14,9 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
@@ -368,7 +366,6 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 
 func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
-	hook := logTest.NewGlobal()
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
@@ -404,10 +401,11 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 		},
 	}
 
-	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
-		t.Fatalf("could not update latest attestation: %v", err)
+	wanted := "bitfield points to an invalid index in the committee"
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Wanted: %s but got %s", wanted, err)
 	}
-	testutil.AssertLogsContain(t, hook, "Bitfield points to an invalid index in the committee")
 }
 
 func TestBatchUpdate_FromSync(t *testing.T) {
