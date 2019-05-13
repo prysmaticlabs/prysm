@@ -438,10 +438,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		if block != nil {
 			state = e.ProcessRegistryUpdates(state)
 		}
-		state, err = e.ProcessCurrSlotShardSeed(state)
-		if err != nil {
-			return nil, fmt.Errorf("could not update current shard shuffling seeds: %v", err)
-		}
 	} else {
 		state, err = e.ProcessPartialValidatorRegistry(state)
 		if err != nil {
