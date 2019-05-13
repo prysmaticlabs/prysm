@@ -35,7 +35,10 @@ var (
 	})
 )
 
-const ErrAlreadyInProgress = errors.New("already in progress")
+// ErrAlreadyInProgress appears when attempting to mark a cache as in progress while it is
+// already in progress. The client should handle this error and wait for the in progress
+// data to resolve via Get.
+var ErrAlreadyInProgress = errors.New("already in progress")
 
 // AttestationCache is used to store the cached results of an AttestationData request.
 type AttestationCache struct {
