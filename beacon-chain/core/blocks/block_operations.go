@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -16,9 +17,9 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -121,7 +122,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(block.Body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
@@ -446,7 +447,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
-	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch <= beaconState.Slot {
+	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
 			att.Data.Slot-params.BeaconConfig().GenesisSlot,
@@ -459,19 +460,19 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
-		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
+		if att.Data.JustifiedEpoch != beaconState.CurrentJustifiedEpoch {
 			return fmt.Errorf(
-				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
+				"expected attestation.JustifiedEpoch == state.CurrentJustifiedEpoch, received %d == %d",
 				att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
-				beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				beaconState.CurrentJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
 
-		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.JustifiedRoot) {
+		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.CurrentJustifiedRoot) {
 			return fmt.Errorf(
-				"expected attestation.JustifiedRoot == state.JustifiedRoot, received %#x == %#x",
+				"expected attestation.JustifiedRoot == state.CurrentJustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
-				beaconState.JustifiedRoot,
+				beaconState.CurrentJustifiedRoot,
 			)
 		}
 	} else {
@@ -486,7 +487,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			return fmt.Errorf(
 				"expected attestation.JustifiedRoot == state.PreviousJustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
-				beaconState.JustifiedRoot,
+				beaconState.CurrentJustifiedRoot,
 			)
 		}
 	}
@@ -498,11 +499,12 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// 	equals state.latest_crosslinks[attestation.data.shard]
 	shard := att.Data.Shard
 	crosslink := &pb.Crosslink{
-		CrosslinkDataRootHash32: att.Data.CrosslinkDataRootHash32,
+		CrosslinkDataRootHash32: att.Data.CrosslinkDataRoot,
 		Epoch:                   helpers.SlotToEpoch(att.Data.Slot),
 	}
 	crosslinkFromAttestation := att.Data.LatestCrosslink
 	crosslinkFromState := beaconState.LatestCrosslinks[shard]
+
 	if !(reflect.DeepEqual(crosslinkFromState, crosslink) ||
 		reflect.DeepEqual(crosslinkFromState, crosslinkFromAttestation)) {
 		return fmt.Errorf(
@@ -512,11 +514,11 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.Data.CrosslinkDataRootHash32, params.BeaconConfig().ZeroHash[:]) {
+	if !bytes.Equal(att.Data.CrosslinkDataRoot, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
 			"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
 			params.BeaconConfig().ZeroHash[:],
-			att.Data.CrosslinkDataRootHash32,
+			att.Data.CrosslinkDataRoot,
 		)
 	}
 	if verifySignatures {
@@ -536,6 +538,118 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		return nil
 	}
 	return nil
+}
+
+// ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
+//
+// Spec pseudocode definition:
+//   def convert_to_indexed(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
+//     """
+//     Convert ``attestation`` to (almost) indexed-verifiable form.
+//     """
+//     attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bitfield)
+//     custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bitfield)
+//     custody_bit_0_indices = [index for index in attesting_indices if index not in custody_bit_1_indices]
+//     return IndexedAttestation(
+//         custody_bit_0_indices=custody_bit_0_indices,
+//         custody_bit_1_indices=custody_bit_1_indices,
+//         data=attestation.data,
+//         signature=attestation.signature,
+//     )
+func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
+	attI, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
+	if err != nil {
+		return nil, err
+	}
+	cb1i, err := helpers.AttestationParticipants(state, attestation.Data, attestation.CustodyBitfield)
+	if err != nil {
+		return nil, err
+	}
+	cb1iMap := make(map[uint64]bool)
+	for _, in := range cb1i {
+		cb1iMap[in] = true
+	}
+	cb0i := []uint64{}
+	for _, index := range attI {
+		_, ok := cb1iMap[index]
+		if !ok {
+			cb0i = append(cb0i, index)
+		}
+	}
+	inAtt := &pb.IndexedAttestation{
+		Data:                attestation.Data,
+		Signature:           attestation.Signature,
+		CustodyBit_0Indices: cb0i,
+		CustodyBit_1Indices: cb1i,
+	}
+	return inAtt, nil
+}
+
+// VerifyIndexedAttestation determines the validity of an indexed attestation.
+// WIP - signing is not implemented until BLS is integrated into Prysm.
+//
+// Spec pseudocode definition:
+//  def verify_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+//    """
+//    Verify validity of ``indexed_attestation`` fields.
+//    """
+//    custody_bit_0_indices = indexed_attestation.custody_bit_0_indices
+//    custody_bit_1_indices = indexed_attestation.custody_bit_1_indices
+//
+//    # Ensure no duplicate indices across custody bits
+//    assert len(set(custody_bit_0_indices).intersection(set(custody_bit_1_indices))) == 0
+//
+//    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
+//        return False
+//
+//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
+//        return False
+//
+//    if custody_bit_0_indices != sorted(custody_bit_0_indices):
+//        return False
+//
+//    if custody_bit_1_indices != sorted(custody_bit_1_indices):
+//        return False
+//
+//    return bls_verify_multiple(
+//        pubkeys=[
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_indices]),
+//        ],
+//        message_hashes=[
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
+//        ],
+//        signature=indexed_attestation.signature,
+//        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
+//    )
+func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttestation) (bool, error) {
+	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
+	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
+
+	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
+	if len(custodyBitIntersection) != 0 {
+		return false, fmt.Errorf("custody bit indice should not contain duplicates, received: %v", custodyBitIntersection)
+	}
+
+	// To be removed in phase 1
+	if len(custodyBit1Indices) > 0 {
+		return false, nil
+	}
+
+	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
+	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
+	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
+		return false, nil
+	}
+
+	if !sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
+		return custodyBit0Indices[i] < custodyBit0Indices[j]
+	}) {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // ProcessValidatorDeposits is one of the operations performed on each processed
@@ -582,7 +696,9 @@ func ProcessValidatorDeposits(
 		depositData := deposit.DepositData
 		depositInput, err = helpers.DecodeDepositInput(depositData)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit input: %v", err)
+			beaconState = processInvalidDeposit(beaconState)
+			log.Errorf("could not decode deposit input: %v", err)
+			continue
 		}
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
@@ -600,7 +716,9 @@ func ProcessValidatorDeposits(
 			depositInput.WithdrawalCredentialsHash32,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not process deposit into beacon state: %v", err)
+			beaconState = processInvalidDeposit(beaconState)
+			log.Errorf("could not process deposit into beacon state: %v", err)
+			continue
 		}
 	}
 	return beaconState, nil
@@ -608,21 +726,21 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Deposits must be processed in order
-	if deposit.MerkleTreeIndex != beaconState.DepositIndex {
+	if deposit.Index != beaconState.DepositIndex {
 		return fmt.Errorf(
 			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
 			beaconState.DepositIndex,
-			deposit.MerkleTreeIndex,
+			deposit.Index,
 		)
 	}
 
 	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := beaconState.LatestEth1Data.DepositRootHash32
+	receiptRoot := beaconState.LatestEth1Data.DepositRoot
 	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,
 		deposit.DepositData,
-		int(deposit.MerkleTreeIndex),
-		deposit.MerkleProofHash32S,
+		int(deposit.Index),
+		deposit.Proof,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",
@@ -631,6 +749,13 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	}
 
 	return nil
+}
+
+// we increase the state deposit index, since deposits have to be processed
+// in order even if they are invalid
+func processInvalidDeposit(bState *pb.BeaconState) *pb.BeaconState {
+	bState.DepositIndex++
+	return bState
 }
 
 // ProcessValidatorExits is one of the operations performed

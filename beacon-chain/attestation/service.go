@@ -25,6 +25,13 @@ import (
 var log = logrus.WithField("prefix", "attestation")
 var committeeCache = cache.NewCommitteesCache()
 
+// TargetHandler provides an interface for fetching latest attestation targets
+// and updating attestations in batches.
+type TargetHandler interface {
+	LatestAttestationTarget(state *pb.BeaconState, validatorIndex uint64) (*pb.AttestationTarget, error)
+	BatchUpdateLatestAttestation(ctx context.Context, atts []*pb.Attestation) error
+}
+
 type attestationStore struct {
 	sync.RWMutex
 	m map[[48]byte]*pb.Attestation
@@ -220,7 +227,7 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 
 	for beaconState.Slot < slot {
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, &state.TransitionConfig{},
+			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
 		if err != nil {
 			return fmt.Errorf("could not execute head transition: %v", err)
@@ -251,11 +258,11 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 	}
 
 	log.WithFields(logrus.Fields{
-		"attestation slot":     attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
-		"attestation shard":    attestation.Data.Shard,
-		"committees shard":     cachedCommittees.Committees[0].Shard,
-		"committees list":      cachedCommittees.Committees[0].Committee,
-		"length of committees": len(cachedCommittees.Committees),
+		"attestationSlot":    attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
+		"attestationShard":   attestation.Data.Shard,
+		"committeesShard":    cachedCommittees.Committees[0].Shard,
+		"committeesList":     cachedCommittees.Committees[0].Committee,
+		"lengthOfCommittees": len(cachedCommittees.Committees),
 	}).Debug("Updating latest attestation")
 
 	// The participation bitfield from attestation is represented in bytes,

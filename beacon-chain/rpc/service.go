@@ -14,10 +14,12 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -36,10 +38,13 @@ func init() {
 type chainService interface {
 	StateInitializedFeed() *event.Feed
 	blockchain.BlockReceiver
+	blockchain.ForkChoice
+	blockchain.TargetsFetcher
 }
 
 type operationService interface {
-	PendingAttestations() ([]*pbp2p.Attestation, error)
+	PendingAttestations(ctx context.Context) ([]*pbp2p.Attestation, error)
+	IsAttCanonical(ctx context.Context, att *pbp2p.Attestation) (bool, error)
 	HandleAttestations(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
@@ -50,6 +55,7 @@ type powChainService interface {
 	LatestBlockHeight() *big.Int
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
+	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
 	DepositRoot() [32]byte
 	DepositTrie() *trieutil.MerkleTrie
 	ChainStartDeposits() [][]byte
@@ -76,6 +82,7 @@ type Service struct {
 	canonicalStateChan  chan *pbp2p.BeaconState
 	incomingAttestation chan *pbp2p.Attestation
 	credentialError     error
+	p2p                 p2p.Broadcaster
 }
 
 // Config options for the beacon node RPC server.
@@ -88,6 +95,7 @@ type Config struct {
 	POWChainService  powChainService
 	OperationService operationService
 	SyncService      syncService
+	Broadcaster      p2p.Broadcaster
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -98,6 +106,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		ctx:                 ctx,
 		cancel:              cancel,
 		beaconDB:            cfg.BeaconDB,
+		p2p:                 cfg.Broadcaster,
 		chainService:        cfg.ChainService,
 		powChainService:     cfg.POWChainService,
 		operationService:    cfg.OperationService,
@@ -150,6 +159,7 @@ func (s *Service) Start() {
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
 		chainService:        s.chainService,
+		targetsFetcher:      s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
@@ -165,12 +175,15 @@ func (s *Service) Start() {
 	attesterServer := &AttesterServer{
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
+		p2p:              s.p2p,
+		cache:            cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
+		powChainService:    s.powChainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

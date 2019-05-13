@@ -4,8 +4,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -248,22 +246,11 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	depAddress := cliCtx.GlobalString(utils.DepositContractFlag.Name)
 
 	if depAddress == "" {
-		log.Infof("Fetching testnet cluster address from %s...", params.BeaconConfig().TestnetContractEndpoint)
-		resp, err := http.Get(params.BeaconConfig().TestnetContractEndpoint)
+		var err error
+		depAddress, err = fetchDepositContract()
 		if err != nil {
-			log.Fatalf("Could not get latest deposit contract address: %v", err)
+			log.WithError(err).Fatal("Cannot fetch deposit contract")
 		}
-		defer func() {
-			if err := resp.Body.Close(); err != nil {
-				log.Fatal(err)
-			}
-		}()
-
-		contractResponse, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		depAddress = string(contractResponse)
 	}
 
 	if !common.IsHexAddress(depAddress) {
@@ -276,11 +263,11 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	}
 	powClient := ethclient.NewClient(rpcClient)
 
-	logRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.HTTPWeb3ProviderFlag.Name))
+	httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.HTTPWeb3ProviderFlag.Name))
 	if err != nil {
 		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
 	}
-	pastLogHTTPClient := ethclient.NewClient(logRPCClient)
+	httpClient := ethclient.NewClient(httpRPCClient)
 
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
@@ -289,8 +276,8 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		Client:          powClient,
 		Reader:          powClient,
 		Logger:          powClient,
-		HTTPLogger:      pastLogHTTPClient,
-		BlockFetcher:    powClient,
+		HTTPLogger:      httpClient,
+		BlockFetcher:    httpClient,
 		ContractBackend: powClient,
 		BeaconDB:        b.db,
 	}
@@ -351,6 +338,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
 	var operationService *operations.Service
 	if err := b.services.FetchService(&operationService); err != nil {
 		return err
@@ -374,6 +366,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		CertFlag:         cert,
 		KeyFlag:          key,
 		BeaconDB:         b.db,
+		Broadcaster:      p2pService,
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,

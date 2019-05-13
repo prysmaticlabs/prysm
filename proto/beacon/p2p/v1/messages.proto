@@ -36,7 +36,7 @@ message BeaconBlockRequest {
   bytes hash = 1;
 }
 
-message BeaconBlockRequestBySlotNumber{
+message BeaconBlockRequestBySlotNumber {
   uint64 slot_number = 1;
 }
 
@@ -46,10 +46,12 @@ message BeaconBlockResponse {
 }
 
 message BatchedBeaconBlockRequest {
-  uint64 start_slot = 1;
-  uint64 end_slot =2;
+  uint64 start_slot = 1 [deprecated=true];
+  uint64 end_slot = 2 [deprecated=true];
+  bytes finalized_root = 3;
+  bytes canonical_root = 4;
 }
- 
+
 message BatchedBeaconBlockResponse {
   repeated BeaconBlock batched_blocks = 1;
 }
@@ -60,6 +62,8 @@ message ChainHeadResponse {
   uint64 canonical_slot = 1;
   bytes canonical_state_root_hash32 = 2;
   bytes finalized_state_root_hash32s = 3;
+  bytes canonical_block_root = 4;
+  bytes finalized_block_root = 5;
 }
 
 message BeaconStateHashAnnounce {
@@ -137,4 +141,8 @@ message ExitRequest {
 message ExitResponse {
   bytes hash = 1;
   VoluntaryExit voluntary_exit = 2;
+}
+
+message Handshake {
+  string deposit_contract_address = 1;
 }

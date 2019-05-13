@@ -1,0 +1,79 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata: 
+  name: api-prylabs-net
+  namespace: istio-system
+spec:
+  hosts:
+  - api.prylabs.net
+  gateways:
+  - prylabs-wildcard-gateway
+  http:
+  - match:
+     - uri:
+         prefix: /faucet.FaucetService
+    route:
+    - destination:
+        port: 
+          number: 8000
+        host: public-faucet.pow.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+        - "*"
+      allowMethods:
+        - POST
+        - GET
+        - OPTIONS
+        - PUT
+        - DELETE
+      allowHeaders:
+        - grpc-timeout
+        - content-type
+        - keep-alive
+        - user-agent
+        - cache-control
+        - content-type
+        - content-transfer-encoding
+        - x-accept-content-transfer-encoding
+        - x-accept-response-streaming
+        - x-user-agent
+        - x-grpc-web
+      maxAge: 1728s
+      exposeHeaders:
+        - grpc-status
+        - grpc-message
+  - match:
+     - uri:
+        prefix: /ethereum.beacon.rpc.v1
+    route:
+    - destination:
+        port:
+          number: 4000
+        host: beacon-chain-grpc-web.beacon-chain.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+        - "*"
+      allowMethods:
+        - POST
+        - GET
+        - OPTIONS
+        - PUT
+        - DELETE
+      allowHeaders:
+        - grpc-timeout
+        - content-type
+        - keep-alive
+        - user-agent
+        - cache-control
+        - content-type
+        - content-transfer-encoding
+        - x-accept-content-transfer-encoding
+        - x-accept-response-streaming
+        - x-user-agent
+        - x-grpc-web
+      maxAge: 1728s
+      exposeHeaders:
+        - grpc-status
+        - grpc-message
+    retries:
+      attempts: 3

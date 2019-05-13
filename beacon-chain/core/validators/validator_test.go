@@ -61,15 +61,25 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot,
-		ValidatorRegistry: validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	boundaryAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
-			AggregationBitfield: []byte{0xC0}}, // returns indices 242
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
-			AggregationBitfield: []byte{0xC0}}, // returns indices 237,224,2
+		{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot,
+				Shard: 1,
+			},
+			AggregationBitfield: []byte{0x03}}, // returns indices 242
+		{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot,
+				Shard: 1,
+			},
+			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
 	}
 
 	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
@@ -77,9 +87,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{123, 65}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{9, 32}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{123, 65}, attesterIndices)
+			[]uint64{9, 32}, attesterIndices)
 	}
 }
 
@@ -96,15 +106,17 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot + 3,
-			Shard:                   6,
-			CrosslinkDataRootHash32: []byte{'B'},
+			Slot:              params.BeaconConfig().GenesisSlot + 3,
+			Shard:             6,
+			CrosslinkDataRoot: []byte{'B'},
 		},
 		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
 	}
@@ -119,9 +131,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{1134, 1150}) {
+	if !reflect.DeepEqual(indices, []uint64{3641, 6307}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{1134, 1150}, indices)
+			[]uint64{278, 2292}, indices)
 	}
 }
 
@@ -134,15 +146,17 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              5,
+		Slot:                   5,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    0,
-			Shard:                   1,
-			CrosslinkDataRootHash32: []byte{'B'},
+			Slot:              0,
+			Shard:             1,
+			CrosslinkDataRoot: []byte{'B'},
 		},
 		AggregationBitfield: []byte{'A'}, // 01000001 = 1,7
 	}
@@ -184,8 +198,8 @@ func TestProcessDeposit_BadWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{0},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{0},
 		},
 	}
 	beaconState := &pb.BeaconState{
@@ -215,8 +229,8 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{0, 0}
@@ -251,8 +265,8 @@ func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{0, 50}
@@ -284,12 +298,12 @@ func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{1000, 1000}
@@ -324,12 +338,12 @@ func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{0, 1000}
@@ -373,8 +387,12 @@ func TestActivateValidatorGenesis_OK(t *testing.T) {
 		t.Fatalf("could not execute activateValidator:%v", err)
 	}
 	if newState.ValidatorRegistry[0].ActivationEpoch != params.BeaconConfig().GenesisEpoch {
-		t.Errorf("Wanted activation slot = genesis slot, got %d",
+		t.Errorf("Wanted activation epoch = genesis epoch, got %d",
 			newState.ValidatorRegistry[0].ActivationEpoch)
+	}
+	if newState.ValidatorRegistry[0].ActivationEligibilityEpoch != params.BeaconConfig().GenesisEpoch {
+		t.Errorf("Wanted activation eligibility epoch = genesis epoch, got %d",
+			newState.ValidatorRegistry[0].ActivationEligibilityEpoch)
 	}
 }
 
@@ -469,14 +487,14 @@ func TestExitValidator_OK(t *testing.T) {
 
 func TestExitValidator_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 1,
+		Slot: params.BeaconConfig().GenesisEpoch + 1000,
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
 	}
 	state = ExitValidator(state, 0)
-	if len(state.ValidatorRegistry) != 1 {
-		t.Error("Expected validator to have failed exiting")
+	if state.ValidatorRegistry[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+		t.Error("Expected exited validator to stay exited")
 	}
 }
 
@@ -484,11 +502,11 @@ func TestSlashValidator_AlreadyWithdrawn(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 100,
 		ValidatorRegistry: []*pb.Validator{
-			{WithdrawalEpoch: 1},
+			{WithdrawableEpoch: 1},
 		},
 	}
 	want := fmt.Sprintf("withdrawn validator 0 could not get slashed, current slot: %d, withdrawn slot %d",
-		state.Slot, helpers.StartSlot(state.ValidatorRegistry[0].WithdrawalEpoch))
+		state.Slot, helpers.StartSlot(state.ValidatorRegistry[0].WithdrawableEpoch))
 	if _, err := SlashValidator(state, 0); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
@@ -560,106 +578,6 @@ func TestEligibleToExit_OK(t *testing.T) {
 	}
 }
 
-func TestUpdateRegistry_NoRotation(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
-		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-		},
-		Balances: []uint64{
-			params.BeaconConfig().MaxDepositAmount,
-			params.BeaconConfig().MaxDepositAmount,
-			params.BeaconConfig().MaxDepositAmount,
-			params.BeaconConfig().MaxDepositAmount,
-			params.BeaconConfig().MaxDepositAmount,
-		},
-	}
-	newState, err := UpdateRegistry(state)
-	if err != nil {
-		t.Fatalf("could not update validator registry:%v", err)
-	}
-	for i, validator := range newState.ValidatorRegistry {
-		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
-		}
-	}
-	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
-		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryUpdateEpoch)
-	}
-}
-
-func TestUpdateRegistry_Activations(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
-		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
-				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
-				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
-		},
-		Balances: []uint64{
-			params.BeaconConfig().MaxDepositAmount,
-			params.BeaconConfig().MaxDepositAmount,
-		},
-	}
-	newState, err := UpdateRegistry(state)
-	if err != nil {
-		t.Fatalf("could not update validator registry:%v", err)
-	}
-	for i, validator := range newState.ValidatorRegistry {
-		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
-		}
-	}
-	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
-		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryUpdateEpoch)
-	}
-}
-
-func TestUpdateRegistry_Exits(t *testing.T) {
-	epoch := uint64(5)
-	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
-	state := &pb.BeaconState{
-		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
-		ValidatorRegistry: []*pb.Validator{
-			{
-				ExitEpoch:   exitEpoch,
-				StatusFlags: pb.Validator_INITIATED_EXIT},
-			{
-				ExitEpoch:   exitEpoch,
-				StatusFlags: pb.Validator_INITIATED_EXIT},
-		},
-		Balances: []uint64{
-			params.BeaconConfig().MaxDepositAmount,
-			params.BeaconConfig().MaxDepositAmount,
-		},
-	}
-	newState, err := UpdateRegistry(state)
-	if err != nil {
-		t.Fatalf("could not update validator registry:%v", err)
-	}
-	for i, validator := range newState.ValidatorRegistry {
-		if validator.ExitEpoch != exitEpoch {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
-				i,
-				exitEpoch,
-				validator.ExitEpoch)
-		}
-	}
-	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
-		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryUpdateEpoch)
-	}
-}
-
 func TestMaxBalanceChurn_OK(t *testing.T) {
 	maxDepositAmount := params.BeaconConfig().MaxDepositAmount
 	tests := []struct {
@@ -699,12 +617,12 @@ func TestInitializeValidatoreStore(t *testing.T) {
 		Slot:              params.BeaconConfig().GenesisSlot,
 	}
 
-	if _, ok := vStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {
+	if _, ok := VStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {
 		t.Fatalf("Validator store already has indices saved in this epoch")
 	}
 
 	InitializeValidatorStore(bState)
-	retrievedIndices := vStore.activatedValidators[helpers.CurrentEpoch(bState)]
+	retrievedIndices := VStore.activatedValidators[helpers.CurrentEpoch(bState)]
 
 	if !reflect.DeepEqual(retrievedIndices, indices) {
 		t.Errorf("Saved active indices are not the same as the one in the validator store, got %v but expected %v", retrievedIndices, indices)

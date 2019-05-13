@@ -24,24 +24,27 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 	return &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Balances:          validatorBalances,
-		Slot:              slot,
+		Slot:                   slot,
+		Balances:               validatorBalances,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 }
 
 func TestWinningRoot_AccurateRoot(t *testing.T) {
 	state := buildState(params.BeaconConfig().GenesisSlot, 100)
 	var participationBitfield []byte
-	participationBitfield = append(participationBitfield, byte(0x80))
+	participationBitfield = append(participationBitfield, byte(0x01))
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestation
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot,
-				CrosslinkDataRootHash32: []byte{byte(i + 100)},
+				Slot:              params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRoot: []byte{byte(i + 100)},
+				Shard:             1,
 			},
 			AggregationBitfield: participationBitfield,
 		}
@@ -52,7 +55,7 @@ func TestWinningRoot_AccurateRoot(t *testing.T) {
 	// winningRoot chooses the lowest hash: []byte{100}
 	winnerRoot, err := winningRoot(
 		state,
-		0,
+		1,
 		attestations,
 		nil)
 	if err != nil {
@@ -67,10 +70,12 @@ func TestWinningRoot_EmptyParticipantBitfield(t *testing.T) {
 	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
 
 	attestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot,
-			CrosslinkDataRootHash32: []byte{},
-		},
+		{
+			Data: &pb.AttestationData{
+				Slot:              params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRoot: []byte{},
+				Shard:             2,
+			},
 			AggregationBitfield: []byte{},
 		},
 	}
@@ -78,7 +83,7 @@ func TestWinningRoot_EmptyParticipantBitfield(t *testing.T) {
 	helpers.RestartCommitteeCache()
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
-	if _, err := winningRoot(state, 0, attestations, nil); !strings.Contains(err.Error(), want) {
+	if _, err := winningRoot(state, 2, attestations, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -90,10 +95,11 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot,
-				CrosslinkDataRootHash32: []byte{byte(i + 100)},
+				Slot:              params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRoot: []byte{byte(i + 100)},
+				Shard:             1,
 			},
-			AggregationBitfield: []byte{0xC0},
+			AggregationBitfield: []byte{0x03},
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -102,7 +108,7 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 
 	attestedValidators, err := AttestingValidators(
 		state,
-		0,
+		1,
 		attestations,
 		nil)
 	if err != nil {
@@ -110,8 +116,8 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 	}
 
 	// Verify the winner root is attested by validators based on shuffling.
-	if !reflect.DeepEqual(attestedValidators, []uint64{123, 65}) {
-		t.Errorf("Active validators don't match. Wanted:[123,65], Got: %v", attestedValidators)
+	if !reflect.DeepEqual(attestedValidators, []uint64{9, 32}) {
+		t.Errorf("Active validators don't match. Wanted: [9, 32], Got: %v", attestedValidators)
 	}
 }
 
@@ -120,8 +126,9 @@ func TestAttestingValidators_EmptyWinningRoot(t *testing.T) {
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot,
-			CrosslinkDataRootHash32: []byte{},
+			Slot:              params.BeaconConfig().GenesisSlot,
+			CrosslinkDataRoot: []byte{},
+			Shard:             2,
 		},
 		AggregationBitfield: []byte{},
 	}
@@ -129,7 +136,7 @@ func TestAttestingValidators_EmptyWinningRoot(t *testing.T) {
 	helpers.RestartCommitteeCache()
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
-	if _, err := AttestingValidators(state, 0, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
+	if _, err := AttestingValidators(state, 2, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -143,11 +150,12 @@ func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot,
-				CrosslinkDataRootHash32: []byte{byte(i + 100)},
+				Slot:              params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRoot: []byte{byte(i + 100)},
+				Shard:             1,
 			},
 			// All validators attested to the above roots.
-			AggregationBitfield: []byte{0xC0},
+			AggregationBitfield: []byte{0x03},
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -156,7 +164,7 @@ func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 
 	attestedBalance, err := TotalAttestingBalance(
 		state,
-		0,
+		1,
 		attestations,
 		nil)
 	if err != nil {
@@ -173,8 +181,9 @@ func TestTotalAttestingBalance_EmptyWinningRoot(t *testing.T) {
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot,
-			CrosslinkDataRootHash32: []byte{},
+			Slot:              params.BeaconConfig().GenesisSlot,
+			CrosslinkDataRoot: []byte{},
+			Shard:             2,
 		},
 		AggregationBitfield: []byte{},
 	}
@@ -182,7 +191,7 @@ func TestTotalAttestingBalance_EmptyWinningRoot(t *testing.T) {
 	helpers.RestartCommitteeCache()
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
-	if _, err := TotalAttestingBalance(state, 0, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
+	if _, err := TotalAttestingBalance(state, 2, []*pb.PendingAttestation{attestation}, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -210,17 +219,26 @@ func TestInclusionSlot_GetsCorrectSlot(t *testing.T) {
 	}
 
 	state.LatestAttestations = []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot,
+			Shard: 2,
+		},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       101},
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot,
+			Shard: 2,
+		},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       100},
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot,
+			Shard: 2,
+		},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       102},
 	}
-	slot, err := InclusionSlot(state, 251)
+	slot, err := InclusionSlot(state, 849)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionSlot: %v", err)
 	}
@@ -234,7 +252,11 @@ func TestInclusionSlot_InvalidBitfield(t *testing.T) {
 	state := buildState(params.BeaconConfig().GenesisSlot, params.BeaconConfig().DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot,
+				Shard: 2,
+			},
 			AggregationBitfield: []byte{},
 			InclusionSlot:       100},
 	}

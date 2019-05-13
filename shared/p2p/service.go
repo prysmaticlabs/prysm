@@ -14,14 +14,16 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	libp2pnet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	"github.com/multiformats/go-multiaddr"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -60,18 +62,31 @@ type Server struct {
 
 // ServerConfig for peer to peer networking.
 type ServerConfig struct {
-	NoDiscovery       bool
-	BootstrapNodeAddr string
-	RelayNodeAddr     string
-	Port              int
+	NoDiscovery            bool
+	BootstrapNodeAddr      string
+	RelayNodeAddr          string
+	HostAddress            string
+	Port                   int
+	MaxPeers               int
+	DepositContractAddress string
 }
 
 // NewServer creates a new p2p server instance.
 func NewServer(cfg *ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	opts := buildOptions(cfg.Port)
+	opts := buildOptions(cfg.Port, cfg.MaxPeers)
 	if cfg.RelayNodeAddr != "" {
 		opts = append(opts, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
+	} else if cfg.HostAddress != "" {
+		opts = append(opts, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
+			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.HostAddress, cfg.Port))
+			if err != nil {
+				log.WithError(err).Error("Unable to create external multiaddress")
+			} else {
+				addrs = append(addrs, external)
+			}
+			return addrs
+		}))
 	}
 	if !checkAvailablePort(cfg.Port) {
 		cancel()
@@ -83,7 +98,18 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	dht := kaddht.NewDHT(ctx, h, dsync.MutexWrap(ds.NewMapDatastore()))
+	dopts := []dhtopts.Option{
+		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+		dhtopts.Protocols(
+			protocol.ID(prysmProtocolPrefix + "/dht"),
+		),
+	}
+
+	dht, err := kaddht.New(ctx, h, dopts...)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
 	// Wrap host with a routed host so that peers can be looked up in the
 	// distributed hash table by their peer ID.
 	h = rhost.Wrap(h, dht)
@@ -102,6 +128,23 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		cancel()
 		return nil, err
 	}
+
+	// Blockchain peering negotiation; excludes negotiating with bootstrap or
+	// relay nodes.
+	exclusions := []peer.ID{}
+	for _, addr := range []string{cfg.BootstrapNodeAddr, cfg.RelayNodeAddr} {
+		if addr == "" {
+			continue
+		}
+		info, err := peerInfoFromAddr(addr)
+		if err != nil {
+			return nil, err
+		}
+		exclusions = append(exclusions, info.ID)
+		h.ConnManager().Protect(info.ID, TagReputation)
+	}
+	setupPeerNegotiation(h, cfg.DepositContractAddress, exclusions)
+	setHandshakeHandler(h, cfg.DepositContractAddress)
 
 	return &Server{
 		ctx:           ctx,
@@ -234,6 +277,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 		data := proto.Clone(message)
 		if err := proto.Unmarshal(msg.Payload, data); err != nil {
 			log.Error("Could not unmarshal payload")
+			s.Reputation(peerID, RepPenalityInvalidProtobuf)
 		}
 		pMsg := Message{Ctx: ctx, Data: data, Peer: peerID}
 		for _, adapter := range adapters {
@@ -410,18 +454,15 @@ func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	// Shorten message if it is too long to avoid
-	// polluting the logs.
-	if len(msg.String()) > 100 {
-		newMessage := msg.String()[:100]
-
+	// polluting the logs, but only marshal to string if we are going to log.
+	if log.Level == logrus.DebugLevel {
+		loggableMessage := msg.String()
+		if len(loggableMessage) > 100 {
+			loggableMessage = loggableMessage[:100]
+		}
 		log.WithFields(logrus.Fields{
 			"topic": topic,
-		}).Debugf("Broadcasting msg %+v --Message too long to be displayed", newMessage)
-
-	} else {
-		log.WithFields(logrus.Fields{
-			"topic": topic,
-			"msg":   msg,
+			"msg":   loggableMessage,
 		}).Debug("Broadcasting msg")
 	}
 

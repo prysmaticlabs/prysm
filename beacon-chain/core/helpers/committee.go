@@ -23,14 +23,6 @@ type CrosslinkCommittee struct {
 	Shard     uint64
 }
 
-type shufflingInput struct {
-	seed               []byte
-	shufflingEpoch     uint64
-	slot               uint64
-	startShard         uint64
-	committeesPerEpoch uint64
-}
-
 // EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //
 // Spec pseudocode definition:
@@ -48,18 +40,18 @@ type shufflingInput struct {
 //    ) * SLOTS_PER_EPOCH
 func EpochCommitteeCount(beaconState *pb.BeaconState, epoch uint64) uint64 {
 	var minCommitteePerSlot = uint64(1)
-	activeValidatorCount := uint64(len(ActiveValidatorIndices(beaconState, epoch)))
+	activeValidatorCount := uint64(len(ActiveValidatorIndices(beaconState.ValidatorRegistry, epoch)))
 	// Max committee count per slot will be 0 when shard count is less than epoch length, this
 	// covers the special case to ensure there's always 1 max committee count per slot.
-	var maxCommitteePerSlot = minCommitteePerSlot
+	var committeeSizesPerSlot = minCommitteePerSlot
 	if params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch > minCommitteePerSlot {
-		maxCommitteePerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().SlotsPerEpoch
+		committeeSizesPerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().SlotsPerEpoch
 	}
 
 	var currCommitteePerSlot = activeValidatorCount / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 
-	if currCommitteePerSlot > maxCommitteePerSlot {
-		return maxCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch
+	if currCommitteePerSlot > committeeSizesPerSlot {
+		return committeeSizesPerSlot * params.BeaconConfig().SlotsPerEpoch
 	}
 	if currCommitteePerSlot < 1 {
 		return minCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch
@@ -125,7 +117,7 @@ func Shuffling(
 
 	// Figure out how many committees can be in a single epoch.
 	s := &pb.BeaconState{ValidatorRegistry: validators}
-	activeIndices := ActiveValidatorIndices(s, epoch)
+	activeIndices := ActiveValidatorIndices(s.ValidatorRegistry, epoch)
 	committeesPerEpoch := EpochCommitteeCount(s, epoch)
 
 	// Convert slot to bytes and xor it with seed.
@@ -144,21 +136,18 @@ func Shuffling(
 
 // VerifyBitfield validates a bitfield with a given committee size.
 //
-// Spec pseudocode:
-//
-// def verify_bitfield(bitfield: bytes, committee_size: int) -> bool:
-// """
-// Verify ``bitfield`` against the ``committee_size``.
-// """
-// if len(bitfield) != (committee_size + 7) // 8:
-// return False
-//
-// # Check `bitfield` is padded with zero bits only
-// for i in range(committee_size, len(bitfield) * 8):
-// if get_bitfield_bit(bitfield, i) == 0b1:
-// return False
-//
-// return True
+// Spec pseudocode definition:
+//   def verify_bitfield(bitfield: bytes, committee_size: int) -> bool:
+//     """
+//     Verify ``bitfield`` against the ``committee_size``.
+//     """
+//     if len(bitfield) != (committee_size + 7) // 8:
+//         return False
+//     # Check `bitfield` is padded with zero bits only
+//     for i in range(committee_size, len(bitfield) * 8):
+//         if get_bitfield_bit(bitfield, i) == 0b1:
+//             return False
+//     return True
 func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 	if len(bitfield) != mathutil.CeilDiv8(committeeSize) {
 		return false, fmt.Errorf(
@@ -166,18 +155,16 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 			mathutil.CeilDiv8(committeeSize),
 			len(bitfield))
 	}
-
-	for i := committeeSize; i < len(bitfield)*8; i++ {
-		bitSet, err := bitutil.CheckBit(bitfield, i)
+	bitLength := len(bitfield) << 3
+	for i := committeeSize; i < bitLength; i++ {
+		set, err := bitutil.CheckBit(bitfield, i)
 		if err != nil {
-			return false, fmt.Errorf("unable to check bit in bitfield %v", err)
+			return false, err
 		}
-
-		if bitSet {
+		if set {
 			return false, nil
 		}
 	}
-
 	return true, nil
 }
 
@@ -193,59 +180,6 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 		return EpochCommitteeCount(beaconState, epoch)
 	}
 	return minShardDelta
-}
-
-// crosslinkCommittees breaks down the shuffled indices into list of crosslink committee structs
-// which contains of validator indices and the shard they are assigned to.
-//
-// Spec pseudocode definition:
-//   def get_crosslink_committees(state: BeaconState,
-//                             seed: Bytes32,
-//                             shuffling_epoch: Epoch,
-//                             slot: Slot,
-//                             start_shard: Shard,
-//                             committees_per_epoch: int) -> List[Tuple[List[ValidatorIndex], Shard]]:
-//    offset = slot % SLOTS_PER_EPOCH
-//    committees_per_slot = committees_per_epoch // SLOTS_PER_EPOCH
-//    slot_start_shard = (shuffling_start_shard + committees_per_slot * offset) % SHARD_COUNT
-//
-//    shuffling = get_shuffling(
-//        seed,
-//        state.validator_registry,
-//        shuffling_epoch,
-//    )
-//
-//    return [
-//        (
-//            shuffling[committees_per_slot * offset + i],
-//            (slot_start_shard + i) % SHARD_COUNT,
-//        )
-//        for i in range(committees_per_slot)
-//    ]
-func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*CrosslinkCommittee, error) {
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	offSet := input.slot % slotsPerEpoch
-	committeesPerSlot := input.committeesPerEpoch / slotsPerEpoch
-	slotStartShard := (input.startShard + committeesPerSlot*offSet) %
-		params.BeaconConfig().ShardCount
-	requestedEpoch := SlotToEpoch(input.slot)
-
-	shuffledIndices, err := Shuffling(
-		bytesutil.ToBytes32(input.seed),
-		state.ValidatorRegistry,
-		requestedEpoch)
-	if err != nil {
-		return nil, err
-	}
-
-	var crosslinkCommittees []*CrosslinkCommittee
-	for i := uint64(0); i < committeesPerSlot; i++ {
-		crosslinkCommittees = append(crosslinkCommittees, &CrosslinkCommittee{
-			Committee: shuffledIndices[committeesPerSlot*offSet+i],
-			Shard:     (slotStartShard + i) % params.BeaconConfig().ShardCount,
-		})
-	}
-	return crosslinkCommittees, nil
 }
 
 // RestartCommitteeCache restarts the committee cache from scratch.
@@ -267,6 +201,5 @@ func ToCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *c
 		Slot:       slot,
 		Committees: cacheCommittee,
 	}
-
 	return committees
 }

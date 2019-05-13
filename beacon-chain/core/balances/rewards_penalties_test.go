@@ -145,7 +145,7 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedBlockRootHash32: []byte{},
 			Shard:                    0,
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+			CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
 		},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       params.BeaconConfig().GenesisSlot + 5,
@@ -498,9 +498,9 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 	}
 	atts := []*pb.Attestation{
 		{Data: &pb.AttestationData{
-			Slot:                    params.BeaconConfig().GenesisSlot,
-			LatestCrosslink:         &pb.Crosslink{},
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}
+			Slot:              params.BeaconConfig().GenesisSlot,
+			LatestCrosslink:   &pb.Crosslink{},
+			CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:]}}}
 	pendingAtts := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			AggregationBitfield: participationBitfield,
@@ -519,11 +519,13 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
 		state := &pb.BeaconState{
-			Slot:               params.BeaconConfig().GenesisSlot + 10,
-			ValidatorRegistry:  validators,
-			Balances:           validatorBalances,
-			LatestAttestations: pendingAtts,
-			LatestCrosslinks:   []*pb.Crosslink{{}},
+			Slot:                   params.BeaconConfig().GenesisSlot + 10,
+			ValidatorRegistry:      validators,
+			Balances:               validatorBalances,
+			LatestAttestations:     pendingAtts,
+			LatestCrosslinks:       []*pb.Crosslink{{}},
+			LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+			LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		}
 
 		_, err := blocks.ProcessBlockAttestations(state, &pb.BeaconBlock{

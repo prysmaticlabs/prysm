@@ -7,13 +7,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,6 +27,15 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
+
+var (
+	correctAttestedValidatorGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "correct_attested_validator_rate",
+		Help: "The % of validators correctly attested for source and target",
+	}, []string{
+		"epoch",
+	})
+)
 
 // TransitionConfig defines important configuration options
 // for executing a state transition, which can have logging and signature
@@ -57,6 +70,10 @@ func ExecuteStateTransition(
 	headRoot [32]byte,
 	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.StateTransition")
 	defer span.End()
 	var err error
@@ -172,9 +189,9 @@ func ProcessBlock(
 	}
 
 	if config.Logging {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block slot == state slot")
-		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
-		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Processed ETH1 data")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Verified block slot == state slot")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Verified and processed block RANDAO")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Processed ETH1 data")
 		log.WithField(
 			"attestationsInBlock", len(block.Body.Attestations),
 		).Info("Block attestations")
@@ -205,7 +222,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	prevEpoch := helpers.PrevEpoch(state)
 
 	// Calculate total balances of active validators of the current epoch.
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
 	// We require the current epoch attestations, current epoch boundary attestations,
@@ -292,8 +309,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 
 	// Calculate the attesting balances for previous and current epoch.
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
-	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(state, prevEpoch)
-	prevTotalBalance := e.TotalBalance(state, previousActiveValidatorIndices)
 	prevEpochAttestingBalance := e.TotalBalance(state, prevEpochAttesterIndices)
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)
 	prevEpochHeadAttestingBalances := e.TotalBalance(state, prevEpochHeadAttesterIndices)
@@ -304,12 +319,10 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	}
 
 	// Update justification and finality.
-	state, err := e.ProcessJustificationAndFinalization(
+	state, err := e.ProcessJustificationFinalization(
 		state,
 		currentBoundaryAttestingBalances,
 		prevEpochAttestingBalance,
-		prevTotalBalance,
-		totalBalance,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not process justification and finalization of state: %v", err)
@@ -448,10 +461,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	state = v.ProcessPenaltiesAndExits(state)
 	if e.CanProcessValidatorRegistry(state) {
 		if block != nil {
-			state, err = v.UpdateRegistry(state)
-			if err != nil {
-				return nil, fmt.Errorf("could not update validator registry: %v", err)
-			}
+			state = e.ProcessRegistryUpdates(state)
 		}
 		state, err = e.ProcessCurrSlotShardSeed(state)
 		if err != nil {
@@ -487,18 +497,23 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
 
+	// Log the useful metrics via prometheus.
+	correctAttestedValidatorGauge.WithLabelValues(
+		strconv.Itoa(int(currentEpoch)),
+	).Set(float64(len(currentBoundaryAttesterIndices) / len(activeValidatorIndices)))
+
 	if config.Logging {
 		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")
 		log.WithField("attesterIndices", currentBoundaryAttesterIndices).Debug("Current epoch boundary attester indices")
-		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of prev epoch attestations")
+		log.WithField("prevEpochAttestations", len(prevEpochAttestations)).Info("Number of previous epoch attestations")
 		log.WithField("attesterIndices", prevEpochAttesterIndices).Debug("Previous epoch attester indices")
-		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of prev epoch boundary attestations")
+		log.WithField("prevEpochBoundaryAttestations", len(prevEpochBoundaryAttestations)).Info("Number of previous epoch boundary attestations")
 		log.WithField("attesterIndices", prevEpochBoundaryAttesterIndices).Debug("Previous epoch boundary attester indices")
 		log.WithField(
 			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Previous justified epoch")
 		log.WithField(
-			"justifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+			"justifiedEpoch", state.CurrentJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Justified epoch")
 		log.WithField(
 			"finalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
@@ -509,26 +524,31 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		log.WithField(
 			"numValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
+
+		activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+		log.WithField(
+			"activeValidators", len(activeValidatorIndices),
+		).Info("Active validators")
 		totalBalance := float32(0)
-		lowestBalance := float32(state.Balances[0])
-		highestBalance := float32(state.Balances[0])
-		for _, val := range state.Balances {
-			if float32(val) < lowestBalance {
-				lowestBalance = float32(val)
+		lowestBalance := float32(state.Balances[activeValidatorIndices[0]])
+		highestBalance := float32(state.Balances[activeValidatorIndices[0]])
+		for _, idx := range activeValidatorIndices {
+			if float32(state.Balances[idx]) < lowestBalance {
+				lowestBalance = float32(state.Balances[idx])
 			}
-			if float32(val) > highestBalance {
-				highestBalance = float32(val)
+			if float32(state.Balances[idx]) > highestBalance {
+				highestBalance = float32(state.Balances[idx])
 			}
-			totalBalance += float32(val)
+			totalBalance += float32(state.Balances[idx])
 		}
-		avgBalance := totalBalance / float32(len(state.Balances)) / float32(params.BeaconConfig().GweiPerEth)
+		avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
 		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
 		highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
 		log.WithFields(logrus.Fields{
 			"averageBalance": avgBalance,
 			"lowestBalance":  lowestBalance,
 			"highestBalance": highestBalance,
-		}).Info("Validator balances")
+		}).Info("Active validator balances")
 	}
 
 	return state, nil

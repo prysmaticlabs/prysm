@@ -76,25 +76,23 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
+	validData := true
 	depositInput, err := helpers.DecodeDepositInput(depositData)
 	if err != nil {
-		log.Errorf("Could not decode deposit input %v", err)
-		return
+		log.Debugf("Could not decode deposit input %v", err)
+		validData = false
 	}
 
 	deposit := &pb.Deposit{
-		DepositData:     depositData,
-		MerkleTreeIndex: index,
+		DepositData: depositData,
+		Index:       index,
 	}
 
-	validData := true
-
 	// Make sure duplicates are rejected pre-chainstart.
-	if !w.chainStarted {
+	if !w.chainStarted && validData {
 		var pubkey = fmt.Sprintf("#%x", depositInput.Pubkey)
 		if w.beaconDB.PubkeyInChainstart(w.ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
-			validData = false
 		} else {
 			w.beaconDB.MarkPubkeyForChainstart(w.ctx, pubkey)
 		}
@@ -103,17 +101,21 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	// We always store all historical deposits in the DB.
 	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
 
+	if !w.chainStarted {
+		w.chainStartDeposits = append(w.chainStartDeposits, depositData)
+	} else {
+		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
+	}
 	if validData {
-		if !w.chainStarted {
-			w.chainStartDeposits = append(w.chainStartDeposits, depositData)
-		} else {
-			w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
-		}
 		log.WithFields(logrus.Fields{
 			"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 			"merkleTreeIndex": index,
-		}).Info("Deposit registered from deposit contract")
+		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
+	} else {
+		log.WithFields(logrus.Fields{
+			"merkleTreeIndex": index,
+		}).Info("Invalid deposit registered in deposit contract")
 	}
 }
 
@@ -128,8 +130,8 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	}
 
 	w.chainStartETH1Data = &pb.Eth1Data{
-		BlockHash32:       depositLog.BlockHash[:],
-		DepositRootHash32: chainStartDepositRoot[:],
+		BlockRoot:   depositLog.BlockHash[:],
+		DepositRoot: chainStartDepositRoot[:],
 	}
 
 	timestamp := binary.LittleEndian.Uint64(timestampData)
@@ -198,7 +200,7 @@ func (w *Web3Service) requestBatchedLogs() error {
 		FromBlock: w.lastRequestedBlock.Add(w.lastRequestedBlock, big.NewInt(1)),
 		ToBlock:   requestedBlock,
 	}
-	logs, err := w.logger.FilterLogs(w.ctx, query)
+	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
 	if err != nil {
 		return err
 	}

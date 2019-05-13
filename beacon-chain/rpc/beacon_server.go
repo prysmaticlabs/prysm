@@ -7,11 +7,15 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -24,6 +28,7 @@ type BeaconServer struct {
 	ctx                 context.Context
 	powChainService     powChainService
 	chainService        chainService
+	targetsFetcher      blockchain.TargetsFetcher
 	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -97,13 +102,17 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 	}
 }
 
-// ForkData fetches the current fork information from the beacon state.
-func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Fork, error) {
+// DomainData fetches the current domain version information from the beacon state.
+func (bs *BeaconServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
 	state, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	return state.Fork, nil
+	dv := helpers.DomainVersion(state, request.Epoch, params.BeaconConfig().DomainRandao)
+	return &pb.DomainResponse{
+		SignatureDomain: dv,
+	}, nil
+
 }
 
 // Eth1Data is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an
@@ -120,7 +129,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	currentHeight := bs.powChainService.LatestBlockHeight()
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 
-	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
+	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockRoot)
 	// If latest ETH1 block hash is empty, send a default response
 	if stateLatestEth1Hash == [32]byte{} {
 		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
@@ -135,11 +144,14 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	bestVote := &pbp2p.Eth1DataVote{}
 	bestVoteHeight := big.NewInt(0)
 	for _, vote := range beaconState.Eth1DataVotes {
-		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockRoot)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
 		if err != nil {
-			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", eth1Hash)).
+			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
 				Debug("Could not verify block with hash in ETH1 chain")
 			continue
 		}
@@ -195,8 +207,8 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
-			BlockHash32:       bestVote.Eth1Data.BlockHash32,
-			DepositRootHash32: bestVote.Eth1Data.DepositRootHash32,
+			BlockRoot:   bestVote.Eth1Data.BlockRoot,
+			DepositRoot: bestVote.Eth1Data.DepositRoot,
 		},
 	}, nil
 }
@@ -221,7 +233,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
+	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockRoot)
 	_, latestEth1DataHeight, err := bs.powChainService.BlockExists(ctx, h)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
@@ -250,7 +262,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*pbp2p.Deposit
 	for _, dep := range allPendingDeps {
-		if dep.MerkleTreeIndex >= beaconState.DepositIndex {
+		if dep.Index >= beaconState.DepositIndex {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}
@@ -271,6 +283,56 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		pendingDeposits = append(pendingDeposits, pendingDeps[i])
 	}
 	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
+}
+
+// BlockTree returns the current tree of saved blocks and their votes starting from the justified state.
+func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.BlockTreeResponse, error) {
+	justifiedState, err := bs.beaconDB.JustifiedState()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
+	}
+	attestationTargets, err := bs.targetsFetcher.AttestationTargets(justifiedState)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+	}
+	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
+	if err != nil {
+		return nil, err
+	}
+	highestSlot := bs.beaconDB.HighestBlockSlot()
+	fullBlockTree := []*pbp2p.BeaconBlock{}
+	for i := justifiedBlock.Slot + 1; i < highestSlot; i++ {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		nextLayer, err := bs.beaconDB.BlocksBySlot(ctx, i)
+		if err != nil {
+			return nil, err
+		}
+		fullBlockTree = append(fullBlockTree, nextLayer...)
+	}
+	tree := []*pb.BlockTreeResponse_TreeNode{}
+	for _, kid := range fullBlockTree {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		votes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
+		if err != nil {
+			return nil, err
+		}
+		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		if err != nil {
+			return nil, err
+		}
+		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
+			BlockRoot: blockRoot[:],
+			Block:     kid,
+			Votes:     uint64(votes),
+		})
+	}
+	return &pb.BlockTreeResponse{
+		Tree: tree,
+	}, nil
 }
 
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
@@ -299,24 +361,24 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	depositRoot := depositTrie.Root()
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
-			DepositRootHash32: depositRoot[:],
-			BlockHash32:       blockHash[:],
+			DepositRoot: depositRoot[:],
+			BlockRoot:   blockHash[:],
 		},
 	}, nil
 }
 
 func constructMerkleProof(trie *trieutil.MerkleTrie, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
-	proof, err := trie.MerkleProof(int(deposit.MerkleTreeIndex))
+	proof, err := trie.MerkleProof(int(deposit.Index))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"could not generate merkle proof for deposit at index %d: %v",
-			deposit.MerkleTreeIndex,
+			deposit.Index,
 			err,
 		)
 	}
 	// For every deposit, we construct a Merkle proof using the powchain service's
 	// in-memory deposits trie, which is updated only once the state's LatestETH1Data
 	// property changes during a state transition after a voting period.
-	deposit.MerkleProofHash32S = proof
+	deposit.Proof = proof
 	return deposit, nil
 }

@@ -12,10 +12,10 @@ message PrivateKeyRequest {
 }
 
 message PrivateKeyResponse {
-  bytes private_key = 1 [deprecated=true];
+  bytes private_key = 1 [deprecated = true];
   PrivateKeys private_keys = 2;
 }
 
-message PrivateKeys { 
+message PrivateKeys {
   repeated bytes private_keys = 1;
 }

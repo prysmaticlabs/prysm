@@ -25,7 +25,7 @@ var log = logrus.WithField("prefix", "stategenerator")
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.stategenerator.GenerateStateFromBlock")
 	defer span.End()
-	fState, err := db.HistoricalStateFromSlot(ctx, slot)
+	fState, err := db.HistoricalStateFromSlot(ctx, slot, [32]byte{})
 	if err != nil {
 		return nil, err
 	}
@@ -54,10 +54,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	// from input slot, retrieve its corresponding block and call that the most recent block.
-	mostRecentBlock, err := db.BlockBySlot(ctx, slot)
+	mostRecentBlocks, err := db.BlocksBySlot(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
+	mostRecentBlock := mostRecentBlocks[0]
 
 	// if the most recent block is a skip block, we get its parent block.
 	// ex:
@@ -66,10 +67,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	lastSlot := slot
 	for mostRecentBlock == nil {
 		lastSlot--
-		mostRecentBlock, err = db.BlockBySlot(ctx, lastSlot)
+		blocks, err := db.BlocksBySlot(ctx, lastSlot)
 		if err != nil {
 			return nil, err
 		}
+		mostRecentBlock = blocks[0]
 	}
 
 	// retrieve the block list to recompute state of the input slot.
@@ -163,7 +165,7 @@ func blocksSinceFinalized(ctx context.Context, db *db.BeaconDB, block *pb.Beacon
 	defer span.End()
 	blockAncestors := make([]*pb.BeaconBlock, 0)
 	blockAncestors = append(blockAncestors, block)
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
 	// looking up ancestors, until the finalized block.
 	for parentRoot != finalizedBlockRoot {
 		retblock, err := db.Block(parentRoot)
@@ -171,7 +173,7 @@ func blocksSinceFinalized(ctx context.Context, db *db.BeaconDB, block *pb.Beacon
 			return nil, err
 		}
 		blockAncestors = append(blockAncestors, retblock)
-		parentRoot = bytesutil.ToBytes32(retblock.ParentRootHash32)
+		parentRoot = bytesutil.ToBytes32(retblock.ParentBlockRoot)
 	}
 	return blockAncestors, nil
 }

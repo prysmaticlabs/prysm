@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -57,6 +58,10 @@ type Querier struct {
 	powchain                  powChainService
 	chainStarted              bool
 	atGenesis                 bool
+	bestPeer                  peer.ID
+	chainHeadResponses        map[peer.ID]*pb.ChainHeadResponse
+	canonicalBlockRoot        []byte
+	finalizedBlockRoot        []byte
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -69,16 +74,18 @@ func NewQuerierService(ctx context.Context,
 	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
 
 	return &Querier{
-		ctx:             ctx,
-		cancel:          cancel,
-		p2p:             cfg.P2P,
-		db:              cfg.BeaconDB,
-		chainService:    cfg.ChainService,
-		responseBuf:     responseBuf,
-		currentHeadSlot: cfg.CurrentHeadSlot,
-		chainStarted:    false,
-		powchain:        cfg.PowChain,
-		chainStartBuf:   make(chan time.Time, 1),
+		ctx:                ctx,
+		cancel:             cancel,
+		p2p:                cfg.P2P,
+		db:                 cfg.BeaconDB,
+		chainService:       cfg.ChainService,
+		responseBuf:        responseBuf,
+		currentHeadSlot:    cfg.CurrentHeadSlot,
+		chainStarted:       false,
+		atGenesis:          true,
+		powchain:           cfg.PowChain,
+		chainStartBuf:      make(chan time.Time, 1),
+		chainHeadResponses: make(map[peer.ID]*pb.ChainHeadResponse),
 	}
 }
 
@@ -126,7 +133,7 @@ func (q *Querier) listenForStateInitialization() {
 	for {
 		select {
 		case <-q.chainStartBuf:
-			queryLog.Info("state initialized")
+			queryLog.Info("State has been initialized")
 			q.chainStarted = true
 			return
 		case <-sub.Err():
@@ -151,34 +158,54 @@ func (q *Querier) run() {
 		ticker.Stop()
 	}()
 
-	q.RequestLatestHead()
-
+	log.Info("Polling peers for latest chain head...")
+	hasReceivedResponse := false
+	var timeout <-chan time.Time
 	for {
 		select {
 		case <-q.ctx.Done():
-			queryLog.Info("Exiting goroutine")
+			queryLog.Info("Finished querying state of the network, importing blocks...")
 			return
 		case <-ticker.C:
 			q.RequestLatestHead()
-		case msg := <-q.responseBuf:
-			response := msg.Data.(*pb.ChainHeadResponse)
+		case <-timeout:
+			queryLog.WithField("peerID", q.bestPeer.Pretty()).Info("Peer with highest canonical head")
 			queryLog.Infof(
 				"Latest chain head is at slot: %d and state root: %#x",
-				response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
+				q.currentHeadSlot-params.BeaconConfig().GenesisSlot, q.currentStateRoot,
 			)
-			q.currentHeadSlot = response.CanonicalSlot
-			q.currentStateRoot = response.CanonicalStateRootHash32
-			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
-
 			ticker.Stop()
 			responseSub.Unsubscribe()
 			q.cancel()
+		case msg := <-q.responseBuf:
+			// If this is the first response a node receives, we start
+			// a timeout that will keep listening for more responses over a
+			// certain time interval to ensure we get the best head from our peers.
+			if !hasReceivedResponse {
+				timeout = time.After(10 * time.Second)
+				hasReceivedResponse = true
+			}
+			response := msg.Data.(*pb.ChainHeadResponse)
+			if _, ok := q.chainHeadResponses[msg.Peer]; !ok {
+				queryLog.WithFields(logrus.Fields{
+					"peerID":      msg.Peer.Pretty(),
+					"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
+				}).Info("Received chain head from peer")
+				q.chainHeadResponses[msg.Peer] = response
+			}
+			if response.CanonicalSlot > q.currentHeadSlot {
+				q.currentHeadSlot = response.CanonicalSlot
+				q.currentStateRoot = response.CanonicalStateRootHash32
+				q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
+				q.canonicalBlockRoot = response.CanonicalBlockRoot
+				q.finalizedBlockRoot = response.FinalizedBlockRoot
+			}
 		}
 	}
 }
 
-// RequestLatestHead broadcasts out a request for all
-// the latest chain heads from the node's peers.
+// RequestLatestHead broadcasts a request for
+// the latest chain head slot and state root to a peer.
 func (q *Querier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
 	q.p2p.Broadcast(context.Background(), request)

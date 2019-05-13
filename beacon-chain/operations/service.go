@@ -2,6 +2,7 @@
 package operations
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -9,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
@@ -112,21 +114,36 @@ func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 // PendingAttestations returns the attestations that have not seen on the beacon chain, the attestations are
 // returns in slot ascending order and up to MaxAttestations capacity. The attestations get
 // deleted in DB after they have been retrieved.
-func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
+func (s *Service) PendingAttestations(ctx context.Context) ([]*pb.Attestation, error) {
 	var attestations []*pb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve attestations from DB")
+	}
+	state, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
 	}
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
 		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
 	})
-	for i := range attestationsFromDB {
+	var validAttsCount uint64
+	for _, att := range attestationsFromDB {
+		// Delete the attestation if the attestation is one epoch older than head state,
+		// we don't want to pass these attestations to RPC for proposer to include.
+		if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch <= state.Slot {
+			if err := s.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, err
+			}
+			continue
+		}
+
+		validAttsCount++
 		// Stop the max attestation number per beacon block is reached.
-		if uint64(i) == params.BeaconConfig().MaxAttestations {
+		if validAttsCount == params.BeaconConfig().MaxAttestations {
 			break
 		}
-		attestations = append(attestations, attestationsFromDB[i])
+		attestations = append(attestations, att)
 	}
 	return attestations, nil
 }
@@ -190,10 +207,34 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
 		return err
 	}
-	s.p2p.Broadcast(ctx, &pb.AttestationAnnounce{
-		Hash: hash[:],
-	})
 	return nil
+}
+
+// IsAttCanonical returns true if the input attestation is voting on the canonical chain, false
+// otherwise. The steps to verify are:
+//	1.) retrieve the voted block
+//	2.) retrieve the canonical block by using voted block's slot number
+//	3.) return true if voted block root and the canonical block root are the same
+func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool, error) {
+	votedBlk, err := s.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRootHash32))
+	if err != nil {
+		return false, fmt.Errorf("could not hash block: %v", err)
+	}
+	if votedBlk == nil {
+		return false, nil
+	}
+	canonicalBlk, err := s.beaconDB.CanonicalBlockBySlot(ctx, votedBlk.Slot)
+	if err != nil {
+		return false, fmt.Errorf("could not hash block: %v", err)
+	}
+	if canonicalBlk == nil {
+		return false, nil
+	}
+	canonicalRoot, err := hashutil.HashBeaconBlock(canonicalBlk)
+	if err != nil {
+		return false, fmt.Errorf("could not hash block: %v", err)
+	}
+	return bytes.Equal(att.Data.BeaconBlockRootHash32, canonicalRoot[:]), nil
 }
 
 // removeOperations removes the processed operations from operation pool and DB.

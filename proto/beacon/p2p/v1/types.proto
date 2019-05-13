@@ -53,10 +53,6 @@ message BeaconState {
   uint64 current_shuffling_epoch = 8006 [deprecated=true];
   bytes previous_shuffling_seed_hash32 = 8007 [deprecated=true];
   bytes current_shuffling_seed_hash32 = 8008 [deprecated=true];
-  uint64 justified_epoch = 8009 [deprecated=true];
-  bytes justified_root = 8010 [deprecated=true];
-  repeated bytes latest_index_root_hash32s = 8011 [deprecated=true];
-  repeated bytes latest_block_root_hash32s = 8012 [deprecated=true];
   repeated bytes batched_block_root_hash32s = 8013 [deprecated=true];
   repeated Crosslink latest_crosslinks = 8014 [deprecated=true];
   repeated PendingAttestation latest_attestations = 8015 [deprecated=true];
@@ -64,8 +60,8 @@ message BeaconState {
 }
 
 message Fork {
-  uint64 previous_version = 1;
-  uint64 current_version = 2;
+  bytes previous_version = 1;
+  bytes current_version = 2;
   uint64 epoch = 3;
 }
 
@@ -80,7 +76,7 @@ message Attestation {
   AttestationData data = 1;
   bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
-  bytes aggregate_signature = 4; // bytes96
+  bytes signature = 4; // bytes96
 }
 
 message AttestationData {
@@ -105,7 +101,6 @@ message AttestationData {
   uint64 justified_epoch = 1002 [deprecated=true];
   bytes justified_block_root_hash32 = 1003 [deprecated=true];
   bytes beacon_block_root_hash32 = 1004 [deprecated=true];
-  bytes crosslink_data_root_hash32 = 1005 [deprecated=true];
 }
 
 message AttestationTarget {
@@ -146,7 +141,6 @@ message Validator {
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
-  uint64 withdrawal_epoch = 1001 [deprecated=true];
   uint64 slashed_epoch = 1002 [deprecated=true];
   enum StatusFlags {
     INITIAL = 0 [deprecated=true]; // validator status initial value.
@@ -154,7 +148,6 @@ message Validator {
     WITHDRAWABLE = 2 [deprecated=true]; // validator deposit is withdrawable.
   }
   StatusFlags status_flags = 1003 [deprecated=true];
-  bytes withdrawal_credentials_hash32 = 1004 [deprecated=true];
 }
 
 message ShardReassignmentRecord {
@@ -181,8 +174,6 @@ message BeaconBlock {
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
-  bytes parent_root_hash32 = 1001;
-  bytes state_root_hash32 = 1002;
   bytes randao_reveal = 1003;
   Eth1Data eth1_data = 1004;
 }
@@ -215,7 +206,7 @@ message SlashableAttestation {
   repeated uint64 validator_indices = 1;
   bytes custody_bitfield = 2;
   AttestationData data = 3;
-  bytes aggregate_signature = 4; // bytes96
+  bytes signature = 4; // bytes96
 }
 
 message DepositData {
@@ -259,8 +250,6 @@ message Deposit {
   DepositData data = 3;
   // Deprecated
   // TODO(2307): Remove deprecated fields
-  repeated bytes merkle_proof_hash32s = 1001 [deprecated=true];
-  uint64 merkle_tree_index = 1002 [deprecated=true];
   bytes deposit_data = 1003 [deprecated=true];
 }
 
@@ -293,11 +282,6 @@ message Eth1Data {
   uint64 deposit_count = 2;
   // Block hash
   bytes block_root = 3;
-
-  // Deprecated
-  // TODO(2307): Remove deprecated fields
-  bytes deposit_root_hash32 = 1000 [deprecated=true];
-  bytes block_hash32 = 1001 [deprecated=true];
 }
 
 message Eth1DataVote {
