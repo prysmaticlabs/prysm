@@ -13,11 +13,21 @@ data:
         for: 1m
         annotations:
           summary: No block slots advanced in 2 minutes
-      - alert: too_long_since_finality
+      - alert: too_long_since_finality_10
         expr: max(state_last_slot / 8) - floor(max(state_last_finalized_epoch)) > 10
         for: 1m
         annotations:
           summary: No finality in 10 epochs
+      - alert: too_long_since_finality_25
+        expr: max(state_last_slot / 8) - floor(max(state_last_finalized_epoch)) > 25
+        for: 1m
+        annotations:
+          summary: No finality in 25 epochs
+      - alert: too_long_since_finality_100
+        expr: max(state_last_slot / 8) - floor(max(state_last_finalized_epoch)) > 100
+        for: 1m
+        annotations:
+          summary: No finality in 100 epochs
       - alert: high_reorg_rate
         expr: max(delta(reorg_counter[10m])) > 5
         for: 1m
