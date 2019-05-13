@@ -35,6 +35,8 @@ var (
 	})
 )
 
+const ErrAlreadyInProgress = errors.New("already in progress")
+
 // AttestationCache is used to store the cached results of an AttestationData request.
 type AttestationCache struct {
 	cache      *cache.FIFO
@@ -108,7 +110,7 @@ func (c *AttestationCache) MarkInProgress(req *pb.AttestationDataRequest) error 
 		return e
 	}
 	if c.inProgress[s] {
-		return errors.New("already in progress")
+		return ErrAlreadyInProgress
 	}
 	c.inProgress[s] = true
 	return nil
