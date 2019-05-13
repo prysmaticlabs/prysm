@@ -166,7 +166,7 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 		attPerSlot := len(activeIndices) / int(params.BeaconConfig().SlotsPerEpoch)
 		// we only set the limit at 70% of the calculated amount to be safe so that relevant attestations
 		// arent carried over to the next batch.
-		a.poolLimit = attPerSlot * 2 / 10
+		a.poolLimit = attPerSlot * 7 / 10
 		if a.poolLimit == 0 {
 			a.poolLimit++
 		}
