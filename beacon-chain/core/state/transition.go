@@ -18,7 +18,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -428,17 +427,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		return nil, fmt.Errorf("could not process attestation inclusion rewards: %v", err)
 	}
 
-	// Process crosslink rewards and penalties.
-	// TODO(#2072): Optimize crosslinks.
-	if featureconfig.FeatureConfig().EnableCrosslinks {
-		state, err = bal.Crosslinks(
-			state,
-			currentEpochAttestations,
-			prevEpochAttestations)
-		if err != nil {
-			return nil, fmt.Errorf("could not process crosslink rewards and penalties: %v", err)
-		}
-	}
+	// TODO(#2307): Insert process crosslink rewards and penalties from 0.6.
 
 	// TODO(#2307): Insert process ejection from 0.6.
 
