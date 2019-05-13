@@ -354,7 +354,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //            break
 func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
 	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
 
 	for idx, validator := range state.ValidatorRegistry {
@@ -401,7 +401,7 @@ func InitializeValidatorStore(bState *pb.BeaconState) {
 	defer VStore.Unlock()
 
 	currentEpoch := helpers.CurrentEpoch(bState)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(bState.ValidatorRegistry, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(bState, currentEpoch)
 	VStore.activatedValidators[currentEpoch] = activeValidatorIndices
 
 }

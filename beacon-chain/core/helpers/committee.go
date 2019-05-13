@@ -4,7 +4,9 @@ package helpers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -158,6 +160,33 @@ func Shuffling(
 
 	// Split the shuffled list into epoch_length * committees_per_slot pieces.
 	return utils.SplitIndices(shuffledIndices, committeesPerEpoch), nil
+}
+
+// AttestingIndices returns the attesting participants indices.
+//
+// Spec pseudocode definition:
+//   def get_attesting_indices(state: BeaconState,
+//                          attestation_data: AttestationData,
+//                          bitfield: bytes) -> List[ValidatorIndex]:
+//    """
+//    Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
+//    """
+//    committee = get_crosslink_committee(state, attestation_data.target_epoch, attestation_data.crosslink.shard)
+//    assert verify_bitfield(bitfield, len(committee))
+//    return sorted([index for i, index in enumerate(committee) if get_bitfield_bit(bitfield, i) == 0b1])
+func AttestationParticipants(state *pb.BeaconState, data *pb.AttestationData, bitfield []byte) ([]uint64, error) {
+	committee, err := CrosslinkCommitteeAtEpoch(state, data.TargetEpoch, data.Shard)
+	if err != nil {
+		return nil, fmt.Errorf("could not get committee: %v", err)
+	}
+	if isValidated, err := VerifyBitfield(bitfield, len(committee)); !isValidated || err != nil {
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New("bitfield is unable to be verified")
+	}
+	sort.Slice(committee, func(i, j int) bool { return committee[i] < committee[j] })
+	return committee, nil
 }
 
 // VerifyBitfield validates a bitfield with a given committee size.
