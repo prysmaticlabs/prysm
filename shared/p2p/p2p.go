@@ -18,6 +18,9 @@ import peer "github.com/libp2p/go-libp2p-peer"
 // AnyPeer represents a Peer ID alias for sending to any available peer(s).
 const AnyPeer = peer.ID("AnyPeer")
 
+// TagReputation is a libp2p tag for identifying reputation.
+const TagReputation = "prysm-reputation"
+
 // Use this file for interfaces only!
 
 // Adapter is used to create middleware.

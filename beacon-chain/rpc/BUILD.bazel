@@ -13,6 +13,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
@@ -24,6 +25,7 @@ go_library(
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/p2p:go_default_library",
         "//shared/params:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
@@ -42,6 +44,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "attester_server_test.go",
         "beacon_server_test.go",
@@ -51,6 +54,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",

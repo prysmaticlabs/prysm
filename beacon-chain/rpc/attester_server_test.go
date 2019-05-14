@@ -2,9 +2,11 @@ package rpc
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -13,16 +15,38 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+type mockBroadcaster struct{}
+
+func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
+}
+
 func TestAttestHead_OK(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
+		p2p:              &mockBroadcaster{},
+		beaconDB:         db,
+		cache:            cache.NewAttestationCache(),
+	}
+	head := &pbp2p.BeaconBlock{
+		Slot:             999,
+		ParentRootHash32: []byte{'a'},
+	}
+	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
+		t.Fatal(err)
+	}
+	root, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		t.Fatal(err)
 	}
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
 			Slot:                    999,
 			Shard:                   1,
 			CrosslinkDataRootHash32: []byte{'a'},
+			BeaconBlockRootHash32:   root[:],
 		},
 	}
 	if _, err := attesterServer.AttestHead(context.Background(), req); err != nil {
@@ -73,6 +97,8 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
+		p2p:      &mockBroadcaster{},
+		cache:    cache.NewAttestationCache(),
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
@@ -168,6 +194,8 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
+		p2p:      &mockBroadcaster{},
+		cache:    cache.NewAttestationCache(),
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
@@ -207,4 +235,52 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	if !proto.Equal(res, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
 	}
+}
+
+func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
+	ctx := context.Background()
+	server := &AttesterServer{
+		cache: cache.NewAttestationCache(),
+	}
+
+	req := &pb.AttestationDataRequest{
+		Shard: 1,
+		Slot:  2,
+	}
+
+	res := &pb.AttestationDataResponse{
+		HeadSlot: 55,
+	}
+
+	if err := server.cache.MarkInProgress(req); err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		response, err := server.AttestationDataAtSlot(ctx, req)
+		if err != nil {
+			t.Error(err)
+		}
+		if !proto.Equal(res, response) {
+			t.Error("Expected  equal responses from cache")
+		}
+	}()
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+
+		if err := server.cache.Put(ctx, req, res); err != nil {
+			t.Error(err)
+		}
+		if err := server.cache.MarkNotInProgress(req); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	wg.Wait()
 }

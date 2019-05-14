@@ -14,9 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
@@ -49,6 +47,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
+	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -76,6 +75,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		Slot:              params.BeaconConfig().GenesisSlot + 36,
 		ValidatorRegistry: validators,
 	}
+	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -115,6 +115,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
+	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +141,7 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{}},
+		LatestBlock:       &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -164,6 +166,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
+		LatestBlock:       &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -233,6 +236,7 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
+	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -263,6 +267,7 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 		Slot:              params.BeaconConfig().GenesisSlot + 36,
 		ValidatorRegistry: validators,
 	}
+	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -316,6 +321,7 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
+	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -360,7 +366,6 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 
 func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
-	hook := logTest.NewGlobal()
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
@@ -383,6 +388,7 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
+	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -395,10 +401,58 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 		},
 	}
 
-	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
-		t.Fatalf("could not update latest attestation: %v", err)
+	wanted := "bitfield points to an invalid index in the committee"
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Wanted: %s but got %s", wanted, err)
 	}
-	testutil.AssertLogsContain(t, hook, "Bitfield points to an invalid index in the committee")
+}
+
+func TestBatchUpdate_FromSync(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+		})
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		ValidatorRegistry: validators,
+	}
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+	service.poolLimit = 9
+	for i := 0; i < 10; i++ {
+		attestation := &pb.Attestation{
+			AggregationBitfield: []byte{0x80},
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + 1,
+				Shard: 1,
+			},
+		}
+		if err := service.handleAttestation(ctx, attestation); err != nil {
+			t.Fatalf("could not update latest attestation: %v", err)
+		}
+	}
+	if len(service.pooledAttestations) != 0 {
+		t.Errorf("pooled attestations were not cleared out, still %d attestations in pool", len(service.pooledAttestations))
+	}
 }
 
 func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
@@ -425,6 +479,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
+	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}

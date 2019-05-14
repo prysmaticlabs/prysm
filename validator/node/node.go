@@ -45,6 +45,7 @@ type ValidatorClient struct {
 func NewValidatorClient(ctx *cli.Context, password string) (*ValidatorClient, error) {
 	if err := tracing.Setup(
 		"validator", // service name
+		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
 		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
 		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
 		ctx.GlobalBool(cmd.EnableTracingFlag.Name),

@@ -81,6 +81,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	for _, amnt := range v.assignments.Assignment {
 		if bytes.Equal(pubKey, amnt.PublicKey) {
 			assignment = amnt
+			break
 		}
 	}
 	idxReq := &pb.ValidatorIndexRequest{
@@ -151,7 +152,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		}
 	}
 
-	aggregationBitfield := bitutil.SetBitfield(indexInCommittee, committeeLength)
+	aggregationBitfield, err := bitutil.SetBitfield(indexInCommittee, len(assignment.Committee))
+	if err != nil {
+		log.Errorf("Could not set bitfield: %v", err)
+	}
 	attestation.AggregationBitfield = aggregationBitfield
 
 	// TODO(#1366): Use BLS to generate an aggregate signature.
@@ -173,7 +177,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	if err != nil {
 		log.WithError(err).Error("Failed to submit attestation")
 	}
-
+	// TODO Check    span.AddAttributes and log with master
 	log.WithFields(logrus.Fields{
 		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attData.BeaconBlockRootHash32)),
 		"slot":      attData.Slot - params.BeaconConfig().GenesisSlot,
@@ -183,11 +187,11 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)),
-		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attestationHash)),
 		trace.Int64Attribute("shard", int64(attData.Shard)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32)),
 		trace.Int64Attribute("justifiedEpoch", int64(attData.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
+		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attestationHash)),
 	)
 }
 

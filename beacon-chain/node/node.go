@@ -55,6 +55,7 @@ type BeaconNode struct {
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if err := tracing.Setup(
 		"beacon-chain", // service name
+		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
 		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
 		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
 		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
@@ -338,6 +339,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
 	var operationService *operations.Service
 	if err := b.services.FetchService(&operationService); err != nil {
 		return err
@@ -361,6 +367,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		CertFlag:         cert,
 		KeyFlag:          key,
 		BeaconDB:         b.db,
+		Broadcaster:      p2pService,
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,

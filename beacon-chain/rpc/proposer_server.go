@@ -46,6 +46,10 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 	for beaconState.Slot < req.SlotNumber {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		beaconState, err = state.ExecuteStateTransition(
 			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
 		)
@@ -83,15 +87,11 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
+	ps.chainService.UpdateCanonicalRoots(blk, h)
 	log.WithFields(logrus.Fields{
-		"headRoot":  fmt.Sprintf("0x%x", bytesutil.Trunc(h[:])),
-		"headSlot":  blk.Slot - params.BeaconConfig().GenesisSlot,
-		"stateSlot": beaconState.Slot - params.BeaconConfig().GenesisSlot,
+		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headSlot": blk.Slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Chain head block and state updated")
-
-	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
-	}
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
@@ -119,8 +119,12 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	}
 
 	for beaconState.Slot < req.ProposalBlockSlot-1 {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
+			ctx, beaconState, nil /* block */, blockRoot, state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
@@ -129,19 +133,57 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	beaconState.Slot++
 
 	var attsReadyForInclusion []*pbp2p.Attestation
-	for _, val := range atts {
-		if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
-			attsReadyForInclusion = append(attsReadyForInclusion, val)
+	for _, att := range atts {
+		if att.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
+			attsReadyForInclusion = append(attsReadyForInclusion, att)
 		}
 	}
 
 	validAtts := make([]*pbp2p.Attestation, 0, len(attsReadyForInclusion))
 	for _, att := range attsReadyForInclusion {
 		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
-			log.WithError(err).WithField(
-				"slot", att.Data.Slot-params.BeaconConfig().GenesisSlot).Warn(
-				"Skipping, pending attestation failed verification")
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+
+			log.WithError(err).WithFields(logrus.Fields{
+				"slot":     att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Info(
+				"Deleting failed pending attestation from DB")
+			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
+			}
 			continue
+		}
+		if valid, err := helpers.VerifyAttestationBitfield(beaconState, att); err != nil || !valid {
+			if err != nil {
+				log.WithError(err)
+			} else {
+				log.Error("invalid attestation bitfield")
+			}
+
+			log.WithFields(logrus.Fields{
+				"slot":     att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Info(
+				"Deleting failed pending attestation from DB")
+			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
+			}
+			continue
+		}
+		if featureconfig.FeatureConfig().EnableCanonicalAttestationFilter {
+			canonical, err := ps.operationService.IsAttCanonical(ctx, att)
+			if err != nil {
+				// Delete attestation that failed to verify as canonical.
+				if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+					return nil, fmt.Errorf("could not delete failed attestation: %v", err)
+				}
+				return nil, fmt.Errorf("could not verify canonical attestation: %v", err)
+			}
+			// Skip the attestation if it's not canonical.
+			if !canonical {
+				continue
+			}
 		}
 		validAtts = append(validAtts, att)
 	}
@@ -167,6 +209,10 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 	parentHash := bytesutil.ToBytes32(req.ParentRootHash32)
 	// Check for skipped slots.
 	for beaconState.Slot < req.Slot-1 {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		beaconState, err = state.ExecuteStateTransition(
 			ctx,
 			beaconState,
