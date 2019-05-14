@@ -114,15 +114,13 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	slashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("B"),
 			},
 		},
 	}
@@ -159,15 +157,13 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("B"),
 			},
 		},
 	}
@@ -213,6 +209,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 	want := "could not process block attestations"
+	fmt.Println(beaconState.ValidatorRegistry[1])
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -228,15 +225,13 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            params.BeaconConfig().GenesisSlot + 1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            params.BeaconConfig().GenesisSlot + 1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("B"),
 			},
 		},
 	}
@@ -321,15 +316,13 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("B"),
 			},
 		},
 	}
