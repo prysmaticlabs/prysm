@@ -61,6 +61,7 @@ spec:
             - --datadir=/data
             - --p2p-max-peers=50
             - --enable-canonical-attestation-filter
+            - --log-format=fluentd
           resources:
             requests:
               memory: "100Mi"
