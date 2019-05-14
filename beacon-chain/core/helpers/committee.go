@@ -32,27 +32,27 @@ type CrosslinkCommittee struct {
 // Spec pseudocode definition:
 //   def get_epoch_committee_count(state: BeaconState, epoch: Epoch) -> int:
 //    """
-//    Return the number of committees in one epoch.
+//    Return the number of committees at ``epoch``.
 //    """
-//    active_validators = get_active_validator_indices(state, epoch)
+//    active_validator_indices = get_active_validator_indices(state, epoch)
 //    return max(
 //        1,
 //        min(
 //            SHARD_COUNT // SLOTS_PER_EPOCH,
-//            len(active_validators) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
+//            len(active_validator_indices) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //        )
 //    ) * SLOTS_PER_EPOCH
-func EpochCommitteeCount(beaconState *pb.BeaconState, epoch uint64) uint64 {
-	var minCommitteePerSlot = uint64(1)
-	activeValidatorCount := uint64(len(ActiveValidatorIndices(beaconState.ValidatorRegistry, epoch)))
+func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
+	activeIndices := ActiveValidatorIndices(state.ValidatorRegistry, epoch)
+	minCommitteePerSlot := uint64(1)
 	// Max committee count per slot will be 0 when shard count is less than epoch length, this
 	// covers the special case to ensure there's always 1 max committee count per slot.
 	var committeeSizesPerSlot = minCommitteePerSlot
 	if params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch > minCommitteePerSlot {
 		committeeSizesPerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().SlotsPerEpoch
 	}
-
-	var currCommitteePerSlot = activeValidatorCount / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
+	count := uint64(len(activeIndices))
+	var currCommitteePerSlot = count / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 
 	if currCommitteePerSlot > committeeSizesPerSlot {
 		return committeeSizesPerSlot * params.BeaconConfig().SlotsPerEpoch
@@ -518,6 +518,33 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 		return EpochCommitteeCount(beaconState, epoch)
 	}
 	return minShardDelta
+}
+
+// EpochStartShard returns the start shard used to process crosslink
+// of a given epoch.
+//
+// Spec pseudocode definition:
+//   def get_epoch_start_shard(state: BeaconState, epoch: Epoch) -> Shard:
+//    assert epoch <= get_current_epoch(state) + 1
+//    check_epoch = get_current_epoch(state) + 1
+//    shard = (state.latest_start_shard + get_shard_delta(state, get_current_epoch(state))) % SHARD_COUNT
+//    while check_epoch > epoch:
+//        check_epoch -= 1
+//        shard = (shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT
+//    return shard
+func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	currentEpoch := CurrentEpoch(state)
+	checkEpoch := currentEpoch + 1
+	if epoch > checkEpoch {
+		return 0, fmt.Errorf("epoch %d can't be greater than %d",
+			epoch, checkEpoch)
+	}
+	shard := (state.LatestStartShard + ShardDelta(state, currentEpoch)) % params.BeaconConfig().ShardCount
+	for checkEpoch > epoch {
+		checkEpoch--
+		shard = (shard + params.BeaconConfig().ShardCount - ShardDelta(state, checkEpoch)) % params.BeaconConfig().ShardCount
+	}
+	return shard, nil
 }
 
 // RestartCommitteeCache restarts the committee cache from scratch.

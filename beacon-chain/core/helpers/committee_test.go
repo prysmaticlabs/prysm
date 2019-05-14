@@ -193,6 +193,9 @@ func TestShuffling_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not shuffle validators: %v", err)
 	}
+	state = &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}
 
 	// Verify shuffled list is correctly split into committees_per_slot pieces.
 	committeesPerEpoch = EpochCommitteeCount(state, 1)
@@ -793,5 +796,74 @@ func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 			wantedCommittee,
 			fetchedCommittees.Committees[0].Committee,
 		)
+	}
+}
+
+func TestShardDelta_Ok(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	min := params.BeaconConfig().ShardCount - params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
+	tests := []struct {
+		validatorCount uint64
+		shardDelta     uint64
+	}{
+		{0, params.BeaconConfig().SlotsPerEpoch},
+		{1000, params.BeaconConfig().SlotsPerEpoch},
+		{2 * validatorsPerEpoch, 2 * params.BeaconConfig().SlotsPerEpoch},
+		{5 * validatorsPerEpoch, 5 * params.BeaconConfig().SlotsPerEpoch},
+		{16 * validatorsPerEpoch, min},
+		{32 * validatorsPerEpoch, min},
+	}
+	for _, test := range tests {
+		validators := make([]*pb.Validator, test.validatorCount)
+		for i := 0; i < len(validators); i++ {
+			validators[i] = &pb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+		state := &pb.BeaconState{ValidatorRegistry: validators}
+		if test.shardDelta != ShardDelta(state, params.BeaconConfig().GenesisEpoch) {
+			t.Errorf("wanted: %d, got: %d",
+				test.shardDelta, ShardDelta(state, params.BeaconConfig().GenesisEpoch))
+		}
+	}
+}
+
+func TestEpochStartShard_EpochOutOfBound(t *testing.T) {
+	_, err := EpochStartShard(&pb.BeaconState{}, 2)
+	want := "epoch 2 can't be greater than 1"
+	if err.Error() != want {
+		t.Fatalf("Did not generate correct error. Want: %s, got: %s",
+			err.Error(), want)
+	}
+}
+
+func TestEpochStartShard_AccurateShard(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	tests := []struct {
+		validatorCount uint64
+		startShard     uint64
+	}{
+		{0, 676},
+		{1000, 676},
+		{2 * validatorsPerEpoch, 228},
+		{5 * validatorsPerEpoch, 932},
+		{16 * validatorsPerEpoch, 212},
+		{32 * validatorsPerEpoch, 212},
+	}
+	for _, test := range tests {
+		validators := make([]*pb.Validator, test.validatorCount)
+		for i := 0; i < len(validators); i++ {
+			validators[i] = &pb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+		state := &pb.BeaconState{ValidatorRegistry: validators, LatestStartShard: 100, Slot: 500}
+		startShard, err := EpochStartShard(state, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.startShard != startShard {
+			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
+		}
 	}
 }
