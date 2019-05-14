@@ -255,13 +255,12 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 	}
 
 	bitfield := attestation.AggregationBitfield
-	fmt.Println(a.canProcessBitfield(committee, bitfield, len(beaconState.ValidatorRegistry)))
 	if !a.canProcessBitfield(committee, bitfield, len(beaconState.ValidatorRegistry)) {
 		if featureconfig.FeatureConfig().EnableForkedAttestationProcessing {
 			a.forkedAttestations = append(a.forkedAttestations, attestation)
 		}
 
-		return fmt.Errorf("don't have the correct state to process forked attestation %d",
+		return fmt.Errorf("invalid state to process forked attestation at slot %d",
 			attestation.Data.Slot-params.BeaconConfig().GenesisSlot)
 	}
 
@@ -272,10 +271,7 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		"lengthOfCommittees": len(committee),
 	}).Debug("Updating latest attestation")
 
-	// The participation bitfield from attestation is represented in bytes,
-	// here we multiply by 8 to get an accurate validator count in bits.
 	totalBits := len(bitfield) * 8
-
 	for i := 0; i < totalBits; i++ {
 		bitSet, err := bitutil.CheckBit(bitfield, i)
 		if err != nil {
@@ -367,7 +363,8 @@ func (a *Service) sortAttestations(attestations []*pb.Attestation) []*pb.Attesta
 // canProcessBitfield returns true if we can process attestation based on the committee length
 // and validator count.
 func (a *Service) canProcessBitfield(committee []uint64, bitfield []byte, validatorCount int) bool {
-	for i := 0; i < len(bitfield); i++ {
+	totalBits := len(bitfield) * 8
+	for i := 0; i < totalBits; i++ {
 		bitSet, err := bitutil.CheckBit(bitfield, i)
 		if err != nil {
 			return false

@@ -401,7 +401,7 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 		},
 	}
 
-	wanted := "bitfield points to an invalid index in the committee"
+	wanted := "invalid state to process forked attestation at slot"
 
 	if err := service.UpdateLatestAttestation(ctx, attestation); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Wanted: %s but got %s", wanted, err)
