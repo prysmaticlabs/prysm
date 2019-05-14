@@ -28,7 +28,7 @@ import (
 var _ = BlockProcessor(&ChainService{})
 
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
 	parent, err := chainService.beaconDB.Block(parentRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +49,7 @@ func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *Chain
 	if err != nil {
 		t.Fatalf("could not tree hash state: %v", err)
 	}
-	block.StateRootHash32 = stateRoot[:]
+	block.StateRoot = stateRoot[:]
 	t.Logf("state root after block: %#x", stateRoot)
 }
 
@@ -81,12 +81,13 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: parentRoot[:],
+		Slot:            2,
+		ParentBlockRoot: parentRoot[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
+		Body: &pb.BeaconBlockBody{},
 	}
 
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
@@ -106,8 +107,8 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -138,15 +139,15 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	block := &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     randaoReveal,
+		Slot:            beaconState.Slot,
+		StateRoot:       stateRoot[:],
+		ParentBlockRoot: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal: randaoReveal,
 			Attestations: nil,
 		},
 	}
@@ -178,8 +179,8 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -200,15 +201,15 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	}
 	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
 	block := &pb.BeaconBlock{
-		Slot:             beaconState.Slot + 4,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     []byte{},
+		Slot:            beaconState.Slot + 4,
+		StateRoot:       stateRoot[:],
+		ParentBlockRoot: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{},
 			Attestations: nil,
 		},
 	}
@@ -233,8 +234,8 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -256,15 +257,15 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	beaconState.Slot++
 
 	block := &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     []byte{},
+		Slot:            beaconState.Slot,
+		StateRoot:       stateRoot[:],
+		ParentBlockRoot: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{},
 			Attestations: []*pb.Attestation{
 				{
 					Data: &pb.AttestationData{
@@ -316,8 +317,8 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -335,10 +336,11 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 
 	beaconState.Slot++
 	goodStateBlock := &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            beaconState.Slot,
+		ParentBlockRoot: parentHash[:],
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
+		},
 	}
 	beaconState.Slot--
 	initBlockStateRoot(t, goodStateBlock, chainService)
@@ -361,8 +363,8 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	ctx := context.Background()
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -379,11 +381,12 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 
 	beaconState.Slot++
 	invalidStateBlock := &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		StateRootHash32:  []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            beaconState.Slot,
+		StateRoot:       []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
+		ParentBlockRoot: parentHash[:],
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
+		},
 	}
 	beaconState.Slot--
 
@@ -408,8 +411,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -447,30 +450,30 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatalf("Could not generate deposit trie: %v", err)
 	}
 	for i := range pendingDeposits {
-		pendingDeposits[i].MerkleTreeIndex = 0
-		proof, err := depositTrie.MerkleProof(int(pendingDeposits[i].MerkleTreeIndex))
+		pendingDeposits[i].Index = 0
+		proof, err := depositTrie.MerkleProof(int(pendingDeposits[i].Index))
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}
-		pendingDeposits[i].MerkleProofHash32S = proof
+		pendingDeposits[i].Proof = proof
 	}
 	depositRoot := depositTrie.Root()
-	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
+	beaconState.LatestEth1Data.DepositRoot = depositRoot[:]
 	if err := db.SaveHistoricalState(context.Background(), beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:             currentSlot + 1,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     randaoReveal,
+		Slot:            currentSlot + 1,
+		StateRoot:       stateRoot[:],
+		ParentBlockRoot: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
-			Deposits: pendingDeposits,
+			RandaoReveal: randaoReveal,
+			Deposits:     pendingDeposits,
 		},
 	}
 
@@ -571,8 +574,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -596,11 +599,12 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	blockSlots := []uint64{1, 2, 3, 5, 8}
 	for _, slot := range blockSlots {
 		block := &pb.BeaconBlock{
-			Slot:             genesisSlot + slot,
-			StateRootHash32:  stateRoot[:],
-			ParentRootHash32: parentHash[:],
-			RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-			Body:             &pb.BeaconBlockBody{},
+			Slot:            genesisSlot + slot,
+			StateRoot:       stateRoot[:],
+			ParentBlockRoot: parentHash[:],
+			Body: &pb.BeaconBlockBody{
+				RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
+			},
 		}
 		initBlockStateRoot(t, block, chainService)
 		computedState, err := chainService.ReceiveBlock(ctx, block)
@@ -645,11 +649,16 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 	// Then we receive the block `f` from slot 6
 	blockF := &pb.BeaconBlock{
-		Slot:             genesisSlot + 6,
-		ParentRootHash32: parentHash[:],
-		StateRootHash32:  stateRoot[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            genesisSlot + 6,
+		ParentBlockRoot: parentHash[:],
+		StateRoot:       stateRoot[:],
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
+		},
+	}
+	rootF, _ := hashutil.HashBeaconBlock(blockF)
+	if err := db.SaveHistoricalState(ctx, beaconState, rootF); err != nil {
+		t.Fatal(err)
 	}
 	rootF, _ := hashutil.HashBeaconBlock(blockF)
 	if err := db.SaveHistoricalState(ctx, beaconState, rootF); err != nil {
@@ -678,11 +687,12 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 
 	// Then we apply block `g` from slot 7
 	blockG := &pb.BeaconBlock{
-		Slot:             genesisSlot + 7,
-		ParentRootHash32: parentHash[:],
-		StateRootHash32:  stateRoot[:],
-		RandaoReveal:     createRandaoReveal(t, computedState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Slot:            genesisSlot + 7,
+		ParentBlockRoot: parentHash[:],
+		StateRoot:       stateRoot[:],
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: createRandaoReveal(t, computedState, privKeys),
+		},
 	}
 	initBlockStateRoot(t, blockG, chainService)
 
@@ -712,7 +722,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}
 	block := &pb.BeaconBlock{
-		ParentRootHash32: []byte{'a'},
+		ParentBlockRoot: []byte{'a'},
 	}
 
 	if err := chainService.VerifyBlockValidity(ctx, block, beaconState); err == nil {
@@ -735,8 +745,8 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	}
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: []byte{2},
-		BlockHash32:       []byte{3},
+		DepositRoot: []byte{2},
+		BlockRoot:   []byte{3},
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot
 
@@ -745,15 +755,15 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block2 := &pb.BeaconBlock{
-		Slot:             currentSlot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentRoot[:],
-		RandaoReveal:     randaoReveal,
+		Slot:            currentSlot,
+		StateRoot:       stateRoot[:],
+		ParentBlockRoot: parentRoot[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRoot: []byte("a"),
+			BlockRoot:   []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal: randaoReveal,
 			Attestations: []*pb.Attestation{{
 				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},

@@ -49,7 +49,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       finalizedState.LatestBlock.Slot,
 		BlockRoot:  finalizedBlockRoot[:],
-		ParentRoot: finalizedState.LatestBlock.ParentRootHash32,
+		ParentRoot: finalizedState.LatestBlock.ParentBlockRoot,
 	}); err != nil {
 		log.Errorf("Could not to save attestation target: %v", err)
 		return nil
@@ -65,7 +65,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
+	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockRoot))
 	if err != nil {
 		log.Errorf("Unable to get powchain block %v", err)
 	}

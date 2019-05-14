@@ -61,13 +61,13 @@ func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*
 	}
 	// Sort the deposits by Merkle index.
 	sort.SliceStable(deposits, func(i, j int) bool {
-		return deposits[i].MerkleTreeIndex < deposits[j].MerkleTreeIndex
+		return deposits[i].Index < deposits[j].Index
 	})
 	return deposits
 }
 
 // RemovePendingDeposit from the database. The deposit is indexed by the
-// MerkleTreeIndex. This method does nothing if deposit ptr is nil.
+// Index. This method does nothing if deposit ptr is nil.
 func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.RemovePendingDeposit")
 	defer span.End()
@@ -82,7 +82,7 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 
 	idx := -1
 	for i, ctnr := range db.pendingDeposits {
-		if ctnr.deposit.MerkleTreeIndex == d.MerkleTreeIndex {
+		if ctnr.deposit.Index == d.Index {
 			idx = i
 			break
 		}
@@ -109,7 +109,7 @@ func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex ui
 
 	var cleanDeposits []*depositContainer
 	for _, dp := range db.pendingDeposits {
-		if dp.deposit.MerkleTreeIndex >= merkleTreeIndex {
+		if dp.deposit.Index >= merkleTreeIndex {
 			cleanDeposits = append(cleanDeposits, dp)
 		}
 	}

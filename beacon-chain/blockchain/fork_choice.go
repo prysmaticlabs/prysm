@@ -43,7 +43,7 @@ type TargetsFetcher interface {
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
 func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconState) error {
-	lastJustifiedSlot := helpers.StartSlot(state.JustifiedEpoch)
+	lastJustifiedSlot := helpers.StartSlot(state.CurrentJustifiedEpoch)
 	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
 		return err
@@ -334,7 +334,7 @@ func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock,
 
 	filteredChildren := []*pb.BeaconBlock{}
 	for _, kid := range children {
-		parentRoot := bytesutil.ToBytes32(kid.ParentRootHash32)
+		parentRoot := bytesutil.ToBytes32(kid.ParentBlockRoot)
 		if blockRoot == parentRoot {
 			filteredChildren = append(filteredChildren, kid)
 		}
@@ -349,10 +349,10 @@ func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.Bea
 		return false, nil
 	}
 	for newHead.Slot > currentHead.Slot {
-		if bytesutil.ToBytes32(newHead.ParentRootHash32) == currentHeadRoot {
+		if bytesutil.ToBytes32(newHead.ParentBlockRoot) == currentHeadRoot {
 			return true, nil
 		}
-		newHead, err = c.beaconDB.Block(bytesutil.ToBytes32(newHead.ParentRootHash32))
+		newHead, err = c.beaconDB.Block(bytesutil.ToBytes32(newHead.ParentBlockRoot))
 		if err != nil {
 			return false, err
 		}
@@ -454,7 +454,7 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 	newTarget := &pb.AttestationTarget{
 		Slot:       parent.Slot,
 		BlockRoot:  parentRoot[:],
-		ParentRoot: parent.ParentRootHash32,
+		ParentRoot: parent.ParentBlockRoot,
 	}
 	return BlockAncestor(newTarget, slot, beaconDB)
 }
@@ -485,7 +485,7 @@ func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.Be
 	ancestorTarget := &pb.AttestationTarget{
 		Slot:       ancestor.Slot,
 		BlockRoot:  ancestorRoot,
-		ParentRoot: ancestor.ParentRootHash32,
+		ParentRoot: ancestor.ParentBlockRoot,
 	}
 	if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
 		Height: height,

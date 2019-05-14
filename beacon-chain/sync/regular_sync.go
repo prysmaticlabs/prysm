@@ -606,7 +606,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 	}
 
 	bList := []*pb.BeaconBlock{b}
-	parentRoot := b.ParentRootHash32
+	parentRoot := b.ParentBlockRoot
 	for !bytes.Equal(parentRoot, finalizedRoot) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -622,7 +622,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		// Prepend parent to the beginning of the list.
 		bList = append([]*pb.BeaconBlock{b}, bList...)
 
-		parentRoot = b.ParentRootHash32
+		parentRoot = b.ParentBlockRoot
 	}
 	return bList, nil
 }

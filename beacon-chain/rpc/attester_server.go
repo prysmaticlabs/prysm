@@ -52,7 +52,7 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 	attTarget := &pbp2p.AttestationTarget{
 		Slot:       att.Data.Slot,
 		BlockRoot:  att.Data.BeaconBlockRootHash32,
-		ParentRoot: head.ParentRootHash32,
+		ParentRoot: head.ParentBlockRoot,
 	}
 	if err := as.beaconDB.SaveAttestationTarget(ctx, attTarget); err != nil {
 		return nil, fmt.Errorf("could not save attestation target")
@@ -78,17 +78,6 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	}
 
 	if err := as.cache.MarkInProgress(req); err != nil {
-		if err == cache.ErrAlreadyInProgress {
-			res, err := as.cache.Get(ctx, req)
-			if err != nil {
-				return nil, err
-			}
-
-			if res == nil {
-				return nil, errors.New("a request was in progress and resolved to nil")
-			}
-			return res, nil
-		}
 		return nil, err
 	}
 	defer func() {
@@ -149,7 +138,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
 	// If the last justified boundary slot is the same as state current slot (ex: slot 0),
 	// we set justified block root to an empty root.
-	justifiedBlockRoot := headState.JustifiedRoot
+	justifiedBlockRoot := headState.CurrentJustifiedRoot
 
 	// If an attester has to attest for genesis block.
 	if headState.Slot == params.BeaconConfig().GenesisSlot {
@@ -161,7 +150,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 		HeadSlot:                 headState.Slot,
 		BeaconBlockRootHash32:    headRoot[:],
 		EpochBoundaryRootHash32:  epochBoundaryRoot,
-		JustifiedEpoch:           headState.JustifiedEpoch,
+		JustifiedEpoch:           headState.CurrentJustifiedEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot,
 		LatestCrosslink:          headState.LatestCrosslinks[req.Shard],
 	}

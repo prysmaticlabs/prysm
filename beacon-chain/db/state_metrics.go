@@ -62,7 +62,7 @@ func reportStateMetrics(state *pb.BeaconState) {
 	e := params.BeaconConfig().GenesisEpoch
 	currentEpoch := state.Slot / params.BeaconConfig().SlotsPerEpoch
 	// Validator balances
-	for i, bal := range state.ValidatorBalances {
+	for i, bal := range state.Balances {
 		validatorBalancesGauge.WithLabelValues(
 			"0x" + hex.EncodeToString(state.ValidatorRegistry[i].Pubkey), // Validator
 		).Set(float64(bal))
@@ -92,7 +92,7 @@ func reportStateMetrics(state *pb.BeaconState) {
 	// Slot number
 	lastSlotGauge.Set(float64(state.Slot - s))
 	// Last justified slot
-	lastJustifiedEpochGauge.Set(float64(state.JustifiedEpoch - e))
+	lastJustifiedEpochGauge.Set(float64(state.CurrentJustifiedEpoch - e))
 	// Last previous justified slot
 	lastPrevJustifiedEpochGauge.Set(float64(state.PreviousJustifiedEpoch - e))
 	// Last finalized slot

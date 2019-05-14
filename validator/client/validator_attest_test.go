@@ -142,11 +142,11 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			EpochBoundaryRootHash32:  []byte("B"),
 			JustifiedBlockRootHash32: []byte("C"),
 			LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+			CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
 			JustifiedEpoch:           3,
 		},
-		CustodyBitfield:    make([]byte, (len(committee)+7)/8),
-		AggregateSignature: []byte("signed"),
+		CustodyBitfield: make([]byte, (len(committee)+7)/8),
+		Signature:       []byte("signed"),
 	}
 	aggregationBitfield, err := bitutil.SetBitfield(4, len(committee))
 	if err != nil {

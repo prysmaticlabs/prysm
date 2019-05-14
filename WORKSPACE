@@ -1081,12 +1081,6 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_connmgr",
-    commit = "5249ec107e4544863dd8c61a6417b640d03a62a2",  # v0.0.4
+    commit = "5249ec107e4544863dd8c61a6417b640d03a62a2",
     importpath = "github.com/libp2p/go-libp2p-connmgr",
-)
-
-go_repository(
-    name = "com_github_joonix_log",
-    commit = "e0e770ceed363301a4f50bbc9599c6925c77b2d8",
-    importpath = "github.com/joonix/log",
 )

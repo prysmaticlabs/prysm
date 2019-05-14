@@ -265,7 +265,7 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		return err
 	}
 	if cachedCommittees == nil {
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false /* registryChange */)
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot)
 		if err != nil {
 			return err
 		}

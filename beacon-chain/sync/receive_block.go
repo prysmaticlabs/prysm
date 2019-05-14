@@ -149,7 +149,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	}
 
 	// We check if we have the block's parents saved locally.
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
 	hasParent := rs.db.HasBlock(parentRoot)
 	span.AddAttributes(trace.BoolAttribute("hasParent", hasParent))
 
@@ -186,7 +186,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	if headRoot != bytesutil.ToBytes32(block.ParentRootHash32) {
+	if headRoot != bytesutil.ToBytes32(block.ParentBlockRoot) {
 		// Save historical state from forked block.
 		forkedBlock.Inc()
 		log.WithFields(logrus.Fields{

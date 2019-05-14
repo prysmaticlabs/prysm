@@ -41,8 +41,10 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	tests := []struct {
@@ -51,23 +53,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 1,
-			index: 504,
+			index: 16165,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 10,
-			index: 2821,
+			slot:  params.BeaconConfig().GenesisSlot + 5,
+			index: 2777,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 19,
-			index: 5132,
+			index: 14911,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 30,
-			index: 7961,
+			index: 16028,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 39,
-			index: 10272,
+			slot:  params.BeaconConfig().GenesisSlot + 43,
+			index: 4401,
 		},
 	}
 
@@ -88,18 +90,55 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
-	_, err := BeaconProposerIndex(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, params.BeaconConfig().GenesisSlot)
+	beaconState := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+	_, err := BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
 	expected := fmt.Sprintf("empty first committee at slot %d", 0)
 	if err.Error() != expected {
 		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
 	}
 }
 
-func TestEntryExitEffectEpoch_OK(t *testing.T) {
+func TestDelayedActivationExitEpoch_OK(t *testing.T) {
 	epoch := uint64(9999)
-	got := EntryExitEffectEpoch(epoch)
+	got := DelayedActivationExitEpoch(epoch)
 	wanted := epoch + 1 + params.BeaconConfig().ActivationExitDelay
 	if wanted != got {
 		t.Errorf("Wanted: %d, received: %d", wanted, got)
+	}
+}
+
+func TestChurnLimit_OK(t *testing.T) {
+	tests := []struct {
+		validatorCount int
+		wantedChurn    uint64
+	}{
+		{validatorCount: 1000, wantedChurn: 4},
+		{validatorCount: 100000, wantedChurn: 4},
+		{validatorCount: 1000000, wantedChurn: 15 /* validatorCount/churnLimitQuotient */},
+		{validatorCount: 2000000, wantedChurn: 30 /* validatorCount/churnLimitQuotient */},
+	}
+	for _, test := range tests {
+		validators := make([]*pb.Validator, test.validatorCount)
+		for i := 0; i < len(validators); i++ {
+			validators[i] = &pb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+
+		beaconState := &pb.BeaconState{
+			Slot:                   1,
+			ValidatorRegistry:      validators,
+			LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+			LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		}
+		resultChurn := ChurnLimit(beaconState)
+		if resultChurn != test.wantedChurn {
+			t.Errorf("ChurnLimit(%d) = %d, want = %d",
+				test.validatorCount, resultChurn, test.wantedChurn)
+		}
 	}
 }
