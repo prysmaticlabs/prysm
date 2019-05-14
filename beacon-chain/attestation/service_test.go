@@ -508,41 +508,56 @@ func TestForkedAttestation_CanProcess(t *testing.T) {
 	var validators []*pb.Validator
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
-			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+			Pubkey:    []byte{byte(i)},
+			ExitEpoch: params.BeaconConfig().GenesisEpoch + 10,
 		})
 	}
-
 	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		Slot:              params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		ValidatorRegistry: validators,
 	}
-	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 1,
-	}
-	if err := beaconDB.SaveBlock(block); err != nil {
-		t.Fatal(err)
-	}
-	beaconState.LatestBlock = block
-	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
-		t.Fatal(err)
-	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-	service.poolLimit = 9
-	for i := 0; i < 10; i++ {
-		attestation := &pb.Attestation{
-			AggregationBitfield: []byte{0x80},
+
+	attestations := []*pb.Attestation{
+		{AggregationBitfield: []byte{0x80}, // Will be deleted because too old
 			Data: &pb.AttestationData{
 				Slot:  params.BeaconConfig().GenesisSlot + 1,
 				Shard: 1,
-			},
-		}
-		if err := service.handleAttestation(ctx, attestation); err != nil {
-			t.Fatalf("could not update latest attestation: %v", err)
-		}
+			}},
+		{AggregationBitfield: []byte{0x80}, // Will be deleted because too old
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Shard: 1,
+			}},
+		{AggregationBitfield: []byte{0x80}, // Will be deleted because can process
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
+				Shard: 1,
+			}},
+		{AggregationBitfield: []byte{0x80}, // Will be deleted because too old
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + 5,
+				Shard: 1,
+			}},
+		{AggregationBitfield: []byte{0x80}, // Will be preserved because invalid state (bitfield)
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 2,
+				Shard: 1,
+			}},
 	}
-	if len(service.pooledAttestations) != 0 {
-		t.Errorf("pooled attestations were not cleared out, still %d attestations in pool", len(service.pooledAttestations))
+	service.forkedAttestations = attestations
+	if err := service.ProcessForkedAtts(ctx, [32]byte{'a'}, beaconState); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+
+	wanted := []*pb.Attestation{
+		{AggregationBitfield: []byte{0x80},
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 2,
+				Shard: 1,
+			}},
+	}
+	if !reflect.DeepEqual(service.forkedAttestations, wanted) {
+		t.Error("Incorrect forked attestations post processing")
 	}
 }

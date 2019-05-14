@@ -315,13 +315,16 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 
 // ProcessForkedAtts attempts to update the attestation target with the invalid forked attestations up to previous epoch.
 func (a *Service) ProcessForkedAtts(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState) error {
-	for i, att := range a.forkedAttestations {
+	for i := 0; i < len(a.forkedAttestations); i++ {
+		att := a.forkedAttestations[i]
+
 		// Delete the forked attestation if it's more than one epoch old.
 		if att.Data.Slot <= beaconState.Slot-params.BeaconConfig().SlotsPerEpoch {
 			log.WithFields(logrus.Fields{
+				"currentSlot":      beaconState.Slot - params.BeaconConfig().GenesisSlot,
 				"attestationSlot":  att.Data.Slot - params.BeaconConfig().GenesisSlot,
 				"attestationShard": att.Data.Shard,
-			}).Info("Deleting forked attestation that's one epoch old")
+			}).Debug("Deleting forked attestation that's one epoch old")
 			a.forkedAttestations = append(a.forkedAttestations[:i], a.forkedAttestations[i+1:]...)
 			i--
 			continue
@@ -333,16 +336,22 @@ func (a *Service) ProcessForkedAtts(ctx context.Context, headRoot [32]byte, beac
 			return err
 		}
 		if !a.canProcessBitfield(committee, att.AggregationBitfield, len(beaconState.ValidatorRegistry)) {
+			log.WithFields(logrus.Fields{
+				"currentSlot":      beaconState.Slot - params.BeaconConfig().GenesisSlot,
+				"attestationSlot":  att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"attestationShard": att.Data.Shard,
+			}).Debug("Could not process forked attestation bitfield")
 			continue
 		}
 
 		// Update the attestation target with the forked attestation if we can process,
 		// and delete the forked attestation after processing it.
 		if err := a.updateAttestation(ctx, headRoot, beaconState, att); err != nil {
+			fmt.Println(err)
 			log.WithError(err).WithFields(logrus.Fields{
 				"attestationSlot":  att.Data.Slot - params.BeaconConfig().GenesisSlot,
 				"attestationShard": att.Data.Shard,
-			}).Info("Deleting forked attestation failed to update")
+			}).Debug("Forked attestation failed to update")
 		}
 		a.forkedAttestations = append(a.forkedAttestations[:i], a.forkedAttestations[i+1:]...)
 		i--
