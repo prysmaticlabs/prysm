@@ -51,8 +51,10 @@ func (db *ValidatorDB) GetProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey,
 	forkVersion := forkutil.ForkVersion(fork, epoch)
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := getBucket(tx, pubKey, forkVersion, proposedBlockBucket, false)
-		blockEnc := bucket.Get(bytesutil.Bytes8(epoch))
-		block, err = createBlock(blockEnc)
+		if bucket != nil {
+			blockEnc := bucket.Get(bytesutil.Bytes8(epoch))
+			block, err = createBlock(blockEnc)
+		}
 		return err
 	})
 	return
