@@ -30,7 +30,7 @@ var committeeCache = cache.NewCommitteesCache()
 type TargetHandler interface {
 	LatestAttestationTarget(state *pb.BeaconState, validatorIndex uint64) (*pb.AttestationTarget, error)
 	BatchUpdateLatestAttestation(ctx context.Context, atts []*pb.Attestation) error
-	ProcessInvalidForkedAtts(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState) error
+	ProcessForkedAtts(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState) error
 }
 
 type attestationStore struct {
