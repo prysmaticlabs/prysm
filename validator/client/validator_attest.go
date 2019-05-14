@@ -31,14 +31,12 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	)
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-
 	// Retrieve the current fork data from the beacon node.
 	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.Errorf("Failed to get fork data from beacon node's state: %v", err)
 		return
 	}
-
 	// if the attestation has already been submit, then resend it
 	attestation, err := v.db.GetAttestation(fork, v.keys[idx].PublicKey, epoch)
 	if err != nil {

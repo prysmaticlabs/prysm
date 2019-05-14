@@ -19,7 +19,7 @@ type ValidatorDB struct {
 	stateLock              sync.RWMutex
 	db                     *bolt.DB
 	DatabasePath           string
-	lastProposedBlockEpoch map[bls.PublicKey]uint64
+	lastProposedBlockEpoch map[bls.PublicKey]uint64 //TODO test work with cache
 	lastAttestationEpoch   map[bls.PublicKey]uint64
 }
 

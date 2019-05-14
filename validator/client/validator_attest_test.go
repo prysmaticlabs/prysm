@@ -345,3 +345,129 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBitfield))
 	}
 }
+
+func TestAttestToBlockHead_SameSignatureForSameSlot(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	validatorIndex := uint64(7)
+	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
+			Shard:     5,
+			Committee: committee,
+		}}}
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{
+		Index: uint64(validatorIndex),
+	}, nil).Times(1)
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
+	).Return(&pb.AttestationDataResponse{
+		HeadSlot: 30,
+	}, nil).Times(1)
+
+	var generatedAttestations []*pbp2p.Attestation
+	m.attesterClient.EXPECT().AttestHead(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
+	).Do(func(_ context.Context, attestation *pbp2p.Attestation) {
+		generatedAttestations = append(generatedAttestations, attestation)
+	}).Return(&pb.AttestResponse{}, nil /* error */).Times(2)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/).Times(2)
+
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+
+	if len(generatedAttestations) != 1 {
+		t.Errorf("not one broadcast attestations per call validator.AttestToBlockHead")
+	}
+
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+
+	if !proto.Equal(generatedAttestations[0], generatedAttestations[1]) {
+		t.Errorf("Different attest for same slot")
+	}
+}
+
+func TestAttestToBlockHead_DifferentSignatureForSameSlotButDifferentFork(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	validatorIndex := uint64(7)
+	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
+			Shard:     5,
+			Committee: committee,
+		}}}
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{
+		Index: uint64(validatorIndex),
+	}, nil).Times(2)
+
+	var generatedAttestations []*pbp2p.Attestation
+	m.attesterClient.EXPECT().AttestHead(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
+	).Do(func(_ context.Context, attestation *pbp2p.Attestation) {
+		generatedAttestations = append(generatedAttestations, attestation)
+	}).Return(&pb.AttestResponse{}, nil /* error */).Times(2)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
+	).Return(&pb.AttestationDataResponse{
+		BeaconBlockRootHash32: []byte("A"),
+	}, nil)
+
+	validator.AttestToBlockHead(context.Background(), params.BeaconConfig().GenesisSlot+300, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+
+	if len(generatedAttestations) != 1 {
+		t.Errorf("not one broadcast attestations per call validator.AttestToBlockHead")
+	}
+
+	// change fork version
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch + 1,
+		CurrentVersion:  1,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
+	).Return(&pb.AttestationDataResponse{
+		BeaconBlockRootHash32: []byte("B"),
+	}, nil)
+
+	validator.AttestToBlockHead(context.Background(), params.BeaconConfig().GenesisSlot+300, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+
+	if proto.Equal(generatedAttestations[0], generatedAttestations[1]) {
+		t.Errorf("Attest was not calculated for different fork")
+	}
+}

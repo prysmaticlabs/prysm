@@ -7,6 +7,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -25,13 +26,13 @@ type mocks struct {
 	attesterClient  *internal.MockAttesterServiceClient
 }
 
-type testWraper struct {
+type testFinisher struct {
 	t    *testing.T
 	db   *db.ValidatorDB
 	ctrl *gomock.Controller
 }
 
-func (w *testWraper) finish() {
+func (w *testFinisher) finish() {
 	if w.db != nil {
 		internal.TeardownDB(w.t, w.db)
 	}
@@ -57,13 +58,13 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		db:              internal.SetupDB(t),
 	}
 
-	var testWraper = &testWraper{
+	var testFinisher = &testFinisher{
 		t:    t,
 		db:   validator.db,
 		ctrl: ctrl,
 	}
 
-	return validator, m, testWraper.finish
+	return validator, m, testFinisher.finish
 }
 
 func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
@@ -527,4 +528,139 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 	}, nil /*err*/).Times(1)
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+}
+
+func TestProposeBlock_SameProposeForSameSlot(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/).Times(1)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/).Times(1)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil /*err*/).Times(1)
+
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(&pb.StateRootResponse{
+		StateRoot: []byte{'F'},
+	}, nil /*err*/).Times(1)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/).Times(2)
+
+	// Requests data for a block once
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{
+		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'T', 'E', 'S', 'T', ' ', 'M', 'A', 'R', 'K'}},
+	}, nil /*err*/).Times(1)
+
+	// Sends block twice
+	var broadcastedBlocks []*pbp2p.BeaconBlock
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
+		broadcastedBlocks = append(broadcastedBlocks, blk)
+	}).Return(&pb.ProposeResponse{}, nil /*error*/).Times(2)
+
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+
+	if len(broadcastedBlocks) != 1 {
+		t.Error("not one broadcast per call validator.ProposeBlock")
+	}
+
+	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+
+	if !proto.Equal(broadcastedBlocks[0], broadcastedBlocks[1]) {
+		t.Errorf("diffrent block for one slot")
+	}
+}
+
+func TestProposeBlock_DifferentProposeBlockForSameSlotButDifferentFork(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/).Times(2)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/).Times(2)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil /*err*/).Times(2)
+
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(&pb.StateRootResponse{
+		StateRoot: []byte{'F'},
+	}, nil /*err*/).Times(2)
+
+	// Requests data for a block once
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{
+		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'T', 'E', 'S', 'T', ' ', 'M', 'A', 'R', 'K'}},
+	}, nil /*err*/).Times(2)
+
+	// Sends block twice
+	var broadcastedBlocks []*pbp2p.BeaconBlock
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
+		broadcastedBlocks = append(broadcastedBlocks, blk)
+	}).Return(&pb.ProposeResponse{}, nil /*error*/).Times(2)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().GenesisSlot+555, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch + 1,
+		CurrentVersion:  1,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().GenesisSlot+555, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+
+	if proto.Equal(broadcastedBlocks[0], broadcastedBlocks[1]) {
+		t.Errorf("propose one block for diffrent ")
+	}
 }
