@@ -255,12 +255,14 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 	}
 
 	bitfield := attestation.AggregationBitfield
-	if featureconfig.FeatureConfig().EnableForkedAttestationProcessing {
-		if !a.canProcessBitfield(committee, bitfield, len(beaconState.ValidatorRegistry)) {
+	fmt.Println(a.canProcessBitfield(committee, bitfield, len(beaconState.ValidatorRegistry)))
+	if !a.canProcessBitfield(committee, bitfield, len(beaconState.ValidatorRegistry)) {
+		if featureconfig.FeatureConfig().EnableForkedAttestationProcessing {
 			a.forkedAttestations = append(a.forkedAttestations, attestation)
-			return fmt.Errorf("don't have the correct state to process forked attestation %d",
-				attestation.Data.Slot-params.BeaconConfig().GenesisSlot)
 		}
+
+		return fmt.Errorf("don't have the correct state to process forked attestation %d",
+			attestation.Data.Slot-params.BeaconConfig().GenesisSlot)
 	}
 
 	log.WithFields(logrus.Fields{
