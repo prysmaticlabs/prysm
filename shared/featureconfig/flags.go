@@ -40,7 +40,7 @@ var (
 		Name:  "enable-canonical-attestation-filter",
 		Usage: "Enable filtering and sending canonical attestations to RPC request, default is disabled.",
 	}
-	// EnableForkedAttestationProcessing.
+	// EnableForkedAttestationProcessing allows saving and processing of forked attestation.
 	EnableForkedAttestationProcessing = cli.BoolFlag{
 		Name:  "enable-forked-attestation-processing",
 		Usage: "Enable saving and attempting to process forked attestation for one spec.",
