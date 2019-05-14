@@ -30,6 +30,7 @@ var committeeCache = cache.NewCommitteesCache()
 type TargetHandler interface {
 	LatestAttestationTarget(state *pb.BeaconState, validatorIndex uint64) (*pb.AttestationTarget, error)
 	BatchUpdateLatestAttestation(ctx context.Context, atts []*pb.Attestation) error
+	ProcessInvalidForkedAtts(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState) error
 }
 
 type attestationStore struct {
@@ -49,6 +50,7 @@ type Service struct {
 	// validator's public key to it's latest attestation.
 	store              attestationStore
 	pooledAttestations []*pb.Attestation
+	forkedAttestations []*pb.Attestation
 	poolLimit          int
 }
 
@@ -242,63 +244,39 @@ func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestatio
 	a.store.m[pubkey] = att
 }
 
+func (a *Service) ProcessForkedAttestations(pubkey [48]byte, att *pb.Attestation) {
+	a.store.Lock()
+	defer a.store.Unlock()
+	a.store.m[pubkey] = att
+}
+
 func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState,
 	attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
 
-	slot := attestation.Data.Slot
-	var committee []uint64
-	var cachedCommittees *cache.CommitteesInSlot
-	var err error
-
-	for beaconState.Slot < slot {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
-		)
-		if err != nil {
-			return fmt.Errorf("could not execute head transition: %v", err)
-		}
-	}
-
-	cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
+	committee, err := a.attsCommittee(ctx, headRoot, beaconState, attestation)
 	if err != nil {
 		return err
 	}
-	if cachedCommittees == nil {
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false /* registryChange */)
-		if err != nil {
-			return err
-		}
-		cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
-		if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-			return err
-		}
-	}
 
-	// Find committee for shard.
-	for _, v := range cachedCommittees.Committees {
-		if v.Shard == attestation.Data.Shard {
-			committee = v.Committee
-			break
-		}
+	bitfield := attestation.AggregationBitfield
+	if !a.canProcess(committee, bitfield, len(beaconState.ValidatorRegistry)) {
+		a.forkedAttestations = append(a.forkedAttestations, attestation)
+		return fmt.Errorf("don't have the correct state to process forked attestation %d",
+			attestation.Data.Slot-params.BeaconConfig().GenesisSlot)
 	}
 
 	log.WithFields(logrus.Fields{
 		"attestationSlot":    attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
 		"attestationShard":   attestation.Data.Shard,
-		"committeesShard":    cachedCommittees.Committees[0].Shard,
-		"committeesList":     cachedCommittees.Committees[0].Committee,
-		"lengthOfCommittees": len(cachedCommittees.Committees),
+		"committeesList":     committee,
+		"lengthOfCommittees": len(committee),
 	}).Debug("Updating latest attestation")
 
 	// The participation bitfield from attestation is represented in bytes,
 	// here we multiply by 8 to get an accurate validator count in bits.
-	bitfield := attestation.AggregationBitfield
 	totalBits := len(bitfield) * 8
 
-	// Check each bit of participation bitfield to find out which
-	// attester has submitted new attestation.
-	// This is has O(n) run time and could be optimized down the line.
 	for i := 0; i < totalBits; i++ {
 		bitSet, err := bitutil.CheckBit(bitfield, i)
 		if err != nil {
@@ -306,14 +284,6 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		}
 		if !bitSet {
 			continue
-		}
-
-		if i >= len(committee) {
-			return fmt.Errorf("bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
-		}
-
-		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
-			return fmt.Errorf("index doesn't exist in validator registry: index %d", committee[i])
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the
@@ -348,6 +318,38 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 	return nil
 }
 
+// ProcessInvalidForkedAtts attempts to update the attestation target with the invalid forked attestations up to previous epoch.
+func (a *Service) ProcessInvalidForkedAtts(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState) error {
+	for i, att := range a.forkedAttestations {
+		if att.Data.Slot <= beaconState.Slot-params.BeaconConfig().SlotsPerEpoch {
+			log.WithFields(logrus.Fields{
+				"attestationSlot":  att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"attestationShard": att.Data.Shard,
+			}).Info("Deleting forked attestation that's one epoch old")
+			a.forkedAttestations = append(a.forkedAttestations[:i], a.forkedAttestations[i+1:]...)
+			i--
+			continue
+		}
+		committee, err := a.attsCommittee(ctx, headRoot, beaconState, att)
+		if err != nil {
+			return err
+		}
+		if !a.canProcess(committee, att.AggregationBitfield, len(beaconState.ValidatorRegistry)) {
+			continue
+		}
+		if err := a.updateAttestation(ctx, headRoot, beaconState, att); err != nil {
+			log.WithError(err).WithFields(logrus.Fields{
+				"attestationSlot":  att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"attestationShard": att.Data.Shard,
+			}).Info("Deleting forked attestation failed to update")
+			a.forkedAttestations = append(a.forkedAttestations[:i], a.forkedAttestations[i+1:]...)
+			i--
+			continue
+		}
+	}
+	return nil
+}
+
 // sortAttestations sorts attestations by their slot number in ascending order.
 func (a *Service) sortAttestations(attestations []*pb.Attestation) []*pb.Attestation {
 	sort.SliceStable(attestations, func(i, j int) bool {
@@ -355,4 +357,65 @@ func (a *Service) sortAttestations(attestations []*pb.Attestation) []*pb.Attesta
 	})
 
 	return attestations
+}
+
+func (a *Service) canProcess(committee []uint64, bitfield []byte, validatorCount int) bool {
+	for i := 0; i < len(bitfield); i++ {
+		bitSet, err := bitutil.CheckBit(bitfield, i)
+		if err != nil {
+			return false
+		}
+		if !bitSet {
+			continue
+		}
+
+		if i >= len(committee) {
+			return false
+		}
+
+		if int(committee[i]) >= validatorCount {
+			return false
+		}
+	}
+	return true
+}
+
+func (a *Service) attsCommittee(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState, attestation *pb.Attestation) ([]uint64, error) {
+	slot := attestation.Data.Slot
+	var committee []uint64
+	var cachedCommittees *cache.CommitteesInSlot
+	var err error
+
+	for beaconState.Slot < slot {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
+	}
+
+	cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
+	if err != nil {
+		return nil, err
+	}
+	if cachedCommittees == nil {
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false /* registryChange */)
+		if err != nil {
+			return nil, err
+		}
+		cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
+		if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
+			return nil, err
+		}
+	}
+
+	// Find committee for shard.
+	for _, v := range cachedCommittees.Committees {
+		if v.Shard == attestation.Data.Shard {
+			committee = v.Committee
+			break
+		}
+	}
+	return committee, nil
 }

@@ -26,6 +26,10 @@ func (m *mockAttestationHandler) BatchUpdateLatestAttestation(ctx context.Contex
 	return nil
 }
 
+func (m *mockAttestationHandler) ProcessInvalidForkedAtts(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState) error {
+	return nil
+}
+
 func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)

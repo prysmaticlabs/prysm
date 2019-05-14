@@ -108,6 +108,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		}
 	}
 
+	// When there's a new state, the prev forked attestations get re-processed,
+	// hoping with a valid state, it can process through.
+	if err := c.attsService.ProcessInvalidForkedAtts(ctx, blockRoot, beaconState); err != nil {
+		return beaconState, fmt.Errorf("could not process forked attestations: %v", err)
+	}
+
 	log.WithFields(logrus.Fields{
 		"slotNumber":   block.Slot - params.BeaconConfig().GenesisSlot,
 		"currentEpoch": helpers.SlotToEpoch(block.Slot) - params.BeaconConfig().GenesisEpoch,
