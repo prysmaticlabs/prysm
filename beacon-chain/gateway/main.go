@@ -4,10 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	joonix "github.com/joonix/log"
+	"github.com/sirupsen/logrus"
 )
 
 // Endpoint describes a gRPC endpoint
@@ -34,10 +35,20 @@ type Options struct {
 var (
 	beaconRpc = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
 	port      = flag.Int("port", 8000, "Port to serve on")
+	debug     = flag.Bool("debug", false, "Enable debug logging")
 )
+
+func init() {
+	logrus.SetFormatter(&joonix.FluentdFormatter{})
+}
+
+var log = logrus.New()
 
 func main() {
 	flag.Parse()
+	if *debug {
+		log.SetLevel(logrus.DebugLevel)
+	}
 
 	opts := Options{
 		GRPCServer: Endpoint{
@@ -85,13 +96,13 @@ func Run(ctx context.Context, opts Options) error {
 	}
 	go func() {
 		<-ctx.Done()
-		log.Println("Shutting down the http server")
+		log.Info("Shutting down the http server")
 		if err := s.Shutdown(context.Background()); err != nil {
 			log.Fatalf("Failed to shutdown http server: %v", err)
 		}
 	}()
 
-	log.Printf("Starting listening at %s\n", opts.Addr)
+	log.Infof("Starting listening at %s", opts.Addr)
 	if err := s.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatalf("Failed to listen and serve: %v", err)
 		return err

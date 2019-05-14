@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"path"
 	"strings"
@@ -15,12 +14,12 @@ import (
 func swaggerServer(dir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasSuffix(r.URL.Path, ".swagger.json") {
-			log.Printf("Not Found: %s\n", r.URL.Path)
+			log.Debugf("Not Found: %s", r.URL.Path)
 			http.NotFound(w, r)
 			return
 		}
 
-		log.Printf("Serving %s\n", r.URL.Path)
+		log.Debugf("Serving %s\n", r.URL.Path)
 		p := strings.TrimPrefix(r.URL.Path, "/swagger/")
 		p = path.Join(dir, p)
 		http.ServeFile(w, r, p)
@@ -36,7 +35,7 @@ func healthzServer(conn *grpc.ClientConn) http.HandlerFunc {
 			return
 		}
 		if _, err := fmt.Fprintln(w, "ok"); err != nil {
-			panic(err) // TODO
+			log.WithError(err).Error("failed to respond to healthz")
 		}
 	}
 }
