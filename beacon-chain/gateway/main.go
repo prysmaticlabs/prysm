@@ -63,6 +63,8 @@ func main() {
 	}
 }
 
+// TODO: Make this a prysm service.
+
 // Run starts a HTTP server and blocks while running if successful.
 // The server will be shutdown when "ctx" is canceled.
 func Run(ctx context.Context, opts Options) error {

@@ -51,6 +51,7 @@ func main() {
 		utils.CertFlag,
 		utils.KeyFlag,
 		utils.EnableDBCleanup,
+		utils.JSONRPCPort,
 		cmd.BootstrapNode,
 		cmd.NoDiscovery,
 		cmd.StaticPeers,

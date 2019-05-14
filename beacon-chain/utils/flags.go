@@ -48,4 +48,9 @@ var (
 		Name:  "enable-db-cleanup",
 		Usage: "Enable automatic DB cleanup routine",
 	}
+	// JSONRPCPort enables a gRPC gateway to be exposed for Prysm.
+	JSONRPCPort = cli.IntFlag{
+		Name:  "json-rpc-port",
+		Usage: "Enable gRPC gateway for JSON requests",
+	}
 )

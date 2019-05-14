@@ -110,6 +110,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if err := beacon.registerGRPCGateway(ctx); err != nil {
+		return nil, err
+	}
+
 	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
 		if err := beacon.registerPrometheusService(ctx); err != nil {
 			return nil, err
@@ -394,4 +398,12 @@ func (b *BeaconNode) registerAttestationService() error {
 		})
 
 	return b.services.RegisterService(attsService)
+}
+
+func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
+	jsonRPCPort := ctx.GlobalInt(utils.JSONRPCPort.Name)
+	if utils.JSONRPCPort > 0 {
+		// TODO: Run gRPC gateway
+	}
+	return nil
 }
