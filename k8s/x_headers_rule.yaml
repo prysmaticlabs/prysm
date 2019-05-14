@@ -29,3 +29,11 @@ spec:
       operation: REMOVE
     - name: server
       operation: REMOVE
+    - name: grpc-metadata-x-backend
+      operation: REMOVE
+    - name: grpc-metadata-x-source
+      operation: REMOVE
+    - name: grpc-metadata-x-envoy-upstream-service-time
+      operation: REMOVE
+    - name: grpc-metadata-server
+      operation: REMOVE
