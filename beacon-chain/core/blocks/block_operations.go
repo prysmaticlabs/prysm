@@ -176,7 +176,7 @@ func ProcessProposerSlashings(
 	}
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
-		if err = verifyProposerSlashing(slashing, verifySignatures); err != nil {
+		if err = verifyProposerSlashing(beaconState, slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
 		proposer := registry[slashing.ProposerIndex]
@@ -192,35 +192,14 @@ func ProcessProposerSlashings(
 }
 
 func verifyProposerSlashing(
+	beaconState *pb.BeaconState,
 	slashing *pb.ProposerSlashing,
 	verifySignatures bool,
 ) error {
-	// section of block operations.
-	slot1 := slashing.ProposalData_1.Slot
-	slot2 := slashing.ProposalData_2.Slot
-	shard1 := slashing.ProposalData_1.Shard
-	shard2 := slashing.ProposalData_2.Shard
-	root1 := slashing.ProposalData_1.BlockRootHash32
-	root2 := slashing.ProposalData_2.BlockRootHash32
-	if slot1 != slot2 {
-		if slot1 > params.BeaconConfig().GenesisSlot {
-			slot1 -= params.BeaconConfig().GenesisSlot
-		}
-		if slot2 > params.BeaconConfig().GenesisSlot {
-			slot2 -= params.BeaconConfig().GenesisSlot
-		}
-		return fmt.Errorf("slashing proposal data slots do not match: %d, %d",
-			slot1, slot2)
-	}
-	if shard1 != shard2 {
-		return fmt.Errorf("slashing proposal data shards do not match: %d, %d", shard1, shard2)
-	}
-	if !bytes.Equal(root1, root2) {
-		return fmt.Errorf("slashing proposal data block roots do not match: %#x, %#x", root1, root2)
-	}
-	if verifySignatures {
-		// TODO(#258): Verify BLS according to the specification in the "Proposer Slashings"
-		return nil
+	headerSlot1 := helpers.SlotToEpoch(slashing.Header_1.Slot)
+	headerSlot2 := helpers.SlotToEpoch(slashing.Header_2.Slot)
+	if headerSlot1 != headerSlot2 {
+		return fmt.Errorf("mismatched header slots, received %d == %d", headerSlot1, headerSlot2)
 	}
 	return nil
 }
