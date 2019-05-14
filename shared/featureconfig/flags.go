@@ -40,6 +40,11 @@ var (
 		Name:  "enable-canonical-attestation-filter",
 		Usage: "Enable filtering and sending canonical attestations to RPC request, default is disabled.",
 	}
+	// EnableForkedAttestationProcessing.
+	EnableForkedAttestationProcessing = cli.BoolFlag{
+		Name:  "enable-forked-attestation-processing",
+		Usage: "Enable saving and attempting to process forked attestation for one spec.",
+	}
 	// DisableHistoricalStatePruningFlag allows the database to keep old historical states.
 	DisableHistoricalStatePruningFlag = cli.BoolFlag{
 		Name:  "disable-historical-state-pruning",
@@ -66,4 +71,5 @@ var BeaconChainFlags = []cli.Flag{
 	DisableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
 	CacheTreeHashFlag,
+	EnableForkedAttestationProcessing,
 }

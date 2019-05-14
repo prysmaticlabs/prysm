@@ -25,15 +25,16 @@ var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
-	VerifyAttestationSigs            bool // VerifyAttestationSigs declares if the client will verify attestations.
-	EnableComputeStateRoot           bool // EnableComputeStateRoot implementation on server side.
-	EnableCrosslinks                 bool // EnableCrosslinks in epoch processing.
-	EnableCheckBlockStateRoot        bool // EnableCheckBlockStateRoot in block processing.
-	EnableCanonicalAttestationFilter bool // EnableCanonicalAttestationFilter for RPC server.
-	DisableHistoricalStatePruning    bool // DisableHistoricalStatePruning when updating finalized states.
-	DisableGossipSub                 bool // DisableGossipSub in p2p messaging.
-	EnableCommitteesCache            bool // EnableCommitteesCache for state transition.
-	CacheTreeHash                    bool // CacheTreeHash determent whether tree hashes will be cached.
+	VerifyAttestationSigs             bool // VerifyAttestationSigs declares if the client will verify attestations.
+	EnableComputeStateRoot            bool // EnableComputeStateRoot implementation on server side.
+	EnableCrosslinks                  bool // EnableCrosslinks in epoch processing.
+	EnableCheckBlockStateRoot         bool // EnableCheckBlockStateRoot in block processing.
+	EnableCanonicalAttestationFilter  bool // EnableCanonicalAttestationFilter for RPC server.
+	DisableHistoricalStatePruning     bool // DisableHistoricalStatePruning when updating finalized states.
+	DisableGossipSub                  bool // DisableGossipSub in p2p messaging.
+	EnableCommitteesCache             bool // EnableCommitteesCache for state transition.
+	CacheTreeHash                     bool // CacheTreeHash determent whether tree hashes will be cached.
+	EnableForkedAttestationProcessing bool // EnableForkedAttestationProcessing enables process of forked attestations.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -86,6 +87,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableCanonicalAttestationFilter.Name) {
 		log.Info("Enabled canonical attestation filter")
 		cfg.EnableCanonicalAttestationFilter = true
+	}
+	if ctx.GlobalBool(EnableForkedAttestationProcessing.Name) {
+		log.Info("Enabled forked attestation processing")
+		cfg.EnableForkedAttestationProcessing = true
 	}
 	InitFeatureConfig(cfg)
 }

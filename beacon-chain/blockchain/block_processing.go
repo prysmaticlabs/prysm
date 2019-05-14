@@ -108,10 +108,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		}
 	}
 
-	// When there's a new state, the prev forked attestations get re-processed,
-	// hoping with a valid state, it can process through.
-	if err := c.attsService.ProcessForkedAtts(ctx, blockRoot, beaconState); err != nil {
-		return beaconState, fmt.Errorf("could not process forked attestations: %v", err)
+	if featureconfig.FeatureConfig().EnableForkedAttestationProcessing {
+		// When there's a new state, the saved forked attestations will get re-processed,
+		// hoping with a valid state, they can process through.
+		if err := c.attsService.ProcessForkedAtts(ctx, blockRoot, beaconState); err != nil {
+			return beaconState, fmt.Errorf("could not process forked attestations: %v", err)
+		}
 	}
 
 	log.WithFields(logrus.Fields{

@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -254,10 +255,12 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 	}
 
 	bitfield := attestation.AggregationBitfield
-	if !a.canProcessBitfield(committee, bitfield, len(beaconState.ValidatorRegistry)) {
-		a.forkedAttestations = append(a.forkedAttestations, attestation)
-		return fmt.Errorf("don't have the correct state to process forked attestation %d",
-			attestation.Data.Slot-params.BeaconConfig().GenesisSlot)
+	if featureconfig.FeatureConfig().EnableForkedAttestationProcessing {
+		if !a.canProcessBitfield(committee, bitfield, len(beaconState.ValidatorRegistry)) {
+			a.forkedAttestations = append(a.forkedAttestations, attestation)
+			return fmt.Errorf("don't have the correct state to process forked attestation %d",
+				attestation.Data.Slot-params.BeaconConfig().GenesisSlot)
+		}
 	}
 
 	log.WithFields(logrus.Fields{
