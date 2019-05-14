@@ -17,7 +17,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -1650,44 +1649,46 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 }
 
 func TestProcessBlockHeader_OK(t *testing.T) {
-	registry := []*pb.Validator{
-		{
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
+			Slashed:   true,
+		}
 	}
+	validators[16165].Slashed = false
 	state := &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Slot:              10,
+		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
+		Fork:              &pb.Fork{},
 	}
-	exits := []*pb.VoluntaryExit{
-		{
-			ValidatorIndex: 0,
-			Epoch:          0,
-		},
+	lbhsr, err := ssz.SignedRoot(state.LatestBlockHeader)
+	if err != nil {
+		t.Error(err)
 	}
 	block := &pb.BeaconBlock{
-		Slot: 10,
+		Slot: params.BeaconConfig().GenesisSlot + 1,
 		Body: &pb.BeaconBlockBody{
-			VoluntaryExits: exits,
+			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
-		ParentBlockRoot: []byte{'A'},
+		ParentBlockRoot: lbhsr[:],
+		Signature:       []byte("hello"),
 	}
 	newState, err := blocks.ProcessBlockHeader(state, block)
 	if err != nil {
 		t.Error(err)
 	}
-	bBytes, err := block.Body.Marshal()
-	if err != nil {
-		t.Error(err)
-	}
-	bHash := hashutil.Hash(bBytes)
-	wanted := &pb.BeaconBlockHeader{
-		Slot:              block.Slot,
-		PreviousBlockRoot: block.ParentBlockRoot,
-		BlockBodyRoot:     bHash[:],
-	}
-	if reflect.DeepEqual(newState.LatestBlockHeader, wanted) {
-		t.Errorf("failed to update latest block header wanted: %v got: %v", wanted, newState.LatestBlockHeader)
+	if !reflect.DeepEqual(newState.LatestBlockHeader,
+		&pb.BeaconBlockHeader{
+			Slot:              params.BeaconConfig().GenesisSlot + 1,
+			PreviousBlockRoot: block.ParentBlockRoot,
+		}) {
+		t.Errorf("new state don't contain")
 	}
 
 }

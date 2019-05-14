@@ -4,6 +4,7 @@
 package blocks
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -86,17 +87,28 @@ func ProcessBlockHeader(
 	if beaconState.Slot != block.Slot{
 		return nil,fmt.Errorf("state slot: %d is different then block slot: %d",beaconState.Slot,block.Slot)
 	}
-	//if block.ParentBlockRoot != //signing_root()
-	bBytes,err:= block.Body.Marshal()
-	if err!=nil{
+	lbhsr,err:= ssz.SignedRoot(beaconState.LatestBlockHeader )
+	if err!=nil {
 		return nil,err
 	}
-	bHash:=hashutil.Hash(bBytes)
+	if !bytes.Equal(block.ParentBlockRoot, lbhsr[:]){
+		return nil,fmt.Errorf("state parentblockroot: %d is different then latest block header signed root: %d",
+		block.ParentBlockRoot,lbhsr)
+	}
+	bBytes,err:= block.Body.Marshal()
+	if err!=nil {
+		return nil,err
+	}
+	bHash,err:=ssz.TreeHash(bBytes)
+	if err!=nil {
+		return nil,err
+	}
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot: block.Slot,
 		PreviousBlockRoot: block.ParentBlockRoot,
 		BlockBodyRoot: bHash[:],
 	}
+	//verify proposer is not slashed
 	idx,err:=helpers.BeaconProposerIndex(beaconState,beaconState.Slot)
 	if err!=nil{
 		return nil,err
@@ -110,12 +122,18 @@ func ProcessBlockHeader(
 	if err!=nil{
 		return nil,err
 	}
-	dt:= forkutil.DomainVersion(beaconState.Fork,currentEpoch,params.BeaconConfig().DomainBeaconProposer)
-	fmt.Print(dt)
-	fmt.Print(sig)
-	// if sig.Verify(signing_root(block),proposer.Pubkey,dt){
-	// 	return nil,fmt.Errorf("verify signature failed)
-	// }
+	dt:= helpers.DomainVersion(beaconState,currentEpoch,params.BeaconConfig().DomainBeaconProposer)
+	bsr,err:=ssz.SignedRoot(block)
+	if err!=nil{
+		return nil,err
+	}
+	blsPk,err :=bls.PublicKeyFromBytes(proposer.Pubkey)
+	if err!=nil{
+		return nil,err
+	}
+	if sig.Verify(bsr[:],blsPk,dt){
+		return nil,fmt.Errorf("verify signature failed")
+	}
 	return beaconState,nil
 }
 
