@@ -280,6 +280,15 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
 
+func TestWaitTillSync_OK(t *testing.T) {
+	t.Skip()
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+
+}
+
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

@@ -37,6 +37,12 @@ service ValidatorService {
   rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
   rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
   rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
+  rpc WaitTillSync(google.protobuf.Empty) returns (stream SyncedResponse);
+
+}
+
+message  SyncedResponse{
+  bool synced = 1;
 }
 
 message ValidatorPerformanceRequest {

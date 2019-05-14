@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"time"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -30,6 +31,7 @@ type ValidatorServer struct {
 	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
 	powChainService    powChainService
+	syncService  	   syncService
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -65,6 +67,23 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 			}
 			if err := stream.Send(res); err != nil {
 				return err
+			}
+		case <-stream.Context().Done():
+			return errors.New("stream context closed,exiting gorutine")
+		case <-vs.ctx.Done():
+			return errors.New("rpc context closed, exiting goroutine")
+		}
+	}
+}
+// WaitTillSync checks if syncservice status is synched and sends message on stream when the service is synced.
+func (vs *ValidatorServer) WaitTillSync(_ *ptypes.Empty,stream pb.ValidatorService_WaitTillSyncServer) error{
+	for {
+		select {
+		case <-time.After(6 * time.Second):
+			if err:=vs.syncService.Status();err==nil{
+				return stream.Send(&pb.SyncedResponse{Synced:true})
+			}else{
+				stream.Send(&pb.SyncedResponse{Synced:false})
 			}
 		case <-stream.Context().Done():
 			return errors.New("stream context closed,exiting gorutine")

@@ -118,6 +118,40 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	return nil
 }
 
+// WaitTillSync checks whether the beacon node sync status is ok.
+// If not, this operation will block until an sync message is
+// received.
+func (v *validator) WaitTillSync(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.WaitTillSync")
+	defer span.End()
+
+	stream, err := v.validatorClient.WaitTillSync(ctx, &ptypes.Empty{})
+	if err != nil {
+		return fmt.Errorf("could not setup validator WaitTillSync streaming client: %v", err)
+	}
+
+	for {
+		res, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+		}
+		if err != nil {
+			return fmt.Errorf("could not receive sync status from stream: %v", err)
+		}
+		log.Info("Waiting for beacon node to sync")
+		if res.Synced {
+			break
+		}
+	}
+
+	return nil
+}
+
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
