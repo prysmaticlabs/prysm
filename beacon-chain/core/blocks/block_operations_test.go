@@ -433,28 +433,20 @@ func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
 	}
 }
 
-func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
+func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 	slashings := []*pb.AttesterSlashing{
 		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
+			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
 					Slot:  5,
 					Shard: 4,
 				},
-				ValidatorIndices: make(
-					[]uint64,
-					params.BeaconConfig().MaxIndicesPerSlashableVote,
-				),
 			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
+			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
 					Slot:  5,
 					Shard: 3,
 				},
-				ValidatorIndices: make(
-					[]uint64,
-					params.BeaconConfig().MaxIndicesPerSlashableVote,
-				),
 			},
 		},
 	}
@@ -472,138 +464,6 @@ func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 	}
 	want := fmt.Sprint("custody bit field can't all be 0")
 
-	if _, err := blocks.ProcessAttesterSlashings(
-		beaconState,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-
-	// Perform the same check for SlashableVoteData_2.
-	slashings = []*pb.AttesterSlashing{
-		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data: &pb.AttestationData{
-					Slot:  5,
-					Shard: 4,
-				},
-				ValidatorIndices: make(
-					[]uint64,
-					params.BeaconConfig().MaxIndicesPerSlashableVote,
-				),
-			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data: &pb.AttestationData{
-					Slot:  5,
-					Shard: 3,
-				},
-				ValidatorIndices: make(
-					[]uint64,
-					params.BeaconConfig().MaxIndicesPerSlashableVote,
-				),
-			},
-		},
-	}
-	beaconState = &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Slot:              currentSlot,
-	}
-	block = &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			AttesterSlashings: slashings,
-		},
-	}
-	if _, err := blocks.ProcessAttesterSlashings(
-		beaconState,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
-	att1 := &pb.AttestationData{
-		Slot: 5,
-	}
-	slashings := []*pb.AttesterSlashing{
-		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1},
-				CustodyBitfield:  []byte{0xFF},
-			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{2},
-				CustodyBitfield:  []byte{0xFF},
-			},
-		},
-	}
-	registry := []*pb.Validator{}
-	currentSlot := uint64(0)
-
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Slot:              currentSlot,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			AttesterSlashings: slashings,
-		},
-	}
-	want := fmt.Sprintf(
-		"attester slashing inner slashable vote data attestation should not match: %v, %v",
-		att1,
-		att1,
-	)
-
-	if _, err := blocks.ProcessAttesterSlashings(
-		beaconState,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
-	att1 := &pb.AttestationData{
-		Slot:           5,
-		JustifiedEpoch: 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           5,
-		JustifiedEpoch: 4,
-	}
-	slashings := []*pb.AttesterSlashing{
-		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
-			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att2,
-				ValidatorIndices: []uint64{9, 10, 11, 12, 13, 14, 15, 16},
-				CustodyBitfield:  []byte{0xFF},
-			},
-		},
-	}
-	registry := []*pb.Validator{}
-	currentSlot := uint64(0)
-
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Slot:              currentSlot,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			AttesterSlashings: slashings,
-		},
-	}
-	want := "expected a non-empty list"
 	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
 		block,
