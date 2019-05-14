@@ -244,23 +244,17 @@ func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestatio
 	a.store.m[pubkey] = att
 }
 
-func (a *Service) ProcessForkedAttestations(pubkey [48]byte, att *pb.Attestation) {
-	a.store.Lock()
-	defer a.store.Unlock()
-	a.store.m[pubkey] = att
-}
-
 func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState,
 	attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
 
-	committee, err := a.attsCommittee(ctx, headRoot, beaconState, attestation)
+	committee, err := a.committee(ctx, headRoot, beaconState, attestation)
 	if err != nil {
 		return err
 	}
 
 	bitfield := attestation.AggregationBitfield
-	if !a.canProcess(committee, bitfield, len(beaconState.ValidatorRegistry)) {
+	if !a.canProcessBitfield(committee, bitfield, len(beaconState.ValidatorRegistry)) {
 		a.forkedAttestations = append(a.forkedAttestations, attestation)
 		return fmt.Errorf("don't have the correct state to process forked attestation %d",
 			attestation.Data.Slot-params.BeaconConfig().GenesisSlot)
@@ -330,11 +324,11 @@ func (a *Service) ProcessInvalidForkedAtts(ctx context.Context, headRoot [32]byt
 			i--
 			continue
 		}
-		committee, err := a.attsCommittee(ctx, headRoot, beaconState, att)
+		committee, err := a.committee(ctx, headRoot, beaconState, att)
 		if err != nil {
 			return err
 		}
-		if !a.canProcess(committee, att.AggregationBitfield, len(beaconState.ValidatorRegistry)) {
+		if !a.canProcessBitfield(committee, att.AggregationBitfield, len(beaconState.ValidatorRegistry)) {
 			continue
 		}
 		if err := a.updateAttestation(ctx, headRoot, beaconState, att); err != nil {
@@ -359,7 +353,9 @@ func (a *Service) sortAttestations(attestations []*pb.Attestation) []*pb.Attesta
 	return attestations
 }
 
-func (a *Service) canProcess(committee []uint64, bitfield []byte, validatorCount int) bool {
+// canProcessBitfield returns true if we can process attestation based on the committee length
+// and validator count.
+func (a *Service) canProcessBitfield(committee []uint64, bitfield []byte, validatorCount int) bool {
 	for i := 0; i < len(bitfield); i++ {
 		bitSet, err := bitutil.CheckBit(bitfield, i)
 		if err != nil {
@@ -368,11 +364,9 @@ func (a *Service) canProcess(committee []uint64, bitfield []byte, validatorCount
 		if !bitSet {
 			continue
 		}
-
 		if i >= len(committee) {
 			return false
 		}
-
 		if int(committee[i]) >= validatorCount {
 			return false
 		}
@@ -380,7 +374,8 @@ func (a *Service) canProcess(committee []uint64, bitfield []byte, validatorCount
 	return true
 }
 
-func (a *Service) attsCommittee(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState, attestation *pb.Attestation) ([]uint64, error) {
+// committee returns the cross link committee of the input attestation.
+func (a *Service) committee(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState, attestation *pb.Attestation) ([]uint64, error) {
 	slot := attestation.Data.Slot
 	var committee []uint64
 	var cachedCommittees *cache.CommitteesInSlot
