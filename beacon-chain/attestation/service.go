@@ -337,16 +337,15 @@ func (a *Service) ProcessForkedAtts(ctx context.Context, headRoot [32]byte, beac
 		}
 
 		// Update the attestation target with the forked attestation if we can process,
-		// delete the forked attestation if it failed to update.
+		// and delete the forked attestation after processing it.
 		if err := a.updateAttestation(ctx, headRoot, beaconState, att); err != nil {
 			log.WithError(err).WithFields(logrus.Fields{
 				"attestationSlot":  att.Data.Slot - params.BeaconConfig().GenesisSlot,
 				"attestationShard": att.Data.Shard,
 			}).Info("Deleting forked attestation failed to update")
-			a.forkedAttestations = append(a.forkedAttestations[:i], a.forkedAttestations[i+1:]...)
-			i--
-			continue
 		}
+		a.forkedAttestations = append(a.forkedAttestations[:i], a.forkedAttestations[i+1:]...)
+		i--
 	}
 	return nil
 }
