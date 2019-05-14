@@ -29,6 +29,7 @@ func TestIsActiveValidator_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
+
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -90,6 +91,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
+
 	beaconState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),

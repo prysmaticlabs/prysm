@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -136,9 +135,7 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
 		b := append(seed[:], bytesutil.Bytes8(i)...)
 		randomByte := hashutil.Hash(b)[i%32]
 		effectiveBal := state.ValidatorRegistry[candidateIndex].EffectiveBalance
-		binary.LittleEndian.Uint64([]byte{randomByte})
-		if effectiveBal*maxRandomByte >=
-			params.BeaconConfig().MaxEffectiveBalance*binary.LittleEndian.Uint64([]byte{randomByte}) {
+		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
 			return candidateIndex, nil
 		}
 	}

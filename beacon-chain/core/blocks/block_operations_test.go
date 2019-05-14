@@ -1065,8 +1065,9 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	attestation := &pb.Attestation{
 		Signature: []byte("signed"),
 		Data: &pb.AttestationData{
-			Slot:  params.BeaconConfig().GenesisSlot + 2,
-			Shard: 3,
+			Slot:        params.BeaconConfig().GenesisSlot + 2,
+			Shard:       3,
+			TargetEpoch: params.BeaconConfig().GenesisEpoch,
 		},
 	}
 	for _, tt := range tests {

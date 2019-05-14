@@ -70,14 +70,16 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	boundaryAttestations := []*pb.PendingAttestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:  params.BeaconConfig().GenesisSlot,
-				Shard: 1,
+				Slot:        params.BeaconConfig().GenesisSlot,
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				Shard:       1,
 			},
 			AggregationBitfield: []byte{0x03}}, // returns indices 242
 		{
 			Data: &pb.AttestationData{
-				Slot:  params.BeaconConfig().GenesisSlot,
-				Shard: 1,
+				Slot:        params.BeaconConfig().GenesisSlot,
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				Shard:       1,
 			},
 			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
 	}
@@ -87,9 +89,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{9, 32}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{25, 87}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{9, 32}, attesterIndices)
+			[]uint64{25, 87}, attesterIndices)
 	}
 }
 
@@ -98,7 +100,7 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, 128)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -115,10 +117,11 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
 			Slot:              params.BeaconConfig().GenesisSlot + 3,
+			TargetEpoch:       params.BeaconConfig().GenesisEpoch,
 			Shard:             6,
 			CrosslinkDataRoot: []byte{'B'},
 		},
-		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+		AggregationBitfield: []byte{1},
 	}
 
 	indices, err := AttestingValidatorIndices(
@@ -131,9 +134,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{3641, 6307}) {
+	if !reflect.DeepEqual(indices, []uint64{25, 87}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{278, 2292}, indices)
+			[]uint64{25, 87}, indices)
 	}
 }
 
