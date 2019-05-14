@@ -244,6 +244,9 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	if err != nil {
 		return false, nil, err
 	}
+	if beaconState == nil{
+		return false,nil,nil
+	}
 	chainStarted, _, err := vs.powChainService.HasChainStartLogOccurred()
 	if err != nil {
 		return false, nil, err
