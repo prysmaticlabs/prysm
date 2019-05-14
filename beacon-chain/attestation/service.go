@@ -312,9 +312,10 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 	return nil
 }
 
-// ProcessInvalidForkedAtts attempts to update the attestation target with the invalid forked attestations up to previous epoch.
-func (a *Service) ProcessInvalidForkedAtts(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState) error {
+// ProcessForkedAtts attempts to update the attestation target with the invalid forked attestations up to previous epoch.
+func (a *Service) ProcessForkedAtts(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState) error {
 	for i, att := range a.forkedAttestations {
+		// Delete the forked attestation if it's more than one epoch old.
 		if att.Data.Slot <= beaconState.Slot-params.BeaconConfig().SlotsPerEpoch {
 			log.WithFields(logrus.Fields{
 				"attestationSlot":  att.Data.Slot - params.BeaconConfig().GenesisSlot,
@@ -324,6 +325,8 @@ func (a *Service) ProcessInvalidForkedAtts(ctx context.Context, headRoot [32]byt
 			i--
 			continue
 		}
+
+		// Skip the attestation if we can't process the based on the current state.
 		committee, err := a.committee(ctx, headRoot, beaconState, att)
 		if err != nil {
 			return err
@@ -331,6 +334,9 @@ func (a *Service) ProcessInvalidForkedAtts(ctx context.Context, headRoot [32]byt
 		if !a.canProcessBitfield(committee, att.AggregationBitfield, len(beaconState.ValidatorRegistry)) {
 			continue
 		}
+
+		// Update the attestation target with the forked attestation if we can process,
+		// delete the forked attestation if it failed to update.
 		if err := a.updateAttestation(ctx, headRoot, beaconState, att); err != nil {
 			log.WithError(err).WithFields(logrus.Fields{
 				"attestationSlot":  att.Data.Slot - params.BeaconConfig().GenesisSlot,
