@@ -45,6 +45,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "attester_server_test.go",
         "beacon_server_test.go",

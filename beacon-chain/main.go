@@ -1,10 +1,12 @@
-// Package beacon-chain defines all the utlities needed for a beacon chain node.
+// Package beacon-chain defines all the utilities needed for a beacon chain node.
 package main
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 
+	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -13,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
@@ -33,10 +35,6 @@ func startNode(ctx *cli.Context) error {
 }
 
 func main() {
-	customFormatter := new(prefixed.TextFormatter)
-	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
-	customFormatter.FullTimestamp = true
-	logrus.SetFormatter(customFormatter)
 	log := logrus.WithField("prefix", "main")
 	app := cli.NewApp()
 	app.Name = "beacon-chain"
@@ -69,6 +67,7 @@ func main() {
 		cmd.MonitoringPortFlag,
 		cmd.DisableMonitoringFlag,
 		cmd.ClearDB,
+		cmd.LogFormat,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
@@ -80,6 +79,24 @@ func main() {
 	app.Flags = append(app.Flags, featureconfig.BeaconChainFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
+		format := ctx.GlobalString(cmd.LogFormat.Name)
+		switch format {
+		case "text":
+			formatter := new(prefixed.TextFormatter)
+			formatter.TimestampFormat = "2006-01-02 15:04:05"
+			formatter.FullTimestamp = true
+			logrus.SetFormatter(formatter)
+			break
+		case "fluentd":
+			logrus.SetFormatter(&joonix.FluentdFormatter{})
+			break
+		case "json":
+			logrus.SetFormatter(&logrus.JSONFormatter{})
+			break
+		default:
+			return fmt.Errorf("unknown log format %s", format)
+		}
+
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		return debug.Setup(ctx)
 	}
