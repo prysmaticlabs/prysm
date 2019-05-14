@@ -99,4 +99,10 @@ var (
 		Name:  "clear-db",
 		Usage: "Clears any previously stored data at the data directory",
 	}
+	// LogFormat specifies the log output format.
+	LogFormat = cli.StringFlag{
+		Name:  "log-format",
+		Usage: "Specify log formatting. Supports: text, json, fluentd.",
+		Value: "text",
+	}
 )
