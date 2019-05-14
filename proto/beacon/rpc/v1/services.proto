@@ -49,7 +49,7 @@ service BeaconService {
   rpc ForkData(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.Fork);
   rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse) {
     option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
-      summary: "Fetches block tree since last finalized block";
+      summary: "Fetches block tree since last finalized block.";
     };
     option (google.api.http) = {
       get: "/v1/beacon/blocktree";

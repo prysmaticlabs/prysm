@@ -33,7 +33,7 @@ type Options struct {
 }
 
 var (
-	beaconRpc = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
+	beaconRPC = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
 	port      = flag.Int("port", 8000, "Port to serve on")
 	debug     = flag.Bool("debug", false, "Enable debug logging")
 )
@@ -53,7 +53,7 @@ func main() {
 	opts := Options{
 		GRPCServer: Endpoint{
 			Network: "tcp",
-			Addr:    *beaconRpc,
+			Addr:    *beaconRPC,
 		},
 		Addr:       fmt.Sprintf("0.0.0.0:%d", *port),
 		SwaggerDir: "proto/beacon/rpc/v1/",
