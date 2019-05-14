@@ -2,7 +2,6 @@ package db
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -29,7 +28,6 @@ func getBucket(tx *bolt.Tx, pubKey *bls.PublicKey, forkVersion uint64, subBucket
 	parentBucketKey := append(pubKey.Marshal(), bytesutil.Bytes8(forkVersion)...)
 	parentBucket := tx.Bucket(parentBucketKey)
 	if parentBucket == nil {
-		fmt.Printf("parentBucket == nil\n")
 		if createIfNotExists {
 			var err error
 			parentBucket, err = tx.CreateBucket(parentBucketKey)
@@ -40,8 +38,6 @@ func getBucket(tx *bolt.Tx, pubKey *bls.PublicKey, forkVersion uint64, subBucket
 		} else {
 			return nil
 		}
-	} else {
-		fmt.Printf("parentBucket != nil\n")
 	}
 	subBucket := parentBucket.Bucket(subBucketKey)
 	if subBucket == nil && createIfNotExists {

@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation.go",
-        "block.go",
+        "proposed_block.go",
         "db.go",
         "schema.go",
     ],
@@ -40,6 +40,7 @@ go_test(
     srcs = [
         "db_test.go",
         "schema_test.go",
+        "attestation_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

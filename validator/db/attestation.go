@@ -62,6 +62,9 @@ func (db *ValidatorDB) GetAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, e
 
 func (db *ValidatorDB) getMaxAttestationEpoch(pubKey *bls.PublicKey) (maxAttestationEpoch uint64, err error) {
 	err = db.lastInAllForks(pubKey, attestationBucket, func(_, lastInForkEnc []byte) error {
+		if lastInForkEnc == nil {
+			return nil
+		}
 		lastInFork, err := createAttestation(lastInForkEnc)
 		if err != nil {
 			log.WithError(err).Error("can't create attestation")
