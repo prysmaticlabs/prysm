@@ -180,7 +180,7 @@ func ProcessProposerSlashings(
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
 		beaconState, err = v.SlashValidator(
-			beaconState, slashing.ProposerIndex, 0 /* proposer is whistleblower */,
+			beaconState, slashing.ProposerIndex, 0, /* proposer is whistleblower */
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not slash proposer index %d: %v",
@@ -196,13 +196,13 @@ func verifyProposerSlashing(
 	slashing *pb.ProposerSlashing,
 	verifySignatures bool,
 ) error {
-	headerSlot1 := helpers.SlotToEpoch(slashing.Header_1.Slot)
-	headerSlot2 := helpers.SlotToEpoch(slashing.Header_2.Slot)
-	if headerSlot1 != headerSlot2 {
-		return fmt.Errorf("mismatched header slots, received %d == %d", headerSlot1, headerSlot2)
+	headerEpoch1 := helpers.SlotToEpoch(slashing.Header_1.Slot)
+	headerEpoch2 := helpers.SlotToEpoch(slashing.Header_2.Slot)
+	if headerEpoch1 != headerEpoch2 {
+		return fmt.Errorf("mismatched header epochs, received %d == %d", headerEpoch1, headerEpoch2)
 	}
 	if proto.Equal(slashing.Header_1, slashing.Header_2) {
-        return errors.New("expected slashing headers to differ")
+		return errors.New("expected slashing headers to differ")
 	}
 	if !helpers.IsSlashableValidator(proposer, helpers.CurrentEpoch(beaconState)) {
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.Pubkey)

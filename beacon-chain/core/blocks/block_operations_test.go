@@ -225,17 +225,17 @@ func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 	}
 }
 
-func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
-	registry := []*pb.Validator{}
+func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
+	registry := make([]*pb.Validator, 2)
 	currentSlot := uint64(0)
 	slashings := []*pb.ProposerSlashing{
 		{
-			ProposerIndex: 0,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot: 1,
+			ProposerIndex: 1,
+			Header_1: &pb.BeaconBlockHeader{
+				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot: 0,
+			Header_2: &pb.BeaconBlockHeader{
+				Slot: params.BeaconConfig().GenesisSlot,
 			},
 		},
 	}
@@ -249,9 +249,8 @@ func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
 			ProposerSlashings: slashings,
 		},
 	}
-	want := "slashing proposal data slots do not match: 1, 0"
+	want := "mismatched header epochs"
 	if _, err := blocks.ProcessProposerSlashings(
-
 		beaconState,
 		block,
 		false,
@@ -260,19 +259,17 @@ func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
 	}
 }
 
-func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
-	registry := []*pb.Validator{}
+func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
+	registry := make([]*pb.Validator, 2)
 	currentSlot := uint64(0)
 	slashings := []*pb.ProposerSlashing{
 		{
-			ProposerIndex: 0,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:  1,
-				Shard: 0,
+			ProposerIndex: 1,
+			Header_1: &pb.BeaconBlockHeader{
+				Slot: params.BeaconConfig().GenesisEpoch,
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:  1,
-				Shard: 1,
+			Header_2: &pb.BeaconBlockHeader{
+				Slot: params.BeaconConfig().GenesisEpoch,
 			},
 		},
 	}
@@ -286,7 +283,7 @@ func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
 			ProposerSlashings: slashings,
 		},
 	}
-	want := "slashing proposal data shards do not match: 0, 1"
+	want := "expected slashing headers to differ"
 	if _, err := blocks.ProcessProposerSlashings(
 
 		beaconState,
@@ -297,21 +294,26 @@ func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
 	}
 }
 
-func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
-	registry := []*pb.Validator{}
+func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			Pubkey:            []byte("key"),
+			Slashed:           true,
+			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
+			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch,
+		},
+	}
 	currentSlot := uint64(0)
 	slashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 0,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           0,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      params.BeaconConfig().GenesisSlot,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           0,
-				BlockRootHash32: []byte{1, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      params.BeaconConfig().GenesisSlot,
+				Signature: []byte("B"),
 			},
 		},
 	}
@@ -326,8 +328,8 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 		},
 	}
 	want := fmt.Sprintf(
-		"slashing proposal data block roots do not match: %#x, %#x",
-		[]byte{0, 1, 0}, []byte{1, 1, 0},
+		"validator with key %#x is not slashable",
+		beaconState.ValidatorRegistry[0].Pubkey,
 	)
 
 	if _, err := blocks.ProcessProposerSlashings(
@@ -342,13 +344,15 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-
-	validators := make([]*pb.Validator, 10)
+	validators := make([]*pb.Validator, 100)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:         params.BeaconConfig().GenesisEpoch + 1,
+			EffectiveBalance:  params.BeaconConfig().MaxDepositAmount,
+			Slashed:           false,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 			SlashedEpoch:      params.BeaconConfig().GenesisEpoch + 1,
-			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch + 1,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -359,24 +363,24 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	slashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            params.BeaconConfig().GenesisSlot + 1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      params.BeaconConfig().GenesisSlot,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            params.BeaconConfig().GenesisSlot + 1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      params.BeaconConfig().GenesisSlot,
+				Signature: []byte("B"),
 			},
 		},
 	}
-	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
+	currentSlot := params.BeaconConfig().GenesisSlot
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:     validators,
-		Slot:                  currentSlot,
-		Balances:              validatorBalances,
-		LatestSlashedBalances: []uint64{0},
+		ValidatorRegistry:      validators,
+		Slot:                   currentSlot,
+		Balances:               validatorBalances,
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{

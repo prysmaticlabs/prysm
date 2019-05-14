@@ -290,20 +290,20 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	state.ValidatorRegistry[slashedIdx].Slashed = true
 	state.ValidatorRegistry[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().LatestSlashedExitLength
 	slashedBalance := state.ValidatorRegistry[slashedIdx].EffectiveBalance
-	state.LatestSlashedBalances[currentEpoch % params.BeaconConfig().LatestSlashedExitLength] += slashedBalance
+	state.LatestSlashedBalances[currentEpoch%params.BeaconConfig().LatestSlashedExitLength] += slashedBalance
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state, state.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposer idx: %v", err)
 	}
-    var whistleBlower uint64
+	var whistleBlower uint64
 	if whistleBlowerIdx == 0 {
 		whistleBlower = proposerIdx
 	}
-	whistleblowerReward := slashedBalance /	params.BeaconConfig().WhistleBlowingRewardQuotient
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 	state = helpers.IncreaseBalance(state, proposerIdx, proposerReward)
-	state = helpers.IncreaseBalance(state, whistleBlower, whistleblowerReward - proposerReward)
+	state = helpers.IncreaseBalance(state, whistleBlower, whistleblowerReward-proposerReward)
 	state = helpers.DecreaseBalance(state, slashedIdx, whistleblowerReward)
 	return state, nil
 }
