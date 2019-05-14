@@ -147,24 +147,23 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 //   Verify that len(block.body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS.
 //
 //   For each proposer_slashing in block.body.proposer_slashings:
-//     Let proposer = state.validator_registry[proposer_slashing.proposer_index].
-//     Verify that proposer_slashing.proposal_data_1.slot == proposer_slashing.proposal_data_2.slot.
-//     Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
-//     Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
-//     Verify that proposer.slashed_epoch > get_current_epoch(state).
-//     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_1),
-//       signature=proposer_slashing.proposal_signature_1,
-//       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_1.slot), DOMAIN_PROPOSAL)).
-//     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_2),
-//       signature=proposer_slashing.proposal_signature_2,
-//       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_2.slot), DOMAIN_PROPOSAL)).
-//     Run slash_validator(state, proposer_slashing.proposer_index).
+//     proposer = state.validator_registry[proposer_slashing.proposer_index]
+//     # Verify that the epoch is the same
+//     assert slot_to_epoch(proposer_slashing.header_1.slot) == slot_to_epoch(proposer_slashing.header_2.slot)
+//     # But the headers are different
+//     assert proposer_slashing.header_1 != proposer_slashing.header_2
+//     # Check proposer is slashable
+//     assert is_slashable_validator(proposer, get_current_epoch(state))
+//     # Signatures are valid
+//     for header in (proposer_slashing.header_1, proposer_slashing.header_2):
+//       domain = get_domain(state, DOMAIN_BEACON_PROPOSER, slot_to_epoch(header.slot))
+//       assert bls_verify(proposer.pubkey, signing_root(header), header.signature, domain)
+//     slash_validator(state, proposer_slashing.proposer_index)
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-
 	body := block.Body
 	registry := beaconState.ValidatorRegistry
 	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
@@ -176,23 +175,24 @@ func ProcessProposerSlashings(
 	}
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
-		if err = verifyProposerSlashing(beaconState, slashing, verifySignatures); err != nil {
+		proposer := registry[slashing.ProposerIndex]
+		if err = verifyProposerSlashing(beaconState, proposer, slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
-		proposer := registry[slashing.ProposerIndex]
-		if proposer.SlashedEpoch > helpers.CurrentEpoch(beaconState) {
-			beaconState, err = v.SlashValidator(beaconState, slashing.ProposerIndex)
-			if err != nil {
-				return nil, fmt.Errorf("could not slash proposer index %d: %v",
-					slashing.ProposerIndex, err)
-			}
+		beaconState, err = v.SlashValidator(
+			beaconState, slashing.ProposerIndex, 0 /* proposer is whistleblower */,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not slash proposer index %d: %v",
+				slashing.ProposerIndex, err)
 		}
 	}
 	return beaconState, nil
 }
 
 func verifyProposerSlashing(
-	beaconState, state *pb.BeaconState,
+	beaconState *pb.BeaconState,
+	proposer *pb.Validator,
 	slashing *pb.ProposerSlashing,
 	verifySignatures bool,
 ) error {
@@ -200,6 +200,16 @@ func verifyProposerSlashing(
 	headerSlot2 := helpers.SlotToEpoch(slashing.Header_2.Slot)
 	if headerSlot1 != headerSlot2 {
 		return fmt.Errorf("mismatched header slots, received %d == %d", headerSlot1, headerSlot2)
+	}
+	if proto.Equal(slashing.Header_1, slashing.Header_2) {
+        return errors.New("expected slashing headers to differ")
+	}
+	if !helpers.IsSlashableValidator(proposer, helpers.CurrentEpoch(beaconState)) {
+		return fmt.Errorf("validator with key %#x is not slashable", proposer.Pubkey)
+	}
+	if verifySignatures {
+		// TODO(#258): Implement BLS verify of header signatures.
+		return nil
 	}
 	return nil
 }
@@ -247,7 +257,7 @@ func ProcessAttesterSlashings(
 			return nil, fmt.Errorf("could not determine validator indices to slash: %v", err)
 		}
 		for _, validatorIndex := range slashableIndices {
-			beaconState, err = v.SlashValidator(beaconState, validatorIndex)
+			beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
 			if err != nil {
 				return nil, fmt.Errorf("could not slash validator index %d: %v",
 					validatorIndex, err)
