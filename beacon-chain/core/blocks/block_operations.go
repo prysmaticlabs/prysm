@@ -255,7 +255,7 @@ func ProcessAttesterSlashings(
 		slashableIndices := slashableAttesterIndices(slashing)
 		currentEpoch := helpers.CurrentEpoch(beaconState)
 		var err error
-        var slashedAny bool
+		var slashedAny bool
 		for _, validatorIndex := range slashableIndices {
 			if helpers.IsSlashableValidator(beaconState.ValidatorRegistry[validatorIndex], currentEpoch) {
 				beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
@@ -343,16 +343,17 @@ func validateIndexedAttestation(attestation *pb.IndexedAttestation, verifySignat
 	if len(intersection) != 0 {
 		return fmt.Errorf("expected disjoint bit indices, received %d bits in common", intersection)
 	}
-	if uint64(len(bit0Indices) + len(bit1Indices)) > params.BeaconConfig().MaxIndicesPerAttestation {
+	if uint64(len(bit0Indices)+len(bit1Indices)) > params.BeaconConfig().MaxIndicesPerAttestation {
 		return fmt.Errorf("exceeded max number of bit indices: %d", len(bit0Indices)+len(bit1Indices))
 	}
-    if !sliceutil.IsUint64Sorted(bit0Indices) || !sliceutil.IsUint64Sorted(bit1Indices) {
+	if !sliceutil.IsUint64Sorted(bit0Indices) || !sliceutil.IsUint64Sorted(bit1Indices) {
 		return errors.New("bit indices not sorted")
 	}
 	if verifySignatures {
 		// TODO(#258): Implement BLS verify of attestation bit information.
 		return nil
 	}
+	return nil
 }
 
 func slashableAttesterIndices(slashing *pb.AttesterSlashing) []uint64 {

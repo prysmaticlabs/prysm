@@ -121,7 +121,7 @@ func ProcessDeposit(
 			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
-			Slashed: false,
+			Slashed:               false,
 			StatusFlags:           0,
 			WithdrawalCredentials: withdrawalCredentials,
 		}
