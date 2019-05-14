@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -104,7 +103,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		if err := chainService.beaconDB.SaveBlock(blocks[forkIndex]); err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.beaconDB.SaveHistoricalState(ctx, forkState); err != nil {
+		if err := chainService.beaconDB.SaveHistoricalState(ctx, forkState, roots[forkIndex]); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -128,7 +127,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	}
 	chainService.attsService = attHandler
 
-	block4State, err := chainService.beaconDB.HistoricalStateFromSlot(ctx, blocks[4].Slot)
+	block4State, err := chainService.beaconDB.HistoricalStateFromSlot(ctx, blocks[4].Slot, roots[4])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,10 +147,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 			newHead,
 		)
 	}
-	want := fmt.Sprintf(
-		"Reorg happened, last head at slot %d, new head block at slot %d",
-		blocks[5].Slot-params.BeaconConfig().GenesisSlot, blocks[4].Slot-params.BeaconConfig().GenesisSlot,
-	)
+	want := "Reorg happened"
 	testutil.AssertLogsContain(t, hook, want)
 }
 

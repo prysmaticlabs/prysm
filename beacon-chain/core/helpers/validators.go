@@ -71,7 +71,7 @@ func DelayedActivationExitEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }
 
-// ChurnLimit returns then number of validators that are allowed to
+// ChurnLimit returns the number of validators that are allowed to
 // enter and exit validator pool for an epoch.
 //
 // Spec pseudocode definition:
@@ -103,7 +103,7 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
 	// RegistryChange is false because BeaconProposerIndex is only written
 	// to be able to get proposers from current and previous epoch following
 	// ETH2.0 beacon chain spec.
-	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
+	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
 	if err != nil {
 		return 0, err
 	}

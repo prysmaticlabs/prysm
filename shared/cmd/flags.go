@@ -72,6 +72,18 @@ var (
 		Usage: "The port used by libp2p.",
 		Value: 12000,
 	}
+	// P2PHost defines the host IP to be used by libp2p.
+	P2PHost = cli.StringFlag{
+		Name:  "p2p-host-ip",
+		Usage: "The IP address advertised by libp2p. This may be used to advertise an external IP.",
+		Value: "",
+	}
+	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
+	P2PMaxPeers = cli.Int64Flag{
+		Name:  "p2p-max-peers",
+		Usage: "The max number of p2p peers to maintain.",
+		Value: 30,
+	}
 	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
 	ClearDB = cli.BoolFlag{
 		Name:  "clear-db",

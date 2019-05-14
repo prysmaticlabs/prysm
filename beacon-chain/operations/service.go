@@ -2,6 +2,7 @@
 package operations
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -9,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
@@ -205,10 +207,34 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
 		return err
 	}
-	s.p2p.Broadcast(ctx, &pb.AttestationAnnounce{
-		Hash: hash[:],
-	})
 	return nil
+}
+
+// IsAttCanonical returns true if the input attestation is voting on the canonical chain, false
+// otherwise. The steps to verify are:
+//	1.) retrieve the voted block
+//	2.) retrieve the canonical block by using voted block's slot number
+//	3.) return true if voted block root and the canonical block root are the same
+func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool, error) {
+	votedBlk, err := s.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRootHash32))
+	if err != nil {
+		return false, fmt.Errorf("could not hash block: %v", err)
+	}
+	if votedBlk == nil {
+		return false, nil
+	}
+	canonicalBlk, err := s.beaconDB.CanonicalBlockBySlot(ctx, votedBlk.Slot)
+	if err != nil {
+		return false, fmt.Errorf("could not hash block: %v", err)
+	}
+	if canonicalBlk == nil {
+		return false, nil
+	}
+	canonicalRoot, err := hashutil.HashBeaconBlock(canonicalBlk)
+	if err != nil {
+		return false, fmt.Errorf("could not hash block: %v", err)
+	}
+	return bytes.Equal(att.Data.BeaconBlockRootHash32, canonicalRoot[:]), nil
 }
 
 // removeOperations removes the processed operations from operation pool and DB.

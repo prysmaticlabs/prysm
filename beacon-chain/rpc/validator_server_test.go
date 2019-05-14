@@ -387,11 +387,12 @@ func TestValidatorStatus_Active(t *testing.T) {
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
 
 	// Active because activation epoch <= current epoch < exit epoch.
+	activeEpoch := helpers.DelayedActivationExitEpoch(params.BeaconConfig().GenesisEpoch)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
-		Slot:        params.BeaconConfig().GenesisSlot,
+		Slot:        params.BeaconConfig().GenesisSlot + 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch: activeEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKey},
 		}}); err != nil {
@@ -416,8 +417,9 @@ func TestValidatorStatus_Active(t *testing.T) {
 	}
 
 	expected := &pb.ValidatorStatusResponse{
-		Status:          pb.ValidatorStatus_ACTIVE,
-		ActivationEpoch: params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+		Status:               pb.ValidatorStatus_ACTIVE,
+		ActivationEpoch:      5,
+		DepositInclusionSlot: 3413,
 	}
 	if !proto.Equal(resp, expected) {
 		t.Errorf("Wanted %v, got %v", expected, resp)
@@ -436,7 +438,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 
 	// Initiated exit because validator status flag = Validator_INITIATED_EXIT.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: params.BeaconConfig().GenesisSlot + 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			StatusFlags: pbp2p.Validator_INITIATED_EXIT,
 			Pubkey:      pubKey},
@@ -490,7 +492,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 
 	// Withdrawable exit because validator status flag = Validator_WITHDRAWABLE.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: params.BeaconConfig().GenesisSlot + 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			StatusFlags: pbp2p.Validator_WITHDRAWABLE,
 			Pubkey:      pubKey},
@@ -544,7 +546,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 
 	// Exit slashed because exit epoch and slashed epoch are =< current epoch.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: params.BeaconConfig().GenesisSlot + 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			Pubkey: pubKey},
 		}}); err != nil {
@@ -597,7 +599,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 
 	// Exit because only exit epoch is =< current epoch.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 64,
+		Slot: params.BeaconConfig().GenesisSlot + 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			Pubkey:       pubKey,
 			SlashedEpoch: params.BeaconConfig().FarFutureEpoch},
@@ -712,6 +714,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		beaconDB:           db,
 		ctx:                ctx,
 		chainService:       newMockChainService(),
+		powChainService:    &mockPOWChainService{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
 	req := &pb.ValidatorActivationRequest{
