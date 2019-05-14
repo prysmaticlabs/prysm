@@ -227,7 +227,7 @@ func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations
 
 	for _, attestation := range attestations {
 		if err := a.updateAttestation(ctx, headRoot, beaconState, attestation); err != nil {
-			log.Error(err)
+			log.Debug(err)
 		}
 	}
 	return nil
