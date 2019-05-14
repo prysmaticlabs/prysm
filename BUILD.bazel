@@ -32,6 +32,24 @@ alias(
     ],
 )
 
+# Protobuf gRPC compiler without gogoproto. Required for gRPC gateway.
+alias(
+    name = "grpc_nogogo_proto_compiler",
+    actual = "@io_bazel_rules_go//proto:go_grpc",
+    visibility = [
+        "//proto:__subpackages__",
+    ],
+)
+
+# Protobuf gRPC gateway compiler
+alias(
+    name = "grpc_gateway_proto_compiler",
+    actual = "@grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+    visibility = [
+        "//proto:__subpackages__",
+    ],
+)
+
 gometalinter(
     name = "gometalinter",
     config = "//:.gometalinter.json",
@@ -44,8 +62,8 @@ gometalinter(
 goimports(
     name = "goimports",
     display_diffs = True,
-    write = False,
     prefix = prefix,
+    write = False,
 )
 
 workspace_binary(
@@ -55,6 +73,8 @@ workspace_binary(
 
 nogo(
     name = "nogo",
+    config = "nogo_config.json",
+    visibility = ["//visibility:public"],
     deps = [
         "@org_golang_x_tools//go/analysis/passes/unsafeptr:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/unreachable:go_tool_library",
@@ -87,6 +107,4 @@ nogo(
         "@org_golang_x_tools//go/analysis/passes/inspect:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/asmdecl:go_tool_library",
     ],
-    visibility = ["//visibility:public"],
-    config = "nogo_config.json",
 )

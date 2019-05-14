@@ -129,6 +129,16 @@ http_archive(
     url = "https://github.com/kubernetes/repo-infra/archive/df02ded38f9506e5bbcbf21702034b4fef815f2f.tar.gz",
 )
 
+http_archive(
+    name = "com_github_bazelbuild_buildtools",
+    strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
+    url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
+)
+
+load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
+
+buildifier_dependencies()
+
 go_repository(
     name = "com_github_golang_mock",
     commit = "51421b967af1f557f93a59e0057aaf15ca02e29c",  # v1.2.0
@@ -1089,4 +1099,16 @@ go_repository(
     name = "com_github_joonix_log",
     commit = "e0e770ceed363301a4f50bbc9599c6925c77b2d8",
     importpath = "github.com/joonix/log",
+)
+
+go_repository(
+    name = "grpc_ecosystem_grpc_gateway",
+    commit = "8fd5fd9d19ce68183a6b0934519dfe7fe6269612",
+    importpath = "github.com/grpc-ecosystem/grpc-gateway",
+)
+
+go_repository(
+    name = "com_github_ghodss_yaml",
+    commit = "25d852aebe32c875e9c044af3eef9c7dc6bc777f",
+    importpath = "github.com/ghodss/yaml",
 )

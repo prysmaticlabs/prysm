@@ -1,17 +1,37 @@
 # gazelle:ignore
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("@grpc_ecosystem_grpc_gateway//protoc-gen-swagger:defs.bzl", "protoc_gen_swagger")
 
 go_proto_library(
     name = "v1_go_proto",
+    compiler = "//:grpc_proto_compiler",
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1",
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/sharding/p2p/v1:go_default_library",
+        "@go_googleapis//google/api:annotations_go_proto",
+        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
     ],
-    compiler = "//:grpc_proto_compiler",
+)
+
+go_proto_library(
+    name = "v1_grpc_gateway_proto",
+    compilers = [
+        "//:grpc_nogogo_proto_compiler",
+        "//:grpc_gateway_proto_compiler",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway",
+    proto = ":v1_proto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/sharding/p2p/v1:go_default_library",
+        "@go_googleapis//google/api:annotations_go_proto",
+        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
+    ],
 )
 
 go_library(
@@ -23,12 +43,22 @@ go_library(
 
 proto_library(
     name = "v1_proto",
-    srcs = ["services.proto"],
+    srcs = [
+        "services.proto",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:v1_proto",
         "//proto/sharding/p2p/v1:v1_proto",
         "@com_google_protobuf//:empty_proto",
         "@com_google_protobuf//:timestamp_proto",
+        "@go_googleapis//google/api:annotations_proto",
+        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_proto",
     ],
+)
+
+protoc_gen_swagger(
+    name = "swagger",
+    proto = ":v1_proto",
+    visibility = ["//visibility:public"],
 )

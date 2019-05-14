@@ -10,6 +10,23 @@ spec:
   - prylabs-wildcard-gateway
   http:
   - match:
+      - uri:
+          prefix: /v1/beacon
+      - uri:
+          prefix: /swagger/
+    route:
+      - destination:
+          port:
+            number: 8000
+          host: public-api-gateway.beacon-chain.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+        - "*"
+      allowHeaders:
+        - content-type
+      allowMethods:
+        - GET
+  - match:
      - uri:
          prefix: /faucet.FaucetService
     route:
@@ -77,3 +94,18 @@ spec:
         - grpc-message
     retries:
       attempts: 3
+  - match:
+      - uri:
+          prefix: /
+    route:
+      - destination:
+          port:
+            number: 8080
+          host: public-api-ui.beacon-chain.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+        - "*"
+      allowHeaders:
+        - content-type
+      allowMethods:
+        - GET

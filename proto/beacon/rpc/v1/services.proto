@@ -5,6 +5,38 @@ package ethereum.beacon.rpc.v1;
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "proto/beacon/p2p/v1/types.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-swagger/options/annotations.proto";
+
+option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
+	info: {
+		title: "Prysm";
+		version: "0.0.0";
+		contact: {
+			name: "Prysmatic Labs";
+			url: "https://prysmaticlabs.com";
+			email: "team@prysmaticlabs.com";
+		};
+		license: {
+			name: "GNU General Public License v3.0";
+			url: "https://github.com/prysmaticlabs/prysm/blob/master/LICENSE.md";
+		};
+        description: "JSON RPC services provided by Prysm."
+	};
+    external_docs: {
+        url: "https://github.com/prysmaticlabs/prysm";
+        description : "Prysm Github";
+    };
+    host: "api.prylabs.net",
+	schemes: HTTPS;
+	consumes: "application/json";
+	consumes: "application/grpc-web-text";
+    consumes: "application/grpc-web-json";
+	produces: "application/json";
+    produces: "application/grpc-web-text";
+    consumes: "application/grpc-web-json";
+};
+
 
 service BeaconService {
   rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
@@ -15,7 +47,14 @@ service BeaconService {
   rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
   rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
   rpc ForkData(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.Fork);
-  rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse);
+  rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse) {
+    option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+      summary: "Fetches block tree since last finalized block";
+    };
+    option (google.api.http) = {
+      get: "/v1/beacon/blocktree";
+    };
+  }
 }
 
 service AttesterService {
