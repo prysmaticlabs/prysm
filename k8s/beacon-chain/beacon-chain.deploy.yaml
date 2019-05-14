@@ -63,6 +63,7 @@ spec:
             # Disabling gossip sub until a larger beacon chain deployment.
             - --disable-gossip-sub
             - --p2p-max-peers=50
+            - --log-format=fluentd
           resources:
             requests:
               memory: "100Mi"
