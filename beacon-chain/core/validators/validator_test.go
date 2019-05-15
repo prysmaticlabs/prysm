@@ -1,7 +1,6 @@
 package validators
 
 import (
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -498,20 +497,6 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	state = ExitValidator(state, 0)
 	if state.ValidatorRegistry[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 		t.Error("Expected exited validator to stay exited")
-	}
-}
-
-func TestSlashValidator_AlreadyWithdrawn(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 100,
-		ValidatorRegistry: []*pb.Validator{
-			{WithdrawableEpoch: 1},
-		},
-	}
-	want := fmt.Sprintf("withdrawn validator 0 could not get slashed, current slot: %d, withdrawn slot %d",
-		state.Slot, helpers.StartSlot(state.ValidatorRegistry[0].WithdrawableEpoch))
-	if _, err := SlashValidator(state, 0); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
 

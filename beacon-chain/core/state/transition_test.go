@@ -114,15 +114,13 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	slashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("B"),
 			},
 		},
 	}
@@ -158,38 +156,36 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			ProposerIndex: 3,
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("B"),
 			},
 		},
 	}
-	att1 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 4,
-	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att2,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
 		},
 	}
@@ -227,38 +223,36 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            params.BeaconConfig().GenesisSlot + 1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			ProposerIndex: 3,
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            params.BeaconConfig().GenesisSlot + 1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("B"),
 			},
 		},
 	}
-	att1 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 4,
-	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att2,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
 		},
 	}
@@ -320,38 +314,36 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			ProposerIndex: 3,
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("A"),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:      1,
+				Signature: []byte("B"),
 			},
 		},
 	}
-	att1 := &pb.AttestationData{
-		Slot:           5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 4,
-	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att2,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
 		},
 	}
