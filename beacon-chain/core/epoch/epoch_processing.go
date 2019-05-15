@@ -11,8 +11,6 @@ import (
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -38,14 +36,6 @@ type MatchedAttestations struct {
 	target []*pb.PendingAttestation
 	head   []*pb.PendingAttestation
 }
-
-var (
-	ejectedCount          float64
-	validatorEjectedGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "validator_ejected_count",
-		Help: "Total number of ejected validators",
-	})
-)
 
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
