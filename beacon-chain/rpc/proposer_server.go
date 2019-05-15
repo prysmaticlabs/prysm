@@ -57,11 +57,8 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
 		}
 	}
-
-	proposerIndex, err := helpers.BeaconProposerIndex(
-		beaconState,
-		req.SlotNumber,
-	)
+	beaconState.Slot = req.SlotNumber
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not get index of previous proposer: %v", err)
 	}
