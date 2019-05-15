@@ -29,6 +29,25 @@ func TestIntersectionUint64(t *testing.T) {
 	}
 }
 
+func TestIsSortedUint64(t *testing.T) {
+	testCases := []struct {
+		setA []uint64
+		out  bool
+	}{
+		{[]uint64{1, 2, 3}, true},
+		{[]uint64{3, 1, 3}, false},
+		{[]uint64{1}, true},
+		{[]uint64{}, true},
+	}
+	for _, tt := range testCases {
+		result := IsUint64Sorted(tt.setA)
+		if result != tt.out {
+			t.Errorf("got %v, want %v", result, tt.out)
+		}
+
+	}
+}
+
 func TestIntersectionInt64(t *testing.T) {
 	testCases := []struct {
 		setA []int64
