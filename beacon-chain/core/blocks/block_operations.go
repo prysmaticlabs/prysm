@@ -177,7 +177,7 @@ func ProcessProposerSlashings(
 	for idx, slashing := range body.ProposerSlashings {
 		proposer := registry[slashing.ProposerIndex]
 		if err = verifyProposerSlashing(beaconState, proposer, slashing, verifySignatures); err != nil {
-			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
+			return nil, fmt.Errorf("could not verify proposer slashing %d: %v", idx, err)
 		}
 		beaconState, err = v.SlashValidator(
 			beaconState, slashing.ProposerIndex, 0, /* proposer is whistleblower */
