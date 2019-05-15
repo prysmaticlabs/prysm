@@ -134,9 +134,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{25, 87}) {
+	if !reflect.DeepEqual(indices, []uint64{33, 94}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{25, 87}, indices)
+			[]uint64{33, 94}, indices)
 	}
 }
 

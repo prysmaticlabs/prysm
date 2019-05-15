@@ -241,21 +241,21 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
 			shard:           3,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{25, 87},
+			wanted:          []uint64{37, 100},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           2,
 			bitfield:        []byte{0x01},
-			wanted:          []uint64{25, 87},
+			wanted:          []uint64{2, 35},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           11,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{25, 87},
+			wanted:          []uint64{95, 101},
 		},
 	}
 

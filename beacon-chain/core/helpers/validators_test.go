@@ -29,7 +29,6 @@ func TestIsActiveValidator_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
-
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -54,28 +53,29 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 1,
-			index: 16165,
+			index: 15324,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 5,
-			index: 2777,
+			index: 11774,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 19,
-			index: 14911,
+			index: 2719,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 30,
-			index: 16028,
+			index: 7418,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 43,
-			index: 4401,
+			index: 15000,
 		},
 	}
 
 	for _, tt := range tests {
-		result, err := BeaconProposerIndex(state, tt.slot)
+		state.Slot = tt.slot
+		result, err := BeaconProposerIndex(state)
 		if err != nil {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)
 		}
@@ -91,13 +91,12 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
-
 	beaconState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
-	_, err := BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
+	_, err := BeaconProposerIndex(beaconState)
 	expected := fmt.Sprintf("empty first committee at slot %d", 0)
 	if err.Error() != expected {
 		t.Errorf("Unexpected error. got=%v want=%s", err, expected)

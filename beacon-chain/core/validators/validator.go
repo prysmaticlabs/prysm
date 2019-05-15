@@ -296,7 +296,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 	slashedDuration := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
 	state.LatestSlashedBalances[slashedDuration] += helpers.EffectiveBalance(state, idx)
 
-	whistleblowerIdx, err := helpers.BeaconProposerIndex(state, state.Slot)
+	whistleblowerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposer idx: %v", err)
 	}

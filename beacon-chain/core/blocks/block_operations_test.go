@@ -19,9 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
@@ -60,7 +59,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 		t.Fatal(err)
 	}
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +95,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 		t.Fatal(err)
 	}
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1045,20 +1044,20 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x01},
-			wantedCustodyBit0Indices: []uint64{2},
-			wantedCustodyBit1Indices: []uint64{35},
+			wantedCustodyBit0Indices: []uint64{},
+			wantedCustodyBit1Indices: []uint64{37, 100},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x02},
-			wantedCustodyBit0Indices: []uint64{35},
-			wantedCustodyBit1Indices: []uint64{2},
+			wantedCustodyBit0Indices: []uint64{},
+			wantedCustodyBit1Indices: []uint64{37, 100},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{2, 35},
+			wantedCustodyBit1Indices: []uint64{37, 100},
 		},
 	}
 

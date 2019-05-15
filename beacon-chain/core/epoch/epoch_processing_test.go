@@ -561,7 +561,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := 128 * params.BeaconConfig().MaxDepositAmount
+	wanted := 256 * params.BeaconConfig().MaxDepositAmount
 	if balance != wanted {
 		t.Errorf("wanted balance: %d, got: %d", wanted, balance)
 	}

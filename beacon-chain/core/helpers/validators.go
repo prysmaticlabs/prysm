@@ -112,7 +112,7 @@ func ChurnLimit(state *pb.BeaconState) uint64 {
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            return candidate_index
 //        i += 1
-func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
+func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	e := CurrentEpoch(state)
 	committesPerSlot := EpochCommitteeCount(state, e) / params.BeaconConfig().SlotsPerEpoch
 	offSet := committesPerSlot * (state.Slot % params.BeaconConfig().SlotsPerEpoch)
@@ -124,6 +124,10 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
 	firstCommittee, err := CrosslinkCommitteeAtEpoch(state, e, shard)
 	if err != nil {
 		return 0, fmt.Errorf("could not get first committee: %v", err)
+	}
+	if len(firstCommittee) == 0 {
+		return 0, fmt.Errorf("empty first committee at slot %d",
+			state.Slot-params.BeaconConfig().GenesisSlot)
 	}
 	maxRandomByte := uint64(8<<1 - 1)
 	seed, err := GenerateSeed(state, e)
