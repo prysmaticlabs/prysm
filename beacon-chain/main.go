@@ -68,6 +68,7 @@ func main() {
 		cmd.DisableMonitoringFlag,
 		cmd.ClearDB,
 		cmd.LogFormat,
+		cmd.MaxGoroutines,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
