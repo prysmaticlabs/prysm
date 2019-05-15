@@ -205,24 +205,24 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 		return state
 	}
 	exitEpochs := []uint64{}
-	for _,val := range state.ValidatorRegistry {
+	for _, val := range state.ValidatorRegistry {
 		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch)
 		}
 	}
-   	exitEpochs = append(exitEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
+	exitEpochs = append(exitEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
 
-   	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
-   	exitQueueEpoch := exitEpochs[0]
-   	for _, i := range exitEpochs {
-   		if exitQueueEpoch < i {
-   			exitQueueEpoch = i
+	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
+	exitQueueEpoch := exitEpochs[0]
+	for _, i := range exitEpochs {
+		if exitQueueEpoch < i {
+			exitQueueEpoch = i
 		}
 	}
 
-   	// We use the exit queue churn to determine if we have passed a churn limit.
-   	exitQueueChurn := 0
-	for _,val := range state.ValidatorRegistry {
+	// We use the exit queue churn to determine if we have passed a churn limit.
+	exitQueueChurn := 0
+	for _, val := range state.ValidatorRegistry {
 		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn++
 		}
