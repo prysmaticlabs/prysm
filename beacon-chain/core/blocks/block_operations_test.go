@@ -1660,32 +1660,45 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 			Slashed:   true,
 		}
 	}
-	validators[16165].Slashed = false
+
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot + 1,
-		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
-		Fork:              &pb.Fork{},
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		LatestBlockHeader:      &pb.BeaconBlockHeader{Slot: 9},
+		Fork:                   &pb.Fork{},
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
+
+	validators[12475].Slashed = false
+
 	lbhsr, err := ssz.SignedRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
+	currentEpoch := helpers.CurrentEpoch(state)
+	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockSig := priv.Sign([]byte("hello"), dt)
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 1,
+		Slot: params.BeaconConfig().GenesisSlot,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
 		ParentBlockRoot: lbhsr[:],
-		Signature:       []byte("hello"),
+		Signature:       blockSig.Marshal(),
 	}
 	newState, err := blocks.ProcessBlockHeader(state, block)
 	if err != nil {
 		t.Error(err)
+		t.Fail()
 	}
 	if !reflect.DeepEqual(newState.LatestBlockHeader,
 		&pb.BeaconBlockHeader{
-			Slot:              params.BeaconConfig().GenesisSlot + 1,
+			Slot:              params.BeaconConfig().GenesisSlot,
 			PreviousBlockRoot: block.ParentBlockRoot,
 		}) {
 		t.Errorf("new state don't contain")
