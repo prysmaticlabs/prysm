@@ -380,7 +380,6 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 }
 
 func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
-	t.Skip()
 	beaconDB := internal.SetupDB(t)
 	hook := logTest.NewGlobal()
 	defer internal.TeardownDB(t, beaconDB)
@@ -396,8 +395,10 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 1,
-		ValidatorRegistry: validators,
+		Slot:                   params.BeaconConfig().GenesisSlot + 1,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		ValidatorRegistry:      validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot + 1,
@@ -425,7 +426,6 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 }
 
 func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
-	t.Skip()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -440,8 +440,10 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 1,
-		ValidatorRegistry: validators,
+		Slot:                   params.BeaconConfig().GenesisSlot + 1,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		ValidatorRegistry:      validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot + 1,

@@ -329,11 +329,11 @@ func CommitteeAssignment(
 // Spec pseudocode definition:
 // 	def get_shard_delta(state: BeaconState, epoch: Epoch) -> int:
 //    return min(get_epoch_committee_count(state, epoch), SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH)
-func ShardDelta(state *pb.BeaconState, epoch uint64) uint64 {
+func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 	shardCount := params.BeaconConfig().ShardCount
 	minShardDelta := shardCount - shardCount/params.BeaconConfig().SlotsPerEpoch
-	if EpochCommitteeCount(state, epoch) < minShardDelta {
-		return EpochCommitteeCount(state, epoch)
+	if EpochCommitteeCount(beaconState, epoch) < minShardDelta {
+		return EpochCommitteeCount(beaconState, epoch)
 	}
 	return minShardDelta
 }
