@@ -648,6 +648,55 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	return winnerCrosslink, nil
 }
 
+// ProcessSlashings processes the slashed validators during epoch processing,
+//
+// def process_slashings(state: BeaconState) -> None:
+//    current_epoch = get_current_epoch(state)
+//    active_validator_indices = get_active_validator_indices(state, current_epoch)
+//    total_balance = get_total_balance(state, active_validator_indices)
+//
+//    # Compute `total_penalties`
+//    total_at_start = state.latest_slashed_balances[(current_epoch + 1) % LATEST_SLASHED_EXIT_LENGTH]
+//    total_at_end = state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
+//    total_penalties = total_at_end - total_at_start
+//
+//    for index, validator in enumerate(state.validator_registry):
+//        if validator.slashed and current_epoch == validator.withdrawable_epoch - LATEST_SLASHED_EXIT_LENGTH // 2:
+//            penalty = max(
+//                validator.effective_balance * min(total_penalties * 3, total_balance) // total_balance,
+//                validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT
+//            )
+//            decrease_balance(state, index, penalty)
+func ProcessSlashings(state *pb.BeaconState) *pb.BeaconState {
+	currentEpoch := helpers.CurrentEpoch(state)
+	activeIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
+	totalBalance := helpers.TotalBalance(state, activeIndices)
+
+	// Compute the total penalties.
+	exitLength := params.BeaconConfig().LatestSlashedExitLength
+	totalAtStart := state.LatestSlashedBalances[(currentEpoch+1)%exitLength]
+	totalAtEnd := state.LatestSlashedBalances[currentEpoch%exitLength]
+	totalPenalties := totalAtEnd - totalAtStart
+
+	// Compute slashing for each validator.
+	for index, validator := range state.ValidatorRegistry {
+		correctEpoch := currentEpoch == validator.WithdrawableEpoch-exitLength/2
+		if validator.Slashed && correctEpoch {
+			minPenalties := totalPenalties * 3
+			if minPenalties > totalBalance {
+				minPenalties = totalBalance
+			}
+			effectiveBal := validator.EffectiveBalance
+			penalty := effectiveBal * minPenalties / totalBalance
+			if penalty < effectiveBal/params.BeaconConfig().MinSlashingPenaltyQuotient {
+				penalty = effectiveBal / params.BeaconConfig().MinSlashingPenaltyQuotient
+			}
+			state = helpers.DecreaseBalance(state, uint64(index), penalty)
+		}
+	}
+	return state
+}
+
 // CrosslinkAttestingIndices returns the attesting indices of the input crosslink.
 func CrosslinkAttestingIndices(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) ([]uint64, error) {
 	crosslinkAtts := attsForCrosslink(state, crosslink, atts)
