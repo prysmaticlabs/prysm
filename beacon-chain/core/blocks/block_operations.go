@@ -89,7 +89,7 @@ func ProcessRandao(
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
 	if verifySignatures {
-		proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+		proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 		}
@@ -147,24 +147,23 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 //   Verify that len(block.body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS.
 //
 //   For each proposer_slashing in block.body.proposer_slashings:
-//     Let proposer = state.validator_registry[proposer_slashing.proposer_index].
-//     Verify that proposer_slashing.proposal_data_1.slot == proposer_slashing.proposal_data_2.slot.
-//     Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
-//     Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
-//     Verify that proposer.slashed_epoch > get_current_epoch(state).
-//     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_1),
-//       signature=proposer_slashing.proposal_signature_1,
-//       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_1.slot), DOMAIN_PROPOSAL)).
-//     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_2),
-//       signature=proposer_slashing.proposal_signature_2,
-//       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_2.slot), DOMAIN_PROPOSAL)).
-//     Run slash_validator(state, proposer_slashing.proposer_index).
+//     proposer = state.validator_registry[proposer_slashing.proposer_index]
+//     # Verify that the epoch is the same
+//     assert slot_to_epoch(proposer_slashing.header_1.slot) == slot_to_epoch(proposer_slashing.header_2.slot)
+//     # But the headers are different
+//     assert proposer_slashing.header_1 != proposer_slashing.header_2
+//     # Check proposer is slashable
+//     assert is_slashable_validator(proposer, get_current_epoch(state))
+//     # Signatures are valid
+//     for header in (proposer_slashing.header_1, proposer_slashing.header_2):
+//       domain = get_domain(state, DOMAIN_BEACON_PROPOSER, slot_to_epoch(header.slot))
+//       assert bls_verify(proposer.pubkey, signing_root(header), header.signature, domain)
+//     slash_validator(state, proposer_slashing.proposer_index)
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-
 	body := block.Body
 	registry := beaconState.ValidatorRegistry
 	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
@@ -176,50 +175,40 @@ func ProcessProposerSlashings(
 	}
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
-		if err = verifyProposerSlashing(slashing, verifySignatures); err != nil {
-			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
-		}
 		proposer := registry[slashing.ProposerIndex]
-		if proposer.SlashedEpoch > helpers.CurrentEpoch(beaconState) {
-			beaconState, err = v.SlashValidator(beaconState, slashing.ProposerIndex)
-			if err != nil {
-				return nil, fmt.Errorf("could not slash proposer index %d: %v",
-					slashing.ProposerIndex, err)
-			}
+		if err = verifyProposerSlashing(beaconState, proposer, slashing, verifySignatures); err != nil {
+			return nil, fmt.Errorf("could not verify proposer slashing %d: %v", idx, err)
+		}
+		beaconState, err = v.SlashValidator(
+			beaconState, slashing.ProposerIndex, 0, /* proposer is whistleblower */
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not slash proposer index %d: %v",
+				slashing.ProposerIndex, err)
 		}
 	}
 	return beaconState, nil
 }
 
 func verifyProposerSlashing(
+	beaconState *pb.BeaconState,
+	proposer *pb.Validator,
 	slashing *pb.ProposerSlashing,
 	verifySignatures bool,
 ) error {
-	// section of block operations.
-	slot1 := slashing.ProposalData_1.Slot
-	slot2 := slashing.ProposalData_2.Slot
-	shard1 := slashing.ProposalData_1.Shard
-	shard2 := slashing.ProposalData_2.Shard
-	root1 := slashing.ProposalData_1.BlockRootHash32
-	root2 := slashing.ProposalData_2.BlockRootHash32
-	if slot1 != slot2 {
-		if slot1 > params.BeaconConfig().GenesisSlot {
-			slot1 -= params.BeaconConfig().GenesisSlot
-		}
-		if slot2 > params.BeaconConfig().GenesisSlot {
-			slot2 -= params.BeaconConfig().GenesisSlot
-		}
-		return fmt.Errorf("slashing proposal data slots do not match: %d, %d",
-			slot1, slot2)
+	headerEpoch1 := helpers.SlotToEpoch(slashing.Header_1.Slot)
+	headerEpoch2 := helpers.SlotToEpoch(slashing.Header_2.Slot)
+	if headerEpoch1 != headerEpoch2 {
+		return fmt.Errorf("mismatched header epochs, received %d == %d", headerEpoch1, headerEpoch2)
 	}
-	if shard1 != shard2 {
-		return fmt.Errorf("slashing proposal data shards do not match: %d, %d", shard1, shard2)
+	if proto.Equal(slashing.Header_1, slashing.Header_2) {
+		return errors.New("expected slashing headers to differ")
 	}
-	if !bytes.Equal(root1, root2) {
-		return fmt.Errorf("slashing proposal data block roots do not match: %#x, %#x", root1, root2)
+	if !helpers.IsSlashableValidator(proposer, helpers.CurrentEpoch(beaconState)) {
+		return fmt.Errorf("validator with key %#x is not slashable", proposer.Pubkey)
 	}
 	if verifySignatures {
-		// TODO(#258): Verify BLS according to the specification in the "Proposer Slashings"
+		// TODO(#258): Implement BLS verify of header signatures.
 		return nil
 	}
 	return nil
@@ -263,119 +252,116 @@ func ProcessAttesterSlashings(
 		if err := verifyAttesterSlashing(slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attester slashing #%d: %v", idx, err)
 		}
-		slashableIndices, err := attesterSlashableIndices(beaconState, slashing)
-		if err != nil {
-			return nil, fmt.Errorf("could not determine validator indices to slash: %v", err)
-		}
+		slashableIndices := slashableAttesterIndices(slashing)
+		currentEpoch := helpers.CurrentEpoch(beaconState)
+		var err error
+		var slashedAny bool
 		for _, validatorIndex := range slashableIndices {
-			beaconState, err = v.SlashValidator(beaconState, validatorIndex)
-			if err != nil {
-				return nil, fmt.Errorf("could not slash validator index %d: %v",
-					validatorIndex, err)
+			if helpers.IsSlashableValidator(beaconState.ValidatorRegistry[validatorIndex], currentEpoch) {
+				beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
+				if err != nil {
+					return nil, fmt.Errorf("could not slash validator index %d: %v",
+						validatorIndex, err)
+				}
+				slashedAny = true
 			}
+		}
+		if !slashedAny {
+			return nil, errors.New("unable to slash any validator despite confirmed attester slashing")
 		}
 	}
 	return beaconState, nil
 }
 
 func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool) error {
-	slashableAttestation1 := slashing.SlashableAttestation_1
-	slashableAttestation2 := slashing.SlashableAttestation_2
-	data1 := slashableAttestation1.Data
-	data2 := slashableAttestation2.Data
-	// Inner attestation data structures for the votes should not be equal,
-	// as that would mean both votes are the same and therefore no slashing
-	// should occur.
-	if reflect.DeepEqual(data1, data2) {
-		return fmt.Errorf(
-			"attester slashing inner slashable vote data attestation should not match: %v, %v",
-			data1,
-			data2,
-		)
+	att1 := slashing.Attestation_1
+	att2 := slashing.Attestation_2
+	data1 := att1.Data
+	data2 := att2.Data
+	if !isSlashableAttestationData(data1, data2) {
+		return errors.New("attestations are not slashable")
 	}
-	// Two attestations having the same epoch target are considered to be a "double vote" in Casper
-	// Proof of Stake literature and the Ethereum 2.0 specification. Below, we verify that either this is the case
-	// or that the two attestations are a "surround vote" instead.
-	isSameTarget := helpers.SlotToEpoch(data1.Slot) == helpers.SlotToEpoch(data2.Slot)
-	if !(isSameTarget || isSurroundVote(data1, data2)) {
-		return errors.New("attester slashing is not a double vote nor surround vote")
+	if err := validateIndexedAttestation(att1, verifySignatures); err != nil {
+		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
-	if err := verifySlashableAttestation(slashableAttestation1, verifySignatures); err != nil {
-		return fmt.Errorf("could not verify attester slashable attestation data 1: %v", err)
-	}
-	if err := verifySlashableAttestation(slashableAttestation2, verifySignatures); err != nil {
-		return fmt.Errorf("could not verify attester slashable attestation data 2: %v", err)
+	if err := validateIndexedAttestation(att2, verifySignatures); err != nil {
+		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
 	return nil
 }
 
-func attesterSlashableIndices(beaconState *pb.BeaconState, slashing *pb.AttesterSlashing) ([]uint64, error) {
-	slashableAttestation1 := slashing.SlashableAttestation_1
-	slashableAttestation2 := slashing.SlashableAttestation_2
-	// Let slashable_indices = [index for index in slashable_attestation_1.validator_indices if
-	//   index in slashable_attestation_2.validator_indices and
-	//   state.validator_registry[index].slashed_epoch > get_current_epoch(state)].
-	var slashableIndices []uint64
-	for _, idx1 := range slashableAttestation1.ValidatorIndices {
-		for _, idx2 := range slashableAttestation2.ValidatorIndices {
-			if idx1 == idx2 {
-				if beaconState.ValidatorRegistry[idx1].SlashedEpoch > helpers.CurrentEpoch(beaconState) {
-					slashableIndices = append(slashableIndices, idx1)
-				}
-			}
-		}
-	}
-	// Verify that len(slashable_indices) >= 1.
-	if len(slashableIndices) < 1 {
-		return nil, errors.New("expected a non-empty list of slashable indices")
-	}
-	return slashableIndices, nil
+// isSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
+//   return (
+//   # Double vote
+//   (data_1 != data_2 and data_1.target_epoch == data_2.target_epoch) or
+//   # Surround vote
+//   (data_1.source_epoch < data_2.source_epoch and data_2.target_epoch < data_1.target_epoch)
+//   )
+func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
+	// Inner attestation data structures for the votes should not be equal,
+	// as that would mean both votes are the same and therefore no slashing
+	// should occur.
+	isDoubleVote := proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
+	isSurroundVote := data1.SourceEpoch < data2.SourceEpoch && data2.TargetEpoch < data1.TargetEpoch
+	return isDoubleVote || isSurroundVote
 }
 
-func verifySlashableAttestation(att *pb.SlashableAttestation, verifySignatures bool) error {
-	emptyCustody := make([]byte, len(att.CustodyBitfield))
-	if bytes.Equal(att.CustodyBitfield, emptyCustody) {
-		return errors.New("custody bit field can't all be 0s")
+// validateIndexedAttestation verifies an attestation's custody and bls bit information.
+//  """
+//    Verify validity of ``indexed_attestation``.
+//    """
+//    bit_0_indices = indexed_attestation.custody_bit_0_indices
+//    bit_1_indices = indexed_attestation.custody_bit_1_indices
+//
+//    # Verify no index has custody bit equal to 1 [to be removed in phase 1]
+//    assert len(bit_1_indices) == 0
+//    # Verify max number of indices
+//    assert len(bit_0_indices) + len(bit_1_indices) <= MAX_INDICES_PER_ATTESTATION
+//    # Verify index sets are disjoint
+//    assert len(set(bit_0_indices).intersection(bit_1_indices)) == 0
+//    # Verify indices are sorted
+//    assert bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)
+//    # Verify aggregate signature
+//    assert bls_verify_multiple(
+//        pubkeys=[
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in bit_0_indices]),
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in bit_1_indices]),
+//        ],
+//        message_hashes=[
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
+//        ],
+//        signature=indexed_attestation.signature,
+//        domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target_epoch),
+func validateIndexedAttestation(attestation *pb.IndexedAttestation, verifySignatures bool) error {
+	bit0Indices := attestation.CustodyBit_0Indices
+	bit1Indices := attestation.CustodyBit_1Indices
+	if len(bit1Indices) != 0 {
+		return fmt.Errorf("expected no bit 1 indices, received %d", len(bit1Indices))
 	}
-	if len(att.ValidatorIndices) == 0 {
-		return errors.New("empty validator indices")
+	intersection := sliceutil.IntersectionUint64(bit0Indices, bit1Indices)
+	if len(intersection) != 0 {
+		return fmt.Errorf("expected disjoint bit indices, received %d bits in common", intersection)
 	}
-	for i := 0; i < len(att.ValidatorIndices)-1; i++ {
-		if att.ValidatorIndices[i] >= att.ValidatorIndices[i+1] {
-			return fmt.Errorf("validator indices not in descending order: %v",
-				att.ValidatorIndices)
-		}
+	if uint64(len(bit0Indices)+len(bit1Indices)) > params.BeaconConfig().MaxIndicesPerAttestation {
+		return fmt.Errorf("exceeded max number of bit indices: %d", len(bit0Indices)+len(bit1Indices))
 	}
-
-	if isValidated, err := helpers.VerifyBitfield(att.CustodyBitfield, len(att.ValidatorIndices)); !isValidated || err != nil {
-		if err != nil {
-			return err
-		}
-		return errors.New("bitfield is unable to be verified")
+	if !sliceutil.IsUint64Sorted(bit0Indices) || !sliceutil.IsUint64Sorted(bit1Indices) {
+		return errors.New("bit indices not sorted")
 	}
-
-	if uint64(len(att.ValidatorIndices)) > params.BeaconConfig().MaxIndicesPerSlashableVote {
-		return fmt.Errorf("validator indices length (%d) exceeded max indices per slashable vote(%d)",
-			len(att.ValidatorIndices), params.BeaconConfig().MaxIndicesPerSlashableVote)
-	}
-
 	if verifySignatures {
-		// TODO(#258): Implement BLS verify multiple.
+		// TODO(#258): Implement BLS verify of attestation bit information.
 		return nil
 	}
 	return nil
 }
 
-// isSurroundVote checks if attestation 1's source epoch is smaller than attestation 2
-// while simultaneously checking if its target epoch is greater than that of attestation 2.
-// This is a Casper FFG slashing condition. This is known as "surrounding" a vote
-// in Casper Proof of Stake literature.
-func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
-	sourceEpoch1 := data1.JustifiedEpoch
-	sourceEpoch2 := data2.JustifiedEpoch
-	targetEpoch1 := helpers.SlotToEpoch(data1.Slot)
-	targetEpoch2 := helpers.SlotToEpoch(data2.Slot)
-	return sourceEpoch1 < sourceEpoch2 && targetEpoch2 < targetEpoch1
+func slashableAttesterIndices(slashing *pb.AttesterSlashing) []uint64 {
+	att1 := slashing.Attestation_1
+	att2 := slashing.Attestation_1
+	indices1 := append(att1.CustodyBit_0Indices, att1.CustodyBit_1Indices...)
+	indices2 := append(att2.CustodyBit_0Indices, att2.CustodyBit_1Indices...)
+	return sliceutil.IntersectionUint64(indices1, indices2)
 }
 
 // ProcessBlockAttestations applies processing operations to a block's inner attestation
@@ -557,11 +543,11 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 //         signature=attestation.signature,
 //     )
 func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
-	attI, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
+	attI, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
 	if err != nil {
 		return nil, err
 	}
-	cb1i, err := helpers.AttestationParticipants(state, attestation.Data, attestation.CustodyBitfield)
+	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
 	if err != nil {
 		return nil, err
 	}

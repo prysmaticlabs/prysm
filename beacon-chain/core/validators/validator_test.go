@@ -1,7 +1,6 @@
 package validators
 
 import (
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -61,14 +60,26 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot,
-		ValidatorRegistry: validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	boundaryAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{
+			Data: &pb.AttestationData{
+				Slot:        params.BeaconConfig().GenesisSlot,
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				Shard:       1,
+			},
 			AggregationBitfield: []byte{0x03}}, // returns indices 242
-		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+		{
+			Data: &pb.AttestationData{
+				Slot:        params.BeaconConfig().GenesisSlot,
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				Shard:       1,
+			},
 			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
 	}
 
@@ -77,9 +88,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{65, 123}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{25, 87}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{65, 123}, attesterIndices)
+			[]uint64{25, 87}, attesterIndices)
 	}
 }
 
@@ -88,7 +99,7 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, 128)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -96,17 +107,20 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
 			Slot:              params.BeaconConfig().GenesisSlot + 3,
+			TargetEpoch:       params.BeaconConfig().GenesisEpoch,
 			Shard:             6,
 			CrosslinkDataRoot: []byte{'B'},
 		},
-		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+		AggregationBitfield: []byte{1},
 	}
 
 	indices, err := AttestingValidatorIndices(
@@ -119,9 +133,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{1015, 1131}) {
+	if !reflect.DeepEqual(indices, []uint64{33, 94}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{1015, 1131}, indices)
+			[]uint64{33, 94}, indices)
 	}
 }
 
@@ -134,8 +148,10 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              5,
+		Slot:                   5,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	attestation := &pb.PendingAttestation{
@@ -481,20 +497,6 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	state = ExitValidator(state, 0)
 	if state.ValidatorRegistry[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 		t.Error("Expected exited validator to stay exited")
-	}
-}
-
-func TestSlashValidator_AlreadyWithdrawn(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 100,
-		ValidatorRegistry: []*pb.Validator{
-			{WithdrawableEpoch: 1},
-		},
-	}
-	want := fmt.Sprintf("withdrawn validator 0 could not get slashed, current slot: %d, withdrawn slot %d",
-		state.Slot, helpers.StartSlot(state.ValidatorRegistry[0].WithdrawableEpoch))
-	if _, err := SlashValidator(state, 0); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
 

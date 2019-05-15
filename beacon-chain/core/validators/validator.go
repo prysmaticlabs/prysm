@@ -47,7 +47,7 @@ func ValidatorIndices(
 
 	var attesterIndicesIntersection []uint64
 	for _, attestation := range attestations {
-		attesterIndices, err := helpers.AttestationParticipants(
+		attesterIndices, err := helpers.AttestingIndices(
 			state,
 			attestation.Data,
 			attestation.AggregationBitfield)
@@ -84,7 +84,7 @@ func AttestingValidatorIndices(
 		if attestation.Data.Shard == shard &&
 			bytes.Equal(attestation.Data.CrosslinkDataRoot, crosslinkDataRoot) {
 
-			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
+			validatorIndicesCommittee, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
 			if err != nil {
 				return nil, fmt.Errorf("could not get attester indices: %v", err)
 			}
@@ -121,7 +121,7 @@ func ProcessDeposit(
 			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:          params.BeaconConfig().FarFutureEpoch,
+			Slashed:               false,
 			StatusFlags:           0,
 			WithdrawalCredentials: withdrawalCredentials,
 		}
@@ -276,37 +276,42 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //    Slash the validator of the given ``index``.
 //    Note that this function mutates ``state``.
 //    """
-//    validator = state.validator_registry[index]
-//    state.latest_slashed_balances[get_current_epoch(state) % LATEST_PENALIZED_EXIT_LENGTH] += get_effective_balance(state, index)
+//    current_epoch = get_current_epoch(state)
+//    initiate_validator_exit(state, slashed_index)
+//    state.validator_registry[slashed_index].slashed = True
+//    state.validator_registry[slashed_index].withdrawable_epoch = current_epoch + LATEST_SLASHED_EXIT_LENGTH
+//    slashed_balance = state.validator_registry[slashed_index].effective_balance
+//    state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH] += slashed_balance
 //
-//    whistleblower_index = get_beacon_proposer_index(state, state.slot)
-//    whistleblower_reward = get_effective_balance(state, index) // WHISTLEBLOWER_REWARD_QUOTIENT
-//    state.validator_balances[whistleblower_index] += whistleblower_reward
-//    state.validator_balances[index] -= whistleblower_reward
-//    validator.slashed_epoch = get_current_epoch(state)
-func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
-	if state.Slot >= helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawableEpoch) {
-		return nil, fmt.Errorf("withdrawn validator %d could not get slashed, "+
-			"current slot: %d, withdrawn slot %d",
-			idx, state.Slot, helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawableEpoch))
-	}
+//    proposer_index = get_beacon_proposer_index(state)
+//    if whistleblower_index is None:
+//      whistleblower_index = proposer_index
+//	  whistleblowing_reward = slashed_balance // WHISTLEBLOWING_REWARD_QUOTIENT
+//	  proposer_reward = whistleblowing_reward // PROPOSER_REWARD_QUOTIENT
+//	  increase_balance(state, proposer_index, proposer_reward)
+//	  increase_balance(state, whistleblower_index, whistleblowing_reward - proposer_reward)
+//	  decrease_balance(state, slashed_index, whistleblowing_reward)
+func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx uint64) (*pb.BeaconState, error) {
+	state = ExitValidator(state, slashedIdx)
+	currentEpoch := helpers.CurrentEpoch(state)
+	state.ValidatorRegistry[slashedIdx].Slashed = true
+	state.ValidatorRegistry[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().LatestSlashedExitLength
+	slashedBalance := state.ValidatorRegistry[slashedIdx].EffectiveBalance
+	state.LatestSlashedBalances[currentEpoch%params.BeaconConfig().LatestSlashedExitLength] += slashedBalance
 
-	state = ExitValidator(state, idx)
-
-	slashedDuration := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
-	state.LatestSlashedBalances[slashedDuration] += helpers.EffectiveBalance(state, idx)
-
-	whistleblowerIdx, err := helpers.BeaconProposerIndex(state, state.Slot)
+	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposer idx: %v", err)
 	}
-	whistleblowerReward := helpers.EffectiveBalance(state, idx) /
-		params.BeaconConfig().WhistleBlowingRewardQuotient
-
-	state.Balances[whistleblowerIdx] += whistleblowerReward
-	state.Balances[idx] -= whistleblowerReward
-
-	state.ValidatorRegistry[idx].SlashedEpoch = helpers.CurrentEpoch(state) + params.BeaconConfig().LatestSlashedExitLength
+	var whistleBlower uint64
+	if whistleBlowerIdx == 0 {
+		whistleBlower = proposerIdx
+	}
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
+	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
+	state = helpers.IncreaseBalance(state, proposerIdx, proposerReward)
+	state = helpers.IncreaseBalance(state, whistleBlower, whistleblowerReward-proposerReward)
+	state = helpers.DecreaseBalance(state, slashedIdx, whistleblowerReward)
 	return state, nil
 }
 
@@ -354,7 +359,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //            break
 func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
 	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
 
 	for idx, validator := range state.ValidatorRegistry {
@@ -401,7 +406,7 @@ func InitializeValidatorStore(bState *pb.BeaconState) {
 	defer VStore.Unlock()
 
 	currentEpoch := helpers.CurrentEpoch(bState)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(bState.ValidatorRegistry, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(bState, currentEpoch)
 	VStore.activatedValidators[currentEpoch] = activeValidatorIndices
 
 }

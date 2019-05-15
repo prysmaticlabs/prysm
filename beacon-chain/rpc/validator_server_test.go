@@ -169,6 +169,8 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 }
 
 func TestCommitteeAssignment_OK(t *testing.T) {
+	t.Skip()
+
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -251,6 +253,8 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 }
 
 func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
+	t.Skip()
+
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()

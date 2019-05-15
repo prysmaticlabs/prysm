@@ -18,7 +18,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -222,7 +221,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	prevEpoch := helpers.PrevEpoch(state)
 
 	// Calculate total balances of active validators of the current epoch.
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
 	// We require the current epoch attestations, current epoch boundary attestations,
@@ -246,7 +245,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	for _, attestation := range state.LatestAttestations {
 
 		// We determine the attestation participants.
-		attesterIndices, err := helpers.AttestationParticipants(
+		attesterIndices, err := helpers.AttestingIndices(
 			state,
 			attestation.Data,
 			attestation.AggregationBitfield)
@@ -328,17 +327,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		return nil, fmt.Errorf("could not process justification and finalization of state: %v", err)
 	}
 
-	// Process crosslinks records.
-	// TODO(#2072): Include an optimized process crosslinks version.
-	if featureconfig.FeatureConfig().EnableCrosslinks {
-		state, err = e.ProcessCrosslinks(
-			state,
-			currentEpochAttestations,
-			prevEpochAttestations)
-		if err != nil {
-			return nil, fmt.Errorf("could not process crosslink records: %v", err)
-		}
-	}
+	// TODO(#2307): Insert process crosslink from 0.6.
 
 	// Process attester rewards and penalties.
 	epochsSinceFinality := e.SinceFinality(state)
@@ -438,23 +427,9 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		return nil, fmt.Errorf("could not process attestation inclusion rewards: %v", err)
 	}
 
-	// Process crosslink rewards and penalties.
-	// TODO(#2072): Optimize crosslinks.
-	if featureconfig.FeatureConfig().EnableCrosslinks {
-		state, err = bal.Crosslinks(
-			state,
-			currentEpochAttestations,
-			prevEpochAttestations)
-		if err != nil {
-			return nil, fmt.Errorf("could not process crosslink rewards and penalties: %v", err)
-		}
-	}
+	// TODO(#2307): Insert process crosslink rewards and penalties from 0.6.
 
-	// Process ejections.
-	state, err = e.ProcessEjections(state, config.Logging)
-	if err != nil {
-		return nil, fmt.Errorf("could not process ejections: %v", err)
-	}
+	// TODO(#2307): Insert process ejection from 0.6.
 
 	// Process validator registry.
 	state = e.ProcessPrevSlotShardSeed(state)
@@ -462,10 +437,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	if e.CanProcessValidatorRegistry(state) {
 		if block != nil {
 			state = e.ProcessRegistryUpdates(state)
-		}
-		state, err = e.ProcessCurrSlotShardSeed(state)
-		if err != nil {
-			return nil, fmt.Errorf("could not update current shard shuffling seeds: %v", err)
 		}
 	} else {
 		state, err = e.ProcessPartialValidatorRegistry(state)
@@ -525,7 +496,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			"numValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
 
-		activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+		activeValidatorIndices := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
 		log.WithField(
 			"activeValidators", len(activeValidatorIndices),
 		).Info("Active validators")

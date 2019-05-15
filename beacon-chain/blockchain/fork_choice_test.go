@@ -1271,7 +1271,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 
 	// New justified slot in state is at slot 64.
 	offset := uint64(64)
-	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+offset)
+	proposerIdx, err := helpers.BeaconProposerIndex(gState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1347,7 +1347,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 
 	// New Finalized slot in state is at slot 64.
 	offset := uint64(64)
-	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+offset)
+	proposerIdx, err := helpers.BeaconProposerIndex(gState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1435,7 +1435,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	// New justified slot in state is at slot 64, but it's a skip slot...
 	offset := uint64(64)
 	lastAvailableSlot := uint64(60)
-	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+lastAvailableSlot)
+	proposerIdx, err := helpers.BeaconProposerIndex(gState)
 	if err != nil {
 		t.Fatal(err)
 	}
