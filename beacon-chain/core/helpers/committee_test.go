@@ -265,7 +265,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		attestationData.Shard = tt.shard
 		attestationData.TargetEpoch = params.BeaconConfig().GenesisEpoch
 
-		result, err := AttestationParticipants(state, attestationData, tt.bitfield)
+		result, err := AttestingIndices(state, attestationData, tt.bitfield)
 		if err != nil {
 			t.Errorf("Failed to get attestation participants: %v", err)
 		}
@@ -297,7 +297,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 	}
 	attestationData := &pb.AttestationData{}
 
-	if _, err := AttestationParticipants(state, attestationData, []byte{}); err == nil {
+	if _, err := AttestingIndices(state, attestationData, []byte{}); err == nil {
 		t.Error("attestation participants should have failed with incorrect bitfield")
 	}
 }
@@ -454,7 +454,7 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 		Shard: 234,
 		Slot:  params.BeaconConfig().GenesisSlot + uint64(slotOffset),
 	}
-	result, err := AttestationParticipants(&pb.BeaconState{}, attestationData, []byte{0x03})
+	result, err := AttestingIndices(&pb.BeaconState{}, attestationData, []byte{0x03})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,7 +491,7 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 		Shard: 11,
 		Slot:  params.BeaconConfig().GenesisSlot + slotOffset,
 	}
-	result, err := AttestationParticipants(state, attestationData, []byte{0x03})
+	result, err := AttestingIndices(state, attestationData, []byte{0x03})
 	if err != nil {
 		t.Fatal(err)
 	}

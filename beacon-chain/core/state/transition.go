@@ -245,7 +245,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	for _, attestation := range state.LatestAttestations {
 
 		// We determine the attestation participants.
-		attesterIndices, err := helpers.AttestationParticipants(
+		attesterIndices, err := helpers.AttestingIndices(
 			state,
 			attestation.Data,
 			attestation.AggregationBitfield)

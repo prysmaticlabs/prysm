@@ -177,7 +177,7 @@ func Shuffling(
 //    committee = get_crosslink_committee(state, attestation_data.target_epoch, attestation_data.crosslink.shard)
 //    assert verify_bitfield(bitfield, len(committee))
 //    return sorted([index for i, index in enumerate(committee) if get_bitfield_bit(bitfield, i) == 0b1])
-func AttestationParticipants(state *pb.BeaconState, data *pb.AttestationData, bitfield []byte) ([]uint64, error) {
+func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield []byte) ([]uint64, error) {
 	committee, err := CrosslinkCommitteeAtEpoch(state, data.TargetEpoch, data.Shard)
 	if err != nil {
 		return nil, fmt.Errorf("could not get committee: %v", err)

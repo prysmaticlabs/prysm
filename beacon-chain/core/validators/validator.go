@@ -47,7 +47,7 @@ func ValidatorIndices(
 
 	var attesterIndicesIntersection []uint64
 	for _, attestation := range attestations {
-		attesterIndices, err := helpers.AttestationParticipants(
+		attesterIndices, err := helpers.AttestingIndices(
 			state,
 			attestation.Data,
 			attestation.AggregationBitfield)
@@ -84,7 +84,7 @@ func AttestingValidatorIndices(
 		if attestation.Data.Shard == shard &&
 			bytes.Equal(attestation.Data.CrosslinkDataRoot, crosslinkDataRoot) {
 
-			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
+			validatorIndicesCommittee, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
 			if err != nil {
 				return nil, fmt.Errorf("could not get attester indices: %v", err)
 			}

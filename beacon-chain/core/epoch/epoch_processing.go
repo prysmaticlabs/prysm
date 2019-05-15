@@ -421,7 +421,7 @@ func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
 func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
 	for _, att := range atts {
-		indices, err := helpers.AttestationParticipants(state, att.Data, att.AggregationBitfield)
+		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBitfield)
 		if err != nil {
 			return nil, fmt.Errorf("could not get attester indices: %v", err)
 		}
@@ -463,7 +463,7 @@ func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, in
 		InclusionSlot: params.BeaconConfig().FarFutureEpoch,
 	}
 	for _, att := range atts {
-		indices, err := helpers.AttestationParticipants(state, att.Data, att.AggregationBitfield)
+		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBitfield)
 		if err != nil {
 			return nil, fmt.Errorf("could not get attester indices: %v", err)
 		}
