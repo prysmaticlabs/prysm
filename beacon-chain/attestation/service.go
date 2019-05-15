@@ -247,8 +247,6 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 	totalAttestationSeen.Inc()
 
 	slot := attestation.Data.Slot
-	var committee []uint64
-	var cachedCommittees *cache.CommitteesInSlot
 	var err error
 
 	for beaconState.Slot < slot {
@@ -260,35 +258,16 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		}
 	}
 
-	cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
+	committee, err := helpers.CrosslinkCommitteeAtEpoch(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Shard)
 	if err != nil {
 		return err
 	}
-	if cachedCommittees == nil {
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false /* registryChange */)
-		if err != nil {
-			return err
-		}
-		cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
-		if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-			return err
-		}
-	}
-
-	// Find committee for shard.
-	for _, v := range cachedCommittees.Committees {
-		if v.Shard == attestation.Data.Shard {
-			committee = v.Committee
-			break
-		}
-	}
-
 	log.WithFields(logrus.Fields{
 		"attestationSlot":    attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
 		"attestationShard":   attestation.Data.Shard,
-		"committeesShard":    cachedCommittees.Committees[0].Shard,
-		"committeesList":     cachedCommittees.Committees[0].Committee,
-		"lengthOfCommittees": len(cachedCommittees.Committees),
+		"committeesShard":    attestation.Data.Shard,
+		"committeesList":     committee,
+		"lengthOfCommittees": len(committee),
 	}).Debug("Updating latest attestation")
 
 	// The participation bitfield from attestation is represented in bytes,

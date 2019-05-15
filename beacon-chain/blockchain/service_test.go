@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -173,8 +172,8 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 			t.Fatalf("Cannot encode data: %v", err)
 		}
 		deposits[i] = &pb.Deposit{
-			DepositData:     depositData,
-			MerkleTreeIndex: uint64(i),
+			DepositData: depositData,
+			Index:       uint64(i),
 		}
 		privKeys[i] = priv
 	}
@@ -188,19 +187,19 @@ func createPreChainStartDeposit(t *testing.T, pk []byte, index uint64) *pb.Depos
 	if err != nil {
 		t.Fatalf("Cannot encode data: %v", err)
 	}
-	return &pb.Deposit{DepositData: depositData, MerkleTreeIndex: index}
+	return &pb.Deposit{DepositData: depositData, Index: index}
 }
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
 	epoch := helpers.SlotToEpoch(beaconState.Slot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal()

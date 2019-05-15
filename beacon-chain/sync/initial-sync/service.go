@@ -154,7 +154,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	if s.nodeIsSynced {
 		return nil
 	}
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
 	parent, err := s.db.Block(parentRoot)
 	if err != nil {
 		return err
@@ -176,7 +176,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       block.Slot,
 		BlockRoot:  root[:],
-		ParentRoot: block.ParentRootHash32,
+		ParentRoot: block.ParentBlockRoot,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}

@@ -163,6 +163,10 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 	).Return(&pb.StateRootResponse{
 		StateRoot: []byte{'F'},
 	}, nil /*err*/)
+	m.beaconClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
 	m.proposerClient.EXPECT().ProposeBlock(
@@ -240,8 +244,13 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+		Eth1Data: &pbp2p.Eth1Data{BlockRoot: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
+
+	m.beaconClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
@@ -274,7 +283,7 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if !bytes.Equal(broadcastedBlock.Eth1Data.BlockHash32, []byte{'B', 'L', 'O', 'C', 'K'}) {
+	if !bytes.Equal(broadcastedBlock.Eth1Data.BlockRoot, []byte{'B', 'L', 'O', 'C', 'K'}) {
 		t.Errorf("Unexpected ETH1 data: %v", broadcastedBlock.Eth1Data)
 	}
 }
@@ -297,8 +306,13 @@ func TestProposeBlock_PendingAttestations_UsesCurrentSlot(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+		Eth1Data: &pbp2p.Eth1Data{BlockRoot: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
+
+	m.beaconClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	var req *pb.PendingAttestationsRequest
 	m.proposerClient.EXPECT().PendingAttestations(
@@ -359,17 +373,13 @@ func TestProposeBlock_PendingAttestationsFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+		Eth1Data: &pbp2p.Eth1Data{BlockRoot: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
 
-	m.beaconClient.EXPECT().ForkData(
+	m.beaconClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pbp2p.Fork{
-		Epoch:           params.BeaconConfig().GenesisEpoch,
-		CurrentVersion:  0,
-		PreviousVersion: 0,
-	}, nil /*err*/)
+		gomock.Any(), //epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
@@ -400,14 +410,10 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().ForkData(
+	m.beaconClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pbp2p.Fork{
-		Epoch:           params.BeaconConfig().GenesisEpoch,
-		CurrentVersion:  0,
-		PreviousVersion: 0,
-	}, nil /*err*/)
+		gomock.Any(), //epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
@@ -442,14 +448,10 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().ForkData(
+	m.beaconClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pbp2p.Fork{
-		Epoch:           params.BeaconConfig().GenesisEpoch,
-		CurrentVersion:  0,
-		PreviousVersion: 0,
-	}, nil /*err*/)
+		gomock.Any(), //epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
@@ -477,8 +479,8 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if !bytes.Equal(broadcastedBlock.StateRootHash32, computedStateRoot) {
-		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRootHash32)
+	if !bytes.Equal(broadcastedBlock.StateRoot, computedStateRoot) {
+		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRoot)
 	}
 }
 
@@ -500,6 +502,11 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx

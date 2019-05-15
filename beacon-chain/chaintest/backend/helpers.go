@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -29,26 +28,26 @@ func generateSimulatedBlock(
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot+1)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
 	epoch := helpers.SlotToEpoch(beaconState.Slot + 1)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:             beaconState.Slot + 1,
-		RandaoReveal:     epochSignature.Marshal(),
-		ParentRootHash32: prevBlockRoot[:],
-		StateRootHash32:  stateRoot[:],
+		Slot:            beaconState.Slot + 1,
+		ParentBlockRoot: prevBlockRoot[:],
+		StateRoot:       stateRoot[:],
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1},
-			BlockHash32:       []byte{2},
+			DepositRoot: []byte{1},
+			BlockRoot:   []byte{2},
 		},
 		Body: &pb.BeaconBlockBody{
+			RandaoReveal:      epochSignature.Marshal(),
 			ProposerSlashings: []*pb.ProposerSlashing{},
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
@@ -84,11 +83,11 @@ func generateSimulatedBlock(
 		}
 
 		root := newTrie.Root()
-		block.Eth1Data.DepositRootHash32 = root[:]
+		block.Eth1Data.DepositRoot = root[:]
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
-			DepositData:        data,
-			MerkleProofHash32S: proof,
-			MerkleTreeIndex:    simObjects.simDeposit.MerkleIndex,
+			DepositData: data,
+			Proof:       proof,
+			Index:       simObjects.simDeposit.MerkleIndex,
 		})
 	}
 	if simObjects.simProposerSlashing != nil {
@@ -163,7 +162,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
 		}
-		deposits[i] = &pb.Deposit{DepositData: depositData, MerkleTreeIndex: uint64(i)}
+		deposits[i] = &pb.Deposit{DepositData: depositData, Index: uint64(i)}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys, nil

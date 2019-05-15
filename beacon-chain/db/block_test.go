@@ -166,27 +166,6 @@ func TestDeleteBlock_OK(t *testing.T) {
 	}
 }
 
-func TestDeleteBlockInCache_OK(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
-	h, _ := hashutil.HashBeaconBlock(block)
-
-	err := db.SaveBlock(block)
-	if err != nil {
-		t.Fatalf("save block failed: %v", err)
-	}
-
-	if err := db.DeleteBlock(block); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, exists := db.blocks[h]; exists {
-		t.Error("Expected block to have been deleted")
-	}
-}
-
 func TestBlocksBySlotEmptyChain_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
@@ -281,8 +260,8 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 1,
-		ParentRootHash32: bHash[:],
+		Slot:            params.BeaconConfig().GenesisSlot + 1,
+		ParentBlockRoot: bHash[:],
 	}
 	b2Hash, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {

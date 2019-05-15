@@ -10,7 +10,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -106,10 +105,18 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	//	   domain_type=DOMAIN_RANDAO,
 	//   )
 	// )
+
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	// Retrieve the current fork data from the beacon node.
+	domain, err := v.beaconClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch})
+	if err != nil {
+		log.WithError(err).Error("Failed to get domain data from beacon node's state")
+		return
+	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
-	epochSignature := v.keys[idx].SecretKey.Sign(buf, domain)
+
+	epochSignature := v.keys[idx].SecretKey.Sign(buf, domain.SignatureDomain)
 
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
@@ -122,12 +129,12 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	}
 
 	// 2. Construct block.
-	block = &pbp2p.BeaconBlock{
-		Slot:             slot,
-		ParentRootHash32: parentTreeRoot[:],
-		RandaoReveal:     epochSignature.Marshal(),
-		Eth1Data:         eth1DataResp.Eth1Data,
+	block := &pbp2p.BeaconBlock{
+		Slot:            slot,
+		ParentBlockRoot: parentTreeRoot[:],
+		Eth1Data:        eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
+			RandaoReveal:      epochSignature.Marshal(),
 			Attestations:      attResp.PendingAttestations,
 			ProposerSlashings: nil, // TODO(1438): Add after operations pool
 			AttesterSlashings: nil, // TODO(1438): Add after operations pool
@@ -145,7 +152,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 		}).WithError(err).Error("Not proposing! Unable to compute state root")
 		return
 	}
-	block.StateRootHash32 = resp.GetStateRoot()
+	block.StateRoot = resp.GetStateRoot()
 
 	// 4. Sign the complete block.
 	// TODO(1366): BLS sign block

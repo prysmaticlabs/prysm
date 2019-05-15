@@ -18,7 +18,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -157,9 +156,9 @@ func ProcessBlock(
 	state.LatestBlock = block
 
 	// Verify block RANDAO.
-	state, err = b.ProcessBlockRandao(state, block, config.VerifySignatures, config.Logging)
+	state, err = b.ProcessRandao(state, block, config.VerifySignatures, config.Logging)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
+		return nil, fmt.Errorf("could not verify and process randao: %v", err)
 	}
 
 	// Process ETH1 data.
@@ -222,7 +221,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	prevEpoch := helpers.PrevEpoch(state)
 
 	// Calculate total balances of active validators of the current epoch.
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
 	// We require the current epoch attestations, current epoch boundary attestations,
@@ -246,7 +245,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	for _, attestation := range state.LatestAttestations {
 
 		// We determine the attestation participants.
-		attesterIndices, err := helpers.AttestationParticipants(
+		attesterIndices, err := helpers.AttestingIndices(
 			state,
 			attestation.Data,
 			attestation.AggregationBitfield)
@@ -309,8 +308,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 
 	// Calculate the attesting balances for previous and current epoch.
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
-	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, prevEpoch)
-	prevTotalBalance := e.TotalBalance(state, previousActiveValidatorIndices)
 	prevEpochAttestingBalance := e.TotalBalance(state, prevEpochAttesterIndices)
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)
 	prevEpochHeadAttestingBalances := e.TotalBalance(state, prevEpochHeadAttesterIndices)
@@ -321,28 +318,16 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	}
 
 	// Update justification and finality.
-	state, err := e.ProcessJustificationAndFinalization(
+	state, err := e.ProcessJustificationFinalization(
 		state,
 		currentBoundaryAttestingBalances,
 		prevEpochAttestingBalance,
-		prevTotalBalance,
-		totalBalance,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not process justification and finalization of state: %v", err)
 	}
 
-	// Process crosslinks records.
-	// TODO(#2072): Include an optimized process crosslinks version.
-	if featureconfig.FeatureConfig().EnableCrosslinks {
-		state, err = e.ProcessCrosslinks(
-			state,
-			currentEpochAttestations,
-			prevEpochAttestations)
-		if err != nil {
-			return nil, fmt.Errorf("could not process crosslink records: %v", err)
-		}
-	}
+	// TODO(#2307): Insert process crosslink from 0.6.
 
 	// Process attester rewards and penalties.
 	epochsSinceFinality := e.SinceFinality(state)
@@ -356,7 +341,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			prevEpochAttestingBalance,
 			totalBalance)
 		if config.Logging {
-			log.WithField("balances", state.ValidatorBalances).Debug("Balance after FFG src calculation")
+			log.WithField("balances", state.Balances).Debug("Balance after FFG src calculation")
 		}
 		// Apply rewards/penalties to validators for attesting
 		// expected FFG target.
@@ -366,7 +351,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			prevEpochBoundaryAttestingBalances,
 			totalBalance)
 		if config.Logging {
-			log.WithField("balances", state.ValidatorBalances).Debug("Balance after FFG target calculation")
+			log.WithField("balances", state.Balances).Debug("Balance after FFG target calculation")
 		}
 		// Apply rewards/penalties to validators for attesting
 		// expected beacon chain head.
@@ -376,7 +361,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			prevEpochHeadAttestingBalances,
 			totalBalance)
 		if config.Logging {
-			log.WithField("balances", state.ValidatorBalances).Debug("Balance after chain head calculation")
+			log.WithField("balances", state.Balances).Debug("Balance after chain head calculation")
 		}
 		// Apply rewards for to validators for including attestations
 		// based on inclusion distance.
@@ -389,7 +374,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			return nil, fmt.Errorf("could not calculate inclusion dist rewards: %v", err)
 		}
 		if config.Logging {
-			log.WithField("balances", state.ValidatorBalances).Debug("Balance after inclusion distance calculation")
+			log.WithField("balances", state.Balances).Debug("Balance after inclusion distance calculation")
 		}
 
 	case epochsSinceFinality > 4:
@@ -442,37 +427,16 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		return nil, fmt.Errorf("could not process attestation inclusion rewards: %v", err)
 	}
 
-	// Process crosslink rewards and penalties.
-	// TODO(#2072): Optimize crosslinks.
-	if featureconfig.FeatureConfig().EnableCrosslinks {
-		state, err = bal.Crosslinks(
-			state,
-			currentEpochAttestations,
-			prevEpochAttestations)
-		if err != nil {
-			return nil, fmt.Errorf("could not process crosslink rewards and penalties: %v", err)
-		}
-	}
+	// TODO(#2307): Insert process crosslink rewards and penalties from 0.6.
 
-	// Process ejections.
-	state, err = e.ProcessEjections(state, config.Logging)
-	if err != nil {
-		return nil, fmt.Errorf("could not process ejections: %v", err)
-	}
+	// TODO(#2307): Insert process ejection from 0.6.
 
 	// Process validator registry.
 	state = e.ProcessPrevSlotShardSeed(state)
 	state = v.ProcessPenaltiesAndExits(state)
 	if e.CanProcessValidatorRegistry(state) {
 		if block != nil {
-			state, err = v.UpdateRegistry(state)
-			if err != nil {
-				return nil, fmt.Errorf("could not update validator registry: %v", err)
-			}
-		}
-		state, err = e.ProcessCurrSlotShardSeed(state)
-		if err != nil {
-			return nil, fmt.Errorf("could not update current shard shuffling seeds: %v", err)
+			state = e.ProcessRegistryUpdates(state)
 		}
 	} else {
 		state, err = e.ProcessPartialValidatorRegistry(state)
@@ -520,7 +484,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			"previousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Previous justified epoch")
 		log.WithField(
-			"justifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+			"justifiedEpoch", state.CurrentJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 		).Info("Justified epoch")
 		log.WithField(
 			"finalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
@@ -532,21 +496,21 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			"numValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
 
-		activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+		activeValidatorIndices := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
 		log.WithField(
 			"activeValidators", len(activeValidatorIndices),
 		).Info("Active validators")
 		totalBalance := float32(0)
-		lowestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
-		highestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
+		lowestBalance := float32(state.Balances[activeValidatorIndices[0]])
+		highestBalance := float32(state.Balances[activeValidatorIndices[0]])
 		for _, idx := range activeValidatorIndices {
-			if float32(state.ValidatorBalances[idx]) < lowestBalance {
-				lowestBalance = float32(state.ValidatorBalances[idx])
+			if float32(state.Balances[idx]) < lowestBalance {
+				lowestBalance = float32(state.Balances[idx])
 			}
-			if float32(state.ValidatorBalances[idx]) > highestBalance {
-				highestBalance = float32(state.ValidatorBalances[idx])
+			if float32(state.Balances[idx]) > highestBalance {
+				highestBalance = float32(state.Balances[idx])
 			}
-			totalBalance += float32(state.ValidatorBalances[idx])
+			totalBalance += float32(state.Balances[idx])
 		}
 		avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
 		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)

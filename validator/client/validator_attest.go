@@ -66,7 +66,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	// First the validator should construct attestation_data, an AttestationData
 	// object based upon the state at the assigned slot.
 	attData := &pbp2p.AttestationData{
-		CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
+		CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
 	}
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
@@ -157,7 +157,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	attestation.AggregationBitfield = aggregationBitfield
 
 	// TODO(#1366): Use BLS to generate an aggregate signature.
-	attestation.AggregateSignature = []byte("signed")
+	attestation.Signature = []byte("signed")
 
 	// Keep the attestation
 	if err := v.db.SaveAttestation(fork, v.keys[idx].PublicKey, attestation); err != nil {

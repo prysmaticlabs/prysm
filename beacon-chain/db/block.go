@@ -176,11 +176,6 @@ func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
 	if err != nil {
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
-
-	// Delete the block from the cache.
-	delete(db.blocks, root)
-	blockCacheSize.Set(float64(len(db.blocks)))
-
 	slotRootBinary := encodeSlotNumberRoot(block.Slot, root)
 
 	return db.update(func(tx *bolt.Tx) error {

@@ -47,7 +47,7 @@ func TotalBalance(
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 	lowestSlotIncluded := uint64(math.MaxUint64)
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
+		participatedValidators, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
@@ -152,7 +152,7 @@ func winningRoot(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard {
-			candidateRoots = append(candidateRoots, attestation.Data.CrosslinkDataRootHash32)
+			candidateRoots = append(candidateRoots, attestation.Data.CrosslinkDataRoot)
 		}
 	}
 
