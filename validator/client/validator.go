@@ -135,7 +135,7 @@ func (v *validator) WaitTillSync(ctx context.Context) error {
 			log.Info("Beacon node is Synched!")
 			break
 		}
-		time.Sleep(6 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 	return nil
 }
