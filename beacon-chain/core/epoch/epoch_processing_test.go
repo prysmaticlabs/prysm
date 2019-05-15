@@ -1139,6 +1139,38 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 	}
 }
 
+func TestProcessSlashings_NotSlashed(t *testing.T) {
+	s := &pb.BeaconState{
+		Slot:                  params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:     []*pb.Validator{{Slashed: true}},
+		Balances:              []uint64{params.BeaconConfig().MaxDepositAmount},
+		LatestSlashedBalances: []uint64{0, 1e9},
+	}
+	newState := ProcessSlashings(s)
+	wanted := params.BeaconConfig().MaxDepositAmount
+	if newState.Balances[0] != wanted {
+		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[0])
+	}
+}
+
+func TestProcessSlashings_SlashedLess(t *testing.T) {
+	s := &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pb.Validator{
+			{Slashed: true,
+				WithdrawableEpoch: params.BeaconConfig().GenesisEpoch + params.BeaconConfig().LatestSlashedExitLength/2,
+				EffectiveBalance:  params.BeaconConfig().MaxDepositAmount},
+			{ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
+		Balances:              []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
+		LatestSlashedBalances: []uint64{0, 1e9},
+	}
+	newState := ProcessSlashings(s)
+	wanted := uint64(31 * 1e9)
+	if newState.Balances[0] != wanted {
+		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[0])
+	}
+}
+
 func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
@@ -1251,5 +1283,4 @@ func TestProcessRegistryUpdates_Exits(t *testing.T) {
 				validator.ExitEpoch)
 		}
 	}
-
 }
