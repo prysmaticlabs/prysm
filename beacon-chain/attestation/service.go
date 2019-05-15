@@ -227,7 +227,7 @@ func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations
 
 	for _, attestation := range attestations {
 		if err := a.updateAttestation(ctx, headRoot, beaconState, attestation); err != nil {
-			log.Debug(err)
+			log.Error(err)
 		}
 	}
 	return nil
@@ -309,11 +309,13 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		}
 
 		if i >= len(committee) {
-			return fmt.Errorf("bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
+			log.Debugf("bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
+			return nil
 		}
 
 		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
-			return fmt.Errorf("index doesn't exist in validator registry: index %d", committee[i])
+			log.Debugf("index doesn't exist in validator registry: index %d", committee[i])
+			return nil
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the
