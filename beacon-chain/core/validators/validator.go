@@ -200,7 +200,39 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 //   validator.exit_epoch = exit_queue_epoch
 //   validator.withdrawable_epoch = validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
-	// TODO!!!
+	validator := state.ValidatorRegistry[idx]
+	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+		return state
+	}
+	exitEpochs := []uint64{}
+	for _,val := range state.ValidatorRegistry {
+		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch)
+		}
+	}
+   	exitEpochs = append(exitEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
+
+   	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
+   	exitQueueEpoch := exitEpochs[0]
+   	for _, i := range exitEpochs {
+   		if exitQueueEpoch < i {
+   			exitQueueEpoch = i
+		}
+	}
+
+   	// We use the exit queue churn to determine if we have passed a churn limit.
+   	exitQueueChurn := 0
+	for _,val := range state.ValidatorRegistry {
+		if val.ExitEpoch == exitQueueEpoch {
+			exitQueueChurn++
+		}
+	}
+
+	if uint64(exitQueueChurn) >= helpers.ChurnLimit(state) {
+		exitQueueEpoch++
+	}
+	state.ValidatorRegistry[idx].ExitEpoch = exitQueueEpoch
+	state.ValidatorRegistry[idx].WithdrawableEpoch = exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
 	return state
 }
 

@@ -782,14 +782,12 @@ func ProcessValidatorExits(
 		)
 	}
 
-	validatorRegistry := beaconState.ValidatorRegistry
 	for idx, exit := range exits {
 		if err := verifyExit(beaconState, exit, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
 		beaconState = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 	}
-	beaconState.ValidatorRegistry = validatorRegistry
 	return beaconState, nil
 }
 
