@@ -33,11 +33,12 @@ type Validator interface {
 //
 // Order of operations:
 // 1 - Initialize validator data
-// 2 - Wait for validator activation
-// 3 - Wait for the next slot start
-// 4 - Update assignments
-// 5 - Determine role at current slot
-// 6 - Perform assigned role, if any
+// 2 - Wait till initial sync is complete
+// 3 - Wait for validator activation
+// 4 - Wait for the next slot start
+// 5 - Update assignments
+// 6 - Determine role at current slot
+// 7 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
 	defer v.Done()
 	if err := v.WaitForChainStart(ctx); err != nil {

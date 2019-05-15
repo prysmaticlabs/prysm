@@ -75,21 +75,13 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 		}
 	}
 }
+
 // WaitTillSync checks if syncservice status is synched and sends message on stream when the service is synced.
-func (vs *ValidatorServer) WaitTillSync(_ *ptypes.Empty,stream pb.ValidatorService_WaitTillSyncServer) error{
-	for {
-		select {
-		case <-time.After(6 * time.Second):
-			if err:=vs.syncService.Status();err==nil{
-				return stream.Send(&pb.SyncedResponse{Synced:true})
-			}else{
-				stream.Send(&pb.SyncedResponse{Synced:false})
-			}
-		case <-stream.Context().Done():
-			return errors.New("stream context closed,exiting gorutine")
-		case <-vs.ctx.Done():
-			return errors.New("rpc context closed, exiting goroutine")
-		}
+func (vs *ValidatorServer) WaitTillSync(ctx context.Context,_ *ptypes.Empty) (*pb.SyncedResponse, error){
+	if err := vs.syncService.Status();err==nil{
+		return &pb.SyncedResponse{Synced:true},nil
+	}else{
+		return &pb.SyncedResponse{Synced:false},err
 	}
 }
 

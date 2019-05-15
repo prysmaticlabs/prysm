@@ -126,11 +126,12 @@ func (mr *MockValidatorServiceServerMockRecorder) WaitForActivation(arg0, arg1 i
 }
 
 // WaitTillSync mocks base method
-func (m *MockValidatorServiceServer) WaitTillSync(arg0 *types.Empty, arg1 v1.ValidatorService_WaitTillSyncServer) error {
+func (m *MockValidatorServiceServer) WaitTillSync(arg0 context.Context, arg1 *types.Empty) (*v1.SyncedResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitTillSync", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*v1.SyncedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // WaitTillSync indicates an expected call of WaitTillSync

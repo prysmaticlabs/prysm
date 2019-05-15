@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -281,11 +282,58 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 }
 
 func TestWaitTillSync_OK(t *testing.T) {
-	t.Skip()
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
+	v := validator{
+		keys:            keyMap,
+		pubkeys:         make([][]byte, 0),
+		validatorClient: client,
+	}
+
+	client.EXPECT().WaitTillSync(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, fmt.Errorf("return error")).Times(1)
+	client.EXPECT().WaitTillSync(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.SyncedResponse{Synced: false}, fmt.Errorf("return error")).Times(1)
+	client.EXPECT().WaitTillSync(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.SyncedResponse{Synced: false}, fmt.Errorf("return error")).Times(1)
+	client.EXPECT().WaitTillSync(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.SyncedResponse{Synced: true}, nil).Times(1)
+
+	v.WaitTillSync(context.Background())
+	testutil.AssertLogsContain(t, hook, "Waiting for beacon node to sync")
+	testutil.AssertLogsContain(t, hook, "Beacon node is Synched!")
+
+}
+
+func TestWaitTillSync_ContextCanceled(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+	v := validator{
+		keys:            keyMap,
+		pubkeys:         make([][]byte, 0),
+		validatorClient: client,
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := v.WaitTillSync(ctx)
+	want := cancelledCtx
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+	testutil.AssertLogsContain(t, hook, "Waiting for beacon node to sync")
 
 }
 

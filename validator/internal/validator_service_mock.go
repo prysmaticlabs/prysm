@@ -158,14 +158,14 @@ func (mr *MockValidatorServiceClientMockRecorder) WaitForActivation(arg0, arg1 i
 }
 
 // WaitTillSync mocks base method
-func (m *MockValidatorServiceClient) WaitTillSync(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (v1.ValidatorService_WaitTillSyncClient, error) {
+func (m *MockValidatorServiceClient) WaitTillSync(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v1.SyncedResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "WaitTillSync", varargs...)
-	ret0, _ := ret[0].(v1.ValidatorService_WaitTillSyncClient)
+	ret0, _ := ret[0].(*v1.SyncedResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
