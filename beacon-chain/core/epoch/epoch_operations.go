@@ -14,27 +14,6 @@ import (
 	b "github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-// TotalBalance returns the total balance at stake of the validators
-// from the shard committee regardless of validators attested or not.
-//
-// Spec pseudocode definition:
-//    def get_total_balance(state: BeaconState, validators: List[ValidatorIndex]) -> Gwei:
-//    """
-//    Return the combined effective balance of an array of validators.
-//    """
-//    return sum([get_effective_balance(state, i) for i in validators])
-func TotalBalance(
-	state *pb.BeaconState,
-	activeValidatorIndices []uint64) uint64 {
-
-	var totalBalance uint64
-	for _, index := range activeValidatorIndices {
-		totalBalance += helpers.EffectiveBalance(state, index)
-	}
-
-	return totalBalance
-}
-
 // InclusionSlot returns the slot number of when the validator's
 // attestation gets included in the beacon chain.
 //
