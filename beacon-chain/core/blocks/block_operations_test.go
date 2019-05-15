@@ -1722,6 +1722,8 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
+	t.Skip()
+	// TODO(#2307) unskip after bls.Verify is finished
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
