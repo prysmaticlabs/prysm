@@ -753,15 +753,20 @@ func processInvalidDeposit(bState *pb.BeaconState) *pb.BeaconState {
 //   Verify that len(block.body.voluntary_exits) <= MAX_VOLUNTARY_EXITS.
 //
 //   For each exit in block.body.voluntary_exits:
-//     Let validator = state.validator_registry[exit.validator_index].
-//     Verify that validator.exit_epoch > get_entry_exit_effect_epoch(get_current_epoch(state)).
-//     Verify that get_current_epoch(state) >= exit.epoch.
-//     Let exit_message = hash_tree_root(
-//       Exit(epoch=exit.epoch, validator_index=exit.validator_index, signature=EMPTY_SIGNATURE)
-//     )
-//     Verify that bls_verify(pubkey=validator.pubkey, message_hash=exit_message,
-//       signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
-//     Run initiate_validator_exit(state, exit.validator_index).
+//     validator = state.validator_registry[exit.validator_index]
+//     # Verify the validator is active
+//     assert is_active_validator(validator, get_current_epoch(state))
+//     # Verify the validator has not yet exited
+//     assert validator.exit_epoch == FAR_FUTURE_EPOCH
+//     # Exits must specify an epoch when they become valid; they are not valid before then
+//     assert get_current_epoch(state) >= exit.epoch
+//     # Verify the validator has been active long enough
+//     assert get_current_epoch(state) >= validator.activation_epoch + PERSISTENT_COMMITTEE_PERIOD
+//     # Verify signature
+//     domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
+//     assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
+//     # Initiate exit
+//     initiate_validator_exit(state, exit.validator_index)
 func ProcessValidatorExits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -791,29 +796,30 @@ func ProcessValidatorExits(
 func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-
-	delayedActivationExitEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	if validator.ExitEpoch <= delayedActivationExitEpoch {
-		return fmt.Errorf(
-			"validator exit epoch should be > entry_exit_effect_epoch, received %d <= %d",
-			currentEpoch,
-			delayedActivationExitEpoch,
-		)
+	// Verify the validator is active.
+	if !helpers.IsActiveValidator(validator, currentEpoch) {
+		return errors.New("non-active validator cannot exit")
 	}
+	// Verify the validator has not yet exited.
+	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
+	}
+	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {
+		return fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
+	}
+	// Verify the validator has been active long enough.
+	if currentEpoch < validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod {
 		return fmt.Errorf(
-			"expected current epoch >= exit.epoch, received %d < %d",
+			"validator has not been active long enough to exit, wanted epoch %d >= %d",
 			currentEpoch,
-			exit.Epoch,
+			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
 	if verifySignatures {
-		// TODO(#258): Verify using BLS signature verification below:
-		// Let exit_message = hash_tree_root(
-		//   Exit(epoch=exit.epoch, validator_index=exit.validator_index, signature=EMPTY_SIGNATURE)
-		// )
-		// Verify that bls_verify(pubkey=validator.pubkey, message_hash=exit_message,
-		//   signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
+		// TODO(#258): Integrate BLS signature verification for exits.
+		// domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
+		// assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 		return nil
 	}
 	return nil
