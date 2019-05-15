@@ -1241,13 +1241,13 @@ func (m *Crosslink) GetCrosslinkDataRootHash32() []byte {
 }
 
 type BeaconBlock struct {
+	RandaoReveal         []byte           `protobuf:"bytes,1003,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty"`
+	Eth1Data             *Eth1Data        `protobuf:"bytes,1004,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
 	Slot                 uint64           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
 	ParentBlockRoot      []byte           `protobuf:"bytes,2,opt,name=parent_block_root,json=parentBlockRoot,proto3" json:"parent_block_root,omitempty"`
 	StateRoot            []byte           `protobuf:"bytes,3,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty"`
 	Body                 *BeaconBlockBody `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
 	Signature            []byte           `protobuf:"bytes,5,opt,name=signature,proto3" json:"signature,omitempty"`
-	RandaoReveal         []byte           `protobuf:"bytes,1003,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty"`
-	Eth1Data             *Eth1Data        `protobuf:"bytes,1004,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"` // Deprecated: Do not use.
 	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
 	XXX_unrecognized     []byte           `json:"-"`
 	XXX_sizecache        int32            `json:"-"`
@@ -1285,6 +1285,20 @@ func (m *BeaconBlock) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_BeaconBlock proto.InternalMessageInfo
+
+func (m *BeaconBlock) GetRandaoReveal() []byte {
+	if m != nil {
+		return m.RandaoReveal
+	}
+	return nil
+}
+
+func (m *BeaconBlock) GetEth1Data() *Eth1Data {
+	if m != nil {
+		return m.Eth1Data
+	}
+	return nil
+}
 
 func (m *BeaconBlock) GetSlot() uint64 {
 	if m != nil {

@@ -83,7 +83,6 @@ func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 )(*pb.BeaconState,error){
-	currentEpoch:=helpers.CurrentEpoch(beaconState)
 	if beaconState.Slot != block.Slot{
 		return nil,fmt.Errorf("state slot: %d is different then block slot: %d",beaconState.Slot,block.Slot)
 	}
@@ -109,7 +108,7 @@ func ProcessBlockHeader(
 		BlockBodyRoot: bHash[:],
 	}
 	//verify proposer is not slashed
-	idx,err:=helpers.BeaconProposerIndex(beaconState,beaconState.Slot)
+	idx,err:=helpers.BeaconProposerIndex(beaconState)
 	if err!=nil{
 		return nil,err
 	}
@@ -117,23 +116,25 @@ func ProcessBlockHeader(
 	if proposer.Slashed{
 		return nil,fmt.Errorf("proposer id: %d was slashed",idx)
 	}
+	// TODO(#2307) reapply after bls.Verify is finished
 	//verify proposer signature
-	sig ,err:= bls.SignatureFromBytes(block.Signature)
-	if err!=nil{
-		return nil,err
-	}
-	dt:= helpers.DomainVersion(beaconState,currentEpoch,params.BeaconConfig().DomainBeaconProposer)
-	bsr,err:=ssz.SignedRoot(block)
-	if err!=nil{
-		return nil,err
-	}
-	blsPk,err :=bls.PublicKeyFromBytes(proposer.Pubkey)
-	if err!=nil{
-		return nil,err
-	}
-	if sig.Verify(bsr[:],blsPk,dt){
-		return nil,fmt.Errorf("verify signature failed")
-	}
+	// currentEpoch:=helpers.CurrentEpoch(beaconState)
+	// sig ,err:= bls.SignatureFromBytes(block.Signature)
+	// if err!=nil{
+	// 	return nil,err
+	// }
+	// dt:= helpers.DomainVersion(beaconState,currentEpoch,params.BeaconConfig().DomainBeaconProposer)
+	// bsr,err:=ssz.SignedRoot(block)
+	// if err!=nil{
+	// 	return nil,err
+	// }
+	// blsPk,err :=bls.PublicKeyFromBytes(proposer.Pubkey)
+	// if err!=nil{
+	// 	return nil,err
+	// }
+	// if !sig.Verify(bsr[:],blsPk,dt){
+	// 	return nil,fmt.Errorf("verify signature failed")
+	// }
 	return beaconState,nil
 }
 
