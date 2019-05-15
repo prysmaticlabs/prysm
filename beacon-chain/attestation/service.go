@@ -259,9 +259,9 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		if featureconfig.FeatureConfig().EnableForkedAttestationProcessing {
 			a.forkedAttestations = append(a.forkedAttestations, attestation)
 		}
-
-		return fmt.Errorf("invalid state to process forked attestation at slot %d",
+		log.Debugf("invalid state to process forked attestation at slot %d",
 			attestation.Data.Slot-params.BeaconConfig().GenesisSlot)
+		return nil
 	}
 
 	log.WithFields(logrus.Fields{

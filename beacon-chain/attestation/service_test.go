@@ -14,7 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
@@ -366,6 +368,7 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 
 func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
+	hook := logTest.NewGlobal()
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
@@ -403,9 +406,11 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 
 	wanted := "invalid state to process forked attestation at slot"
 
-	if err := service.UpdateLatestAttestation(ctx, attestation); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Wanted: %s but got %s", wanted, err)
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Error(err)
 	}
+
+	testutil.AssertLogsContain(t, hook, wanted)
 }
 
 func TestBatchUpdate_FromSync(t *testing.T) {
