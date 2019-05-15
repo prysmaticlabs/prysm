@@ -244,15 +244,16 @@ func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) 
 		return chainHeadResponses[peers[i]].CanonicalSlot > chainHeadResponses[peers[j]].CanonicalSlot
 	})
 
-	// Retry for our 3 best peers, 2 times more
+	// Retry for our 3 best peers
 	totalNumTries := 3
 	peersToRetry := 3
 	bestPeers := make([]peer.ID, totalNumTries*peersToRetry)
 	for i := range bestPeers {
-		indexAdd := i / totalNumTries
-		bestPeers[i] = peers[indexAdd]
+		indexToAdd := i / totalNumTries
+		bestPeers[i] = peers[indexToAdd]
 	}
 
+	// add to peer list
 	peers = append(bestPeers, peers[peersToRetry:]...)
 
 	for _, peer := range peers {
