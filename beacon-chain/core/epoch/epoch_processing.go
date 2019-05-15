@@ -823,6 +823,15 @@ func BaseReward(state *pb.BeaconState, index uint64) uint64 {
 	return baseReward / params.BeaconConfig().BaseRewardsPerEpoch
 }
 
+// SinceFinality calculates and returns how many epoch has it been since
+// a finalized slot.
+//
+// Spec pseudocode definition:
+//    epochs_since_finality = next_epoch - state.finalized_epoch
+func SinceFinality(state *pb.BeaconState) uint64 {
+	return helpers.NextEpoch(state) - state.FinalizedEpoch
+}
+
 // attsForCrosslink returns the attestations of the input crosslink.
 func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
 	var crosslinkAtts []*pb.PendingAttestation
