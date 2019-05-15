@@ -19,7 +19,7 @@ type ValidatorDB struct {
 	stateLock              sync.RWMutex
 	db                     *bolt.DB
 	DatabasePath           string
-	lastProposedBlockEpoch map[bls.PublicKey]uint64 //TODO test work with cache
+	lastProposedBlockEpoch map[bls.PublicKey]uint64
 	lastAttestationEpoch   map[bls.PublicKey]uint64
 }
 
@@ -78,5 +78,5 @@ func ClearDB(dirPath string) error {
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.RemoveAll(dirPath) // TODO remove only database file, not keys file
+	return os.RemoveAll(dirPath)
 }

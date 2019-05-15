@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// TODO copy from beacon-chain/db/block.go     move to shared metod?
+// createBlock This function has been copied from beacon-chain/db/block.go. Move it to shared metod?
 func createBlock(enc []byte) (*pbp2p.BeaconBlock, error) {
 	protoBlock := &pbp2p.BeaconBlock{}
 	err := proto.Unmarshal(enc, protoBlock)
@@ -23,7 +23,7 @@ func createBlock(enc []byte) (*pbp2p.BeaconBlock, error) {
 	return protoBlock, nil
 }
 
-// SaveProposedBlock TODO accepts a public key and validator index and writes them to disk.
+// SaveProposedBlock save proposed beacon block to disk
 func (db *ValidatorDB) SaveProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey, block *pbp2p.BeaconBlock) error {
 	epoch := block.Slot / params.BeaconConfig().SlotsPerEpoch
 
@@ -42,12 +42,24 @@ func (db *ValidatorDB) SaveProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey
 	})
 }
 
-//GetProposedBlock TODO
+// GetProposedBlock returns the previously proposed block from disk.
+// if validator has not previously proposed a block, then it returns nil
 func (db *ValidatorDB) GetProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey, epoch uint64) (block *pbp2p.BeaconBlock, err error) {
-	if lastProposedBlockEpoch, ok := db.lastProposedBlockEpoch[(*pubKey)]; ok && lastProposedBlockEpoch < epoch {
+	// maybe it makes no sense to read to disk
+	lastProposedBlockEpoch, lastProposedBlockEpochExists := db.lastProposedBlockEpoch[(*pubKey)]
+	if !lastProposedBlockEpochExists {
+		// lastProposedBlockEpoch not initiated for this key, initiate it
+		lastProposedBlockEpoch, err = db.getMaxProposedEpoch(pubKey)
+		if err != nil {
+			log.WithError(err).Error("Can not init lastProposedBlockEpoch")
+			return nil, err
+		}
+		db.lastProposedBlockEpoch[(*pubKey)] = lastProposedBlockEpoch
+	}
+	if lastProposedBlockEpoch < epoch {
 		return
 	}
-
+	// try read block from disk
 	forkVersion := forkutil.ForkVersion(fork, epoch)
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := getBucket(tx, pubKey, forkVersion, proposedBlockBucket, false)
@@ -60,11 +72,14 @@ func (db *ValidatorDB) GetProposedBlock(fork *pbp2p.Fork, pubKey *bls.PublicKey,
 	return
 }
 
+// getMaxProposedEpoch return max epoch for saved proposed block. Used for lastProposedBlockEpoch init
 func (db *ValidatorDB) getMaxProposedEpoch(pubKey *bls.PublicKey) (maxProposedEpoch uint64, err error) {
 	err = db.lastInAllForks(pubKey, proposedBlockBucket, func(_, lastInForkEnc []byte) error {
+		if lastInForkEnc == nil {
+			return nil
+		}
 		lastInFork, err := createBlock(lastInForkEnc)
 		if err != nil {
-			//TODO maxProposedEpoch = ^uint64(0) // MaxUint // try get proposed block for any Epoch
 			log.Fatalf("can't create block: %s", err)
 			return err
 		}

@@ -159,29 +159,17 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.AggregateSignature = []byte("signed")
 
-	log.WithFields(logrus.Fields{
-		"shard":     attData.Shard,
-		"slot":      slot - params.BeaconConfig().GenesisSlot,
-		"validator": truncatedPk,
-	}).Info("Attesting to beacon chain head...")
-
 	// Keep the attestation
 	if err := v.db.SaveAttestation(fork, v.keys[idx].PublicKey, attestation); err != nil {
 		log.WithError(err).Error("Failed to save attestation")
 		return
 	}
 
-	attestationHash, err := v.submitAttestation(ctx, attestation)
-	if err != nil {
-		log.WithError(err).Error("Failed to submit attestation")
-	}
-	// TODO Check    span.AddAttributes and log with master
 	log.WithFields(logrus.Fields{
-		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attData.BeaconBlockRootHash32)),
-		"slot":      attData.Slot - params.BeaconConfig().GenesisSlot,
 		"shard":     attData.Shard,
+		"slot":      slot - params.BeaconConfig().GenesisSlot,
 		"validator": truncatedPk,
-	}).Info("Attested latest head")
+	}).Info("Attesting to beacon chain head...")
 
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)),
@@ -189,15 +177,28 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32)),
 		trace.Int64Attribute("justifiedEpoch", int64(attData.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
+	)
+
+	attestationHash, err := v.submitAttestation(ctx, attestation)
+	if err != nil {
+		log.WithError(err).Error("Failed to submit attestation")
+	}
+	log.WithFields(logrus.Fields{
+		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attData.BeaconBlockRootHash32)),
+		"slot":      attData.Slot - params.BeaconConfig().GenesisSlot,
+		"shard":     attData.Shard,
+		"validator": truncatedPk,
+	}).Info("Attested latest head")
+	span.AddAttributes(
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attestationHash)),
 	)
 }
 
+// submitAttestation submit attestation to beacon node
 func (v *validator) submitAttestation(ctx context.Context, attestation *pbp2p.Attestation) ([]byte, error) {
 	_, span := trace.StartSpan(ctx, "validator.submitAttestation")
 	defer span.End()
 
-	log.Infof("Produced attestation with block root: %#x", attestation.Data.BeaconBlockRootHash32)
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")

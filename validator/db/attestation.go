@@ -21,7 +21,7 @@ func createAttestation(enc []byte) (*pbp2p.Attestation, error) {
 	return protoAttestation, nil
 }
 
-// SaveAttestation TODO
+// SaveAttestation save attestation to disk
 func (db *ValidatorDB) SaveAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, attestation *pbp2p.Attestation) error {
 	epoch := attestation.Data.Slot / params.BeaconConfig().SlotsPerEpoch
 	if lastAttestationEpoch, ok := db.lastAttestationEpoch[(*pubKey)]; !ok || lastAttestationEpoch < epoch {
@@ -40,10 +40,21 @@ func (db *ValidatorDB) SaveAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, 
 	})
 }
 
-// GetAttestation
+// GetAttestation returns the attestation from disk
+// if validator has not previously attestation, then it returns nil
 func (db *ValidatorDB) GetAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, epoch uint64) (attestation *pbp2p.Attestation, err error) {
-	if lastAttestationEpoch, ok := db.lastAttestationEpoch[(*pubKey)]; ok && lastAttestationEpoch < epoch {
-		fmt.Printf("did not perform the attsation for the epoch or higher\n")
+	// maybe it makes no sense to read to disk
+	lastAttestationEpoch, lastAttestationEpochExists := db.lastAttestationEpoch[(*pubKey)]
+	if !lastAttestationEpochExists {
+		// lastAttestationEpoch not initiated for this key, initiate it
+		lastAttestationEpoch, err = db.getMaxAttestationEpoch(pubKey)
+		if err != nil {
+			log.WithError(err).Error("Can not init lastAttestationEpoch")
+			return nil, err
+		}
+		db.lastAttestationEpoch[(*pubKey)] = lastAttestationEpoch
+	}
+	if lastAttestationEpoch < epoch {
 		return
 	}
 
@@ -60,6 +71,7 @@ func (db *ValidatorDB) GetAttestation(fork *pbp2p.Fork, pubKey *bls.PublicKey, e
 	return
 }
 
+// getMaxAttestationEpoch return max epoch for saved attestation. Used for lastAttestationEpoch init
 func (db *ValidatorDB) getMaxAttestationEpoch(pubKey *bls.PublicKey) (maxAttestationEpoch uint64, err error) {
 	err = db.lastInAllForks(pubKey, attestationBucket, func(_, lastInForkEnc []byte) error {
 		if lastInForkEnc == nil {

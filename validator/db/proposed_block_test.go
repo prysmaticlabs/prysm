@@ -90,3 +90,64 @@ func TestGetMaxProposedBlockEpoch(t *testing.T) {
 		t.Fatalf("getMaxProposedEpoch return not max epoch")
 	}
 }
+
+func TestInitLastProposedBlockEpoch(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	fork := &pbp2p.Fork{}
+	pubKey := getRandPubKey(t)
+
+	_, exists := db.lastProposedBlockEpoch[(*pubKey)]
+	if exists {
+		t.Fatalf("expect that lastProposedBlockEpoch will not be initiated")
+	}
+
+	block := &pbp2p.BeaconBlock{Slot: 10 * params.BeaconConfig().SlotsPerEpoch}
+	_ = db.SaveProposedBlock(fork, pubKey, block)
+
+	lastProposedBlockEpoch := db.lastProposedBlockEpoch[(*pubKey)]
+	if lastProposedBlockEpoch != 10 {
+		t.Fatalf("SaveProposedBlock did not init lastProposedBlockEpoch")
+	}
+
+	_ = db.Close()
+	newDB, _ := NewDB(db.DatabasePath)
+	defer teardownDB(t, newDB)
+
+	_, exists = newDB.lastProposedBlockEpoch[(*pubKey)]
+	if exists {
+		t.Fatalf("expect that lastProposedBlockEpoch will not be initiated in newDB")
+	}
+
+	_, _ = newDB.GetProposedBlock(fork, pubKey, 0)
+	lastProposedBlockEpoch = newDB.lastProposedBlockEpoch[(*pubKey)]
+	if lastProposedBlockEpoch != 10 {
+		t.Fatalf("GetProposedBlock did not init lastProposedBlockEpoch")
+	}
+}
+
+func TestGetProposedBlock_DontReadDiskIfLastProposedBlockEpochLess(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	fork := &pbp2p.Fork{}
+	pubKey := getRandPubKey(t)
+	block := &pbp2p.BeaconBlock{Slot: 10 * params.BeaconConfig().SlotsPerEpoch}
+
+	err := db.SaveProposedBlock(fork, pubKey, block)
+	if err != nil {
+		t.Fatalf("can't save attestation: %v", err)
+	}
+
+	db.lastProposedBlockEpoch[(*pubKey)] = 5
+
+	loadedProposedBlock, err := db.GetProposedBlock(fork, pubKey, block.Slot/params.BeaconConfig().SlotsPerEpoch)
+	if err != nil {
+		t.Fatalf("can't read attestation: %v", err)
+	}
+
+	if loadedProposedBlock != nil {
+		t.Fatalf("read the block, although the lastProposedBlockEpoch said that it is not necessary to do this")
+	}
+}
