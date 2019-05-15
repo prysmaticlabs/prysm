@@ -12,6 +12,7 @@ import (
 
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/types"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
@@ -288,6 +289,16 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 			trace.StringAttribute("peerID", peerID.String()),
 		)
 
+		if msg.Timestamp != nil {
+			t, err := types.TimestampFromProto(msg.Timestamp)
+			if err != nil {
+				propagationTimeMetric.Observe(time.Now().Sub(t).Seconds())
+				span.AddAttributes(
+					trace.StringAttribute("timestamp", t.String()),
+				)
+			}
+		}
+
 		data := proto.Clone(message)
 		if err := proto.Unmarshal(msg.Payload, data); err != nil {
 			log.Error("Could not unmarshal payload")
@@ -437,6 +448,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 	envelope := &pb.Envelope{
 		SpanContext: propagation.Binary(span.SpanContext()),
 		Payload:     b,
+		Timestamp:   types.TimestampNow(),
 	}
 
 	return w.WriteMsg(envelope)
@@ -499,6 +511,7 @@ func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
 	envelope := &pb.Envelope{
 		SpanContext: propagation.Binary(span.SpanContext()),
 		Payload:     b,
+		Timestamp:   types.TimestampNow(),
 	}
 
 	data, err := proto.Marshal(envelope)

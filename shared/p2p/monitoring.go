@@ -13,6 +13,10 @@ var (
 		Name: "p2p_peer_count",
 		Help: "The number of currently connected peers",
 	})
+	propagationTimeMetric = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "p2p_propagation_time_sec",
+		Help: "The time between message sent/received from peer",
+	})
 )
 
 func init() {

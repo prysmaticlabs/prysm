@@ -26,6 +26,7 @@ go_library(
         "//shared/iputils:go_default_library",
         "@com_github_gogo_protobuf//io:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_ipfs_go_datastore//:go_default_library",
         "@com_github_ipfs_go_datastore//sync:go_default_library",
         "@com_github_ipfs_go_ipfs_addr//:go_default_library",
