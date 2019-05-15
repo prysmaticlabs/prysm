@@ -89,7 +89,7 @@ func ProcessRandao(
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
 	if verifySignatures {
-		proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+		proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 		}
@@ -543,11 +543,11 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 //         signature=attestation.signature,
 //     )
 func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
-	attI, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
+	attI, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
 	if err != nil {
 		return nil, err
 	}
-	cb1i, err := helpers.AttestationParticipants(state, attestation.Data, attestation.CustodyBitfield)
+	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
 	if err != nil {
 		return nil, err
 	}

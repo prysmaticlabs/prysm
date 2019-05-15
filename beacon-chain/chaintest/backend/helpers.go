@@ -28,7 +28,7 @@ func generateSimulatedBlock(
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot+1)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}

@@ -86,9 +86,9 @@ message AttestationData {
 
   // FFG vote
   uint64 source_epoch = 3;
-  bytes source_root = 4;
-  bytes target_root = 5;
-  uint64 target_epoch = 6;
+  uint64 target_epoch = 4;
+  bytes source_root = 5;
+  bytes target_root = 6;
 
   // Crosslink vote
   uint64 shard = 7;
