@@ -17,7 +17,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -90,7 +89,7 @@ func ProcessRandao(
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
 	if verifySignatures {
-		proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+		proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 		}
@@ -123,7 +122,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(block.Body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
@@ -448,7 +447,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
-	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch <= beaconState.Slot {
+	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
 			att.Data.Slot-params.BeaconConfig().GenesisSlot,
@@ -539,6 +538,51 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		return nil
 	}
 	return nil
+}
+
+// ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
+//
+// Spec pseudocode definition:
+//   def convert_to_indexed(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
+//     """
+//     Convert ``attestation`` to (almost) indexed-verifiable form.
+//     """
+//     attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bitfield)
+//     custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bitfield)
+//     custody_bit_0_indices = [index for index in attesting_indices if index not in custody_bit_1_indices]
+//     return IndexedAttestation(
+//         custody_bit_0_indices=custody_bit_0_indices,
+//         custody_bit_1_indices=custody_bit_1_indices,
+//         data=attestation.data,
+//         signature=attestation.signature,
+//     )
+func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
+	attI, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
+	if err != nil {
+		return nil, err
+	}
+	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
+	if err != nil {
+		return nil, err
+	}
+	cb1iMap := make(map[uint64]bool)
+	for _, in := range cb1i {
+		cb1iMap[in] = true
+	}
+	cb0i := []uint64{}
+	for _, index := range attI {
+		_, ok := cb1iMap[index]
+		if !ok {
+			cb0i = append(cb0i, index)
+		}
+	}
+	inAtt := &pb.IndexedAttestation{
+		Data:                attestation.Data,
+		Signature:           attestation.Signature,
+		CustodyBit_0Indices: cb0i,
+		CustodyBit_1Indices: cb1i,
+	}
+	return inAtt, nil
 }
 
 // VerifyIndexedAttestation determines the validity of an indexed attestation.

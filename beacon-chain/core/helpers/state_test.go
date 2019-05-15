@@ -103,3 +103,32 @@ func TestStateRootAtSlot_OutOfBounds(t *testing.T) {
 		}
 	}
 }
+
+func TestDomain_OK(t *testing.T) {
+	state := &pb.BeaconState{
+		Fork: &pb.Fork{
+			Epoch:           3,
+			PreviousVersion: []byte{0, 0, 0, 2},
+			CurrentVersion:  []byte{0, 0, 0, 3},
+		},
+		Slot: 70,
+	}
+
+	if DomainVersion(state, 9, 1) != 4345298944 {
+		t.Errorf("fork Version not equal to 4345298944 %d", DomainVersion(state, 1, 9))
+	}
+
+	if DomainVersion(state, 9, 2) != 8640266240 {
+		t.Errorf("fork Version not equal to 8640266240 %d", DomainVersion(state, 2, 9))
+	}
+
+	if DomainVersion(state, 2, 1) != 4328521728 {
+		t.Errorf("fork Version not equal to 4328521728 %d", DomainVersion(state, 1, 2))
+	}
+	if DomainVersion(state, 2, 2) != 8623489024 {
+		t.Errorf("fork Version not equal to 8623489024 %d", DomainVersion(state, 2, 2))
+	}
+	if DomainVersion(state, 0, 1) != 4328521728 {
+		t.Errorf("fork Version not equal to 4328521728 %d", DomainVersion(state, 1, 0))
+	}
+}

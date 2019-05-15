@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"math/big"
-	"reflect"
 	"testing"
 	"time"
 
@@ -22,11 +21,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -195,14 +192,14 @@ func createPreChainStartDeposit(t *testing.T, pk []byte, index uint64) *pb.Depos
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
 	epoch := helpers.SlotToEpoch(beaconState.Slot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal()
@@ -330,47 +327,4 @@ func TestChainStartStop_Initialized(t *testing.T) {
 		t.Error("context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
-}
-
-func TestRecentCanonicalRoots_CanFilter(t *testing.T) {
-	service := setupBeaconChain(t, nil, nil)
-	blks := map[uint64][]byte{
-		1:  {'A'},
-		50: {'E'},
-		2:  {'B'},
-		99: {'F'},
-		30: {'D'},
-		3:  {'C'},
-	}
-	service.canonicalBlocks = blks
-
-	want := []*pbrpc.BlockRoot{{Slot: 99, Root: []byte{'F'}}}
-	roots := service.RecentCanonicalRoots(1)
-	if !reflect.DeepEqual(want, roots) {
-		t.Log("Incorrect block roots received")
-	}
-
-	want = []*pbrpc.BlockRoot{
-		{Slot: 99, Root: []byte{'F'}},
-		{Slot: 50, Root: []byte{'E'}},
-		{Slot: 30, Root: []byte{'D'}},
-	}
-	roots = service.RecentCanonicalRoots(3)
-	if !reflect.DeepEqual(want, roots) {
-		t.Log("Incorrect block roots received")
-	}
-
-	want = []*pbrpc.BlockRoot{
-		{Slot: 99, Root: []byte{'F'}},
-		{Slot: 50, Root: []byte{'E'}},
-		{Slot: 30, Root: []byte{'D'}},
-		{Slot: 3, Root: []byte{'C'}},
-		{Slot: 2, Root: []byte{'B'}},
-		{Slot: 1, Root: []byte{'A'}},
-	}
-	roots = service.RecentCanonicalRoots(100)
-	if !reflect.DeepEqual(want, roots) {
-		t.Log("Incorrect block roots received")
-	}
-
 }

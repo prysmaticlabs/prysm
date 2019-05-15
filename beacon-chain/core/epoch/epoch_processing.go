@@ -11,8 +11,6 @@ import (
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -26,6 +24,11 @@ import (
 
 var log = logrus.WithField("prefix", "core/state")
 
+type queueElement struct {
+	idx                        int
+	ActivationEligibilityEpoch uint64
+}
+
 // MatchedAttestations is an object that contains the correctly
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
@@ -33,14 +36,6 @@ type MatchedAttestations struct {
 	target []*pb.PendingAttestation
 	head   []*pb.PendingAttestation
 }
-
-var (
-	ejectedCount          float64
-	validatorEjectedGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "validator_ejected_count",
-		Help: "Total number of ejected validators",
-	})
-)
 
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
@@ -77,7 +72,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 		return false
 	}
 	if featureconfig.FeatureConfig().EnableCrosslinks {
-		shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().SlotsPerEpoch
+		shardsProcessed := helpers.EpochCommitteeCount(state, helpers.CurrentEpoch(state)) * params.BeaconConfig().SlotsPerEpoch
 		startShard := state.CurrentShufflingStartShard
 		for i := startShard; i < shardsProcessed; i++ {
 			if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
@@ -111,90 +106,74 @@ func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
-// ProcessCrosslinks goes through each crosslink committee and check
-// crosslink committee's attested balance * 3 is greater than total balance *2.
-// If it's greater then beacon node updates crosslink committee with
-// the state epoch and wining root.
+// ProcessRegistryUpdates rotates validators in and out of active pool.
+// the amount to rotate is determined churn limit.
 //
 // Spec pseudocode definition:
-//	For every slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)),
-// 	let `crosslink_committees_at_slot = get_crosslink_committees_at_slot(state, slot)`.
-// 		For every `(crosslink_committee, shard)` in `crosslink_committees_at_slot`, compute:
-// 			Set state.latest_crosslinks[shard] = Crosslink(
-// 			epoch=slot_to_epoch(slot), crosslink_data_root=winning_root(crosslink_committee))
-// 			if 3 * total_attesting_balance(crosslink_committee) >= 2 * total_balance(crosslink_committee)
-func ProcessCrosslinks(
-	state *pb.BeaconState,
-	thisEpochAttestations []*pb.PendingAttestation,
-	prevEpochAttestations []*pb.PendingAttestation) (*pb.BeaconState, error) {
-
-	prevEpoch := helpers.PrevEpoch(state)
+//   def process_registry_updates(state: BeaconState) -> None:
+//     # Process activation eligibility and ejections
+//     for index, validator in enumerate(state.validator_registry):
+//         if validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH and validator.effective_balance >= MAX_EFFECTIVE_BALANCE:
+//             validator.activation_eligibility_epoch = get_current_epoch(state)
+//         if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
+//             initiate_validator_exit(state, index)
+//     # Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
+//     activation_queue = sorted([
+//         index for index, validator in enumerate(state.validator_registry) if
+//         validator.activation_eligibility_epoch != FAR_FUTURE_EPOCH and
+//         validator.activation_epoch >= get_delayed_activation_exit_epoch(state.finalized_epoch)
+//     ], key=lambda index: state.validator_registry[index].activation_eligibility_epoch)
+//     # Dequeued validators for activation up to churn limit (without resetting activation epoch)
+//     for index in activation_queue[:get_churn_limit(state)]:
+//         validator = state.validator_registry[index]
+//         if validator.activation_epoch == FAR_FUTURE_EPOCH:
+//             validator.activation_epoch = get_delayed_activation_exit_epoch(get_current_epoch(state))
+func ProcessRegistryUpdates(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-	nextEpoch := helpers.NextEpoch(state)
-	startSlot := helpers.StartSlot(prevEpoch)
-	endSlot := helpers.StartSlot(nextEpoch)
-
-	for i := startSlot; i < endSlot; i++ {
-		// RegistryChange is a no-op when requesting slot in current and previous epoch.
-		// ProcessCrosslinks will never ask for slot in next epoch.
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false /* registryChange */)
-		if err != nil {
-			return nil, fmt.Errorf("could not get committees for slot %d: %v", i-params.BeaconConfig().GenesisSlot, err)
+	validators.VStore.Lock()
+	defer validators.VStore.Unlock()
+	for idx, validator := range state.ValidatorRegistry {
+		// Activate validators within the allowable balance churn.
+		if validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
+			validator.EffectiveBalance >= params.BeaconConfig().MaxEffectiveBalance {
+			validator.ActivationEligibilityEpoch = currentEpoch
 		}
-		for _, crosslinkCommittee := range crosslinkCommittees {
-			shard := crosslinkCommittee.Shard
-			committee := crosslinkCommittee.Committee
-			attestingBalance, err := TotalAttestingBalance(state, shard, thisEpochAttestations, prevEpochAttestations)
-			if err != nil {
-				return nil, fmt.Errorf("could not get attesting balance for shard committee %d: %v", shard, err)
-			}
-			totalBalance := TotalBalance(state, committee)
-			if attestingBalance*3 >= totalBalance*2 {
-				winningRoot, err := winningRoot(state, shard, thisEpochAttestations, prevEpochAttestations)
-				if err != nil {
-					return nil, fmt.Errorf("could not get winning root: %v", err)
-				}
-				state.LatestCrosslinks[shard] = &pb.Crosslink{
-					Epoch:                   currentEpoch,
-					CrosslinkDataRootHash32: winningRoot,
-				}
-			}
+		if helpers.IsActiveValidator(validator, currentEpoch) &&
+			validator.EffectiveBalance <= params.BeaconConfig().EjectionBalance {
+			state = validators.ExitValidator(state, uint64(idx))
 		}
 	}
-	return state, nil
-}
+	// queue validators eligible for activation and not dequeued for activation prior to finalized epoch
 
-// ProcessEjections iterates through every validator and find the ones below
-// ejection balance and eject them.
-//
-// Spec pseudocode definition:
-//	def process_ejections(state: BeaconState) -> None:
-//    """
-//    Iterate through the validator registry
-//    and eject active validators with balance below ``EJECTION_BALANCE``.
-//    """
-//    for index in get_active_validator_indices(state.validator_registry, current_epoch(state)):
-//        if state.validator_balances[index] < EJECTION_BALANCE:
-//            exit_validator(state, index)
-func ProcessEjections(state *pb.BeaconState, enableLogging bool) (*pb.BeaconState, error) {
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
-	for _, index := range activeValidatorIndices {
-		if state.Balances[index] < params.BeaconConfig().EjectionBalance {
-			if enableLogging {
-				log.WithFields(logrus.Fields{
-					"pubKey": fmt.Sprintf("%#x", state.ValidatorRegistry[index].Pubkey),
-					"index":  index}).Info("Validator ejected")
-			}
-			state = validators.ExitValidator(state, index)
-			// Verify the validator has properly exited due to ejection before setting the
-			// ejection count for gauge.
-			if state.ValidatorRegistry[index].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-				ejectedCount++
-				validatorEjectedGauge.Set(ejectedCount)
-			}
+	activationQueue := []queueElement{}
+	for idx, validator := range state.ValidatorRegistry {
+		if validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch &&
+			validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(state.FinalizedEpoch) {
+			qe := queueElement{idx: idx,
+				ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch}
+			activationQueue = append(activationQueue, qe)
 		}
 	}
-	return state, nil
+	sort.Slice(activationQueue, func(i, j int) bool {
+		return activationQueue[i].ActivationEligibilityEpoch < activationQueue[j].ActivationEligibilityEpoch
+	})
+	// dequeued validators for activation up to churn limit (without resetting activation epoch)
+	limit := uint64(len(activationQueue))
+	cl := helpers.ChurnLimit(state)
+	if cl < limit {
+		limit = helpers.ChurnLimit(state)
+	}
+	for _, qe := range activationQueue[:limit] {
+		validator := state.ValidatorRegistry[qe.idx]
+		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+			validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
+			log.WithFields(logrus.Fields{
+				"index":           qe.idx,
+				"activationEpoch": validator.ActivationEpoch,
+			}).Info("Validator activated")
+		}
+	}
+	return state
 }
 
 // ProcessPrevSlotShardSeed computes and sets current epoch's calculation slot
@@ -209,20 +188,6 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 	state.PreviousShufflingStartShard = state.CurrentShufflingStartShard
 	state.PreviousShufflingSeedHash32 = state.CurrentShufflingSeedHash32
 	return state
-}
-
-// ProcessCurrSlotShardSeed sets the current shuffling information in the beacon state.
-//   Set state.current_shuffling_start_shard = (state.current_shuffling_start_shard +
-//     get_current_epoch_committee_count(state)) % SHARD_COUNT
-//   Set state.current_shuffling_epoch = next_epoch
-//   Set state.current_shuffling_seed = generate_seed(state, state.current_shuffling_epoch)
-func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.CurrentShufflingStartShard = (state.CurrentShufflingStartShard +
-		helpers.CurrentEpochCommitteeCount(state)) % params.BeaconConfig().ShardCount
-	// TODO(#2072)we have removed the generation of a new seed for the timebeing to get it stable for the testnet.
-	// this will be handled in Q2.
-	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
-	return state, nil
 }
 
 // ProcessPartialValidatorRegistry processes the portion of validator registry
@@ -278,7 +243,7 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 // 	next_epoch + ACTIVATION_EXIT_DELAY))
 func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
-	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
+	validatorIndices := helpers.ActiveValidatorIndices(state, nextEpoch)
 	indicesBytes := []byte{}
 	for _, val := range validatorIndices {
 		buf := make([]byte, 8)
@@ -446,7 +411,7 @@ func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
 func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
 	for _, att := range atts {
-		indices, err := helpers.AttestationParticipants(state, att.Data, att.AggregationBitfield)
+		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBitfield)
 		if err != nil {
 			return nil, fmt.Errorf("could not get attester indices: %v", err)
 		}
@@ -488,7 +453,7 @@ func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, in
 		InclusionSlot: params.BeaconConfig().FarFutureEpoch,
 	}
 	for _, att := range atts {
-		indices, err := helpers.AttestationParticipants(state, att.Data, att.AggregationBitfield)
+		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBitfield)
 		if err != nil {
 			return nil, fmt.Errorf("could not get attester indices: %v", err)
 		}
@@ -704,7 +669,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 //            decrease_balance(state, index, penalty)
 func ProcessSlashings(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-	activeIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
+	activeIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
 	totalBalance := helpers.TotalBalance(state, activeIndices)
 
 	// Compute the total penalties.
@@ -754,5 +719,5 @@ func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb
 //	def get_total_active_balance(state: BeaconState) -> Gwei:
 //    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
 func totalActiveBalance(state *pb.BeaconState) uint64 {
-	return TotalBalance(state, helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state)))
+	return TotalBalance(state, helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state)))
 }
