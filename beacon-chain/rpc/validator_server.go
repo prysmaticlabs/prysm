@@ -78,11 +78,11 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 
 // WaitTillSync checks if syncservice status is synched and sends message on stream when the service is synced.
 func (vs *ValidatorServer) WaitTillSync(ctx context.Context,_ *ptypes.Empty) (*pb.SyncedResponse, error){
-	if err := vs.syncService.Status();err==nil{
+	err := vs.syncService.Status();
+	if err==nil{
 		return &pb.SyncedResponse{Synced:true},nil
-	}else{
-		return &pb.SyncedResponse{Synced:false},err
 	}
+	return &pb.SyncedResponse{Synced:false},err
 }
 
 // ValidatorIndex is called by a validator to get its index location that corresponds
