@@ -39,6 +39,19 @@ func UnionUint64(a []uint64, b []uint64) []uint64 {
 	return set
 }
 
+// IsUint64Sorted verifies if a uint64 slice is sorted in ascending order.
+func IsUint64Sorted(a []uint64) bool {
+	if len(a) == 0 || len(a) == 1 {
+		return true
+	}
+	for i := 1; i < len(a); i++ {
+		if a[i-1] > a[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // NotUint64 returns the uint64 in slice a that are
 // not in slice b with time complexity of approximately
 // O(n) leveraging a map to check for element existence
