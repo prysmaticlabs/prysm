@@ -438,14 +438,18 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:  5,
-					Shard: 4,
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
 				},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:  5,
-					Shard: 3,
+					Slot:        params.BeaconConfig().SlotsPerEpoch,
+					SourceEpoch: 1,
+					TargetEpoch: 1,
+					Shard:       3,
 				},
 			},
 		},
@@ -462,7 +466,123 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	want := fmt.Sprint("custody bit field can't all be 0")
+	want := fmt.Sprint("attestations are not slashable")
+
+	if _, err := blocks.ProcessAttesterSlashings(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T) {
+	slashings := []*pb.AttesterSlashing{
+		{
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1, 2},
+				CustodyBit_1Indices: []uint64{0, 1, 2},
+			},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1, 2},
+				CustodyBit_1Indices: []uint64{0, 1, 2},
+			},
+		},
+	}
+	registry := []*pb.Validator{}
+	currentSlot := uint64(0)
+
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			AttesterSlashings: slashings,
+		},
+	}
+	want := fmt.Sprint("expected no bit 1 indices")
+
+	if _, err := blocks.ProcessAttesterSlashings(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	slashings = []*pb.AttesterSlashing{
+		{
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
+			},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
+			},
+		},
+	}
+
+	block.Body.AttesterSlashings = slashings
+	want = fmt.Sprint("exceeded max number of bit indices")
+
+	if _, err := blocks.ProcessAttesterSlashings(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	slashings = []*pb.AttesterSlashing{
+		{
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{3, 2, 1},
+			},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{3, 2, 1},
+			},
+		},
+	}
+
+	block.Body.AttesterSlashings = slashings
+	want = fmt.Sprint("bit indices not sorted")
 
 	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
@@ -481,7 +601,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		validators[i] = &pb.Validator{
 			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Slashed:           false,
 			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().SlotsPerEpoch,
 		}
 	}
@@ -490,25 +610,25 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
-	att1 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
-		JustifiedEpoch: 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
-		JustifiedEpoch: 4,
-	}
 	slashings := []*pb.AttesterSlashing{
 		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att2,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
 		},
 	}

@@ -301,7 +301,7 @@ func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.Attestation
 	// Inner attestation data structures for the votes should not be equal,
 	// as that would mean both votes are the same and therefore no slashing
 	// should occur.
-	isDoubleVote := !proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
+	isDoubleVote := proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
 	isSurroundVote := data1.SourceEpoch < data2.SourceEpoch && data2.TargetEpoch < data1.TargetEpoch
 	return isDoubleVote || isSurroundVote
 }

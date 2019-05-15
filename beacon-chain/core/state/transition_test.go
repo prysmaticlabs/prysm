@@ -156,7 +156,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
+			ProposerIndex: 3,
 			Header_1: &pb.BeaconBlockHeader{
 				Slot:      1,
 				Signature: []byte("A"),
@@ -167,25 +167,25 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			},
 		},
 	}
-	att1 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 4,
-	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att2,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
 		},
 	}
@@ -209,7 +209,6 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 	want := "could not process block attestations"
-	fmt.Println(beaconState.ValidatorRegistry[1])
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -224,7 +223,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
+			ProposerIndex: 3,
 			Header_1: &pb.BeaconBlockHeader{
 				Slot:      1,
 				Signature: []byte("A"),
@@ -235,25 +234,25 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 		},
 	}
-	att1 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 4,
-	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att2,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
 		},
 	}
@@ -315,7 +314,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
+			ProposerIndex: 3,
 			Header_1: &pb.BeaconBlockHeader{
 				Slot:      1,
 				Signature: []byte("A"),
@@ -326,25 +325,25 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			},
 		},
 	}
-	att1 := &pb.AttestationData{
-		Slot:           5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 4,
-	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_1: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att2,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
+			Attestation_2: &pb.IndexedAttestation{
+				Data: &pb.AttestationData{
+					Slot:        5,
+					SourceEpoch: 0,
+					TargetEpoch: 0,
+					Shard:       4,
+				},
+				CustodyBit_0Indices: []uint64{0, 1},
 			},
 		},
 	}
