@@ -20,6 +20,7 @@ func init() {
 	})
 }
 func TestGenerateState_OK(t *testing.T) {
+	t.Skip()
 	b, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create a new simulated backend %v", err)
@@ -88,6 +89,7 @@ func TestGenerateState_OK(t *testing.T) {
 }
 
 func TestGenerateState_WithNilBlocksOK(t *testing.T) {
+	t.Skip()
 	b, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create a new simulated backend %v", err)

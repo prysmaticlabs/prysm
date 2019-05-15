@@ -90,11 +90,17 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
+	head, err := vs.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get head: %v", err)
+	}
 	validatorRegistry, err := vs.beaconDB.ValidatorRegistry(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	validatorBalances, err := vs.beaconDB.ValidatorBalances(ctx)
+
+	activeIndices := helpers.ActiveValidatorIndices(head, helpers.SlotToEpoch(req.Slot))
+	validatorBalances, err := vs.beaconDB.Balances(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve validator balances %v", err)
 	}
