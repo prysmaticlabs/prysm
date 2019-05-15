@@ -122,7 +122,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
 	if len(newState.Balances) != depositsForChainStart {
-		t.Error("ValidatorBalances was not correctly initialized")
+		t.Error("Balances was not correctly initialized")
 	}
 
 	// Randomness and committees fields checks.
@@ -157,7 +157,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !reflect.DeepEqual(newState.BatchedBlockRootHash32S, [][]byte{}) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
 	}
-	activeValidators := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(newState, params.BeaconConfig().GenesisEpoch)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)

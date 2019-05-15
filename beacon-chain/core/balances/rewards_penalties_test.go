@@ -519,11 +519,13 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
 		state := &pb.BeaconState{
-			Slot:               params.BeaconConfig().GenesisSlot + 10,
-			ValidatorRegistry:  validators,
-			Balances:           validatorBalances,
-			LatestAttestations: pendingAtts,
-			LatestCrosslinks:   []*pb.Crosslink{{}},
+			Slot:                   params.BeaconConfig().GenesisSlot + 10,
+			ValidatorRegistry:      validators,
+			Balances:               validatorBalances,
+			LatestAttestations:     pendingAtts,
+			LatestCrosslinks:       []*pb.Crosslink{{}},
+			LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+			LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		}
 
 		_, err := blocks.ProcessBlockAttestations(state, &pb.BeaconBlock{
@@ -622,56 +624,6 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 		inclusionMap := make(map[uint64]uint64)
 		if _, err := AttestationInclusion(state, 0, tt.voted, inclusionMap); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no proposer index")
-		}
-	}
-}
-
-func TestCrosslinksRewardsPenalties_AccurateBalances(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*4)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	tests := []struct {
-		voted                        []byte
-		balanceAfterCrosslinkRewards []uint64
-	}{
-		{[]byte{0x0}, []uint64{
-			32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9}},
-		{[]byte{0xF}, []uint64{
-			31585730498, 31585730498, 31585730498, 31585730498,
-			32416931985, 32416931985, 32416931985, 32416931985}},
-		{[]byte{0xFF}, []uint64{
-			32829149760, 32829149760, 32829149760, 32829149760,
-			32829149760, 32829149760, 32829149760, 32829149760}},
-	}
-	for _, tt := range tests {
-		validatorBalances := make([]uint64, params.BeaconConfig().SlotsPerEpoch*4)
-		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
-		}
-		attestation := []*pb.PendingAttestation{
-			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
-				AggregationBitfield: tt.voted,
-				InclusionSlot:       0},
-		}
-		state := &pb.BeaconState{
-			ValidatorRegistry:  validators,
-			Balances:           validatorBalances,
-			LatestAttestations: attestation,
-		}
-		state, err := Crosslinks(
-			state,
-			attestation,
-			nil)
-		if err != nil {
-			t.Fatalf("Could not apply Crosslinks rewards: %v", err)
-		}
-		if !reflect.DeepEqual(state.Balances, validatorBalances) {
-			t.Errorf("CrosslinksRewardsPenalties(%v) = %v, wanted: %v",
-				tt.voted, state.Balances, validatorBalances)
 		}
 	}
 }
