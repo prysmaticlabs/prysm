@@ -244,6 +244,17 @@ func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) 
 		return chainHeadResponses[peers[i]].CanonicalSlot > chainHeadResponses[peers[j]].CanonicalSlot
 	})
 
+	// Retry for our 3 best peers, 2 times more
+	totalNumTries := 3
+	peersToRetry := 3
+	bestPeers := make([]peer.ID, totalNumTries*peersToRetry)
+	for i := range bestPeers {
+		indexAdd := i / totalNumTries
+		bestPeers[i] = peers[indexAdd]
+	}
+
+	peers = append(bestPeers, peers[peersToRetry:]...)
+
 	for _, peer := range peers {
 		chainHead := chainHeadResponses[peer]
 		if err := s.syncToPeer(ctx, chainHead, peer); err != nil {
@@ -279,6 +290,9 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 
 			return ctx.Err()
 		case msg := <-s.stateBuf:
+			if msg.Peer != peer {
+				continue
+			}
 			log.WithFields(fields).Info("Received state resp from peer")
 			if err := s.processState(msg, chainHeadResponse); err != nil {
 				return err

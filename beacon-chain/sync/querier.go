@@ -191,8 +191,8 @@ func (q *Querier) run() {
 					"peerID":      msg.Peer.Pretty(),
 					"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
 				}).Info("Received chain head from peer")
-				q.chainHeadResponses[msg.Peer] = response
 			}
+			q.chainHeadResponses[msg.Peer] = response
 			if response.CanonicalSlot > q.currentHeadSlot {
 				q.currentHeadSlot = response.CanonicalSlot
 				q.currentStateRoot = response.CanonicalStateRootHash32
