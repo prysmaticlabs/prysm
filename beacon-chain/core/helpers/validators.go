@@ -113,14 +113,21 @@ func ChurnLimit(state *pb.BeaconState) uint64 {
 //            return candidate_index
 //        i += 1
 func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
+	// Calculate the offset for slot and shard
 	e := CurrentEpoch(state)
 	committesPerSlot := EpochCommitteeCount(state, e) / params.BeaconConfig().SlotsPerEpoch
 	offSet := committesPerSlot * (state.Slot % params.BeaconConfig().SlotsPerEpoch)
+
+	// Calculate which shards get assigned given the epoch start shard
+	// and the offset
 	startShard, err := EpochStartShard(state, e)
 	if err != nil {
 		return 0, fmt.Errorf("could not get start shard: %v", err)
 	}
 	shard := (startShard + offSet) % params.BeaconConfig().ShardCount
+
+	// Use the first committee of the given slot and shard
+	// to select proposer
 	firstCommittee, err := CrosslinkCommitteeAtEpoch(state, e, shard)
 	if err != nil {
 		return 0, fmt.Errorf("could not get first committee: %v", err)
@@ -129,11 +136,16 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		return 0, fmt.Errorf("empty first committee at slot %d",
 			state.Slot-params.BeaconConfig().GenesisSlot)
 	}
-	maxRandomByte := uint64(8<<1 - 1)
+
+	// Use the generated seed to select proposer from the first committee
+	maxRandomByte := uint64(1<<8 - 1)
 	seed, err := GenerateSeed(state, e)
 	if err != nil {
 		return 0, fmt.Errorf("could not generate seed: %v", err)
 	}
+
+	// Looping through the committee to select proposer that has enough
+	// effective balance.
 	for i := uint64(0); ; i++ {
 		candidateIndex := firstCommittee[(e+i)%uint64(len(firstCommittee))]
 		b := append(seed[:], bytesutil.Bytes8(i)...)
