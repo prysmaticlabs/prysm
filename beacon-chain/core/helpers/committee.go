@@ -75,10 +75,7 @@ func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
 //    )
 func CrosslinkCommitteeAtEpoch(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64, error) {
 	indices := ActiveValidatorIndices(state, epoch)
-	seed, err := GenerateSeed(state, epoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate seed: %v", err)
-	}
+	seed := GenerateSeed(state, epoch)
 	startShard, err := EpochStartShard(state, epoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get start shard: %v", err)
