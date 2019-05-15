@@ -403,10 +403,8 @@ func TestUpdateLatestRandaoMixes_UpdatesRandao(t *testing.T) {
 		state := &pb.BeaconState{
 			Slot:              tt.epoch * params.BeaconConfig().SlotsPerEpoch,
 			LatestRandaoMixes: latestSlashedRandaoMixes}
-		newState, err := UpdateLatestRandaoMixes(state)
-		if err != nil {
-			t.Fatalf("could not update latest randao mixes: %v", err)
-		}
+		newState := UpdateLatestRandaoMixes(state)
+
 		if !bytes.Equal(newState.LatestRandaoMixes[epoch+1], tt.seed) {
 			t.Errorf(
 				"LatestRandaoMixes didn't update for epoch %d,"+

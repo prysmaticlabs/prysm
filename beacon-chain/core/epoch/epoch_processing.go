@@ -449,10 +449,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().LatestRandaoMixesLength
-	mix, err := helpers.RandaoMix(state, currentEpoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not get randao mix: %v", err)
-	}
+	mix := helpers.RandaoMix(state, currentEpoch)
 	state.LatestRandaoMixes[nextEpoch%randaoMixLength] = mix
 
 	// Set historical root accumulator.
@@ -495,15 +492,12 @@ func UpdateLatestSlashedBalances(state *pb.BeaconState) *pb.BeaconState {
 // Spec pseudocode definition:
 // Set state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] =
 // 	get_randao_mix(state, current_epoch).
-func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
+func UpdateLatestRandaoMixes(state *pb.BeaconState) *pb.BeaconState {
 	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestRandaoMixesLength
-	randaoMix, err := helpers.RandaoMix(state, helpers.CurrentEpoch(state))
-	if err != nil {
-		return nil, fmt.Errorf("could not get randaoMix mix: %v", err)
-	}
+	randaoMix := helpers.RandaoMix(state, helpers.CurrentEpoch(state))
 
 	state.LatestRandaoMixes[nextEpoch] = randaoMix
-	return state, nil
+	return state
 }
 
 // UnslashedAttestingIndices returns all the attesting indices from a list of attestations,

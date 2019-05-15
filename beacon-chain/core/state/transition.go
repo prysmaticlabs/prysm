@@ -460,10 +460,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	state = e.UpdateLatestSlashedBalances(state)
 
 	// Update current epoch's randao seed to next epoch.
-	state, err = e.UpdateLatestRandaoMixes(state)
-	if err != nil {
-		return nil, fmt.Errorf("could not update latest randao mixes: %v", err)
-	}
+	state = e.UpdateLatestRandaoMixes(state)
 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)

@@ -38,24 +38,11 @@ func TestRandaoMix_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
-		mix, err := RandaoMix(state, test.epoch)
-		if err != nil {
-			t.Fatalf("Could not get randao mix: %v", err)
-		}
+		mix := RandaoMix(state, test.epoch)
 		if !bytes.Equal(test.randaoMix, mix) {
 			t.Errorf("Incorrect randao mix. Wanted: %#x, got: %#x",
 				test.randaoMix, mix)
 		}
-	}
-}
-
-func TestRandaoMix_OutOfBound(t *testing.T) {
-	wanted := fmt.Sprintf(
-		"input randaoMix epoch %d out of bounds: %d <= epoch < %d",
-		100, 0, 0,
-	)
-	if _, err := RandaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
 	}
 }
 
@@ -144,16 +131,6 @@ func TestActiveIndexRoot_OutOfBound(t *testing.T) {
 		100, 0, params.BeaconConfig().ActivationExitDelay,
 	)
 	if _, err := ActiveIndexRoot(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
-	}
-}
-
-func TestGenerateSeed_OutOfBound(t *testing.T) {
-	wanted := fmt.Sprintf(
-		"input randaoMix epoch %d out of bounds: %d <= epoch < %d",
-		100-params.BeaconConfig().MinSeedLookahead, 0, 0,
-	)
-	if _, err := GenerateSeed(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
 	}
 }

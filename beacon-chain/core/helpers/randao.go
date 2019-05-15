@@ -23,10 +23,8 @@ import (
 //        int_to_bytes32(epoch)
 //    )
 func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
-	randaoMix, err := RandaoMix(state, wantedEpoch-params.BeaconConfig().MinSeedLookahead)
-	if err != nil {
-		return [32]byte{}, err
-	}
+	randaoMix := RandaoMix(state, wantedEpoch-params.BeaconConfig().MinSeedLookahead)
+
 	indexRoot, err := ActiveIndexRoot(state, wantedEpoch)
 	if err != nil {
 		return [32]byte{}, err
@@ -67,18 +65,9 @@ func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) 
 //                   epoch: Epoch) -> Bytes32:
 //    """
 //    Return the randao mix at a recent ``epoch``.
+//    ``epoch`` expected to be between (current_epoch - LATEST_RANDAO_MIXES_LENGTH, current_epoch].
 //    """
-//    assert get_current_epoch(state) - LATEST_RANDAO_MIXES_LENGTH < epoch <= get_current_epoch(state)
 //    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
-func RandaoMix(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
-	var earliestEpoch uint64
-	currentEpoch := CurrentEpoch(state)
-	if currentEpoch > params.BeaconConfig().LatestRandaoMixesLength {
-		earliestEpoch = currentEpoch - params.BeaconConfig().LatestRandaoMixesLength
-	}
-	if earliestEpoch > wantedEpoch || wantedEpoch > currentEpoch {
-		return nil, fmt.Errorf("input randaoMix epoch %d out of bounds: %d <= epoch < %d",
-			wantedEpoch, earliestEpoch, currentEpoch)
-	}
-	return state.LatestRandaoMixes[wantedEpoch%params.BeaconConfig().LatestRandaoMixesLength], nil
+func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
+	return state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength]
 }
