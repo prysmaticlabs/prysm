@@ -436,7 +436,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Set active index root.
 	activationDelay := params.BeaconConfig().ActivationExitDelay
 	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().LatestActiveIndexRootsLength
-	idxRoot, err := ssz.TreeHash(helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch+activationDelay))
+	idxRoot, err := ssz.TreeHash(helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay))
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash active indices: %v", err)
 	}

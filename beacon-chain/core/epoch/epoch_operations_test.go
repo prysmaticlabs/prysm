@@ -44,6 +44,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
 }
 
