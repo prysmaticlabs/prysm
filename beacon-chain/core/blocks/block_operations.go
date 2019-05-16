@@ -73,18 +73,23 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 // in the beacon state's latest randao mixes slice.
 //
 // Spec pseudocode definition:
-//   def process_randao(state: BeaconState, block: BeaconBlock) -> None:
+//   def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
 //     proposer = state.validator_registry[get_beacon_proposer_index(state)]
 //     # Verify that the provided randao value is valid
-//     assert bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)), block.body.randao_reveal, get_domain(state, DOMAIN_RANDAO))
+//     assert bls_verify(
+//         proposer.pubkey,
+//         hash_tree_root(get_current_epoch(state)),
+//         body.randao_reveal,
+//         get_domain(state, DOMAIN_RANDAO),
+//     )
 //     # Mix it in
 //     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
 //         xor(get_randao_mix(state, get_current_epoch(state)),
-//             hash(block.body.randao_reveal))
+//             hash(body.randao_reveal))
 //     )
 func ProcessRandao(
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
@@ -94,7 +99,7 @@ func ProcessRandao(
 			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 		}
 
-		if err := verifyBlockRandao(beaconState, block, proposerIdx, enableLogging); err != nil {
+		if err := verifyBlockRandao(beaconState, body, proposerIdx, enableLogging); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
 	}
@@ -103,7 +108,7 @@ func ProcessRandao(
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
-	blockRandaoReveal := hashutil.Hash(block.Body.RandaoReveal)
+	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
@@ -113,7 +118,7 @@ func ProcessRandao(
 
 // Verify that bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)),
 //   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
-func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64, enableLogging bool) error {
+func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, proposerIdx uint64, enableLogging bool) error {
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
 	if err != nil {
@@ -123,7 +128,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 	domain := helpers.DomainVersion(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
-	sig, err := bls.SignatureFromBytes(block.Body.RandaoReveal)
+	sig, err := bls.SignatureFromBytes(body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
