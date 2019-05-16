@@ -314,7 +314,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 
 	// Process eth1 data.
 	if e.CanProcessEth1Data(state) {
-		state = e.ProcessEth1Data(state)
+		state = e.ProcessEth1Data(state, block.Body)
 	}
 
 	// Update justification and finality.
