@@ -293,7 +293,7 @@ func TestUpdateLatestSlashedBalances_UpdatesBalances(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength)
 		latestSlashedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
-			Slot:                  tt.epoch * params.BeaconConfig().SlotsPerEpoch,
+			Slot: tt.epoch * params.BeaconConfig().SlotsPerEpoch,
 			LatestSlashedBalances: latestSlashedExitBalances}
 		newState := UpdateLatestSlashedBalances(state)
 		if newState.LatestSlashedBalances[epoch+1] !=
@@ -358,7 +358,7 @@ func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 	latestActiveIndexRoots := make([][]byte,
 		params.BeaconConfig().LatestActiveIndexRootsLength)
 	state := &pb.BeaconState{
-		Slot:                   epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
 		LatestActiveIndexRoots: latestActiveIndexRoots}
 	newState, err := UpdateLatestActiveIndexRoots(state)
 	if err != nil {
@@ -626,7 +626,7 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 		blockRoots[i] = []byte{byte(i + 1)}
 	}
 	state := &pb.BeaconState{
-		Slot:                      s + e + 2,
+		Slot: s + e + 2,
 		CurrentEpochAttestations:  currentAtts,
 		PreviousEpochAttestations: prevAtts,
 		LatestBlockRoots:          blockRoots,
@@ -700,7 +700,7 @@ func TestMatchAttestations_CurrentEpoch(t *testing.T) {
 		blockRoots[i] = []byte{byte(i + 1)}
 	}
 	state := &pb.BeaconState{
-		Slot:                      s + e + 2,
+		Slot: s + e + 2,
 		CurrentEpochAttestations:  currentAtts,
 		PreviousEpochAttestations: prevAtts,
 		LatestBlockRoots:          blockRoots,
@@ -758,7 +758,7 @@ func TestCrosslinkFromAttsData_CanGetCrosslink(t *testing.T) {
 		PreviousCrosslinkRoot: []byte{'B'},
 	}
 	if !proto.Equal(CrosslinkFromAttsData(s, a), &pb.Crosslink{
-		Epoch:                       params.BeaconConfig().GenesisEpoch + params.BeaconConfig().MaxCrosslinkEpochs,
+		Epoch: params.BeaconConfig().GenesisEpoch + params.BeaconConfig().MaxCrosslinkEpochs,
 		CrosslinkDataRootHash32:     []byte{'A'},
 		PreviousCrosslinkRootHash32: []byte{'B'},
 	}) {
@@ -792,8 +792,8 @@ func TestCrosslinkAttestingIndices_CanGetIndices(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                  params.BeaconConfig().GenesisSlot + uint64(i),
-				Shard:                 uint64(i + 2),
+				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
+				Shard: uint64(i + 2),
 				PreviousCrosslinkRoot: []byte{'E'},
 				TargetEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
@@ -822,7 +822,7 @@ func TestCrosslinkAttestingIndices_CanGetIndices(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	c := &pb.Crosslink{
-		Epoch:                       params.BeaconConfig().GenesisEpoch,
+		Epoch: params.BeaconConfig().GenesisEpoch,
 		PreviousCrosslinkRootHash32: []byte{'E'},
 	}
 	indices, err := CrosslinkAttestingIndices(s, c, atts)
@@ -856,14 +856,14 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 	ge := params.BeaconConfig().GenesisEpoch
 
 	state := &pb.BeaconState{
-		Slot:                      gs + e + 2,
+		Slot: gs + e + 2,
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 		LatestBlockRoots:          make([][]byte, 128),
 		CurrentCrosslinks:         []*pb.Crosslink{{Epoch: ge}},
 	}
 
 	gCrosslink := &pb.Crosslink{
-		Epoch:                       params.BeaconConfig().GenesisEpoch,
+		Epoch: params.BeaconConfig().GenesisEpoch,
 		CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
 		PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 	}
@@ -913,7 +913,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	currentCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	currentCrosslinks[3] = &pb.Crosslink{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}
 	state := &pb.BeaconState{
-		Slot:                      gs + e + 2,
+		Slot: gs + e + 2,
 		PreviousEpochAttestations: atts,
 		LatestBlockRoots:          blockRoots,
 		CurrentCrosslinks:         currentCrosslinks,
@@ -975,7 +975,7 @@ func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxDepositAmount
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2,
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
@@ -1001,7 +1001,7 @@ func TestProcessJustificationFinalization_NoBlockRootCurrentEpoch(t *testing.T) 
 		blockRoots[i] = []byte{byte(i)}
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2,
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
@@ -1027,7 +1027,7 @@ func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
 		blockRoots[i] = []byte{byte(i)}
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2 + 1,
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
@@ -1068,7 +1068,7 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 		blockRoots[i] = []byte{byte(i)}
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2 + 1,
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,

@@ -664,7 +664,7 @@ func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *
 		epoch = state.CurrentCrosslinks[attData.Shard].Epoch + params.BeaconConfig().MaxCrosslinkEpochs
 	}
 	return &pb.Crosslink{
-		Epoch:                       epoch,
+		Epoch: epoch,
 		CrosslinkDataRootHash32:     attData.CrosslinkDataRoot,
 		PreviousCrosslinkRootHash32: attData.PreviousCrosslinkRoot,
 	}
@@ -728,7 +728,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
-			Epoch:                       params.BeaconConfig().GenesisEpoch,
+			Epoch: params.BeaconConfig().GenesisEpoch,
 			CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
 			PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 		}, nil
