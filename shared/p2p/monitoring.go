@@ -17,7 +17,7 @@ var (
 	propagationTimeMetric = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "p2p_propagation_time_sec",
 		Help:    "The time between message sent/received from peer",
-		Buckets: prometheus.ExponentialBuckets(0.01, 5, 7),
+		Buckets: append(prometheus.DefBuckets, []float64{20, 30, 60, 90}...),
 	})
 )
 
