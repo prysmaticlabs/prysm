@@ -284,6 +284,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 func TestWaitTillSync_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
+	waitBetweenSynchedRetry = 10
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
 	v := validator{

@@ -37,6 +37,8 @@ func (v *validator) Done() {
 	v.ticker.Done()
 }
 
+var waitBetweenSynchedRetry = 6000
+
 // WaitForChainStart checks whether the beacon node has started its runtime. That is,
 // it calls to the beacon node which then verifies the ETH1.0 deposit contract logs to check
 // for the ChainStart log to have been emitted. If so, it starts a ticker based on the ChainStart
@@ -135,7 +137,7 @@ func (v *validator) WaitTillSync(ctx context.Context) error {
 			log.Info("Beacon node is Synched!")
 			break
 		}
-		time.Sleep(3 * time.Second)
+		time.Sleep(time.Duration(waitBetweenSynchedRetry) * time.Millisecond)
 	}
 	return nil
 }
