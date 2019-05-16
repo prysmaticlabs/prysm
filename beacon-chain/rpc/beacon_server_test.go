@@ -708,13 +708,15 @@ func TestBlockTree_OK(t *testing.T) {
 	//                   /->[A, Slot 3, 3 Votes]->[B, Slot 4, 3 Votes]
 	// [Justified Block]->[C, Slot 3, 2 Votes]
 	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
+	var validators []*pbp2p.Validator
+	for i := 0; i < 11; i++ {
+		validators = append(validators, &pbp2p.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance})
+	}
 	justifiedState := &pbp2p.BeaconState{
-		Slot:     params.BeaconConfig().GenesisSlot,
-		Balances: make([]uint64, 11),
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: validators,
 	}
-	for i := 0; i < len(justifiedState.Balances); i++ {
-		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
-	}
+
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
 	}

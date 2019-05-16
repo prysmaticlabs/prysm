@@ -543,7 +543,8 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxDepositAmount,
 		}
 		balances[i] = params.BeaconConfig().MaxDepositAmount
 	}
@@ -1042,8 +1043,8 @@ func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
-		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
+		ValidatorRegistry: []*pb.Validator{{ExitEpoch: e, EffectiveBalance: a}, {ExitEpoch: e, EffectiveBalance: a},
+			{ExitEpoch: e, EffectiveBalance: a}, {ExitEpoch: e, EffectiveBalance: a}},
 	}
 	// Since Attested balances are less than total balances, nothing happened.
 	newState, err := ProcessJustificationFinalization(state, 0, 0)
@@ -1145,11 +1146,11 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(newState.CurrentJustifiedRoot, []byte{byte(64)}) {
+	if !bytes.Equal(newState.CurrentJustifiedRoot, []byte{byte(128)}) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
 			[]byte{byte(128)}, newState.CurrentJustifiedRoot)
 	}
-	if newState.CurrentJustifiedEpoch != params.BeaconConfig().GenesisEpoch+1 {
+	if newState.CurrentJustifiedEpoch != params.BeaconConfig().GenesisEpoch+2 {
 		t.Errorf("Wanted justified epoch: %d, got: %d",
 			params.BeaconConfig().GenesisEpoch+2, newState.CurrentJustifiedEpoch)
 	}
@@ -1184,7 +1185,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			{Slashed: true,
 				WithdrawableEpoch: params.BeaconConfig().GenesisEpoch + params.BeaconConfig().LatestSlashedExitLength/2,
 				EffectiveBalance:  params.BeaconConfig().MaxDepositAmount},
-			{ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
+			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxDepositAmount}},
 		Balances:              []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
 		LatestSlashedBalances: []uint64{0, 1e9},
 	}

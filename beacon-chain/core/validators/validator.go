@@ -124,6 +124,7 @@ func ProcessDeposit(
 			Slashed:               false,
 			StatusFlags:           0,
 			WithdrawalCredentials: withdrawalCredentials,
+			EffectiveBalance:      amount,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.Balances = append(state.Balances, amount)
@@ -138,6 +139,7 @@ func ProcessDeposit(
 				withdrawalCredentials,
 			)
 		}
+		state.ValidatorRegistry[existingValidatorIdx].EffectiveBalance += amount
 		state.Balances[existingValidatorIdx] += amount
 	}
 	state.DepositIndex++
@@ -313,90 +315,6 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	state = helpers.IncreaseBalance(state, whistleBlower, whistleblowerReward-proposerReward)
 	state = helpers.DecreaseBalance(state, slashedIdx, whistleblowerReward)
 	return state, nil
-}
-
-// ProcessPenaltiesAndExits prepares the validators and the slashed validators
-// for withdrawal.
-//
-// Spec pseudocode definition:
-// def process_penalties_and_exits(state: BeaconState) -> None:
-//    """
-//    Process the penalties and prepare the validators who are eligible to withdrawal.
-//    Note that this function mutates ``state``.
-//    """
-//    current_epoch = get_current_epoch(state)
-//    # The active validators
-//    active_validator_indices = get_active_validator_indices(state.validator_registry, current_epoch)
-//    # The total effective balance of active validators
-//    total_balance = sum(get_effective_balance(state, i) for i in active_validator_indices)
-//
-//    for index, validator in enumerate(state.validator_registry):
-//        if current_epoch == validator.slashed_epoch + LATEST_PENALIZED_EXIT_LENGTH // 2:
-//            epoch_index = current_epoch % LATEST_PENALIZED_EXIT_LENGTH
-//            total_at_start = state.latest_slashed_balances[(epoch_index + 1) % LATEST_PENALIZED_EXIT_LENGTH]
-//            total_at_end = state.latest_slashed_balances[epoch_index]
-//            total_penalties = total_at_end - total_at_start
-//            penalty = get_effective_balance(state, index) * min(total_penalties * 3, total_balance) // total_balance
-//            state.validator_balances[index] -= penalty
-//
-//    def eligible(index):
-//        validator = state.validator_registry[index]
-//        if validator.slashed_epoch <= current_epoch:
-//            slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
-//            return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
-//        else:
-//            return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
-//
-//    all_indices = list(range(len(state.validator_registry)))
-//    eligible_indices = filter(eligible, all_indices)
-//    # Sort in order of exit epoch, and validators that exit within the same epoch exit in order of validator index
-//    sorted_indices = sorted(eligible_indices, key=lambda index: state.validator_registry[index].exit_epoch)
-//    withdrawn_so_far = 0
-//    for index in sorted_indices:
-//        prepare_validator_for_withdrawal(state, index)
-//        withdrawn_so_far += 1
-//        if withdrawn_so_far >= MAX_EXIT_DEQUEUES_PER_EPOCH:
-//            break
-func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
-	currentEpoch := helpers.CurrentEpoch(state)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
-	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
-
-	for idx, validator := range state.ValidatorRegistry {
-		slashed := validator.SlashedEpoch +
-			params.BeaconConfig().LatestSlashedExitLength/2
-		if currentEpoch == slashed {
-			slashedEpoch := currentEpoch % params.BeaconConfig().LatestSlashedExitLength
-			slashedEpochStart := (slashedEpoch + 1) % params.BeaconConfig().LatestSlashedExitLength
-			totalAtStart := state.LatestSlashedBalances[slashedEpochStart]
-			totalAtEnd := state.LatestSlashedBalances[slashedEpoch]
-			totalPenalties := totalAtStart - totalAtEnd
-
-			penaltyMultiplier := totalPenalties * 3
-			if totalBalance < penaltyMultiplier {
-				penaltyMultiplier = totalBalance
-			}
-			penalty := helpers.EffectiveBalance(state, uint64(idx)) *
-				penaltyMultiplier / totalBalance
-			state.Balances[idx] -= penalty
-		}
-	}
-	allIndices := allValidatorsIndices(state)
-	var eligibleIndices []uint64
-	for _, idx := range allIndices {
-		if eligibleToExit(state, idx) {
-			eligibleIndices = append(eligibleIndices, idx)
-		}
-	}
-	var withdrawnSoFar uint64
-	for _, idx := range eligibleIndices {
-		state = prepareValidatorForWithdrawal(state, idx)
-		withdrawnSoFar++
-		if withdrawnSoFar >= params.BeaconConfig().MaxExitDequeuesPerEpoch {
-			break
-		}
-	}
-	return state
 }
 
 // InitializeValidatorStore sets the current active validators from the current
