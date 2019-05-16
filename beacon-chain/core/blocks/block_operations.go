@@ -73,18 +73,23 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 // in the beacon state's latest randao mixes slice.
 //
 // Spec pseudocode definition:
-//   def process_randao(state: BeaconState, block: BeaconBlock) -> None:
+//   def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
 //     proposer = state.validator_registry[get_beacon_proposer_index(state)]
 //     # Verify that the provided randao value is valid
-//     assert bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)), block.body.randao_reveal, get_domain(state, DOMAIN_RANDAO))
+//     assert bls_verify(
+//         proposer.pubkey,
+//         hash_tree_root(get_current_epoch(state)),
+//         body.randao_reveal,
+//         get_domain(state, DOMAIN_RANDAO),
+//     )
 //     # Mix it in
 //     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
 //         xor(get_randao_mix(state, get_current_epoch(state)),
-//             hash(block.body.randao_reveal))
+//             hash(body.randao_reveal))
 //     )
 func ProcessRandao(
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 	enableLogging bool,
 ) (*pb.BeaconState, error) {
@@ -94,7 +99,7 @@ func ProcessRandao(
 			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 		}
 
-		if err := verifyBlockRandao(beaconState, block, proposerIdx, enableLogging); err != nil {
+		if err := verifyBlockRandao(beaconState, body, proposerIdx, enableLogging); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
 	}
@@ -103,7 +108,7 @@ func ProcessRandao(
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
-	blockRandaoReveal := hashutil.Hash(block.Body.RandaoReveal)
+	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
@@ -113,7 +118,7 @@ func ProcessRandao(
 
 // Verify that bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)),
 //   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
-func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64, enableLogging bool) error {
+func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, proposerIdx uint64, enableLogging bool) error {
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
 	if err != nil {
@@ -123,7 +128,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 	domain := helpers.DomainVersion(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
-	sig, err := bls.SignatureFromBytes(block.Body.RandaoReveal)
+	sig, err := bls.SignatureFromBytes(body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
@@ -753,15 +758,20 @@ func processInvalidDeposit(bState *pb.BeaconState) *pb.BeaconState {
 //   Verify that len(block.body.voluntary_exits) <= MAX_VOLUNTARY_EXITS.
 //
 //   For each exit in block.body.voluntary_exits:
-//     Let validator = state.validator_registry[exit.validator_index].
-//     Verify that validator.exit_epoch > get_entry_exit_effect_epoch(get_current_epoch(state)).
-//     Verify that get_current_epoch(state) >= exit.epoch.
-//     Let exit_message = hash_tree_root(
-//       Exit(epoch=exit.epoch, validator_index=exit.validator_index, signature=EMPTY_SIGNATURE)
-//     )
-//     Verify that bls_verify(pubkey=validator.pubkey, message_hash=exit_message,
-//       signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
-//     Run initiate_validator_exit(state, exit.validator_index).
+//     validator = state.validator_registry[exit.validator_index]
+//     # Verify the validator is active
+//     assert is_active_validator(validator, get_current_epoch(state))
+//     # Verify the validator has not yet exited
+//     assert validator.exit_epoch == FAR_FUTURE_EPOCH
+//     # Exits must specify an epoch when they become valid; they are not valid before then
+//     assert get_current_epoch(state) >= exit.epoch
+//     # Verify the validator has been active long enough
+//     assert get_current_epoch(state) >= validator.activation_epoch + PERSISTENT_COMMITTEE_PERIOD
+//     # Verify signature
+//     domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
+//     assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
+//     # Initiate exit
+//     initiate_validator_exit(state, exit.validator_index)
 func ProcessValidatorExits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -777,43 +787,42 @@ func ProcessValidatorExits(
 		)
 	}
 
-	validatorRegistry := beaconState.ValidatorRegistry
 	for idx, exit := range exits {
 		if err := verifyExit(beaconState, exit, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
 		beaconState = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 	}
-	beaconState.ValidatorRegistry = validatorRegistry
 	return beaconState, nil
 }
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-
-	delayedActivationExitEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	if validator.ExitEpoch <= delayedActivationExitEpoch {
-		return fmt.Errorf(
-			"validator exit epoch should be > entry_exit_effect_epoch, received %d <= %d",
-			currentEpoch,
-			delayedActivationExitEpoch,
-		)
+	// Verify the validator is active.
+	if !helpers.IsActiveValidator(validator, currentEpoch) {
+		return errors.New("non-active validator cannot exit")
 	}
+	// Verify the validator has not yet exited.
+	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
+	}
+	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {
+		return fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
+	}
+	// Verify the validator has been active long enough.
+	if currentEpoch < validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod {
 		return fmt.Errorf(
-			"expected current epoch >= exit.epoch, received %d < %d",
+			"validator has not been active long enough to exit, wanted epoch %d >= %d",
 			currentEpoch,
-			exit.Epoch,
+			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
 	if verifySignatures {
-		// TODO(#258): Verify using BLS signature verification below:
-		// Let exit_message = hash_tree_root(
-		//   Exit(epoch=exit.epoch, validator_index=exit.validator_index, signature=EMPTY_SIGNATURE)
-		// )
-		// Verify that bls_verify(pubkey=validator.pubkey, message_hash=exit_message,
-		//   signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
+		// TODO(#258): Integrate BLS signature verification for exits.
+		// domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
+		// assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 		return nil
 	}
 	return nil
