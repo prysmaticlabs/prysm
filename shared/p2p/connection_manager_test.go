@@ -13,7 +13,6 @@ import (
 )
 
 func hostWithConnMgr(t *testing.T) host.Host {
-
 	h, err := libp2p.New(context.Background(), optionConnectionManager(5))
 	if err != nil {
 		t.Fatal(err)
