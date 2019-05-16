@@ -80,7 +80,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	want := "block randao reveal signature did not verify"
 	if _, err := blocks.ProcessRandao(
 		beaconState,
-		block,
+		block.Body,
 		true,  /* verify signatures */
 		false, /* disable logging */
 	); !strings.Contains(err.Error(), want) {
@@ -114,7 +114,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 
 	newState, err := blocks.ProcessRandao(
 		beaconState,
-		block,
+		block.Body,
 		true,  /* verify signatures */
 		false, /* disable logging */
 	)
