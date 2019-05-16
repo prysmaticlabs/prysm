@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -149,25 +149,8 @@ func GenesisBeaconState(
 
 	// Process initial deposits.
 	var err error
-	validatorMap := stateutils.ValidatorIndexMap(state)
 	for _, deposit := range genesisValidatorDeposits {
-		depositData := deposit.DepositData
-		depositInput, err := helpers.DecodeDepositInput(depositData)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit input: %v", err)
-		}
-		value, _, err := helpers.DecodeDepositAmountAndTimeStamp(depositData)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit value and timestamp: %v", err)
-		}
-		state, err = v.ProcessDeposit(
-			state,
-			validatorMap,
-			depositInput.Pubkey,
-			value,
-			depositInput.ProofOfPossession,
-			depositInput.WithdrawalCredentialsHash32,
-		)
+		state, err = v.ProcessDeposit(state, deposit)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
 		}

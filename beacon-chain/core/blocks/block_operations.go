@@ -13,7 +13,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -681,11 +680,7 @@ func ProcessValidatorDeposits(
 		)
 	}
 	var err error
-	var depositInput *pb.DepositInput
-	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
-		depositData := deposit.DepositData
-		depositInput, err = helpers.DecodeDepositInput(depositData)
 		if err != nil {
 			beaconState = processInvalidDeposit(beaconState)
 			log.Errorf("could not decode deposit input: %v", err)
@@ -694,17 +689,10 @@ func ProcessValidatorDeposits(
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}
-		// depositData consists of depositValue [8]byte +
-		// depositTimestamp [8]byte + depositInput []byte .
-		depositValue := depositData[:8]
 		// We then mutate the beacon state with the verified validator deposit.
 		beaconState, err = v.ProcessDeposit(
 			beaconState,
-			validatorIndexMap,
-			depositInput.Pubkey,
-			binary.LittleEndian.Uint64(depositValue),
-			depositInput.ProofOfPossession,
-			depositInput.WithdrawalCredentialsHash32,
+			deposit,
 		)
 		if err != nil {
 			beaconState = processInvalidDeposit(beaconState)
