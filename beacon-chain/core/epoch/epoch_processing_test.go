@@ -107,108 +107,44 @@ func TestCanProcessEth1Data_TrueOnVotingPeriods(t *testing.T) {
 	}
 }
 
-func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
-	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod *
-		params.BeaconConfig().SlotsPerEpoch
+func TestProcessEth1Data_UpdatesStateAndNoCleans(t *testing.T) {
+	requiredVoteCount := int(params.BeaconConfig().SlotsPerEth1VotingPeriod)
 	state := &pb.BeaconState{
 		Slot: 15 * params.BeaconConfig().SlotsPerEpoch,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRoot: nil,
-			BlockRoot:   nil,
-		},
-		Eth1DataVotes: []*pb.Eth1DataVote{
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{'A'},
-					BlockRoot:   []byte{'B'},
-				},
-				VoteCount: 0,
-			},
-			// DepositRoot ['B'] gets to process with sufficient vote count.
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{'C'},
-					BlockRoot:   []byte{'D'},
-				},
-				VoteCount: requiredVoteCount/2 + 1,
-			},
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{'E'},
-					BlockRoot:   []byte{'F'},
-				},
-				VoteCount: requiredVoteCount / 2,
-			},
+			DepositRoot: []byte{'C'},
+			BlockRoot:   []byte{'D'},
 		},
 	}
+	body := &pb.BeaconBlockBody{
+		Eth1Data: &pb.Eth1Data{
+			DepositRoot: []byte{'A'},
+			BlockRoot:   []byte{'B'},
+		},
+	}
+	eth1DataBlockVote := &pb.Eth1DataVote{
+		Eth1Data: body.Eth1Data,
+	}
 
-	newState := ProcessEth1Data(state)
+	for i := 0; i < requiredVoteCount/2-1; i++ {
+		state.Eth1DataVotes = append(state.Eth1DataVotes, eth1DataBlockVote)
+	}
+
+	newState := ProcessEth1Data(state, body)
 	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, []byte{'C'}) {
 		t.Errorf("Incorrect DepositRoot. Wanted: %v, got: %v",
 			[]byte{'C'}, newState.LatestEth1Data.DepositRoot)
 	}
 
-	// Adding a new receipt root ['D'] which should be the new processed receipt root.
-	state.Eth1DataVotes = append(state.Eth1DataVotes,
-		&pb.Eth1DataVote{
-			Eth1Data: &pb.Eth1Data{
-				DepositRoot: []byte{'G'},
-				BlockRoot:   []byte{'H'},
-			},
-			VoteCount: requiredVoteCount,
-		},
-	)
-	newState = ProcessEth1Data(state)
-	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, []byte{'G'}) {
-		t.Errorf("Incorrect DepositRoot. Wanted: %v, got: %v",
-			[]byte{'G'}, newState.LatestEth1Data.DepositRoot)
-	}
+	// append 1 more eth1DataBlockVote to state.Eth1DataVotes to update state
+	newState.Eth1DataVotes = append(newState.Eth1DataVotes, eth1DataBlockVote)
 
-	if len(newState.Eth1DataVotes) != 0 {
-		t.Errorf("Failed to clean up Eth1DataVotes slice. Length: %d",
-			len(newState.Eth1DataVotes))
-	}
-}
-
-func TestProcessEth1Data_InactionSlot(t *testing.T) {
-	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod
-	state := &pb.BeaconState{
-		Slot: 4,
-		LatestEth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{'A'},
-			BlockRoot:   []byte{'B'},
-		},
-		Eth1DataVotes: []*pb.Eth1DataVote{
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{'C'},
-					BlockRoot:   []byte{'D'},
-				},
-				VoteCount: requiredVoteCount/2 + 1,
-			},
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{'E'},
-					BlockRoot:   []byte{'F'},
-				},
-				VoteCount: requiredVoteCount / 2,
-			},
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{'G'},
-					BlockRoot:   []byte{'H'},
-				},
-				VoteCount: requiredVoteCount,
-			},
-		},
-	}
-
-	// Adding a new receipt root ['D'] which should be the new processed receipt root.
-	newState := ProcessEth1Data(state)
+	newState = ProcessEth1Data(newState, body)
 	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, []byte{'A'}) {
 		t.Errorf("Incorrect DepositRoot. Wanted: %v, got: %v",
 			[]byte{'A'}, newState.LatestEth1Data.DepositRoot)
 	}
+
 }
 
 func TestCanProcessValidatorRegistry_OnFarEpoch(t *testing.T) {
