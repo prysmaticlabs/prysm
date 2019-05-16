@@ -289,13 +289,15 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 			trace.StringAttribute("peerID", peerID.String()),
 		)
 
-		if msg.Timestamp != nil {
+		if msg.Timestamp != nil && msg.Timestamp.Seconds > 0 {
 			t, err := types.TimestampFromProto(msg.Timestamp)
-			if err != nil {
+			if err == nil {
 				propagationTimeMetric.Observe(time.Now().Sub(t).Seconds())
 				span.AddAttributes(
 					trace.StringAttribute("timestamp", t.String()),
 				)
+			} else {
+				log.WithError(err).Debug("Message received without timestamp")
 			}
 		}
 
