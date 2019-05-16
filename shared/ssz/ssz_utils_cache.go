@@ -112,6 +112,9 @@ func structFields(typ reflect.Type) (fields []field, err error) {
 }
 
 func structFieldMap(typ reflect.Type) (fieldMap map[string]field, err error) {
+	if typ.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("wrong object type, expecting struct got: %v", typ.Kind())
+	}
 	fieldMap = make(map[string]field)
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
