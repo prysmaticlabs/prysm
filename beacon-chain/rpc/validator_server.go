@@ -31,7 +31,7 @@ type ValidatorServer struct {
 	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
 	powChainService    powChainService
-	syncService  	   syncService
+	syncService        syncService
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -77,12 +77,12 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 }
 
 // WaitTillSync checks if syncservice status is synched and sends message on stream when the service is synced.
-func (vs *ValidatorServer) WaitTillSync(ctx context.Context,_ *ptypes.Empty) (*pb.SyncedResponse, error){
-	err := vs.syncService.Status();
-	if err==nil{
-		return &pb.SyncedResponse{Synced:true},nil
+func (vs *ValidatorServer) WaitTillSync(ctx context.Context, _ *ptypes.Empty) (*pb.SyncedResponse, error) {
+	err := vs.syncService.Status()
+	if err == nil {
+		return &pb.SyncedResponse{Synced: true}, nil
 	}
-	return &pb.SyncedResponse{Synced:false},err
+	return &pb.SyncedResponse{Synced: false}, err
 }
 
 // ValidatorIndex is called by a validator to get its index location that corresponds

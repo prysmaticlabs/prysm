@@ -9,7 +9,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	
+
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

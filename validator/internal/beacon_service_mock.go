@@ -5,9 +5,9 @@
 package internal
 
 import (
-	reflect "reflect"
 	context "context"
-	
+	reflect "reflect"
+
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
