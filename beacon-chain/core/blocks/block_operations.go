@@ -4,7 +4,6 @@
 package blocks
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -12,6 +11,7 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -82,39 +82,40 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
-)(*pb.BeaconState,error){
-	if beaconState.Slot != block.Slot{
-		return nil,fmt.Errorf("state slot: %d is different then block slot: %d",beaconState.Slot,block.Slot)
+) (*pb.BeaconState, error) {
+	if beaconState.Slot != block.Slot {
+		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
 	}
-	lbhsr,err:= ssz.SignedRoot(beaconState.LatestBlockHeader )
-	if err!=nil {
-		return nil,err
+	lbhsr, err := ssz.SignedRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		return nil, err
 	}
-	if !bytes.Equal(block.ParentBlockRoot, lbhsr[:]){
-		return nil,fmt.Errorf("state parentblockroot: %d is different then latest block header signed root: %d",
-		block.ParentBlockRoot,lbhsr)
+	if !bytes.Equal(block.ParentBlockRoot, lbhsr[:]) {
+		return nil, fmt.Errorf("state parentblockroot: %d is different then latest block header signed root: %d",
+			block.ParentBlockRoot, lbhsr)
 	}
-	bBytes,err:= block.Body.Marshal()
-	if err!=nil {
-		return nil,err
+	bBytes, err := block.Body.Marshal()
+	if err != nil {
+		return nil, err
 	}
-	bHash,err:=ssz.TreeHash(bBytes)
-	if err!=nil {
-		return nil,err
+	bHash, err := ssz.TreeHash(bBytes)
+	if err != nil {
+		return nil, err
 	}
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
-		Slot: block.Slot,
+		Slot:              block.Slot,
 		PreviousBlockRoot: block.ParentBlockRoot,
-		BlockBodyRoot: bHash[:],
+		BlockBodyRoot:     bHash[:],
 	}
-	//verify proposer is not slashed
-	idx,err:=helpers.BeaconProposerIndex(beaconState)
-	if err!=nil{
-		return nil,err
+
+	// Verify proposer is not slashed
+	idx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return nil, err
 	}
-	proposer:= beaconState.ValidatorRegistry[idx]
-	if proposer.Slashed{
-		return nil,fmt.Errorf("proposer id: %d was slashed",idx)
+	proposer := beaconState.ValidatorRegistry[idx]
+	if proposer.Slashed {
+		return nil, fmt.Errorf("proposer id: %d was slashed", idx)
 	}
 	// TODO(#2307) reapply after bls.Verify is finished
 	//verify proposer signature
@@ -135,7 +136,7 @@ func ProcessBlockHeader(
 	// if !sig.Verify(bsr[:],blsPk,dt){
 	// 	return nil,fmt.Errorf("verify signature failed")
 	// }
-	return beaconState,nil
+	return beaconState, nil
 }
 
 // ProcessRandao checks the block proposer's
