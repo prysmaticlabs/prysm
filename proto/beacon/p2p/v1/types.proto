@@ -175,17 +175,16 @@ message Crosslink {
 }
 
 message BeaconBlock {
-  // Deprecated
-  // TODO(2307): Remove deprecated fields
-  bytes randao_reveal = 1003;
-  Eth1Data eth1_data = 1004;
-  // End of deprecated fields
   uint64 slot = 1;
   bytes parent_block_root = 2;
   bytes state_root = 3;
   BeaconBlockBody body = 4;
   bytes signature = 5; // bytes96
-
+ 
+  // Deprecated
+  // TODO(2307): Remove deprecated fields
+  bytes randao_reveal = 1003;
+  Eth1Data eth1_data = 1004;
 }
 
 message BeaconBlockBody {
