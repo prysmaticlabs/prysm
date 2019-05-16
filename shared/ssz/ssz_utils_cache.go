@@ -110,3 +110,20 @@ func structFields(typ reflect.Type) (fields []field, err error) {
 	}
 	return fields, nil
 }
+
+func structFieldMap(typ reflect.Type) (fieldMap map[string]field, err error) {
+	fieldMap = make(map[string]field)
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		if strings.Contains(f.Name, "XXX") {
+			continue
+		}
+		utils, err := cachedSSZUtilsNoAcquireLock(f.Type)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ssz utils: %v", err)
+		}
+		name := f.Name
+		fieldMap[name] = field{i, name, utils}
+	}
+	return fieldMap, nil
+}
