@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -20,15 +18,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
-
-var (
-	correctAttestedValidatorGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "correct_attested_validator_rate",
-		Help: "The % of validators correctly attested for source and target",
-	}, []string{
-		"epoch",
-	})
-)
 
 // TransitionConfig defines important configuration options
 // for executing a state transition, which can have logging and signature

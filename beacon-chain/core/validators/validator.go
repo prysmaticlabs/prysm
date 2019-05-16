@@ -431,20 +431,3 @@ func eligibleToExit(state *pb.BeaconState, idx uint64) bool {
 	}
 	return currentEpoch >= validator.ExitEpoch+params.BeaconConfig().MinValidatorWithdrawalDelay
 }
-
-// prepareValidatorForWithdrawal sets validator's status flag to
-// WITHDRAWABLE.
-//
-// Spec pseudocode definition:
-// def prepare_validator_for_withdrawal(state: BeaconState, index: ValidatorIndex) -> None:
-//    """
-//    Set the validator with the given ``index`` with ``WITHDRAWABLE`` flag.
-//    Note that this function mutates ``state``.
-//    """
-//    validator = state.validator_registry[index]
-//    validator.status_flags |= WITHDRAWABLE
-func prepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.BeaconState {
-	state.ValidatorRegistry[idx].StatusFlags |=
-		pb.Validator_WITHDRAWABLE
-	return state
-}
