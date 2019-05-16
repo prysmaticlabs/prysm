@@ -357,11 +357,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
-	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + (params.BeaconConfig().PersistentCommitteePeriod * slotsPerEpoch)
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Shard:                    0,
-			Slot:                     params.BeaconConfig().GenesisSlot,
+			Slot:                     beaconState.Slot - params.BeaconConfig().MinAttestationInclusionDelay,
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
@@ -379,7 +380,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 10,
+		Slot: beaconState.Slot,
 		Eth1Data: &pb.Eth1Data{
 			DepositRoot: []byte{2},
 			BlockRoot:   []byte{3},

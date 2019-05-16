@@ -1716,7 +1716,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 		},
 	}
 
-	want := "validator exit epoch should be > entry_exit_effect_epoch"
+	want := "non-active validator cannot exit"
 
 	if _, err := blocks.ProcessValidatorExits(
 
@@ -1749,7 +1749,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 		},
 	}
 
-	want := "expected current epoch >= exit.epoch"
+	want := "expected current epoch >= exit epoch"
 
 	if _, err := blocks.ProcessValidatorExits(
 
@@ -1761,7 +1761,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
+func TestProcessValidatorExits_NotActiveLongEnoughToExit(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
@@ -1770,7 +1770,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 	}
 	registry := []*pb.Validator{
 		{
-			ExitEpoch: 1,
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1783,7 +1783,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 		},
 	}
 
-	want := "exit epoch should be > entry_exit_effect_epoch"
+	want := "validator has not been active long enough to exit"
 	if _, err := blocks.ProcessValidatorExits(
 
 		state,
@@ -1803,13 +1803,15 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	registry := []*pb.Validator{
 		{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
 		},
 	}
 	state := &pb.BeaconState{
 		ValidatorRegistry: registry,
-		Slot:              10,
+		Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*5,
 	}
+	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			VoluntaryExits: exits,
