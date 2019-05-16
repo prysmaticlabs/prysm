@@ -156,7 +156,7 @@ func ProcessBlock(
 	state.LatestBlock = block
 
 	// Verify block RANDAO.
-	state, err = b.ProcessRandao(state, block, config.VerifySignatures, config.Logging)
+	state, err = b.ProcessRandao(state, block.Body, config.VerifySignatures, config.Logging)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process randao: %v", err)
 	}
