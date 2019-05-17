@@ -35,11 +35,6 @@ var (
 		Name:  "enable-check-block-state-root",
 		Usage: "Enable check block state root in block processing, default is disabled.",
 	}
-	// EnableCanonicalAttestationFilter filters and sends canonical attestation to RPC requests.
-	EnableCanonicalAttestationFilter = cli.BoolFlag{
-		Name:  "enable-canonical-attestation-filter",
-		Usage: "Enable filtering and sending canonical attestations to RPC request, default is disabled.",
-	}
 	// DisableHistoricalStatePruningFlag allows the database to keep old historical states.
 	DisableHistoricalStatePruningFlag = cli.BoolFlag{
 		Name:  "disable-historical-state-pruning",
@@ -62,7 +57,6 @@ var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
 	EnableCheckBlockStateRootFlag,
-	EnableCanonicalAttestationFilter,
 	DisableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
 	CacheTreeHashFlag,
