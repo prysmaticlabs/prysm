@@ -344,7 +344,7 @@ func (rs *RegularSync) handleFinalizedStateAnnouncement(msg p2p.Message) error {
 		log.Errorf("Unable to marshal the beacon state: %v", err)
 		return err
 	}
-	blocks, err := rs.blocksParentsToFinalized(ctx, fRoot[:], announce.BlockRoot)
+	blocks, err := rs.blockParentsToFinalized(ctx, fRoot[:], announce.BlockRoot)
 	if err != nil {
 		log.Errorf("Could not get block parents: %v", err)
 		return err
@@ -588,7 +588,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	// To prevent circuit in the chain and the potentiality peer can bomb a node building block list.
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	response, err := rs.blocksParentsToFinalized(ctx, req.FinalizedRoot, req.CanonicalRoot)
+	response, err := rs.blockParentsToFinalized(ctx, req.FinalizedRoot, req.CanonicalRoot)
 	cancel()
 	if err != nil {
 		return fmt.Errorf("could not build canonical block list %v", err)
@@ -680,7 +680,7 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 
 // blockParentsToFinalized returns the requested block list inclusive of head block but not inclusive of the finalized block.
 // the return should look like (finalizedBlock... headBlock].
-func (rs *RegularSync) blocksParentsToFinalized(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+func (rs *RegularSync) blockParentsToFinalized(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
 	// if head block was the same as the finalized block.
 	if bytes.Equal(headRoot, finalizedRoot) {
 		return nil, nil
