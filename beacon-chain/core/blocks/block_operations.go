@@ -679,13 +679,20 @@ func ProcessValidatorDeposits(
 			params.BeaconConfig().MaxDeposits,
 		)
 	}
-	var err error
+	
 	for idx, deposit := range deposits {
-		if err = verifyDeposit(beaconState, deposit); err != nil {
+		depositData := deposit.DepositData
+		if _, err := helpers.DecodeDepositInput(depositData);err != nil {
+			return nil, fmt.Errorf("could not decode deposit input: %v", err)
+		}
+		if _, _, err := helpers.DecodeDepositAmountAndTimeStamp(depositData);err != nil {
+			return nil, fmt.Errorf("could not decode deposit value and timestamp: %v", err)
+		}
+		if err := verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}
 		// We then mutate the beacon state with the verified validator deposit.
-		beaconState, err = v.ProcessDeposit(
+		beaconState, err := v.ProcessDeposit(
 			beaconState,
 			deposit,
 		)
