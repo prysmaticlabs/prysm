@@ -93,6 +93,12 @@ message AttestationResponse {
   Attestation attestation = 2;
 }
 
+message FinalizedStateAnnounce {
+  bytes block_root = 1;
+  bytes state_root = 2;
+  uint64 slot = 3;
+}
+
 message ProposerSlashingAnnounce {
   bytes hash = 1;
 }
