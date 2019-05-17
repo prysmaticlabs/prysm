@@ -84,7 +84,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		cfg.DisableGossipSub = true
 	}
 	if ctx.GlobalBool(EnableExcessDepositsFlag.Name) {
-		log.Info("Enable Excess Deposits")
+		log.Info("Enabled excess deposits")
 		cfg.EnableExcessDeposits = true
 	}
 	InitFeatureConfig(cfg)
