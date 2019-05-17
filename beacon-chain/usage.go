@@ -56,6 +56,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
+			cmd.MaxGoroutines,
 		},
 	},
 	{

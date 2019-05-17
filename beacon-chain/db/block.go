@@ -51,7 +51,7 @@ func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
 
 	// Return block from cache if it exists
 	if blk, exists := db.blocks[root]; exists && blk != nil {
-		db.blocksLock.RUnlock()
+		defer db.blocksLock.RUnlock()
 		blockCacheHit.Inc()
 		return db.blocks[root], nil
 	}

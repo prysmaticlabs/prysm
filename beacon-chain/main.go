@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"github.com/x-cray/logrus-prefixed-formatter"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
@@ -69,6 +69,7 @@ func main() {
 		cmd.DisableMonitoringFlag,
 		cmd.ClearDB,
 		cmd.LogFormat,
+		cmd.MaxGoroutines,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
