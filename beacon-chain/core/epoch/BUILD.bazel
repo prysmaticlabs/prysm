@@ -2,17 +2,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "epoch_operations.go",
-        "epoch_processing.go",
-    ],
+    srcs = ["epoch_processing.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/mathutil:go_default_library",
@@ -26,10 +22,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = [
-        "epoch_operations_test.go",
-        "epoch_processing_test.go",
-    ],
+    srcs = ["epoch_processing_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
