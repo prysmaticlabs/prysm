@@ -30,6 +30,7 @@ var (
 	debug      = flag.Bool("debug", false, "Enable debug logging")
 	privateKey = flag.String("private", "", "Private key to use for peer ID")
 	port       = flag.Int("port", 4000, "Port to listen for connections")
+	insecure   = flag.Bool("insecure", false, "Disable transport security")
 
 	log = logging.Logger("prysm-bootnode")
 )
@@ -54,6 +55,10 @@ func main() {
 		libp2p.ListenAddrs(listen),
 	}
 	opts = addPrivateKeyOpt(opts)
+
+	if *insecure {
+		opts = append(opts, libp2p.NoSecurity)
+	}
 
 	ctx := context.Background()
 

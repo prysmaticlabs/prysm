@@ -25,6 +25,7 @@ var (
 	privateKey = flag.String("private", "", "Private key to use for peer ID")
 	port       = flag.Int("port", 4000, "Port to listen for connections")
 	debug      = flag.Bool("debug", false, "Enable debug logging")
+	insecure   = flag.Bool("insecure", false, "Disable transport security")
 
 	log = logging.Logger("prysm-relaynode")
 )
@@ -50,6 +51,10 @@ func main() {
 	opts := []libp2p.Option{
 		libp2p.EnableRelay(circuit.OptHop),
 		libp2p.ListenAddrs(srcMAddr),
+	}
+
+	if *insecure {
+		opts = append(opts, libp2p.NoSecurity)
 	}
 
 	if *privateKey != "" {

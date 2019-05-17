@@ -24,6 +24,7 @@ spec:
             - "-debug"
             - "-port=4000"
             - "-private=$(PRIVATE_KEY)"
+            - "-insecure"
           resources:
             requests:
               memory: "100Mi"
