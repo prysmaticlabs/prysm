@@ -68,7 +68,9 @@ type RegularSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
 	p2p                          p2pAPI
+	regSyncLock                  sync.Mutex
 	chainService                 chainService
+	ancestorVerifier             blockchain.AncestorVerifier
 	attsService                  attsService
 	operationsService            operations.OperationFeeds
 	db                           *db.BeaconDB
@@ -82,7 +84,7 @@ type RegularSync struct {
 	attestationBuf               chan p2p.Message
 	attestationReqByHashBuf      chan p2p.Message
 	announceAttestationBuf       chan p2p.Message
-	finalizedAnnouncementBuf chan p2p.Message
+	finalizedAnnouncementBuf     chan p2p.Message
 	exitBuf                      chan p2p.Message
 	canonicalBuf                 chan *pb.BeaconBlockAnnounce
 	highestObservedSlot          uint64
@@ -95,39 +97,40 @@ type RegularSync struct {
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
 type RegularSyncConfig struct {
-	BlockAnnounceBufferSize     int
-	BlockBufferSize             int
-	BlockReqHashBufferSize      int
-	BatchedBufferSize           int
-	StateReqBufferSize          int
-	AttestationBufferSize       int
-	AttestationReqHashBufSize   int
-	AttestationsAnnounceBufSize int
+	BlockAnnounceBufferSize      int
+	BlockBufferSize              int
+	BlockReqHashBufferSize       int
+	BatchedBufferSize            int
+	StateReqBufferSize           int
+	AttestationBufferSize        int
+	AttestationReqHashBufSize    int
+	AttestationsAnnounceBufSize  int
 	FinalizedAnnouncementBufSize int
-	ExitBufferSize              int
-	ChainHeadReqBufferSize      int
-	CanonicalBufferSize         int
-	ChainService                chainService
-	OperationService            operations.OperationFeeds
-	AttsService                 attsService
-	BeaconDB                    *db.BeaconDB
-	P2P                         p2pAPI
+	ExitBufferSize               int
+	ChainHeadReqBufferSize       int
+	CanonicalBufferSize          int
+	ChainService                 chainService
+	AncestorVerifier             blockchain.AncestorVerifier
+	OperationService             operations.OperationFeeds
+	AttsService                  attsService
+	BeaconDB                     *db.BeaconDB
+	P2P                          p2pAPI
 }
 
 // DefaultRegularSyncConfig provides the default configuration for a sync service.
 func DefaultRegularSyncConfig() *RegularSyncConfig {
 	return &RegularSyncConfig{
-		BlockAnnounceBufferSize:     params.BeaconConfig().DefaultBufferSize,
-		BlockBufferSize:             params.BeaconConfig().DefaultBufferSize,
-		BlockReqHashBufferSize:      params.BeaconConfig().DefaultBufferSize,
-		BatchedBufferSize:           params.BeaconConfig().DefaultBufferSize,
-		StateReqBufferSize:          params.BeaconConfig().DefaultBufferSize,
-		ChainHeadReqBufferSize:      params.BeaconConfig().DefaultBufferSize,
-		AttestationBufferSize:       params.BeaconConfig().DefaultBufferSize,
-		AttestationReqHashBufSize:   params.BeaconConfig().DefaultBufferSize,
-		AttestationsAnnounceBufSize: params.BeaconConfig().DefaultBufferSize,
-		ExitBufferSize:              params.BeaconConfig().DefaultBufferSize,
-		CanonicalBufferSize:         params.BeaconConfig().DefaultBufferSize,
+		BlockAnnounceBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		BlockBufferSize:              params.BeaconConfig().DefaultBufferSize,
+		BlockReqHashBufferSize:       params.BeaconConfig().DefaultBufferSize,
+		BatchedBufferSize:            params.BeaconConfig().DefaultBufferSize,
+		StateReqBufferSize:           params.BeaconConfig().DefaultBufferSize,
+		ChainHeadReqBufferSize:       params.BeaconConfig().DefaultBufferSize,
+		AttestationBufferSize:        params.BeaconConfig().DefaultBufferSize,
+		AttestationReqHashBufSize:    params.BeaconConfig().DefaultBufferSize,
+		AttestationsAnnounceBufSize:  params.BeaconConfig().DefaultBufferSize,
+		ExitBufferSize:               params.BeaconConfig().DefaultBufferSize,
+		CanonicalBufferSize:          params.BeaconConfig().DefaultBufferSize,
 		FinalizedAnnouncementBufSize: params.BeaconConfig().DefaultBufferSize,
 	}
 }
@@ -140,6 +143,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		cancel:                   cancel,
 		p2p:                      cfg.P2P,
 		chainService:             cfg.ChainService,
+		ancestorVerifier:         cfg.AncestorVerifier,
 		db:                       cfg.BeaconDB,
 		operationsService:        cfg.OperationService,
 		attsService:              cfg.AttsService,
@@ -293,8 +297,79 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 }
 
 func (rs *RegularSync) handleFinalizedStateAnnouncement(msg p2p.Message) error {
-	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleFinalizedStateAnnouncement")
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleFinalizedStateAnnouncement")
 	defer span.End()
+	rs.regSyncLock.Lock()
+	defer rs.regSyncLock.Unlock()
+
+	announce, ok := msg.Data.(*pb.FinalizedStateAnnounce)
+	if !ok {
+		log.Error("Message is of the incorrect type")
+		return errors.New("incoming message is not *pb.FinalizedStateAnnounce")
+	}
+	chainHead, err := rs.db.ChainHead()
+	if err != nil {
+		log.Errorf("Unable to retrieve chain head: %v", err)
+		return err
+	}
+	announcedBlock, err := rs.db.Block(bytesutil.ToBytes32(announce.BlockRoot))
+	if err != nil {
+		log.Errorf("Unable to retrieve block: %v", err)
+		return err
+	}
+
+	isDescendant, err := rs.ancestorVerifier.IsDescendant(chainHead, announcedBlock)
+	if err != nil {
+		log.Errorf("Unable to verify if block is descendant: %v", err)
+	}
+	// If the announced finalized block is a descendant of our chain head, then we just return,
+	// as it will be correctly processed by the rest of the regular sync runtime.
+	if isDescendant {
+		return nil
+	}
+	// If the announced finalized block is NOT a descendant of our chain head, then it means
+	// we have been building on a forked chain and we need to roll all the way back
+	// to our current finalized state, and then process blocks up on the correct branch of the block tree.
+	fState, err := rs.db.FinalizedState()
+	if err != nil {
+		log.Errorf("Unable to retrieve beacon state: %v", err)
+		return err
+	}
+	fBlock, err := rs.db.FinalizedBlock()
+	if err != nil {
+		log.Errorf("Unable to retrieve finalized block: %v", err)
+	}
+	fRoot, err := hashutil.HashProto(fBlock)
+	if err != nil {
+		log.Errorf("Unable to marshal the beacon state: %v", err)
+		return err
+	}
+	blocks, err := rs.blocksParentsToFinalized(ctx, fRoot[:], announce.BlockRoot)
+	if err != nil {
+		log.Errorf("Could not get block parents: %v", err)
+		return err
+	}
+
+	currentState := fState
+	for _, block := range blocks {
+		beaconState, err := rs.chainService.ReceiveBlock(ctx, block)
+		if err != nil {
+			log.Errorf("Could not process beacon block: %v", err)
+			return err
+		}
+		if err := rs.db.UpdateChainHead(ctx, block, beaconState); err != nil {
+			log.Errorf("Could not update chain head: %v", err)
+		}
+		currentState = beaconState
+	}
+	stateRoot, err := hashutil.HashProto(currentState)
+	if err != nil {
+		log.Errorf("Could not hash beacon state: %v", err)
+		return err
+	}
+	if !bytes.Equal(stateRoot[:], announce.StateRoot) {
+		return fmt.Errorf("state root mismatched: wanted %#x, received %#x", announce.StateRoot, stateRoot)
+	}
 	return nil
 }
 
@@ -513,7 +588,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 
 	// To prevent circuit in the chain and the potentiality peer can bomb a node building block list.
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	response, err := rs.respondBatchedBlocks(ctx, req.FinalizedRoot, req.CanonicalRoot)
+	response, err := rs.blocksParentsToFinalized(ctx, req.FinalizedRoot, req.CanonicalRoot)
 	cancel()
 	if err != nil {
 		return fmt.Errorf("could not build canonical block list %v", err)
@@ -603,9 +678,9 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 	sentBlockAnnounce.Inc()
 }
 
-// respondBatchedBlocks returns the requested block list inclusive of head block but not inclusive of the finalized block.
+// blockParentsToFinalized returns the requested block list inclusive of head block but not inclusive of the finalized block.
 // the return should look like (finalizedBlock... headBlock].
-func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+func (rs *RegularSync) blocksParentsToFinalized(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
 	// if head block was the same as the finalized block.
 	if bytes.Equal(headRoot, finalizedRoot) {
 		return nil, nil
