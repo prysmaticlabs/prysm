@@ -85,25 +85,28 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	return true
 }
 
-// ProcessEth1Data processes eth1 block deposit roots by checking its vote count.
-// With sufficient votes (>2*EPOCHS_PER_ETH1_VOTING_PERIOD), it then
-// marks the voted Eth1 data as the latest data set.
+// ProcessEth1Data processes eth1 block deposit roots by checking how many times
+// state.eth1_data_votes contains body.eth1_data.
+// With sufficient number of times (>2*SLOTS_PER_ETH1_VOTING_PERIOD), it then
+// marks the body Eth1 data as the latest data set.
 //
-// Official spec definition:
-//     if eth1_data_vote.vote_count * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH for
-//       some eth1_data_vote in state.eth1_data_votes.
-//       (ie. more than half the votes in this voting period were for that value)
-//       Set state.latest_eth1_data = eth1_data_vote.eth1_data.
-//		 Set state.eth1_data_votes = [].
-//
-func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
+// Spec pseudocode definition:
+// def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
+//     state.eth1_data_votes.append(body.eth1_data)
+//     if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
+//         state.latest_eth1_data = body.eth1_data
+func ProcessEth1Data(state *pb.BeaconState, body *pb.BeaconBlockBody) *pb.BeaconState {
+	eth1DataBlockVote := &pb.Eth1DataVote{Eth1Data: body.Eth1Data}
+	state.Eth1DataVotes = append(state.Eth1DataVotes, eth1DataBlockVote)
+	var count uint64
 	for _, eth1DataVote := range state.Eth1DataVotes {
-		if eth1DataVote.VoteCount*2 > params.BeaconConfig().SlotsPerEpoch*
-			params.BeaconConfig().EpochsPerEth1VotingPeriod {
-			state.LatestEth1Data = eth1DataVote.Eth1Data
+		if eth1DataVote.Eth1Data == body.Eth1Data {
+			count++
 		}
 	}
-	state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
+	if count*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
+		state.LatestEth1Data = body.Eth1Data
+	}
 	return state
 }
 
@@ -655,7 +658,7 @@ func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *
 		epoch = state.CurrentCrosslinks[attData.Shard].Epoch + params.BeaconConfig().MaxCrosslinkEpochs
 	}
 	return &pb.Crosslink{
-		Epoch:                       epoch,
+		Epoch: epoch,
 		CrosslinkDataRootHash32:     attData.CrosslinkDataRoot,
 		PreviousCrosslinkRootHash32: attData.PreviousCrosslinkRoot,
 	}
@@ -719,7 +722,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
-			Epoch:                       params.BeaconConfig().GenesisEpoch,
+			Epoch: params.BeaconConfig().GenesisEpoch,
 			CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
 			PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 		}, nil
