@@ -3,7 +3,6 @@
 package helpers
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"sort"
@@ -12,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -113,52 +111,6 @@ func ComputeCommittee(
 		indices[i-startOffset] = validatorIndices[permutedIndex]
 	}
 	return indices, nil
-}
-
-// Shuffling shuffles input validator indices and splits them by slot and shard.
-//
-// Spec pseudocode definition:
-//   def get_shuffling(seed: Bytes32,
-//                  validators: List[Validator],
-//                  epoch: Epoch) -> List[List[ValidatorIndex]]
-//    """
-//    Shuffle ``validators`` into crosslink committees seeded by ``seed`` and ``epoch``.
-//    Return a list of ``committees_per_epoch`` committees where each
-//    committee is itself a list of validator indices.
-//    """
-//
-//    active_validator_indices = get_active_validator_indices(validators, epoch)
-//
-//    committees_per_epoch = get_epoch_committee_count(len(active_validator_indices))
-//
-//    # Shuffle
-//    seed = xor(seed, int_to_bytes32(epoch))
-//    shuffled_active_validator_indices = shuffle(active_validator_indices, seed)
-//
-//    # Split the shuffled list into committees_per_epoch pieces
-//    return split(shuffled_active_validator_indices, committees_per_epoch)
-func Shuffling(
-	seed [32]byte,
-	validators []*pb.Validator,
-	epoch uint64) ([][]uint64, error) {
-
-	// Figure out how many committees can be in a single epoch.
-	s := &pb.BeaconState{ValidatorRegistry: validators}
-	activeIndices := ActiveValidatorIndices(s, epoch)
-	committeesPerEpoch := EpochCommitteeCount(s, epoch)
-
-	// Convert slot to bytes and xor it with seed.
-	epochInBytes := make([]byte, 32)
-	binary.LittleEndian.PutUint64(epochInBytes, epoch)
-	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], epochInBytes))
-
-	shuffledIndices, err := utils.ShuffleIndices(seed, activeIndices)
-	if err != nil {
-		return nil, err
-	}
-
-	// Split the shuffled list into epoch_length * committees_per_slot pieces.
-	return utils.SplitIndices(shuffledIndices, committeesPerEpoch), nil
 }
 
 // AttestingIndices returns the attesting participants indices.
