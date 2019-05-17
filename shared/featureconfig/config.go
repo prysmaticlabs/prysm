@@ -34,6 +34,7 @@ type FeatureFlagConfig struct {
 	DisableGossipSub                 bool // DisableGossipSub in p2p messaging.
 	EnableCommitteesCache            bool // EnableCommitteesCache for state transition.
 	CacheTreeHash                    bool // CacheTreeHash determent whether tree hashes will be cached.
+	EnableExcessDeposits             bool // EnableExcessDeposits in validator balances.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -86,6 +87,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableCanonicalAttestationFilter.Name) {
 		log.Info("Enabled canonical attestation filter")
 		cfg.EnableCanonicalAttestationFilter = true
+	}
+	if ctx.GlobalBool(EnableExcessDepositsFlag.Name) {
+		log.Info("Enable Excess Deposits")
+		cfg.EnableExcessDeposits = true
 	}
 	InitFeatureConfig(cfg)
 }
