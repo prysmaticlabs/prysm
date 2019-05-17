@@ -99,15 +99,6 @@ message FinalizedStateAnnounce {
   uint64 slot = 3;
 }
 
-message FinalizedStateRequest {
-  bytes state_root = 1;
-  uint64 slot = 2;
-}
-
-message FinalizedStateResponse {
-  BeaconState finalized_state = 1;
-}
-
 message ProposerSlashingAnnounce {
   bytes hash = 1;
 }
