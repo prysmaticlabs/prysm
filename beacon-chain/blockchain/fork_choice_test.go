@@ -30,6 +30,8 @@ import (
 
 // Ensure ChainService implements interfaces.
 var _ = ForkChoice(&ChainService{})
+var _ = TargetsFetcher(&ChainService{})
+var _ = AncestorVerifier(&ChainService{})
 var endpoint = "ws://127.0.0.1"
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
