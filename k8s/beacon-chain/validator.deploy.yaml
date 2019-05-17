@@ -33,6 +33,7 @@ spec:
         - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
         - --trace-sample-fraction=1.0
         - --log-format=fluentd
+        - --disable-rewards-penalties-logging
         volumeMounts:
         - name: localdata
           mountPath: /data
