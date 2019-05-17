@@ -827,3 +827,26 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 	}
 	return nil
 }
+
+// ProcessTransfers is one of the operations performed
+// on each processed beacon block to determine transfers between beacon chain balances.
+//
+// Official spec definition for processing transfers:
+//
+//   Verify that len(block.body.voluntary_exits) <= MAX_TRANSFERS.
+func ProcessTransfers(
+	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
+	verifySignatures bool,
+) (*pb.BeaconState, error) {
+
+	exits := block.Body.VoluntaryExits
+	if uint64(len(exits)) > params.BeaconConfig().MaxVoluntaryExits {
+		return nil, fmt.Errorf(
+			"number of exits (%d) exceeds allowed threshold of %d",
+			len(exits),
+			params.BeaconConfig().MaxVoluntaryExits,
+		)
+	}
+	return nil, nil
+}
