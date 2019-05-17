@@ -94,9 +94,8 @@ message AttestationResponse {
 }
 
 message FinalizedStateAnnounce {
-  bytes block_root = 1;
-  bytes state_root = 2;
-  uint64 slot = 3;
+  bytes state_root = 1;
+  uint64 slot = 2;
 }
 
 message FinalizedStateRequest {
