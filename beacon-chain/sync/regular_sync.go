@@ -327,6 +327,7 @@ func (rs *RegularSync) handleFinalizedStateAnnouncement(msg p2p.Message) error {
 	if isDescendant {
 		return nil
 	}
+	log.Info("Announced finalized block is not a descendant of the current chain, reorging...")
 	// If the announced finalized block is NOT a descendant of our chain head, then it means
 	// we have been building on a forked chain and we need to roll all the way back
 	// to our current finalized state, and then process blocks up on the correct branch of the block tree.

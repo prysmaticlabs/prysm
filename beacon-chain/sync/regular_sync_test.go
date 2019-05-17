@@ -103,6 +103,14 @@ func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 func (ms *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
 }
 
+type mockAncestorVerifier struct {
+	isDescendant bool
+}
+
+func (m *mockAncestorVerifier) IsDescendant(currentHead *pb.BeaconBlock, newHead *pb.BeaconBlock) (bool, error) {
+	return m.isDescendant, nil
+}
+
 type mockOperationService struct{}
 
 func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
@@ -786,3 +794,49 @@ func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestFinalizedStateAnnouncement_IsDescendant(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	cfg := &RegularSyncConfig{
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		AncestorVerifier: &mockAncestorVerifier{isDescendant: true},
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
+	}
+	rs := NewRegularSyncService(context.Background(), cfg)
+	genesisTime := time.Now()
+	unixTime := uint64(genesisTime.Unix())
+	if err := db.InitializeState(context.Background(), unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
+		t.Fatalf("could not initialize beacon state to disk: %v", err)
+	}
+
+	announcedFinalizedBlock := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot+10,
+	}
+	if err := db.SaveBlock(announcedFinalizedBlock); err != nil {
+		t.Fatal(err)
+	}
+	announcedRoot, err := hashutil.HashBeaconBlock(announcedFinalizedBlock)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	annoucement := p2p.Message{
+		Ctx: context.Background(),
+		Data: &pb.FinalizedStateAnnounce{
+			BlockRoot: announcedRoot[:],
+		},
+	}
+	if err := rs.handleFinalizedStateAnnouncement(annoucement); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	msg := "Announced finalized block is not a descendant of the current chain, reorging..."
+	testutil.AssertLogsDoNotContain(t, hook, msg)
+}
+
+
+
