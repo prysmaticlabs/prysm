@@ -505,9 +505,11 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	state = e.CleanupAttestations(state)
 
 	// Log the useful metrics via prometheus.
-	correctAttestedValidatorGauge.WithLabelValues(
-		strconv.Itoa(int(currentEpoch)),
-	).Set(float64(len(currentBoundaryAttesterIndices) / len(activeValidatorIndices)))
+	if len(activeValidatorIndices) > 0 {
+		correctAttestedValidatorGauge.WithLabelValues(
+			strconv.Itoa(int(currentEpoch)),
+		).Set(float64(len(currentBoundaryAttesterIndices) / len(activeValidatorIndices)))
+	}
 
 	if config.Logging {
 		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")
@@ -548,7 +550,10 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			}
 			totalBalance += float32(state.ValidatorBalances[idx])
 		}
-		avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
+		avgBalance := float32(0)
+		if len(activeValidatorIndices) > 0 {
+			avgBalance = totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
+		}
 		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
 		highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
 		log.WithFields(logrus.Fields{
