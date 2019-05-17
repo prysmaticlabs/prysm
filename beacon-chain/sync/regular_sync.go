@@ -340,7 +340,7 @@ func (rs *RegularSync) handleFinalizedStateAnnouncement(msg p2p.Message) error {
 	if err != nil {
 		log.Errorf("Unable to retrieve finalized block: %v", err)
 	}
-	fRoot, err := hashutil.HashProto(fBlock)
+	fRoot, err := hashutil.HashBeaconBlock(fBlock)
 	if err != nil {
 		log.Errorf("Unable to marshal the beacon state: %v", err)
 		return err
