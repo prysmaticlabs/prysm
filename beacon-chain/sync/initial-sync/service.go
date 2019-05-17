@@ -244,31 +244,7 @@ func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) 
 		return chainHeadResponses[peers[i]].CanonicalSlot > chainHeadResponses[peers[j]].CanonicalSlot
 	})
 
-	// Retry for our 3 best peers
-	totalNumTries := 3
-	peersToRetry := 3
-	bestPeers := make([]peer.ID, totalNumTries*peersToRetry)
-	for i := range bestPeers {
-		indexToAdd := i / totalNumTries
-		bestPeers[i] = peers[indexToAdd]
-	}
-
-	// add to peer list
-	peers = append(bestPeers, peers[peersToRetry:]...)
-
-	for _, peer := range peers {
-		chainHead := chainHeadResponses[peer]
-		if err := s.syncToPeer(ctx, chainHead, peer); err != nil {
-			log.WithError(err).WithField("peer", peer.Pretty()).Warn("Failed to sync with peer, trying next best peer")
-			continue
-		}
-		log.Info("Synced!")
-		break
-	}
-
-	if !s.nodeIsSynced {
-		log.Fatal("Failed to sync with anyone...")
-	}
+	s.syncWithAllPeers(ctx, peers, chainHeadResponses)
 }
 
 func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.ChainHeadResponse, peer peer.ID) error {
@@ -314,5 +290,22 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 			s.p2p.Reputation(msg.Peer, p2p.RepRewardValidBlock)
 			return nil
 		}
+	}
+}
+
+func (s *InitialSync) syncWithAllPeers(ctx context.Context, peers []peer.ID, chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
+	for _, peer := range peers {
+		chainHead := chainHeadResponses[peer]
+		if err := s.syncToPeer(ctx, chainHead, peer); err != nil {
+			log.WithError(err).WithField("peer", peer.Pretty()).Warn("Failed to sync with peer, trying next best peer")
+			continue
+		}
+		log.Info("Synced!")
+		break
+	}
+
+	if !s.nodeIsSynced {
+		log.Error("Failed to sync with anyone, Retrying Sync")
+		s.syncWithAllPeers(ctx, peers, chainHeadResponses)
 	}
 }
