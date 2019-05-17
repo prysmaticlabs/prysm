@@ -3,6 +3,7 @@ syntax = "proto3";
 package ethereum.beacon.p2p.v1;
 
 import "proto/beacon/p2p/v1/types.proto";
+import "google/protobuf/timestamp.proto";
 
 enum Topic {
   UNKNOWN = 0;
@@ -25,6 +26,7 @@ enum Topic {
 message Envelope {
   bytes span_context = 1;
   bytes payload = 2;
+  google.protobuf.Timestamp timestamp = 3;
 }
 
 message BeaconBlockAnnounce {
@@ -89,6 +91,21 @@ message AttestationRequest {
 message AttestationResponse {
   bytes hash = 1;
   Attestation attestation = 2;
+}
+
+message FinalizedStateAnnounce {
+  bytes block_root = 1;
+  bytes state_root = 2;
+  uint64 slot = 3;
+}
+
+message FinalizedStateRequest {
+  bytes state_root = 1;
+  uint64 slot = 2;
+}
+
+message FinalizedStateResponse {
+  BeaconState finalized_state = 1;
 }
 
 message ProposerSlashingAnnounce {
