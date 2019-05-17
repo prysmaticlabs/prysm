@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
