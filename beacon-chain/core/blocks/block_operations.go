@@ -681,11 +681,6 @@ func ProcessValidatorDeposits(
 	}
 	var err error
 	for idx, deposit := range deposits {
-		if err != nil {
-			beaconState = processInvalidDeposit(beaconState)
-			log.Errorf("could not decode deposit input: %v", err)
-			continue
-		}
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}

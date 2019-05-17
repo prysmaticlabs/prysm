@@ -169,13 +169,8 @@ func ProcessDeposit(state *pb.BeaconState, deposit *pb.Deposit) (*pb.BeaconState
   
 	pubKey := deposit.Data.Pubkey
 	amount := deposit.Data.Amount
-	validatorsPubKeys := make([][]byte, 0, len(state.ValidatorRegistry))
-	for _, v := range state.ValidatorRegistry {
-		validatorsPubKeys = append(validatorsPubKeys, v.Pubkey)
-	}
-  
-	for index, pk := range validatorsPubKeys {
-		if bytes.Equal(pk, pubKey) {
+	for index, v := range state.ValidatorRegistry {
+		if bytes.Equal(v.Pubkey, pubKey) {
 			return helpers.IncreaseBalance(state, uint64(index), amount), nil
 		} 
 	}
