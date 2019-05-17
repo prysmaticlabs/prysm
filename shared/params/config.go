@@ -213,7 +213,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.TargetCommitteeSize = 1
 	demoConfig.DepositsForChainStart = 8
 	demoConfig.SlotsPerEpoch = 16
-	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
+	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / demoConfig.SlotsPerEpoch
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3.2 * 1e9
 	demoConfig.EjectionBalance = 3.175 * 1e9
