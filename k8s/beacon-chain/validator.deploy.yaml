@@ -48,7 +48,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-
       initContainers:
       - name: init-pk
         image: gcr.io/prysmaticlabs/prysm/cluster-pk-manager/client:latest 
@@ -57,6 +56,7 @@ spec:
         - --keystore-password=nopass
         - --pod-name=$(POD_NAME)
         - --server=cluster-pk-manager:8000
+        - --keys=64
         volumeMounts:
         - name: keystore
           mountPath: /keystore
