@@ -37,6 +37,10 @@ const testTopic = "test_topic"
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
+
+	// Security required for swarm testing.
+	// https://github.com/libp2p/go-libp2p-swarm/issues/124
+	disableSecurity = false
 }
 
 func TestNewServer_InvalidMultiaddress(t *testing.T) {
@@ -441,6 +445,7 @@ func TestStatus_MinimumPeers(t *testing.T) {
 
 func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Message) error {
 	ctx := context.Background()
+
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
 	setHandshakeHandler(h, "")
@@ -457,6 +462,8 @@ func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Me
 
 	// Short timeout to allow libp2p to handle peer connection.
 	time.Sleep(time.Millisecond * 100)
+
+	t.Logf("peers: %v", h.Network().Peers())
 
 	return gsub.Publish(topic, createEnvelopeBytes(t, msg))
 }
