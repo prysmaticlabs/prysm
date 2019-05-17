@@ -82,6 +82,7 @@ type RegularSync struct {
 	attestationBuf               chan p2p.Message
 	attestationReqByHashBuf      chan p2p.Message
 	announceAttestationBuf       chan p2p.Message
+	finalizedAnnouncementBuf chan p2p.Message
 	exitBuf                      chan p2p.Message
 	canonicalBuf                 chan *pb.BeaconBlockAnnounce
 	highestObservedSlot          uint64
@@ -102,6 +103,7 @@ type RegularSyncConfig struct {
 	AttestationBufferSize       int
 	AttestationReqHashBufSize   int
 	AttestationsAnnounceBufSize int
+	FinalizedAnnouncementBufSize int
 	ExitBufferSize              int
 	ChainHeadReqBufferSize      int
 	CanonicalBufferSize         int
@@ -126,6 +128,7 @@ func DefaultRegularSyncConfig() *RegularSyncConfig {
 		AttestationsAnnounceBufSize: params.BeaconConfig().DefaultBufferSize,
 		ExitBufferSize:              params.BeaconConfig().DefaultBufferSize,
 		CanonicalBufferSize:         params.BeaconConfig().DefaultBufferSize,
+		FinalizedAnnouncementBufSize: params.BeaconConfig().DefaultBufferSize,
 	}
 }
 
@@ -149,6 +152,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		attestationBuf:           make(chan p2p.Message, cfg.AttestationBufferSize),
 		attestationReqByHashBuf:  make(chan p2p.Message, cfg.AttestationReqHashBufSize),
 		announceAttestationBuf:   make(chan p2p.Message, cfg.AttestationsAnnounceBufSize),
+		finalizedAnnouncementBuf: make(chan p2p.Message, cfg.FinalizedAnnouncementBufSize),
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
@@ -193,6 +197,7 @@ func (rs *RegularSync) run() {
 	exitSub := rs.p2p.Subscribe(&pb.VoluntaryExit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 	canonicalBlockSub := rs.chainService.CanonicalBlockFeed().Subscribe(rs.canonicalBuf)
+	finalizedAnnouncementSub := rs.p2p.Subscribe(&pb.FinalizedStateAnnounce{}, rs.finalizedAnnouncementBuf)
 
 	defer announceBlockSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
@@ -205,6 +210,7 @@ func (rs *RegularSync) run() {
 	defer announceAttestationSub.Unsubscribe()
 	defer exitSub.Unsubscribe()
 	defer canonicalBlockSub.Unsubscribe()
+	defer finalizedAnnouncementSub.Unsubscribe()
 
 	log.Info("Listening for regular sync messages from peers")
 
@@ -233,6 +239,8 @@ func (rs *RegularSync) run() {
 			go safelyHandleMessage(rs.handleStateRequest, msg)
 		case msg := <-rs.chainHeadReqBuf:
 			go safelyHandleMessage(rs.handleChainHeadRequest, msg)
+		case msg := <-rs.finalizedAnnouncementBuf:
+			go safelyHandleMessage(rs.handleFinalizedStateAnnouncement, msg)
 		case blockAnnounce := <-rs.canonicalBuf:
 			go rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
 		}
@@ -282,6 +290,12 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 			})
 		}
 	}
+}
+
+func (rs *RegularSync) handleFinalizedStateAnnouncement(msg p2p.Message) error {
+	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleFinalizedStateAnnouncement")
+	defer span.End()
+	return nil
 }
 
 func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
