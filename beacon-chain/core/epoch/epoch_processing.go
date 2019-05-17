@@ -452,10 +452,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().LatestRandaoMixesLength
-	mix, err := helpers.RandaoMix(state, currentEpoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not get randao mix: %v", err)
-	}
+	mix := helpers.RandaoMix(state, currentEpoch)
 	state.LatestRandaoMixes[nextEpoch%randaoMixLength] = mix
 
 	// Set historical root accumulator.
@@ -498,15 +495,12 @@ func UpdateLatestSlashedBalances(state *pb.BeaconState) *pb.BeaconState {
 // Spec pseudocode definition:
 // Set state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] =
 // 	get_randao_mix(state, current_epoch).
-func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
+func UpdateLatestRandaoMixes(state *pb.BeaconState) *pb.BeaconState {
 	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestRandaoMixesLength
-	randaoMix, err := helpers.RandaoMix(state, helpers.CurrentEpoch(state))
-	if err != nil {
-		return nil, fmt.Errorf("could not get randaoMix mix: %v", err)
-	}
+	randaoMix := helpers.RandaoMix(state, helpers.CurrentEpoch(state))
 
 	state.LatestRandaoMixes[nextEpoch] = randaoMix
-	return state, nil
+	return state
 }
 
 // UnslashedAttestingIndices returns all the attesting indices from a list of attestations,
@@ -548,7 +542,7 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 	if err != nil {
 		return 0, fmt.Errorf("could not get attesting balance: %v", err)
 	}
-	return TotalBalance(state, indices), nil
+	return helpers.TotalBalance(state, indices), nil
 }
 
 // EarlistAttestation returns attestation with the earliest inclusion slot.
@@ -664,7 +658,7 @@ func CrosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *
 		epoch = state.CurrentCrosslinks[attData.Shard].Epoch + params.BeaconConfig().MaxCrosslinkEpochs
 	}
 	return &pb.Crosslink{
-		Epoch: epoch,
+		Epoch:                       epoch,
 		CrosslinkDataRootHash32:     attData.CrosslinkDataRoot,
 		PreviousCrosslinkRootHash32: attData.PreviousCrosslinkRoot,
 	}
@@ -728,7 +722,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
-			Epoch: params.BeaconConfig().GenesisEpoch,
+			Epoch:                       params.BeaconConfig().GenesisEpoch,
 			CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
 			PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 		}, nil
@@ -832,6 +826,15 @@ func BaseReward(state *pb.BeaconState, index uint64) uint64 {
 	return baseReward / params.BeaconConfig().BaseRewardsPerEpoch
 }
 
+// SinceFinality calculates and returns how many epoch has it been since
+// a finalized slot.
+//
+// Spec pseudocode definition:
+//    epochs_since_finality = next_epoch - state.finalized_epoch
+func SinceFinality(state *pb.BeaconState) uint64 {
+	return helpers.NextEpoch(state) - state.FinalizedEpoch
+}
+
 // attsForCrosslink returns the attestations of the input crosslink.
 func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
 	var crosslinkAtts []*pb.PendingAttestation
@@ -849,5 +852,5 @@ func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb
 //	def get_total_active_balance(state: BeaconState) -> Gwei:
 //    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
 func totalActiveBalance(state *pb.BeaconState) uint64 {
-	return TotalBalance(state, helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state)))
+	return helpers.TotalBalance(state, helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state)))
 }

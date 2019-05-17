@@ -139,10 +139,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 
 	// Use the generated seed to select proposer from the first committee
 	maxRandomByte := uint64(1<<8 - 1)
-	seed, err := GenerateSeed(state, e)
-	if err != nil {
-		return 0, fmt.Errorf("could not generate seed: %v", err)
-	}
+	seed := GenerateSeed(state, e)
 
 	// Looping through the committee to select proposer that has enough
 	// effective balance.

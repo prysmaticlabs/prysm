@@ -185,10 +185,7 @@ func TestComputeCommittee_OK(t *testing.T) {
 	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().SlotsPerEpoch
 	offset := state.Slot % params.BeaconConfig().SlotsPerEpoch
 	slotStartShard := (startShard + committeesPerSlot + offset) % shardCount
-	seed, err := GenerateSeed(state, wantedEpoch)
-	if err != nil {
-		t.Errorf("could not generate seed: %v", err)
-	}
+	seed := GenerateSeed(state, wantedEpoch)
 
 	indices := ActiveValidatorIndices(state, wantedEpoch)
 	newCommittees := make([]*CrosslinkCommittee, committeesPerSlot)
@@ -293,7 +290,9 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	attestationData := &pb.AttestationData{}
 

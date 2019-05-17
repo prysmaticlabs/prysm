@@ -173,7 +173,7 @@ func GenesisBeaconState(
 		}
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if helpers.EffectiveBalance(state, uint64(i)) >=
+		if state.ValidatorRegistry[i].EffectiveBalance >=
 			params.BeaconConfig().MaxDepositAmount {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
