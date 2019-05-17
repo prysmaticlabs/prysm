@@ -27,6 +27,7 @@ func buildOptions(port, maxPeers int) []libp2p.Option {
 	return []libp2p.Option{
 		libp2p.ListenAddrs(listen),
 		libp2p.EnableRelay(), // Allows dialing to peers via relay.
+		libp2p.NoSecurity,    // Disabled for now for performance reasons.
 		optionConnectionManager(maxPeers),
 	}
 }
