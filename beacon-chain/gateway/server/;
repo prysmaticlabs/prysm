@@ -17,13 +17,12 @@ import (
 var _ = shared.Service(&Gateway{})
 
 type Gateway struct {
-	conn        *grpc.ClientConn
-	ctx         context.Context
-	cancel      context.CancelFunc
-	gatewayAddr string
-	remoteAddr  string
-	server      *http.Server
-	mux         *http.ServeMux
+	conn   *grpc.ClientConn
+	ctx    context.Context
+	cancel context.CancelFunc
+	address string
+	server *http.Server
+	mux    *http.ServeMux
 
 	startFailure error
 }
@@ -32,7 +31,7 @@ func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
-	conn, err := Dial(ctx, "tcp", g.remoteAddr)
+	conn, err := Dial(ctx, "", "")
 	if err != nil {
 		log.WithError(err).Error("Failed to connect to gRPC server")
 		g.startFailure = err
@@ -53,7 +52,7 @@ func (g *Gateway) Start() {
 	g.mux.Handle("/", gwmux)
 
 	g.server = &http.Server{
-		Addr:    g.gatewayAddr,
+		Addr:    g.addr,
 		Handler: g.mux,
 	}
 	go func() {
@@ -93,16 +92,15 @@ func (g *Gateway) Stop() error {
 
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
-func New(ctx context.Context, remoteAddress, gatewayAddress string, mux *http.ServeMux) *Gateway {
+func New(ctx context.Context, address string, mux *http.ServeMux) *Gateway {
 	if mux == nil {
 		mux = http.NewServeMux()
 	}
 
 	return &Gateway{
-		remoteAddr:  remoteAddress,
-		gatewayAddr: gatewayAddress,
-		ctx:         ctx,
-		mux:         mux,
+		address: address,
+		ctx:     ctx,
+		mux:     mux,
 	}
 }
 

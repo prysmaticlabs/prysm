@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
@@ -404,8 +405,11 @@ func (b *BeaconNode) registerAttestationService() error {
 
 func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 	jsonRPCPort := ctx.GlobalInt(utils.JSONRPCPort.Name)
-	if utils.JSONRPCPort > 0 {
+	if jsonRPCPort > 0 {
 		// TODO: Run gRPC gateway
+		selfAddress := ""
+		gatewayAddress := ""
+		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil))
 	}
 	return nil
 }

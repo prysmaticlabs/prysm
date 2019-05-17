@@ -1,42 +1,34 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "gateway.go",
-        "handlers.go",
-        "log.go",
-    ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/gateway",
-    visibility = [
-        "//beacon-chain/node:__pkg__",
-        "//beacon-chain/gateway/server:__pkg__",
-    ],
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/gateway/server",
+    visibility = ["//visibility:private"],
     deps = [
-        "//proto/beacon/rpc/v1:v1_grpc_gateway_proto",
-        "//shared:go_default_library",
+        "//beacon-chain/gateway:go_default_library",
+        "@com_github_joonix_log//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@grpc_ecosystem_grpc_gateway//runtime:go_default_library",
-        "@org_golang_google_grpc//:go_default_library",
-        "@org_golang_google_grpc//connectivity:go_default_library",
     ],
+)
+
+go_binary(
+    name = "server",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
 )
 
 go_image(
     name = "image",
     srcs = [
-        "gateway.go",
-        "handlers.go",
         "main.go",
-    ],
-    data = [
-        "//proto/beacon/rpc/v1:swagger",
     ],
     goarch = "amd64",
     goos = "linux",
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/gateway",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/gateway/server",
     race = "off",
     tags = ["manual"],
     visibility = ["//visibility:private"],
