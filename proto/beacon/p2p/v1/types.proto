@@ -91,9 +91,10 @@ message AttestationData {
   bytes target_root = 6;
 
   // Crosslink vote
-  uint64 shard = 7;
-  bytes previous_crosslink_root = 8;
-  bytes crosslink_data_root = 9;
+  Crosslink crosslink = 7;
+  uint64 shard = 8;
+  bytes previous_crosslink_root = 9;
+  bytes crosslink_data_root = 10;
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
@@ -164,6 +165,7 @@ message Crosslink {
   bytes previous_crosslink_root_hash32 = 2;
   // Root of the shard data since the previous crosslink
   bytes crosslink_data_root_hash32 = 3;
+  uint64 shard = 4;
 }
 
 message BeaconBlock {
