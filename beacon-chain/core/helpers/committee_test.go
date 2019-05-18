@@ -11,18 +11,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var size = 1<<(params.BeaconConfig().RandBytes*8) - 1
-var validatorsUpperBound = make([]*pb.Validator, size)
-var validator = &pb.Validator{
-	ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-}
-
-func populateValidatorsMax() {
-	for i := 0; i < len(validatorsUpperBound); i++ {
-		validatorsUpperBound[i] = validator
-	}
-}
-
 func TestEpochCommitteeCount_OK(t *testing.T) {
 	// this defines the # of validators required to have 1 committee
 	// per slot for epoch length.

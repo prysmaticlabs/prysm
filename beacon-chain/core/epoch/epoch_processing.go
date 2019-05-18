@@ -7,6 +7,7 @@ package epoch
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -264,7 +265,7 @@ func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 //
 // Spec pseudocode definition:
-//	def process_justification_and_finalization(state: BeaconState) -> None:
+//  def process_justification_and_finalization(state: BeaconState) -> None:
 //    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
 //        return
 //
@@ -373,10 +374,102 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 	return state, nil
 }
 
+// ProcessCrosslink processes crosslink and finds the crosslink
+// with enough state to make it canonical in state.
+//
+// Spec pseudocode definition:
+//  def process_crosslinks(state: BeaconState) -> None:
+//    state.previous_crosslinks = [c for c in state.current_crosslinks]
+//    for epoch in (get_previous_epoch(state), get_current_epoch(state)):
+//        for offset in range(get_epoch_committee_count(state, epoch)):
+//            shard = (get_epoch_start_shard(state, epoch) + offset) % SHARD_COUNT
+//            crosslink_committee = get_crosslink_committee(state, epoch, shard)
+//            winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, epoch, shard)
+//            if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
+//                state.current_crosslinks[shard] = winning_crosslink
+func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
+	state.PreviousCrosslinks = state.CurrentCrosslinks
+	epochs := []uint64{helpers.PrevEpoch(state), helpers.CurrentEpoch(state)}
+	for _, e := range epochs {
+		offset := helpers.EpochCommitteeCount(state, e)
+		for i := uint64(0); i < offset; i++ {
+			shard, err := helpers.EpochStartShard(state, e)
+			if err != nil {
+				return nil, err
+			}
+			committee, err := helpers.CrosslinkCommitteeAtEpoch(state, e, shard)
+			if err != nil {
+				return nil, err
+			}
+			crosslink, indices, err := WinningCrosslink(state, shard, e)
+			if err != nil {
+				return nil, err
+			}
+			attestedBalance := helpers.TotalBalance(state, indices)
+			totalBalance := helpers.TotalBalance(state, committee)
+			// In order for a crosslink to get included in state, the attesting balance needs to
+			// be greater than 2/3 of the total balance.
+			if 3*attestedBalance >= 2*totalBalance {
+				state.CurrentCrosslinks[shard] = crosslink
+			}
+		}
+	}
+	return state, nil
+}
+
+// ProcessSlashings processes the slashed validators during epoch processing,
+//
+//  def process_slashings(state: BeaconState) -> None:
+//    current_epoch = get_current_epoch(state)
+//    active_validator_indices = get_active_validator_indices(state, current_epoch)
+//    total_balance = get_total_balance(state, active_validator_indices)
+//
+//    # Compute `total_penalties`
+//    total_at_start = state.latest_slashed_balances[(current_epoch + 1) % LATEST_SLASHED_EXIT_LENGTH]
+//    total_at_end = state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
+//    total_penalties = total_at_end - total_at_start
+//
+//    for index, validator in enumerate(state.validator_registry):
+//        if validator.slashed and current_epoch == validator.withdrawable_epoch - LATEST_SLASHED_EXIT_LENGTH // 2:
+//            penalty = max(
+//                validator.effective_balance * min(total_penalties * 3, total_balance) // total_balance,
+//                validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT
+//            )
+//            decrease_balance(state, index, penalty)
+func ProcessSlashings(state *pb.BeaconState) *pb.BeaconState {
+	currentEpoch := helpers.CurrentEpoch(state)
+	activeIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
+	totalBalance := helpers.TotalBalance(state, activeIndices)
+
+	// Compute the total penalties.
+	exitLength := params.BeaconConfig().LatestSlashedExitLength
+	totalAtStart := state.LatestSlashedBalances[(currentEpoch+1)%exitLength]
+	totalAtEnd := state.LatestSlashedBalances[currentEpoch%exitLength]
+	totalPenalties := totalAtEnd - totalAtStart
+
+	// Compute slashing for each validator.
+	for index, validator := range state.ValidatorRegistry {
+		correctEpoch := currentEpoch == validator.WithdrawableEpoch-exitLength/2
+		if validator.Slashed && correctEpoch {
+			minPenalties := totalPenalties * 3
+			if minPenalties > totalBalance {
+				minPenalties = totalBalance
+			}
+			effectiveBal := validator.EffectiveBalance
+			penalty := effectiveBal * minPenalties / totalBalance
+			if penalty < effectiveBal/params.BeaconConfig().MinSlashingPenaltyQuotient {
+				penalty = effectiveBal / params.BeaconConfig().MinSlashingPenaltyQuotient
+			}
+			state = helpers.DecreaseBalance(state, uint64(index), penalty)
+		}
+	}
+	return state
+}
+
 // ProcessFinalUpdates processes the final updates during epoch processing.
 //
 // Spec pseudocode definition:
-//	def process_final_updates(state: BeaconState) -> None:
+//  def process_final_updates(state: BeaconState) -> None:
 //    current_epoch = get_current_epoch(state)
 //    next_epoch = current_epoch + 1
 //    # Reset eth1 data votes
@@ -480,34 +573,101 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 // the amount from the current epoch index to next epoch index.
 //
 // Spec pseudocode definition:
-// Set state.latest_slashed_balances[(next_epoch) % LATEST_PENALIZED_EXIT_LENGTH] =
-// 	state.latest_slashed_balances[current_epoch % LATEST_PENALIZED_EXIT_LENGTH].
-func UpdateLatestSlashedBalances(state *pb.BeaconState) *pb.BeaconState {
-	currentEpoch := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
-	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
-	state.LatestSlashedBalances[nextEpoch] = state.LatestSlashedBalances[currentEpoch]
-	return state
-}
-
-// UpdateLatestRandaoMixes updates the latest seed mixes. It transfers
-// the seed mix of current epoch to next epoch.
+//  def get_winning_crosslink_and_attesting_indices(state: BeaconState, shard: Shard, epoch: Epoch) -> Tuple[Crosslink, List[ValidatorIndex]]:
+//    shard_attestations = [a for a in get_matching_source_attestations(state, epoch) if a.data.shard == shard]
+//    shard_crosslinks = [get_crosslink_from_attestation_data(state, a.data) for a in shard_attestations]
+//    candidate_crosslinks = [
+//        c for c in shard_crosslinks
+//        if hash_tree_root(state.current_crosslinks[shard]) in (c.previous_crosslink_root, hash_tree_root(c))
+//    ]
+//    if len(candidate_crosslinks) == 0:
+//        return Crosslink(epoch=GENESIS_EPOCH, previous_crosslink_root=ZERO_HASH, crosslink_data_root=ZERO_HASH), []
 //
-// Spec pseudocode definition:
-// Set state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] =
-// 	get_randao_mix(state, current_epoch).
-func UpdateLatestRandaoMixes(state *pb.BeaconState) *pb.BeaconState {
-	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestRandaoMixesLength
-	randaoMix := helpers.RandaoMix(state, helpers.CurrentEpoch(state))
+//    def get_attestations_for(crosslink: Crosslink) -> List[PendingAttestation]:
+//        return [a for a in shard_attestations if get_crosslink_from_attestation_data(state, a.data) == crosslink]
+//    # Winning crosslink has the crosslink data root with the most balance voting for it (ties broken lexicographically)
+//    winning_crosslink = max(candidate_crosslinks, key=lambda crosslink: (
+//        get_attesting_balance(state, get_attestations_for(crosslink)), crosslink.crosslink_data_root
+//    ))
+//
+//    return winning_crosslink, get_unslashed_attesting_indices(state, get_attestations_for(winning_crosslink))
+func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, []uint64, error) {
+	var shardAtts []*pb.PendingAttestation
+	matchedAtts, err := MatchAttestations(state, epoch)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get matching attestations: %v", err)
+	}
 
-	state.LatestRandaoMixes[nextEpoch] = randaoMix
-	return state
+	// Filter out source attestations by shard.
+	for _, att := range matchedAtts.source {
+		if att.Data.Shard == shard {
+			shardAtts = append(shardAtts, att)
+		}
+	}
+
+	// Convert shard attestations to shard crosslinks.
+	shardCrosslinks := make([]*pb.Crosslink, len(shardAtts))
+	for i := 0; i < len(shardCrosslinks); i++ {
+		shardCrosslinks[i] = CrosslinkFromAttsData(state, shardAtts[i].Data)
+	}
+
+	var candidateCrosslinks []*pb.Crosslink
+	// Filter out shard crosslinks with correct current or previous crosslink data.
+	for _, c := range shardCrosslinks {
+		cFromState := state.CurrentCrosslinks[shard]
+		h, err := hashutil.HashProto(cFromState)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not hash crosslink from state: %v", err)
+		}
+		if proto.Equal(cFromState, c) || bytes.Equal(h[:], c.PreviousCrosslinkRootHash32) {
+			candidateCrosslinks = append(candidateCrosslinks, c)
+		}
+	}
+
+	if len(candidateCrosslinks) == 0 {
+		return &pb.Crosslink{
+			Epoch:                       params.BeaconConfig().GenesisEpoch,
+			CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
+			PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+		}, nil, nil
+	}
+	var crosslinkAtts []*pb.PendingAttestation
+	var winnerBalance uint64
+	var winnerCrosslink *pb.Crosslink
+	// Out of the existing shard crosslinks, pick the one that has the
+	// most balance staked.
+	crosslinkAtts = attsForCrosslink(state, candidateCrosslinks[0], shardAtts)
+	winnerBalance, err = AttestingBalance(state, crosslinkAtts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	winnerCrosslink = candidateCrosslinks[0]
+	for _, c := range candidateCrosslinks {
+		crosslinkAtts := crosslinkAtts[:0]
+		crosslinkAtts = attsForCrosslink(state, c, shardAtts)
+		attestingBalance, err := AttestingBalance(state, crosslinkAtts)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get crosslink's attesting balance: %v", err)
+		}
+		if attestingBalance > winnerBalance {
+			winnerCrosslink = c
+		}
+	}
+
+	crosslinkIndices, err := UnslashedAttestingIndices(state, attsForCrosslink(state, winnerCrosslink, shardAtts))
+	if err != nil {
+		return nil, nil, errors.New("could not get crosslink indices")
+	}
+
+	return winnerCrosslink, crosslinkIndices, nil
 }
 
 // UnslashedAttestingIndices returns all the attesting indices from a list of attestations,
 // it sorts the indices and filters out the slashed ones.
 //
 // Spec pseudocode definition:
-// def get_unslashed_attesting_indices(state: BeaconState, attestations: List[PendingAttestation]) -> List[ValidatorIndex]:
+//  def get_unslashed_attesting_indices(state: BeaconState, attestations: List[PendingAttestation]) -> List[ValidatorIndex]:
 //    output = set()
 //    for a in attestations:
 //        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bitfield))
@@ -535,7 +695,7 @@ func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 // AttestingBalance returns the total balance from all the attesting indices.
 //
 // Spec pseudocode definition:
-// def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
+//  def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
 //    return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
 func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uint64, error) {
 	indices, err := UnslashedAttestingIndices(state, atts)
@@ -548,7 +708,7 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 // EarlistAttestation returns attestation with the earliest inclusion slot.
 //
 // Spec pseudocode definition:
-// def get_earliest_attestation(state: BeaconState, attestations: List[PendingAttestation], index: ValidatorIndex) -> PendingAttestation:
+//  def get_earliest_attestation(state: BeaconState, attestations: List[PendingAttestation], index: ValidatorIndex) -> PendingAttestation:
 //    return min([
 //        a for a in attestations if index in get_attesting_indices(state, a.data, a.aggregation_bitfield)
 //    ], key=lambda a: a.inclusion_slot)
@@ -577,17 +737,17 @@ func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, in
 // We combined the individual helpers from spec for efficiency and to achieve O(N) run time.
 //
 // Spec pseudocode definition:
-//	def get_matching_source_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//  def get_matching_source_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
 //    assert epoch in (get_current_epoch(state), get_previous_epoch(state))
 //    return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
 //
-//	def get_matching_target_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//  def get_matching_target_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
 //    return [
 //        a for a in get_matching_source_attestations(state, epoch)
 //        if a.data.target_root == get_block_root(state, epoch)
 //    ]
 //
-//	def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//  def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
 //    return [
 //        a for a in get_matching_source_attestations(state, epoch)
 //        if a.data.beacon_block_root == get_block_root_at_slot(state, a.data.slot)
@@ -646,7 +806,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 // CrosslinkFromAttsData returns a constructed crosslink from attestation data.
 //
 // Spec pseudocode definition:
-//	def get_crosslink_from_attestation_data(state: BeaconState, data: AttestationData) -> Crosslink:
+//  def get_crosslink_from_attestation_data(state: BeaconState, data: AttestationData) -> Crosslink:
 //    return Crosslink(
 //        epoch=min(slot_to_epoch(data.slot), state.current_crosslinks[data.shard].epoch + MAX_CROSSLINK_EPOCHS),
 //        previous_crosslink_root=data.previous_crosslink_root,
@@ -811,7 +971,7 @@ func CrosslinkAttestingIndices(state *pb.BeaconState, crosslink *pb.Crosslink, a
 // individual validator's base reward quotient.
 //
 // Spec pseudocode definition:
-//	def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
 //    adjusted_quotient = integer_squareroot(get_total_active_balance(state)) // BASE_REWARD_QUOTIENT
 //    if adjusted_quotient == 0:
 //        return 0
@@ -849,7 +1009,7 @@ func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb
 // totalActiveBalance returns the combined balances of all the active validators.
 //
 // Spec pseudocode definition:
-//	def get_total_active_balance(state: BeaconState) -> Gwei:
+//  def get_total_active_balance(state: BeaconState) -> Gwei:
 //    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
 func totalActiveBalance(state *pb.BeaconState) uint64 {
 	return helpers.TotalBalance(state, helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state)))
