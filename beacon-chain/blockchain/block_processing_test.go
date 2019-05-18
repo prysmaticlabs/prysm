@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -442,7 +444,11 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
-		pendingDepositsData[i] = pd.DepositData
+		h, err := ssz.TreeHash(pd.Data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pendingDepositsData[i] = h[:]
 	}
 	depositTrie, err := trieutil.GenerateTrieFromItems(pendingDepositsData, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {

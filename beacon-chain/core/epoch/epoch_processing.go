@@ -6,9 +6,9 @@ package epoch
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sort"
-	"errors"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
