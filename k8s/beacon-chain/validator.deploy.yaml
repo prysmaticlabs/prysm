@@ -33,6 +33,7 @@ spec:
         - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
         - --trace-sample-fraction=1.0
         - --log-format=fluentd
+        - --disable-rewards-penalties-logging
         volumeMounts:
         - name: localdata
           mountPath: /data
@@ -48,7 +49,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-
       initContainers:
       - name: init-pk
         image: gcr.io/prysmaticlabs/prysm/cluster-pk-manager/client:latest 
@@ -57,6 +57,7 @@ spec:
         - --keystore-password=nopass
         - --pod-name=$(POD_NAME)
         - --server=cluster-pk-manager:8000
+        - --keys=64
         volumeMounts:
         - name: keystore
           mountPath: /keystore

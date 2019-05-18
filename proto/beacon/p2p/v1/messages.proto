@@ -21,6 +21,7 @@ enum Topic {
   ATTESTATION_ANNOUNCE = 12;
   ATTESTATION_REQUEST = 13;
   ATTESTATION_RESPONSE = 14;
+  FINALIZED_STATE_ANNOUNCE = 15;
 }
 
 message Envelope {
@@ -97,15 +98,6 @@ message FinalizedStateAnnounce {
   bytes block_root = 1;
   bytes state_root = 2;
   uint64 slot = 3;
-}
-
-message FinalizedStateRequest {
-  bytes state_root = 1;
-  uint64 slot = 2;
-}
-
-message FinalizedStateResponse {
-  BeaconState finalized_state = 1;
 }
 
 message ProposerSlashingAnnounce {

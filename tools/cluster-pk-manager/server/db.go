@@ -81,7 +81,8 @@ func newDB(dbPath string) *db {
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			pks := &pb.PrivateKeys{}
 			if err := proto.Unmarshal(v, pks); err != nil {
-				return err
+				log.WithError(err).Error("Unable to unmarshal private key")
+				continue
 			}
 			keys += len(pks.PrivateKeys)
 		}
@@ -155,10 +156,13 @@ func (d *db) RemovePKAssignment(_ context.Context, podName string) error {
 			log.WithField("podName", podName).Warn("Nil private key returned from db")
 			return nil
 		}
+
 		pks := &pb.PrivateKeys{}
 		if err := proto.Unmarshal(data, pks); err != nil {
-			return err
+			log.WithError(err).Error("Failed to unmarshal pks, deleting from db")
+			return tx.Bucket(assignedPkBucket).Delete([]byte(podName))
 		}
+
 		if err := tx.Bucket(assignedPkBucket).Delete([]byte(podName)); err != nil {
 			return err
 		}
@@ -287,7 +291,8 @@ func (d *db) RemovePKFromPod(podName string, key []byte) error {
 		}
 		pks := &pb.PrivateKeys{}
 		if err := proto.Unmarshal(data, pks); err != nil {
-			return err
+			log.WithError(err).Error("Unable to unmarshal private keys, deleting assignment from db")
+			return tx.Bucket(assignedPkBucket).Delete([]byte(podName))
 		}
 		found := false
 		for i, k := range pks.PrivateKeys {

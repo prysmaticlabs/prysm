@@ -77,7 +77,7 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 	if err := ms.db.SaveBlock(block); err != nil {
 		return nil, err
 	}
-	return &pb.BeaconState{}, nil
+	return ms.db.HeadState(ctx)
 }
 
 func (ms *mockChainService) ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
@@ -101,6 +101,14 @@ func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 }
 
 func (ms *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
+}
+
+type mockAncestorVerifier struct {
+	isDescendant bool
+}
+
+func (m *mockAncestorVerifier) IsDescendant(currentHead *pb.BeaconBlock, newHead *pb.BeaconBlock) (bool, error) {
+	return m.isDescendant, nil
 }
 
 type mockOperationService struct{}
@@ -725,7 +733,7 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	}
 
 	// Verify passing in roots of B4 and B1 give us the canonical lists.
-	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root4[:])
+	list, err := ss.blockParentsToFinalized(context.Background(), root1[:], root4[:])
 	wantList := []*pb.BeaconBlock{block2, block4}
 	if !reflect.DeepEqual(list, wantList) {
 		t.Error("Did not retrieve the correct canonical lists")
@@ -749,7 +757,7 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 	}
 
 	// Verify passing in roots of B1 and B1 give us the canonical lists which should be an empty list.
-	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root1[:])
+	list, err := ss.blockParentsToFinalized(context.Background(), root1[:], root1[:])
 	if len(list) != 0 {
 		t.Error("Did not retrieve the correct canonical lists")
 	}
@@ -761,7 +769,7 @@ func TestCanonicalBlockList_NilBlock(t *testing.T) {
 	ss := setupService(db)
 
 	want := "nil block 0x42 from db"
-	if _, err := ss.respondBatchedBlocks(context.Background(), []byte{'A'}, []byte{'B'}); err.Error() != want {
+	if _, err := ss.blockParentsToFinalized(context.Background(), []byte{'A'}, []byte{'B'}); err.Error() != want {
 		t.Fatal(err)
 	}
 }
@@ -781,8 +789,257 @@ func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
 	}
 
 	want := fmt.Sprintf("nil parent block %#x from db", []byte{'B'})
-	if _, err := ss.respondBatchedBlocks(context.Background(), []byte{}, root1[:]); err.Error() != want {
+	if _, err := ss.blockParentsToFinalized(context.Background(), []byte{}, root1[:]); err.Error() != want {
 		t.Log(want)
 		t.Fatal(err)
 	}
+}
+
+func TestFinalizedStateAnnouncement_IsDescendant(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	cfg := &RegularSyncConfig{
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		AncestorVerifier:        &mockAncestorVerifier{isDescendant: true},
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
+	}
+	rs := NewRegularSyncService(context.Background(), cfg)
+	genesisTime := time.Now()
+	unixTime := uint64(genesisTime.Unix())
+	if err := db.InitializeState(context.Background(), unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
+		t.Fatalf("could not initialize beacon state to disk: %v", err)
+	}
+
+	announcedFinalizedBlock := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 10,
+	}
+	if err := db.SaveBlock(announcedFinalizedBlock); err != nil {
+		t.Fatal(err)
+	}
+	announcedRoot, err := hashutil.HashBeaconBlock(announcedFinalizedBlock)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	announcement := p2p.Message{
+		Ctx: context.Background(),
+		Data: &pb.FinalizedStateAnnounce{
+			BlockRoot: announcedRoot[:],
+		},
+	}
+	if err := rs.handleFinalizedStateAnnouncement(announcement); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	msg := "Announced finalized block is not a descendant of the current chain, reorging..."
+	testutil.AssertLogsDoNotContain(t, hook, msg)
+}
+
+func TestFinalizedStateAnnouncement_NotDescendant(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	cfg := &RegularSyncConfig{
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		AncestorVerifier:        &mockAncestorVerifier{isDescendant: false},
+		ChainService:            &mockChainService{db: db},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
+	}
+	rs := NewRegularSyncService(context.Background(), cfg)
+	genesisTime := uint64(time.Now().Unix())
+	deposits, _ := setupInitialDeposits(t)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+	currentState, err := rs.db.HeadState(context.Background())
+	genesisBlock, err := rs.db.ChainHead()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := rs.db.SaveFinalizedBlock(genesisBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := rs.db.SaveFinalizedState(currentState); err != nil {
+		t.Fatal(err)
+	}
+	currentHead, err := rs.db.FinalizedBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We set up the following chain to make sure our current chain converges to
+	// the new finalized block announcement successfully:
+	//  /->[]->[]->F (new finalized block announced)
+	// F
+	// \->[]->[] (our current, canonical head)
+	forkedChainHeadRoot := setupForkedChain(t, rs.db)
+	canonicalChainHeadRoot := setupCanonicalChain(t, rs.db)
+	if forkedChainHeadRoot == canonicalChainHeadRoot {
+		t.Errorf("Expected roots to differ in setup, received %#x == %#x", forkedChainHeadRoot, canonicalChainHeadRoot)
+	}
+
+	currentHead, err = rs.db.ChainHead()
+	if err != nil {
+		t.Fatal(err)
+	}
+	announcedFinalizedBlock, err := rs.db.Block(forkedChainHeadRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalizedState, err := rs.db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := hashutil.HashProto(finalizedState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	announcement := p2p.Message{
+		Ctx: context.Background(),
+		Data: &pb.FinalizedStateAnnounce{
+			BlockRoot: forkedChainHeadRoot[:],
+			StateRoot: stateRoot[:],
+		},
+	}
+	if err := rs.handleFinalizedStateAnnouncement(announcement); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	newChainHead, err := rs.db.ChainHead()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if proto.Equal(currentHead, newChainHead) {
+		t.Errorf("Expected new head to differ, received %v", currentHead)
+	}
+	if !proto.Equal(newChainHead, announcedFinalizedBlock) {
+		t.Errorf("Expected new head equals %v, received %v", announcedFinalizedBlock, newChainHead)
+	}
+	msg := "Announced finalized block is not a descendant of the current chain, reorging..."
+	testutil.AssertLogsContain(t, hook, msg)
+}
+
+func setupForkedChain(t *testing.T, db *db.BeaconDB) [32]byte {
+	genesisBlock, err := db.ChainHead()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	genesisState, err := db.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockA := &pb.BeaconBlock{
+		Slot:             genesisBlock.Slot + 1,
+		ParentRootHash32: genesisRoot[:],
+		RandaoReveal:     []byte("A"),
+		Body:             &pb.BeaconBlockBody{},
+	}
+	blockARoot, err := hashutil.HashBeaconBlock(blockA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(blockA); err != nil {
+		t.Fatal(err)
+	}
+	beaconState := genesisState
+	beaconState.Slot++
+	if err := db.SaveHistoricalState(ctx, beaconState, blockARoot); err != nil {
+		t.Fatal(err)
+	}
+	blockB := &pb.BeaconBlock{
+		Slot:             blockA.Slot + 1,
+		ParentRootHash32: blockARoot[:],
+		RandaoReveal:     []byte("B"),
+		Body:             &pb.BeaconBlockBody{},
+	}
+	blockBRoot, err := hashutil.HashBeaconBlock(blockB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(blockB); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot++
+	if err := db.SaveHistoricalState(ctx, beaconState, blockBRoot); err != nil {
+		t.Fatal(err)
+	}
+	blockC := &pb.BeaconBlock{
+		Slot:             blockB.Slot + 1,
+		ParentRootHash32: blockBRoot[:],
+		RandaoReveal:     []byte("C"),
+		Body:             &pb.BeaconBlockBody{},
+	}
+	if err := db.SaveBlock(blockC); err != nil {
+		t.Fatal(err)
+	}
+	blockCRoot, err := hashutil.HashBeaconBlock(blockC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot++
+	if err := db.SaveHistoricalState(ctx, beaconState, blockCRoot); err != nil {
+		t.Fatal(err)
+	}
+	return blockCRoot
+}
+
+func setupCanonicalChain(t *testing.T, db *db.BeaconDB) [32]byte {
+	genesisBlock, err := db.ChainHead()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	genesisState, err := db.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockA := &pb.BeaconBlock{
+		Slot:             genesisBlock.Slot + 1,
+		ParentRootHash32: genesisRoot[:],
+		RandaoReveal:     []byte("D"),
+		Body:             &pb.BeaconBlockBody{},
+	}
+	blockARoot, err := hashutil.HashBeaconBlock(blockA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(blockA); err != nil {
+		t.Fatal(err)
+	}
+	beaconState := genesisState
+	beaconState.Slot++
+	if err := db.UpdateChainHead(ctx, blockA, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	blockB := &pb.BeaconBlock{
+		Slot:             blockA.Slot + 1,
+		ParentRootHash32: blockARoot[:],
+		RandaoReveal:     []byte("E"),
+		Body:             &pb.BeaconBlockBody{},
+	}
+	blockBRoot, err := hashutil.HashBeaconBlock(blockB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(blockB); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot++
+	if err := db.UpdateChainHead(ctx, blockB, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	return blockBRoot
 }
