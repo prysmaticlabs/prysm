@@ -172,4 +172,3 @@ func TestDomain_OK(t *testing.T) {
 		t.Errorf("fork Version not equal to 4328521728 %d", DomainVersion(state, 1, 0))
 	}
 }
-
