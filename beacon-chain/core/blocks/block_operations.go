@@ -51,7 +51,6 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 			numVotes++
 		}
 	}
-	fmt.Println(numVotes)
 	if numVotes*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
 		beaconState.LatestEth1Data = block.Body.Eth1Data
 	}

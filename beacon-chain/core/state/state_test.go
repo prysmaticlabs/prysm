@@ -181,7 +181,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, processedPowReceiptRoot) {
 		t.Error("LatestEth1Data DepositRoot was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.Eth1DataVotes, []*pb.Eth1DataVote{}) {
+	if !reflect.DeepEqual(newState.Eth1DataVotes, []*pb.Eth1Data{}) {
 		t.Error("Eth1DataVotes was not correctly initialized")
 	}
 }
