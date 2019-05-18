@@ -6,9 +6,9 @@ package epoch
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sort"
-	"errors"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -453,7 +453,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 // Individual rewards and penalties are returned in list.
 //
 // Spec pseudocode definition:
-//	def get_crosslink_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
+//  def get_crosslink_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
 //    rewards = [0 for index in range(len(state.validator_registry))]
 //    penalties = [0 for index in range(len(state.validator_registry))]
 //    epoch = get_previous_epoch(state)
@@ -471,22 +471,22 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 //                penalties[index] += base_reward
 //    return rewards, penalties
 func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
-	prevEpoch := helpers.PrevEpoch(state)
 	rewards := make([]uint64, len(state.ValidatorRegistry))
 	penalties := make([]uint64, len(state.ValidatorRegistry))
-	committeeCount := helpers.PrevEpochCommitteeCount(state)
-	for i := uint64(0); i < committeeCount; i++ {
-		startShard, err := helpers.EpochStartShard(state, prevEpoch)
-		if err != nil {
-			return nil, nil, err
-		}
+	epoch := helpers.PrevEpoch(state)
+	count := helpers.EpochCommitteeCount(state, epoch)
+	startShard, err := helpers.EpochStartShard(state, epoch)
+	if err != nil {
+		return nil, nil, err
+	}
+	for i := uint64(0); i < count; i++ {
 		shard := (startShard + i) % params.BeaconConfig().ShardCount
 		// Need to update get_crosslink_committee in spec.
-		crosslinkCommittee, err := helpers.CrosslinkCommitteesAtSlot(state, helpers.StartSlot(prevEpoch), false)
+		committee, err := helpers.CrosslinkCommitteeAtEpoch(state, epoch, shard)
 		if err != nil {
 			return nil, nil, err
 		}
-		_, attestingIndices, err := WinningCrosslink(state, prevEpoch, shard)
+		_, attestingIndices, err := WinningCrosslink(state, epoch, shard)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -495,9 +495,9 @@ func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		for _, index := range attestingIndices {
 			attested[index] = true
 		}
-		committeeBalance := TotalBalance(state, crosslinkCommittee[0].Committee)
-		attestingBalance := TotalBalance(state, attestingIndices)
-		for _, index := range crosslinkCommittee[0].Committee {
+		committeeBalance := helpers.TotalBalance(state, committee)
+		attestingBalance := helpers.TotalBalance(state, attestingIndices)
+		for _, index := range committee {
 			if _, ok := attested[index]; ok {
 				rewards[index] += BaseReward(state, index) * attestingBalance / committeeBalance
 			} else {
