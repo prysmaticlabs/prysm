@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -25,7 +24,6 @@ type Service struct {
 // Config defines the configured services required for sync to work.
 type Config struct {
 	ChainService     chainService
-	AncestorVerifier blockchain.AncestorVerifier
 	BeaconDB         *db.BeaconDB
 	P2P              p2pAPI
 	AttsService      attsService
@@ -54,7 +52,6 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	rsCfg.P2P = cfg.P2P
 	rsCfg.AttsService = cfg.AttsService
 	rsCfg.OperationService = cfg.OperationService
-	rsCfg.AncestorVerifier = cfg.AncestorVerifier
 
 	sq := NewQuerierService(ctx, sqCfg)
 	rs := NewRegularSyncService(ctx, rsCfg)

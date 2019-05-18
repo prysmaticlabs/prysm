@@ -30,8 +30,6 @@ import (
 
 // Ensure ChainService implements interfaces.
 var _ = ForkChoice(&ChainService{})
-var _ = TargetsFetcher(&ChainService{})
-var _ = AncestorVerifier(&ChainService{})
 var endpoint = "ws://127.0.0.1"
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
@@ -820,22 +818,22 @@ func TestIsDescendant_Ok(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 
-	isDescendant, err := chainService.IsDescendant(block2, block5)
+	isDescendant, err := chainService.isDescendant(block2, block5)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if isDescendant {
 		t.Errorf("block%d can't be descendant of block%d", block5.Slot, block2.Slot)
 	}
-	isDescendant, _ = chainService.IsDescendant(block4, block3)
+	isDescendant, _ = chainService.isDescendant(block4, block3)
 	if isDescendant {
 		t.Errorf("block%d can't be descendant of block%d", block3.Slot, block4.Slot)
 	}
-	isDescendant, _ = chainService.IsDescendant(block1, block5)
+	isDescendant, _ = chainService.isDescendant(block1, block5)
 	if !isDescendant {
 		t.Errorf("block%d is the descendant of block%d", block3.Slot, block1.Slot)
 	}
-	isDescendant, _ = chainService.IsDescendant(block1, block3)
+	isDescendant, _ = chainService.isDescendant(block1, block3)
 	if !isDescendant {
 		t.Errorf("block%d is the descendant of block%d", block3.Slot, block1.Slot)
 	}

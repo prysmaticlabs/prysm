@@ -39,11 +39,6 @@ type TargetsFetcher interface {
 	AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error)
 }
 
-// AncestorVerifier defines a struct which can verify if a block is a descendant of another.
-type AncestorVerifier interface {
-	IsDescendant(currentHead *pb.BeaconBlock, newHead *pb.BeaconBlock) (bool, error)
-}
-
 // updateFFGCheckPts checks whether the existing FFG check points saved in DB
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
@@ -182,7 +177,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 		return fmt.Errorf("could not hash current head block: %v", err)
 	}
 
-	isDescendant, err := c.IsDescendant(currentHead, newHead)
+	isDescendant, err := c.isDescendant(currentHead, newHead)
 	if err != nil {
 		return fmt.Errorf("could not check if block is descendant: %v", err)
 	}
@@ -347,8 +342,8 @@ func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock,
 	return filteredChildren, nil
 }
 
-// IsDescendant checks if the new head block is a descendant block of the current head.
-func (c *ChainService) IsDescendant(currentHead *pb.BeaconBlock, newHead *pb.BeaconBlock) (bool, error) {
+// isDescendant checks if the new head block is a descendant block of the current head.
+func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.BeaconBlock) (bool, error) {
 	currentHeadRoot, err := hashutil.HashBeaconBlock(currentHead)
 	if err != nil {
 		return false, nil

@@ -45,15 +45,11 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 
 	if hasBlock {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debug(
-			"Already processed",
-		)
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debug("Already processed")
 		return nil
 	}
 
-	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debug(
-		"Received incoming block root, requesting full block data from sender",
-	)
+	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debug("Received incoming block root, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
 	if err := rs.p2p.Send(ctx, &pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer); err != nil {
 		log.Error(err)

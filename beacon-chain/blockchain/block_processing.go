@@ -278,19 +278,6 @@ func (c *ChainService) runStateTransition(
 	}
 	// Prune the block cache on every new finalized epoch.
 	if newState.FinalizedEpoch > finalizedEpoch {
-		blockRoot, err := hashutil.HashBeaconBlock(block)
-		if err != nil {
-			return nil, err
-		}
-		stateRoot, err := hashutil.HashProto(beaconState)
-		if err != nil {
-			return nil, err
-		}
-		c.p2p.Broadcast(ctx, &pb.FinalizedStateAnnounce{
-			BlockRoot: blockRoot[:],
-			StateRoot: stateRoot[:],
-			Slot:      beaconState.Slot,
-		})
 		c.beaconDB.ClearBlockCache()
 	}
 	log.WithField(
