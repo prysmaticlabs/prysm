@@ -217,7 +217,7 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 				TargetEpoch: params.BeaconConfig().GenesisEpoch,
 				Shard:       uint64(i + 2),
 			},
-			InclusionSlot: uint64(i + 100),
+			InclusionDelay: uint64(i + 100),
 			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
 		}
@@ -242,13 +242,13 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 
 	// Get attestation for validator index 255.
 	idx := uint64(914)
-	att, err := EarlistAttestation(state, atts, idx)
+	att, err := earlistAttestation(state, atts, idx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	wantedInclusion := uint64(18446744073709551615)
-	if att.InclusionSlot != wantedInclusion {
-		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionSlot)
+	if att.InclusionDelay != wantedInclusion {
+		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionDelay)
 
 	}
 }
@@ -272,7 +272,7 @@ func TestEarliestAttestation_CantGetIndicesBitfieldError(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	const wantedErr = "could not get attester indices: wanted participants bitfield length 0, got: 1"
-	if _, err := EarlistAttestation(state, atts, 0); !strings.Contains(err.Error(), wantedErr) {
+	if _, err := earlistAttestation(state, atts, 0); !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
 }

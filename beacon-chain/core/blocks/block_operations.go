@@ -412,8 +412,6 @@ func ProcessBlockAttestations(
 		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
-			CustodyBitfield:     attestation.CustodyBitfield,
-			InclusionSlot:       beaconState.Slot,
 		})
 	}
 
