@@ -239,7 +239,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 }
 
 // MultipleValidatorStatus returns the validator status response for the set of validators
-// requested by their pubkeys.DepositInclusionDelay
+// requested by their pubkeys.
 
 func (vs *ValidatorServer) MultipleValidatorStatus(
 	ctx context.Context,
