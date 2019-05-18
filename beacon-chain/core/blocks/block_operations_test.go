@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -1792,5 +1792,200 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
+	}
+}
+
+func TestProcessBeaconTransfers_ThresholdReached(t *testing.T) {
+	transfers := make([]*pb.Transfer, params.BeaconConfig().MaxTransfers+1)
+	registry := []*pb.Validator{}
+	state := &pb.BeaconState{
+		ValidatorRegistry: registry,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: transfers,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"number of transfers (%d) exceeds allowed threshold of %d",
+		params.BeaconConfig().MaxTransfers+1,
+		params.BeaconConfig().MaxTransfers,
+	)
+
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
+	testConfig := params.BeaconConfig()
+	testConfig.MaxTransfers = 1
+	params.OverrideBeaconConfig(testConfig)
+	registry := []*pb.Validator{
+		{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: registry,
+		Balances:          balances,
+	}
+	transfers := []*pb.Transfer{
+		{
+			Fee: params.BeaconConfig().MaxDepositAmount + 1,
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: transfers,
+		},
+	}
+	want := fmt.Sprintf(
+		"expected sender balance %d >= %d",
+		balances[0],
+		transfers[0].Fee,
+	)
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	block.Body.Transfers = []*pb.Transfer{
+		{
+			Fee:  params.BeaconConfig().MinDepositAmount,
+			Slot: state.Slot + 1,
+		},
+	}
+	want = fmt.Sprintf(
+		"expected beacon state slot %d == transfer slot %d",
+		state.Slot,
+		block.Body.Transfers[0].Slot,
+	)
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	state.ValidatorRegistry[0].WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
+	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().GenesisEpoch
+	block.Body.Transfers = []*pb.Transfer{
+		{
+			Fee:    params.BeaconConfig().MinDepositAmount,
+			Amount: params.BeaconConfig().MaxDepositAmount,
+			Slot:   state.Slot,
+		},
+	}
+	want = "over max transfer"
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	state.ValidatorRegistry[0].WithdrawableEpoch = params.BeaconConfig().GenesisEpoch
+	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
+	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
+	pubKey := []byte("B")
+	hashed := hashutil.Hash(pubKey)
+	buf = append(buf, hashed[:]...)
+	state.ValidatorRegistry[0].WithdrawalCredentials = buf
+	block.Body.Transfers = []*pb.Transfer{
+		{
+			Fee:    params.BeaconConfig().MinDepositAmount,
+			Amount: params.BeaconConfig().MinDepositAmount,
+			Slot:   state.Slot,
+			Pubkey: []byte("A"),
+		},
+	}
+	want = "invalid public key"
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBeaconTransfers_OK(t *testing.T) {
+	testConfig := params.BeaconConfig()
+	testConfig.MaxTransfers = 1
+	params.OverrideBeaconConfig(testConfig)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			Slashed:           false,
+			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch,
+		}
+	}
+	validatorBalances := make([]uint64, len(validators))
+	for i := 0; i < len(validatorBalances); i++ {
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		Balances:               validatorBalances,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+	transfers := []*pb.Transfer{
+		{
+			Sender:    0,
+			Recipient: 1,
+			Fee:       params.BeaconConfig().MinDepositAmount,
+			Amount:    params.BeaconConfig().MinDepositAmount,
+			Slot:      state.Slot,
+			Pubkey:    []byte("A"),
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: transfers,
+		},
+	}
+	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
+	pubKey := []byte("A")
+	hashed := hashutil.Hash(pubKey)
+	buf = append(buf, hashed[:]...)
+	state.ValidatorRegistry[0].WithdrawalCredentials = buf
+	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
+	newState, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	expectedRecipient := params.BeaconConfig().MaxDepositAmount + block.Body.Transfers[0].Amount
+	if newState.Balances[1] != expectedRecipient {
+		t.Errorf("Expected recipient balance %d, received %d", newState.Balances[1], expectedRecipient)
+	}
+	expectedSender := params.BeaconConfig().MaxDepositAmount - block.Body.Transfers[0].Amount - block.Body.Transfers[0].Fee
+	if newState.Balances[0] != expectedSender {
+		t.Errorf("Expected sender balance %d, received %d", newState.Balances[0], expectedSender)
 	}
 }

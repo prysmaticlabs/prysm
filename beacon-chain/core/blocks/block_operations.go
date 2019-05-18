@@ -816,3 +816,117 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 	}
 	return nil
 }
+
+// ProcessTransfers is one of the operations performed
+// on each processed beacon block to determine transfers between beacon chain balances.
+//
+// Official spec definition for processing transfers:
+//
+//   Verify that len(block.body.transfers) <= MAX_TRANSFERS.
+//
+//   for each transfer in block.body.transfers:
+//     assert state.balances[transfer.sender] >= max(transfer.amount, transfer.fee)
+//     assert state.slot == transfer.slot
+//     assert (
+//       state.validator_registry[transfer.sender].activation_eligibility_epoch == FAR_FUTURE_EPOCH or
+//       get_current_epoch(state) >= state.validator_registry[transfer.sender].withdrawable_epoch or
+//       transfer.amount + transfer.fee + MAX_EFFECTIVE_BALANCE <= state.balances[transfer.sender]
+//     )
+//     assert (
+//       state.validator_registry[transfer.sender].withdrawal_credentials ==
+//       int_to_bytes(BLS_WITHDRAWAL_PREFIX, length=1) + hash(transfer.pubkey)[1:]
+//     )
+//     assert bls_verify(
+//       transfer.pubkey, signing_root(transfer), transfer.signature, get_domain(state, DOMAIN_TRANSFER)
+//     )
+//     decrease_balance(state, transfer.sender, transfer.amount + transfer.fee)
+//     increase_balance(state, transfer.recipient, transfer.amount)
+//     increase_balance(state, get_beacon_proposer_index(state), transfer.fee)
+//     assert not (0 < state.balances[transfer.sender] < MIN_DEPOSIT_AMOUNT)
+//     assert not (0 < state.balances[transfer.recipient] < MIN_DEPOSIT_AMOUNT)
+func ProcessTransfers(
+	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
+	verifySignatures bool,
+) (*pb.BeaconState, error) {
+	transfers := block.Body.Transfers
+	if uint64(len(transfers)) > params.BeaconConfig().MaxTransfers {
+		return nil, fmt.Errorf(
+			"number of transfers (%d) exceeds allowed threshold of %d",
+			len(transfers),
+			params.BeaconConfig().MaxTransfers,
+		)
+	}
+	for idx, transfer := range transfers {
+		if err := verifyTransfer(beaconState, transfer, verifySignatures); err != nil {
+			return nil, fmt.Errorf("could not verify transfer %d: %v", idx, err)
+		}
+		// Process the transfer between accounts.
+		beaconState = helpers.DecreaseBalance(beaconState, transfer.Sender, transfer.Amount+transfer.Fee)
+		beaconState = helpers.IncreaseBalance(beaconState, transfer.Recipient, transfer.Amount)
+		proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+		if err != nil {
+			return nil, fmt.Errorf("could not determine beacon proposer index: %v", err)
+		}
+		beaconState = helpers.IncreaseBalance(beaconState, proposerIndex, transfer.Fee)
+
+		// Finally, we verify balances will not go below the mininum.
+		if beaconState.Balances[transfer.Sender] < params.BeaconConfig().MinDepositAmount &&
+			0 < beaconState.Balances[transfer.Sender] {
+			return nil, fmt.Errorf(
+				"sender balance below critical level: %v",
+				beaconState.Balances[transfer.Sender],
+			)
+		}
+		if beaconState.Balances[transfer.Recipient] < params.BeaconConfig().MinDepositAmount &&
+			0 < beaconState.Balances[transfer.Recipient] {
+			return nil, fmt.Errorf(
+				"recipient balance below critical level: %v",
+				beaconState.Balances[transfer.Recipient],
+			)
+		}
+	}
+	return beaconState, nil
+}
+
+func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySignatures bool) error {
+	maxVal := transfer.Fee
+	if transfer.Amount > maxVal {
+		maxVal = transfer.Amount
+	}
+	sender := beaconState.ValidatorRegistry[transfer.Sender]
+	senderBalance := beaconState.Balances[transfer.Sender]
+	// Verify the amount and fee are not individually too big (for anti-overflow purposes).
+	if senderBalance < maxVal {
+		return fmt.Errorf("expected sender balance %d >= %d", senderBalance, maxVal)
+	}
+	// A transfer is valid in only one slot.
+	if beaconState.Slot != transfer.Slot {
+		return fmt.Errorf("expected beacon state slot %d == transfer slot %d", beaconState.Slot, transfer.Slot)
+	}
+
+	// Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE.
+	senderNotActivationEligible := sender.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch
+	senderNotWithdrawn := helpers.CurrentEpoch(beaconState) >= sender.WithdrawableEpoch
+	underMaxTransfer := transfer.Amount+transfer.Fee+params.BeaconConfig().MaxEffectiveBalance <= senderBalance
+
+	if !(senderNotActivationEligible || senderNotWithdrawn || underMaxTransfer) {
+		return fmt.Errorf(
+			"expected activation eligiblity: false or withdrawn: false or over max transfer: false, received %v %v %v",
+			senderNotActivationEligible,
+			senderNotWithdrawn,
+			underMaxTransfer,
+		)
+	}
+	// Verify that the pubkey is valid.
+	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
+	hashed := hashutil.Hash(transfer.Pubkey)
+	buf = append(buf, hashed[:]...)
+	if !bytes.Equal(sender.WithdrawalCredentials, buf) {
+		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
+	}
+	if verifySignatures {
+		// TODO(#258): Integrate BLS signature verification for transfers.
+	}
+	return nil
+}
