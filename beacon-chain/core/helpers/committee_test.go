@@ -109,56 +109,6 @@ func TestShardDelta_OK(t *testing.T) {
 	}
 }
 
-func TestShuffling_OK(t *testing.T) {
-	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
-	committeesPerEpoch := uint64(6)
-	// Set epoch total validators count to 6 committees per slot.
-	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-	}
-
-	randaoSeed := [32]byte{'A'}
-	slot := uint64(10)
-	committees, err := Shuffling(randaoSeed, validators, slot)
-	if err != nil {
-		t.Fatalf("Could not shuffle validators: %v", err)
-	}
-	state = &pb.BeaconState{
-		ValidatorRegistry: validators,
-	}
-
-	// Verify shuffled list is correctly split into committees_per_slot pieces.
-	committeesPerEpoch = EpochCommitteeCount(state, 1)
-	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().SlotsPerEpoch
-	if committeesPerSlot != committeesPerSlot {
-		t.Errorf("Incorrect committee count after splitting. Wanted: %d, got: %d",
-			committeesPerSlot, len(committees))
-	}
-
-	// Verify each shuffled committee is TARGET_COMMITTEE_SIZE.
-	for i := 0; i < len(committees); i++ {
-		committeeCount := uint64(len(committees[i]))
-		if committeeCount != params.BeaconConfig().TargetCommitteeSize {
-			t.Errorf("Incorrect validator count per committee. Wanted: %d, got: %d",
-				params.BeaconConfig().TargetCommitteeSize, committeeCount)
-		}
-	}
-
-}
-
-func TestShuffling_OutOfBound(t *testing.T) {
-	populateValidatorsMax()
-	if _, err := Shuffling([32]byte{}, validatorsUpperBound, 0); err == nil {
-		t.Fatalf("Shuffling should have failed with exceeded upper bound")
-	}
-}
-
 func TestComputeCommittee_OK(t *testing.T) {
 	t.Skip()
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
