@@ -521,7 +521,6 @@ func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 		}
 		setIndices = sliceutil.UnionUint64(setIndices, indices)
 	}
-
 	// Sort the attesting set indices by increasing order.
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
 	// Remove the slashed validator indices.

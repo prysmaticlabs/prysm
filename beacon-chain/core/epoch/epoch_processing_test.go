@@ -924,7 +924,6 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	}
 
 	winner, indices, err := WinningCrosslink(state, 0, ge)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -987,8 +986,8 @@ func TestProcessCrosslink_SuccessfulUpdate(t *testing.T) {
 	gs := params.BeaconConfig().GenesisSlot
 	ge := params.BeaconConfig().GenesisEpoch
 
-	validators := make([]*pb.Validator, 128)
-	balances := make([]uint64, 128)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/8)
+	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart/8)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -1015,9 +1014,9 @@ func TestProcessCrosslink_SuccessfulUpdate(t *testing.T) {
 				Slot:              gs + 1 + (s % e),
 				Shard:             s,
 				CrosslinkDataRoot: []byte{'B'},
+				TargetEpoch:       params.BeaconConfig().GenesisEpoch,
 			},
-			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
-				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
 		})
 	}
 	state := &pb.BeaconState{
