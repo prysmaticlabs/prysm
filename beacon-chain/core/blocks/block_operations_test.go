@@ -5,11 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1870,13 +1871,13 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	}
 	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot:              params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: registry,
-		Balances: balances,
+		Balances:          balances,
 	}
 	transfers := []*pb.Transfer{
 		{
-			Fee: params.BeaconConfig().MaxDepositAmount+1,
+			Fee: params.BeaconConfig().MaxDepositAmount + 1,
 		},
 	}
 	block := &pb.BeaconBlock{
@@ -1899,14 +1900,14 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 
 	block.Body.Transfers = []*pb.Transfer{
 		{
-			Fee: params.BeaconConfig().MinDepositAmount,
-			Slot: state.Slot+1,
+			Fee:  params.BeaconConfig().MinDepositAmount,
+			Slot: state.Slot + 1,
 		},
 	}
 	want = fmt.Sprintf(
 		"expected beacon state slot %d == transfer slot %d",
-        state.Slot,
-        block.Body.Transfers[0].Slot,
+		state.Slot,
+		block.Body.Transfers[0].Slot,
 	)
 	if _, err := blocks.ProcessTransfers(
 		state,
@@ -1920,9 +1921,9 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().GenesisEpoch
 	block.Body.Transfers = []*pb.Transfer{
 		{
-			Fee: params.BeaconConfig().MinDepositAmount,
+			Fee:    params.BeaconConfig().MinDepositAmount,
 			Amount: params.BeaconConfig().MaxDepositAmount,
-			Slot: state.Slot,
+			Slot:   state.Slot,
 		},
 	}
 	want = "over max transfer"
@@ -1943,9 +1944,9 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	state.ValidatorRegistry[0].WithdrawalCredentials = buf
 	block.Body.Transfers = []*pb.Transfer{
 		{
-			Fee: params.BeaconConfig().MinDepositAmount,
+			Fee:    params.BeaconConfig().MinDepositAmount,
 			Amount: params.BeaconConfig().MinDepositAmount,
-			Slot: state.Slot,
+			Slot:   state.Slot,
 			Pubkey: []byte("A"),
 		},
 	}
@@ -1960,5 +1961,66 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 }
 
 func TestProcessBeaconTransfers_OK(t *testing.T) {
+	testConfig := params.BeaconConfig()
+	testConfig.MaxTransfers = 1
+	params.OverrideBeaconConfig(testConfig)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			Slashed:           false,
+			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch,
+		}
+	}
+	validatorBalances := make([]uint64, len(validators))
+	for i := 0; i < len(validatorBalances); i++ {
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
+	}
 
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		Balances:               validatorBalances,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+	transfers := []*pb.Transfer{
+		{
+			Sender: 0,
+			Recipient: 1,
+			Fee:    params.BeaconConfig().MinDepositAmount,
+			Amount: params.BeaconConfig().MinDepositAmount,
+			Slot:   state.Slot,
+			Pubkey: []byte("A"),
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: transfers,
+		},
+	}
+	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
+	pubKey := []byte("A")
+	hashed := hashutil.Hash(pubKey)
+	buf = append(buf, hashed[:]...)
+	state.ValidatorRegistry[0].WithdrawalCredentials = buf
+	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
+	newState, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	expectedRecipient := params.BeaconConfig().MaxDepositAmount + block.Body.Transfers[0].Amount
+	if newState.Balances[1] != expectedRecipient {
+		t.Errorf("Expected recipient balance %d, received %d", newState.Balances[1], expectedRecipient)
+	}
+	expectedSender := params.BeaconConfig().MaxDepositAmount - block.Body.Transfers[0].Amount - block.Body.Transfers[0].Fee
+	if newState.Balances[0] != expectedSender {
+		t.Errorf("Expected sender balance %d, received %d", newState.Balances[0], expectedSender)
+	}
 }
