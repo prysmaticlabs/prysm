@@ -34,6 +34,7 @@ type BeaconChainConfig struct {
 	// Gwei value constants.
 	MinDepositAmount          uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
 	MaxDepositAmount          uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxEffectiveBalance       uint64 // MaxEffectiveBalance is the maximal amount of Gwie that is effective for staking.
 	EjectionBalance           uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	EffectiveBalanceIncrement uint64 // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 	// TODO(2307): Remove deprecated fields
@@ -48,7 +49,7 @@ type BeaconChainConfig struct {
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
-	GenesisForkVersion uint64 // GenesisForkVersion is used to track fork version between state transitions.
+	GenesisForkVersion []byte // GenesisForkVersion is used to track fork version between state transitions.
 	// Deprecated: Do not use.
 	GenesisStartShard uint64 // GenesisStartShard is the first shard to assign validators.
 	// Deprecated: Do not use.
@@ -160,6 +161,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Gwei value constants.
 	MinDepositAmount:           1 * 1e9,
 	MaxDepositAmount:           32 * 1e9,
+	MaxEffectiveBalance:        32 * 1e9,
 	EjectionBalance:            16 * 1e9,
 	EffectiveBalanceIncrement:  1 * 1e9,
 	ForkChoiceBalanceIncrement: 1 * 1e9,
@@ -173,7 +175,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// TODO(2307): Remove deprecated fields
 	// Deprecated.
-	GenesisForkVersion: 0,
+	GenesisForkVersion: []byte{0, 0, 0, 0},
 	GenesisStartShard:  0,
 	EmptySignature:     [96]byte{},
 
@@ -203,6 +205,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:                 32,
+	ProposerRewardQuotient:             8,
 	WhistleBlowingRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
 	InactivityPenaltyQuotient:          1 << 25,

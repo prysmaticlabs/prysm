@@ -89,7 +89,7 @@ func GenesisBeaconState(
 			WithdrawalCredentials: depositInput.WithdrawalCredentialsHash32,
 			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:          params.BeaconConfig().FarFutureEpoch,
+			Slashed:               false,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		}
 
@@ -173,7 +173,7 @@ func GenesisBeaconState(
 		}
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if helpers.EffectiveBalance(state, uint64(i)) >=
+		if state.ValidatorRegistry[i].EffectiveBalance >=
 			params.BeaconConfig().MaxDepositAmount {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
@@ -181,7 +181,7 @@ func GenesisBeaconState(
 			}
 		}
 	}
-	activeValidators := helpers.ActiveValidatorIndices(state.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(state, params.BeaconConfig().GenesisEpoch)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)

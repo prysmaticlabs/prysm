@@ -145,7 +145,6 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 		if bitV == 1 {
 			index = flip
 		}
-
 	}
 	return index, nil
 }

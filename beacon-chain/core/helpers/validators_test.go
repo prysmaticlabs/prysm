@@ -41,8 +41,10 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	tests := []struct {
@@ -51,28 +53,29 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 1,
-			index: 504,
+			index: 15324,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 10,
-			index: 2821,
+			slot:  params.BeaconConfig().GenesisSlot + 5,
+			index: 11774,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 19,
-			index: 5132,
+			index: 2719,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 30,
-			index: 7961,
+			index: 7418,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 39,
-			index: 10272,
+			slot:  params.BeaconConfig().GenesisSlot + 43,
+			index: 15000,
 		},
 	}
 
 	for _, tt := range tests {
-		result, err := BeaconProposerIndex(state, tt.slot)
+		state.Slot = tt.slot
+		result, err := BeaconProposerIndex(state)
 		if err != nil {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)
 		}
@@ -88,7 +91,12 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
-	_, err := BeaconProposerIndex(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, params.BeaconConfig().GenesisSlot)
+	beaconState := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+	_, err := BeaconProposerIndex(beaconState)
 	expected := fmt.Sprintf("empty first committee at slot %d", 0)
 	if err.Error() != expected {
 		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
@@ -122,13 +130,45 @@ func TestChurnLimit_OK(t *testing.T) {
 			}
 		}
 
-		resultChurn := ChurnLimit(&pb.BeaconState{
-			Slot:              1,
-			ValidatorRegistry: validators,
-		})
+		beaconState := &pb.BeaconState{
+			Slot:                   1,
+			ValidatorRegistry:      validators,
+			LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+			LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		}
+		resultChurn := ChurnLimit(beaconState)
 		if resultChurn != test.wantedChurn {
 			t.Errorf("ChurnLimit(%d) = %d, want = %d",
 				test.validatorCount, resultChurn, test.wantedChurn)
 		}
+	}
+}
+
+func TestDomain_OK(t *testing.T) {
+	state := &pb.BeaconState{
+		Fork: &pb.Fork{
+			Epoch:           3,
+			PreviousVersion: []byte{0, 0, 0, 2},
+			CurrentVersion:  []byte{0, 0, 0, 3},
+		},
+		Slot: 70,
+	}
+
+	if DomainVersion(state, 9, 1) != 4345298944 {
+		t.Errorf("fork Version not equal to 4345298944 %d", DomainVersion(state, 1, 9))
+	}
+
+	if DomainVersion(state, 9, 2) != 8640266240 {
+		t.Errorf("fork Version not equal to 8640266240 %d", DomainVersion(state, 2, 9))
+	}
+
+	if DomainVersion(state, 2, 1) != 4328521728 {
+		t.Errorf("fork Version not equal to 4328521728 %d", DomainVersion(state, 1, 2))
+	}
+	if DomainVersion(state, 2, 2) != 8623489024 {
+		t.Errorf("fork Version not equal to 8623489024 %d", DomainVersion(state, 2, 2))
+	}
+	if DomainVersion(state, 0, 1) != 4328521728 {
+		t.Errorf("fork Version not equal to 4328521728 %d", DomainVersion(state, 1, 0))
 	}
 }
