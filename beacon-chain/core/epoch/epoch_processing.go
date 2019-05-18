@@ -49,7 +49,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 //
 // Spec pseudocode definition:
-//	def process_justification_and_finalization(state: BeaconState) -> None:
+//  def process_justification_and_finalization(state: BeaconState) -> None:
 //    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
 //        return
 //
@@ -162,7 +162,7 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 // with enough state to make it canonical in state.
 //
 // Spec pseudocode definition:
-//	def process_crosslinks(state: BeaconState) -> None:
+//  def process_crosslinks(state: BeaconState) -> None:
 //    state.previous_crosslinks = [c for c in state.current_crosslinks]
 //    for epoch in (get_previous_epoch(state), get_current_epoch(state)):
 //        for offset in range(get_epoch_committee_count(state, epoch)):
@@ -203,7 +203,7 @@ func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 // ProcessSlashings processes the slashed validators during epoch processing,
 //
-// def process_slashings(state: BeaconState) -> None:
+//  def process_slashings(state: BeaconState) -> None:
 //    current_epoch = get_current_epoch(state)
 //    active_validator_indices = get_active_validator_indices(state, current_epoch)
 //    total_balance = get_total_balance(state, active_validator_indices)
@@ -253,7 +253,7 @@ func ProcessSlashings(state *pb.BeaconState) *pb.BeaconState {
 // ProcessFinalUpdates processes the final updates during epoch processing.
 //
 // Spec pseudocode definition:
-//	def process_final_updates(state: BeaconState) -> None:
+//  def process_final_updates(state: BeaconState) -> None:
 //    current_epoch = get_current_epoch(state)
 //    next_epoch = current_epoch + 1
 //    # Reset eth1 data votes
@@ -358,7 +358,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 // `WinningCrosslink` and  `CrosslinkAttestingIndices` for clarity and efficiency.
 //
 // Spec pseudocode definition:
-//	def get_winning_crosslink_and_attesting_indices(state: BeaconState, shard: Shard, epoch: Epoch) -> Tuple[Crosslink, List[ValidatorIndex]]:
+//  def get_winning_crosslink_and_attesting_indices(state: BeaconState, shard: Shard, epoch: Epoch) -> Tuple[Crosslink, List[ValidatorIndex]]:
 //    shard_attestations = [a for a in get_matching_source_attestations(state, epoch) if a.data.shard == shard]
 //    shard_crosslinks = [get_crosslink_from_attestation_data(state, a.data) for a in shard_attestations]
 //    candidate_crosslinks = [
@@ -452,7 +452,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 // it sorts the indices and filters out the slashed ones.
 //
 // Spec pseudocode definition:
-// def get_unslashed_attesting_indices(state: BeaconState, attestations: List[PendingAttestation]) -> List[ValidatorIndex]:
+//  def get_unslashed_attesting_indices(state: BeaconState, attestations: List[PendingAttestation]) -> List[ValidatorIndex]:
 //    output = set()
 //    for a in attestations:
 //        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bitfield))
@@ -480,7 +480,7 @@ func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 // AttestingBalance returns the total balance from all the attesting indices.
 //
 // Spec pseudocode definition:
-// def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
+//  def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
 //    return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
 func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uint64, error) {
 	indices, err := UnslashedAttestingIndices(state, atts)
@@ -493,7 +493,7 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 // EarlistAttestation returns attestation with the earliest inclusion slot.
 //
 // Spec pseudocode definition:
-// def get_earliest_attestation(state: BeaconState, attestations: List[PendingAttestation], index: ValidatorIndex) -> PendingAttestation:
+//  def get_earliest_attestation(state: BeaconState, attestations: List[PendingAttestation], index: ValidatorIndex) -> PendingAttestation:
 //    return min([
 //        a for a in attestations if index in get_attesting_indices(state, a.data, a.aggregation_bitfield)
 //    ], key=lambda a: a.inclusion_slot)
@@ -522,17 +522,17 @@ func EarlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, in
 // We combined the individual helpers from spec for efficiency and to achieve O(N) run time.
 //
 // Spec pseudocode definition:
-//	def get_matching_source_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//  def get_matching_source_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
 //    assert epoch in (get_current_epoch(state), get_previous_epoch(state))
 //    return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
 //
-//	def get_matching_target_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//  def get_matching_target_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
 //    return [
 //        a for a in get_matching_source_attestations(state, epoch)
 //        if a.data.target_root == get_block_root(state, epoch)
 //    ]
 //
-//	def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
+//  def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
 //    return [
 //        a for a in get_matching_source_attestations(state, epoch)
 //        if a.data.beacon_block_root == get_block_root_at_slot(state, a.data.slot)
@@ -591,7 +591,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 // CrosslinkFromAttsData returns a constructed crosslink from attestation data.
 //
 // Spec pseudocode definition:
-//	def get_crosslink_from_attestation_data(state: BeaconState, data: AttestationData) -> Crosslink:
+//  def get_crosslink_from_attestation_data(state: BeaconState, data: AttestationData) -> Crosslink:
 //    return Crosslink(
 //        epoch=min(slot_to_epoch(data.slot), state.current_crosslinks[data.shard].epoch + MAX_CROSSLINK_EPOCHS),
 //        previous_crosslink_root=data.previous_crosslink_root,
@@ -619,7 +619,7 @@ func CrosslinkAttestingIndices(state *pb.BeaconState, crosslink *pb.Crosslink, a
 // individual validator's base reward quotient.
 //
 // Spec pseudocode definition:
-//	def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
 //    adjusted_quotient = integer_squareroot(get_total_active_balance(state)) // BASE_REWARD_QUOTIENT
 //    if adjusted_quotient == 0:
 //        return 0
@@ -648,7 +648,7 @@ func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb
 // totalActiveBalance returns the combined balances of all the active validators.
 //
 // Spec pseudocode definition:
-//	def get_total_active_balance(state: BeaconState) -> Gwei:
+//  def get_total_active_balance(state: BeaconState) -> Gwei:
 //    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
 func totalActiveBalance(state *pb.BeaconState) uint64 {
 	return helpers.TotalBalance(state, helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state)))
