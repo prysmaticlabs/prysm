@@ -973,6 +973,10 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 }
 
+func TestCrosslinkDelta_CanProcess(t *testing.T) {
+
+}
+
 func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
