@@ -870,7 +870,7 @@ func ProcessTransfers(
 	}
 	for idx, transfer := range transfers {
 		if err := verifyTransfer(beaconState, transfer, verifySignatures); err != nil {
-			return nil, fmt.Errorf("could not verify transfer #%d: %v", idx, err)
+			return nil, fmt.Errorf("could not verify transfer %d: %v", idx, err)
 		}
 		// Process the transfer between accounts.
 		beaconState = helpers.DecreaseBalance(beaconState, transfer.Sender, transfer.Amount+transfer.Fee)
