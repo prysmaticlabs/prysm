@@ -81,11 +81,7 @@ func CrosslinkCommitteeAtEpoch(state *pb.BeaconState, epoch uint64, shard uint64
 	shardCount := params.BeaconConfig().ShardCount
 	currentShard := (shard + shardCount - startShard) % shardCount
 	committeeCount := EpochCommitteeCount(state, epoch)
-	committee, err := ComputeCommittee(indices, seed, currentShard, committeeCount)
-	if err != nil {
-		return nil, err
-	}
-	return committee, nil
+	return ComputeCommittee(indices, seed, currentShard, committeeCount)
 }
 
 // ComputeCommittee returns the requested shuffled committee out of the total committees using
