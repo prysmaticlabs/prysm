@@ -7,6 +7,7 @@ package epoch
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -647,7 +648,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 // with enough state to make it canonical in state.
 //
 // Spec pseudocode definition:
-// def process_crosslinks(state: BeaconState) -> None:
+//	def process_crosslinks(state: BeaconState) -> None:
 //    state.previous_crosslinks = [c for c in state.current_crosslinks]
 //    for epoch in (get_previous_epoch(state), get_current_epoch(state)):
 //        for offset in range(get_epoch_committee_count(state, epoch)):
@@ -796,7 +797,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 
 	crosslinkIndices, err := UnslashedAttestingIndices(state, attsForCrosslink(state, winnerCrosslink, shardAtts))
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not get crosslink indices")
+		return nil, nil, errors.New("could not get crosslink indices")
 	}
 
 	return winnerCrosslink, crosslinkIndices, nil
