@@ -225,6 +225,13 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 	return root, nil
 }
 
+// UpdateCanonicalRoots sets a new head into the canonical block roots map.
+func (c *ChainService) UpdateCanonicalRoots(newHead *pb.BeaconBlock, newHeadRoot [32]byte) {
+	c.canonicalBlocksLock.Lock()
+	defer c.canonicalBlocksLock.Unlock()
+	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]
+}
+
 // IsCanonical returns true if the input block hash of the corresponding slot
 // is part of the canonical chain. False otherwise.
 func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
@@ -234,12 +241,4 @@ func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
 		return bytes.Equal(canonicalHash, hash)
 	}
 	return false
-}
-
-// InsertsCanonical inserts a canonical block hash to its corresponding slot.
-// This is used for testing purpose.
-func (c *ChainService) InsertsCanonical(slot uint64, hash []byte) {
-	c.canonicalBlocksLock.Lock()
-	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[slot] = hash
 }

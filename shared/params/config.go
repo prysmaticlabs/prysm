@@ -34,6 +34,7 @@ type BeaconChainConfig struct {
 	// Gwei value constants.
 	MinDepositAmount          uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
 	MaxDepositAmount          uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxEffectiveBalance       uint64 // MaxEffectiveBalance is the maximal amount of Gwie that is effective for staking.
 	EjectionBalance           uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	EffectiveBalanceIncrement uint64 // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 	// TODO(2307): Remove deprecated fields
@@ -48,7 +49,7 @@ type BeaconChainConfig struct {
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
-	GenesisForkVersion uint64 // GenesisForkVersion is used to track fork version between state transitions.
+	GenesisForkVersion []byte // GenesisForkVersion is used to track fork version between state transitions.
 	// Deprecated: Do not use.
 	GenesisStartShard uint64 // GenesisStartShard is the first shard to assign validators.
 	// Deprecated: Do not use.
@@ -121,6 +122,7 @@ type BeaconChainConfig struct {
 	HashCacheSize             int64         // HashCacheSize defines the size of object hashes that are cached.
 	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
 	TestnetContractEndpoint   string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
+	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
 }
 
 // DepositContractConfig contains the deposits for
@@ -159,6 +161,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Gwei value constants.
 	MinDepositAmount:           1 * 1e9,
 	MaxDepositAmount:           32 * 1e9,
+	MaxEffectiveBalance:        32 * 1e9,
 	EjectionBalance:            16 * 1e9,
 	EffectiveBalanceIncrement:  1 * 1e9,
 	ForkChoiceBalanceIncrement: 1 * 1e9,
@@ -172,7 +175,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// TODO(2307): Remove deprecated fields
 	// Deprecated.
-	GenesisForkVersion: 0,
+	GenesisForkVersion: []byte{0, 0, 0, 0},
 	GenesisStartShard:  0,
 	EmptySignature:     [96]byte{},
 
@@ -202,6 +205,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:                 32,
+	ProposerRewardQuotient:             8,
 	WhistleBlowingRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
 	InactivityPenaltyQuotient:          1 << 25,
@@ -236,6 +240,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
 	RPCSyncCheck:              1,
+	GoerliBlockTime:           14, // 14 seconds on average for a goerli block to be created.
 
 	// Testnet misc values.
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
@@ -272,7 +277,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3.2 * 1e9
-	demoConfig.EjectionBalance = 3 * 1e9
+	demoConfig.EjectionBalance = 3.175 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.EpochsPerEth1VotingPeriod = 1

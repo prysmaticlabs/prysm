@@ -17,6 +17,30 @@ import (
 
 // GenesisBeaconState gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
+// Spec pseudocode definition:
+// def get_genesis_beacon_state(genesis_validator_deposits: List[Deposit],
+//                             genesis_time: int,
+//                             genesis_eth1_data: Eth1Data) -> BeaconState:
+//    """
+//    Get the genesis ``BeaconState``.
+//    """
+//    state = BeaconState(genesis_time=genesis_time, latest_eth1_data=genesis_eth1_data)
+//
+//    # Process genesis deposits
+//    for deposit in genesis_validator_deposits:
+//        process_deposit(state, deposit)
+//
+//    # Process genesis activations
+//    for validator in state.validator_registry:
+//        if validator.effective_balance >= MAX_EFFECTIVE_BALANCE:
+//            validator.activation_eligibility_epoch = GENESIS_EPOCH
+//            validator.activation_epoch = GENESIS_EPOCH
+//
+//    genesis_active_index_root = hash_tree_root(get_active_validator_indices(state, GENESIS_EPOCH))
+//    for index in range(LATEST_ACTIVE_INDEX_ROOTS_LENGTH):
+//        state.latest_active_index_roots[index] = genesis_active_index_root
+//
+//    return state
 func GenesisBeaconState(
 	genesisValidatorDeposits []*pb.Deposit,
 	genesisTime uint64,
@@ -65,7 +89,7 @@ func GenesisBeaconState(
 			WithdrawalCredentials: depositInput.WithdrawalCredentialsHash32,
 			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:          params.BeaconConfig().FarFutureEpoch,
+			Slashed:               false,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		}
 
@@ -111,8 +135,8 @@ func GenesisBeaconState(
 
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,
-		LatestBlockRoots:        latestBlockRoots,
 		LatestActiveIndexRoots:  latestActiveIndexRoots,
+		LatestBlockRoots:        latestBlockRoots,
 		LatestSlashedBalances:   latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},
@@ -149,7 +173,7 @@ func GenesisBeaconState(
 		}
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if helpers.EffectiveBalance(state, uint64(i)) >=
+		if state.ValidatorRegistry[i].EffectiveBalance >=
 			params.BeaconConfig().MaxDepositAmount {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
@@ -157,7 +181,7 @@ func GenesisBeaconState(
 			}
 		}
 	}
-	activeValidators := helpers.ActiveValidatorIndices(state.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(state, params.BeaconConfig().GenesisEpoch)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)
@@ -168,10 +192,5 @@ func GenesisBeaconState(
 	for i := uint64(0); i < params.BeaconConfig().LatestActiveIndexRootsLength; i++ {
 		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot[:]
 	}
-	seed, err := helpers.GenerateSeed(state, params.BeaconConfig().GenesisEpoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate initial seed: %v", err)
-	}
-	state.CurrentShufflingSeedHash32 = seed[:]
 	return state, nil
 }

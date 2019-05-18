@@ -32,8 +32,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	genesisEpochNumber := params.BeaconConfig().GenesisEpoch
 
-	if params.BeaconConfig().GenesisForkVersion != 0 {
-		t.Error("GenesisSlot( should be 0 for these tests to pass")
+	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, []byte{0, 0, 0, 0}) {
+		t.Error("GenesisSlot( should be {0,0,0,0} for these tests to pass")
 	}
 	genesisForkVersion := params.BeaconConfig().GenesisForkVersion
 
@@ -122,7 +122,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
 	if len(newState.Balances) != depositsForChainStart {
-		t.Error("ValidatorBalances was not correctly initialized")
+		t.Error("Balances was not correctly initialized")
 	}
 
 	// Randomness and committees fields checks.
@@ -157,7 +157,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !reflect.DeepEqual(newState.BatchedBlockRootHash32S, [][]byte{}) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
 	}
-	activeValidators := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(newState, params.BeaconConfig().GenesisEpoch)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)
@@ -171,14 +171,12 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 			newState.LatestActiveIndexRoots[0],
 		)
 	}
-	seed, err := helpers.GenerateSeed(newState, params.BeaconConfig().GenesisEpoch)
-	if err != nil {
-		t.Fatalf("Could not generate initial seed: %v", err)
+	if !bytes.Equal(newState.LatestActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
+		t.Errorf(
+			"Expected index roots to be the tree hash root of active validator indices, received %#x",
+			newState.LatestActiveIndexRoots[0],
+		)
 	}
-	if !bytes.Equal(seed[:], newState.CurrentShufflingSeedHash32) {
-		t.Errorf("Expected current epoch seed to be %#x, received %#x", seed[:], newState.CurrentShufflingSeedHash32)
-	}
-
 	// deposit root checks.
 	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, processedPowReceiptRoot) {
 		t.Error("LatestEth1Data DepositRoot was not correctly initialized")

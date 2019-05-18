@@ -59,6 +59,9 @@ type Querier struct {
 	chainStarted              bool
 	atGenesis                 bool
 	bestPeer                  peer.ID
+	chainHeadResponses        map[peer.ID]*pb.ChainHeadResponse
+	canonicalBlockRoot        []byte
+	finalizedBlockRoot        []byte
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -71,16 +74,18 @@ func NewQuerierService(ctx context.Context,
 	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
 
 	return &Querier{
-		ctx:             ctx,
-		cancel:          cancel,
-		p2p:             cfg.P2P,
-		db:              cfg.BeaconDB,
-		chainService:    cfg.ChainService,
-		responseBuf:     responseBuf,
-		currentHeadSlot: cfg.CurrentHeadSlot,
-		chainStarted:    false,
-		powchain:        cfg.PowChain,
-		chainStartBuf:   make(chan time.Time, 1),
+		ctx:                ctx,
+		cancel:             cancel,
+		p2p:                cfg.P2P,
+		db:                 cfg.BeaconDB,
+		chainService:       cfg.ChainService,
+		responseBuf:        responseBuf,
+		currentHeadSlot:    cfg.CurrentHeadSlot,
+		chainStarted:       false,
+		atGenesis:          true,
+		powchain:           cfg.PowChain,
+		chainStartBuf:      make(chan time.Time, 1),
+		chainHeadResponses: make(map[peer.ID]*pb.ChainHeadResponse),
 	}
 }
 
@@ -128,7 +133,7 @@ func (q *Querier) listenForStateInitialization() {
 	for {
 		select {
 		case <-q.chainStartBuf:
-			queryLog.Info("state initialized")
+			queryLog.Info("State has been initialized")
 			q.chainStarted = true
 			return
 		case <-sub.Err():
@@ -153,11 +158,13 @@ func (q *Querier) run() {
 		ticker.Stop()
 	}()
 
-	timeout := time.After(5 * time.Second)
+	log.Info("Polling peers for latest chain head...")
+	hasReceivedResponse := false
+	var timeout <-chan time.Time
 	for {
 		select {
 		case <-q.ctx.Done():
-			queryLog.Info("Exiting goroutine")
+			queryLog.Info("Finished querying state of the network, importing blocks...")
 			return
 		case <-ticker.C:
 			q.RequestLatestHead()
@@ -171,17 +178,27 @@ func (q *Querier) run() {
 			responseSub.Unsubscribe()
 			q.cancel()
 		case msg := <-q.responseBuf:
+			// If this is the first response a node receives, we start
+			// a timeout that will keep listening for more responses over a
+			// certain time interval to ensure we get the best head from our peers.
+			if !hasReceivedResponse {
+				timeout = time.After(10 * time.Second)
+				hasReceivedResponse = true
+			}
 			response := msg.Data.(*pb.ChainHeadResponse)
-			queryLog.WithFields(logrus.Fields{
-				"peerID":      msg.Peer.Pretty(),
-				"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
-			}).Info("Received chain head from peer")
+			if _, ok := q.chainHeadResponses[msg.Peer]; !ok {
+				queryLog.WithFields(logrus.Fields{
+					"peerID":      msg.Peer.Pretty(),
+					"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
+				}).Info("Received chain head from peer")
+				q.chainHeadResponses[msg.Peer] = response
+			}
 			if response.CanonicalSlot > q.currentHeadSlot {
-				q.currentHeadSlot = response.CanonicalSlot
-				q.bestPeer = msg.Peer
 				q.currentHeadSlot = response.CanonicalSlot
 				q.currentStateRoot = response.CanonicalStateRootHash32
 				q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
+				q.canonicalBlockRoot = response.CanonicalBlockRoot
+				q.finalizedBlockRoot = response.FinalizedBlockRoot
 			}
 		}
 	}

@@ -79,7 +79,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	validData := true
 	depositInput, err := helpers.DecodeDepositInput(depositData)
 	if err != nil {
-		log.Errorf("Could not decode deposit input %v", err)
+		log.Debugf("Could not decode deposit input %v", err)
 		validData = false
 	}
 
@@ -110,7 +110,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		log.WithFields(logrus.Fields{
 			"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 			"merkleTreeIndex": index,
-		}).Info("Deposit registered from deposit contract")
+		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
 	} else {
 		log.WithFields(logrus.Fields{
