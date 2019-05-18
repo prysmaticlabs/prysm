@@ -138,7 +138,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 			}).Info("Not yet included in state...")
 			continue
 		}
-		if status.Status.ActivationEpoch == (params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch) {
+		if status.Status.ActivationEpoch == (params.BeaconConfig().FarFutureEpoch) {
 			log.WithFields(logrus.Fields{
 				"publicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
 				"status":                    status.Status.Status.String(),
@@ -165,7 +165,7 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	defer span.End()
 	head, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		return params.BeaconConfig().GenesisSlot, err
+		return 0, err
 	}
 	return head.Slot, nil
 }
@@ -177,7 +177,7 @@ func (v *validator) NextSlot() <-chan uint64 {
 
 // SlotDeadline is the start time of the next slot.
 func (v *validator) SlotDeadline(slot uint64) time.Time {
-	secs := (slot + 1 - params.BeaconConfig().GenesisSlot) * params.BeaconConfig().SecondsPerSlot
+	secs := (slot + 1) * params.BeaconConfig().SecondsPerSlot
 	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(time.Duration(secs) * time.Second)
 }
 
@@ -225,12 +225,12 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 			} else {
 				attesterSlot = assignment.Slot
 			}
-			lFields["attesterSlot"] = attesterSlot - params.BeaconConfig().GenesisSlot
+			lFields["attesterSlot"] = attesterSlot
 			lFields["proposerSlot"] = "Not proposing"
 			lFields["shard"] = assignment.Shard
 
 			if assignment.IsProposer {
-				lFields["proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
+				lFields["proposerSlot"] = proposerSlot
 			}
 			log.WithFields(lFields).Info("New assignment")
 

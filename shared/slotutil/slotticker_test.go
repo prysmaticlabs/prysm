@@ -3,8 +3,6 @@ package slotutil
 import (
 	"testing"
 	"time"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestSlotTicker(t *testing.T) {
@@ -43,15 +41,15 @@ func TestSlotTicker(t *testing.T) {
 	// Tick once.
 	tick <- time.Now()
 	slot := <-ticker.C()
-	if slot != 1+params.BeaconConfig().GenesisSlot {
-		t.Fatalf("Expected %d, got %d", params.BeaconConfig().GenesisSlot+1, slot)
+	if slot != 1 {
+		t.Fatalf("Expected %d, got %d", 1, slot)
 	}
 
 	// Tick twice.
 	tick <- time.Now()
 	slot = <-ticker.C()
-	if slot != 2+params.BeaconConfig().GenesisSlot {
-		t.Fatalf("Expected %d, got %d", params.BeaconConfig().GenesisSlot+2, slot)
+	if slot != 2 {
+		t.Fatalf("Expected %d, got %d", 2, slot)
 	}
 }
 
@@ -91,14 +89,14 @@ func TestSlotTickerGenesis(t *testing.T) {
 	// Tick once.
 	tick <- time.Now()
 	slot := <-ticker.C()
-	if slot != params.BeaconConfig().GenesisSlot {
-		t.Fatalf("Expected %d, got %d", params.BeaconConfig().GenesisSlot, slot)
+	if slot != 0 {
+		t.Fatalf("Expected %d, got %d", 0, slot)
 	}
 
 	// Tick twice.
 	tick <- time.Now()
 	slot = <-ticker.C()
-	if slot != 1+params.BeaconConfig().GenesisSlot {
-		t.Fatalf("Expected %d, got %d", params.BeaconConfig().GenesisSlot+1, slot)
+	if slot != 1 {
+		t.Fatalf("Expected %d, got %d", 1, slot)
 	}
 }

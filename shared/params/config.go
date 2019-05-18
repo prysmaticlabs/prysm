@@ -42,8 +42,6 @@ type BeaconChainConfig struct {
 	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
 
 	// Initial value constants.
-	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields.
-	GenesisEpoch            uint64   // GenesisEpoch is used to initialize epoch.
 	FarFutureEpoch          uint64   // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
@@ -167,8 +165,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ForkChoiceBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
-	GenesisSlot:             1 << 63,
-	GenesisEpoch:            1 << 63 / 64,
 	FarFutureEpoch:          1<<64 - 1,
 	ZeroHash:                [32]byte{},
 	BLSWithdrawalPrefixByte: byte(0),
@@ -274,7 +270,6 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.TargetCommitteeSize = 1
 	demoConfig.DepositsForChainStart = 8
 	demoConfig.SlotsPerEpoch = 8
-	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3.2 * 1e9
 	demoConfig.EjectionBalance = 3.175 * 1e9

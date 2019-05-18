@@ -74,7 +74,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	infoRes, err := v.attesterClient.AttestationDataAtSlot(ctx, infoReq)
 	if err != nil {
 		log.Errorf("Could not fetch necessary info to produce attestation at slot %d: %v",
-			slot-params.BeaconConfig().GenesisSlot, err)
+			slot, err)
 		return
 	}
 
@@ -129,7 +129,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 
 	log.WithFields(logrus.Fields{
 		"shard":     attData.Shard,
-		"slot":      slot - params.BeaconConfig().GenesisSlot,
+		"slot":      slot,
 		"validator": truncatedPk,
 	}).Info("Attesting to beacon chain head...")
 
@@ -140,16 +140,16 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	}
 	log.WithFields(logrus.Fields{
 		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attData.BeaconBlockRootHash32)),
-		"slot":      attData.Slot - params.BeaconConfig().GenesisSlot,
+		"slot":      attData.Slot,
 		"shard":     attData.Shard,
 		"validator": truncatedPk,
 	}).Info("Attested latest head")
 	span.AddAttributes(
-		trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)),
+		trace.Int64Attribute("slot", int64(slot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationHash)),
 		trace.Int64Attribute("shard", int64(attData.Shard)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32)),
-		trace.Int64Attribute("justifiedEpoch", int64(attData.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)),
+		trace.Int64Attribute("justifiedEpoch", int64(attData.JustifiedEpoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
 }
