@@ -529,7 +529,6 @@ func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 			setIndices = append(setIndices[:i], setIndices[i+1:]...)
 		}
 	}
-
 	return setIndices, nil
 }
 
