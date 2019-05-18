@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"reflect"
 	"strings"
 	"testing"
@@ -1826,4 +1827,138 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
 	}
+}
+
+func TestProcessBeaconTransfers_ThresholdReached(t *testing.T) {
+	transfers := make([]*pb.Transfer, params.BeaconConfig().MaxTransfers+1)
+	registry := []*pb.Validator{}
+	state := &pb.BeaconState{
+		ValidatorRegistry: registry,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: transfers,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"number of transfers (%d) exceeds allowed threshold of %d",
+		params.BeaconConfig().MaxTransfers+1,
+		params.BeaconConfig().MaxTransfers,
+	)
+
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
+	testConfig := params.BeaconConfig()
+	testConfig.MaxTransfers = 1
+	params.OverrideBeaconConfig(testConfig)
+	registry := []*pb.Validator{
+		{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
+	state := &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: registry,
+		Balances: balances,
+	}
+	transfers := []*pb.Transfer{
+		{
+			Fee: params.BeaconConfig().MaxDepositAmount+1,
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: transfers,
+		},
+	}
+	want := fmt.Sprintf(
+		"expected sender balance %d >= %d",
+		balances[0],
+		transfers[0].Fee,
+	)
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	block.Body.Transfers = []*pb.Transfer{
+		{
+			Fee: params.BeaconConfig().MinDepositAmount,
+			Slot: state.Slot+1,
+		},
+	}
+	want = fmt.Sprintf(
+		"expected beacon state slot %d == transfer slot %d",
+        state.Slot,
+        block.Body.Transfers[0].Slot,
+	)
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	state.ValidatorRegistry[0].WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
+	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().GenesisEpoch
+	block.Body.Transfers = []*pb.Transfer{
+		{
+			Fee: params.BeaconConfig().MinDepositAmount,
+			Amount: params.BeaconConfig().MaxDepositAmount,
+			Slot: state.Slot,
+		},
+	}
+	want = "over max transfer"
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	state.ValidatorRegistry[0].WithdrawableEpoch = params.BeaconConfig().GenesisEpoch
+	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
+	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
+	pubKey := []byte("B")
+	hashed := hashutil.Hash(pubKey)
+	buf = append(buf, hashed[:]...)
+	state.ValidatorRegistry[0].WithdrawalCredentials = buf
+	block.Body.Transfers = []*pb.Transfer{
+		{
+			Fee: params.BeaconConfig().MinDepositAmount,
+			Amount: params.BeaconConfig().MinDepositAmount,
+			Slot: state.Slot,
+			Pubkey: []byte("A"),
+		},
+	}
+	want = "invalid public key"
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBeaconTransfers_OK(t *testing.T) {
+
 }

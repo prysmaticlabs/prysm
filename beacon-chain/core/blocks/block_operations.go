@@ -919,14 +919,14 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	// Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE.
 	senderNotActivationEligible := sender.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch
 	senderNotWithdrawn := helpers.CurrentEpoch(beaconState) >= sender.WithdrawableEpoch
-	overMaxTransfer := transfer.Amount + transfer.Fee + params.BeaconConfig().MaxEffectiveBalance <= senderBalance
+	underMaxTransfer := transfer.Amount + transfer.Fee + params.BeaconConfig().MaxEffectiveBalance <= senderBalance
 
-	if !(senderNotActivationEligible || senderNotWithdrawn || overMaxTransfer) {
+	if !(senderNotActivationEligible || senderNotWithdrawn || underMaxTransfer) {
 		return fmt.Errorf(
 			"expected activation eligiblity: false or withdrawn: false or over max transfer: false, received %v %v %v",
 			senderNotActivationEligible,
 			senderNotWithdrawn,
-			overMaxTransfer,
+			underMaxTransfer,
 		)
 	}
 	// Verify that the pubkey is valid.
