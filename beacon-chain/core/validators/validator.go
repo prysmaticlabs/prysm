@@ -11,7 +11,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -146,17 +145,10 @@ func AttestingValidatorIndices(
 //         index = validator_pubkeys.index(pubkey)
 //         increase_balance(state, index, amount)
 func ProcessDeposit(state *pb.BeaconState, deposit *pb.Deposit) (*pb.BeaconState, error) {
-	depositDataBuf32, err := hashutil.HashProto(deposit.Data)
-	if err != nil {
-		return  nil, fmt.Errorf("Hashing of deposit.Data failed")
-	}
-  
-	depositDataBuf := make([]byte, 0, len(depositDataBuf32))
-	copy(depositDataBuf, depositDataBuf32[:])
-  
+	
 	if !trieutil.VerifyMerkleProof(
 		state.LatestEth1Data.DepositRoot,
-		depositDataBuf,
+		deposit.Data,
 		int(deposit.Index),
 		deposit.Proof) {
 		return nil, fmt.Errorf("merkle proof verification failed")

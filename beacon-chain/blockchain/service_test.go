@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -174,9 +175,27 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 		deposits[i] = &pb.Deposit{
 			DepositData: depositData,
 			Index:       uint64(i),
+			Data: 		&pb.DepositData{
+						Pubkey: []byte{1, 2, 3},
+						},
 		}
 		privKeys[i] = priv
 	}
+	depositDatas := make([][]byte, 0, numDeposits)
+    for i := 0; i < len(deposits); i++ { 	
+		depositDatas = append(depositDatas, deposits[i].Data.Pubkey)
+	}
+	trie, err := trieutil.GenerateTrieFromItems(depositDatas, numDeposits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < len(deposits); i++ { 
+		proof, err := trie.MerkleProof(i)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deposits[i].Proof = proof
+	}    
 	return deposits, privKeys
 }
 
