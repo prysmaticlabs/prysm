@@ -1988,12 +1988,12 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 	}
 	transfers := []*pb.Transfer{
 		{
-			Sender: 0,
+			Sender:    0,
 			Recipient: 1,
-			Fee:    params.BeaconConfig().MinDepositAmount,
-			Amount: params.BeaconConfig().MinDepositAmount,
-			Slot:   state.Slot,
-			Pubkey: []byte("A"),
+			Fee:       params.BeaconConfig().MinDepositAmount,
+			Amount:    params.BeaconConfig().MinDepositAmount,
+			Slot:      state.Slot,
+			Pubkey:    []byte("A"),
 		},
 	}
 	block := &pb.BeaconBlock{
