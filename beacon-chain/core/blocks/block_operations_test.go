@@ -683,7 +683,6 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Slot = params.BeaconConfig().GenesisSlot+10*params.BeaconConfig().SlotsPerEpoch
 
 	attestationSlot, err := helpers.AttestationDataSlot(beaconState, attestations[0].Data)
 	if err != nil {
@@ -705,11 +704,14 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
+func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + 5,
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				Crosslink: &pb.Crosslink{
+					Shard: 0,
+				},
 			},
 		},
 	}
@@ -718,84 +720,25 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 5 + 2*params.BeaconConfig().SlotsPerEpoch,
+	deposits, _ := setupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	attestationSlot, err := helpers.AttestationDataSlot(beaconState, attestations[0].Data)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	want := fmt.Sprintf(
-		"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
-		5,
-		params.BeaconConfig().SlotsPerEpoch,
-		5+2*params.BeaconConfig().SlotsPerEpoch,
+		"attestation slot %d + inclusion delay %d > state slot %d",
+		attestationSlot,
+		params.BeaconConfig().MinAttestationInclusionDelay,
+		beaconState.Slot,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T) {
-	attestations := []*pb.Attestation{
-		{
-			Data: &pb.AttestationData{
-				Slot:           params.BeaconConfig().GenesisSlot + 152,
-				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-	state := &pb.BeaconState{
-		Slot:                  params.BeaconConfig().GenesisSlot + 158,
-		CurrentJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
-	}
-
-	want := fmt.Sprintf(
-		"expected attestation.JustifiedEpoch == state.CurrentJustifiedEpoch, received %d == %d",
-		2,
-		1,
-	)
-	if _, err := blocks.ProcessBlockAttestations(
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *testing.T) {
-	attestations := []*pb.Attestation{
-		{
-			Data: &pb.AttestationData{
-				Slot:           params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
-				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 3,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
-		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
-	}
-
-	want := fmt.Sprintf(
-		"expected attestation.JustifiedEpoch == state.PreviousJustifiedEpoch, received %d == %d",
-		3,
-		2,
-	)
-	if _, err := blocks.ProcessBlockAttestations(
-		state,
+		beaconState,
 		block,
 		false,
 	); !strings.Contains(err.Error(), want) {
@@ -804,166 +747,12 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 }
 
 func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
-	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-
-	// If attestation.latest_cross_link_root != state.latest_crosslinks[shard].shard_block_root
-	// AND
-	// attestation.data.shard_block_root != state.latest_crosslinks[shard].shard_block_root
-	// the attestation should be invalid.
-	stateLatestCrosslinks := []*pb.Crosslink{
-		{
-			CrosslinkDataRootHash32: []byte{1},
-		},
-	}
-	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 70,
-		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
-		LatestBlockRoots:       blockRoots,
-		PreviousJustifiedRoot:  blockRoots[0],
-		LatestCrosslinks:       stateLatestCrosslinks,
-	}
-	attestations := []*pb.Attestation{
-		{
-			Data: &pb.AttestationData{
-				Shard:                    0,
-				Slot:                     params.BeaconConfig().GenesisSlot + 20,
-				JustifiedBlockRootHash32: blockRoots[0],
-				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{2}},
-				CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
-				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-	want := fmt.Sprintf(
-		"incoming attestation does not match crosslink in state for shard %d",
-		attestations[0].Data.Shard,
-	)
-	if _, err := blocks.ProcessBlockAttestations(
-
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
 }
 
 func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.T) {
-	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-	stateLatestCrosslinks := []*pb.Crosslink{
-		{
-			CrosslinkDataRootHash32: []byte{1},
-		},
-	}
-	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 70,
-		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
-		LatestBlockRoots:       blockRoots,
-		LatestCrosslinks:       stateLatestCrosslinks,
-		PreviousJustifiedRoot:  blockRoots[0],
-	}
-	attestations := []*pb.Attestation{
-		{
-			Data: &pb.AttestationData{
-				Shard:                    0,
-				Slot:                     params.BeaconConfig().GenesisSlot + 20,
-				JustifiedBlockRootHash32: blockRoots[0],
-				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-				CrosslinkDataRoot:        []byte{1},
-				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-	want := fmt.Sprintf(
-		"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
-		params.BeaconConfig().ZeroHash[:],
-		[]byte{1},
-	)
-	if _, err := blocks.ProcessBlockAttestations(
-
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
 }
 
 func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
-	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-	stateLatestCrosslinks := []*pb.Crosslink{
-		{
-			CrosslinkDataRootHash32: []byte{1},
-		},
-	}
-	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 70,
-		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
-		LatestBlockRoots:       blockRoots,
-		LatestCrosslinks:       stateLatestCrosslinks,
-		PreviousJustifiedRoot:  blockRoots[0],
-	}
-	att1 := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Shard:                    0,
-			Slot:                     params.BeaconConfig().GenesisSlot + 20,
-			JustifiedBlockRootHash32: blockRoots[0],
-			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
-			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-		},
-		AggregationBitfield: []byte{1},
-		CustodyBitfield:     []byte{1},
-	}
-	attestations := []*pb.Attestation{att1}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-	newState, err := blocks.ProcessBlockAttestations(
-
-		state,
-		block,
-		false,
-	)
-	pendingAttestations := newState.LatestAttestations
-	if err != nil {
-		t.Fatalf("Could not produce pending attestations: %v", err)
-	}
-	if !reflect.DeepEqual(pendingAttestations[0].Data, att1.Data) {
-		t.Errorf(
-			"Did not create pending attestation correctly with inner data, wanted %v, received %v",
-			att1.Data,
-			pendingAttestations[0].Data,
-		)
-	}
-	if pendingAttestations[0].InclusionSlot != params.BeaconConfig().GenesisSlot+70 {
-		t.Errorf(
-			"Pending attestation not included at correct slot: wanted %v, received %v",
-			64,
-			pendingAttestations[0].InclusionSlot,
-		)
-	}
 }
 
 func TestVerifyIndexedAttestation_OK(t *testing.T) {
