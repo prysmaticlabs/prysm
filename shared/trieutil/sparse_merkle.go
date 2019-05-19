@@ -21,14 +21,8 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	if len(items) == 0 {
 		return nil, errors.New("no items provided to generate Merkle trie")
 	}
-	leaves := make([][]byte, len(items))
+	leaves := items
 	emptyNodes := generateEmptyNodes(depth)
-	// We then construct the leaves of the trie by hashing every
-	// value in the items slice.
-	for i, val := range items {
-		h := hashutil.Hash(val)
-		leaves[i] = h[:]
-	}
 	// Append the leaves to the branches.
 	branches := [][][]byte{leaves}
 	for i := 0; i < depth-1; i++ {
@@ -47,8 +41,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
 func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
-	leaf := hashutil.Hash(item)
-	node := leaf[:]
+	node := item
 	branchIndices := BranchIndices(merkleIndex, len(proof))
 	for i := 0; i < len(proof); i++ {
 		if branchIndices[i]%2 == 0 {
