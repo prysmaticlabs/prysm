@@ -666,7 +666,10 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + 5,
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				Crosslink: &pb.Crosslink{
+					Shard: 0,
+				},
 			},
 		},
 	}
@@ -675,18 +678,26 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 5,
+	deposits, _ := setupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot = params.BeaconConfig().GenesisSlot+10*params.BeaconConfig().SlotsPerEpoch
+
+	attestationSlot, err := helpers.AttestationDataSlot(beaconState, attestations[0].Data)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	want := fmt.Sprintf(
-		"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
-		5,
+        "attestation slot %d + inclusion delay %d > state slot %d",
+		attestationSlot,
 		params.BeaconConfig().MinAttestationInclusionDelay,
-		5,
+		beaconState.Slot,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
-		state,
+		beaconState,
 		block,
 		false,
 	); !strings.Contains(err.Error(), want) {
