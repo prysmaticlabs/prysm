@@ -1,4 +1,4 @@
-## compiled with v0.1.0-beta.8 ##
+## compiled with v0.1.0-beta.9 ##
 DEPOSIT_TREE_DEPTH: constant(uint256) = 32
 TWO_TO_POWER_OF_TREE_DEPTH: constant(uint256) = 4294967296  # 2**32
 SECONDS_PER_DAY: constant(uint256) = 86400
@@ -144,7 +144,7 @@ def deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: byt
 
     if deposit_amount >= FULL_DEPOSIT_AMOUNT:
         self.full_deposit_count += 1
-        if self.full_deposit_count == CHAIN_START_FULL_DEPOSIT_THRESHOLD:
+        if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
             timestamp_day_boundary: uint256 = (
                     as_unitless_number(block.timestamp) -
                     as_unitless_number(block.timestamp) % SECONDS_PER_DAY +
