@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -690,7 +691,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	}
 
 	want := fmt.Sprintf(
-        "attestation slot %d + inclusion delay %d > state slot %d",
+		"attestation slot %d + inclusion delay %d > state slot %d",
 		attestationSlot,
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot,
@@ -725,7 +726,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4+params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
 
 	want := fmt.Sprintf(
 		"expected target epoch %d == %d or %d",
@@ -747,7 +748,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		{
 			Data: &pb.AttestationData{
 				TargetEpoch: params.BeaconConfig().GenesisEpoch,
-				SourceEpoch: params.BeaconConfig().GenesisEpoch+1,
+				SourceEpoch: params.BeaconConfig().GenesisEpoch + 1,
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -791,7 +792,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
-        beaconState.CurrentJustifiedRoot,
+		beaconState.CurrentJustifiedRoot,
 		attestations[0].Data.SourceRoot,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
@@ -808,7 +809,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		{
 			Data: &pb.AttestationData{
 				TargetEpoch: params.BeaconConfig().GenesisEpoch,
-				SourceEpoch: params.BeaconConfig().GenesisEpoch+1,
+				SourceEpoch: params.BeaconConfig().GenesisEpoch + 1,
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -825,7 +826,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch+params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousCrosslinks = []*pb.Crosslink{
 		{
 			Shard: 0,
@@ -865,9 +866,139 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				SourceEpoch: params.BeaconConfig().GenesisEpoch,
+				SourceRoot:  []byte("tron-sucks"),
+				Crosslink: &pb.Crosslink{
+					Shard: 0,
+					Epoch: params.BeaconConfig().GenesisEpoch + 1,
+				},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	deposits, _ := setupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.CurrentCrosslinks = []*pb.Crosslink{
+		{
+			Shard: 0,
+			Epoch: params.BeaconConfig().GenesisEpoch,
+		},
+	}
+	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+
+	want := fmt.Sprintf(
+		"expected crosslink epoch %d, received %d",
+		params.BeaconConfig().GenesisEpoch,
+		attestations[0].Data.Crosslink.Epoch,
+	)
+	if _, err := blocks.ProcessBlockAttestations(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	block.Body.Attestations[0].Data.Crosslink.Epoch = params.BeaconConfig().GenesisEpoch
+	want = "mismatched parent crosslink root"
+	if _, err := blocks.ProcessBlockAttestations(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
+	block.Body.Attestations[0].Data.Crosslink.DataRoot = encoded[:]
+
+	want = fmt.Sprintf("expected data root %#x == ZERO_HASH", encoded)
+	if _, err := blocks.ProcessBlockAttestations(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
 }
 
 func TestProcessBlockAttestations_OK(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				SourceEpoch: params.BeaconConfig().GenesisEpoch,
+				SourceRoot:  []byte("tron-sucks"),
+				Crosslink: &pb.Crosslink{
+					Shard: 0,
+					Epoch: params.BeaconConfig().GenesisEpoch,
+				},
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			CustodyBitfield:     []byte{},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: []byte(strconv.Itoa(i)),
+		}
+		balance := params.BeaconConfig().MaxDepositAmount
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.CurrentCrosslinks = []*pb.Crosslink{
+		{
+			Shard: 0,
+			Epoch: params.BeaconConfig().GenesisEpoch,
+		},
+	}
+	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+
+	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
+	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
+
+	if _, err := blocks.ProcessBlockAttestations(
+		beaconState,
+		block,
+		false,
+	); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
 }
 
 func TestVerifyIndexedAttestation_OK(t *testing.T) {

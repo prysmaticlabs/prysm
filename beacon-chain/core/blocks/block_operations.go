@@ -544,26 +544,27 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 	if err != nil {
 		return nil, err
 	}
-	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
-	if err != nil {
-		return nil, err
-	}
-	cb1iMap := make(map[uint64]bool)
-	for _, in := range cb1i {
-		cb1iMap[in] = true
-	}
-	cb0i := []uint64{}
-	for _, index := range attI {
-		_, ok := cb1iMap[index]
-		if !ok {
-			cb0i = append(cb0i, index)
-		}
-	}
+	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
 	inAtt := &pb.IndexedAttestation{
 		Data:                attestation.Data,
 		Signature:           attestation.Signature,
-		CustodyBit_0Indices: cb0i,
-		CustodyBit_1Indices: cb1i,
+		CustodyBit_0Indices: []uint64{},
+		CustodyBit_1Indices: []uint64{},
+	}
+	if len(cb1i) > 0 {
+		cb1iMap := make(map[uint64]bool)
+		for _, in := range cb1i {
+			cb1iMap[in] = true
+		}
+		cb0i := []uint64{}
+		for _, index := range attI {
+			_, ok := cb1iMap[index]
+			if !ok {
+				cb0i = append(cb0i, index)
+			}
+		}
+		inAtt.CustodyBit_0Indices = cb0i
+		inAtt.CustodyBit_1Indices = cb1i
 	}
 	return inAtt, nil
 }
@@ -612,7 +613,7 @@ func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttes
 
 	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
 	if len(custodyBitIntersection) != 0 {
-		return false, fmt.Errorf("custody bit indice should not contain duplicates, received: %v", custodyBitIntersection)
+		return false, fmt.Errorf("custody bit indices should not contain duplicates, received: %v", custodyBitIntersection)
 	}
 
 	// To be removed in phase 1
