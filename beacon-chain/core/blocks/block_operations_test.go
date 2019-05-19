@@ -742,7 +742,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_FFGDataMismatches(t *testing.T) {
+func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -770,6 +770,7 @@ func TestProcessBlockAttestations_FFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
+	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -784,12 +785,89 @@ func TestProcessBlockAttestations_FFGDataMismatches(t *testing.T) {
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
+
+	block.Body.Attestations[0].Data.SourceEpoch = helpers.CurrentEpoch(beaconState)
+	block.Body.Attestations[0].Data.SourceRoot = []byte{}
+
+	want = fmt.Sprintf(
+		"expected source root %#x, received %#x",
+        beaconState.CurrentJustifiedRoot,
+		attestations[0].Data.SourceRoot,
+	)
+	if _, err := blocks.ProcessBlockAttestations(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
 }
 
-func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.T) {
+func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				SourceEpoch: params.BeaconConfig().GenesisEpoch+1,
+				Crosslink: &pb.Crosslink{
+					Shard: 0,
+				},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	deposits, _ := setupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch+params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.PreviousCrosslinks = []*pb.Crosslink{
+		{
+			Shard: 0,
+		},
+	}
+	beaconState.PreviousJustifiedRoot = []byte("tron-sucks")
+	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
+
+	want := fmt.Sprintf(
+		"expected source epoch %d, received %d",
+		helpers.PrevEpoch(beaconState),
+		attestations[0].Data.SourceEpoch,
+	)
+	if _, err := blocks.ProcessBlockAttestations(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+
+	block.Body.Attestations[0].Data.SourceEpoch = helpers.PrevEpoch(beaconState)
+	block.Body.Attestations[0].Data.SourceRoot = []byte{}
+
+	want = fmt.Sprintf(
+		"expected source root %#x, received %#x",
+		beaconState.PreviousJustifiedRoot,
+		attestations[0].Data.SourceRoot,
+	)
+	if _, err := blocks.ProcessBlockAttestations(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
 }
 
-func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
+func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
+}
+
+func TestProcessBlockAttestations_OK(t *testing.T) {
 }
 
 func TestVerifyIndexedAttestation_OK(t *testing.T) {
