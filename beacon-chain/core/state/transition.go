@@ -12,7 +12,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -122,8 +121,8 @@ func ProcessBlock(
 	if block.Slot != state.Slot {
 		return nil, fmt.Errorf(
 			"block.slot != state.slot, block.slot = %d, state.slot = %d",
-			block.Slot-params.BeaconConfig().GenesisSlot,
-			state.Slot-params.BeaconConfig().GenesisSlot,
+			block.Slot,
+			state.Slot,
 		)
 	}
 

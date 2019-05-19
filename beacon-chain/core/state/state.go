@@ -67,7 +67,7 @@ func GenesisBeaconState(
 	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.Crosslink{
-			Epoch:                   params.BeaconConfig().GenesisEpoch,
+			Epoch:                   0,
 			CrosslinkDataRootHash32: zeroHash,
 		}
 	}
@@ -101,36 +101,36 @@ func GenesisBeaconState(
 
 	state := &pb.BeaconState{
 		// Misc fields.
-		Slot:        params.BeaconConfig().GenesisSlot,
+		Slot:        0,
 		GenesisTime: genesisTime,
 
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			Epoch:           params.BeaconConfig().GenesisEpoch,
+			Epoch:           0,
 		},
 
 		// Validator registry fields.
 		ValidatorRegistry:            validatorRegistry,
 		Balances:                     latestBalances,
-		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
+		ValidatorRegistryUpdateEpoch: 0,
 
 		// Randomness and committees.
 		LatestRandaoMixes:           latestRandaoMixes,
 		PreviousShufflingStartShard: params.BeaconConfig().GenesisStartShard,
 		CurrentShufflingStartShard:  params.BeaconConfig().GenesisStartShard,
-		PreviousShufflingEpoch:      params.BeaconConfig().GenesisEpoch,
-		CurrentShufflingEpoch:       params.BeaconConfig().GenesisEpoch,
+		PreviousShufflingEpoch:      0,
+		CurrentShufflingEpoch:       0,
 		PreviousShufflingSeedHash32: zeroHash,
 		CurrentShufflingSeedHash32:  zeroHash,
 
 		// Finality.
-		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		PreviousJustifiedEpoch: 0,
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  params.BeaconConfig().GenesisEpoch,
+		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
 		JustificationBitfield:  0,
-		FinalizedEpoch:         params.BeaconConfig().GenesisEpoch,
+		FinalizedEpoch:         0,
 		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
 
 		// Recent state.
@@ -181,7 +181,7 @@ func GenesisBeaconState(
 			}
 		}
 	}
-	activeValidators := helpers.ActiveValidatorIndices(state, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(state, 0)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)
