@@ -725,17 +725,13 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	attestationSlot, err := helpers.AttestationDataSlot(beaconState, attestations[0].Data)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4+params.BeaconConfig().MinAttestationInclusionDelay
 
 	want := fmt.Sprintf(
-		"attestation slot %d + inclusion delay %d > state slot %d",
-		attestationSlot,
-		params.BeaconConfig().MinAttestationInclusionDelay,
-		beaconState.Slot,
+		"expected target epoch %d == %d or %d",
+		attestations[0].Data.TargetEpoch,
+		helpers.PrevEpoch(beaconState),
+		helpers.CurrentEpoch(beaconState),
 	)
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
