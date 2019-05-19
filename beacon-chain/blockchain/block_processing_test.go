@@ -83,11 +83,12 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:            2,
 		ParentBlockRoot: parentRoot[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte("a"),
-			BlockRoot:   []byte("b"),
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockRoot:   []byte("b"),
+			},
 		},
-		Body: &pb.BeaconBlockBody{},
 	}
 
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
@@ -142,11 +143,11 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		Slot:            beaconState.Slot,
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentHash[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte("a"),
-			BlockRoot:   []byte("b"),
-		},
 		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockRoot:   []byte("b"),
+			},
 			RandaoReveal: randaoReveal,
 			Attestations: nil,
 		},
@@ -204,11 +205,11 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		Slot:            beaconState.Slot + 4,
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentHash[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte("a"),
-			BlockRoot:   []byte("b"),
-		},
 		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockRoot:   []byte("b"),
+			},
 			RandaoReveal: []byte{},
 			Attestations: nil,
 		},
@@ -260,11 +261,11 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		Slot:            beaconState.Slot,
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentHash[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte("a"),
-			BlockRoot:   []byte("b"),
-		},
 		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockRoot:   []byte("b"),
+			},
 			RandaoReveal: []byte{},
 			Attestations: []*pb.Attestation{
 				{
@@ -339,6 +340,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		Slot:            beaconState.Slot,
 		ParentBlockRoot: parentHash[:],
 		Body: &pb.BeaconBlockBody{
+			Eth1Data:     &pb.Eth1Data{},
 			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
 		},
 	}
@@ -385,6 +387,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		StateRoot:       []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
 		ParentBlockRoot: parentHash[:],
 		Body: &pb.BeaconBlockBody{
+			Eth1Data:     &pb.Eth1Data{},
 			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
 		},
 	}
@@ -471,11 +474,11 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		Slot:            currentSlot + 1,
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentHash[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte("a"),
-			BlockRoot:   []byte("b"),
-		},
 		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockRoot:   []byte("b"),
+			},
 			RandaoReveal: randaoReveal,
 			Deposits:     pendingDeposits,
 		},
@@ -607,6 +610,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 			StateRoot:       stateRoot[:],
 			ParentBlockRoot: parentHash[:],
 			Body: &pb.BeaconBlockBody{
+				Eth1Data:     &pb.Eth1Data{},
 				RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
 			},
 		}
@@ -657,6 +661,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		ParentBlockRoot: parentHash[:],
 		StateRoot:       stateRoot[:],
 		Body: &pb.BeaconBlockBody{
+			Eth1Data:     &pb.Eth1Data{},
 			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
 		},
 	}
@@ -691,6 +696,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		ParentBlockRoot: parentHash[:],
 		StateRoot:       stateRoot[:],
 		Body: &pb.BeaconBlockBody{
+			Eth1Data:     &pb.Eth1Data{},
 			RandaoReveal: createRandaoReveal(t, computedState, privKeys),
 		},
 	}
@@ -758,11 +764,11 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		Slot:            currentSlot,
 		StateRoot:       stateRoot[:],
 		ParentBlockRoot: parentRoot[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte("a"),
-			BlockRoot:   []byte("b"),
-		},
 		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockRoot:   []byte("b"),
+			},
 			RandaoReveal: randaoReveal,
 			Attestations: []*pb.Attestation{{
 				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

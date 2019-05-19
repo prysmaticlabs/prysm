@@ -34,7 +34,6 @@ import (
 func VerifyProposerSignature(
 	_ *pb.BeaconBlock,
 ) error {
-
 	return nil
 }
 
@@ -43,30 +42,20 @@ func VerifyProposerSignature(
 // into the beacon state.
 //
 // Official spec definition of ProcessEth1Data
-//   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
-//   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
-//   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
+//   state.eth1_data_votes.append(body.eth1_data)
+//   if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
+//     state.latest_eth1_data = body.eth1_data
 func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
-	var eth1DataVoteAdded bool
-
-	for idx := range beaconState.Eth1DataVotes {
-		if proto.Equal(beaconState.Eth1DataVotes[idx].Eth1Data, block.Eth1Data) {
-			beaconState.Eth1DataVotes[idx].VoteCount++
-			eth1DataVoteAdded = true
-			break
+	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, block.Body.Eth1Data)
+	numVotes := uint64(0)
+	for _, vote := range beaconState.Eth1DataVotes {
+		if proto.Equal(vote, block.Body.Eth1Data) {
+			numVotes++
 		}
 	}
-
-	if !eth1DataVoteAdded {
-		beaconState.Eth1DataVotes = append(
-			beaconState.Eth1DataVotes,
-			&pb.Eth1DataVote{
-				Eth1Data:  block.Eth1Data,
-				VoteCount: 1,
-			},
-		)
+	if numVotes*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
+		beaconState.LatestEth1Data = block.Body.Eth1Data
 	}
-
 	return beaconState
 }
 
