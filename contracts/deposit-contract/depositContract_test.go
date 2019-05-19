@@ -77,7 +77,7 @@ func TestRegister_Below1ETH(t *testing.T) {
 	}
 
 	testAccount.txOpts.Value = amountLessThan1Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{}, []byte{}, []byte{})
 	if err == nil {
 		t.Error("Validator registration should have failed with insufficient deposit")
 	}
@@ -91,7 +91,7 @@ func TestRegister_Above32Eth(t *testing.T) {
 	}
 
 	testAccount.txOpts.Value = amount33Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{}, []byte{}, []byte{})
 	if err == nil {
 		t.Error("Validator registration should have failed with more than asked deposit amount")
 	}
@@ -105,17 +105,17 @@ func TestValidatorRegister_OK(t *testing.T) {
 	}
 	testAccount.txOpts.Value = amount32Eth
 
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'}, []byte{'B'}, []byte{'C'})
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'B'})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'B'}, []byte{'B'}, []byte{'C'})
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'C'})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'C'}, []byte{'B'}, []byte{'C'})
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
@@ -166,7 +166,7 @@ func TestChainStart_OK(t *testing.T) {
 	testAccount.txOpts.Value = amount32Eth
 
 	for i := 0; i < 8; i++ {
-		_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
+		_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'}, []byte{'B'}, []byte{'C'})
 		if err != nil {
 			t.Errorf("Validator registration failed: %v", err)
 		}
@@ -197,7 +197,7 @@ func TestDrain(t *testing.T) {
 	}
 	testAccount.txOpts.Value = amount32Eth
 
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'}, []byte{'B'}, []byte{'C'})
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}

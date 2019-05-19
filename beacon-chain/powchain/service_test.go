@@ -280,7 +280,7 @@ func TestInitDataFromContract_OK(t *testing.T) {
 	}
 
 	testAcc.txOpts.Value = amount32Eth
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, []byte{'a'}); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, []byte{'a'}, []byte{'a'}, []byte{'a'}); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 	testAcc.backend.Commit()

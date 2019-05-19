@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -21,7 +20,6 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -211,13 +209,9 @@ func main() {
 				continue
 			}
 
-			serializedData := new(bytes.Buffer)
-			if err := ssz.Encode(serializedData, data); err != nil {
-				log.Errorf("could not serialize deposit data: %v", err)
-			}
-
 			for i := int64(0); i < numberOfDeposits; i++ {
-				tx, err := depositContract.Deposit(txOps, serializedData.Bytes())
+				//TODO(#2658): Use actual compressed pubkeys in G1 here
+				tx, err := depositContract.Deposit(txOps, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession)
 				if err != nil {
 					log.Error("unable to send transaction to contract")
 				}
