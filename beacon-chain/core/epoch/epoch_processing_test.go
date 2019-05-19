@@ -925,18 +925,13 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	s := buildState(params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch)
 	ce := helpers.CurrentEpoch(s)
 	ne := ce + 1
-	s.Eth1DataVotes = []*pb.Eth1DataVote{{VoteCount: 100}}
+	s.Eth1DataVotes = []*pb.Eth1Data{}
 	s.Balances[0] = 29 * 1e9
 	s.LatestSlashedBalances[ce] = 100
 	s.LatestRandaoMixes[ce] = []byte{'A'}
 	newS, err := ProcessFinalUpdates(s)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	// Verify we can reset ETH1 data votes.
-	if len(newS.Eth1DataVotes) != 0 {
-		t.Errorf("Eth1 data votes didnt get reset, got %d", len(newS.Eth1DataVotes))
 	}
 
 	// Verify effective balance is correctly updated.

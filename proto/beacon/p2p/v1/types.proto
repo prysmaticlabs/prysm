@@ -42,7 +42,7 @@ message BeaconState {
 
   // Ethereum 1.0 chain data [6001-7000]
   Eth1Data latest_eth1_data = 6001;
-  repeated Eth1DataVote eth1_data_votes = 6002;
+  repeated Eth1Data eth1_data_votes = 6002;
   uint64 deposit_index = 6003;
 
   // Deprecated [8001-9000]
@@ -184,7 +184,7 @@ message BeaconBlock {
   // Deprecated
   // TODO(2307): Remove deprecated fields
   bytes randao_reveal = 1003;
-  Eth1Data eth1_data = 1004;
+  Eth1Data eth1_data = 1004 [deprecated = true];
 }
 
 message BeaconBlockBody {
