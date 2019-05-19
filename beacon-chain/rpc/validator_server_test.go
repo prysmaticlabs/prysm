@@ -132,7 +132,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	}
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{{1}},
-		EpochStart: params.BeaconConfig().GenesisEpoch,
+		EpochStart: 0,
 	}
 	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
 	if _, err := validatorServer.CommitteeAssignment(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
@@ -160,7 +160,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	pubKey := make([]byte, 96)
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKey},
-		EpochStart: params.BeaconConfig().GenesisEpoch,
+		EpochStart: 0,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
 	if _, err := vs.CommitteeAssignment(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
@@ -215,7 +215,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf},
-		EpochStart: params.BeaconConfig().GenesisSlot,
+		EpochStart: 0,
 	}
 	res, err := vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
@@ -236,7 +236,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	copy(pubKeyBuf[:], []byte(strconv.FormatUint(lastValidatorIndex, 10)))
 	req = &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf},
-		EpochStart: params.BeaconConfig().GenesisSlot,
+		EpochStart: 0,
 	}
 	res, err = vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
@@ -301,7 +301,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf0, pubKeyBuf1},
-		EpochStart: params.BeaconConfig().GenesisSlot,
+		EpochStart: 0,
 	}
 	res, err := vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
@@ -391,10 +391,10 @@ func TestValidatorStatus_Active(t *testing.T) {
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
 
 	// Active because activation epoch <= current epoch < exit epoch.
-	activeEpoch := helpers.DelayedActivationExitEpoch(params.BeaconConfig().GenesisEpoch)
+	activeEpoch := helpers.DelayedActivationExitEpoch(0)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
-		Slot:        params.BeaconConfig().GenesisSlot + 10000,
+		Slot:        10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			ActivationEpoch: activeEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
@@ -442,7 +442,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 
 	// Initiated exit because validator status flag = Validator_INITIATED_EXIT.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 10000,
+		Slot: 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			StatusFlags: pbp2p.Validator_INITIATED_EXIT,
 			Pubkey:      pubKey},
@@ -496,7 +496,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 
 	// Withdrawable exit because validator status flag = Validator_WITHDRAWABLE.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 10000,
+		Slot: 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			StatusFlags: pbp2p.Validator_WITHDRAWABLE,
 			Pubkey:      pubKey},
@@ -550,7 +550,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 
 	// Exit slashed because exit epoch and slashed epoch are =< current epoch.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 10000,
+		Slot: 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			Pubkey: pubKey},
 		}}); err != nil {
@@ -603,7 +603,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 
 	// Exit because only exit epoch is =< current epoch.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 10000,
+		Slot: 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			Pubkey:       pubKey,
 			SlashedEpoch: params.BeaconConfig().FarFutureEpoch},
@@ -656,9 +656,9 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	}
 
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			ActivationEpoch: params.BeaconConfig().GenesisSlot,
+			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKey},
 		}}); err != nil {
@@ -706,7 +706,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		ValidatorRegistry: []*pbp2p.Validator{},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -757,13 +757,13 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 4000,
+		Slot: 4000,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKeys[0]},
 			{
-				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				Pubkey:          pubKeys[1]},
 		},
@@ -815,7 +815,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 				},
 				{PublicKey: []byte{'B'},
 					Status: &pb.ValidatorStatusResponse{
-						ActivationEpoch: params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch,
+						ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 					},
 				},
 			},
@@ -841,17 +841,17 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 4000,
+		Slot: 4000,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKeys[0]},
 			{
-				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				Pubkey:          pubKeys[1]},
 			{
-				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				Pubkey:          pubKeys[2]},
 		},

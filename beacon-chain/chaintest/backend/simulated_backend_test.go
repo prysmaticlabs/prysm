@@ -52,7 +52,7 @@ func TestGenerateBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 		}
 	}
 
-	if backend.state.Slot != params.BeaconConfig().GenesisSlot+uint64(slotLimit) {
+	if backend.state.Slot != uint64(slotLimit) {
 		t.Errorf("Unequal state slot and expected slot %d %d", backend.state.Slot, slotLimit)
 	}
 
@@ -78,7 +78,7 @@ func TestGenerateNilBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 		}
 	}
 
-	if backend.state.Slot != params.BeaconConfig().GenesisSlot+uint64(slotLimit) {
+	if backend.state.Slot != uint64(slotLimit) {
 		t.Errorf("Unequal state slot and expected slot %d %d", backend.state.Slot, slotLimit)
 	}
 

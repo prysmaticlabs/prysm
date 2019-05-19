@@ -713,7 +713,7 @@ func TestBlockTree_OK(t *testing.T) {
 		validators = append(validators, &pbp2p.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance})
 	}
 	justifiedState := &pbp2p.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		ValidatorRegistry: validators,
 	}
 
@@ -721,38 +721,38 @@ func TestBlockTree_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	justifiedBlock := &pbp2p.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 	}
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
 	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
 	b1 := &pbp2p.BeaconBlock{
-		Slot:            params.BeaconConfig().GenesisSlot + 3,
+		Slot:            3,
 		ParentBlockRoot: justifiedRoot[:],
 		RandaoReveal:    []byte("A"),
 	}
 	b1Root, _ := hashutil.HashBeaconBlock(b1)
 	b2 := &pbp2p.BeaconBlock{
-		Slot:            params.BeaconConfig().GenesisSlot + 3,
+		Slot:            3,
 		ParentBlockRoot: justifiedRoot[:],
 		RandaoReveal:    []byte("C"),
 	}
 	b2Root, _ := hashutil.HashBeaconBlock(b2)
 	b3 := &pbp2p.BeaconBlock{
-		Slot:            params.BeaconConfig().GenesisSlot + 3,
+		Slot:            3,
 		ParentBlockRoot: justifiedRoot[:],
 		RandaoReveal:    []byte("D"),
 	}
 	b3Root, _ := hashutil.HashBeaconBlock(b1)
 	b4 := &pbp2p.BeaconBlock{
-		Slot:            params.BeaconConfig().GenesisSlot + 4,
+		Slot:            4,
 		ParentBlockRoot: b1Root[:],
 		RandaoReveal:    []byte("B"),
 	}
 	b4Root, _ := hashutil.HashBeaconBlock(b4)
 	b5 := &pbp2p.BeaconBlock{
-		Slot:            params.BeaconConfig().GenesisSlot + 5,
+		Slot:            5,
 		ParentBlockRoot: b3Root[:],
 		RandaoReveal:    []byte("E"),
 	}
