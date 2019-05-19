@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "attestation.go",
         "block.go",
         "committee.go",
         "deposits.go",
@@ -31,6 +32,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestation_test.go",
         "block_test.go",
         "committee_test.go",
         "deposits_test.go",
@@ -42,6 +44,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/internal:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",

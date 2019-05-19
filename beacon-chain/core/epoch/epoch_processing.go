@@ -6,7 +6,6 @@ package epoch
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"sort"
