@@ -60,7 +60,6 @@ spec:
             - --trace-sample-fraction=1.0
             - --datadir=/data
             - --p2p-max-peers=50
-            - --enable-canonical-attestation-filter
             - --log-format=fluentd
           resources:
             requests:
