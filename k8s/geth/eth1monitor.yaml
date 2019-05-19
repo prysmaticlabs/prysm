@@ -23,7 +23,7 @@ spec:
         args:
         - --port=9090
         - --addresses=/etc/config/addresses.txt
-        - --web3-url=http://public-rpc-nodes.pow.svc.cluster.local:8545
+        - --web3-provider=http://public-rpc-nodes.pow.svc.cluster.local:8545
         volumeMounts:
         - name: addresses
           mountPath: /etc/config
