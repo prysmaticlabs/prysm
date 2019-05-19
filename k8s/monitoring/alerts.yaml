@@ -46,7 +46,7 @@ data:
           summary: Pod has less than 1GB free disk space in their persistent disk.
       - alert: balance_too_low
         expr: eth_balance < 200
-        for: 1m
+        for: 15m
         annotations:
           summary: ETH1 wallet has less than 200 ETH
           description: "{{ $labels.name }} ({{ $labels.address }}) has {{ $value }} ETH"
