@@ -111,7 +111,7 @@ func TestComputeCommittee_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry:      validators,
-		Slot:                   params.BeaconConfig().GenesisSlot + 200,
+		Slot:                   200,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
@@ -172,25 +172,25 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		wanted          []uint64
 	}{
 		{
-			attestationSlot: params.BeaconConfig().GenesisSlot + 2,
-			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
+			attestationSlot: 2,
+			stateSlot:       5,
 			shard:           3,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{37, 100},
+			wanted:          []uint64{21, 126},
 		},
 		{
-			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
-			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
+			attestationSlot: 1,
+			stateSlot:       10,
 			shard:           2,
 			bitfield:        []byte{0x01},
-			wanted:          []uint64{2, 35},
+			wanted:          []uint64{2, 17},
 		},
 		{
-			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
-			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
+			attestationSlot: 10,
+			stateSlot:       10,
 			shard:           11,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{95, 101},
+			wanted:          []uint64{79, 112},
 		},
 	}
 
@@ -198,7 +198,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		state.Slot = tt.stateSlot
 		attestationData.Slot = tt.attestationSlot
 		attestationData.Shard = tt.shard
-		attestationData.TargetEpoch = params.BeaconConfig().GenesisEpoch
+		attestationData.TargetEpoch = 0
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
 		if err != nil {
@@ -288,7 +288,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		ValidatorRegistry:      validators,
-		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+		Slot:                   params.BeaconConfig().SlotsPerEpoch,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
@@ -302,28 +302,28 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       params.BeaconConfig().GenesisSlot + 151,
+			slot:       151,
 			committee:  []uint64{28, 0},
 			shard:      88,
 			isProposer: true,
 		},
 		{
 			index:      105,
-			slot:       params.BeaconConfig().GenesisSlot + 157,
+			slot:       157,
 			committee:  []uint64{105, 40},
 			shard:      94,
 			isProposer: false,
 		},
 		{
 			index:      64,
-			slot:       params.BeaconConfig().GenesisSlot + 163,
+			slot:       163,
 			committee:  []uint64{64, 27},
 			shard:      100,
 			isProposer: false,
 		},
 		{
 			index:      11,
-			slot:       params.BeaconConfig().GenesisSlot + 160,
+			slot:       160,
 			committee:  []uint64{11, 101},
 			shard:      97,
 			isProposer: true,
@@ -357,7 +357,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 
 func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+		Slot:                   params.BeaconConfig().SlotsPerEpoch,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
@@ -377,7 +377,7 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
-		Slot: params.BeaconConfig().GenesisSlot + slotOffset,
+		Slot: slotOffset,
 		Committees: []*cache.CommitteeInfo{
 			{Shard: 123, Committee: []uint64{55, 105}},
 			{Shard: 234, Committee: []uint64{11, 14}},
@@ -389,7 +389,7 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 
 	attestationData := &pb.AttestationData{
 		Shard: 234,
-		Slot:  params.BeaconConfig().GenesisSlot + uint64(slotOffset),
+		Slot:  uint64(slotOffset),
 	}
 	result, err := AttestingIndices(&pb.BeaconState{}, attestationData, []byte{0x03})
 	if err != nil {
@@ -418,7 +418,7 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 
 	slotOffset := uint64(10)
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + slotOffset,
+		Slot:                   slotOffset,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
@@ -426,7 +426,7 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 
 	attestationData := &pb.AttestationData{
 		Shard: 11,
-		Slot:  params.BeaconConfig().GenesisSlot + slotOffset,
+		Slot:  slotOffset,
 	}
 	result, err := AttestingIndices(state, attestationData, []byte{0x03})
 	if err != nil {
@@ -443,7 +443,7 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 	}
 
 	// Verify the committee for offset slot was cached.
-	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(params.BeaconConfig().GenesisSlot + slotOffset)
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(slotOffset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -462,7 +462,7 @@ func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 	// TODO(#2307) unskip after CommitteeAssignments is updated
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
-		Slot: params.BeaconConfig().GenesisSlot + slotOffset,
+		Slot: slotOffset,
 		Committees: []*cache.CommitteeInfo{
 			{Shard: 123, Committee: []uint64{55, 105}},
 			{Shard: 234, Committee: []uint64{11, 14}},
@@ -516,14 +516,14 @@ func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 
 	slotOffset := uint64(10)
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + slotOffset,
+		Slot:                   slotOffset,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	committee, shard, _, isProposer, err :=
-		CommitteeAssignment(state, params.BeaconConfig().GenesisSlot+slotOffset, 105, false)
+		CommitteeAssignment(state, slotOffset, 105, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -550,7 +550,7 @@ func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 	}
 
 	// Verify the committee for offset slot was cached.
-	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(params.BeaconConfig().GenesisSlot + slotOffset)
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(slotOffset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -585,9 +585,9 @@ func TestShardDelta_Ok(t *testing.T) {
 			}
 		}
 		state := &pb.BeaconState{ValidatorRegistry: validators}
-		if test.shardDelta != ShardDelta(state, params.BeaconConfig().GenesisEpoch) {
+		if test.shardDelta != ShardDelta(state, 0) {
 			t.Errorf("wanted: %d, got: %d",
-				test.shardDelta, ShardDelta(state, params.BeaconConfig().GenesisEpoch))
+				test.shardDelta, ShardDelta(state, 0))
 		}
 	}
 }

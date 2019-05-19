@@ -58,7 +58,7 @@ func IsValidBlock(
 	// The node's local time is greater than or equal to
 	// state.genesis_time + (block.slot-GENESIS_SLOT)* SECONDS_PER_SLOT.
 	if !IsSlotValid(block.Slot, genesisTime) {
-		return fmt.Errorf("slot of block is too high: %d", block.Slot-params.BeaconConfig().GenesisSlot)
+		return fmt.Errorf("slot of block is too high: %d", block.Slot)
 	}
 
 	return nil
@@ -66,7 +66,7 @@ func IsValidBlock(
 
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	secondsPerSlot := time.Duration((slot-params.BeaconConfig().GenesisSlot)*params.BeaconConfig().SecondsPerSlot) * time.Second
+	secondsPerSlot := time.Duration((slot)*params.BeaconConfig().SecondsPerSlot) * time.Second
 	validTimeThreshold := genesisTime.Add(secondsPerSlot)
 	now := clock.Now()
 	isValid := now.After(validTimeThreshold)

@@ -125,7 +125,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 	}
 	if enableLogging {
 		log.WithFields(logrus.Fields{
-			"epoch":         helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
+			"epoch":         helpers.CurrentEpoch(beaconState),
 			"proposerIndex": proposerIdx,
 		}).Info("Verifying randao")
 	}
@@ -413,28 +413,21 @@ func ProcessBlockAttestations(
 
 // VerifyAttestation verifies an input attestation can pass through processing using the given beacon state.
 func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
-	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
-		return fmt.Errorf(
-			"attestation slot (slot %d) less than genesis slot (%d)",
-			att.Data.Slot,
-			params.BeaconConfig().GenesisSlot,
-		)
-	}
 	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay
 	if att.Data.Slot+inclusionDelay > beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
-			att.Data.Slot-params.BeaconConfig().GenesisSlot,
+			att.Data.Slot,
 			inclusionDelay,
-			beaconState.Slot-params.BeaconConfig().GenesisSlot,
+			beaconState.Slot,
 		)
 	}
 	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
-			att.Data.Slot-params.BeaconConfig().GenesisSlot,
+			att.Data.Slot,
 			params.BeaconConfig().SlotsPerEpoch,
-			beaconState.Slot-params.BeaconConfig().GenesisSlot,
+			beaconState.Slot,
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
@@ -445,8 +438,8 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		if att.Data.JustifiedEpoch != beaconState.CurrentJustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.CurrentJustifiedEpoch, received %d == %d",
-				att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
-				beaconState.CurrentJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				att.Data.JustifiedEpoch,
+				beaconState.CurrentJustifiedEpoch,
 			)
 		}
 
@@ -461,8 +454,8 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		if att.Data.JustifiedEpoch != beaconState.PreviousJustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.PreviousJustifiedEpoch, received %d == %d",
-				att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
-				beaconState.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				att.Data.JustifiedEpoch,
+				beaconState.PreviousJustifiedEpoch,
 			)
 		}
 		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.PreviousJustifiedRoot) {

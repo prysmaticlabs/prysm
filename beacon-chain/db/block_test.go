@@ -86,7 +86,7 @@ func TestDeleteBlock_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
+	block := &pb.BeaconBlock{Slot: 0}
 	h, _ := hashutil.HashBeaconBlock(block)
 
 	err := db.SaveBlock(block)
@@ -129,7 +129,7 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
-	slotNum := params.BeaconConfig().GenesisSlot + 3
+	slotNum := uint64(3)
 	b1 := &pb.BeaconBlock{
 		Slot:         slotNum,
 		RandaoReveal: []byte("A"),
@@ -152,7 +152,7 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blocks, _ := db.BlocksBySlot(ctx, params.BeaconConfig().GenesisSlot+3)
+	blocks, _ := db.BlocksBySlot(ctx, 3)
 	if len(blocks) != 3 {
 		t.Errorf("Wanted %d blocks, received %d", 3, len(blocks))
 	}
@@ -207,7 +207,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:            params.BeaconConfig().GenesisSlot + 1,
+		Slot:            1,
 		ParentBlockRoot: bHash[:],
 	}
 	b2Hash, err := hashutil.HashBeaconBlock(block2)
@@ -221,7 +221,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to record the new head of the main chain: %v", err)
 	}
 
-	b2Prime, err := db.CanonicalBlockBySlot(ctx, params.BeaconConfig().GenesisSlot+1)
+	b2Prime, err := db.CanonicalBlockBySlot(ctx, 1)
 	if err != nil {
 		t.Fatalf("failed to retrieve slot 1: %v", err)
 	}
