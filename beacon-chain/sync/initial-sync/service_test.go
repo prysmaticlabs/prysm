@@ -7,7 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
-	"github.com/prometheus/common/log"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -99,7 +98,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
-		log.Errorf("unable to marshal the beacon state: %v", err)
+		t.Errorf("unable to marshal the beacon state: %v", err)
 		return
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
