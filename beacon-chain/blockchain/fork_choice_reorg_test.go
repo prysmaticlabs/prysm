@@ -165,7 +165,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	blocks[0] = &pb.BeaconBlock{
 		Slot:            beaconState.Slot,
 		ParentBlockRoot: []byte{'A'},
-		Body:            &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{},
+		},
 	}
 	roots[0], err = hashutil.HashBeaconBlock(blocks[0])
 	if err != nil {
@@ -175,7 +177,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	blocks[1] = &pb.BeaconBlock{
 		Slot:            beaconState.Slot + 2,
 		ParentBlockRoot: roots[0][:],
-		Body:            &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{},
+		},
 	}
 	roots[1], err = hashutil.HashBeaconBlock(blocks[1])
 	if err != nil {
@@ -185,7 +189,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	blocks[2] = &pb.BeaconBlock{
 		Slot:            beaconState.Slot + 1,
 		ParentBlockRoot: roots[0][:],
-		Body:            &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{},
+		},
 	}
 	roots[2], err = hashutil.HashBeaconBlock(blocks[2])
 	if err != nil {
@@ -195,7 +201,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	blocks[3] = &pb.BeaconBlock{
 		Slot:            beaconState.Slot + 3,
 		ParentBlockRoot: roots[1][:],
-		Body:            &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{},
+		},
 	}
 	roots[3], err = hashutil.HashBeaconBlock(blocks[3])
 	if err != nil {
@@ -205,7 +213,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	blocks[4] = &pb.BeaconBlock{
 		Slot:            beaconState.Slot + 4,
 		ParentBlockRoot: roots[2][:],
-		Body:            &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{},
+		},
 	}
 	roots[4], err = hashutil.HashBeaconBlock(blocks[4])
 	if err != nil {
@@ -215,7 +225,9 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	blocks[5] = &pb.BeaconBlock{
 		Slot:            beaconState.Slot + 5,
 		ParentBlockRoot: roots[3][:],
-		Body:            &pb.BeaconBlockBody{},
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{},
+		},
 	}
 	roots[5], err = hashutil.HashBeaconBlock(blocks[5])
 	if err != nil {

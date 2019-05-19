@@ -119,7 +119,7 @@ func GenesisBeaconState(
 
 		// Eth1 data.
 		LatestEth1Data: eth1Data,
-		Eth1DataVotes:  []*pb.Eth1DataVote{},
+		Eth1DataVotes:  []*pb.Eth1Data{},
 		DepositIndex:   0,
 	}
 
