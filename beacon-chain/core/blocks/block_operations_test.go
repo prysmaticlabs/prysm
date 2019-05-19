@@ -743,6 +743,47 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_FFGDataMismatches(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				SourceEpoch: params.BeaconConfig().GenesisEpoch+1,
+				Crosslink: &pb.Crosslink{
+					Shard: 0,
+				},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	deposits, _ := setupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.CurrentCrosslinks = []*pb.Crosslink{
+		{
+			Shard: 0,
+		},
+	}
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+
+	want := fmt.Sprintf(
+		"expected source epoch %d, received %d",
+		helpers.CurrentEpoch(beaconState),
+		attestations[0].Data.SourceEpoch,
+	)
+	if _, err := blocks.ProcessBlockAttestations(
+		beaconState,
+		block,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
 }
 
 func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.T) {
