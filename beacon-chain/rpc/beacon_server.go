@@ -120,97 +120,10 @@ func (bs *BeaconServer) DomainData(ctx context.Context, request *pb.DomainReques
 // state.latest_eth1_data is updated, and validator deposits up to this root can be processed.
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
+//
+// TODO(#2307): Refactor for v0.6.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
-	beaconState, err := bs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
-	}
-	// Fetch the current canonical chain height from the eth1.0 chain.
-	currentHeight := bs.powChainService.LatestBlockHeight()
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-
-	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockRoot)
-	// If latest ETH1 block hash is empty, send a default response
-	if stateLatestEth1Hash == [32]byte{} {
-		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
-	}
-	// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
-	// in the canonical, eth1.0 chain.
-	_, stateLatestEth1Height, err := bs.powChainService.BlockExists(ctx, stateLatestEth1Hash)
-	if err != nil {
-		return nil, fmt.Errorf("could not verify block with hash exists in Eth1 chain: %#x: %v", stateLatestEth1Hash, err)
-	}
-	dataVotes := []*pbp2p.Eth1DataVote{}
-	bestVote := &pbp2p.Eth1DataVote{}
-	bestVoteHeight := big.NewInt(0)
-	for _, vote := range beaconState.Eth1DataVotes {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockRoot)
-		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
-		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
-		if err != nil {
-			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
-				Debug("Could not verify block with hash in ETH1 chain")
-			continue
-		}
-		if !blockExists {
-			continue
-		}
-		// Let dataVotes be the set of Eth1DataVote objects vote in state.eth1_data_votes where:
-		// vote.eth1_data.block_hash is the hash of an eth1.0 block that is:
-		//   (i) part of the canonical chain
-		//   (ii) >= ETH1_FOLLOW_DISTANCE blocks behind the head
-		//   (iii) newer than state.latest_eth1_data.block_data.
-		// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
-		// at the block defined by vote.eth1_data.block_hash.
-		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
-		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
-		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data {
-			dataVotes = append(dataVotes, vote)
-
-			// Sets the first vote as best vote.
-			if len(dataVotes) == 1 {
-				bestVote = vote
-				bestVoteHeight = blockHeight
-				continue
-			}
-			// If dataVotes is non-empty:
-			// Let best_vote be the member of D that has the highest vote.eth1_data.vote_count,
-			// breaking ties by favoring block hashes with higher associated block height.
-			// Let block_hash = best_vote.eth1_data.block_hash.
-			// Let deposit_root = best_vote.eth1_data.deposit_root.
-			if vote.VoteCount > bestVote.VoteCount {
-				bestVote = vote
-				bestVoteHeight = blockHeight
-			} else if vote.VoteCount == bestVote.VoteCount {
-
-				if blockHeight.Cmp(bestVoteHeight) == 1 {
-					bestVote = vote
-					bestVoteHeight = blockHeight
-				}
-			}
-
-		}
-	}
-
-	// Now we handle the following two scenarios:
-	// If dataVotes is empty:
-	// Let block_hash be the block hash of the ETH1_FOLLOW_DISTANCE'th ancestor of the head of
-	// the canonical eth1.0 chain.
-	// Let deposit_root be the deposit root of the eth1.0 deposit contract in the
-	// post-state of the block referenced by block_hash.
-	if len(dataVotes) == 0 {
-		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
-	}
-
-	return &pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{
-			BlockRoot:   bestVote.Eth1Data.BlockRoot,
-			DepositRoot: bestVote.Eth1Data.DepositRoot,
-		},
-	}, nil
+	return nil, nil
 }
 
 // PendingDeposits returns a list of pending deposits that are ready for
