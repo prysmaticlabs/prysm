@@ -1,5 +1,5 @@
 ## compiled with v0.1.0-beta.9 ##
-DEPOSIT_TREE_DEPTH: constant(uint256) = 32
+DEPOSIT_CONTRACT_TREE_DEPTH: constant(uint256) = 32
 TWO_TO_POWER_OF_TREE_DEPTH: constant(uint256) = 4294967296  # 2**32
 SECONDS_PER_DAY: constant(uint256) = 86400
 MAX_64_BIT_VALUE: constant(uint256) = 18446744073709551615  # 2**64 - 1
@@ -97,7 +97,7 @@ def get_deposit_count() -> bytes[8]:
 @public
 def deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96]):
     deposit_amount: uint256 = msg.value / as_wei_value(1, "gwei")
-    assert deposit_amount >= MIN_DEPOSIT_AMOUNT
+    assert deposit_amount >= self.MIN_DEPOSIT_AMOUNT
     amount: bytes[8] = self.to_little_endian_64(deposit_amount)
 
     index: uint256 = self.deposit_count
@@ -142,7 +142,7 @@ def deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: byt
         self.to_little_endian_64(index),
     )
 
-    if deposit_amount >= FULL_DEPOSIT_AMOUNT:
+    if deposit_amount >= self.MAX_DEPOSIT_AMOUNT:
         self.full_deposit_count += 1
         if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
             timestamp_day_boundary: uint256 = (
