@@ -18,7 +18,7 @@ func AttestationDataSlot(state *pb.BeaconState, data *pb.AttestationData) (uint6
 	commiteeCount := EpochCommitteeCount(state, data.TargetEpoch)
 	epochStartShardNumber, err := EpochStartShard(state, data.TargetEpoch)
 	if err != nil {
-		return 0, fmt.Errorf("EpochStartShard error: %v", err)
+		return 0, fmt.Errorf("epochStartShard error: %v", err)
 	}
 	offset := (data.Crosslink.Shard + params.BeaconConfig().ShardCount -
 		epochStartShardNumber) % params.BeaconConfig().ShardCount
