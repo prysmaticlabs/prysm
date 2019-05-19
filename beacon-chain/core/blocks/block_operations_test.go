@@ -742,7 +742,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
+func TestProcessBlockAttestations_FFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.T) {
