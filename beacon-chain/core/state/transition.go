@@ -161,7 +161,7 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
 
-	state, err = b.ProcessValidatorDeposits(state, block)
+	state, err = b.ProcessValidatorDeposits(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
 	}

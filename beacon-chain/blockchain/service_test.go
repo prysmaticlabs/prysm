@@ -187,7 +187,14 @@ func createPreChainStartDeposit(t *testing.T, pk []byte, index uint64) *pb.Depos
 	if err != nil {
 		t.Fatalf("Cannot encode data: %v", err)
 	}
-	return &pb.Deposit{DepositData: depositData, Index: index}
+	return &pb.Deposit{
+		DepositData: depositData,
+		Index:       index,
+		Data: &pb.DepositData{
+			Amount: balance,
+			Pubkey: pk,
+		},
+	}
 }
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
