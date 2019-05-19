@@ -36,7 +36,6 @@ spec:
         - --tracing-process-name=$(POD_NAME)
         - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces
         - --trace-sample-fraction=1.0
-        - --disable-rewards-penalties-logging
         - --log-format=fluentd
         - --disable-rewards-penalties-logging
         volumeMounts:
