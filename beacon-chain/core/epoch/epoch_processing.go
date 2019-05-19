@@ -484,11 +484,11 @@ func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		// Need to update get_crosslink_committee in spec.
 		committee, err := helpers.CrosslinkCommitteeAtEpoch(state, epoch, shard)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("could not get crosslink's committee: %v", err)
 		}
-		_, attestingIndices, err := WinningCrosslink(state, epoch, shard)
+		_, attestingIndices, err := WinningCrosslink(state, shard, epoch)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("could not get winning crosslink: %v", err)
 		}
 		attested := make(map[uint64]bool)
 		// Construct a map to look up validators that voted for crosslink.
@@ -501,7 +501,7 @@ func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			if _, ok := attested[index]; ok {
 				rewards[index] += BaseReward(state, index) * attestingBalance / committeeBalance
 			} else {
-				penalties[index] -= BaseReward(state, index)
+				penalties[index] += BaseReward(state, index)
 			}
 		}
 	}

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -132,67 +133,32 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	}
 }
 
-func TestProcessEth1Data_SameRootHash(t *testing.T) {
+func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 	beaconState := &pb.BeaconState{
-		Eth1DataVotes: []*pb.Eth1DataVote{
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{1},
-					BlockRoot:   []byte{2},
-				},
-				VoteCount: 5,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{1},
-			BlockRoot:   []byte{2},
-		},
-	}
-	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
-	newETH1DataVotes := beaconState.Eth1DataVotes
-	if newETH1DataVotes[0].VoteCount != 6 {
-		t.Errorf("expected votes to increase from 5 to 6, received %d", newETH1DataVotes[0].VoteCount)
-	}
-}
-
-func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
-	beaconState := &pb.BeaconState{
-		Eth1DataVotes: []*pb.Eth1DataVote{
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{0},
-					BlockRoot:   []byte{1},
-				},
-				VoteCount: 5,
-			},
-		},
+		Eth1DataVotes: []*pb.Eth1Data{},
 	}
 
 	block := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{2},
-			BlockRoot:   []byte{3},
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{2},
+				BlockRoot:   []byte{3},
+			},
 		},
 	}
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEth1VotingPeriod; i++ {
+		beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
+	}
 
-	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if len(newETH1DataVotes) <= 1 {
-		t.Error("expected new ETH1 data votes to have length > 1")
+		t.Error("Expected new ETH1 data votes to have length > 1")
 	}
-	if newETH1DataVotes[1].VoteCount != 1 {
+	if !proto.Equal(beaconState.LatestEth1Data, block.Body.Eth1Data) {
 		t.Errorf(
-			"expected new ETH1 data votes to have a new element with votes = 1, received votes = %d",
-			newETH1DataVotes[1].VoteCount,
-		)
-	}
-	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRoot, []byte{2}) {
-		t.Errorf(
-			"expected new ETH1 data votes to have a new element with deposit root = %#x, received deposit root = %#x",
-			[]byte{1},
-			newETH1DataVotes[1].Eth1Data.DepositRoot,
+			"Expected latest eth1 data to have been set to %v, received %v",
+			block.Body.Eth1Data,
+			beaconState.LatestEth1Data,
 		)
 	}
 }

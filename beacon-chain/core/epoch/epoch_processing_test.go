@@ -925,18 +925,13 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	s := buildState(params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch)
 	ce := helpers.CurrentEpoch(s)
 	ne := ce + 1
-	s.Eth1DataVotes = []*pb.Eth1DataVote{{VoteCount: 100}}
+	s.Eth1DataVotes = []*pb.Eth1Data{}
 	s.Balances[0] = 29 * 1e9
 	s.LatestSlashedBalances[ce] = 100
 	s.LatestRandaoMixes[ce] = []byte{'A'}
 	newS, err := ProcessFinalUpdates(s)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	// Verify we can reset ETH1 data votes.
-	if len(newS.Eth1DataVotes) != 0 {
-		t.Errorf("Eth1 data votes didnt get reset, got %d", len(newS.Eth1DataVotes))
 	}
 
 	// Verify effective balance is correctly updated.
@@ -973,8 +968,29 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 }
 
-func TestCrosslinkDelta_CanProcess(t *testing.T) {
+func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
 
+	validatorCount := uint64(128)
+	state := buildState(gs + e + 2, validatorCount)
+
+	rewards, penalties, err := CrosslinkDelta(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := uint64(0); i < validatorCount; i++ {
+		// Since no one attested, all the validators should gain 0 reward
+		if rewards[i] != 0 {
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
+		}
+		// Since no one attested, all the validators should get penalized the same
+		if penalties[i] != BaseReward(state, i) {
+			t.Errorf("Wanted penalty balance %d, got %d",
+				BaseReward(state, i), penalties[i])
+		}
+	}
 }
 
 func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
@@ -1010,5 +1026,6 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestBlockRoots: make([][]byte, params.BeaconConfig().SlotsPerEpoch * 2),
 	}
 }
