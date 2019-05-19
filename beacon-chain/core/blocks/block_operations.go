@@ -464,7 +464,44 @@ func ProcessBlockAttestations(
 //     validate_indexed_attestation(state, convert_to_indexed(state, attestation))
 func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
 	data := att.Data
+	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
+	if err != nil {
+		return fmt.Errorf("could not get attestation slot: %v", err)
+	}
+	minInclusionCheck := attestationSlot + params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot
+	epochInclusionCheck := beaconState.Slot <= attestationSlot + params.BeaconConfig().SlotsPerEpoch
 
+	if !minInclusionCheck {
+		return fmt.Errorf(
+			"attestation slot %d + inclusion delay %d > state slot %d",
+			attestationSlot,
+			params.BeaconConfig().MinAttestationInclusionDelay,
+			beaconState.Slot,
+		)
+	}
+	if !epochInclusionCheck {
+		return fmt.Errorf(
+			"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
+			beaconState.Slot,
+			attestationSlot,
+			params.BeaconConfig().SlotsPerEpoch,
+		)
+	}
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return err
+	}
+	pendingAtt := &pb.PendingAttestation{
+		Data: data,
+		AggregationBitfield: att.AggregationBitfield,
+		InclusionDelay: beaconState.Slot - attestationSlot,
+		ProposerIndex: proposerIndex,
+	}
+
+	if !(data.TargetEpoch == helpers.PrevEpoch(beaconState) || data.TargetEpoch == helpers.CurrentEpoch(beaconState)) {
+		return fmt.Errorf("expected target " +
+			"")
+	}
 	if verifySignatures {
 		// TODO(#258): Integrate BLS signature verification for attestation.
 		return nil
