@@ -38,6 +38,7 @@ spec:
         - --trace-sample-fraction=1.0
         - --disable-rewards-penalties-logging
         - --log-format=fluentd
+        - --disable-rewards-penalties-logging
         volumeMounts:
         - name: localdata
           mountPath: /data
