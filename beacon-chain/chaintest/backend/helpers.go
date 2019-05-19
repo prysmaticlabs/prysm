@@ -42,11 +42,11 @@ func generateSimulatedBlock(
 		Slot:            beaconState.Slot + 1,
 		ParentBlockRoot: prevBlockRoot[:],
 		StateRoot:       stateRoot[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{1},
-			BlockRoot:   []byte{2},
-		},
 		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{1},
+				BlockRoot:   []byte{2},
+			},
 			RandaoReveal:      epochSignature.Marshal(),
 			ProposerSlashings: []*pb.ProposerSlashing{},
 			AttesterSlashings: []*pb.AttesterSlashing{},
@@ -83,7 +83,7 @@ func generateSimulatedBlock(
 		}
 
 		root := newTrie.Root()
-		block.Eth1Data.DepositRoot = root[:]
+		block.Body.Eth1Data.DepositRoot = root[:]
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			DepositData: data,
 			Proof:       proof,

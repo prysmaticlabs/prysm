@@ -10,18 +10,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
@@ -132,67 +131,32 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	}
 }
 
-func TestProcessEth1Data_SameRootHash(t *testing.T) {
+func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 	beaconState := &pb.BeaconState{
-		Eth1DataVotes: []*pb.Eth1DataVote{
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{1},
-					BlockRoot:   []byte{2},
-				},
-				VoteCount: 5,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{1},
-			BlockRoot:   []byte{2},
-		},
-	}
-	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
-	newETH1DataVotes := beaconState.Eth1DataVotes
-	if newETH1DataVotes[0].VoteCount != 6 {
-		t.Errorf("expected votes to increase from 5 to 6, received %d", newETH1DataVotes[0].VoteCount)
-	}
-}
-
-func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
-	beaconState := &pb.BeaconState{
-		Eth1DataVotes: []*pb.Eth1DataVote{
-			{
-				Eth1Data: &pb.Eth1Data{
-					DepositRoot: []byte{0},
-					BlockRoot:   []byte{1},
-				},
-				VoteCount: 5,
-			},
-		},
+		Eth1DataVotes: []*pb.Eth1Data{},
 	}
 
 	block := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{2},
-			BlockRoot:   []byte{3},
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{2},
+				BlockRoot:   []byte{3},
+			},
 		},
 	}
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEth1VotingPeriod; i++ {
+		beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
+	}
 
-	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if len(newETH1DataVotes) <= 1 {
-		t.Error("expected new ETH1 data votes to have length > 1")
+		t.Error("Expected new ETH1 data votes to have length > 1")
 	}
-	if newETH1DataVotes[1].VoteCount != 1 {
+	if !proto.Equal(beaconState.LatestEth1Data, block.Body.Eth1Data) {
 		t.Errorf(
-			"expected new ETH1 data votes to have a new element with votes = 1, received votes = %d",
-			newETH1DataVotes[1].VoteCount,
-		)
-	}
-	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRoot, []byte{2}) {
-		t.Errorf(
-			"expected new ETH1 data votes to have a new element with deposit root = %#x, received deposit root = %#x",
-			[]byte{1},
-			newETH1DataVotes[1].Eth1Data.DepositRoot,
+			"Expected latest eth1 data to have been set to %v, received %v",
+			block.Body.Eth1Data,
+			beaconState.LatestEth1Data,
 		)
 	}
 }
@@ -1160,71 +1124,25 @@ func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 	if _, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
+		false, /* verifySignatures */
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
 
-func TestProcessValidatorDeposits_DepositDataSizeTooSmall(t *testing.T) {
-	hook := logTest.NewGlobal()
-	data := []byte{1, 2, 3}
-	deposit := &pb.Deposit{
-		DepositData: data,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: []*pb.Deposit{deposit},
-		},
-	}
-	beaconState := &pb.BeaconState{}
-	want := "deposit data slice too small"
-	_, _ = blocks.ProcessValidatorDeposits(
-		beaconState,
-		block,
-	)
-	testutil.AssertLogsContain(t, hook, want)
-}
-
-func TestProcessValidatorDeposits_DepositInputDecodingFails(t *testing.T) {
-	hook := logTest.NewGlobal()
-	data := make([]byte, 16)
-	deposit := &pb.Deposit{
-		DepositData: data,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: []*pb.Deposit{deposit},
-		},
-	}
-	beaconState := &pb.BeaconState{}
-	want := "ssz decode failed"
-	_, _ = blocks.ProcessValidatorDeposits(
-
-		beaconState,
-		block,
-	)
-	testutil.AssertLogsContain(t, hook, want)
-}
-
 func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
-	// We create a correctly encoded deposit data using Simple Serialize.
-	depositInput := &pb.DepositInput{
-		Pubkey: []byte{1, 2, 3},
+	deposit := &pb.Deposit{
+		Data: &pb.DepositData{
+			Pubkey: []byte{1, 2, 3},
+		},
 	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
-		t.Fatalf("failed to encode deposit input: %v", err)
+	leaf, err := ssz.TreeHash(deposit.Data)
+	if err != nil {
+		t.Fatal(err)
 	}
-	encodedInput := wBuf.Bytes()
-	data := []byte{}
-	value := make([]byte, 8)
-	timestamp := make([]byte, 8)
-	data = append(data, encodedInput...)
-	data = append(data, value...)
-	data = append(data, timestamp...)
 
 	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not generate trie: %v", err)
 	}
@@ -1233,11 +1151,8 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		t.Fatalf("Could not generate proof: %v", err)
 	}
 
-	deposit := &pb.Deposit{
-		DepositData: data,
-		Proof:       proof,
-		Index:       0,
-	}
+	deposit.Proof = proof
+	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
@@ -1249,57 +1164,29 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 			BlockRoot:   []byte{1},
 		},
 	}
-	want := "merkle branch of deposit root did not verify"
+	want := "deposit root did not verify"
 	if _, err := blocks.ProcessValidatorDeposits(
-
 		beaconState,
 		block,
+		false, /* verifySignatures */
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
 
-func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
-	hook := logTest.NewGlobal()
-	// Having mismatched withdrawal credentials will cause the process deposit
-	// validator helper function to fail with error when the public key
-	// currently exists in the validator registry.
-	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
-		WithdrawalCredentialsHash32: []byte{1, 2, 3},
-		ProofOfPossession:           []byte{},
+func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
+	deposit := &pb.Deposit{
+		Data: &pb.DepositData{
+			Pubkey: []byte{1, 2, 3},
+		},
 	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
-		t.Fatalf("failed to encode deposit input: %v", err)
+	leaf, err := ssz.TreeHash(deposit.Data)
+	if err != nil {
+		t.Fatal(err)
 	}
-	encodedInput := wBuf.Bytes()
-	data := []byte{}
-
-	// We set a deposit value of 1000.
-	value := make([]byte, 8)
-	binary.LittleEndian.PutUint64(value, uint64(1000))
-
-	// We then serialize a unix time into the timestamp []byte slice
-	// and ensure it has size of 8 bytes.
-	timestamp := make([]byte, 8)
-
-	// Set deposit time to 1000 seconds since unix time 0.
-	depositTime := time.Unix(1000, 0).Unix()
-	// Set genesis time to unix time 0.
-	genesisTime := time.Unix(0, 0).Unix()
-
-	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
-	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
-
-	// We then create a serialized deposit data slice of type []byte
-	// by appending all 3 items above together.
-	data = append(data, value...)
-	data = append(data, timestamp...)
-	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not generate trie: %v", err)
 	}
@@ -1307,86 +1194,9 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate proof: %v", err)
 	}
-	deposit := &pb.Deposit{
-		DepositData: data,
-		Proof:       proof,
-		Index:       0,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: []*pb.Deposit{deposit},
-		},
-	}
-	// The validator will have a mismatched withdrawal credential than
-	// the one specified in the deposit input, causing a failure.
-	registry := []*pb.Validator{
-		{
-			Pubkey:                []byte{1},
-			WithdrawalCredentials: []byte{4, 5, 6},
-		},
-	}
-	balances := []uint64{0}
-	root := depositTrie.Root()
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Balances:          balances,
-		LatestEth1Data: &pb.Eth1Data{
-			DepositRoot: root[:],
-			BlockRoot:   root[:],
-		},
-		Slot:        currentSlot,
-		GenesisTime: uint64(genesisTime),
-	}
-	want := "expected withdrawal credentials to match"
-	_, err = blocks.ProcessValidatorDeposits(
 
-		beaconState,
-		block,
-	)
-	testutil.AssertLogsContain(t, hook, want)
-}
-
-func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
-	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
-		WithdrawalCredentialsHash32: []byte{1, 2, 3},
-		ProofOfPossession:           []byte{},
-	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
-		t.Fatalf("failed to encode deposit input: %v", err)
-	}
-	encodedInput := wBuf.Bytes()
-	data := []byte{}
-
-	// We set a deposit value of 1000.
-	value := make([]byte, 8)
-	depositValue := uint64(1000)
-	binary.LittleEndian.PutUint64(value, depositValue)
-
-	// We then serialize a unix time into the timestamp []byte slice
-	// and ensure it has size of 8 bytes.
-	timestamp := make([]byte, 8)
-
-	// Set deposit time to 1000 seconds since unix time 0.
-	depositTime := time.Unix(1000, 0).Unix()
-	// Set genesis time to unix time 0.
-	genesisTime := time.Unix(0, 0).Unix()
-
-	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
-	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
-
-	// We then create a serialized deposit data slice of type []byte
-	// by appending all 3 items above together.
-	data = append(data, value...)
-	data = append(data, timestamp...)
-	data = append(data, encodedInput...)
-
-	deposit := &pb.Deposit{
-		DepositData: data,
-		Proof:       [][]byte{{0}},
-		Index:       1,
-	}
+	deposit.Proof = proof
+	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
@@ -1399,60 +1209,43 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
+	depositRoot := depositTrie.Root()
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Balances:          balances,
-		Slot:              currentSlot,
-		GenesisTime:       uint64(genesisTime),
+		Slot:              params.BeaconConfig().GenesisSlot,
+		GenesisTime:       uint64(0),
+		DepositIndex:      1,
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRoot: depositRoot[:],
+			BlockRoot:   []byte{1},
+		},
 	}
 
 	want := "expected deposit merkle tree index to match beacon state deposit index"
 	if _, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
+		false, /* verifySignatures */
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
 
 func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
-	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
-		WithdrawalCredentialsHash32: []byte{1, 2, 3},
-		ProofOfPossession:           []byte{},
+	deposit := &pb.Deposit{
+		Data: &pb.DepositData{
+			Pubkey: []byte{1, 2, 3},
+			Amount: params.BeaconConfig().MaxDepositAmount,
+		},
 	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
-		t.Fatalf("failed to encode deposit input: %v", err)
+	leaf, err := ssz.TreeHash(deposit.Data)
+	if err != nil {
+		t.Fatal(err)
 	}
-	encodedInput := wBuf.Bytes()
-	data := []byte{}
-
-	// We set a deposit value of 1000.
-	value := make([]byte, 8)
-	depositValue := uint64(1000)
-	binary.LittleEndian.PutUint64(value, depositValue)
-
-	// We then serialize a unix time into the timestamp []byte slice
-	// and ensure it has size of 8 bytes.
-	timestamp := make([]byte, 8)
-
-	// Set deposit time to 1000 seconds since unix time 0.
-	depositTime := time.Unix(1000, 0).Unix()
-	// Set genesis time to unix time 0.
-	genesisTime := time.Unix(0, 0).Unix()
-
-	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
-	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
-
-	// We then create a serialized deposit data slice of type []byte
-	// by appending all 3 items above together.
-	data = append(data, value...)
-	data = append(data, timestamp...)
-	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not generate trie: %v", err)
 	}
@@ -1461,11 +1254,8 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		t.Fatalf("Could not generate proof: %v", err)
 	}
 
-	deposit := &pb.Deposit{
-		DepositData: data,
-		Proof:       proof,
-		Index:       0,
-	}
+	deposit.Proof = proof
+	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
@@ -1486,187 +1276,22 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 			DepositRoot: root[:],
 			BlockRoot:   root[:],
 		},
-		Slot:        currentSlot,
-		GenesisTime: uint64(genesisTime),
 	}
 	newState, err := blocks.ProcessValidatorDeposits(
-
 		beaconState,
 		block,
+		false, /* verifySignatures */
 	)
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
-	if newState.Balances[0] != depositValue {
+	if newState.Balances[1] != deposit.Data.Amount {
 		t.Errorf(
 			"Expected state validator balances index 0 to equal %d, received %d",
-			depositValue,
+			deposit.Data.Amount,
 			newState.Balances[0],
 		)
 	}
-}
-
-func TestProcessValidatorDeposits_InvalidSSZ_DepositIndexIncremented(t *testing.T) {
-	hook := logTest.NewGlobal()
-	encodedInput := []byte{'A', 'B', 'C', 'D'}
-	data := []byte{}
-
-	// We set a deposit value of 1000.
-	value := make([]byte, 8)
-	depositValue := uint64(1000)
-	binary.LittleEndian.PutUint64(value, depositValue)
-
-	// We then serialize a unix time into the timestamp []byte slice
-	// and ensure it has size of 8 bytes.
-	timestamp := make([]byte, 8)
-
-	// Set deposit time to 1000 seconds since unix time 0.
-	depositTime := time.Unix(1000, 0).Unix()
-	// Set genesis time to unix time 0.
-	genesisTime := time.Unix(0, 0).Unix()
-
-	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
-	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
-
-	// We then create a serialized deposit data slice of type []byte
-	// by appending all 3 items above together.
-	data = append(data, value...)
-	data = append(data, timestamp...)
-	data = append(data, encodedInput...)
-
-	deposit := &pb.Deposit{
-		DepositData: data,
-		Index:       0,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: []*pb.Deposit{deposit},
-		},
-	}
-	registry := []*pb.Validator{
-		{
-			Pubkey:                []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
-		},
-	}
-	balances := []uint64{0}
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Balances:          balances,
-		Slot:              currentSlot,
-		GenesisTime:       uint64(genesisTime),
-		DepositIndex:      1,
-	}
-	newState, err := blocks.ProcessValidatorDeposits(
-
-		beaconState,
-		block,
-	)
-	if err != nil {
-		t.Fatalf("Expected no errors returned but received this %v", err)
-	}
-	if newState.DepositIndex != 2 {
-		t.Errorf(
-			"Expected state deposit index to equal %d, received %d",
-			2,
-			newState.DepositIndex,
-		)
-	}
-	testutil.AssertLogsContain(t, hook, "could not decode deposit input")
-}
-
-func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented(t *testing.T) {
-	hook := logTest.NewGlobal()
-	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
-		WithdrawalCredentialsHash32: []byte{3, 2, 1},
-		ProofOfPossession:           []byte{},
-	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
-		t.Fatalf("failed to encode deposit input: %v", err)
-	}
-	encodedInput := wBuf.Bytes()
-	data := []byte{}
-
-	// We set a deposit value of 1000.
-	value := make([]byte, 8)
-	depositValue := uint64(1000)
-	binary.LittleEndian.PutUint64(value, depositValue)
-
-	// We then serialize a unix time into the timestamp []byte slice
-	// and ensure it has size of 8 bytes.
-	timestamp := make([]byte, 8)
-
-	// Set deposit time to 1000 seconds since unix time 0.
-	depositTime := time.Unix(1000, 0).Unix()
-	// Set genesis time to unix time 0.
-	genesisTime := time.Unix(0, 0).Unix()
-
-	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
-	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
-
-	// We then create a serialized deposit data slice of type []byte
-	// by appending all 3 items above together.
-	data = append(data, value...)
-	data = append(data, timestamp...)
-	data = append(data, encodedInput...)
-
-	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("Could not generate trie: %v", err)
-	}
-	proof, err := depositTrie.MerkleProof(0)
-	if err != nil {
-		t.Fatalf("Could not generate proof: %v", err)
-	}
-
-	deposit := &pb.Deposit{
-		DepositData: data,
-		Proof:       proof,
-		Index:       0,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: []*pb.Deposit{deposit},
-		},
-	}
-	registry := []*pb.Validator{
-		{
-			Pubkey:                []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
-		},
-	}
-	balances := []uint64{0}
-	root := depositTrie.Root()
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Balances:          balances,
-		DepositIndex:      0,
-		LatestEth1Data: &pb.Eth1Data{
-			DepositRoot: root[:],
-			BlockRoot:   root[:],
-		},
-		Slot:        currentSlot,
-		GenesisTime: uint64(genesisTime),
-	}
-	newState, err := blocks.ProcessValidatorDeposits(
-		beaconState,
-		block,
-	)
-	if err != nil {
-		t.Fatalf("Expected no error returned from processing the deposit: %v", err)
-	}
-	if newState.DepositIndex != 1 {
-		t.Errorf(
-			"Expected state deposit index to equal %d, received %d",
-			1,
-			newState.DepositIndex,
-		)
-	}
-
-	testutil.AssertLogsContain(t, hook, "could not process deposit into beacon state")
 }
 
 func TestProcessValidatorExits_ThresholdReached(t *testing.T) {

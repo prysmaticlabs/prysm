@@ -17,9 +17,11 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -32,7 +34,6 @@ import (
 func VerifyProposerSignature(
 	_ *pb.BeaconBlock,
 ) error {
-
 	return nil
 }
 
@@ -41,30 +42,20 @@ func VerifyProposerSignature(
 // into the beacon state.
 //
 // Official spec definition of ProcessEth1Data
-//   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
-//   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
-//   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
+//   state.eth1_data_votes.append(body.eth1_data)
+//   if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
+//     state.latest_eth1_data = body.eth1_data
 func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
-	var eth1DataVoteAdded bool
-
-	for idx := range beaconState.Eth1DataVotes {
-		if proto.Equal(beaconState.Eth1DataVotes[idx].Eth1Data, block.Eth1Data) {
-			beaconState.Eth1DataVotes[idx].VoteCount++
-			eth1DataVoteAdded = true
-			break
+	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, block.Body.Eth1Data)
+	numVotes := uint64(0)
+	for _, vote := range beaconState.Eth1DataVotes {
+		if proto.Equal(vote, block.Body.Eth1Data) {
+			numVotes++
 		}
 	}
-
-	if !eth1DataVoteAdded {
-		beaconState.Eth1DataVotes = append(
-			beaconState.Eth1DataVotes,
-			&pb.Eth1DataVote{
-				Eth1Data:  block.Eth1Data,
-				VoteCount: 1,
-			},
-		)
+	if numVotes*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
+		beaconState.LatestEth1Data = block.Body.Eth1Data
 	}
-
 	return beaconState
 }
 
@@ -648,28 +639,47 @@ func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttes
 // Official spec definition for processing validator deposits:
 //   Verify that len(block.body.deposits) <= MAX_DEPOSITS.
 //   For each deposit in block.body.deposits:
-//     Let serialized_deposit_data be the serialized form of deposit.deposit_data.
-//     It should be the DepositInput followed by 8 bytes for deposit_data.value
-//     and 8 bytes for deposit_data.timestamp. That is, it should match
-//     deposit_data in the Ethereum 1.0 deposit contract of which the hash
-//     was placed into the Merkle tree.
-//
-//     Verify deposit merkle_branch, setting leaf=hash(serialized_deposit_data), branch=deposit.branch,
-//     depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.latest_eth1_data.deposit_root, index = deposit.index:
-//
-//     Run the following:
-//     process_deposit(
-//       state=state,
-//       pubkey=deposit.deposit_data.deposit_input.pubkey,
-//       deposit=deposit.deposit_data.value,
-//       proof_of_possession=deposit.deposit_data.deposit_input.proof_of_possession,
-//       withdrawal_credentials=deposit.deposit_data.deposit_input.withdrawal_credentials,
+//	   # Verify the Merkle branch
+//     assert verify_merkle_branch(
+//       leaf=hash_tree_root(deposit.data),
+//       proof=deposit.proof,
+//       depth=DEPOSIT_CONTRACT_TREE_DEPTH,
+//       index=deposit.index,
+//       root=state.latest_eth1_data.deposit_root,
 //     )
+//
+//     # Deposits must be processed in order
+//     assert deposit.index == state.deposit_index
+//     state.deposit_index += 1
+//     pubkey = deposit.data.pubkey
+//     amount = deposit.data.amount
+//     validator_pubkeys = [v.pubkey for v in state.validator_registry]
+//     if pubkey not in validator_pubkeys:
+//       # Verify the deposit signature (proof of possession)
+//       if not bls_verify(
+//         pubkey, signing_root(deposit.data), deposit.data.signature, get_domain(state, DOMAIN_DEPOSIT)
+//       ):
+//         return
+//       # Add validator and balance entries
+//       state.validator_registry.append(Validator(
+//         pubkey=pubkey,
+//         withdrawal_credentials=deposit.data.withdrawal_credentials,
+//         activation_eligibility_epoch=FAR_FUTURE_EPOCH,
+//         activation_epoch=FAR_FUTURE_EPOCH,
+//         exit_epoch=FAR_FUTURE_EPOCH,
+//         withdrawable_epoch=FAR_FUTURE_EPOCH,
+//         effective_balance=min(amount - amount % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
+//       ))
+//       state.balances.append(amount)
+//     else:
+//       # Increase balance by deposit amount
+//       index = validator_pubkeys.index(pubkey)
+//       increase_balance(state, index, amount)
 func ProcessValidatorDeposits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
+	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-
 	deposits := block.Body.Deposits
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
 		return nil, fmt.Errorf(
@@ -679,55 +689,50 @@ func ProcessValidatorDeposits(
 		)
 	}
 	var err error
-	var depositInput *pb.DepositInput
-	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
-		depositData := deposit.DepositData
-		depositInput, err = helpers.DecodeDepositInput(depositData)
-		if err != nil {
-			beaconState = processInvalidDeposit(beaconState)
-			log.Errorf("could not decode deposit input: %v", err)
-			continue
-		}
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}
-		// depositData consists of depositValue [8]byte +
-		// depositTimestamp [8]byte + depositInput []byte .
-		depositValue := depositData[:8]
-		// We then mutate the beacon state with the verified validator deposit.
-		beaconState, err = v.ProcessDeposit(
-			beaconState,
-			validatorIndexMap,
-			depositInput.Pubkey,
-			binary.LittleEndian.Uint64(depositValue),
-			depositInput.ProofOfPossession,
-			depositInput.WithdrawalCredentialsHash32,
-		)
-		if err != nil {
-			beaconState = processInvalidDeposit(beaconState)
-			log.Errorf("could not process deposit into beacon state: %v", err)
-			continue
+		beaconState.DepositIndex++
+		pubKey := deposit.Data.Pubkey
+		amount := deposit.Data.Amount
+		valIndexMap := stateutils.ValidatorIndexMap(beaconState)
+		index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
+		if !ok {
+			if verifySignatures {
+				// TODO(#2307): Use BLS verification of proof of possession.
+			}
+			effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
+			if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
+				effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+			}
+			beaconState.ValidatorRegistry = append(beaconState.ValidatorRegistry, &pb.Validator{
+				Pubkey:                     pubKey,
+				WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
+				ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+				ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance:           effectiveBalance,
+			})
+			beaconState.Balances = append(beaconState.Balances, amount)
+		} else {
+			beaconState = helpers.IncreaseBalance(beaconState, uint64(index), amount)
 		}
 	}
 	return beaconState, nil
 }
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
-	// Deposits must be processed in order
-	if deposit.Index != beaconState.DepositIndex {
-		return fmt.Errorf(
-			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
-			beaconState.DepositIndex,
-			deposit.Index,
-		)
-	}
-
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := beaconState.LatestEth1Data.DepositRoot
+	leaf, err := ssz.TreeHash(deposit.Data)
+	if err != nil {
+		return fmt.Errorf("could not tree hash deposit data: %v", err)
+	}
 	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,
-		deposit.DepositData,
+		leaf[:],
 		int(deposit.Index),
 		deposit.Proof,
 	); !ok {
@@ -737,14 +742,16 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 		)
 	}
 
-	return nil
-}
+	// Deposits must be processed in order
+	if deposit.Index != beaconState.DepositIndex {
+		return fmt.Errorf(
+			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
+			beaconState.DepositIndex,
+			deposit.Index,
+		)
+	}
 
-// we increase the state deposit index, since deposits have to be processed
-// in order even if they are invalid
-func processInvalidDeposit(bState *pb.BeaconState) *pb.BeaconState {
-	bState.DepositIndex++
-	return bState
+	return nil
 }
 
 // ProcessValidatorExits is one of the operations performed

@@ -62,7 +62,6 @@ func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 }
 
 func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
-
 	// Generate 2 attestations.
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
@@ -116,7 +115,6 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 }
 
 func TestUnslashedAttestingIndices_CantGetIndicesBitfieldError(t *testing.T) {
-
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
@@ -925,18 +923,13 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	s := buildState(params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch)
 	ce := helpers.CurrentEpoch(s)
 	ne := ce + 1
-	s.Eth1DataVotes = []*pb.Eth1DataVote{{VoteCount: 100}}
+	s.Eth1DataVotes = []*pb.Eth1Data{}
 	s.Balances[0] = 29 * 1e9
 	s.LatestSlashedBalances[ce] = 100
 	s.LatestRandaoMixes[ce] = []byte{'A'}
 	newS, err := ProcessFinalUpdates(s)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	// Verify we can reset ETH1 data votes.
-	if len(newS.Eth1DataVotes) != 0 {
-		t.Errorf("Eth1 data votes didnt get reset, got %d", len(newS.Eth1DataVotes))
 	}
 
 	// Verify effective balance is correctly updated.
@@ -973,6 +966,94 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 }
 
+func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+
+	validatorCount := uint64(128)
+	state := buildState(gs+e+2, validatorCount)
+
+	rewards, penalties, err := CrosslinkDelta(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := uint64(0); i < validatorCount; i++ {
+		// Since no one attested, all the validators should gain 0 reward
+		if rewards[i] != 0 {
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
+		}
+		// Since no one attested, all the validators should get penalized the same
+		if penalties[i] != BaseReward(state, i) {
+			t.Errorf("Wanted penalty balance %d, got %d",
+				BaseReward(state, i), penalties[i])
+		}
+	}
+}
+
+func TestCrosslinkDelta_SomeAttested(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+	ge := params.BeaconConfig().GenesisEpoch
+
+	state := buildState(gs+e+2, params.BeaconConfig().DepositsForChainStart/8)
+	startShard := uint64(960)
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:              params.BeaconConfig().GenesisSlot + uint64(i),
+				TargetEpoch:       params.BeaconConfig().GenesisEpoch,
+				CrosslinkDataRoot: []byte{'A'},
+				Shard:             startShard + 1,
+			},
+			InclusionSlot:       uint64(i + 100),
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+		}
+	}
+	state.PreviousEpochAttestations = atts
+	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
+		Epoch:                   ge,
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
+		Epoch:                   ge,
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+
+	rewards, penalties, err := CrosslinkDelta(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	attestedIndices := []uint64{184, 638, 714, 1511, 506, 11, 797}
+	for _, i := range attestedIndices {
+		// Since all these validators attested, they should get the same rewards.
+		if rewards[i] != BaseReward(state, i) {
+			t.Errorf("Wanted reward balance %d, got %d", BaseReward(state, i), rewards[i])
+		}
+		// Since all these validators attested, they shouldn't get penalized.
+		if penalties[i] != 0 {
+			t.Errorf("Wanted penalty balance %d, got %d",
+				0, penalties[i])
+		}
+	}
+}
+
+func TestCrosslinkDelta_CantGetStartShard(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+
+	state := buildState(gs+2*e, 1)
+	state.Slot = 0
+
+	_, _, err := CrosslinkDelta(state)
+	wanted := "could not get epoch start shard"
+	if !strings.Contains(err.Error(), wanted) {
+		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+	}
+}
+
 func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -1003,8 +1084,10 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		Slot:                   slot,
 		Balances:               validatorBalances,
 		ValidatorRegistry:      validators,
+		CurrentCrosslinks:      make([]*pb.Crosslink, params.BeaconConfig().ShardCount),
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestBlockRoots:       make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
 	}
 }

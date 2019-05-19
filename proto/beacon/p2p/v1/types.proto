@@ -42,7 +42,7 @@ message BeaconState {
 
   // Ethereum 1.0 chain data [6001-7000]
   Eth1Data latest_eth1_data = 6001;
-  repeated Eth1DataVote eth1_data_votes = 6002;
+  repeated Eth1Data eth1_data_votes = 6002;
   uint64 deposit_index = 6003;
 
   // Deprecated [8001-9000]
@@ -81,19 +81,20 @@ message Attestation {
 
 message AttestationData {
   // LMD GHOST vote
-  uint64 slot = 1;
+  uint64 slot = 1 [deprecated=true];
   bytes beacon_block_root = 2;
 
   // FFG vote
   uint64 source_epoch = 3;
-  uint64 target_epoch = 4;
-  bytes source_root = 5;
+  bytes source_root = 4;
+  uint64 target_epoch = 5;
   bytes target_root = 6;
 
   // Crosslink vote
-  uint64 shard = 7;
-  bytes previous_crosslink_root = 8;
-  bytes crosslink_data_root = 9;
+  uint64 shard = 7 [deprecated=true];
+  bytes previous_crosslink_root = 8 [deprecated=true];
+  bytes crosslink_data_root = 9 [deprecated=true];
+  Crosslink crosslink = 10;
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
@@ -158,12 +159,19 @@ message ShardReassignmentRecord {
 }
 
 message Crosslink {
+  //Shard number
+  uint64 shard = 1;
   // Epoch number
-  uint64 epoch = 1;
+  uint64 epoch = 2;
+  // Parent root
+  bytes parent_root = 3;
+  // Data root
+  bytes data_root = 4;
   // Root of the previous crosslink
-  bytes previous_crosslink_root_hash32 = 2;
+  bytes previous_crosslink_root_hash32 = 5 [deprecated=true];
   // Root of the shard data since the previous crosslink
-  bytes crosslink_data_root_hash32 = 3;
+  bytes crosslink_data_root_hash32 = 6 [deprecated=true];
+  
 }
 
 message BeaconBlock {
@@ -176,7 +184,7 @@ message BeaconBlock {
   // Deprecated
   // TODO(2307): Remove deprecated fields
   bytes randao_reveal = 1003;
-  Eth1Data eth1_data = 1004;
+  Eth1Data eth1_data = 1004 [deprecated = true];
 }
 
 message BeaconBlockBody {
