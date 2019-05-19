@@ -179,15 +179,15 @@ func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
 		for i := uint64(0); i < offset; i++ {
 			shard, err := helpers.EpochStartShard(state, e)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not get epoch start shards: %v", err)
 			}
 			committee, err := helpers.CrosslinkCommitteeAtEpoch(state, e, shard)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not get crosslink committee: %v", err)
 			}
 			crosslink, indices, err := WinningCrosslink(state, shard, e)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not get winning crosslink: %v", err)
 			}
 			attestedBalance := helpers.TotalBalance(state, indices)
 			totalBalance := helpers.TotalBalance(state, committee)
@@ -477,11 +477,10 @@ func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	count := helpers.EpochCommitteeCount(state, epoch)
 	startShard, err := helpers.EpochStartShard(state, epoch)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("could not get epoch start shard: %v", err)
 	}
 	for i := uint64(0); i < count; i++ {
 		shard := (startShard + i) % params.BeaconConfig().ShardCount
-		// Need to update get_crosslink_committee in spec.
 		committee, err := helpers.CrosslinkCommitteeAtEpoch(state, epoch, shard)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get crosslink's committee: %v", err)
@@ -490,6 +489,7 @@ func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get winning crosslink: %v", err)
 		}
+
 		attested := make(map[uint64]bool)
 		// Construct a map to look up validators that voted for crosslink.
 		for _, index := range attestingIndices {
