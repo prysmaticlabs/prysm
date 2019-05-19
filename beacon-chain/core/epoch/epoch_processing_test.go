@@ -1002,12 +1002,11 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:              params.BeaconConfig().GenesisSlot + uint64(i),
 				TargetEpoch:       params.BeaconConfig().GenesisEpoch,
 				CrosslinkDataRoot: []byte{'A'},
 				Shard:             startShard + 1,
 			},
-			InclusionSlot:       uint64(i + 100),
+			InclusionDelay:      uint64(i + 100),
 			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
 		}
 	}
@@ -1049,6 +1048,34 @@ func TestCrosslinkDelta_CantGetStartShard(t *testing.T) {
 
 	_, _, err := CrosslinkDelta(state)
 	wanted := "could not get epoch start shard"
+	if !strings.Contains(err.Error(), wanted) {
+		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+	}
+}
+
+func TestAttestationDelta_CantGetBlockRoot(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+
+	state := buildState(gs+2*e, 1)
+	state.Slot = 0
+
+	_, _, err := AttestationDelta(state)
+	wanted := "could not get block root for epoch"
+	if !strings.Contains(err.Error(), wanted) {
+		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+	}
+}
+
+func TestAttestationDelta_CantGetAttestingBalance(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	gs := params.BeaconConfig().GenesisSlot
+
+	state := buildState(gs+2*e, 1)
+	state.Slot = 0
+
+	_, _, err := AttestationDelta(state)
+	wanted := "could not get attesting balance"
 	if !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
 	}

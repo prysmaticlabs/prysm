@@ -556,7 +556,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 				JustifiedBlockRootHash32: []byte{0},
 			},
 			AggregationBitfield: []byte{},
-			InclusionDelay:       i + params.BeaconConfig().SlotsPerEpoch + 1 + params.BeaconConfig().GenesisSlot,
+			InclusionDelay:      i + params.BeaconConfig().SlotsPerEpoch + 1 + params.BeaconConfig().GenesisSlot,
 		})
 	}
 
