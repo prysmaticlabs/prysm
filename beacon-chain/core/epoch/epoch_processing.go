@@ -179,15 +179,15 @@ func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
 		for i := uint64(0); i < offset; i++ {
 			shard, err := helpers.EpochStartShard(state, e)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not get epoch start shards: %v", err)
 			}
 			committee, err := helpers.CrosslinkCommitteeAtEpoch(state, e, shard)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not get crosslink committee: %v", err)
 			}
 			crosslink, indices, err := WinningCrosslink(state, shard, e)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not get winning crosslink: %v", err)
 			}
 			attestedBalance := helpers.TotalBalance(state, indices)
 			totalBalance := helpers.TotalBalance(state, committee)
@@ -446,6 +446,66 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	}
 
 	return winnerCrosslink, crosslinkIndices, nil
+}
+
+// CrosslinkDelta calculates the rewards and penalties of individual
+// validator for submitting the correct crosslink.
+// Individual rewards and penalties are returned in list.
+//
+// Spec pseudocode definition:
+//  def get_crosslink_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
+//    rewards = [0 for index in range(len(state.validator_registry))]
+//    penalties = [0 for index in range(len(state.validator_registry))]
+//    epoch = get_previous_epoch(state)
+//    for offset in range(get_epoch_committee_count(state, epoch)):
+//        shard = (get_epoch_start_shard(state, epoch) + offset) % SHARD_COUNT
+//        crosslink_committee = get_crosslink_committee(state, epoch, shard)
+//        winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, epoch, shard)
+//        attesting_balance = get_total_balance(state, attesting_indices)
+//        committee_balance = get_total_balance(state, crosslink_committee)
+//        for index in crosslink_committee:
+//            base_reward = get_base_reward(state, index)
+//            if index in attesting_indices:
+//                rewards[index] += base_reward * attesting_balance // committee_balance
+//            else:
+//                penalties[index] += base_reward
+//    return rewards, penalties
+func CrosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
+	rewards := make([]uint64, len(state.ValidatorRegistry))
+	penalties := make([]uint64, len(state.ValidatorRegistry))
+	epoch := helpers.PrevEpoch(state)
+	count := helpers.EpochCommitteeCount(state, epoch)
+	startShard, err := helpers.EpochStartShard(state, epoch)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get epoch start shard: %v", err)
+	}
+	for i := uint64(0); i < count; i++ {
+		shard := (startShard + i) % params.BeaconConfig().ShardCount
+		committee, err := helpers.CrosslinkCommitteeAtEpoch(state, epoch, shard)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get crosslink's committee: %v", err)
+		}
+		_, attestingIndices, err := WinningCrosslink(state, shard, epoch)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get winning crosslink: %v", err)
+		}
+
+		attested := make(map[uint64]bool)
+		// Construct a map to look up validators that voted for crosslink.
+		for _, index := range attestingIndices {
+			attested[index] = true
+		}
+		committeeBalance := helpers.TotalBalance(state, committee)
+		attestingBalance := helpers.TotalBalance(state, attestingIndices)
+		for _, index := range committee {
+			if _, ok := attested[index]; ok {
+				rewards[index] += BaseReward(state, index) * attestingBalance / committeeBalance
+			} else {
+				penalties[index] += BaseReward(state, index)
+			}
+		}
+	}
+	return rewards, penalties, nil
 }
 
 // UnslashedAttestingIndices returns all the attesting indices from a list of attestations,
