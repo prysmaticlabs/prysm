@@ -17,7 +17,7 @@ var clock utils.Clock = &utils.RealClock{}
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
-		Slot:            params.BeaconConfig().GenesisSlot,
+		Slot:            0,
 		ParentBlockRoot: params.BeaconConfig().ZeroHash[:],
 		StateRoot:       stateRoot,
 		Signature:       params.BeaconConfig().EmptySignature[:],
@@ -48,16 +48,16 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 //		assert slot < state.slot
 //		return state.latest_block_roots[slot % LATEST_BLOCK_ROOTS_LENGTH]
 func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	earliestSlot := state.Slot - params.BeaconConfig().LatestBlockRootsLength
+	earliestSlot := uint64(0)
+	if state.Slot > params.BeaconConfig().LatestBlockRootsLength {
+		earliestSlot = state.Slot - params.BeaconConfig().LatestBlockRootsLength
+	}
 
 	if slot < earliestSlot || slot >= state.Slot {
-		if earliestSlot < params.BeaconConfig().GenesisSlot {
-			earliestSlot = params.BeaconConfig().GenesisSlot
-		}
 		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
-			slot-params.BeaconConfig().GenesisSlot,
-			earliestSlot-params.BeaconConfig().GenesisSlot,
-			state.Slot-params.BeaconConfig().GenesisSlot,
+			slot,
+			earliestSlot,
+			state.Slot,
 		)
 	}
 

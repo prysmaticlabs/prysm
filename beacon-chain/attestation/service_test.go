@@ -36,19 +36,19 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
 			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
 		})
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 1,
+		Slot:                   1,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 1,
+		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
-			Slot:  params.BeaconConfig().GenesisSlot + 1,
+			Slot:  1,
 			Shard: 2,
 		},
 	}
@@ -78,7 +78,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState = &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 36,
+		Slot:                   36,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
@@ -88,7 +88,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		t.Fatalf("could not save state: %v", err)
 	}
 
-	attestation.Data.Slot = params.BeaconConfig().GenesisSlot + 36
+	attestation.Data.Slot = 36
 	attestation.Data.Shard = 36
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
@@ -110,16 +110,16 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
 			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
 		})
 	}
 	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		Slot:              1,
 		ValidatorRegistry: validators,
 	}
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 1,
+		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -133,7 +133,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x80},
 		Data: &pb.AttestationData{
-			Slot:  params.BeaconConfig().GenesisSlot + 1,
+			Slot:  1,
 			Shard: 1,
 		},
 	}
@@ -150,7 +150,7 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{}},
-		LatestBlock:       &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
+		LatestBlock:       &pb.BeaconBlock{Slot: 0},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
-		LatestBlock:       &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
+		LatestBlock:       &pb.BeaconBlock{Slot: 0},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -230,19 +230,19 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
 			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
 		})
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 1,
+		Slot:                   1,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 1,
+		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -256,7 +256,7 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
-			Slot:  params.BeaconConfig().GenesisSlot + 1,
+			Slot:  1,
 			Shard: 2,
 		},
 	}
@@ -271,11 +271,11 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
 
-	attestation.Data.Slot = params.BeaconConfig().GenesisSlot + 36
+	attestation.Data.Slot = 36
 	attestation.Data.Shard = 36
 
 	beaconState = &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 36,
+		Slot:                   36,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
@@ -315,8 +315,8 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
 			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
 		})
 	}
 
@@ -325,13 +325,13 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 2,
+		Slot:                   2,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 2,
+		Slot: 2,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -343,7 +343,7 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	slot := params.BeaconConfig().GenesisSlot + 2
+	slot := uint64(2)
 	shard := uint64(3)
 	index := uint64(4)
 	attestation := &pb.Attestation{
@@ -389,19 +389,19 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
 			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
 		})
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 1,
+		Slot:                   1,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		ValidatorRegistry:      validators,
 	}
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 1,
+		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -414,7 +414,7 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0xC0},
 		Data: &pb.AttestationData{
-			Slot:  params.BeaconConfig().GenesisSlot + 1,
+			Slot:  1,
 			Shard: 1,
 		},
 	}
@@ -434,19 +434,19 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
 			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
 		})
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 1,
+		Slot:                   1,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		ValidatorRegistry:      validators,
 	}
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 1,
+		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -461,7 +461,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 		attestations = append(attestations, &pb.Attestation{
 			AggregationBitfield: []byte{0x80},
 			Data: &pb.AttestationData{
-				Slot:  params.BeaconConfig().GenesisSlot + 1,
+				Slot:  1,
 				Shard: 1,
 			},
 		})

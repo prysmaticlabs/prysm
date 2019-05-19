@@ -230,9 +230,9 @@ func CommitteeAssignment(
 	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
 		return nil, 0, 0, false, fmt.Errorf(
 			"epoch %d out of bounds: %d <= epoch <= %d",
-			wantedEpoch-params.BeaconConfig().GenesisEpoch,
-			prevEpoch-params.BeaconConfig().GenesisEpoch,
-			nextEpoch-params.BeaconConfig().GenesisEpoch,
+			wantedEpoch,
+			prevEpoch,
+			nextEpoch,
 		)
 	}
 

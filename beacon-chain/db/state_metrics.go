@@ -58,8 +58,6 @@ var (
 )
 
 func reportStateMetrics(state *pb.BeaconState) {
-	s := params.BeaconConfig().GenesisSlot
-	e := params.BeaconConfig().GenesisEpoch
 	currentEpoch := state.Slot / params.BeaconConfig().SlotsPerEpoch
 	// Validator balances
 	for i, bal := range state.Balances {
@@ -73,15 +71,15 @@ func reportStateMetrics(state *pb.BeaconState) {
 		// Track individual Validator's activation epochs
 		validatorActivatedGauge.WithLabelValues(
 			strconv.Itoa(i), //Validator index
-		).Set(float64(v.ActivationEpoch - e))
+		).Set(float64(v.ActivationEpoch))
 		// Track individual Validator's exited epochs
 		validatorExitedGauge.WithLabelValues(
 			strconv.Itoa(i), //Validator index
-		).Set(float64(v.ExitEpoch - e))
+		).Set(float64(v.ExitEpoch))
 		// Track individual Validator's slashed epochs
 		validatorSlashedGauge.WithLabelValues(
 			strconv.Itoa(i), //Validator index
-		).Set(float64(v.SlashedEpoch - e))
+		).Set(float64(v.SlashedEpoch))
 		// Total number of active validators
 		if v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch {
 			active++
@@ -90,11 +88,11 @@ func reportStateMetrics(state *pb.BeaconState) {
 	activeValidatorsGauge.Set(active)
 
 	// Slot number
-	lastSlotGauge.Set(float64(state.Slot - s))
+	lastSlotGauge.Set(float64(state.Slot))
 	// Last justified slot
-	lastJustifiedEpochGauge.Set(float64(state.CurrentJustifiedEpoch - e))
+	lastJustifiedEpochGauge.Set(float64(state.CurrentJustifiedEpoch))
 	// Last previous justified slot
-	lastPrevJustifiedEpochGauge.Set(float64(state.PreviousJustifiedEpoch - e))
+	lastPrevJustifiedEpochGauge.Set(float64(state.PreviousJustifiedEpoch))
 	// Last finalized slot
-	lastFinalizedEpochGauge.Set(float64(state.FinalizedEpoch - e))
+	lastFinalizedEpochGauge.Set(float64(state.FinalizedEpoch))
 }
