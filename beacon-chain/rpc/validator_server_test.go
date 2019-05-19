@@ -326,7 +326,9 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	// Pending active because activation epoch is still defaulted at far future slot.
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{ValidatorRegistry: []*pbp2p.Validator{
 		{ActivationEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: pubKey},
-	}}); err != nil {
+	},
+		Slot: 5000,
+	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depositInput := &pbp2p.DepositInput{
@@ -334,7 +336,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 		ProofOfPossession:           []byte("hi"),
 		WithdrawalCredentialsHash32: []byte("hey"),
 	}
-	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
+	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0 /*timestamp*/)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +344,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		DepositData: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/)
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{

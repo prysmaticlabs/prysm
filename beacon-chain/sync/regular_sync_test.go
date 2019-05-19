@@ -409,7 +409,15 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	if err := db.SaveState(ctx, state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
+	headBlock := &pb.BeaconBlock{Slot: state.Slot}
+	if err := db.SaveBlock(headBlock); err != nil {
+		t.Fatalf("failed to save block: %v", err)
+	}
+	if err := db.UpdateChainHead(ctx, headBlock, state); err != nil {
+		t.Fatalf("failed to update chain head: %v", err)
+	}
 	cfg := &RegularSyncConfig{
+		AttsService:      &mockAttestationService{},
 		ChainService:     ms,
 		OperationService: os,
 		P2P:              &mockP2P{},
