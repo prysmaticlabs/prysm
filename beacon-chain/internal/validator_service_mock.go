@@ -6,12 +6,11 @@ package internal
 
 import (
 	context "context"
-	reflect "reflect"
-
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	metadata "google.golang.org/grpc/metadata"
+	reflect "reflect"
 )
 
 // MockValidatorServiceServer is a mock of ValidatorServiceServer interface
@@ -127,10 +126,10 @@ func (mr *MockValidatorServiceServerMockRecorder) WaitForActivation(arg0, arg1 i
 }
 
 // WaitTillSync mocks base method
-func (m *MockValidatorServiceServer) WaitTillSync(arg0 context.Context, arg1 *types.Empty) (*v1.SyncedResponse, error) {
+func (m *MockValidatorServiceServer) WaitTillSync(arg0 context.Context, arg1 *types.Empty) (*types.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitTillSync", arg0, arg1)
-	ret0, _ := ret[0].(*v1.SyncedResponse)
+	ret0, _ := ret[0].(*types.Empty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

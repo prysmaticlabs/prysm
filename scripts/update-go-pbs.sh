@@ -3,7 +3,7 @@
 # Script to copy pb.go files from bazel build folder to appropriate location.
 # Bazel builds to bazel-bin/... folder, script copies them back to original folder where .proto is.
 
-bazel build //proto/...
+bazel build //proto/... --repository_cache=/Users/Shay/bazel
 
 # Get locations of pb.go files.
 

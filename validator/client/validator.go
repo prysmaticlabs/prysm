@@ -132,19 +132,12 @@ func (v *validator) WaitTillSync(ctx context.Context) error {
 		if ctx.Err() == context.Canceled {
 			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
 		}
-		res, err := v.validatorClient.WaitTillSync(ctx, &ptypes.Empty{})
-		if err != nil {
-			return fmt.Errorf("wait till sync got error : %v", err)
-		}
-		if res != nil && !res.Synced && string(res.SyncError) != "" {
-			log.Infof("in sync process - %s", string(res.SyncError))
-			time.Sleep(time.Millisecond * time.Duration(waitBetweenSynchedRetry))
-			continue
-		}
-		if res != nil && res.Synced {
+		_, err := v.validatorClient.WaitTillSync(ctx, &ptypes.Empty{})
+		if err == nil {
 			log.Info("Beacon node is Synced")
 			break
 		}
+		log.Infof("in sync process - %s", err.Error())
 		time.Sleep(time.Millisecond * time.Duration(waitBetweenSynchedRetry))
 	}
 	return nil
