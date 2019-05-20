@@ -19,7 +19,7 @@ type WriterHook struct {
 	LogLevels []logrus.Level
 }
 
-// Fire will be called when some logging function is called with current hook
+// Fire will be called when some logging function is called with current hook.
 // It will format log entry to string and write it to appropriate writer
 func (hook *WriterHook) Fire(entry *logrus.Entry) error {
 	line, err := entry.String()
