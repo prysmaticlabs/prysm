@@ -911,7 +911,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_cobra",
-    commit = "ef82de70bb3f60c65fb8eebacbb2d122ef517385",  # v0.0.3
+    commit = "67fc4837d267bc9bfd6e47f77783fcc3dffc68de",  # v0.0.4
     importpath = "github.com/spf13/cobra",
 )
 
