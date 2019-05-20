@@ -32,7 +32,6 @@ func (hook *WriterHook) Levels() []logrus.Level {
 	return hook.LogLevels
 }
 
-// File Logger insyance
 var fileLogger = &logrus.Logger{
 	Level: logrus.TraceLevel,
 }
