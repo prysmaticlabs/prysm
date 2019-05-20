@@ -117,7 +117,7 @@ var (
 		Usage: "Specify log file name, relative or absolute",
 		Value: "text",
 	}
-	// LogFileName specifies the log output format.
+	// LogFileFormat specifies the log output format.
 	LogFileFormat = cli.StringFlag{
 		Name:  "log-file-format",
 		Usage: "Specify log file formatting. Supports: text, json, fluentd.",
