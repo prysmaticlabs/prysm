@@ -29,7 +29,7 @@ func (hook *WriterHook) Fire(entry *logrus.Entry) error {
 	return err
 }
 
-// Levels define on which log levels this hook would trigger
+// Levels defines on which log levels this hook would trigger.
 func (hook *WriterHook) Levels() []logrus.Level {
 	return hook.LogLevels
 }
