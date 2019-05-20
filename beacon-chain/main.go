@@ -109,7 +109,7 @@ func main() {
 		if logFileName != "" {
 			logFileFormatName := ctx.GlobalString(cmd.LogFileFormat.Name)
 			if err := logutil.ConfigurePersistentLogging(logFileName, logFileFormatName); err != nil {
-			    log.WithError(err).Error("Failed to configuring logging to disk.")
+				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
 
