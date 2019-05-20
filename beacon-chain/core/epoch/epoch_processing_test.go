@@ -616,8 +616,9 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 }
 
 func TestProcessCrosslink_NoUpdate(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
+	validatorCount := 128
+	validators := make([]*pb.Validator, validatorCount)
+	balances := make([]uint64, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -966,10 +967,9 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 
 func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
-	gs := params.BeaconConfig().GenesisSlot
 
 	validatorCount := uint64(128)
-	state := buildState(gs+e+2, validatorCount)
+	state := buildState(e+2, validatorCount)
 
 	rewards, penalties, err := CrosslinkDelta(state)
 	if err != nil {
@@ -991,17 +991,14 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 
 func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
-	gs := params.BeaconConfig().GenesisSlot
-	ge := params.BeaconConfig().GenesisEpoch
 
-	state := buildState(gs+e+2, params.BeaconConfig().DepositsForChainStart/8)
+	state := buildState(e+2, params.BeaconConfig().DepositsForChainStart/8)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:              params.BeaconConfig().GenesisSlot + uint64(i),
-				TargetEpoch:       params.BeaconConfig().GenesisEpoch,
+				Slot:              uint64(i),
 				CrosslinkDataRoot: []byte{'A'},
 				Shard:             startShard + 1,
 			},
@@ -1011,11 +1008,9 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	}
 	state.PreviousEpochAttestations = atts
 	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
-		Epoch:                   ge,
 		CrosslinkDataRootHash32: []byte{'A'},
 	}
 	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
-		Epoch:                   ge,
 		CrosslinkDataRootHash32: []byte{'A'},
 	}
 
@@ -1024,7 +1019,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{184, 638, 714, 1511, 506, 11, 797}
+	attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
 		if rewards[i] != BaseReward(state, i) {
@@ -1038,15 +1033,11 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	}
 }
 
-func TestCrosslinkDelta_CantGetStartShard(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
-	gs := params.BeaconConfig().GenesisSlot
-
-	state := buildState(gs+2*e, 1)
-	state.Slot = 0
+func TestCrosslinkDelta_CantGetWinningCrosslink(t *testing.T) {
+	state := buildState(0, 1)
 
 	_, _, err := CrosslinkDelta(state)
-	wanted := "could not get epoch start shard"
+	wanted := "could not get winning crosslink: could not get matching attestations"
 	if !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
 	}
