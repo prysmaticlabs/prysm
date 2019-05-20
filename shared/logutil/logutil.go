@@ -62,7 +62,7 @@ func ConfigurePersistentLogging(logFileName string, logFileFormatName string) (b
 		fileLogger.SetFormatter(&logrus.JSONFormatter{})
 		break
 	default:
-		logrus.Fatalf("must specifiy log file format when logging to persistent log file.")
+		return false, fmt.Errorf("unknown log file format %v", logFileFormatName)
 	}
 
 	logrus.Info("File logger initialized")
