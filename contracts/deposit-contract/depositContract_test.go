@@ -104,12 +104,21 @@ func TestValidatorRegister_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	testAccount.txOpts.Value = amount32Eth
+	testAccount.txOpts.GasLimit = 100000
 
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'}, []byte{'B'}, []byte{'C'})
+	var pubkey [96]byte
+	pubkey[0] = 'A'
+	var withdrawalCreds [32]byte
+	withdrawalCreds[0] = 'A'
+	var sig [96]byte
+	sig[0] = 'B'
+	tx, err := testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
+	rec, _ := testAccount.backend.TransactionReceipt(context.Background(), tx.Hash())
+	t.Logf("status %d", rec.Status)
 	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'B'}, []byte{'B'}, []byte{'C'})
 	testAccount.backend.Commit()
 	if err != nil {
@@ -133,15 +142,13 @@ func TestValidatorRegister_OK(t *testing.T) {
 	}
 
 	merkleTreeIndex := make([]uint64, 5)
-	depositData := make([][]byte, 5)
 
 	for i, log := range logs {
-		_, data, idx, _, err := UnpackDepositLogData(log.Data)
+		_, _, _, _, idx, err := UnpackDepositLogData(log.Data)
 		if err != nil {
 			t.Fatalf("Unable to unpack log data: %v", err)
 		}
-		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx)
-		depositData[i] = data
+		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx[:])
 	}
 
 	if merkleTreeIndex[0] != 0 {
