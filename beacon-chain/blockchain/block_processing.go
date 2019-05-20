@@ -265,7 +265,6 @@ func (c *ChainService) runStateTransition(
 		ctx,
 		beaconState,
 		block,
-		headRoot,
 		&state.TransitionConfig{
 			VerifySignatures: false, // We disable signature verification for now.
 			Logging:          true,  // We enable logging in this state transition call.

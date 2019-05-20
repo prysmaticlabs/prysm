@@ -225,7 +225,7 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 
 	for beaconState.Slot < slot {
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
+			ctx, beaconState, nil /* block */, state.DefaultConfig(),
 		)
 		if err != nil {
 			return fmt.Errorf("could not execute head transition: %v", err)

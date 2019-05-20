@@ -16,7 +16,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -135,21 +134,13 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	chainHead, err := vs.beaconDB.ChainHead()
-	if err != nil {
-		return nil, fmt.Errorf("could not get chain head: %v", err)
-	}
-	headRoot, err := hashutil.HashBeaconBlock(chainHead)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
-	}
 
 	for beaconState.Slot < req.EpochStart {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
+			ctx, beaconState, nil /* block */, state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)

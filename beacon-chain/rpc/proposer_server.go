@@ -36,22 +36,13 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
-
-	head, err := ps.beaconDB.ChainHead()
-	if err != nil {
-		return nil, fmt.Errorf("could not get chain head: %v", err)
-	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
-	}
 	for beaconState.Slot < req.SlotNumber {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
 
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
+			ctx, beaconState, nil /* block */, state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
@@ -106,14 +97,6 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
-	head, err := ps.beaconDB.ChainHead()
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
-	}
-	blockRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash beacon block: %v", err)
-	}
 
 	for beaconState.Slot < req.ProposalBlockSlot-1 {
 		if ctx.Err() != nil {
@@ -121,7 +104,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 		}
 
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, blockRoot, state.DefaultConfig(),
+			ctx, beaconState, nil /* block */, state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
@@ -188,7 +171,6 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	parentHash := bytesutil.ToBytes32(req.ParentBlockRoot)
 	// Check for skipped slots.
 	for beaconState.Slot < req.Slot-1 {
 		if ctx.Err() != nil {
@@ -199,7 +181,6 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 			ctx,
 			beaconState,
 			nil,
-			parentHash,
 			state.DefaultConfig(),
 		)
 		if err != nil {
@@ -210,7 +191,6 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		ctx,
 		beaconState,
 		req,
-		parentHash,
 		state.DefaultConfig(),
 	)
 	if err != nil {

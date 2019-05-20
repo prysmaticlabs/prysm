@@ -107,7 +107,6 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		context.Background(),
 		sb.state,
 		newBlock,
-		prevBlockRoot,
 		state.DefaultConfig(),
 	)
 	if err != nil {
@@ -126,12 +125,10 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 
 // GenerateNilBlockAndAdvanceChain would trigger a state transition with a nil block.
 func (sb *SimulatedBackend) GenerateNilBlockAndAdvanceChain() error {
-	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
 	newState, err := state.ExecuteStateTransition(
 		context.Background(),
 		sb.state,
 		nil,
-		prevBlockRoot,
 		state.DefaultConfig(),
 	)
 	if err != nil {
