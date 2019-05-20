@@ -108,7 +108,9 @@ func main() {
 		logFileName := ctx.GlobalString(cmd.LogFileName.Name)
 		if logFileName != "" {
 			logFileFormatName := ctx.GlobalString(cmd.LogFileFormat.Name)
-			logutil.ConfigurePersistentLogging(logFileName, logFileFormatName)
+			if err := logutil.ConfigurePersistentLogging(logFileName, logFileFormatName); err != nil {
+			    log.WithError(err).Error("Failed to configuring logging to disk.")
+			}
 		}
 
 		runtime.GOMAXPROCS(runtime.NumCPU())
