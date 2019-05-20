@@ -6,6 +6,8 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/prysmaticlabs/prysm/shared/logutil"
+
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -33,36 +35,6 @@ func startNode(ctx *cli.Context) error {
 	beacon.Start()
 	return nil
 }
-
-//---------------file logging hook code------------
-
-// WriterHook is a hook that writes logs of specified LogLevels to specified Writer
-type WriterHook struct {
-	LogLevels []logrus.Level
-}
-
-// Fire will be called when some logging function is called with current hook
-// It will format log entry to string and write it to appropriate writer
-func (hook *WriterHook) Fire(entry *logrus.Entry) error {
-	line, err := entry.String()
-	if err != nil {
-		return err
-	}
-	//simply call the file logger Println func
-	fileLogger.Println(line)
-	return err
-}
-
-// Levels define on which log levels this hook would trigger
-func (hook *WriterHook) Levels() []logrus.Level {
-	return hook.LogLevels
-}
-
-var fileLogger = &logrus.Logger{
-	Level: logrus.TraceLevel,
-}
-
-//------- end of file logging hook code---------------
 
 func main() {
 	log := logrus.WithField("prefix", "main")
@@ -134,47 +106,9 @@ func main() {
 		//if the user has specified a log file name (--log-file arg) -
 		//we configure a persistent log file logger , a formatter and a hook.
 		logFileName := ctx.GlobalString(cmd.LogFileName.Name)
-		logrus.Info("Logs will be made persistent , logFileName=" + logFileName)
 		if logFileName != "" {
-			f, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-			if err != nil {
-				logrus.Fatalf("Cannot open log file " + err.Error())
-			}
-			fileLogger.SetOutput(f)
-
-			//configure format if specified, othereise use the stdout logger's format
 			logFileFormatName := ctx.GlobalString(cmd.LogFileFormat.Name)
-			switch logFileFormatName {
-			case "text":
-				formatter := new(prefixed.TextFormatter)
-				formatter.TimestampFormat = "2006-01-02 15:04:05"
-				formatter.FullTimestamp = true
-				formatter.DisableColors = true
-				fileLogger.SetFormatter(formatter)
-				break
-			case "fluentd":
-				fileLogger.SetFormatter(&joonix.FluentdFormatter{})
-				break
-			case "json":
-				fileLogger.SetFormatter(&logrus.JSONFormatter{})
-				break
-			default:
-				logrus.Fatalf("must specifiy log file format when logging to persistent log file.")
-			}
-
-			logrus.Info("File logger initialized")
-			//trigger writing to the log file on every stdout log write
-			logrus.AddHook(&WriterHook{
-				LogLevels: []logrus.Level{
-					logrus.PanicLevel,
-					logrus.FatalLevel,
-					logrus.ErrorLevel,
-					logrus.WarnLevel,
-					logrus.InfoLevel,
-					logrus.DebugLevel,
-					logrus.TraceLevel,
-				},
-			})
+			logutil.ConfigurePersistentLogging(logFileName, logFileFormatName)
 		}
 
 		runtime.GOMAXPROCS(runtime.NumCPU())
