@@ -1677,7 +1677,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 
 	validators[12683].Slashed = false
 
-	lbhsr, err := ssz.SignedRoot(state.LatestBlockHeader)
+	latestBlockSignedRoot, err := ssz.SignedRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1694,7 +1694,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
-		ParentBlockRoot: lbhsr[:],
+		ParentBlockRoot: latestBlockSignedRoot[:],
 		Signature:       blockSig.Marshal(),
 	}
 	bBytes, err := block.Body.Marshal()
