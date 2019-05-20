@@ -6,6 +6,7 @@ package epoch
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"sort"
@@ -22,13 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 )
-
-var log = logrus.WithField("prefix", "core/state")
-
-type queueElement struct {
-	idx                        int
-	ActivationEligibilityEpoch uint64
-}
 
 // MatchedAttestations is an object that contains the correctly
 // voted attestations based on source, target and head criteria.

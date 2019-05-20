@@ -161,6 +161,41 @@ var merkleHashTests = []merkleHashTest{
 	}, output: "55DC6699E7B5713DD9102224C302996F931836C6DAE9A4EC6AB49C966F394685"},
 }
 
+var signatureRootTests = []signatureRootTest{
+	{val: &pb.BeaconBlockHeader{Slot: 20, Signature: []byte{'A', 'B'}},
+		output: "15DE30A770592FAD0AC0AE262DBEF783AA747DA5103275F651E41DF1E8CC653F"},
+	{val: &pb.BeaconBlockHeader{Slot: 10, Signature: []byte("TESTING")},
+		output: "85AA0ABF2B8CEC5DB303320328B691FA125B3A4D3106365A29EAE44C9E60BF07"},
+	{val: &pb.BeaconBlockHeader{
+		Slot:              10,
+		PreviousBlockRoot: []byte{'a', 'b'},
+		Signature:         []byte("TESTING23")},
+		output: "3E4ABA699B1F0E6BA39CCED965E23AAA8CBD1892338ACCB1781DEFB8870FF76B"},
+
+	{val: &pb.IndexedAttestation{Signature: []byte("SigningAttestation")},
+		output: "F00354BFA20B0CFBBE623A1AE36D9CE0D29FF65C3D69BF133C264B0707579E3B"},
+	{val: &pb.VoluntaryExit{Signature: []byte("SigningExit")},
+		output: "C940F7E42FF91F069939264514E6F88F690615FF452B76BECFFD5D36063EAAE4"},
+	{val: pb.BeaconBlockHeader{Slot: 20, Signature: []byte{'A', 'B'}},
+		output: "15DE30A770592FAD0AC0AE262DBEF783AA747DA5103275F651E41DF1E8CC653F"},
+	{val: pb.BeaconBlockHeader{
+		Slot:              10,
+		PreviousBlockRoot: []byte{'a', 'b'},
+		Signature:         []byte("TESTING23")},
+		output: "3E4ABA699B1F0E6BA39CCED965E23AAA8CBD1892338ACCB1781DEFB8870FF76B"},
+	{val: pb.BeaconBlockHeader{Slot: 10, Signature: []byte("TESTING")},
+		output: "85AA0ABF2B8CEC5DB303320328B691FA125B3A4D3106365A29EAE44C9E60BF07"},
+	{val: pb.IndexedAttestation{Signature: []byte("SigningAttestation")},
+		output: "F00354BFA20B0CFBBE623A1AE36D9CE0D29FF65C3D69BF133C264B0707579E3B"},
+	{val: pb.VoluntaryExit{Signature: []byte("SigningExit")},
+		output: "C940F7E42FF91F069939264514E6F88F690615FF452B76BECFFD5D36063EAAE4"},
+	{val: pb.Deposit{Index: 0}, error: "field name Signature is missing from the given struct"},
+	{val: 2, error: "given object is neither a struct or a pointer"},
+	{val: []byte{'a'}, error: "given object is neither a struct or a pointer"},
+	{val: nil, error: "given object is neither a struct or a pointer"},
+	{val: (*[]uint8)(nil), error: "nil pointer given"},
+}
+
 func runHashTests(t *testing.T, hash func(val interface{}) ([32]byte, error)) {
 	for i, test := range hashTests {
 		output, err := hash(test.val)

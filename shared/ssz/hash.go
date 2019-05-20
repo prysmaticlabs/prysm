@@ -40,6 +40,46 @@ func TreeHash(val interface{}) ([32]byte, error) {
 	return paddedOutput, nil
 }
 
+// SignedRoot returns the signed root of the last element in the container.
+func SignedRoot(val interface{}) ([32]byte, error) {
+	valObj := reflect.ValueOf(val)
+	kind := valObj.Kind()
+
+	switch {
+	case kind == reflect.Struct:
+		return hashSignature(valObj)
+	case kind == reflect.Ptr:
+		if valObj.IsNil() {
+			return [32]byte{}, errors.New("nil pointer given")
+		}
+		deRefVal := valObj.Elem()
+		if deRefVal.Kind() != reflect.Struct {
+			return [32]byte{}, errors.New("invalid type")
+		}
+		return hashSignature(deRefVal)
+	default:
+		return [32]byte{}, fmt.Errorf("given object is neither a struct or a pointer but is %v", kind)
+	}
+}
+
+func hashSignature(val reflect.Value) ([32]byte, error) {
+	valTyp := val.Type()
+	fieldsMap, err := structFieldMap(valTyp)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	sf, ok := fieldsMap["Signature"]
+
+	if !ok {
+		return [32]byte{}, fmt.Errorf("field name Signature is missing from the given struct")
+	}
+	sigField := val.Field(sf.index)
+	if sigField.Kind() == reflect.Slice && sigField.Type().Elem().Kind() == reflect.Uint8 {
+		return TreeHash(sigField.Interface().([]byte))
+	}
+	return [32]byte{}, errors.New("signature field is of an invalid type")
+}
+
 type hashError struct {
 	msg string
 	typ reflect.Type
