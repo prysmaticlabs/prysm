@@ -175,9 +175,9 @@ var signatureRootTests = []signatureRootTest{
 	{val: &pb.BeaconBlockHeader{Slot: 10, Signature: []byte("TESTING")},
 		output: "85AA0ABF2B8CEC5DB303320328B691FA125B3A4D3106365A29EAE44C9E60BF07"},
 	{val: &pb.BeaconBlockHeader{
-		Slot:              10,
-		PreviousBlockRoot: []byte{'a', 'b'},
-		Signature:         []byte("TESTING23")},
+		Slot:       10,
+		ParentRoot: []byte{'a', 'b'},
+		Signature:  []byte("TESTING23")},
 		output: "3E4ABA699B1F0E6BA39CCED965E23AAA8CBD1892338ACCB1781DEFB8870FF76B"},
 
 	{val: &pb.IndexedAttestation{Signature: []byte("SigningAttestation")},
@@ -187,9 +187,9 @@ var signatureRootTests = []signatureRootTest{
 	{val: pb.BeaconBlockHeader{Slot: 20, Signature: []byte{'A', 'B'}},
 		output: "15DE30A770592FAD0AC0AE262DBEF783AA747DA5103275F651E41DF1E8CC653F"},
 	{val: pb.BeaconBlockHeader{
-		Slot:              10,
-		PreviousBlockRoot: []byte{'a', 'b'},
-		Signature:         []byte("TESTING23")},
+		Slot:       10,
+		ParentRoot: []byte{'a', 'b'},
+		Signature:  []byte("TESTING23")},
 		output: "3E4ABA699B1F0E6BA39CCED965E23AAA8CBD1892338ACCB1781DEFB8870FF76B"},
 	{val: pb.BeaconBlockHeader{Slot: 10, Signature: []byte("TESTING")},
 		output: "85AA0ABF2B8CEC5DB303320328B691FA125B3A4D3106365A29EAE44C9E60BF07"},
@@ -285,8 +285,8 @@ func TestMerkleHash(t *testing.T) {
 	})
 }
 
-func TestSignedRoot(t *testing.T) {
+func TestSigningRoot(t *testing.T) {
 	runSignedRootTests(t, func(val interface{}) ([32]byte, error) {
-		return SignedRoot(val)
+		return SigningRoot(val)
 	})
 }

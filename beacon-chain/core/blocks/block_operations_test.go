@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -19,6 +17,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -50,6 +49,289 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 		privKeys[i] = priv
 	}
 	return deposits, privKeys
+}
+
+func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
+	t.Skip()
+	// TODO(#2307) unskip after bls.Verify is finished
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Slashed:   true,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              0,
+		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
+		Fork: &pb.Fork{
+			PreviousVersion: []byte{0, 0, 0, 0},
+			CurrentVersion:  []byte{0, 0, 0, 0},
+		},
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	validators[5896].Slashed = false
+
+	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	if err != nil {
+		t.Error(err)
+	}
+	currentEpoch := helpers.CurrentEpoch(state)
+	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("failed to generate private key got: %v", err)
+	}
+	priv2, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("failed to generate private key got: %v", err)
+	}
+	wrongBlockSig := priv2.Sign([]byte("hello"), dt)
+	validators[5896].Pubkey = priv.PublicKey().Marshal()
+	block := &pb.BeaconBlock{
+		Slot: 0,
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{'A', 'B', 'C'},
+		},
+		ParentRoot: lbhsr[:],
+		Signature:  wrongBlockSig.Marshal(),
+	}
+
+	_, err = blocks.ProcessBlockHeader(state, block)
+	want := "verify signature failed"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+
+}
+
+func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Slashed:   true,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              0,
+		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
+		Fork: &pb.Fork{
+			PreviousVersion: []byte{0, 0, 0, 0},
+			CurrentVersion:  []byte{0, 0, 0, 0},
+		},
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	if err != nil {
+		t.Error(err)
+	}
+	currentEpoch := helpers.CurrentEpoch(state)
+	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("failed to generate private key got: %v", err)
+	}
+	blockSig := priv.Sign([]byte("hello"), dt)
+	validators[5896].Pubkey = priv.PublicKey().Marshal()
+	block := &pb.BeaconBlock{
+		Slot: 1,
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{'A', 'B', 'C'},
+		},
+		ParentRoot: lbhsr[:],
+		Signature:  blockSig.Marshal(),
+	}
+
+	_, err = blocks.ProcessBlockHeader(state, block)
+	want := "is different then block slot"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Slashed:   true,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              0,
+		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
+		Fork: &pb.Fork{
+			PreviousVersion: []byte{0, 0, 0, 0},
+			CurrentVersion:  []byte{0, 0, 0, 0},
+		},
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	currentEpoch := helpers.CurrentEpoch(state)
+	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("failed to generate private key got: %v", err)
+	}
+	blockSig := priv.Sign([]byte("hello"), dt)
+	validators[5896].Pubkey = priv.PublicKey().Marshal()
+	block := &pb.BeaconBlock{
+		Slot: 0,
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{'A', 'B', 'C'},
+		},
+		ParentRoot: []byte{'A'},
+		Signature:  blockSig.Marshal(),
+	}
+
+	_, err = blocks.ProcessBlockHeader(state, block)
+	want := "does not match"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Slashed:   true,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              0,
+		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
+		Fork: &pb.Fork{
+			PreviousVersion: []byte{0, 0, 0, 0},
+			CurrentVersion:  []byte{0, 0, 0, 0},
+		},
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	if err != nil {
+		t.Error(err)
+	}
+	currentEpoch := helpers.CurrentEpoch(state)
+	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("failed to generate private key got: %v", err)
+	}
+	blockSig := priv.Sign([]byte("hello"), dt)
+	validators[12683].Pubkey = priv.PublicKey().Marshal()
+	block := &pb.BeaconBlock{
+		Slot: 0,
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{'A', 'B', 'C'},
+		},
+		ParentRoot: lbhsr[:],
+		Signature:  blockSig.Marshal(),
+	}
+
+	_, err = blocks.ProcessBlockHeader(state, block)
+	want := "was previously slashed"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestProcessBlockHeader_OK(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Fatalf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Slashed:   true,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              0,
+		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
+		Fork: &pb.Fork{
+			PreviousVersion: []byte{0, 0, 0, 0},
+			CurrentVersion:  []byte{0, 0, 0, 0},
+		},
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	validators[12683].Slashed = false
+
+	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
+	if err != nil {
+		t.Error(err)
+	}
+	currentEpoch := helpers.CurrentEpoch(state)
+	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("Failed to generate private key got: %v", err)
+	}
+	blockSig := priv.Sign([]byte("hello"), dt)
+	validators[12683].Pubkey = priv.PublicKey().Marshal()
+	block := &pb.BeaconBlock{
+		Slot: 0,
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{'A', 'B', 'C'},
+		},
+		ParentRoot: latestBlockSignedRoot[:],
+		Signature:  blockSig.Marshal(),
+	}
+	bodyRoot, err := ssz.TreeHash(block.Body)
+	if err != nil {
+		t.Fatalf("Failed to hash block bytes got: %v", err)
+	}
+	newState, err := blocks.ProcessBlockHeader(state, block)
+	if err != nil {
+		t.Fatalf("Failed to process block header got: %v", err)
+	}
+	nsh := newState.LatestBlockHeader
+	expected := &pb.BeaconBlockHeader{
+		Slot:       block.Slot,
+		ParentRoot: latestBlockSignedRoot[:],
+		BodyRoot:   bodyRoot[:],
+	}
+	if !proto.Equal(nsh, expected) {
+		t.Errorf("Expected %v, received %vk9k", expected, nsh)
+	}
 }
 
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
@@ -1648,295 +1930,4 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 	if newState.Balances[0] != expectedSender {
 		t.Errorf("Expected sender balance %d, received %d", newState.Balances[0], expectedSender)
 	}
-}
-
-func TestProcessBlockHeader_OK(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			Slashed:   true,
-		}
-	}
-
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              0,
-		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	validators[12683].Slashed = false
-
-	latestBlockSignedRoot, err := ssz.SignedRoot(state.LatestBlockHeader)
-	if err != nil {
-		t.Error(err)
-	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
-	}
-	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[12683].Pubkey = priv.PublicKey().Marshal()
-	block := &pb.BeaconBlock{
-		Slot: 0,
-		Body: &pb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
-		},
-		ParentBlockRoot: latestBlockSignedRoot[:],
-		Signature:       blockSig.Marshal(),
-	}
-	bBytes, err := block.Body.Marshal()
-	if err != nil {
-		t.Errorf("failed to marshal block body got: %v", err)
-	}
-	bHash, err := ssz.TreeHash(bBytes)
-	if err != nil {
-		t.Errorf("failed to hash block bytes got: %v", err)
-	}
-	newState, err := blocks.ProcessBlockHeader(state, block)
-	if err != nil {
-		t.Errorf("failed to process block header got: %v", err)
-	}
-	nsh := newState.LatestBlockHeader
-	if !reflect.DeepEqual(nsh,
-		&pb.BeaconBlockHeader{
-			Slot:              block.Slot,
-			PreviousBlockRoot: block.ParentBlockRoot,
-			BlockBodyRoot:     bHash[:],
-		}) {
-		t.Errorf("new state don't contain")
-	}
-
-}
-
-func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
-	t.Skip()
-	// TODO(#2307) unskip after bls.Verify is finished
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			Slashed:   true,
-		}
-	}
-
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              0,
-		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	validators[5896].Slashed = false
-
-	lbhsr, err := ssz.SignedRoot(state.LatestBlockHeader)
-	if err != nil {
-		t.Error(err)
-	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
-	}
-	priv2, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
-	}
-	wrongBlockSig := priv2.Sign([]byte("hello"), dt)
-	validators[5896].Pubkey = priv.PublicKey().Marshal()
-	block := &pb.BeaconBlock{
-		Slot: 0,
-		Body: &pb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
-		},
-		ParentBlockRoot: lbhsr[:],
-		Signature:       wrongBlockSig.Marshal(),
-	}
-
-	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "verify signature failed"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
-
-}
-
-func TestProcessBlockHeader_DiffrentSlots(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			Slashed:   true,
-		}
-	}
-
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              0,
-		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	lbhsr, err := ssz.SignedRoot(state.LatestBlockHeader)
-	if err != nil {
-		t.Error(err)
-	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
-	}
-	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[5896].Pubkey = priv.PublicKey().Marshal()
-	block := &pb.BeaconBlock{
-		Slot: 1,
-		Body: &pb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
-		},
-		ParentBlockRoot: lbhsr[:],
-		Signature:       blockSig.Marshal(),
-	}
-
-	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "is different then block slot"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
-
-}
-
-func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			Slashed:   true,
-		}
-	}
-
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              0,
-		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
-	}
-	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[5896].Pubkey = priv.PublicKey().Marshal()
-	block := &pb.BeaconBlock{
-		Slot: 0,
-		Body: &pb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
-		},
-		ParentBlockRoot: []byte{'A'},
-		Signature:       blockSig.Marshal(),
-	}
-
-	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "is different then latest block header signed root"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
-
-}
-
-func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			Slashed:   true,
-		}
-	}
-
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              0,
-		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	lbhsr, err := ssz.SignedRoot(state.LatestBlockHeader)
-	if err != nil {
-		t.Error(err)
-	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
-	}
-	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[12683].Pubkey = priv.PublicKey().Marshal()
-	block := &pb.BeaconBlock{
-		Slot: 0,
-		Body: &pb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
-		},
-		ParentBlockRoot: lbhsr[:],
-		Signature:       blockSig.Marshal(),
-	}
-
-	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "proposer id: 12683 was slashed"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
-
 }
