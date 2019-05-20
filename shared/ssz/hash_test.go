@@ -197,7 +197,7 @@ var signatureRootTests = []signatureRootTest{
 		output: "F00354BFA20B0CFBBE623A1AE36D9CE0D29FF65C3D69BF133C264B0707579E3B"},
 	{val: pb.VoluntaryExit{Signature: []byte("SigningExit")},
 		output: "C940F7E42FF91F069939264514E6F88F690615FF452B76BECFFD5D36063EAAE4"},
-	{val: pb.Deposit{Index: 0}, error: "field name is invalid wanted Signature but got"},
+	{val: pb.Deposit{Index: 0}, error: "field name Signature is missing from the given struct"},
 	{val: 2, error: "given object is neither a struct or a pointer"},
 	{val: []byte{'a'}, error: "given object is neither a struct or a pointer"},
 	{val: nil, error: "given object is neither a struct or a pointer"},

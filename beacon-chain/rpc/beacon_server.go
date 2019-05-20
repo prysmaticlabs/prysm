@@ -248,38 +248,6 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	}, nil
 }
 
-func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
-	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
-	}
-	// Fetch all historical deposits up to an ancestor height.
-	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
-	depositData := [][]byte{}
-	// If there are less than or equal to len(ChainStartDeposits) historical deposits, then we just fetch the default
-	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
-	chainStartDeposits := bs.powChainService.ChainStartDeposits()
-	if len(allDeposits) <= len(chainStartDeposits) {
-		depositData = chainStartDeposits
-	} else {
-		for i := range allDeposits {
-			depositData = append(depositData, allDeposits[i].DepositData)
-		}
-	}
-	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
-	}
-	depositRoot := depositTrie.Root()
-	return &pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{
-			DepositRoot: depositRoot[:],
-			BlockRoot:   blockHash[:],
-		},
-	}, nil
-}
-
 func constructMerkleProof(trie *trieutil.MerkleTrie, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
 	proof, err := trie.MerkleProof(int(deposit.Index))
 	if err != nil {
