@@ -76,7 +76,7 @@ func ExecuteStateTransition(
 				return nil, fmt.Errorf("could not process epoch: %v", err)
 			}
 		}
-		state.Slot += 1
+		state.Slot++
 	}
 
 	// Execute per block transition.
