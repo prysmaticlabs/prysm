@@ -46,6 +46,7 @@ go_image(
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/version:go_default_library",
+        "//shared/logutil:go_default_library",
         "//validator/accounts:go_default_library",
         "//validator/node:go_default_library",
         "//validator/types:go_default_library",
