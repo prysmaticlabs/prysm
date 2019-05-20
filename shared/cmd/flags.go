@@ -111,7 +111,7 @@ var (
 		Usage: "Specifies the upper limit of goroutines running before a status check fails",
 		Value: 5000,
 	}
-	// LogFileName specifies the log output format.
+	// LogFileName specifies the log output file name.
 	LogFileName = cli.StringFlag{
 		Name:  "log-file",
 		Usage: "Specify log file name, relative or absolute",
