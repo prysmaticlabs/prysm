@@ -37,7 +37,8 @@ var fileLogger = &logrus.Logger{
 	Level: logrus.TraceLevel,
 }
 
-//ConfigurePersistentLogging starts a persistent file logger
+// ConfigurePersistentLogging adds a log-to-file writer hook to the logrus logger. The writer hook appends new 
+// logs to the specified log file.
 func ConfigurePersistentLogging(logFileName string, logFileFormatName string) (bool, error) {
 	logrus.WithField("logFileName", logFileName).Info("Logs will be made persistent")
 	f, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
