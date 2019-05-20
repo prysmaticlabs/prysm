@@ -7,10 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strconv"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -27,15 +24,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
-
-var (
-	correctAttestedValidatorGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "correct_attested_validator_rate",
-		Help: "The % of validators correctly attested for source and target",
-	}, []string{
-		"epoch",
-	})
-)
 
 // TransitionConfig defines important configuration options
 // for executing a state transition, which can have logging and signature
@@ -503,13 +491,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
-
-	// Log the useful metrics via prometheus.
-	if len(activeValidatorIndices) > 0 {
-		correctAttestedValidatorGauge.WithLabelValues(
-			strconv.Itoa(int(currentEpoch)),
-		).Set(float64(len(currentBoundaryAttesterIndices) / len(activeValidatorIndices)))
-	}
 
 	if config.Logging {
 		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")

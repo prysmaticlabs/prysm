@@ -35,11 +35,6 @@ var (
 		Name:  "enable-check-block-state-root",
 		Usage: "Enable check block state root in block processing, default is disabled.",
 	}
-	// EnableCanonicalAttestationFilter filters and sends canonical attestation to RPC requests.
-	EnableCanonicalAttestationFilter = cli.BoolFlag{
-		Name:  "enable-canonical-attestation-filter",
-		Usage: "Enable filtering and sending canonical attestations to RPC request, default is disabled.",
-	}
 	// DisableHistoricalStatePruningFlag allows the database to keep old historical states.
 	DisableHistoricalStatePruningFlag = cli.BoolFlag{
 		Name:  "disable-historical-state-pruning",
@@ -49,6 +44,12 @@ var (
 	DisableGossipSubFlag = cli.BoolFlag{
 		Name:  "disable-gossip-sub",
 		Usage: "Disable gossip sub messaging and use floodsub messaging",
+	}
+	// EnableExcessDepositsFlag enables a validator to have total amount deposited as more than the
+	// max deposit amount.
+	EnableExcessDepositsFlag = cli.BoolFlag{
+		Name:  "enables-excess-deposit",
+		Usage: "Enables balances more than max deposit amount for a validator",
 	}
 )
 
@@ -62,8 +63,8 @@ var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
 	EnableCrosslinksFlag,
 	EnableCheckBlockStateRootFlag,
-	EnableCanonicalAttestationFilter,
 	DisableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
 	CacheTreeHashFlag,
+	EnableExcessDepositsFlag,
 }

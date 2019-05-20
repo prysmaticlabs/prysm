@@ -3,7 +3,6 @@ apiVersion: apps/v1
 metadata:
   name: beacon-chain
   namespace: beacon-chain
-  app: beacon-chain
 spec:
   replicas: 3
   serviceName: beacon-chain
@@ -55,19 +54,17 @@ spec:
             - --bootstrap-node=/dns4/bootnode/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw
             - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK
             - --p2p-port=5000
-            - --enable-tracing
+            #- --enable-tracing
             - --tracing-process-name=$(POD_NAME)
-            - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
+            - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces
             - --trace-sample-fraction=1.0
             - --datadir=/data
-            # Disabling gossip sub until a larger beacon chain deployment.
-            - --disable-gossip-sub
             - --p2p-max-peers=50
             - --log-format=fluentd
           resources:
             requests:
-              memory: "100Mi"
-              cpu: "50m"
+              memory: "500Mi"
+              cpu: "250m"
           volumeMounts:
           - mountPath: /data
             name: beacondb
