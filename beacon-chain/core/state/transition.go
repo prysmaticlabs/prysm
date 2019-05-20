@@ -538,29 +538,28 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		log.WithField(
 			"activeValidators", len(activeValidatorIndices),
 		).Info("Active validators")
-		totalBalance := float32(0)
-		lowestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
-		highestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
-		for _, idx := range activeValidatorIndices {
-			if float32(state.ValidatorBalances[idx]) < lowestBalance {
-				lowestBalance = float32(state.ValidatorBalances[idx])
-			}
-			if float32(state.ValidatorBalances[idx]) > highestBalance {
-				highestBalance = float32(state.ValidatorBalances[idx])
-			}
-			totalBalance += float32(state.ValidatorBalances[idx])
-		}
-		avgBalance := float32(0)
 		if len(activeValidatorIndices) > 0 {
-			avgBalance = totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
+			totalBalance := float32(0)
+			lowestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
+			highestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
+			for _, idx := range activeValidatorIndices {
+				if float32(state.ValidatorBalances[idx]) < lowestBalance {
+					lowestBalance = float32(state.ValidatorBalances[idx])
+				}
+				if float32(state.ValidatorBalances[idx]) > highestBalance {
+					highestBalance = float32(state.ValidatorBalances[idx])
+				}
+				totalBalance += float32(state.ValidatorBalances[idx])
+			}
+			avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
+			lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
+			highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
+			log.WithFields(logrus.Fields{
+				"averageBalance": avgBalance,
+				"lowestBalance":  lowestBalance,
+				"highestBalance": highestBalance,
+			}).Info("Active validator balances")
 		}
-		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
-		highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
-		log.WithFields(logrus.Fields{
-			"averageBalance": avgBalance,
-			"lowestBalance":  lowestBalance,
-			"highestBalance": highestBalance,
-		}).Info("Active validator balances")
 	}
 
 	return state, nil
