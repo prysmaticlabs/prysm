@@ -104,27 +104,23 @@ func TestValidatorRegister_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	testAccount.txOpts.Value = amount32Eth
-	testAccount.txOpts.GasLimit = 100000
+	testAccount.txOpts.GasLimit = 1000000
 
-	var pubkey [96]byte
-	pubkey[0] = 'A'
+	var pubkey [48]byte
 	var withdrawalCreds [32]byte
-	withdrawalCreds[0] = 'A'
 	var sig [96]byte
-	sig[0] = 'B'
-	tx, err := testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
+
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	rec, _ := testAccount.backend.TransactionReceipt(context.Background(), tx.Hash())
-	t.Logf("status %d", rec.Status)
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'B'}, []byte{'B'}, []byte{'C'})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'C'}, []byte{'B'}, []byte{'C'})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
@@ -165,15 +161,21 @@ func TestValidatorRegister_OK(t *testing.T) {
 }
 
 // normal test case, test beacon chain start log event.
-func TestChainStart_OK(t *testing.T) {
+func TestETH2Genesis_OK(t *testing.T) {
 	testAccount, err := setup()
 	if err != nil {
 		t.Fatal(err)
 	}
 	testAccount.txOpts.Value = amount32Eth
+	testAccount.txOpts.GasLimit = 1000000
+
+	var pubkey [48]byte
+	var withdrawalCreds [32]byte
+	var sig [96]byte
 
 	for i := 0; i < 8; i++ {
-		_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'}, []byte{'B'}, []byte{'C'})
+		_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
+		testAccount.backend.Commit()
 		if err != nil {
 			t.Errorf("Validator registration failed: %v", err)
 		}
@@ -192,8 +194,8 @@ func TestChainStart_OK(t *testing.T) {
 		t.Fatalf("Unable to get logs %v", err)
 	}
 
-	if logs[8].Topics[0] != hashutil.Hash([]byte("ChainStart(bytes32,bytes)")) {
-		t.Error("Chain start even did not get emitted")
+	if logs[8].Topics[0] != hashutil.Hash([]byte("Eth2Genesis(bytes32,bytes,bytes)")) {
+		t.Error("Chain start did not even get emitted")
 	}
 }
 
@@ -204,7 +206,12 @@ func TestDrain(t *testing.T) {
 	}
 	testAccount.txOpts.Value = amount32Eth
 
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'}, []byte{'B'}, []byte{'C'})
+	var pubkey [48]byte
+	var withdrawalCreds [32]byte
+	var sig [96]byte
+
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
+	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}

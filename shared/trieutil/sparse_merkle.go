@@ -16,6 +16,14 @@ type MerkleTrie struct {
 	originalItems [][]byte // list of provided items before hashing them into leaves.
 }
 
+// Return a new merkle trie to use.
+func NewTrie() *MerkleTrie {
+	return &MerkleTrie{
+		branches:      make([][][]byte, 0),
+		originalItems: make([][]byte, 0),
+	}
+}
+
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
 func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	if len(items) == 0 {

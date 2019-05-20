@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -59,7 +60,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
-	_, depositData, merkleTreeIndex, _, err := contracts.UnpackDepositLogData(depositLog.Data)
+	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
 		return
@@ -77,15 +78,17 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
 	validData := true
-	depositInput, err := helpers.DecodeDepositInput(depositData)
-	if err != nil {
-		log.Debugf("Could not decode deposit input %v", err)
-		validData = false
+	depositData := &pb.DepositData{
+		Amount: bytesutil.FromBytes8( amount),
+		Pubkey: pubkey,
+		Signature: signature,
+		WithdrawalCredentials:withdrawalCredentials,
 	}
 
 	deposit := &pb.Deposit{
-		DepositData: depositData,
+		Data: depositData,
 		Index:       index,
+		Proof: ,
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.
