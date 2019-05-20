@@ -184,7 +184,7 @@ message BeaconBlock {
   // Deprecated
   // TODO(2307): Remove deprecated fields
   bytes randao_reveal = 1003;
-  Eth1Data eth1_data = 1004;
+  Eth1Data eth1_data = 1004 [deprecated = true];
 }
 
 message BeaconBlockBody {
