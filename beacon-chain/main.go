@@ -104,7 +104,6 @@ func main() {
 			return fmt.Errorf("unknown log format %s", format)
 		}
 
-		//we configure a persistent log file logger , a formatter and a hook.
 		logFileName := ctx.GlobalString(cmd.LogFileName.Name)
 		if logFileName != "" {
 			logFileFormatName := ctx.GlobalString(cmd.LogFileFormat.Name)
