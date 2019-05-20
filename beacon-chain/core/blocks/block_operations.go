@@ -90,7 +90,7 @@ func ProcessBlockHeader(
 		return nil, err
 	}
 	if !bytes.Equal(block.ParentBlockRoot, latestBlockHeaderSR[:]) {
-		return nil, fmt.Errorf("state parentblockroot: %d is different then latest block header signed root: %d",
+		return nil, fmt.Errorf("state parent block root: %#x is different then latest block header signed root: %#x",
 			block.ParentBlockRoot, latestBlockHeaderSR)
 	}
 	bBytes, err := block.Body.Marshal()
@@ -114,7 +114,7 @@ func ProcessBlockHeader(
 	}
 	proposer := beaconState.ValidatorRegistry[idx]
 	if proposer.Slashed {
-		return nil, fmt.Errorf("proposer id: %d was slashed", idx)
+		return nil, fmt.Errorf("proposer index: %d was slashed", idx)
 	}
 	// TODO(#2307) reapply after bls.Verify is finished
 	//verify proposer signature
