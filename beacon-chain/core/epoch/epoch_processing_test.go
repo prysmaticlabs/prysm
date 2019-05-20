@@ -1074,7 +1074,7 @@ func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:              uint64(i),
+				Slot: uint64(i),
 			},
 			InclusionDelay:      uint64(i + 100),
 			AggregationBitfield: []byte{0xff},
@@ -1091,7 +1091,7 @@ func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
 
 func TestAttestationDelta_NoOneAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
-	validatorCount := params.BeaconConfig().DepositsForChainStart/32
+	validatorCount := params.BeaconConfig().DepositsForChainStart / 32
 	state := buildState(e+2, validatorCount)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 2)
@@ -1129,7 +1129,7 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 
 func TestAttestationDelta_SomeAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
-	validatorCount := params.BeaconConfig().DepositsForChainStart/8
+	validatorCount := params.BeaconConfig().DepositsForChainStart / 8
 	state := buildState(e+2, validatorCount)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 3)
@@ -1141,7 +1141,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 				Shard:             startShard + 1,
 			},
 			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-			InclusionDelay: 1,
+			InclusionDelay:      1,
 		}
 	}
 	state.PreviousEpochAttestations = atts
