@@ -292,19 +292,10 @@ func TestWaitTillSync_OK(t *testing.T) {
 		pubkeys:         make([][]byte, 0),
 		validatorClient: client,
 	}
-
 	client.EXPECT().WaitTillSync(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(nil, fmt.Errorf("return error")).Times(1)
-	client.EXPECT().WaitTillSync(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&pb.SyncedResponse{Synced: false}, fmt.Errorf("return error")).Times(1)
-	client.EXPECT().WaitTillSync(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&pb.SyncedResponse{Synced: false}, fmt.Errorf("return error")).Times(1)
+	).Return(&pb.SyncedResponse{Synced: false, SyncError: []byte("error")}, nil).Times(2)
 	client.EXPECT().WaitTillSync(
 		gomock.Any(),
 		gomock.Any(),
@@ -312,7 +303,31 @@ func TestWaitTillSync_OK(t *testing.T) {
 
 	v.WaitTillSync(context.Background())
 	testutil.AssertLogsContain(t, hook, "Waiting for beacon node to sync")
+	testutil.AssertLogsContain(t, hook, "in sync process -")
 	testutil.AssertLogsContain(t, hook, "Beacon node is Synched!")
+
+}
+func TestWaitTillSync_ERROR(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	waitBetweenSynchedRetry = 10
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+	v := validator{
+		keys:            keyMap,
+		pubkeys:         make([][]byte, 0),
+		validatorClient: client,
+	}
+	client.EXPECT().WaitTillSync(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, fmt.Errorf("return error")).Times(1)
+	err := v.WaitTillSync(context.Background())
+	testutil.AssertLogsContain(t, hook, "Waiting for beacon node to sync")
+	want := "wait till sync got error"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
 
 }
 

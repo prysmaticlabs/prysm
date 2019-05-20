@@ -82,7 +82,7 @@ func (vs *ValidatorServer) WaitTillSync(ctx context.Context, _ *ptypes.Empty) (*
 	if err == nil {
 		return &pb.SyncedResponse{Synced: true}, nil
 	}
-	return &pb.SyncedResponse{Synced: false}, err
+	return &pb.SyncedResponse{Synced: false,SyncError:[]byte(err.Error())}, nil
 }
 
 // ValidatorIndex is called by a validator to get its index location that corresponds

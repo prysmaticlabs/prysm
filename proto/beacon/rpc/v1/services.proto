@@ -43,6 +43,7 @@ service ValidatorService {
 
 message  SyncedResponse{
   bool synced = 1;
+  bytes sync_error = 2;
 }
 
 message ValidatorPerformanceRequest {
