@@ -142,7 +142,7 @@ func (v *validator) WaitTillSync(ctx context.Context) error {
 			continue
 		}
 		if res != nil && res.Synced {
-			log.Info("Beacon node is Synched!")
+			log.Info("Beacon node is Synced")
 			break
 		}
 		time.Sleep(time.Millisecond * time.Duration(waitBetweenSynchedRetry))
