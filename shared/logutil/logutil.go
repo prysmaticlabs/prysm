@@ -47,7 +47,6 @@ func ConfigurePersistentLogging(logFileName string, logFileFormatName string) (b
 	}
 	fileLogger.SetOutput(f)
 
-	//configure format if specified, othereise use the stdout logger's format
 	switch logFileFormatName {
 	case "text":
 		formatter := new(prefixed.TextFormatter)
