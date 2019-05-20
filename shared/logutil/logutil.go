@@ -67,7 +67,6 @@ func ConfigurePersistentLogging(logFileName string, logFileFormatName string) (b
 	}
 
 	logrus.Info("File logger initialized")
-	//trigger writing to the log file on every stdout log write
 	logrus.AddHook(&WriterHook{
 		LogLevels: []logrus.Level{
 			logrus.PanicLevel,
