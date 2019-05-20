@@ -6,14 +6,13 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/prysmaticlabs/prysm/shared/logutil"
-
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -90,6 +89,8 @@ func main() {
 			formatter := new(prefixed.TextFormatter)
 			formatter.TimestampFormat = "2006-01-02 15:04:05"
 			formatter.FullTimestamp = true
+			//if persistent log files are written - we disable the log messages coloring
+			//(the colors are ANSI codes and seen as Gibberish in the log files)
 			formatter.DisableColors = ctx.GlobalString(cmd.LogFileFormat.Name) != ""
 			logrus.SetFormatter(formatter)
 			break

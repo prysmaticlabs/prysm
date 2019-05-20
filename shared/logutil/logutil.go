@@ -1,3 +1,5 @@
+//Package logutil creates a logrus lib file logger instance that
+//write all logs that are written to stdout.
 package logutil
 
 import (
@@ -66,15 +68,7 @@ func ConfigurePersistentLogging(logFileName string, logFileFormatName string) er
 
 	logrus.Info("File logger initialized")
 	logrus.AddHook(&WriterHook{
-		LogLevels: []logrus.Level{
-			logrus.PanicLevel,
-			logrus.FatalLevel,
-			logrus.ErrorLevel,
-			logrus.WarnLevel,
-			logrus.InfoLevel,
-			logrus.DebugLevel,
-			logrus.TraceLevel,
-		},
+		LogLevels: logrus.AllLevels,
 	})
 
 	return true, nil
