@@ -8,8 +8,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"sort"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -19,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
+	"sort"
 )
 
 var log = logrus.WithField("prefix", "core/state")
@@ -349,7 +348,6 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			}
 		}
 	}
-
 	// Apply rewards for proposer including attestations promptly.
 	indices, err := UnslashedAttestingIndices(state, atts.source)
 	if err != nil {

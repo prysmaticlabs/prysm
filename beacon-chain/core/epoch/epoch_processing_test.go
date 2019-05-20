@@ -1127,6 +1127,62 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 	}
 }
 
+func TestAttestationDelta_SomeAttested(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := params.BeaconConfig().DepositsForChainStart/8
+	state := buildState(e+2, validatorCount)
+	startShard := uint64(960)
+	atts := make([]*pb.PendingAttestation, 3)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:              uint64(i),
+				CrosslinkDataRoot: []byte{'A'},
+				Shard:             startShard + 1,
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			InclusionDelay: 1,
+		}
+	}
+	state.PreviousEpochAttestations = atts
+	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+
+	rewards, penalties, err := AttestationDelta(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
+	attestedIndices := []uint64{500}
+
+	attestedBalance, err := AttestingBalance(state, atts)
+	totalBalance := totalActiveBalance(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, i := range attestedIndices {
+		// Base rewards for getting source right
+		wanted := 3 * (BaseReward(state, i) * attestedBalance / totalBalance)
+		// Base rewards for proposer and attesters working together getting attestation
+		// on chain in the fatest manner
+		wanted += BaseReward(state, i) * params.BeaconConfig().MinAttestationInclusionDelay
+		if rewards[i] != wanted {
+			t.Errorf("Wanted reward balance %d, got %d", wanted, rewards[i])
+		}
+		// Since all these validators attested, they shouldn't get penalized.
+		if penalties[i] != 0 {
+			t.Errorf("Wanted penalty balance %d, got %d",
+				0, penalties[i])
+		}
+	}
+}
+
 func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
