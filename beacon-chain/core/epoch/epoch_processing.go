@@ -255,7 +255,7 @@ func ProcessSlashings(state *pb.BeaconState) *pb.BeaconState {
 // and penalties. Individual rewards and penalties are returned in list.
 //
 // Spec pseudocode definition:
-//	def get_attestation_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
+//  def get_attestation_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
 //    previous_epoch = get_previous_epoch(state)
 //    total_balance = get_total_active_balance(state)
 //    rewards = [0 for _ in range(len(state.validator_registry))]
