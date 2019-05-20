@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1663,7 +1665,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
@@ -1673,7 +1675,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	validators[5896].Slashed = false
+	validators[12683].Slashed = false
 
 	lbhsr, err := ssz.SignedRoot(state.LatestBlockHeader)
 	if err != nil {
@@ -1686,9 +1688,9 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Errorf("failed to generate private key got: %v", err)
 	}
 	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[5896].Pubkey = priv.PublicKey().Marshal()
+	validators[12683].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
@@ -1736,7 +1738,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
@@ -1765,7 +1767,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	wrongBlockSig := priv2.Sign([]byte("hello"), dt)
 	validators[5896].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
@@ -1796,7 +1798,7 @@ func TestProcessBlockHeader_DiffrentSlots(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
@@ -1819,7 +1821,7 @@ func TestProcessBlockHeader_DiffrentSlots(t *testing.T) {
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 1,
+		Slot: 1,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
@@ -1850,7 +1852,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
@@ -1869,7 +1871,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
@@ -1900,7 +1902,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		LatestBlockHeader: &pb.BeaconBlockHeader{Slot: 9},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
@@ -1921,9 +1923,9 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		t.Errorf("failed to generate private key got: %v", err)
 	}
 	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[5896].Pubkey = priv.PublicKey().Marshal()
+	validators[12683].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
@@ -1932,7 +1934,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "proposer id: 5896 was slashed"
+	want := "proposer id: 12683 was slashed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
