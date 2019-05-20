@@ -1066,6 +1066,67 @@ func TestAttestationDelta_CantGetAttestation(t *testing.T) {
 	}
 }
 
+func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+
+	state := buildState(e+2, 1)
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:              uint64(i),
+			},
+			InclusionDelay:      uint64(i + 100),
+			AggregationBitfield: []byte{0xff},
+		}
+	}
+	state.PreviousEpochAttestations = atts
+
+	_, _, err := AttestationDelta(state)
+	wanted := "could not get attestation indices"
+	if !strings.Contains(err.Error(), wanted) {
+		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+	}
+}
+
+func TestAttestationDelta_NoOneAttested(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := params.BeaconConfig().DepositsForChainStart/32
+	state := buildState(e+2, validatorCount)
+	startShard := uint64(960)
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:              uint64(i),
+				CrosslinkDataRoot: []byte{'A'},
+				Shard:             startShard + 1,
+			},
+			InclusionDelay:      uint64(i + 100),
+			AggregationBitfield: []byte{0xC0},
+		}
+	}
+
+	rewards, penalties, err := AttestationDelta(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := uint64(0); i < validatorCount; i++ {
+		// Since no one attested, all the validators should gain 0 reward
+		if rewards[i] != 0 {
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
+		}
+		// Since no one attested, all the validators should get penalized the same
+		// it's 3 times the penalized amount because source, target and head.
+		wanted := 3 * BaseReward(state, i)
+		if penalties[i] != wanted {
+			t.Errorf("Wanted penalty balance %d, got %d",
+				wanted, penalties[i])
+		}
+	}
+}
+
 func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {

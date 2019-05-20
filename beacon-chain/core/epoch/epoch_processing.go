@@ -345,7 +345,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			if _, ok := attested[index]; ok {
 				rewards[index] += BaseReward(state, index) * attestedBalance / totalBalance
 			} else {
-				penalties[index] -= BaseReward(state, index)
+				penalties[index] += BaseReward(state, index)
 			}
 		}
 	}
