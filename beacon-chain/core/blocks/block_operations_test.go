@@ -1933,7 +1933,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "proposer id: 12683 was slashed"
+	want := "proposer index: 12683 was slashed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
