@@ -3,6 +3,7 @@
 package logutil
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -40,13 +41,13 @@ var fileLogger = &logrus.Logger{
 	Level: logrus.TraceLevel,
 }
 
-// ConfigurePersistentLogging adds a log-to-file writer hook to the logrus logger. The writer hook appends new 
+// ConfigurePersistentLogging adds a log-to-file writer hook to the logrus logger. The writer hook appends new
 // logs to the specified log file.
 func ConfigurePersistentLogging(logFileName string, logFileFormatName string) error {
 	logrus.WithField("logFileName", logFileName).Info("Logs will be made persistent")
 	f, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		return false, err
+		return err
 	}
 	fileLogger.SetOutput(f)
 
@@ -65,7 +66,7 @@ func ConfigurePersistentLogging(logFileName string, logFileFormatName string) er
 		fileLogger.SetFormatter(&logrus.JSONFormatter{})
 		break
 	default:
-		return false, fmt.Errorf("unknown log file format %v", logFileFormatName)
+		return fmt.Errorf("unknown log file format %v", logFileFormatName)
 	}
 
 	logrus.Info("File logger initialized")
@@ -73,5 +74,5 @@ func ConfigurePersistentLogging(logFileName string, logFileFormatName string) er
 		LogLevels: logrus.AllLevels,
 	})
 
-	return true, nil
+	return nil
 }
