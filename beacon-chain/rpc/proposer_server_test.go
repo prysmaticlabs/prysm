@@ -141,11 +141,11 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	stateSlot := params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay + 100
+	stateSlot := params.BeaconConfig().MinAttestationInclusionDelay + 100
 	beaconState := &pbp2p.BeaconState{
 		Slot: stateSlot,
 		LatestCrosslinks: []*pbp2p.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch + 1,
+			Epoch:                   1,
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 		}},
 	}
@@ -196,7 +196,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	// Edge case: current slot is at the end of an epoch. The pending attestation
 	// for the next slot should come from currentSlot + 1.
 	currentSlot := helpers.StartSlot(
-		params.BeaconConfig().GenesisEpoch+10,
+		10,
 	) - 1
 
 	expectedEpoch := uint64(100)
@@ -264,7 +264,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		CurrentJustifiedEpoch:  expectedEpoch,
 		PreviousJustifiedEpoch: expectedEpoch,
 		LatestCrosslinks: []*pbp2p.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch + 9,
+			Epoch:                   9,
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 		}},
 	}
@@ -334,10 +334,9 @@ func TestPendingAttestations_OK(t *testing.T) {
 		beaconDB:         db,
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot +
-			params.BeaconConfig().SlotsPerEpoch +
+		Slot: params.BeaconConfig().SlotsPerEpoch +
 			params.BeaconConfig().MinAttestationInclusionDelay,
-		LatestCrosslinks: []*pbp2p.Crosslink{{Epoch: params.BeaconConfig().GenesisEpoch + 1,
+		LatestCrosslinks: []*pbp2p.Crosslink{{Epoch: 1,
 			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {

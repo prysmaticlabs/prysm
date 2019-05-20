@@ -27,10 +27,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	if params.BeaconConfig().GenesisSlot != 1<<63 {
-		t.Error("GenesisSlot should be 2^63 for these tests to pass")
-	}
-	genesisEpochNumber := params.BeaconConfig().GenesisEpoch
+	genesisEpochNumber := uint64(0)
 
 	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, []byte{0, 0, 0, 0}) {
 		t.Error("GenesisSlot( should be {0,0,0,0} for these tests to pass")
@@ -100,7 +97,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Misc fields checks.
-	if newState.Slot != params.BeaconConfig().GenesisSlot {
+	if newState.Slot != 0 {
 		t.Error("Slot was not correctly initialized")
 	}
 	if newState.GenesisTime != genesisTime {
@@ -115,7 +112,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Validator registry fields checks.
-	if newState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
+	if newState.ValidatorRegistryUpdateEpoch != 0 {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
 	if len(newState.ValidatorRegistry) != depositsForChainStart {
@@ -157,7 +154,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !reflect.DeepEqual(newState.BatchedBlockRootHash32S, [][]byte{}) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
 	}
-	activeValidators := helpers.ActiveValidatorIndices(newState, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(newState, 0)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)

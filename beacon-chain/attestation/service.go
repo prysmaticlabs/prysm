@@ -237,7 +237,7 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"attestationSlot":    attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
+		"attestationSlot":    attestation.Data.Slot,
 		"attestationShard":   attestation.Data.Shard,
 		"committeesShard":    attestation.Data.Shard,
 		"committeesList":     committee,
@@ -286,8 +286,8 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 
 			log.WithFields(
 				logrus.Fields{
-					"attestationSlot": attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
-					"justifiedEpoch":  attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+					"attestationSlot": attestation.Data.Slot,
+					"justifiedEpoch":  attestation.Data.JustifiedEpoch,
 				},
 			).Debug("Attestation store updated")
 

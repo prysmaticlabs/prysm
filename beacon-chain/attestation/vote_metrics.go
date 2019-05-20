@@ -6,7 +6,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -28,7 +27,6 @@ func reportVoteMetrics(index uint64, block *pb.BeaconBlock) {
 		return
 	}
 
-	s := params.BeaconConfig().GenesisSlot
 	validatorLastVoteGauge.WithLabelValues(
-		"v" + strconv.Itoa(int(index))).Set(float64(block.Slot - s))
+		"v" + strconv.Itoa(int(index))).Set(float64(block.Slot))
 }

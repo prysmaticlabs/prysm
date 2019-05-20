@@ -42,7 +42,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry:      validators,
-		Slot:                   params.BeaconConfig().GenesisSlot,
+		Slot:                   0,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
@@ -52,24 +52,24 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		index uint64
 	}{
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 1,
-			index: 15324,
+			slot:  1,
+			index: 828,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 5,
-			index: 11774,
+			slot:  5,
+			index: 11151,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 19,
-			index: 2719,
+			slot:  19,
+			index: 3805,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 30,
-			index: 7418,
+			slot:  30,
+			index: 4507,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot + 43,
-			index: 15000,
+			slot:  43,
+			index: 9753,
 		},
 	}
 
@@ -92,7 +92,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
 	beaconState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot,
+		Slot:                   0,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}

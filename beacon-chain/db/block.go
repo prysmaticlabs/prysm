@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -275,7 +274,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 func (db *BeaconDB) CanonicalBlockBySlot(ctx context.Context, slot uint64) (*pb.BeaconBlock, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.CanonicalBlockBySlot")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)))
+	span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
 	var block *pb.BeaconBlock
 	slotEnc := encodeSlotNumber(slot)
@@ -301,7 +300,7 @@ func (db *BeaconDB) BlocksBySlot(ctx context.Context, slot uint64) ([]*pb.Beacon
 	}
 	_, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(slot-params.BeaconConfig().GenesisSlot)))
+	span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
 	blocks := []*pb.BeaconBlock{}
 	slotEnc := encodeSlotNumber(slot)

@@ -134,7 +134,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	}
 	if len(firstCommittee) == 0 {
 		return 0, fmt.Errorf("empty first committee at slot %d",
-			state.Slot-params.BeaconConfig().GenesisSlot)
+			state.Slot)
 	}
 
 	// Use the generated seed to select proposer from the first committee
