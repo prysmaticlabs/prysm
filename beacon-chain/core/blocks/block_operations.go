@@ -85,13 +85,13 @@ func ProcessBlockHeader(
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
 	}
-	lbhsr, err := ssz.SignedRoot(beaconState.LatestBlockHeader)
+	latestBlockHeaderSR, err := ssz.SignedRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		return nil, err
 	}
-	if !bytes.Equal(block.ParentBlockRoot, lbhsr[:]) {
+	if !bytes.Equal(block.ParentBlockRoot, latestBlockHeaderSR[:]) {
 		return nil, fmt.Errorf("state parentblockroot: %d is different then latest block header signed root: %d",
-			block.ParentBlockRoot, lbhsr)
+			block.ParentBlockRoot, latestBlockHeaderSR)
 	}
 	bBytes, err := block.Body.Marshal()
 	if err != nil {
