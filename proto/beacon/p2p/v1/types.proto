@@ -180,7 +180,7 @@ message BeaconBlock {
   bytes state_root = 3;
   BeaconBlockBody body = 4;
   bytes signature = 5; // bytes96
- 
+
   // Deprecated
   // TODO(2307): Remove deprecated fields
   bytes randao_reveal = 1003;
