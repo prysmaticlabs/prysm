@@ -5,7 +5,6 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 go_library(
     name = "go_default_library",
     srcs = [
-        "logutil1.go",
         "main.go",
         "usage.go",
     ],
