@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -274,10 +275,10 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 	if !isSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
-	if err := validateIndexedAttestation(att1, verifySignatures); err != nil {
+	if err := ValidateIndexedAttestation(att1, verifySignatures); err != nil {
 		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
-	if err := validateIndexedAttestation(att2, verifySignatures); err != nil {
+	if err := ValidateIndexedAttestation(att2, verifySignatures); err != nil {
 		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
 	return nil
@@ -299,7 +300,7 @@ func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.Attestation
 	return isDoubleVote || isSurroundVote
 }
 
-// validateIndexedAttestation verifies an attestation's custody and bls bit information.
+// ValidateIndexedAttestation verifies an attestation's custody and bls bit information.
 //  """
 //    Verify validity of ``indexed_attestation``.
 //    """
@@ -326,7 +327,7 @@ func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.Attestation
 //        ],
 //        signature=indexed_attestation.signature,
 //        domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target_epoch),
-func validateIndexedAttestation(attestation *pb.IndexedAttestation, verifySignatures bool) error {
+func ValidateIndexedAttestation(attestation *pb.IndexedAttestation, verifySignatures bool) error {
 	bit0Indices := attestation.CustodyBit_0Indices
 	bit1Indices := attestation.CustodyBit_1Indices
 	if len(bit1Indices) != 0 {
@@ -515,7 +516,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	if err != nil {
 		return nil, fmt.Errorf("could not convert to indexed attestation: %v", err)
 	}
-	if err := validateIndexedAttestation(indexedAtt, verifySignatures); err != nil {
+	if err := ValidateIndexedAttestation(indexedAtt, verifySignatures); err != nil {
 		return nil, fmt.Errorf("could not verify indexed attestation: %v", err)
 	}
 	return beaconState, nil

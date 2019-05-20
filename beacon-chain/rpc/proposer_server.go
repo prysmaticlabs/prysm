@@ -138,7 +138,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 
 	validAtts := make([]*pbp2p.Attestation, 0, len(attsReadyForInclusion))
 	for _, att := range attsReadyForInclusion {
-		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
+		if _, err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}

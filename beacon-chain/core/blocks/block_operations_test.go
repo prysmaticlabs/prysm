@@ -667,7 +667,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				TargetEpoch: 0,
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -709,7 +709,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				TargetEpoch: 0,
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -747,8 +747,8 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: params.BeaconConfig().GenesisEpoch,
-				SourceEpoch: params.BeaconConfig().GenesisEpoch + 1,
+				TargetEpoch: 0,
+				SourceEpoch: 1,
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -808,8 +808,8 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: params.BeaconConfig().GenesisEpoch,
-				SourceEpoch: params.BeaconConfig().GenesisEpoch + 1,
+				TargetEpoch: 0,
+				SourceEpoch: 1,
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -869,12 +869,12 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: params.BeaconConfig().GenesisEpoch,
-				SourceEpoch: params.BeaconConfig().GenesisEpoch,
+				TargetEpoch: 0,
+				SourceEpoch: 0,
 				SourceRoot:  []byte("tron-sucks"),
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
-					Epoch: params.BeaconConfig().GenesisEpoch + 1,
+					Epoch: 1,
 				},
 			},
 		},
@@ -893,7 +893,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
 			Shard: 0,
-			Epoch: params.BeaconConfig().GenesisEpoch,
+			Epoch: 0,
 		},
 	}
 	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
@@ -901,7 +901,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 
 	want := fmt.Sprintf(
 		"expected crosslink epoch %d, received %d",
-		params.BeaconConfig().GenesisEpoch,
+		0,
 		attestations[0].Data.Crosslink.Epoch,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
@@ -912,7 +912,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.Crosslink.Epoch = params.BeaconConfig().GenesisEpoch
+	block.Body.Attestations[0].Data.Crosslink.Epoch = 0
 	want = "mismatched parent crosslink root"
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
@@ -942,12 +942,12 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: params.BeaconConfig().GenesisEpoch,
-				SourceEpoch: params.BeaconConfig().GenesisEpoch,
+				TargetEpoch: 0,
+				SourceEpoch: 0,
 				SourceRoot:  []byte("tron-sucks"),
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
-					Epoch: params.BeaconConfig().GenesisEpoch,
+					Epoch: 0,
 				},
 			},
 			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
@@ -979,7 +979,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
 			Shard: 0,
-			Epoch: params.BeaconConfig().GenesisEpoch,
+			Epoch: 0,
 		},
 	}
 	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
@@ -1001,13 +1001,13 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	}
 }
 
-func TestVerifyIndexedAttestation_OK(t *testing.T) {
+func TestValidateIndexedAttestation_OK(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
 		CustodyBit_0Indices: []uint64{1, 3, 5, 10, 12},
 		CustodyBit_1Indices: []uint64{},
 	}
 
-	if ok, err := blocks.VerifyIndexedAttestation(&pb.BeaconState{}, indexedAtt1); !ok {
+	if err := blocks.ValidateIndexedAttestation(indexedAtt1, false); err != nil {
 		t.Errorf("indexed attestation failed to verify: %v", err)
 	}
 }
@@ -1084,50 +1084,35 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 }
 
-func TestVerifyIndexedAttestation_Intersecting(t *testing.T) {
+func TestValidateIndexedAttestation_Custody1Length(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
-		CustodyBit_1Indices: []uint64{3, 5, 8},
+		CustodyBit_0Indices: []uint64{1, 2, 3, 4},
+		CustodyBit_1Indices: []uint64{},
 	}
 
-	want := "should not contain duplicates"
-	if _, err := blocks.VerifyIndexedAttestation(
-		&pb.BeaconState{},
+	if err := blocks.ValidateIndexedAttestation(
 		indexedAtt1,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected verification to fail, received: %v", err)
+		false,
+	); err != nil {
+		t.Errorf("Unexpected error %v", err)
 	}
 }
 
-func TestVerifyIndexedAttestation_Custody1Length(t *testing.T) {
-	indexedAtt1 := &pb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
-		CustodyBit_1Indices: []uint64{5},
-	}
-
-	if ok, err := blocks.VerifyIndexedAttestation(
-		&pb.BeaconState{},
-		indexedAtt1,
-	); ok || err != nil {
-		t.Errorf("Expected verification to fail return false, received: %t with error: %v", ok, err)
-	}
-}
-
-func TestVerifyIndexedAttestation_Empty(t *testing.T) {
+func TestValidateIndexedAttestation_Empty(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
 		CustodyBit_0Indices: []uint64{},
 		CustodyBit_1Indices: []uint64{},
 	}
 
-	if ok, err := blocks.VerifyIndexedAttestation(
-		&pb.BeaconState{},
+	if err := blocks.ValidateIndexedAttestation(
 		indexedAtt1,
-	); ok || err != nil {
-		t.Errorf("Expected verification to fail return false, received: %t with error: %v", ok, err)
+		false,
+	); err != nil {
+		t.Errorf("Unexpected error %v", err)
 	}
 }
 
-func TestVerifyIndexedAttestation_AboveMaxLength(t *testing.T) {
+func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
 		CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+5),
 		CustodyBit_1Indices: []uint64{},
@@ -1137,25 +1122,27 @@ func TestVerifyIndexedAttestation_AboveMaxLength(t *testing.T) {
 		indexedAtt1.CustodyBit_0Indices[i] = i
 	}
 
-	if ok, err := blocks.VerifyIndexedAttestation(
-		&pb.BeaconState{},
+	want := "exceeded max number of bit indices"
+	if err := blocks.ValidateIndexedAttestation(
 		indexedAtt1,
-	); ok || err != nil {
-		t.Errorf("Expected verification to fail return false, received: %t", ok)
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Unexpected error %v", err)
 	}
 }
 
-func TestVerifyIndexedAttestation_NotSorted(t *testing.T) {
+func TestValidateIndexedAttestation_NotSorted(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
 		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
 		CustodyBit_1Indices: []uint64{},
 	}
 
-	if ok, err := blocks.VerifyIndexedAttestation(
-		&pb.BeaconState{},
+	want := "indices not sorted"
+	if err := blocks.ValidateIndexedAttestation(
 		indexedAtt1,
-	); ok || err != nil {
-		t.Errorf("Expected verification to fail return false, received: %t with error: %v", ok, err)
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Unexpected error %v", err)
 	}
 }
 
