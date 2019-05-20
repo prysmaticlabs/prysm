@@ -11,7 +11,7 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-// WriterHook is a hook that writes logs of specified LogLevels to specified Writer
+// WriterHook is a hook that writes logs of specified LogLevels to specified Writer.
 type WriterHook struct {
 	LogLevels []logrus.Level
 }
