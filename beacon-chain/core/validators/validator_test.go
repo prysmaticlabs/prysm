@@ -60,7 +60,7 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot,
+		Slot:                   0,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
@@ -69,15 +69,15 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	boundaryAttestations := []*pb.PendingAttestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:        params.BeaconConfig().GenesisSlot,
-				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				Slot:        0,
+				TargetEpoch: 0,
 				Shard:       1,
 			},
 			AggregationBitfield: []byte{0x03}}, // returns indices 242
 		{
 			Data: &pb.AttestationData{
-				Slot:        params.BeaconConfig().GenesisSlot,
-				TargetEpoch: params.BeaconConfig().GenesisEpoch,
+				Slot:        0,
+				TargetEpoch: 0,
 				Shard:       1,
 			},
 			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
@@ -88,9 +88,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{25, 87}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{16, 113}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{25, 87}, attesterIndices)
+			[]uint64{16, 113}, attesterIndices)
 	}
 }
 
@@ -107,7 +107,7 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot,
+		Slot:                   0,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
@@ -115,8 +115,8 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:              params.BeaconConfig().GenesisSlot + 3,
-			TargetEpoch:       params.BeaconConfig().GenesisEpoch,
+			Slot:              3,
+			TargetEpoch:       0,
 			Shard:             6,
 			CrosslinkDataRoot: []byte{'B'},
 		},
@@ -133,9 +133,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{33, 94}) {
+	if !reflect.DeepEqual(indices, []uint64{13, 51}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{33, 94}, indices)
+			[]uint64{13, 51}, indices)
 	}
 }
 
@@ -388,11 +388,11 @@ func TestActivateValidatorGenesis_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not execute activateValidator:%v", err)
 	}
-	if newState.ValidatorRegistry[0].ActivationEpoch != params.BeaconConfig().GenesisEpoch {
+	if newState.ValidatorRegistry[0].ActivationEpoch != 0 {
 		t.Errorf("Wanted activation epoch = genesis epoch, got %d",
 			newState.ValidatorRegistry[0].ActivationEpoch)
 	}
-	if newState.ValidatorRegistry[0].ActivationEligibilityEpoch != params.BeaconConfig().GenesisEpoch {
+	if newState.ValidatorRegistry[0].ActivationEligibilityEpoch != 0 {
 		t.Errorf("Wanted activation eligibility epoch = genesis epoch, got %d",
 			newState.ValidatorRegistry[0].ActivationEligibilityEpoch)
 	}
@@ -489,7 +489,7 @@ func TestExitValidator_OK(t *testing.T) {
 
 func TestExitValidator_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisEpoch + 1000,
+		Slot: 1000,
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
@@ -551,7 +551,7 @@ func TestInitializeValidatoreStore(t *testing.T) {
 	for i := 0; i < validatorsLimit; i++ {
 		registry = append(registry, &pb.Validator{
 			Pubkey:          []byte(strconv.Itoa(i)),
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 		})
 		indices = append(indices, uint64(i))
@@ -559,7 +559,7 @@ func TestInitializeValidatoreStore(t *testing.T) {
 
 	bState := &pb.BeaconState{
 		ValidatorRegistry: registry,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 	}
 
 	if _, ok := VStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {

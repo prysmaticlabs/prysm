@@ -11,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -47,7 +46,7 @@ func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, finish := setup(t)
 	defer finish()
-	validator.ProposeBlock(context.Background(), params.BeaconConfig().GenesisSlot, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.ProposeBlock(context.Background(), 0, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	testutil.AssertLogsContain(t, hook, "Assigned to genesis slot, skipping proposal")
 }

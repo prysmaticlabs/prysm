@@ -87,7 +87,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	ps.chainService.UpdateCanonicalRoots(blk, h)
 	log.WithFields(logrus.Fields{
 		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
-		"headSlot": blk.Slot - params.BeaconConfig().GenesisSlot,
+		"headSlot": blk.Slot,
 	}).Info("Chain head block and state updated")
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
@@ -144,7 +144,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			}
 
 			log.WithError(err).WithFields(logrus.Fields{
-				"slot":     att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"slot":     att.Data.Slot,
 				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Info(
 				"Deleting failed pending attestation from DB")
 			if err := ps.beaconDB.DeleteAttestation(att); err != nil {

@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -87,7 +86,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 	s.stateReceived = true
 	log.Debugf(
 		"Successfully saved beacon state with the last finalized slot: %d",
-		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
+		finalizedState.Slot,
 	)
 	log.WithField("peer", msg.Peer.Pretty()).Info("Requesting batch blocks from peer")
 	s.requestBatchedBlocks(ctx, finalizedBlockRoot[:], chainHead.CanonicalBlockRoot, msg.Peer)

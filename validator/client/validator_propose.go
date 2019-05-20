@@ -22,7 +22,7 @@ import (
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
 func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
-	if slot == params.BeaconConfig().GenesisSlot {
+	if slot == 0 {
 		log.Info("Assigned to genesis slot, skipping proposal")
 		return
 	}
@@ -139,7 +139,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 		trace.Int64Attribute("numAttestations", int64(len(block.Body.Attestations))),
 	)
 	log.WithFields(logrus.Fields{
-		"slot":            block.Slot - params.BeaconConfig().GenesisSlot,
+		"slot":            block.Slot,
 		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRootHash32),
 		"numAttestations": len(block.Body.Attestations),
 		"numDeposits":     len(block.Body.Deposits),

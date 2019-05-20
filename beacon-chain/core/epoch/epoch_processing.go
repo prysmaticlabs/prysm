@@ -95,7 +95,7 @@ func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uin
 	*pb.BeaconState, error) {
 	// There's no reason to process justification until the 3rd epoch.
 	currentEpoch := helpers.CurrentEpoch(state)
-	if currentEpoch <= params.BeaconConfig().GenesisEpoch+1 {
+	if currentEpoch <= 1 {
 		return state, nil
 	}
 
@@ -553,7 +553,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
-			Epoch:                       params.BeaconConfig().GenesisEpoch,
+			Epoch:                       0,
 			CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
 			PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 		}, nil, nil
