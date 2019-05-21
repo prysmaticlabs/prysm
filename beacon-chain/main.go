@@ -89,7 +89,7 @@ func main() {
 			formatter := new(prefixed.TextFormatter)
 			formatter.TimestampFormat = "2006-01-02 15:04:05"
 			formatter.FullTimestamp = true
-			//if persistent log files are written - we disable the log messages coloring
+			// If persistent log files are written - we disable the log messages coloring because
 			//(the colors are ANSI codes and seen as Gibberish in the log files)
 			formatter.DisableColors = ctx.GlobalString(cmd.LogFileFormat.Name) != ""
 			logrus.SetFormatter(formatter)
