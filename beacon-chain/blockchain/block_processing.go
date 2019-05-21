@@ -32,7 +32,7 @@ type BlockReceiver interface {
 // to beacon blocks and generating a new beacon state from the Ethereum 2.0 core primitives.
 type BlockProcessor interface {
 	VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error
-	ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error)
+	AdvanceState(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error)
 	CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error
 }
 
@@ -92,7 +92,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		"Executing state transition")
 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
-	beaconState, err = c.ApplyBlockStateTransition(ctx, block, beaconState)
+	beaconState, err = c.AdvanceState(ctx, beaconState, block)
 	if err != nil {
 		switch err.(type) {
 		case *BlockFailedProcessingErr:
@@ -133,52 +133,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	log.WithField("slot", block.Slot).Info("Finished processing beacon block")
-	return beaconState, nil
-}
-
-// ApplyBlockStateTransition runs the Ethereum 2.0 state transition function
-// to produce a new beacon state and also accounts for skip slots occurring.
-//
-//  def apply_block_state_transition(block):
-//  	# process skipped slots
-// 		while (state.slot < block.slot - 1):
-//      	state = slot_state_transition(state, block=None)
-//
-//		# process slot with block
-//		state = slot_state_transition(state, block)
-//
-//		# check state root
-//      if block.state_root == hash(state):
-//			return state, error
-//		else:
-//			return nil, error  # or throw or whatever
-//
-func (c *ChainService) ApplyBlockStateTransition(
-	ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState,
-) (*pb.BeaconState, error) {
-	// Retrieve the last processed beacon block's hash root.
-	headRoot, err := c.ChainHeadRoot()
-	if err != nil {
-		return beaconState, fmt.Errorf("could not retrieve chain head root: %v", err)
-	}
-
-	// Check for skipped slots.
-	numSkippedSlots := 0
-	for beaconState.Slot < block.Slot-1 {
-		beaconState, err = c.runStateTransition(ctx, headRoot, nil, beaconState)
-		if err != nil {
-			return beaconState, err
-		}
-		numSkippedSlots++
-	}
-	if numSkippedSlots > 0 {
-		log.Warnf("Processed %d skipped slots", numSkippedSlots)
-	}
-
-	beaconState, err = c.runStateTransition(ctx, headRoot, block, beaconState)
-	if err != nil {
-		return beaconState, err
-	}
 	return beaconState, nil
 }
 
@@ -252,20 +206,18 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 	return nil
 }
 
-// runStateTransition executes the Ethereum 2.0 core state transition for the beacon chain and
+// AdvanceState executes the Ethereum 2.0 core state transition for the beacon chain and
 // updates important checkpoints and local persistent data during epoch transitions. It serves as a wrapper
 // around the more low-level, core state transition function primitive.
-func (c *ChainService) runStateTransition(
+func (c *ChainService) AdvanceState(
 	ctx context.Context,
-	headRoot [32]byte,
-	block *pb.BeaconBlock,
 	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	newState, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
 		block,
-		headRoot,
 		&state.TransitionConfig{
 			VerifySignatures: false, // We disable signature verification for now.
 			Logging:          true,  // We enable logging in this state transition call.

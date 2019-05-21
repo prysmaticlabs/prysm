@@ -107,7 +107,6 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		context.Background(),
 		sb.state,
 		newBlock,
-		prevBlockRoot,
 		state.DefaultConfig(),
 	)
 	if err != nil {
@@ -121,23 +120,6 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		sb.historicalDeposits = append(sb.historicalDeposits, newBlock.Body.Deposits...)
 	}
 
-	return nil
-}
-
-// GenerateNilBlockAndAdvanceChain would trigger a state transition with a nil block.
-func (sb *SimulatedBackend) GenerateNilBlockAndAdvanceChain() error {
-	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
-	newState, err := state.ExecuteStateTransition(
-		context.Background(),
-		sb.state,
-		nil,
-		prevBlockRoot,
-		state.DefaultConfig(),
-	)
-	if err != nil {
-		return fmt.Errorf("could not execute state transition: %v", err)
-	}
-	sb.state = newState
 	return nil
 }
 
@@ -223,13 +205,9 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	averageTimesPerTransition := []time.Duration{}
 	startSlot := uint64(0)
 	for i := startSlot; i < startSlot+testCase.Config.NumSlots; i++ {
-
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
 		if sliceutil.IsInUint64(i, testCase.Config.SkipSlots) {
-			if err := sb.GenerateNilBlockAndAdvanceChain(); err != nil {
-				return fmt.Errorf("could not advance the chain with a nil block %v", err)
-			}
 			continue
 		}
 
@@ -278,6 +256,10 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	sb.state, err = state.GenesisBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state: %v", err)
+	}
+	sb.state.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	sb.state.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
 	}
 	sb.historicalDeposits = initialDeposits
 

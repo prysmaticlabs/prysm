@@ -110,7 +110,10 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
-
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockHeader = &pbp2p.BeaconBlockHeader{
+		StateRoot: []byte{},
+	}
 	beaconState.Slot = 10
 
 	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
