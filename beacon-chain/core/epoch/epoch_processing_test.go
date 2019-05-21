@@ -989,6 +989,27 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 	}
 }
 
+func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
+		}
+	}
+}
+
 func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 
@@ -1019,11 +1040,22 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	committee, err := helpers.CrosslinkCommitteeAtEpoch(state, 0, startShard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, winningIndices, err := WinningCrosslink(state, startShard+1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committeeBalance := helpers.TotalBalance(state, committee)
+	attestingBalance := helpers.TotalBalance(state, winningIndices)
 	attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
-		if rewards[i] != BaseReward(state, i) {
-			t.Errorf("Wanted reward balance %d, got %d", BaseReward(state, i), rewards[i])
+		want := BaseReward(state, i) * attestingBalance / committeeBalance
+		if rewards[i] != want {
+			t.Errorf("Wanted reward balance %d, got %d", want, rewards[i])
 		}
 		// Since all these validators attested, they shouldn't get penalized.
 		if penalties[i] != 0 {
@@ -1043,6 +1075,7 @@ func TestCrosslinkDelta_CantGetWinningCrosslink(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
 func TestAttestationDelta_CantGetBlockRoot(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 
@@ -1123,10 +1156,39 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		if penalties[i] != wanted {
 			t.Errorf("Wanted penalty balance %d, got %d",
 				wanted, penalties[i])
+=======
+func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+	}
+	limit := helpers.ChurnLimit(state)
+	for i := 0; i < int(limit)+10; i++ {
+		state.ValidatorRegistry = append(state.ValidatorRegistry, &pb.Validator{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+		})
+	}
+	currentEpoch := helpers.CurrentEpoch(state)
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ActivationEligibilityEpoch != currentEpoch {
+			t.Errorf("could not update registry %d, wanted activation eligibility epoch %d got %d",
+				i, currentEpoch, validator.ActivationEligibilityEpoch)
+		}
+		if i < int(limit) && validator.ActivationEpoch != helpers.DelayedActivationExitEpoch(currentEpoch) {
+			t.Errorf("could not update registry %d, validators failed to activate wanted activation epoch %d got %d",
+				i, helpers.DelayedActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
+		}
+		if i >= int(limit) && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
+			t.Errorf("could not update registry %d, validators should not have been activated wanted activation epoch: %d got %d",
+				i, params.BeaconConfig().FarFutureEpoch, validator.ActivationEpoch)
+>>>>>>> crosslink-deltas
 		}
 	}
 }
 
+<<<<<<< HEAD
 func TestAttestationDelta_SomeAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := params.BeaconConfig().DepositsForChainStart / 8
@@ -1179,6 +1241,56 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		if penalties[i] != 0 {
 			t.Errorf("Wanted penalty balance %d, got %d",
 				0, penalties[i])
+=======
+func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
+		}
+	}
+}
+
+func TestProcessRegistryUpdates_CanExits(t *testing.T) {
+	epoch := uint64(5)
+	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	state := &pb.BeaconState{
+		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{
+				ExitEpoch:   exitEpoch,
+				StatusFlags: pb.Validator_INITIATED_EXIT},
+			{
+				ExitEpoch:   exitEpoch,
+				StatusFlags: pb.Validator_INITIATED_EXIT},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitEpoch != exitEpoch {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i,
+				exitEpoch,
+				validator.ExitEpoch)
+>>>>>>> crosslink-deltas
 		}
 	}
 }
