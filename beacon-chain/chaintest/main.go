@@ -84,9 +84,8 @@ func runTests(tests []interface{}, sb *backend.SimulatedBackend) error {
 		case *backend.ShuffleTest:
 			log.Infof("Title: %v", typedTest.Title)
 			log.Infof("Summary: %v", typedTest.Summary)
-			log.Infof("Test Suite: %v", typedTest.TestSuite)
-			log.Infof("Fork: %v", typedTest.Fork)
-			log.Infof("Version: %v", typedTest.Version)
+			log.Infof("Fork: %v", typedTest.Forks)
+			log.Infof("Config: %v", typedTest.Config)
 			for _, testCase := range typedTest.TestCases {
 				if err := sb.RunShuffleTest(testCase); err != nil {
 					return fmt.Errorf("chain test failed: %v", err)
