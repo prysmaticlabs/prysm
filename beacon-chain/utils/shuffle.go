@@ -80,41 +80,40 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 	return divided
 }
 
-// PermutedIndex returns `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
+// ShuffledIndex returns `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
 // We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
 // constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
 //
 // Spec pseudocode definition:
-// def get_permuted_index(index: int, list_size: int, seed: Bytes32) -> int:
+//   def get_shuffled_index(index: ValidatorIndex, index_count: int, seed: Bytes32) -> ValidatorIndex:
 //     """
-//     Return `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
-//     Utilizes 'swap or not' shuffling found in
-//     https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf
-//     See the 'generalized domain' algorithm on page 3.
+//     Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
 //     """
-//     assert index < list_size
-//     assert list_size <= 2**40
+//     assert index < index_count
+//     assert index_count <= 2**40
+//     # Swap or not (https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf)
+//     # See the 'generalized domain' algorithm on page 3
 //     for round in range(SHUFFLE_ROUND_COUNT):
-//         pivot = bytes_to_int(hash(seed + int_to_bytes1(round))[0:8]) % list_size
-//         flip = (pivot - index) % list_size
+//         pivot = bytes_to_int(hash(seed + int_to_bytes(round, length=1))[0:8]) % index_count
+//         flip = (pivot + index_count - index) % index_count
 //         position = max(index, flip)
-//         source = hash(seed + int_to_bytes1(round) + int_to_bytes4(position // 256))
+//         source = hash(seed + int_to_bytes(round, length=1) + int_to_bytes(position // 256, length=4))
 //         byte = source[(position % 256) // 8]
 //         bit = (byte >> (position % 8)) % 2
 //         index = flip if bit else index
 //     return index
-func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error) {
+func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
 	if params.BeaconConfig().ShuffleRoundCount == 0 {
 		return index, nil
 	}
-	if index >= listSize {
+	if index >= indexCount {
 		return 0, fmt.Errorf("input index %d out of bounds: %d",
-			index, listSize)
+			index, indexCount)
 	}
-	if listSize > maxShuffleListSize {
+	if indexCount > maxShuffleListSize {
 		return 0, fmt.Errorf("list size %d out of bounds",
-			listSize)
+			indexCount)
 	}
 	buf := make([]byte, totalSize, totalSize)
 	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
@@ -123,8 +122,8 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 		buf[seedSize] = round
 		hash := hashutil.Hash(buf[:pivotViewSize])
 		hash8 := hash[:8]
-		pivot := bytesutil.FromBytes8(hash8) % listSize
-		flip := (pivot - index) % listSize
+		pivot := bytesutil.FromBytes8(hash8) % indexCount
+		flip := (pivot + indexCount - index) % indexCount
 		// spec: position = max(index, flip)
 		// Consider every pair only once by picking the highest pair index to retrieve randomness.
 		position := index

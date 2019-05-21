@@ -177,17 +177,23 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	defer db.TeardownDB(sb.beaconDB)
 	seed := common.BytesToHash([]byte(testCase.Seed))
-	indexList := make([]uint64, len(testCase.Input.Validators), len(testCase.Input.Validators))
-	for i, v := range testCase.Input.Validators {
-		indexList[i] = uint64(v.OriginalIndex)
+	indexList := make([]uint64, testCase.Count, testCase.Count)
+	shuffledIndexList := make([]uint64, testCase.Count, testCase.Count)
+	for i := uint64(0); i < testCase.Count; i++ {
+		indexList[i] = i
 	}
-	output, err := utils.ShuffleIndices(seed, indexList)
-	if err != nil {
-		return err
+	for i := uint64(0); i < testCase.Count; i++ {
+		si, err := utils.ShuffledIndex(i, testCase.Count, seed)
+		if err != nil {
+			return err
+		}
+		shuffledIndexList[si] = i
 	}
-	if !reflect.DeepEqual(output, testCase.Output) {
-		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Output, output)
+	if !reflect.DeepEqual(shuffledIndexList, testCase.Shuffled) {
+		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledIndexList)
 	}
+	log.Infof("shuffledIndexList: %v", shuffledIndexList)
+
 	return nil
 }
 

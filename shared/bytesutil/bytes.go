@@ -5,6 +5,20 @@ import (
 	"encoding/binary"
 )
 
+//
+// Spec pseudocode definition:
+//   def int_to_bytes(integer: int, length: int) -> bytes:
+//     return integer.to_bytes(length, 'little')
+func ToBytes(x uint64, length int) []byte {
+	makeLength := length
+	if length < 8 {
+		makeLength = 8
+	}
+	bytes := make([]byte, makeLength)
+	binary.LittleEndian.PutUint64(bytes, x)
+	return bytes[:length]
+}
+
 // Bytes1 returns integer x to bytes in little-endian format, x.to_bytes(1, 'big').
 func Bytes1(x uint64) []byte {
 	bytes := make([]byte, 8)

@@ -12,20 +12,7 @@ type ShuffleTest struct {
 
 // ShuffleTestCase --
 type ShuffleTestCase struct {
-	Input  ShuffleInput `yaml:"input,flow"`
-	Output [][]uint64   `yaml:"output,flow"`
-	Seed   string
-}
-
-// ShuffleInput --
-type ShuffleInput struct {
-	Epoch      uint64       `yaml:"epoch"`
-	Validators []Validators `yaml:"validators"`
-}
-
-// Validators --
-type Validators struct {
-	ActivationEpoch uint64 `yaml:"activation_epoch"`
-	ExitEpoch       uint64 `yaml:"exit_epoch"`
-	OriginalIndex   int    `yaml:"original_index"`
+	Count    uint64   `yaml:"count,flow"`
+	Shuffled []uint64 `yaml:"shuffled,flow"`
+	Seed     string   `yaml:"seed,flow`
 }

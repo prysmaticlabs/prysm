@@ -74,14 +74,14 @@ func TestSplitIndices_OK(t *testing.T) {
 	}
 }
 
-func BenchmarkPermuteIndex(b *testing.B) {
+func BenchmarkShuffledIndex(b *testing.B) {
 	listSizes := []uint64{4000000, 40000, 400}
 	// Random 32 bytes seed for testing.
 	seed := [32]byte{123, 42}
 	for _, listSize := range listSizes {
-		b.Run(fmt.Sprintf("PermuteIndex_%d", listSize), func(ib *testing.B) {
+		b.Run(fmt.Sprintf("ShuffledIndex_%d", listSize), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				PermutedIndex(i%listSize, listSize, seed)
+				ShuffledIndex(i%listSize, listSize, seed)
 			}
 		})
 	}
