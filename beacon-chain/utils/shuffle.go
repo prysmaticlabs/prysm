@@ -132,7 +132,7 @@ func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, erro
 		}
 		// Add position except its last byte to []buf for randomness,
 		// it will be used later to select a bit from the resulting hash.
-		position4bytes := bytesutil.Bytes4(position >> 8)
+		position4bytes := bytesutil.ToBytes(position>>8, 4)
 		copy(buf[pivotViewSize:], position4bytes[:])
 		source := hashutil.Hash(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,

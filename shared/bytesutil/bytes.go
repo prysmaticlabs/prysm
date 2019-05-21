@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 )
 
-//
+// ToBytes returns integer x to bytes in little-endian format at the specified length.
 // Spec pseudocode definition:
 //   def int_to_bytes(integer: int, length: int) -> bytes:
 //     return integer.to_bytes(length, 'little')
