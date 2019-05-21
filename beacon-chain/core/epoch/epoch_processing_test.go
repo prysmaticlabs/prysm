@@ -1399,91 +1399,106 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 }
 
-func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
-	gs := params.BeaconConfig().GenesisSlot
-
-	validatorCount := uint64(128)
-	state := buildState(gs+e+2, validatorCount)
-
-	rewards, penalties, err := CrosslinkDelta(state)
-	if err != nil {
-		t.Fatal(err)
+func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+		},
 	}
-
-	for i := uint64(0); i < validatorCount; i++ {
-		// Since no one attested, all the validators should gain 0 reward
-		if rewards[i] != 0 {
-			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
-		}
-		// Since no one attested, all the validators should get penalized the same
-		if penalties[i] != BaseReward(state, i) {
-			t.Errorf("Wanted penalty balance %d, got %d",
-				BaseReward(state, i), penalties[i])
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
 		}
 	}
 }
 
-func TestCrosslinkDelta_SomeAttested(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
-	gs := params.BeaconConfig().GenesisSlot
-	ge := params.BeaconConfig().GenesisEpoch
-
-	state := buildState(gs+e+2, params.BeaconConfig().DepositsForChainStart/8)
-	startShard := uint64(960)
-	atts := make([]*pb.PendingAttestation, 2)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
-			Data: &pb.AttestationData{
-				Slot:              params.BeaconConfig().GenesisSlot + uint64(i),
-				TargetEpoch:       params.BeaconConfig().GenesisEpoch,
-				CrosslinkDataRoot: []byte{'A'},
-				Shard:             startShard + 1,
-			},
-			InclusionSlot:       uint64(i + 100),
-			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+	}
+	limit := helpers.ChurnLimit(state)
+	for i := 0; i < int(limit)+10; i++ {
+		state.ValidatorRegistry = append(state.ValidatorRegistry, &pb.Validator{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+		})
+	}
+	currentEpoch := helpers.CurrentEpoch(state)
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ActivationEligibilityEpoch != currentEpoch {
+			t.Errorf("could not update registry %d, wanted activation eligibility epoch %d got %d",
+				i, currentEpoch, validator.ActivationEligibilityEpoch)
 		}
-	}
-	state.PreviousEpochAttestations = atts
-	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
-		Epoch:                   ge,
-		CrosslinkDataRootHash32: []byte{'A'},
-	}
-	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
-		Epoch:                   ge,
-		CrosslinkDataRootHash32: []byte{'A'},
-	}
-
-	rewards, penalties, err := CrosslinkDelta(state)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	attestedIndices := []uint64{184, 638, 714, 1511, 506, 11, 797}
-	for _, i := range attestedIndices {
-		// Since all these validators attested, they should get the same rewards.
-		if rewards[i] != BaseReward(state, i) {
-			t.Errorf("Wanted reward balance %d, got %d", BaseReward(state, i), rewards[i])
+		if i < int(limit) && validator.ActivationEpoch != helpers.DelayedActivationExitEpoch(currentEpoch) {
+			t.Errorf("could not update registry %d, validators failed to activate wanted activation epoch %d got %d",
+				i, helpers.DelayedActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
 		}
-		// Since all these validators attested, they shouldn't get penalized.
-		if penalties[i] != 0 {
-			t.Errorf("Wanted penalty balance %d, got %d",
-				0, penalties[i])
+		if i >= int(limit) && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
+			t.Errorf("could not update registry %d, validators should not have been activated wanted activation epoch: %d got %d",
+				i, params.BeaconConfig().FarFutureEpoch, validator.ActivationEpoch)
 		}
 	}
 }
 
-func TestCrosslinkDelta_CantGetStartShard(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
-	gs := params.BeaconConfig().GenesisSlot
+func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
+		}
+	}
+}
 
-	state := buildState(gs+2*e, 1)
-	state.Slot = 0
-
-	_, _, err := CrosslinkDelta(state)
-	wanted := "could not get epoch start shard"
-	if !strings.Contains(err.Error(), wanted) {
-		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+func TestProcessRegistryUpdates_CanExits(t *testing.T) {
+	epoch := uint64(5)
+	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	state := &pb.BeaconState{
+		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{
+				ExitEpoch:   exitEpoch,
+				StatusFlags: pb.Validator_INITIATED_EXIT},
+			{
+				ExitEpoch:   exitEpoch,
+				StatusFlags: pb.Validator_INITIATED_EXIT},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitEpoch != exitEpoch {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i,
+				exitEpoch,
+				validator.ExitEpoch)
+		}
 	}
 }
 
