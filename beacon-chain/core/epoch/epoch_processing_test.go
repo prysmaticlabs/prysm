@@ -1297,7 +1297,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 }
 
 func TestProcessRewardsAndPenalties_GenesisEpoch(t *testing.T) {
-	state := &pb.BeaconState{Slot:params.BeaconConfig().SlotsPerEpoch - 1, LatestStartShard: 999}
+	state := &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 1, LatestStartShard: 999}
 	newState, err := ProcessRewardsAndPenalties(state)
 	if err != nil {
 		t.Fatal(err)

@@ -341,8 +341,8 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 		return nil, fmt.Errorf("could not get crosslink delta: %v ", err)
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i] + clRewards[i])
-		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i] + clPenalties[i])
+		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i])
+		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]+clPenalties[i])
 	}
 	return state, nil
 }
