@@ -61,7 +61,7 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 
 // ProcessBlockHeader validates a block by its header.
 //
-// Spec pseudocode definition:
+// Spec pseudocode definition
 // def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
 //     # Verify that the slots match
 //     assert block.slot == state.slot
