@@ -19,6 +19,7 @@ type WriterHook struct {
 	LogLevels []logrus.Level
 }
 
+// Fire is the logging event in which the stdout logs are written to the file
 func (hook *WriterHook) Fire(entry *logrus.Entry) error {
 	line, err := entry.String()
 	if err != nil {
