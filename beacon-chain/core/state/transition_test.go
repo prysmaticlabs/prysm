@@ -61,19 +61,15 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	return epochSignature.Marshal()
 }
 
-func TestProcessBlock_IncorrectSlot(t *testing.T) {
+func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + 5,
 	}
 	block := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot + 4,
 	}
-	want := fmt.Sprintf(
-		"block.slot != state.slot, block.slot = %d, state.slot = %d",
-		4,
-		5,
-	)
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
+	want := "expected state.slot"
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -452,7 +448,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
-	_, err := state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, state.DefaultConfig())
+	_, err := state.ProcessEpoch(context.Background(), newState)
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
@@ -516,7 +512,7 @@ func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
 		FinalizedEpoch:               params.BeaconConfig().GenesisEpoch + 1,
 	}
 
-	newState, err := state.ProcessEpoch(context.Background(), newState, nil, state.DefaultConfig())
+	newState, err := state.ProcessEpoch(context.Background(), newState)
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
@@ -587,7 +583,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
-	_, err := state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, state.DefaultConfig())
+	_, err := state.ProcessEpoch(context.Background(), newState)
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
@@ -608,7 +604,7 @@ func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 		0,
 		newState.Slot-params.BeaconConfig().GenesisSlot,
 	)
-	if _, err := state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessEpoch(context.Background(), newState); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
 	}
 }
@@ -643,7 +639,7 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 
 	wanted := fmt.Sprintf("could not process justification and finalization of state: slot %d is not within expected range of %d to %d",
 		64, 0, 64)
-	if _, err := state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, state.DefaultConfig()); !strings.Contains(err.Error(), wanted) {
+	if _, err := state.ProcessEpoch(context.Background(), newState); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %v", wanted, err)
 	}
 }

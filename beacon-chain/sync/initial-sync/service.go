@@ -221,7 +221,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}
-	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
+	state, err = s.chainService.AdvanceState(ctx, state, block)
 	if err != nil {
 		switch err.(type) {
 		case *blockchain.BlockFailedProcessingErr:
