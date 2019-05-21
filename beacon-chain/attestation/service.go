@@ -10,7 +10,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -219,18 +218,6 @@ func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestatio
 func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState,
 	attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
-
-	slot := attestation.Data.Slot
-	var err error
-
-	for beaconState.Slot < slot {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, state.DefaultConfig(),
-		)
-		if err != nil {
-			return fmt.Errorf("could not execute head transition: %v", err)
-		}
-	}
 
 	committee, err := helpers.CrosslinkCommitteeAtEpoch(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Shard)
 	if err != nil {

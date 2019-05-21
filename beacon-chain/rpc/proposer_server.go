@@ -36,18 +36,6 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
-	for beaconState.Slot < req.SlotNumber {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
-		}
-	}
 	beaconState.Slot = req.SlotNumber
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
@@ -96,19 +84,6 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	atts, err := ps.operationService.PendingAttestations(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
-	}
-
-	for beaconState.Slot < req.ProposalBlockSlot-1 {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
-		}
 	}
 	beaconState.Slot++
 
@@ -171,22 +146,6 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	// Check for skipped slots.
-	for beaconState.Slot < req.Slot-1 {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-
-		beaconState, err = state.ExecuteStateTransition(
-			ctx,
-			beaconState,
-			nil,
-			state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute state transition %v", err)
-		}
-	}
 	beaconState, err = state.ExecuteStateTransition(
 		ctx,
 		beaconState,

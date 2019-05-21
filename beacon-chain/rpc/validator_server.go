@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -133,18 +132,6 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	beaconState, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
-	}
-
-	for beaconState.Slot < req.EpochStart {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
-		}
 	}
 
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
