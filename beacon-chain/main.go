@@ -77,7 +77,6 @@ func main() {
 		debug.CPUProfileFlag,
 		debug.TraceFlag,
 		cmd.LogFileName,
-		cmd.LogFileFormat,
 	}
 
 	app.Flags = append(app.Flags, featureconfig.BeaconChainFlags...)
@@ -91,7 +90,7 @@ func main() {
 			formatter.FullTimestamp = true
 			// If persistent log files are written - we disable the log messages coloring because
 			// the colors are ANSI codes and seen as gibberish in the log files.
-			formatter.DisableColors = ctx.GlobalString(cmd.LogFileFormat.Name) != ""
+			formatter.DisableColors = ctx.GlobalString(cmd.LogFileName.Name) != ""
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
@@ -106,8 +105,7 @@ func main() {
 
 		logFileName := ctx.GlobalString(cmd.LogFileName.Name)
 		if logFileName != "" {
-			logFileFormatName := ctx.GlobalString(cmd.LogFileFormat.Name)
-			if err := logutil.ConfigurePersistentLogging(logFileName, logFileFormatName); err != nil {
+			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}

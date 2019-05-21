@@ -153,7 +153,6 @@ contract in order to activate the validator client`,
 		debug.CPUProfileFlag,
 		debug.TraceFlag,
 		cmd.LogFileName,
-		cmd.LogFileFormat,
 	}
 
 	app.Flags = append(app.Flags, featureconfig.ValidatorFlags...)
@@ -167,7 +166,7 @@ contract in order to activate the validator client`,
 			formatter.FullTimestamp = true
 			// If persistent log files are written - we disable the log messages coloring because
 			// the colors are ANSI codes and seen as Gibberish in the log files.
-			formatter.DisableColors = ctx.GlobalString(cmd.LogFileFormat.Name) != ""
+			formatter.DisableColors = ctx.GlobalString(cmd.LogFileName.Name) != ""
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
@@ -182,8 +181,9 @@ contract in order to activate the validator client`,
 
 		logFileName := ctx.GlobalString(cmd.LogFileName.Name)
 		if logFileName != "" {
-			logFileFormatName := ctx.GlobalString(cmd.LogFileFormat.Name)
-			logutil.ConfigurePersistentLogging(logFileName, logFileFormatName)
+			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
+				log.WithError(err).Error("Failed to configuring logging to disk.")
+			}
 		}
 
 		runtime.GOMAXPROCS(runtime.NumCPU())
