@@ -68,8 +68,8 @@ message Fork {
 message PendingAttestation {
   bytes aggregation_bitfield = 1;
   AttestationData data = 2;
-  uint64 inclusion_slot = 3;
-  bytes custody_bitfield = 4;
+  uint64 inclusion_delay = 3;
+  uint64 proposer_index = 4;
 }
 
 message Attestation {
