@@ -1,4 +1,4 @@
-//Package logutil creates a logrus lib file logger instance that
+// Package logutil creates a logrus lib file logger instance that
 //write all logs that are written to stdout.
 package logutil
 
