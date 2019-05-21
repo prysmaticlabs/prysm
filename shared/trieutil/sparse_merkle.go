@@ -135,8 +135,11 @@ func hashLayer(layer [][]byte) [][]byte {
 // as padding along the way if an odd number of leaves are originally provided.
 func generateEmptyNodes(depth int) [][]byte {
 	nodes := make([][]byte, depth)
+	var prevNode [32]byte
 	for i := 0; i < depth; i++ {
-		nodes[i] = parentHash([]byte{}, []byte{})
+		hashedNode := parentHash(prevNode[:], prevNode[:])
+		nodes[i] = hashedNode
+		prevNode = bytesutil.ToBytes32(hashedNode)
 	}
 	return nodes
 }
