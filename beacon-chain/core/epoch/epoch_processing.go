@@ -242,6 +242,26 @@ func ProcessSlashings(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
+// ProcessRewardsAndPenalties processes the rewards and penalties of individual validator.
+//
+// Spec pseudocode definition:
+//  def process_rewards_and_penalties(state: BeaconState) -> None:
+//    if get_current_epoch(state) == GENESIS_EPOCH:
+//        return
+//
+//    rewards1, penalties1 = get_attestation_deltas(state)
+//    rewards2, penalties2 = get_crosslink_deltas(state)
+//    for i in range(len(state.validator_registry)):
+//        increase_balance(state, i, rewards1[i] + rewards2[i])
+//        decrease_balance(state, i, penalties1[i] + penalties2[i])
+func ProcessRewardsAndPenalties(state *pb.BeaconState) *pb.BeaconState {
+	// Can't process rewards and penalties in first epoch.
+	if helpers.CurrentEpoch(state) == 0 {
+		return state
+	}
+	attsRewards, attsPenalties := 
+}
+
 // ProcessFinalUpdates processes the final updates during epoch processing.
 //
 // Spec pseudocode definition:
