@@ -17,11 +17,10 @@ type MerkleTrie struct {
 }
 
 // Return a new merkle trie to use.
-func NewTrie() *MerkleTrie {
-	return &MerkleTrie{
-		branches:      make([][][]byte, 0),
-		originalItems: make([][]byte, 0),
-	}
+func NewTrie(depth int) (*MerkleTrie, error) {
+	var zeroBytes [32]byte
+	items := [][]byte{zeroBytes[:]}
+	return GenerateTrieFromItems(items, depth)
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
@@ -115,7 +114,7 @@ func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][]byte, error) {
 
 // parentHash takes a left and right node and hashes their concatenation.
 func parentHash(left []byte, right []byte) []byte {
-	res := hashutil.Hash(append(left, right...))
+	res := hashutil.HashSha256(append(left, right...))
 	return res[:]
 }
 
@@ -136,7 +135,8 @@ func hashLayer(layer [][]byte) [][]byte {
 func generateEmptyNodes(depth int) [][]byte {
 	nodes := make([][]byte, depth)
 	var prevNode [32]byte
-	for i := 0; i < depth; i++ {
+	nodes[0] = prevNode[:]
+	for i := 1; i < depth; i++ {
 		hashedNode := parentHash(prevNode[:], prevNode[:])
 		nodes[i] = hashedNode
 		prevNode = bytesutil.ToBytes32(hashedNode)
