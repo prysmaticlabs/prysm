@@ -10,13 +10,13 @@ import (
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
-	ShardCount               uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize      uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxIndicesPerAttestation uint64 // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
-	MinPerEpochChurnLimit    uint64 // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
-	ChurnLimitQuotient       uint64 // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
-	BaseRewardsPerEpoch      uint64 // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
-	ShuffleRoundCount        uint64 // ShuffleRoundCount is used for retrieving the permuted index.
+	ShardCount               uint64 `yaml:"SHARD_COUNT"`                 // ShardCount is the number of shard chains in Ethereum 2.0.
+	TargetCommitteeSize      uint64 `yaml:"TARGET_COMMITTEE_SIZE"`       // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxIndicesPerAttestation uint64 `yaml:"MAX_INDICES_PER_ATTESTATION"` // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
+	MinPerEpochChurnLimit    uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`   // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
+	ChurnLimitQuotient       uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`        // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
+	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
+	ShuffleRoundCount        uint64 `yaml:"SHUFFLE_ROUND_COUNT"`         // ShuffleRoundCount is used for retrieving the permuted index.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
 	MaxBalanceChurnQuotient uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
@@ -28,81 +28,81 @@ type BeaconChainConfig struct {
 	MaxExitDequeuesPerEpoch uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 
 	// Deposit contract constants.
-	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
-	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
+	DepositContractAddress   []byte `yaml:"DEPOSIT_CONTRACT_ADDRESS"`    // DepositContractAddress is the address of the deposit contract in PoW chain.
+	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
 
 	// Gwei value constants.
-	MinDepositAmount          uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"` // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
 	MaxDepositAmount          uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MaxEffectiveBalance       uint64 // MaxEffectiveBalance is the maximal amount of Gwie that is effective for staking.
-	EjectionBalance           uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
-	EffectiveBalanceIncrement uint64 // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
+	MaxEffectiveBalance       uint64 `yaml:"MAX_EFFECTIVE_BALANCE"`       // MaxEffectiveBalance is the maximal amount of Gwie that is effective for staking.
+	EjectionBalance           uint64 `yaml:"EJECTION_BALANCE"`            // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	EffectiveBalanceIncrement uint64 `yaml:"EFFECTIVE_BALANCE_INCREMENT"` // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 	// TODO(2307): Remove deprecated fields
 	//Deprecated: Do not use.
 	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
 
 	// Initial value constants.
-	FarFutureEpoch          uint64   // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
+	FarFutureEpoch          uint64   `yaml:"FAR_FUTURE_EPOCH"` // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
-	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
+	BLSWithdrawalPrefixByte byte     `yaml:"BLS_WITHDRAWAL_PREFIX_BYTE"` // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
-	GenesisForkVersion []byte // GenesisForkVersion is used to track fork version between state transitions.
+	GenesisForkVersion []byte `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
 	// Deprecated: Do not use.
 	GenesisStartShard uint64 // GenesisStartShard is the first shard to assign validators.
 	// Deprecated: Do not use.
 	EmptySignature [96]byte // EmptySignature is used to represent a zeroed out BLS Signature.
 
 	// Time parameters constants.
-	SecondsPerSlot               uint64 // SecondsPerSlot is how many seconds are in a single slot.
-	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
-	SlotsPerEpoch                uint64 // SlotsPerEpoch is the number of slots in an epoch.
-	MinSeedLookahead             uint64 // SeedLookahead is the duration of randao look ahead seed.
-	ActivationExitDelay          uint64 // ActivationExitDelay is the duration a validator has to wait for entry and exit in epoch.
-	SlotsPerEth1VotingPeriod     uint64 // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
-	SlotsPerHistoricalRoot       uint64 // SlotsPerHistoricalRoot defines how often the historical root is saved.
-	MinValidatorWithdrawalDelay  uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator has to wait to withdraw.
-	PersistentCommitteePeriod    uint64 // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
-	MaxCrosslinkEpochs           uint64 // MaxCrosslinkEpochs defines the max epoch from current a crosslink can be formed at.
-	MinEpochsToInactivityPenalty uint64 // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
+	SecondsPerSlot               uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
+	MinAttestationInclusionDelay uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY"`     // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
+	SlotsPerEpoch                uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
+	MinSeedLookahead             uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
+	ActivationExitDelay          uint64 `yaml:"ACTIVATION_EXIT_DELAY"`               // ActivationExitDelay is the duration a validator has to wait for entry and exit in epoch.
+	SlotsPerEth1VotingPeriod     uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	SlotsPerHistoricalRoot       uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
+	MinValidatorWithdrawalDelay  uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawalEpochs is the shortest amount of time a validator has to wait to withdraw.
+	PersistentCommitteePeriod    uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
+	MaxCrosslinkEpochs           uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxCrosslinkEpochs defines the max epoch from current a crosslink can be formed at.
+	MinEpochsToInactivityPenalty uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
 	EpochsPerEth1VotingPeriod uint64 // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 
 	// State list lengths
-	LatestRandaoMixesLength      uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	LatestActiveIndexRootsLength uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
-	LatestSlashedExitLength      uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
+	LatestRandaoMixesLength      uint64 `yaml:"LATEST_RANDAO_MIXES_LENGTH"`       // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
+	LatestActiveIndexRootsLength uint64 `yaml:"LATEST_ACTIVE_INDEX_ROOTS_LENGTH"` // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
+	LatestSlashedExitLength      uint64 `yaml:"LATEST_SLASHED_EXIT_LENGTH"`       // LatestSlashedExitLength is used to track penalized exit balances per time interval.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
 	LatestBlockRootsLength uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 
 	// Reward and penalty quotients constants.
-	BaseRewardQuotient           uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
-	WhistleBlowingRewardQuotient uint64 // WhistleBlowingRewardQuotient is used to calculate whistler blower reward.
-	ProposerRewardQuotient       uint64 // ProposerRewardQuotient is used to calculate the reward for proposers.
-	InactivityPenaltyQuotient    uint64 // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
-	MinSlashingPenaltyQuotient   uint64 // MinSlashingPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
+	BaseRewardQuotient           uint64 `yaml:"BASE_REWARD_QUOTIENT"`           // BaseRewardQuotient is used to calculate validator per-slot interest rate.
+	WhistleBlowingRewardQuotient uint64 `yaml:"WHISTLEBLOWING_REWARD_QUOTIENT"` // WhistleBlowingRewardQuotient is used to calculate whistler blower reward.
+	ProposerRewardQuotient       uint64 `yaml:"PROPOSER_REWARD_QUOTIENT"`       // ProposerRewardQuotient is used to calculate the reward for proposers.
+	InactivityPenaltyQuotient    uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT"`    // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
+	MinSlashingPenaltyQuotient   uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT"`  // MinSlashingPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
 	// TODO(2307): Remove deprecated fields
 	// Deprecated: Do not use.
 	AttestationInclusionRewardQuotient uint64 // AttestationInclusionRewardQuotient defines the reward quotient of proposer for including attestations.
 
 	// Max operations per block constants.
-	MaxProposerSlashings uint64 // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
-	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
-	MaxAttestations      uint64 // MaxAttestations defines the maximum allowed attestations in a beacon block.
-	MaxDeposits          uint64 // MaxVoluntaryExits defines the maximum number of validator deposits in a block.
-	MaxVoluntaryExits    uint64 // MaxVoluntaryExits defines the maximum number of validator exits in a block.
-	MaxTransfers         uint64 // MaxTransfers defines the maximum number of balance transfers in a block.
+	MaxProposerSlashings uint64 `yaml:"MAX_PROPOSER_SLASHINGS"` // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
+	MaxAttesterSlashings uint64 `yaml:"MAX_ATTESTER_SLASHINGS"` // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
+	MaxAttestations      uint64 `yaml:"MAX_ATTESTATIONS"`       // MaxAttestations defines the maximum allowed attestations in a beacon block.
+	MaxDeposits          uint64 `yaml:"MAX_DEPOSITS"`           // MaxVoluntaryExits defines the maximum number of validator deposits in a block.
+	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
+	MaxTransfers         uint64 `yaml:"MAX_TRANSFERS"`          // MaxTransfers defines the maximum number of balance transfers in a block.
 
 	// BLS domain values.
-	DomainBeaconProposer uint64 // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
-	DomainRandao         uint64 // DomainRandao defines the BLS signature domain for randao verification.
-	DomainAttestation    uint64 // DomainAttestation defines the BLS signature domain for attestation verification.
-	DomainDeposit        uint64 // DomainDeposit defines the BLS signature domain for deposit verification.
-	DomainVoluntaryExit  uint64 // DomainVoluntaryExit defines the BLS signature domain for exit verification.
-	DomainTransfer       uint64 // DomainTransfer defines the BLS signature domain for transfer verification.
+	DomainBeaconProposer uint64 `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
+	DomainRandao         uint64 `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
+	DomainAttestation    uint64 `yaml:"DOMAIN_ATTESTATION"`     // DomainAttestation defines the BLS signature domain for attestation verification.
+	DomainDeposit        uint64 `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
+	DomainVoluntaryExit  uint64 `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
+	DomainTransfer       uint64 `yaml:"DOMAIN_TRANSFER"`        // DomainTransfer defines the BLS signature domain for transfer verification.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
