@@ -17,11 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
-<<<<<<< HEAD
-	"github.com/sirupsen/logrus"
 	"sort"
-=======
->>>>>>> crosslink-deltas
 )
 
 // MatchedAttestations is an object that contains the correctly
