@@ -60,19 +60,15 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	return epochSignature.Marshal()
 }
 
-func TestProcessBlock_IncorrectSlot(t *testing.T) {
+func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Slot: 5,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 4,
 	}
-	want := fmt.Sprintf(
-		"block.slot != state.slot, block.slot = %d, state.slot = %d",
-		4,
-		5,
-	)
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
+	want := "expected state.slot"
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }

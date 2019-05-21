@@ -62,7 +62,7 @@ func ExecuteStateTransition(
 	var err error
 
 	// Execute per slot transition.
-	if block.Slot >= state.Slot {
+	if state.Slot >= block.Slot {
 		return nil, fmt.Errorf("expected state.slot %d < block.slot %d", state.Slot, block.Slot)
 	}
 	for state.Slot < block.Slot {
@@ -108,7 +108,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
-	prevBlockRoot, err := ssz.SignedRoot(state.LatestBlockHeader)
+	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
 	}

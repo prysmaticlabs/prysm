@@ -125,13 +125,6 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 
 	slotsWithNil := uint64(10)
 
-	// Run the chain for 10 slots with nil blocks.
-	for i := uint64(0); i < slotsWithNil; i++ {
-		if err := b.GenerateNilBlockAndAdvanceChain(); err != nil {
-			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, b.State().Slot+1)
-		}
-	}
-
 	for i := uint64(0); i < slotLimit-slotsWithNil; i++ {
 		if err := b.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, b.State().Slot+1)

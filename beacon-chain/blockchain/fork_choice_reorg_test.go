@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -40,6 +42,10 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	justifiedState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	justifiedState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
+	}
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
 
@@ -66,7 +72,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	canonicalBlockIndices := []int{1, 3, 5}
 	postState := proto.Clone(justifiedState).(*pb.BeaconState)
 	for _, canonicalIndex := range canonicalBlockIndices {
-		postState, err = chainService.ApplyBlockStateTransition(ctx, blocks[canonicalIndex], postState)
+		postState, err = chainService.RunStateTransition(ctx, postState, blocks[canonicalIndex])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,7 +101,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	forkedBlockIndices := []int{2, 4}
 	forkState := proto.Clone(justifiedState).(*pb.BeaconState)
 	for _, forkIndex := range forkedBlockIndices {
-		forkState, err = chainService.ApplyBlockStateTransition(ctx, blocks[forkIndex], forkState)
+		forkState, err = chainService.RunStateTransition(ctx, forkState, blocks[forkIndex])
 		if err != nil {
 			t.Fatal(err)
 		}
