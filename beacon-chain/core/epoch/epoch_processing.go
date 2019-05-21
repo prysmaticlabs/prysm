@@ -251,7 +251,6 @@ func ProcessRegistryUpdates(state *pb.BeaconState) *pb.BeaconState {
 		return state.ValidatorRegistry[i].ActivationEligibilityEpoch < state.ValidatorRegistry[j].ActivationEligibilityEpoch
 	})
 
-
 	// Only activate just enough validators according to the activation churn limit.
 	limit := len(activationQ)
 	churnLimit := int(helpers.ChurnLimit(state))
