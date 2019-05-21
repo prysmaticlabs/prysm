@@ -178,7 +178,7 @@ message BeaconBlockHeader {
   bytes parent_root = 2;
   bytes state_root = 3;
   bytes body_root = 4;
-  bytes signature = 5; // bytes86
+  bytes signature = 5; // bytes96
 }
 
 message BeaconBlock {
