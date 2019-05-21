@@ -62,7 +62,7 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) RunStateTransition(
+func (ms *mockChainService) AdvanceState(
 	ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil

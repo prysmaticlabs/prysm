@@ -32,7 +32,7 @@ type BlockReceiver interface {
 // to beacon blocks and generating a new beacon state from the Ethereum 2.0 core primitives.
 type BlockProcessor interface {
 	VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error
-	RunStateTransition(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	AdvanceState(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error)
 	CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error
 }
 
@@ -92,7 +92,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		"Executing state transition")
 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
-	beaconState, err = c.RunStateTransition(ctx, beaconState, block)
+	beaconState, err = c.AdvanceState(ctx, beaconState, block)
 	if err != nil {
 		switch err.(type) {
 		case *BlockFailedProcessingErr:
@@ -206,10 +206,10 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 	return nil
 }
 
-// RunStateTransition executes the Ethereum 2.0 core state transition for the beacon chain and
+// AdvanceState executes the Ethereum 2.0 core state transition for the beacon chain and
 // updates important checkpoints and local persistent data during epoch transitions. It serves as a wrapper
 // around the more low-level, core state transition function primitive.
-func (c *ChainService) RunStateTransition(
+func (c *ChainService) AdvanceState(
 	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,

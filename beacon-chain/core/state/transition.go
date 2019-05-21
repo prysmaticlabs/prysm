@@ -40,13 +40,9 @@ func DefaultConfig() *TransitionConfig {
 // ExecuteStateTransition defines the procedure for a state transition function.
 // Spec pseudocode definition:
 //  We now define the state transition function. At a high level the state transition is made up of three parts:
-//  - The per-slot transitions, which happens at the start of every slot.
-//  - The per-epoch transitions, which happens at the end of the last slot of every epoch (i.e. (state.slot + 1) % SLOTS_PER_EPOCH == 0).
-//  - The per-block transitions, which happens at every block.
-//  The per-slot transitions focus on the slot counter and block roots records updates.
-//  The per-epoch transitions focus on the validator registry, including adjusting balances and activating and exiting validators,
-//  The per-block transitions focus on verifying aggregate signatures and saving temporary records relating to the per-block activity in the state.
-//  as well as processing crosslinks and managing block justification/finalization.
+//  - The per-slot transitions focuses on increasing the slot number and recording recent block headers.
+//  - The per-epoch transitions focuses on the validator registry, adjusting balances, and finalizing slots.
+//  - The per-block transitions focuses on verifying block operations, verifying attestations, and signatures.
 func ExecuteStateTransition(
 	ctx context.Context,
 	state *pb.BeaconState,
@@ -91,8 +87,6 @@ func ExecuteStateTransition(
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
 // It happens regardless if there's an incoming block or not.
-//
-// Spec pseudocode definition:
 func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
 	defer span.End()
@@ -184,12 +178,10 @@ func ProcessBlock(
 
 // ProcessEpoch describes the per epoch operations that are performed on the
 // beacon state.
-//
 func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 
 	// TODO(#2307): Implement process epoch based on 0.6.
-
 	return state, nil
 }

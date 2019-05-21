@@ -71,7 +71,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	canonicalBlockIndices := []int{1, 3, 5}
 	postState := proto.Clone(justifiedState).(*pb.BeaconState)
 	for _, canonicalIndex := range canonicalBlockIndices {
-		postState, err = chainService.RunStateTransition(ctx, postState, blocks[canonicalIndex])
+		postState, err = chainService.AdvanceState(ctx, postState, blocks[canonicalIndex])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -100,7 +100,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	forkedBlockIndices := []int{2, 4}
 	forkState := proto.Clone(justifiedState).(*pb.BeaconState)
 	for _, forkIndex := range forkedBlockIndices {
-		forkState, err = chainService.RunStateTransition(ctx, forkState, blocks[forkIndex])
+		forkState, err = chainService.AdvanceState(ctx, forkState, blocks[forkIndex])
 		if err != nil {
 			t.Fatal(err)
 		}

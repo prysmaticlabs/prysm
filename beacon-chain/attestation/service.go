@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -163,15 +162,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	if err != nil {
 		return err
 	}
-	head, err := a.beaconDB.ChainHead()
-	if err != nil {
-		return err
-	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return err
-	}
-	return a.updateAttestation(ctx, headRoot, beaconState, attestation)
+	return a.updateAttestation(beaconState, attestation)
 }
 
 // BatchUpdateLatestAttestation updates multiple attestations and adds them into the attestation store
@@ -187,19 +178,11 @@ func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations
 	if err != nil {
 		return err
 	}
-	head, err := a.beaconDB.ChainHead()
-	if err != nil {
-		return err
-	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return err
-	}
 
 	attestations = a.sortAttestations(attestations)
 
 	for _, attestation := range attestations {
-		if err := a.updateAttestation(ctx, headRoot, beaconState, attestation); err != nil {
+		if err := a.updateAttestation(beaconState, attestation); err != nil {
 			return err
 		}
 	}
@@ -215,8 +198,7 @@ func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestatio
 	a.store.m[pubkey] = att
 }
 
-func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState,
-	attestation *pb.Attestation) error {
+func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
 
 	committee, err := helpers.CrosslinkCommitteeAtEpoch(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Shard)

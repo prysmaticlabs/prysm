@@ -39,7 +39,7 @@ func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *Chain
 	}
 	saveLatestBlock := beaconState.LatestBlock
 
-	computedState, err := chainService.RunStateTransition(context.Background(), beaconState, block)
+	computedState, err := chainService.AdvanceState(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatalf("could not apply block state transition: %v", err)
 	}
