@@ -989,6 +989,27 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 	}
 }
 
+func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
+		}
+	}
+}
+
 func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 
@@ -1051,6 +1072,88 @@ func TestCrosslinkDelta_CantGetWinningCrosslink(t *testing.T) {
 	wanted := "could not get winning crosslink: could not get matching attestations"
 	if !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+	}
+}
+
+func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+	}
+	limit := helpers.ChurnLimit(state)
+	for i := 0; i < int(limit)+10; i++ {
+		state.ValidatorRegistry = append(state.ValidatorRegistry, &pb.Validator{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+		})
+	}
+	currentEpoch := helpers.CurrentEpoch(state)
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ActivationEligibilityEpoch != currentEpoch {
+			t.Errorf("could not update registry %d, wanted activation eligibility epoch %d got %d",
+				i, currentEpoch, validator.ActivationEligibilityEpoch)
+		}
+		if i < int(limit) && validator.ActivationEpoch != helpers.DelayedActivationExitEpoch(currentEpoch) {
+			t.Errorf("could not update registry %d, validators failed to activate wanted activation epoch %d got %d",
+				i, helpers.DelayedActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
+		}
+		if i >= int(limit) && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
+			t.Errorf("could not update registry %d, validators should not have been activated wanted activation epoch: %d got %d",
+				i, params.BeaconConfig().FarFutureEpoch, validator.ActivationEpoch)
+		}
+	}
+}
+
+func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
+		}
+	}
+}
+
+func TestProcessRegistryUpdates_CanExits(t *testing.T) {
+	epoch := uint64(5)
+	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	state := &pb.BeaconState{
+		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
+		ValidatorRegistry: []*pb.Validator{
+			{
+				ExitEpoch:   exitEpoch,
+				StatusFlags: pb.Validator_INITIATED_EXIT},
+			{
+				ExitEpoch:   exitEpoch,
+				StatusFlags: pb.Validator_INITIATED_EXIT},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	newState := ProcessRegistryUpdates(state)
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitEpoch != exitEpoch {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i,
+				exitEpoch,
+				validator.ExitEpoch)
+		}
 	}
 }
 
