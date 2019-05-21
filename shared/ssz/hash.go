@@ -41,8 +41,8 @@ func TreeHash(val interface{}) ([32]byte, error) {
 	return paddedOutput, nil
 }
 
-// SignedRoot returns the signed root of the last element in the container.
-func SignedRoot(val interface{}) ([32]byte, error) {
+// SigningRoot returns the signed root of the last element in the container.
+func SigningRoot(val interface{}) ([32]byte, error) {
 	valObj := reflect.ValueOf(val)
 	kind := valObj.Kind()
 
