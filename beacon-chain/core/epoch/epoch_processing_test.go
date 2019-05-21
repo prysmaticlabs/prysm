@@ -215,7 +215,7 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 				TargetEpoch: 0,
 				Shard:       uint64(i + 2),
 			},
-			InclusionSlot: uint64(i + 100),
+			InclusionDelay: uint64(i + 100),
 			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
 		}
@@ -240,13 +240,13 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 
 	// Get attestation for validator index 255.
 	idx := uint64(914)
-	att, err := EarlistAttestation(state, atts, idx)
+	att, err := earlistAttestation(state, atts, idx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	wantedInclusion := uint64(18446744073709551615)
-	if att.InclusionSlot != wantedInclusion {
-		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionSlot)
+	if att.InclusionDelay != wantedInclusion {
+		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionDelay)
 
 	}
 }
@@ -270,7 +270,7 @@ func TestEarliestAttestation_CantGetIndicesBitfieldError(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	const wantedErr = "could not get attester indices: wanted participants bitfield length 0, got: 1"
-	if _, err := EarlistAttestation(state, atts, 0); !strings.Contains(err.Error(), wantedErr) {
+	if _, err := earlistAttestation(state, atts, 0); !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
 }
@@ -1002,7 +1002,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 				CrosslinkDataRoot: []byte{'A'},
 				Shard:             startShard + 1,
 			},
-			InclusionSlot:       uint64(i + 100),
+			InclusionDelay:      uint64(i + 100),
 			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
 		}
 	}
@@ -1051,6 +1051,146 @@ func TestCrosslinkDelta_CantGetWinningCrosslink(t *testing.T) {
 	wanted := "could not get winning crosslink: could not get matching attestations"
 	if !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+	}
+}
+
+func TestAttestationDelta_CantGetBlockRoot(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+
+	state := buildState(2*e, 1)
+	state.Slot = 0
+
+	_, _, err := AttestationDelta(state)
+	wanted := "could not get block root for epoch"
+	if !strings.Contains(err.Error(), wanted) {
+		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+	}
+}
+
+func TestAttestationDelta_CantGetAttestation(t *testing.T) {
+	state := buildState(0, 1)
+
+	_, _, err := AttestationDelta(state)
+	wanted := "could not get source, target and head attestations"
+	if !strings.Contains(err.Error(), wanted) {
+		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+	}
+}
+
+func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+
+	state := buildState(e+2, 1)
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot: uint64(i),
+			},
+			InclusionDelay:      uint64(i + 100),
+			AggregationBitfield: []byte{0xff},
+		}
+	}
+	state.PreviousEpochAttestations = atts
+
+	_, _, err := AttestationDelta(state)
+	wanted := "could not get attestation indices"
+	if !strings.Contains(err.Error(), wanted) {
+		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
+	}
+}
+
+func TestAttestationDelta_NoOneAttested(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := params.BeaconConfig().DepositsForChainStart / 32
+	state := buildState(e+2, validatorCount)
+	startShard := uint64(960)
+	atts := make([]*pb.PendingAttestation, 2)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:              uint64(i),
+				CrosslinkDataRoot: []byte{'A'},
+				Shard:             startShard + 1,
+			},
+			InclusionDelay:      uint64(i + 100),
+			AggregationBitfield: []byte{0xC0},
+		}
+	}
+
+	rewards, penalties, err := AttestationDelta(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := uint64(0); i < validatorCount; i++ {
+		// Since no one attested, all the validators should gain 0 reward
+		if rewards[i] != 0 {
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
+		}
+		// Since no one attested, all the validators should get penalized the same
+		// it's 3 times the penalized amount because source, target and head.
+		wanted := 3 * BaseReward(state, i)
+		if penalties[i] != wanted {
+			t.Errorf("Wanted penalty balance %d, got %d",
+				wanted, penalties[i])
+		}
+	}
+}
+
+func TestAttestationDelta_SomeAttested(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := params.BeaconConfig().DepositsForChainStart / 8
+	state := buildState(e+2, validatorCount)
+	startShard := uint64(960)
+	atts := make([]*pb.PendingAttestation, 3)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:              uint64(i),
+				CrosslinkDataRoot: []byte{'A'},
+				Shard:             startShard + 1,
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			InclusionDelay:      1,
+		}
+	}
+	state.PreviousEpochAttestations = atts
+	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+
+	rewards, penalties, err := AttestationDelta(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
+	attestedIndices := []uint64{500}
+
+	attestedBalance, err := AttestingBalance(state, atts)
+	totalBalance := totalActiveBalance(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, i := range attestedIndices {
+		// Base rewards for getting source right
+		wanted := 3 * (BaseReward(state, i) * attestedBalance / totalBalance)
+		// Base rewards for proposer and attesters working together getting attestation
+		// on chain in the fatest manner
+		wanted += BaseReward(state, i) * params.BeaconConfig().MinAttestationInclusionDelay
+		if rewards[i] != wanted {
+			t.Errorf("Wanted reward balance %d, got %d", wanted, rewards[i])
+		}
+		// Since all these validators attested, they shouldn't get penalized.
+		if penalties[i] != 0 {
+			t.Errorf("Wanted penalty balance %d, got %d",
+				0, penalties[i])
+		}
 	}
 }
 

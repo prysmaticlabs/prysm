@@ -422,7 +422,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 				JustifiedEpoch:           1,
 				JustifiedBlockRootHash32: []byte{0},
 			},
-			InclusionSlot: i + params.BeaconConfig().SlotsPerEpoch + 1,
+			InclusionDelay: i + params.BeaconConfig().SlotsPerEpoch + 1,
 		})
 	}
 
@@ -484,7 +484,7 @@ func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
 				JustifiedEpoch:           1,
 				JustifiedBlockRootHash32: []byte{0},
 			},
-			InclusionSlot: i + params.BeaconConfig().SlotsPerEpoch + 1,
+			InclusionDelay: i + params.BeaconConfig().SlotsPerEpoch + 1,
 		})
 	}
 
@@ -556,7 +556,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 				JustifiedBlockRootHash32: []byte{0},
 			},
 			AggregationBitfield: []byte{},
-			InclusionSlot:       i + params.BeaconConfig().SlotsPerEpoch + 1,
+			InclusionDelay:      i + params.BeaconConfig().SlotsPerEpoch + 1,
 		})
 	}
 
