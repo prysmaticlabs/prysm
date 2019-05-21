@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
