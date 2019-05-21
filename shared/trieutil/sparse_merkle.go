@@ -12,15 +12,31 @@ import (
 // MerkleTrie implements a sparse, general purpose Merkle trie to be used
 // across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
+	treeDepth     int
 	branches      [][][]byte
 	originalItems [][]byte // list of provided items before hashing them into leaves.
 }
 
-// Return a new merkle trie to use.
+// Return a new merkle trie filled with zerohashes to use.
 func NewTrie(depth int) (*MerkleTrie, error) {
 	var zeroBytes [32]byte
 	items := [][]byte{zeroBytes[:]}
 	return GenerateTrieFromItems(items, depth)
+}
+
+// Inserts an item into the trie.
+func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) {
+	indexWanted := 0
+	powersOfTwo := 2
+	for i := 0; i < m.treeDepth; i++ {
+		if (indexWanted+1)%powersOfTwo != 0 {
+			break
+		}
+		indexWanted++
+		powersOfTwo <<= 1
+		item = parentHash(m.branches[i], item)
+	}
+
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
@@ -43,7 +59,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	for i, j := 0, len(branches)-1; i < j; i, j = i+1, j-1 {
 		branches[i], branches[j] = branches[j], branches[i]
 	}
-	return &MerkleTrie{branches: branches, originalItems: items}, nil
+	return &MerkleTrie{branches: branches, originalItems: items, treeDepth: depth}, nil
 }
 
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
