@@ -316,6 +316,38 @@ func ProcessSlashings(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
+// ProcessRewardsAndPenalties processes the rewards and penalties of individual validator.
+//
+// Spec pseudocode definition:
+//  def process_rewards_and_penalties(state: BeaconState) -> None:
+//    if get_current_epoch(state) == GENESIS_EPOCH:
+//        return
+//
+//    rewards1, penalties1 = get_attestation_deltas(state)
+//    rewards2, penalties2 = get_crosslink_deltas(state)
+//    for i in range(len(state.validator_registry)):
+//        increase_balance(state, i, rewards1[i] + rewards2[i])
+//        decrease_balance(state, i, penalties1[i] + penalties2[i])
+func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) {
+	// Can't process rewards and penalties in genesis epoch.
+	if helpers.CurrentEpoch(state) == 0 {
+		return state, nil
+	}
+	attsRewards, attsPenalties, err := AttestationDelta(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attestation delta: %v ", err)
+	}
+	clRewards, clPenalties, err := CrosslinkDelta(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not get crosslink delta: %v ", err)
+	}
+	for i := 0; i < len(state.ValidatorRegistry); i++ {
+		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i])
+		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]+clPenalties[i])
+	}
+	return state, nil
+}
+
 // AttestationDelta calculates the rewards and penalties of individual
 // validator for voting the correct FFG source, FFG target, and head. It
 // also calculates proposer delay inclusion and inactivity rewards

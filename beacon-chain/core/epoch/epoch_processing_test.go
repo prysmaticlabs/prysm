@@ -1189,8 +1189,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
-	attestedIndices := []uint64{500}
+	attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
 
 	attestedBalance, err := AttestingBalance(state, atts)
 	totalBalance := totalActiveBalance(state)
@@ -1294,6 +1293,56 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 				exitEpoch,
 				validator.ExitEpoch)
 		}
+	}
+}
+
+func TestProcessRewardsAndPenalties_GenesisEpoch(t *testing.T) {
+	state := &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 1, LatestStartShard: 999}
+	newState, err := ProcessRewardsAndPenalties(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(state, newState) {
+		t.Error("genesis state mutated")
+	}
+}
+
+func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := params.BeaconConfig().DepositsForChainStart / 8
+	state := buildState(e+2, validatorCount)
+	startShard := uint64(960)
+	atts := make([]*pb.PendingAttestation, 3)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Slot:              uint64(i),
+				CrosslinkDataRoot: []byte{'A'},
+				Shard:             startShard + 1,
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			InclusionDelay:      1,
+		}
+	}
+	state.PreviousEpochAttestations = atts
+	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
+		CrosslinkDataRootHash32: []byte{'A'},
+	}
+
+	state, err := ProcessRewardsAndPenalties(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Balances[0] != params.BeaconConfig().MaxDepositAmount {
+		t.Errorf("wanted balance: %d, got: %d",
+			params.BeaconConfig().MaxDepositAmount, state.Balances[0])
+	}
+	if state.Balances[1] == params.BeaconConfig().MaxDepositAmount {
+		t.Errorf("validator balance %d can't equal to %d",
+			state.Balances[0], params.BeaconConfig().MaxDepositAmount)
 	}
 }
 
