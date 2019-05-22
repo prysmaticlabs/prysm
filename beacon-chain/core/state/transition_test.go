@@ -394,8 +394,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
-	atts := []*pb.PendingAttestation{{Data:&pb.AttestationData{TargetEpoch:1}}}
-	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{CurrentEpochAttestations:atts})
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{TargetEpoch: 1}}}
+	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{CurrentEpochAttestations: atts})
 	if !strings.Contains(err.Error(), "could not get target atts prev epoch") {
 		t.Fatal("Did not receive wanted error")
 	}
@@ -404,13 +404,13 @@ func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
 func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 
-	atts := []*pb.PendingAttestation{{Data:&pb.AttestationData{Slot:100}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 100}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot: e,
-		LatestBlockRoots:          make([][]byte, 128),
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		CurrentEpochAttestations:atts})
+		Slot:                     e,
+		LatestBlockRoots:         make([][]byte, 128),
+		LatestRandaoMixes:        make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:   make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentEpochAttestations: atts})
 	if !strings.Contains(err.Error(), "could not get target atts current epoch") {
 		t.Fatal("Did not receive wanted error")
 	}
@@ -419,13 +419,13 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 
-	atts := []*pb.PendingAttestation{{Data:&pb.AttestationData{Slot:1}, AggregationBitfield: []byte{1}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}, AggregationBitfield: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot: e+1,
+		Slot:                      e + 1,
 		LatestBlockRoots:          make([][]byte, 128),
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		PreviousEpochAttestations:atts})
+		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		PreviousEpochAttestations: atts})
 	if !strings.Contains(err.Error(), "could not get attesting balance prev epoch") {
 		t.Fatal("Did not receive wanted error")
 	}
@@ -434,13 +434,13 @@ func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
 func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 
-	atts := []*pb.PendingAttestation{{Data:&pb.AttestationData{Slot:1}, AggregationBitfield: []byte{1}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}, AggregationBitfield: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot: e+1,
-		LatestBlockRoots:          make([][]byte, 128),
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		CurrentEpochAttestations:atts})
+		Slot:                     e + 1,
+		LatestBlockRoots:         make([][]byte, 128),
+		LatestRandaoMixes:        make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:   make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentEpochAttestations: atts})
 	if !strings.Contains(err.Error(), "could not get attesting balance current epoch") {
 		t.Fatal("Did not receive wanted error")
 	}
@@ -449,7 +449,7 @@ func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
 func TestProcessEpoch_CanProcess(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 
-	atts := []*pb.PendingAttestation{{Data:&pb.AttestationData{Slot:1}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}}}
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
@@ -458,13 +458,13 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 		})
 	}
 	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot: e+1,
-		LatestBlockRoots:          make([][]byte, 128),
-		LatestSlashedBalances: []uint64{0, 1e9, 0},
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		CurrentCrosslinks:         crosslinks,
-		CurrentEpochAttestations:atts})
+		Slot:                     e + 1,
+		LatestBlockRoots:         make([][]byte, 128),
+		LatestSlashedBalances:    []uint64{0, 1e9, 0},
+		LatestRandaoMixes:        make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:   make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentCrosslinks:        crosslinks,
+		CurrentEpochAttestations: atts})
 	if err != nil {
 		t.Fatal(err)
 	}
