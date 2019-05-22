@@ -85,7 +85,7 @@ func makeHasher(typ reflect.Type) (hasher, error) {
 }
 
 func getEncoding(val reflect.Value) ([]byte, error) {
-	utils, err := cachedSSZUtilsNoAcquireLock(val.Type())
+	utils, err := cachedSSZUtils(val.Type())
 	if err != nil {
 		return nil, err
 	}
