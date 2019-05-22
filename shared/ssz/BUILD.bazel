@@ -35,6 +35,7 @@ go_test(
         "hash_test.go",
     ],
     embed = [":go_default_library"],
+    race = "on",
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
