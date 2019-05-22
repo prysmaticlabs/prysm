@@ -5,12 +5,10 @@ go_library(
     srcs = ["slotticker.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/slotutil",
     visibility = ["//visibility:public"],
-    deps = ["//shared/params:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
     srcs = ["slotticker_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/params:go_default_library"],
 )

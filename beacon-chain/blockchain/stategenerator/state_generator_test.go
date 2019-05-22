@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func init() {
@@ -70,7 +69,7 @@ func TestGenerateState_OK(t *testing.T) {
 	}
 
 	// Ran 30 slots to save finalized slot then ran another 30 slots.
-	slotToGenerateTill := params.BeaconConfig().GenesisSlot + slotLimit*2
+	slotToGenerateTill := slotLimit * 2
 	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, slotToGenerateTill)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
@@ -126,13 +125,6 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 
 	slotsWithNil := uint64(10)
 
-	// Run the chain for 10 slots with nil blocks.
-	for i := uint64(0); i < slotsWithNil; i++ {
-		if err := b.GenerateNilBlockAndAdvanceChain(); err != nil {
-			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, b.State().Slot+1)
-		}
-	}
-
 	for i := uint64(0); i < slotLimit-slotsWithNil; i++ {
 		if err := b.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, b.State().Slot+1)
@@ -147,7 +139,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 	}
 
 	// Ran 30 slots to save finalized slot then ran another 10 slots w/o blocks and 20 slots w/ blocks.
-	slotToGenerateTill := params.BeaconConfig().GenesisSlot + slotLimit*2
+	slotToGenerateTill := slotLimit * 2
 	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, slotToGenerateTill)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)

@@ -80,7 +80,9 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
+func (ms *mockChainService) AdvanceState(
+	ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock,
+) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 
@@ -199,7 +201,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	ss := NewRegularSyncService(context.Background(), cfg)
 
 	parentBlock := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 	}
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -215,7 +217,7 @@ func TestProcessBlock_OK(t *testing.T) {
 			BlockRoot:   []byte{6, 7, 8, 9, 10},
 		},
 		ParentBlockRoot: parentRoot[:],
-		Slot:            params.BeaconConfig().GenesisSlot,
+		Slot:            0,
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
@@ -274,7 +276,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	ss := NewRegularSyncService(context.Background(), cfg)
 
 	parentBlock := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 	}
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -290,7 +292,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 			BlockRoot:   []byte{6, 7, 8, 9, 10},
 		},
 		ParentBlockRoot: parentRoot[:],
-		Slot:            params.BeaconConfig().GenesisSlot + 1,
+		Slot:            1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -298,7 +300,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
 				CrosslinkDataRoot: []byte{},
-				Slot:              params.BeaconConfig().GenesisSlot,
+				Slot:              0,
 			},
 		},
 	}
@@ -354,7 +356,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 2,
+		Slot: 2,
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
@@ -380,7 +382,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	request1 := &pb.AttestationResponse{
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + 1,
+				Slot: 1,
 			},
 		},
 	}
@@ -405,11 +407,19 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch}
+	state := &pb.BeaconState{Slot: 2 * params.BeaconConfig().SlotsPerEpoch}
 	if err := db.SaveState(ctx, state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
+	headBlock := &pb.BeaconBlock{Slot: state.Slot}
+	if err := db.SaveBlock(headBlock); err != nil {
+		t.Fatalf("failed to save block: %v", err)
+	}
+	if err := db.UpdateChainHead(ctx, headBlock, state); err != nil {
+		t.Fatalf("failed to update chain head: %v", err)
+	}
 	cfg := &RegularSyncConfig{
+		AttsService:      &mockAttestationService{},
 		ChainService:     ms,
 		OperationService: os,
 		P2P:              &mockP2P{},
@@ -420,7 +430,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	request1 := &pb.AttestationResponse{
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot,
+				Slot: 0,
 			},
 		},
 	}

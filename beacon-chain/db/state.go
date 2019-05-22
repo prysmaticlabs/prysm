@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
@@ -47,7 +45,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
 	blockEnc, _ := proto.Marshal(genesisBlock)
-	zeroBinary := encodeSlotNumberRoot(params.BeaconConfig().GenesisSlot, blockRoot)
+	zeroBinary := encodeSlotNumberRoot(0, blockRoot)
 
 	db.serializedState = stateEnc
 	db.stateHash = stateHash
@@ -291,7 +289,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64, bl
 	}
 	_, span := trace.StartSpan(ctx, "BeaconDB.HistoricalStateFromSlot")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slotSinceGenesis", int64(slot)))
+	span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		var err error
@@ -322,7 +320,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64, bl
 				slotBinary := k[:8]
 				slotNumber := decodeToSlotNumber(slotBinary)
 				// find the state with slot closest to the requested slot
-				if slotNumber > highestStateSlot && slotNumber <= slot {
+				if slotNumber >= highestStateSlot && slotNumber <= slot {
 					stateExists = true
 					highestStateSlot = slotNumber
 					histStateKey = v

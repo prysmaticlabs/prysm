@@ -68,8 +68,8 @@ message Fork {
 message PendingAttestation {
   bytes aggregation_bitfield = 1;
   AttestationData data = 2;
-  uint64 inclusion_slot = 3;
-  bytes custody_bitfield = 4;
+  uint64 inclusion_delay = 3;
+  uint64 proposer_index = 4;
 }
 
 message Attestation {
@@ -171,15 +171,23 @@ message Crosslink {
   bytes previous_crosslink_root_hash32 = 5 [deprecated=true];
   // Root of the shard data since the previous crosslink
   bytes crosslink_data_root_hash32 = 6 [deprecated=true];
-  
+}
+
+message BeaconBlockHeader {
+  uint64 slot = 1;
+  bytes parent_root = 2;
+  bytes state_root = 3;
+  bytes body_root = 4;
+  bytes signature = 5; // bytes96
 }
 
 message BeaconBlock {
   uint64 slot = 1;
-  bytes parent_block_root = 2;
+  bytes parent_block_root = 2 [deprecated = true];
   bytes state_root = 3;
   BeaconBlockBody body = 4;
   bytes signature = 5; // bytes96
+  bytes parent_root = 6;
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
@@ -303,10 +311,3 @@ message HistoricalBatch {
   repeated bytes state_roots = 2;
 }
 
-message BeaconBlockHeader {
-  uint64 slot = 1;
-  bytes previous_block_root = 2;
-  bytes state_root = 3;
-  bytes block_body_root = 4;
-  bytes signature = 5; // bytes86
-}

@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -102,19 +101,6 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 		return nil, fmt.Errorf("could not fetch head state: %v", err)
 	}
 
-	for headState.Slot < req.Slot {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-
-		headState, err = state.ExecuteStateTransition(
-			ctx, headState, nil /* block */, headRoot, state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
-		}
-	}
-
 	// Fetch the epoch boundary root = hash_tree_root(epoch_boundary)
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
@@ -140,7 +126,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	justifiedBlockRoot := headState.CurrentJustifiedRoot
 
 	// If an attester has to attest for genesis block.
-	if headState.Slot == params.BeaconConfig().GenesisSlot {
+	if headState.Slot == 0 {
 		epochBoundaryRoot = params.BeaconConfig().ZeroHash[:]
 		justifiedBlockRoot = params.BeaconConfig().ZeroHash[:]
 	}

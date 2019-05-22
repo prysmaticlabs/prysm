@@ -180,7 +180,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}
-	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
+	state, err = s.chainService.AdvanceState(ctx, state, block)
 	if err != nil {
 		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
 		switch err.(type) {
@@ -212,7 +212,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 
 		return ErrCanonicalStateMismatch
 	}
-	log.WithField("canonicalStateSlot", state.Slot-params.BeaconConfig().GenesisSlot).Info("Exiting init sync and starting regular sync")
+	log.WithField("canonicalStateSlot", state.Slot).Info("Exiting init sync and starting regular sync")
 	s.syncService.ResumeSync()
 	s.cancel()
 	s.nodeIsSynced = true
@@ -262,7 +262,7 @@ func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) 
 func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.ChainHeadResponse, peer peer.ID) error {
 	fields := logrus.Fields{
 		"peer":          peer.Pretty(),
-		"canonicalSlot": chainHeadResponse.CanonicalSlot - params.BeaconConfig().GenesisSlot,
+		"canonicalSlot": chainHeadResponse.CanonicalSlot,
 	}
 
 	log.WithFields(fields).Info("Requesting state from peer")

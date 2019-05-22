@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -110,7 +109,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	log.WithFields(logrus.Fields{
 		"root": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
-		"slot": block.Slot - params.BeaconConfig().GenesisSlot,
+		"slot": block.Slot,
 	}).Info("Saving block")
 
 	s.mutex.Lock()
@@ -132,7 +131,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}); err != nil {
 		return fmt.Errorf("could not to save attestation target: %v", err)
 	}
-	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
+	state, err = s.chainService.AdvanceState(ctx, state, block)
 	if err != nil {
 		return fmt.Errorf("could not apply block state transition: %v", err)
 	}

@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -63,8 +62,8 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) ApplyBlockStateTransition(
-	ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState,
+func (ms *mockChainService) AdvanceState(
+	ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
@@ -128,7 +127,7 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	for i := 1; i <= batchSize; i++ {
 		batchedBlocks[i-1] = &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot + uint64(i),
+			Slot: uint64(i),
 		}
 	}
 	// edge case: handle out of order block list. Specifically with the highest
@@ -163,7 +162,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	ss := NewInitialSyncService(context.Background(), cfg)
 
 	batchSize := 20
-	blks, err := ss.db.BlocksBySlot(ctx, params.BeaconConfig().GenesisSlot)
+	blks, err := ss.db.BlocksBySlot(ctx, 0)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
@@ -179,7 +178,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			continue
 		}
 		block := &pb.BeaconBlock{
-			Slot:            params.BeaconConfig().GenesisSlot + uint64(i),
+			Slot:            uint64(i),
 			ParentBlockRoot: parentHash,
 		}
 

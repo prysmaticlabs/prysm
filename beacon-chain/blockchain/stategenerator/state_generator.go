@@ -9,7 +9,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -39,8 +38,8 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	if fState.Slot > slot {
 		return nil, fmt.Errorf(
 			"requested slot %d < current slot %d in the finalized beacon state",
-			slot-params.BeaconConfig().GenesisSlot,
-			fState.Slot-params.BeaconConfig().GenesisSlot,
+			slot,
+			fState.Slot,
 		)
 	}
 
@@ -81,9 +80,8 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	log.Infof("Recompute state starting last finalized slot %d and ending slot %d",
-		fState.Slot-params.BeaconConfig().GenesisSlot, slot-params.BeaconConfig().GenesisSlot)
+		fState.Slot, slot)
 	postState := fState
-	root := fRoot
 	// this recomputes state up to the last available block.
 	//	ex: 1A - 2B (finalized) - 3C - 4 - 5 - 6C - 7 - 8 (C is the last block).
 	// 	input slot 8, this recomputes state to slot 6.
@@ -98,7 +96,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 				ctx,
 				postState,
 				nil,
-				root,
 				&state.TransitionConfig{
 					VerifySignatures: false,
 					Logging:          false,
@@ -112,7 +109,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			ctx,
 			postState,
 			block,
-			root,
 			&state.TransitionConfig{
 				VerifySignatures: false,
 				Logging:          false,
@@ -120,11 +116,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
-		}
-
-		root, err = hashutil.HashBeaconBlock(block)
-		if err != nil {
-			return nil, fmt.Errorf("unable to get block root %v", err)
 		}
 	}
 
@@ -136,7 +127,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			ctx,
 			postState,
 			nil,
-			root,
 			&state.TransitionConfig{
 				VerifySignatures: false,
 				Logging:          false,
@@ -148,7 +138,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	log.Infof("Finished recompute state with slot %d and finalized epoch %d",
-		postState.Slot-params.BeaconConfig().GenesisSlot, postState.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		postState.Slot, postState.FinalizedEpoch)
 
 	return postState, nil
 }
