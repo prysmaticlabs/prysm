@@ -232,49 +232,33 @@ type concurrentHashStruct2 struct {
 	b uint64
 }
 
-type concurrentHashStruct3 struct {
-	a uint64
-	c string
-}
-
-type concurrentHashStruct4 struct {
-	b uint64
-	c string
-}
-
 func TestConcurrentHash(t *testing.T) {
-	examples := []interface{}{
-		concurrentHashStruct{
-			a: 0,
-			b: 1,
-			c: "test",
-		},
-		concurrentHashStruct2{
-			a: 0,
-			b: 1,
-		},
-		concurrentHashStruct3{
-			a: 0,
-			c: "test",
-		},
-		concurrentHashStruct4{
-			b: 1,
-			c: "test",
-		},
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
-	for i := 0; i < 4; i++ {
-		go func(q int) {
-			for {
-				select {
-				case <-ctx.Done():
-				default:
-					TreeHash(examples[q])
-				}
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+			default:
+				TreeHash(concurrentHashStruct{
+					a: 0,
+					b: 1,
+					c: "test",
+				})
 			}
-		}(i)
-	}
+		}
+	}()
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+			default:
+				TreeHash(concurrentHashStruct2{
+					a: 0,
+					b: 1,
+				})
+			}
+		}
+	}()
 
 	time.Sleep(100 * time.Millisecond)
 	cancel()
