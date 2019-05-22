@@ -265,9 +265,6 @@ message Deposit {
   // Index in the deposit tree
   uint64 index = 2;
   DepositData data = 3;
-  // Deprecated
-  // TODO(2307): Remove deprecated fields
-  bytes deposit_data = 1003 [deprecated=true];
 }
 
 message VoluntaryExit {
