@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/terencechain/prysm-phase2/beacon-chain/core/epoch"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -177,11 +178,20 @@ func ProcessBlock(
 }
 
 // ProcessEpoch describes the per epoch operations that are performed on the
-// beacon state.
+// beacon state. It focuses on the validator registry, adjusting balances, and finalizing slots.
+// Spec pseudocode definition:
+//
+//  def process_epoch(state: BeaconState) -> None:
+//    process_justification_and_finalization(state)
+//    process_crosslinks(state)
+//    process_rewards_and_penalties(state)
+//    process_registry_updates(state)
+//    process_slashings(state)
+//    process_final_updates(state)
 func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 
-	// TODO(#2307): Implement process epoch based on 0.6.
+	state, err := epoch.ProcessJustificationAndFinalization(state)
 	return state, nil
 }
