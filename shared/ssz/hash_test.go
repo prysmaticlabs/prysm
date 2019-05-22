@@ -2,8 +2,10 @@ package ssz
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"testing"
+	"time"
 )
 
 type hashTest struct {
@@ -217,4 +219,47 @@ func TestMerkleHash(t *testing.T) {
 	runMerkleHashTests(t, func(val [][]byte) ([]byte, error) {
 		return merkleHash(val)
 	})
+}
+
+type concurrentHashStruct struct {
+	a uint64
+	b uint64
+	c string
+}
+
+type concurrentHashStruct2 struct {
+	a uint64
+	b uint64
+}
+
+func TestConcurrentHash(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+			default:
+				TreeHash(concurrentHashStruct{
+					a: 0,
+					b: 1,
+					c: "test",
+				})
+			}
+		}
+	}()
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+			default:
+				TreeHash(concurrentHashStruct2{
+					a: 0,
+					b: 1,
+				})
+			}
+		}
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+	cancel()
 }
