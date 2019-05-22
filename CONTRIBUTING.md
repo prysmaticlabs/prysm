@@ -115,7 +115,7 @@ The code from the Prysm repo is inserted between <<< and === while the change yo
 
 **14. Push your changes to your fork of the Prysm repo.**
 
-push to move your changes to your fork of the repo.
+Use git push to move your changes to your fork of the repo.
 
 ```
 $ git push myrepo feature-in-progress-branch
