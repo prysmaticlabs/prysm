@@ -157,9 +157,10 @@ func TestFromBytes8(t *testing.T) {
 		4290997,
 		922376854775806,
 		42893720984775807,
+		18446744073709551615,
 	}
 	for _, tt := range tests {
-		b := Bytes8(tt)
+		b := ToBytes(tt, 8)
 		c := FromBytes8(b)
 		if c != tt {
 			t.Errorf("Wanted %d but got %d", tt, c)

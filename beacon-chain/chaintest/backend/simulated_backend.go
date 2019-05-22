@@ -187,12 +187,12 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 		if err != nil {
 			return err
 		}
-		shuffledIndexList[si] = i
+		shuffledIndexList[i] = si
 	}
+	log.Infof("shuffledIndexList: %v", shuffledIndexList)
 	if !reflect.DeepEqual(shuffledIndexList, testCase.Shuffled) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledIndexList)
 	}
-	log.Infof("shuffledIndexList: %v", shuffledIndexList)
 
 	return nil
 }

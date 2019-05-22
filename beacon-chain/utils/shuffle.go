@@ -2,12 +2,14 @@
 package utils
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -84,7 +86,16 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 // We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
 // constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
-//
+func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
+	return innerShuffledIndex(index, indexCount, seed, true)
+}
+
+// UnShuffledIndex returns the inverse of ShuffledIndex. This implementation is based
+// on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
+func UnShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
+	return innerShuffledIndex(index, indexCount, seed, false)
+}
+
 // Spec pseudocode definition:
 //   def get_shuffled_index(index: ValidatorIndex, index_count: int, seed: Bytes32) -> ValidatorIndex:
 //     """
@@ -103,7 +114,7 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 //         bit = (byte >> (position % 8)) % 2
 //         index = flip if bit else index
 //     return index
-func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
+func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, dir bool) (uint64, error) {
 	if params.BeaconConfig().ShuffleRoundCount == 0 {
 		return index, nil
 	}
@@ -115,14 +126,23 @@ func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, erro
 		return 0, fmt.Errorf("list size %d out of bounds",
 			indexCount)
 	}
+	rounds := uint8(params.BeaconConfig().ShuffleRoundCount)
+	round := uint8(0)
+	if !dir {
+		// Start at last round.
+		// Iterating through the rounds in reverse, un-swaps everything, effectively un-shuffling the list.
+		round = rounds - 1
+	}
 	buf := make([]byte, totalSize, totalSize)
 	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
 	copy(buf[:32], seed[:])
-	for round := uint8(0); round < uint8(params.BeaconConfig().ShuffleRoundCount); round++ {
+	for {
+		//round := uint8(0); round < uint8(params.BeaconConfig().ShuffleRoundCount); round++
 		buf[seedSize] = round
-		hash := hashutil.Hash(buf[:pivotViewSize])
+		hash := sha256.Sum256(buf[:pivotViewSize])
 		hash8 := hash[:8]
-		pivot := bytesutil.FromBytes8(hash8) % indexCount
+		hash8Int := bytesutil.FromBytes8(hash8)
+		pivot := hash8Int % indexCount
 		flip := (pivot + indexCount - index) % indexCount
 		// spec: position = max(index, flip)
 		// Consider every pair only once by picking the highest pair index to retrieve randomness.
@@ -132,17 +152,30 @@ func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, erro
 		}
 		// Add position except its last byte to []buf for randomness,
 		// it will be used later to select a bit from the resulting hash.
-		position4bytes := bytesutil.ToBytes(position>>8, 4)
+		position4bytes := bytesutil.ToBytes(position/256, 4)
 		copy(buf[pivotViewSize:], position4bytes[:])
-		source := hashutil.Hash(buf)
+		source := sha256.Sum256(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,
 		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
-		byteV := source[(position&0xff)>>3]
+		byteV := source[(position%256)/8]
 		// Using the last 3 bits of the position-byte, determine which bit to get from the hash-byte (note: 8 bits = 2^3)
-		bitV := (byteV >> (position & 0x7)) & 0x1
+		bitV := (byteV >> (position % 8)) % 2
 		// index = flip if bit else index
 		if bitV == 1 {
 			index = flip
+		}
+		if dir {
+			// -> shuffle
+			round++
+			if round == rounds {
+				break
+			}
+		} else {
+			if round == 0 {
+				break
+			}
+			// -> un-shuffle
+			round--
 		}
 	}
 	return index, nil

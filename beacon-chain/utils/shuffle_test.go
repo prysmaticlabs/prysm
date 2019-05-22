@@ -87,6 +87,40 @@ func BenchmarkShuffledIndex(b *testing.B) {
 	}
 }
 
+func TestShuffledIndex(t *testing.T) {
+	list := []uint64{}
+	listSize := uint64(10000)
+	for i := uint64(0); i < listSize; i++ {
+		list = append(list, i)
+	}
+	shuffledList := make([]uint64, listSize)
+	unShuffledList := make([]uint64, listSize)
+	// Random 32 bytes seed for testing.
+	seed := [32]byte{123, 42, 200, 30, 1, 0, 8, 20, 80, 200,
+		1, 30, 1, 1, 3, 4, 6, 7, 8, 20,
+		23, 78, 23, 33, 44, 55, 66, 77, 88, 99,
+		31, 32}
+	for i := uint64(0); i < listSize; i++ {
+		si, err := ShuffledIndex(i, listSize, seed)
+		if err != nil {
+			t.Error(err)
+		}
+		shuffledList[i] = si
+	}
+	t.Logf("shuffledList: %v", shuffledList)
+	for i := uint64(0); i < listSize; i++ {
+		ui, err := UnShuffledIndex(i, listSize, seed)
+		if err != nil {
+			t.Error(err)
+		}
+		unShuffledList[i] = shuffledList[ui]
+	}
+	if !reflect.DeepEqual(unShuffledList, list) {
+		t.Errorf("Want: %v got: %v", list, unShuffledList)
+	}
+
+}
+
 func TestSplitIndicesAndOffset_OK(t *testing.T) {
 	var l []uint64
 	validators := uint64(64000)
