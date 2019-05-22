@@ -130,6 +130,11 @@ func ProcessBlock(
 	// Save latest block.
 	state.LatestBlock = block
 
+	// Process the block's header into the state.
+	state, err = b.ProcessBlockHeader(state, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not process block header: %v", err)
+	}
 	// Verify block RANDAO.
 	state, err = b.ProcessRandao(state, block.Body, config.VerifySignatures, config.Logging)
 	if err != nil {
@@ -137,6 +142,7 @@ func ProcessBlock(
 	}
 	// Process ETH1 data.
 	state = b.ProcessEth1DataInBlock(state, block)
+
 	state, err = b.ProcessAttesterSlashings(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
