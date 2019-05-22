@@ -5,6 +5,7 @@ package backend
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"reflect"
 	"time"
@@ -172,26 +173,32 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	return nil
 }
 
+func getStandardHashFn() utils.HashFn {
+	hash := sha256.New()
+	hashFn := func(in []byte) []byte {
+		hash.Reset()
+		hash.Write(in)
+		return hash.Sum(nil)
+	}
+	return hashFn
+}
+
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
 // algorithm, then compare the output with the expected output from the YAML file.
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	defer db.TeardownDB(sb.beaconDB)
 	seed := common.BytesToHash([]byte(testCase.Seed))
-	indexList := make([]uint64, testCase.Count, testCase.Count)
-	shuffledIndexList := make([]uint64, testCase.Count, testCase.Count)
+
+	hashFn := getStandardHashFn()
+	testIndices := make([]uint64, testCase.Count, testCase.Count)
 	for i := uint64(0); i < testCase.Count; i++ {
-		indexList[i] = i
+		testIndices[i] = i
 	}
-	for i := uint64(0); i < testCase.Count; i++ {
-		si, err := utils.ShuffledIndex(i, testCase.Count, seed)
-		if err != nil {
-			return err
-		}
-		shuffledIndexList[i] = si
-	}
-	log.Infof("shuffledIndexList: %v", shuffledIndexList)
-	if !reflect.DeepEqual(shuffledIndexList, testCase.Shuffled) {
-		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledIndexList)
+	utils.ShuffleList(hashFn, testIndices, seed)
+
+	log.Infof("shuffledIndexList: %v", testIndices)
+	if !reflect.DeepEqual(testIndices, testCase.Shuffled) {
+		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, testIndices)
 	}
 
 	return nil

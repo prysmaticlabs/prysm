@@ -1,33 +1,26 @@
 package utils
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestShuffleIndices_InvalidValidatorCount(t *testing.T) {
-	var list []uint64
-
-	upperBound := 1<<(params.BeaconConfig().RandBytes*8) - 1
-
-	for i := 0; i < upperBound+1; i++ {
-		list = append(list, uint64(i))
-	}
-
-	if _, err := ShuffleIndices(common.Hash{'a'}, list); err == nil {
+func TestShuffleList_InvalidValidatorCount(t *testing.T) {
+	maxShuffleListSize = 20
+	list := make([]uint64, 21)
+	if _, err := ShuffleList(getStandardHashFn(), list, [32]byte{123, 125}); err == nil {
 		t.Error("Shuffle should have failed when validator count exceeds ModuloBias")
 	}
 }
 
-func TestShuffleIndices_OK(t *testing.T) {
-	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
-	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
+func TestShuffleList_OK(t *testing.T) {
 	var list1 []uint64
-
+	seed1 := [32]byte{1, 128, 12}
+	seed2 := [32]byte{2, 128, 12}
 	for i := 0; i < 10; i++ {
 		list1 = append(list1, uint64(i))
 	}
@@ -35,12 +28,12 @@ func TestShuffleIndices_OK(t *testing.T) {
 	list2 := make([]uint64, len(list1))
 	copy(list2, list1)
 
-	list1, err := ShuffleIndices(hash1, list1)
+	list1, err := ShuffleList(getStandardHashFn(), list1, seed1)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
 
-	list2, err = ShuffleIndices(hash2, list2)
+	list2, err = ShuffleList(getStandardHashFn(), list2, seed2)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
@@ -48,11 +41,11 @@ func TestShuffleIndices_OK(t *testing.T) {
 	if reflect.DeepEqual(list1, list2) {
 		t.Errorf("2 shuffled lists shouldn't be equal")
 	}
-	if !reflect.DeepEqual(list1, []uint64{5, 4, 9, 6, 7, 3, 0, 1, 8, 2}) {
-		t.Errorf("list 1 was incorrectly shuffled")
+	if !reflect.DeepEqual(list1, []uint64{0, 7, 8, 6, 3, 9, 4, 5, 2, 1}) {
+		t.Errorf("list 1 was incorrectly shuffled got: %v", list1)
 	}
-	if !reflect.DeepEqual(list2, []uint64{9, 0, 1, 5, 3, 2, 4, 7, 8, 6}) {
-		t.Errorf("list 2 was incorrectly shuffled")
+	if !reflect.DeepEqual(list2, []uint64{0, 5, 2, 1, 6, 8, 7, 3, 4, 9}) {
+		t.Errorf("list 2 was incorrectly shuffled got: %v", list2)
 	}
 }
 
@@ -87,19 +80,62 @@ func BenchmarkShuffledIndex(b *testing.B) {
 	}
 }
 
+func BenchmarkIndexComparison(b *testing.B) {
+	listSizes := []uint64{400000, 40000, 400}
+	// "random" seed for testing. Can be any 32 bytes.
+	seed := [32]byte{123, 42}
+	for _, listSize := range listSizes {
+		b.Run(fmt.Sprintf("Indexwise_ShuffleList_%d", listSize), func(ib *testing.B) {
+			for i := 0; i < ib.N; i++ {
+				// Simulate a list-shuffle by running permute-index listSize times.
+				for j := uint64(0); j < listSize; j++ {
+					ShuffledIndex(j, listSize, seed)
+				}
+			}
+		})
+	}
+}
+func getStandardHashFn() HashFn {
+	hash := sha256.New()
+	hashFn := func(in []byte) []byte {
+		hash.Reset()
+		hash.Write(in)
+		return hash.Sum(nil)
+	}
+	return hashFn
+}
+func BenchmarkShuffleList(b *testing.B) {
+	listSizes := []uint64{4000000, 40000, 400}
+
+	hashFn := getStandardHashFn()
+	// "random" seed for testing. Can be any 32 bytes.
+	seed := [32]byte{123, 42}
+
+	for _, listSize := range listSizes {
+		// list to test
+		testIndices := make([]uint64, listSize, listSize)
+		// fill
+		for i := uint64(0); i < listSize; i++ {
+			testIndices[i] = i
+		}
+		b.Run(fmt.Sprintf("ShuffleList_%d", listSize), func(ib *testing.B) {
+			for i := 0; i < ib.N; i++ {
+				ShuffleList(hashFn, testIndices, seed)
+			}
+		})
+	}
+}
+
 func TestShuffledIndex(t *testing.T) {
 	list := []uint64{}
-	listSize := uint64(10000)
+	listSize := uint64(400000)
 	for i := uint64(0); i < listSize; i++ {
 		list = append(list, i)
 	}
 	shuffledList := make([]uint64, listSize)
 	unShuffledList := make([]uint64, listSize)
-	// Random 32 bytes seed for testing.
-	seed := [32]byte{123, 42, 200, 30, 1, 0, 8, 20, 80, 200,
-		1, 30, 1, 1, 3, 4, 6, 7, 8, 20,
-		23, 78, 23, 33, 44, 55, 66, 77, 88, 99,
-		31, 32}
+	//random 32 bytes seed for testing.
+	seed := [32]byte{123, 42}
 	for i := uint64(0); i < listSize; i++ {
 		si, err := ShuffledIndex(i, listSize, seed)
 		if err != nil {
