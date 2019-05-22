@@ -25,18 +25,30 @@ func NewTrie(depth int) (*MerkleTrie, error) {
 }
 
 // Inserts an item into the trie.
-func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) {
-	indexWanted := 0
-	powersOfTwo := 2
-	for i := 0; i < m.treeDepth; i++ {
-		if (indexWanted+1)%powersOfTwo != 0 {
-			break
-		}
-		indexWanted++
-		powersOfTwo <<= 1
-		item = parentHash(m.branches[i], item)
+func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) error {
+	// Only insert new items which follow directly after the last
+	// added element
+	if index > len(m.originalItems) {
+		return errors.New("invalid index to be inserting")
+	}
+	if index == len(m.originalItems) {
+		m.originalItems = append(m.originalItems, item)
+		return m.updateTrie()
 	}
 
+	m.originalItems[index] = item
+	return m.updateTrie()
+}
+
+// Regenerates the trie with the item list.
+func (m *MerkleTrie) updateTrie() error {
+	trie, err := GenerateTrieFromItems(m.originalItems, m.treeDepth)
+	if err != nil {
+		return err
+	}
+	m.branches = trie.branches
+	m.originalItems = trie.originalItems
+	return nil
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
