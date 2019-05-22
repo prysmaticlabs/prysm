@@ -276,6 +276,6 @@ func TestConcurrentHash(t *testing.T) {
 		}(i)
 	}
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 	cancel()
 }
