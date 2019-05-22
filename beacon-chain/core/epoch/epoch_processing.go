@@ -854,7 +854,6 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	} else {
 		srcAtts = state.PreviousEpochAttestations
 	}
-
 	targetRoot, err := helpers.BlockRoot(state, epoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
