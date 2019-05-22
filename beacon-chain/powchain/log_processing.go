@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -79,21 +78,38 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	// we can store in our persistent DB.
 	validData := true
 	depositData := &pb.DepositData{
-		Amount: bytesutil.FromBytes8( amount),
-		Pubkey: pubkey,
-		Signature: signature,
-		WithdrawalCredentials:withdrawalCredentials,
+		Amount:                bytesutil.FromBytes8(amount),
+		Pubkey:                pubkey,
+		Signature:             signature,
+		WithdrawalCredentials: withdrawalCredentials,
+	}
+
+	depositHash, err := hashutil.DepositHash(depositData)
+	if err != nil {
+		log.Errorf("Unable to determine hashed value of deposit %v", err)
+		return
+	}
+
+	if err := w.depositTrie.InsertIntoTrie(depositHash[:], int(index)); err != nil {
+		log.Error("Unable to insert deposit into trie %v", err)
+		return
+	}
+
+	proof, err := w.depositTrie.MerkleProof(int(index))
+	if err != nil {
+		log.Error("Unable to generate merkle proof for deposit %v", err)
+		return
 	}
 
 	deposit := &pb.Deposit{
-		Data: depositData,
-		Index:       index,
-		Proof: ,
+		Data:  depositData,
+		Index: index,
+		Proof: proof,
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted && validData {
-		var pubkey = fmt.Sprintf("#%x", depositInput.Pubkey)
+		var pubkey = fmt.Sprintf("#%x", depositData.Pubkey)
 		if w.beaconDB.PubkeyInChainstart(w.ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
 		} else {
@@ -105,13 +121,13 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
 
 	if !w.chainStarted {
-		w.chainStartDeposits = append(w.chainStartDeposits, depositData)
+		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
-			"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
+			"publicKey":       fmt.Sprintf("%#x", depositData.Pubkey),
 			"merkleTreeIndex": index,
 		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
@@ -142,11 +158,17 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	w.depositRoot = chainStartDepositRoot[:]
 	chainStartTime := time.Unix(int64(timestamp), 0)
 
+	depHashes, err := w.chainStartDepositHashes()
+	if err != nil {
+		log.Errorf("Generating chainstart deposit hashes failed: %v", err)
+		return
+	}
+
 	// We then update the in-memory deposit trie from the chain start
 	// deposits at this point, as this trie will be later needed for
 	// incoming, post-chain start deposits.
 	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(
-		w.chainStartDeposits,
+		depHashes,
 		int(params.BeaconConfig().DepositContractTreeDepth),
 	)
 	if err != nil {
@@ -218,4 +240,16 @@ func (w *Web3Service) requestBatchedLogs() error {
 
 	w.lastRequestedBlock.Set(requestedBlock)
 	return nil
+}
+
+func (w *Web3Service) chainStartDepositHashes() ([][]byte, error) {
+	hashes := make([][]byte, len(w.chainStartDeposits))
+	for i, dep := range w.chainStartDeposits {
+		hash, err := hashutil.DepositHash(dep.Data)
+		if err != nil {
+			return nil, err
+		}
+		hashes[i] = hash[:]
+	}
+	return hashes, nil
 }
