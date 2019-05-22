@@ -256,18 +256,25 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	}
 	// Fetch all historical deposits up to an ancestor height.
 	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
-	depositData := []*pbp2p.DepositData{}
+	depositHashes := [][]byte{}
 	// If there are less than or equal to len(ChainStartDeposits) historical deposits, then we just fetch the default
 	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
-	chainStartDeposits := bs.powChainService.ChainStartDeposits()
+	chainStartDeposits, err := bs.powChainService.ChainStartDepositHashes()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve chainstart deposit hashes %v", err)
+	}
 	if len(allDeposits) <= len(chainStartDeposits) {
-		depositData = chainStartDeposits
+		depositHashes = chainStartDeposits
 	} else {
 		for i := range allDeposits {
-			depositData = append(depositData, allDeposits[i].DepositData)
+			hash, err := hashutil.DepositHash(allDeposits[i].Data)
+			if err != nil {
+				return nil, err
+			}
+			depositHashes = append(depositHashes, hash[:])
 		}
 	}
-	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems(depositHashes, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}

@@ -158,7 +158,7 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	w.depositRoot = chainStartDepositRoot[:]
 	chainStartTime := time.Unix(int64(timestamp), 0)
 
-	depHashes, err := w.chainStartDepositHashes()
+	depHashes, err := w.ChainStartDepositHashes()
 	if err != nil {
 		log.Errorf("Generating chainstart deposit hashes failed: %v", err)
 		return
@@ -242,7 +242,9 @@ func (w *Web3Service) requestBatchedLogs() error {
 	return nil
 }
 
-func (w *Web3Service) chainStartDepositHashes() ([][]byte, error) {
+// ChainStartDepositHashes returns the hashes of all the chainstart deposits
+// stored in memory.
+func (w *Web3Service) ChainStartDepositHashes() ([][]byte, error) {
 	hashes := make([][]byte, len(w.chainStartDeposits))
 	for i, dep := range w.chainStartDeposits {
 		hash, err := hashutil.DepositHash(dep.Data)

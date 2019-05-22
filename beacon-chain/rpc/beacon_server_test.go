@@ -68,8 +68,12 @@ func (f *faultyPOWChainService) DepositTrie() *trieutil.MerkleTrie {
 	return &trieutil.MerkleTrie{}
 }
 
-func (f *faultyPOWChainService) ChainStartDeposits() [][]byte {
-	return [][]byte{}
+func (f *faultyPOWChainService) ChainStartDeposits() []*pbp2p.Deposit {
+	return []*pbp2p.Deposit{}
+}
+
+func (f *faultyPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
+	return [][]byte{}, errors.New("hashing failed")
 }
 
 type mockPOWChainService struct {
@@ -126,8 +130,12 @@ func (m *mockPOWChainService) DepositRoot() [32]byte {
 	return bytesutil.ToBytes32(root)
 }
 
-func (m *mockPOWChainService) ChainStartDeposits() [][]byte {
-	return [][]byte{}
+func (m *mockPOWChainService) ChainStartDeposits() []*pbp2p.Deposit {
+	return []*pbp2p.Deposit{}
+}
+
+func (m *mockPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
+	return [][]byte{}, nil
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {

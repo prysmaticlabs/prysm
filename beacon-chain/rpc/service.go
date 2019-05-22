@@ -58,6 +58,7 @@ type powChainService interface {
 	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
 	DepositRoot() [32]byte
 	DepositTrie() *trieutil.MerkleTrie
+	ChainStartDepositHashes() ([][]byte, error)
 	ChainStartDeposits() []*pbp2p.Deposit
 }
 

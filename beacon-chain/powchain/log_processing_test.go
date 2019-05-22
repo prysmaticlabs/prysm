@@ -212,7 +212,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	_, depositData, index, _, err := contracts.UnpackDepositLogData(logz[0].Data)
+	_, depositData, index, _, _, err := contracts.UnpackDepositLogData(logz[0].Data)
 	if err != nil {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
