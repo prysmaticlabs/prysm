@@ -7,10 +7,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/terencechain/prysm-phase2/beacon-chain/core/epoch"
-
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -192,6 +191,48 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 
-	state, err := epoch.ProcessJustificationAndFinalization(state)
+	prevEpochAtts, err := e.MatchAttestations(state, helpers.PrevEpoch(state))
+	if err != nil {
+		return nil, fmt.Errorf("could not get target atts prev epoch %d: %v",
+			helpers.PrevEpoch(state), err)
+	}
+	currentEpochAtts, err := e.MatchAttestations(state, helpers.CurrentEpoch(state))
+	if err != nil {
+		return nil, fmt.Errorf("could not get target atts current epoch %d: %v",
+			helpers.CurrentEpoch(state), err)
+	}
+	prevEpochAttestedBalance, err := e.AttestingBalance(state, prevEpochAtts.Target)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attesting balance prev epoch: %v", err)
+	}
+	currentEpochAttestedBalance, err := e.AttestingBalance(state, currentEpochAtts.Target)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attesting balance current epoch: %v", err)
+	}
+
+	state, err = e.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
+	if err != nil {
+		return nil, fmt.Errorf("could not process justification: %v", err)
+	}
+
+	state, err = e.ProcessCrosslink(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process crosslink: %v", err)
+	}
+
+	state, err = e.ProcessRewardsAndPenalties(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process rewards and penalties: %v", err)
+	}
+
+	state = e.ProcessRegistryUpdates(state)
+
+	state = e.ProcessSlashings(state)
+
+	state, err = e.ProcessFinalUpdates(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process final updates: %v", err)
+	}
+
 	return state, nil
 }
