@@ -256,7 +256,7 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	}
 	// Fetch all historical deposits up to an ancestor height.
 	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
-	depositData := [][]byte{}
+	depositData := []*pbp2p.DepositData{}
 	// If there are less than or equal to len(ChainStartDeposits) historical deposits, then we just fetch the default
 	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
 	chainStartDeposits := bs.powChainService.ChainStartDeposits()

@@ -91,13 +91,13 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 
 	if err := w.depositTrie.InsertIntoTrie(depositHash[:], int(index)); err != nil {
-		log.Error("Unable to insert deposit into trie %v", err)
+		log.Errorf("Unable to insert deposit into trie %v", err)
 		return
 	}
 
 	proof, err := w.depositTrie.MerkleProof(int(index))
 	if err != nil {
-		log.Error("Unable to generate merkle proof for deposit %v", err)
+		log.Errorf("Unable to generate merkle proof for deposit %v", err)
 		return
 	}
 
