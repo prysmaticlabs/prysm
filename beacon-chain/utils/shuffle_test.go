@@ -66,6 +66,32 @@ func TestSplitIndices_OK(t *testing.T) {
 	}
 }
 
+func TestShuffleList_Vs_ShuffleIndex(t *testing.T) {
+	list := []uint64{}
+	listSize := uint64(10)
+	seed := [32]byte{123, 42}
+	for i := uint64(0); i < listSize; i++ {
+		list = append(list, i)
+	}
+	shuffledListByIndex := make([]uint64, listSize)
+	for i := uint64(0); i < listSize; i++ {
+		si, err := ShuffledIndex(i, listSize, seed)
+		if err != nil {
+			t.Error(err)
+		}
+		shuffledListByIndex[si] = i
+	}
+	shuffledList, err := ShuffleList(list, seed)
+	if err != nil {
+		t.Fatalf("shuffled list error: %v", err)
+
+	}
+	if !reflect.DeepEqual(shuffledList, shuffledListByIndex) {
+		t.Errorf("shuffled lists ar not equal shuffled list: %v shuffled list by index: %v", shuffledList, shuffledListByIndex)
+	}
+
+}
+
 func BenchmarkShuffledIndex(b *testing.B) {
 	listSizes := []uint64{4000000, 40000, 400}
 	seed := [32]byte{123, 42}
@@ -111,7 +137,7 @@ func BenchmarkShuffleList(b *testing.B) {
 
 func TestShuffledIndex(t *testing.T) {
 	list := []uint64{}
-	listSize := uint64(400000)
+	listSize := uint64(400)
 	for i := uint64(0); i < listSize; i++ {
 		list = append(list, i)
 	}
@@ -123,7 +149,7 @@ func TestShuffledIndex(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		shuffledList[i] = si
+		shuffledList[si] = i
 	}
 	t.Logf("shuffledList: %v", shuffledList)
 	for i := uint64(0); i < listSize; i++ {
@@ -131,7 +157,7 @@ func TestShuffledIndex(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		unShuffledList[i] = shuffledList[ui]
+		unShuffledList[ui] = shuffledList[i]
 	}
 	if !reflect.DeepEqual(unShuffledList, list) {
 		t.Errorf("Want: %v got: %v", list, unShuffledList)
