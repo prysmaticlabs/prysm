@@ -68,7 +68,6 @@ func TestSplitIndices_OK(t *testing.T) {
 
 func BenchmarkShuffledIndex(b *testing.B) {
 	listSizes := []uint64{4000000, 40000, 400}
-	// Random 32 bytes seed for testing.
 	seed := [32]byte{123, 42}
 	for _, listSize := range listSizes {
 		b.Run(fmt.Sprintf("ShuffledIndex_%d", listSize), func(ib *testing.B) {
@@ -81,12 +80,11 @@ func BenchmarkShuffledIndex(b *testing.B) {
 
 func BenchmarkIndexComparison(b *testing.B) {
 	listSizes := []uint64{400000, 40000, 400}
-	// "random" seed for testing. Can be any 32 bytes.
 	seed := [32]byte{123, 42}
 	for _, listSize := range listSizes {
 		b.Run(fmt.Sprintf("Indexwise_ShuffleList_%d", listSize), func(ib *testing.B) {
 			for i := 0; i < ib.N; i++ {
-				// Simulate a list-shuffle by running permute-index listSize times.
+				// Simulate a list-shuffle by running shuffle-index listSize times.
 				for j := uint64(0); j < listSize; j++ {
 					ShuffledIndex(j, listSize, seed)
 				}
@@ -96,15 +94,10 @@ func BenchmarkIndexComparison(b *testing.B) {
 }
 
 func BenchmarkShuffleList(b *testing.B) {
-	listSizes := []uint64{4000000, 40000, 400}
-
-	// "random" seed for testing. Can be any 32 bytes.
+	listSizes := []uint64{400000, 40000, 400}
 	seed := [32]byte{123, 42}
-
 	for _, listSize := range listSizes {
-		// list to test
 		testIndices := make([]uint64, listSize, listSize)
-		// fill
 		for i := uint64(0); i < listSize; i++ {
 			testIndices[i] = i
 		}
@@ -124,7 +117,6 @@ func TestShuffledIndex(t *testing.T) {
 	}
 	shuffledList := make([]uint64, listSize)
 	unShuffledList := make([]uint64, listSize)
-	//random 32 bytes seed for testing.
 	seed := [32]byte{123, 42}
 	for i := uint64(0); i < listSize; i++ {
 		si, err := ShuffledIndex(i, listSize, seed)
