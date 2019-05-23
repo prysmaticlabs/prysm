@@ -2,7 +2,7 @@ package p2p
 
 import (
 	ggio "github.com/gogo/protobuf/io"
-	host "github.com/libp2p/go-libp2p-host"
+	"github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )

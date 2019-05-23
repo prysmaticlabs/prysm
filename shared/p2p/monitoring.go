@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	host "github.com/libp2p/go-libp2p-host"
+	"github.com/libp2p/go-libp2p-host"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )

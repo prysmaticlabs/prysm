@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	recaptcha "github.com/prestonvanloon/go-recaptcha"
+	"github.com/prestonvanloon/go-recaptcha"
 	faucetpb "github.com/prysmaticlabs/prysm/proto/faucet"
 	"google.golang.org/grpc/peer"
 )

@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-peer"
 )
 
 // Message represents a message received from an external peer.

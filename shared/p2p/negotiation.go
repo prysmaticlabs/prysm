@@ -4,9 +4,9 @@ import (
 	"context"
 
 	ggio "github.com/gogo/protobuf/io"
-	host "github.com/libp2p/go-libp2p-host"
+	"github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
