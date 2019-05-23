@@ -63,7 +63,7 @@ $ go test <file_you_are_working_on>
 Changes that affect multiple files can be tested with ...
 
 ```
-$ gometalinter && bazel test
+$ golangci-lint run && bazel test //...
 ```
 
 **10. Stage the file or files that you want to commit.**
