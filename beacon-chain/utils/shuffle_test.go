@@ -68,7 +68,7 @@ func TestSplitIndices_OK(t *testing.T) {
 
 func TestShuffleList_Vs_ShuffleIndex(t *testing.T) {
 	list := []uint64{}
-	listSize := uint64(10)
+	listSize := uint64(1000)
 	seed := [32]byte{123, 42}
 	for i := uint64(0); i < listSize; i++ {
 		list = append(list, i)
