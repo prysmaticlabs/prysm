@@ -5,7 +5,6 @@ package backend
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"reflect"
 	"time"
@@ -171,16 +170,6 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	// Then, we call the updateHead routine and confirm the
 	// chain's head is the expected result from the test case.
 	return nil
-}
-
-func getStandardHashFn() utils.HashFn {
-	hash := sha256.New()
-	hashFn := func(in []byte) []byte {
-		hash.Reset()
-		hash.Write(in)
-		return hash.Sum(nil)
-	}
-	return hashFn
 }
 
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
