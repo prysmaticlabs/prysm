@@ -17,14 +17,14 @@ type MerkleTrie struct {
 	originalItems [][]byte // list of provided items before hashing them into leaves.
 }
 
-// Return a new merkle trie filled with zerohashes to use.
+// NewTrie returns a new merkle trie filled with zerohashes to use.
 func NewTrie(depth int) (*MerkleTrie, error) {
 	var zeroBytes [32]byte
 	items := [][]byte{zeroBytes[:]}
 	return GenerateTrieFromItems(items, depth)
 }
 
-// Inserts an item into the trie.
+// InsertIntoTrie inserts an item(deposit hash) into the trie.
 func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) error {
 	// Only insert new items which follow directly after the last
 	// added element
