@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"reflect"
 	"testing"
@@ -12,7 +11,7 @@ import (
 func TestShuffleList_InvalidValidatorCount(t *testing.T) {
 	maxShuffleListSize = 20
 	list := make([]uint64, 21)
-	if _, err := ShuffleList(getStandardHashFn(), list, [32]byte{123, 125}); err == nil {
+	if _, err := ShuffleList(list, [32]byte{123, 125}); err == nil {
 		t.Error("Shuffle should have failed when validator count exceeds ModuloBias")
 	}
 }
@@ -28,12 +27,12 @@ func TestShuffleList_OK(t *testing.T) {
 	list2 := make([]uint64, len(list1))
 	copy(list2, list1)
 
-	list1, err := ShuffleList(getStandardHashFn(), list1, seed1)
+	list1, err := ShuffleList(list1, seed1)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
 
-	list2, err = ShuffleList(getStandardHashFn(), list2, seed2)
+	list2, err = ShuffleList(list2, seed2)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
@@ -95,19 +94,10 @@ func BenchmarkIndexComparison(b *testing.B) {
 		})
 	}
 }
-func getStandardHashFn() HashFn {
-	hash := sha256.New()
-	hashFn := func(in []byte) []byte {
-		hash.Reset()
-		hash.Write(in)
-		return hash.Sum(nil)
-	}
-	return hashFn
-}
+
 func BenchmarkShuffleList(b *testing.B) {
 	listSizes := []uint64{4000000, 40000, 400}
 
-	hashFn := getStandardHashFn()
 	// "random" seed for testing. Can be any 32 bytes.
 	seed := [32]byte{123, 42}
 
@@ -120,7 +110,7 @@ func BenchmarkShuffleList(b *testing.B) {
 		}
 		b.Run(fmt.Sprintf("ShuffleList_%d", listSize), func(ib *testing.B) {
 			for i := 0; i < ib.N; i++ {
-				ShuffleList(hashFn, testIndices, seed)
+				ShuffleList(testIndices, seed)
 			}
 		})
 	}

@@ -2,11 +2,11 @@
 package utils
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -90,7 +90,7 @@ func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, dir bool
 	for {
 		//round := uint8(0); round < uint8(params.BeaconConfig().ShuffleRoundCount); round++
 		buf[seedSize] = round
-		hash := sha256.Sum256(buf[:pivotViewSize])
+		hash := hashutil.HashSha256(buf[:pivotViewSize])
 		hash8 := hash[:8]
 		hash8Int := bytesutil.FromBytes8(hash8)
 		pivot := hash8Int % indexCount
@@ -105,7 +105,7 @@ func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, dir bool
 		// it will be used later to select a bit from the resulting hash.
 		position4bytes := bytesutil.ToBytes(position>>8, 4)
 		copy(buf[pivotViewSize:], position4bytes[:])
-		source := sha256.Sum256(buf)
+		source := hashutil.HashSha256(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,
 		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
 		byteV := source[(position&0xff)>>3]
@@ -145,21 +145,21 @@ func SplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
 	return (listSize * index) / chunks
 }
 
-// ShuffleList returns `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
+// ShuffleList returns list of shuffled indexes in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
 // We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
 // constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
-func ShuffleList(hashFn HashFn, input []uint64, seed [32]byte) ([]uint64, error) {
-	return innerShuffleList(hashFn, input, seed, true)
+func ShuffleList(input []uint64, seed [32]byte) ([]uint64, error) {
+	return innerShuffleList(input, seed, true)
 }
 
-// UnshuffleList Un-shuffles the list
-func UnshuffleList(hashFn HashFn, input []uint64, seed [32]byte) ([]uint64, error) {
-	return innerShuffleList(hashFn, input, seed, false)
+// UnshuffleList Un-shuffles the list by running backwards through the round count.
+func UnshuffleList(input []uint64, seed [32]byte) ([]uint64, error) {
+	return innerShuffleList(input, seed, false)
 }
 
-// Shuffles or unshuffles, depending on the `dir` (true for shuffling, false for unshuffling
-func innerShuffleList(hashFn HashFn, input []uint64, seed [32]byte, dir bool) ([]uint64, error) {
+// shuffles or unshuffles, depending on the `dir` true for shuffling, false for unshuffling.
+func innerShuffleList(input []uint64, seed [32]byte, dir bool) ([]uint64, error) {
 	if len(input) <= 1 {
 		// nothing to (un)shuffle
 		return input, nil
@@ -189,7 +189,8 @@ func innerShuffleList(hashFn HashFn, input []uint64, seed [32]byte, dir bool) ([
 		buf[seedSize] = r
 		// Seed is already in place, now just hash the correct part of the buffer, and take a uint64 from it,
 		//  and modulo it to get a pivot within range.
-		pivot := binary.LittleEndian.Uint64(hashFn(buf[:pivotViewSize])[:8]) % listSize
+		ph := hashutil.HashSha256(buf[:pivotViewSize])
+		pivot := bytesutil.FromBytes8(ph[:8]) % listSize
 
 		// Split up the for-loop in two:
 		//  1. Handle the part from 0 (incl) to pivot (incl). This is mirrored around (pivot / 2)
@@ -211,7 +212,7 @@ func innerShuffleList(hashFn HashFn, input []uint64, seed [32]byte, dir bool) ([
 		// We start from the pivot position, and work back to the mirror position (of the part left to the pivot).
 		// This makes us process each pear exactly once (instead of unnecessarily twice, like in the spec)
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(pivot>>8))
-		source := hashFn(buf)
+		source := hashutil.HashSha256(buf)
 		byteV := source[(pivot&0xff)>>3]
 		for i, j := uint64(0), pivot; i < mirror; i, j = i+1, j-1 {
 			// The pair is i,j. With j being the bigger of the two, hence the "position" identifier of the pair.
@@ -219,7 +220,7 @@ func innerShuffleList(hashFn HashFn, input []uint64, seed [32]byte, dir bool) ([
 			if j&0xff == 0xff {
 				// just overwrite the last part of the buffer, reuse the start (seed, round)
 				binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(j>>8))
-				source = hashFn(buf)
+				source = hashutil.HashSha256(buf)
 			}
 			// Same trick with byte retrieval. Only every 8th.
 			if j&0x7 == 0x7 {
@@ -239,7 +240,7 @@ func innerShuffleList(hashFn HashFn, input []uint64, seed [32]byte, dir bool) ([
 		// We start at the end, and work back to the mirror point.
 		// This makes us process each pear exactly once (instead of unnecessarily twice, like in the spec)
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(end>>8))
-		source = hashFn(buf)
+		source = hashutil.HashSha256(buf)
 		byteV = source[(end&0xff)>>3]
 		for i, j := pivot+1, end; i < mirror; i, j = i+1, j-1 {
 			// Exact same thing (copy of above loop body)
@@ -249,7 +250,7 @@ func innerShuffleList(hashFn HashFn, input []uint64, seed [32]byte, dir bool) ([
 			if j&0xff == 0xff {
 				// just overwrite the last part of the buffer, reuse the start (seed, round)
 				binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(j>>8))
-				source = hashFn(buf)
+				source = hashutil.HashSha256(buf)
 			}
 			// Same trick with byte retrieval. Only every 8th.
 			if j&0x7 == 0x7 {

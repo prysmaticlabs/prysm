@@ -189,15 +189,18 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	defer db.TeardownDB(sb.beaconDB)
 	seed := common.BytesToHash([]byte(testCase.Seed))
 
-	hashFn := getStandardHashFn()
 	testIndices := make([]uint64, testCase.Count, testCase.Count)
 	for i := uint64(0); i < testCase.Count; i++ {
 		testIndices[i] = i
 	}
-	utils.ShuffleList(hashFn, testIndices, seed)
+	sl, err := utils.ShuffleList(testIndices, seed)
+	if err != nil {
+		return fmt.Errorf("running shuffle list resulted in error: %v", err)
+
+	}
 
 	log.Infof("shuffledIndexList: %v", testIndices)
-	if !reflect.DeepEqual(testIndices, testCase.Shuffled) {
+	if !reflect.DeepEqual(sl, testCase.Shuffled) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, testIndices)
 	}
 
