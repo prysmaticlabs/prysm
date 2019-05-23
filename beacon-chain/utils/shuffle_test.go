@@ -151,7 +151,6 @@ func TestShuffledIndex(t *testing.T) {
 		}
 		shuffledList[si] = i
 	}
-	t.Logf("shuffledList: %v", shuffledList)
 	for i := uint64(0); i < listSize; i++ {
 		ui, err := UnShuffledIndex(i, listSize, seed)
 		if err != nil {

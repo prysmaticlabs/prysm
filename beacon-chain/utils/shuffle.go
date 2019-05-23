@@ -88,14 +88,12 @@ func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, dir bool
 	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
 	copy(buf[:32], seed[:])
 	for {
-		//round := uint8(0); round < uint8(params.BeaconConfig().ShuffleRoundCount); round++
 		buf[seedSize] = round
 		hash := hashutil.HashSha256(buf[:pivotViewSize])
 		hash8 := hash[:8]
 		hash8Int := bytesutil.FromBytes8(hash8)
 		pivot := hash8Int % indexCount
 		flip := (pivot + indexCount - index) % indexCount
-		// spec: position = max(index, flip)
 		// Consider every pair only once by picking the highest pair index to retrieve randomness.
 		position := index
 		if flip > position {

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"path"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	"github.com/go-yaml/yaml"
@@ -99,12 +101,11 @@ func runTests(tests []interface{}, configs map[string]interface{}, sb *backend.S
 			log.Infof("Config: %v", typedTest.Config)
 			config, ok := configs[string(typedTest.Config)]
 			if !ok {
-				return fmt.Errorf("no config file found for test")
+				return errors.New("no config file found for test")
 			}
 			conf, ok := config.(*params.BeaconChainConfig)
-
 			if !ok {
-				return fmt.Errorf("config file is not of type *params.BeaconChainConfig")
+				return fmt.Errorf("config file is not of type *params.BeaconChainConfig found type: %v", reflect.TypeOf(config))
 			}
 			params.OverrideBeaconConfig(conf)
 			for _, testCase := range typedTest.TestCases {
