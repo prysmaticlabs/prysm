@@ -31,6 +31,8 @@ func (w *Web3Service) HasChainStartLogOccurred() (bool, error) {
 	return w.depositContractCaller.ChainStarted(&bind.CallOpts{})
 }
 
+// ETH2GenesisTime retrieves the genesis time of the beacon chain
+// from the deposit contract.
 func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
