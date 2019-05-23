@@ -7,109 +7,97 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
 
 var (
-	// ErrNotACommitteeInfo will be returned when a cache object is not a pointer to
-	// a committeeInfo struct.
-	ErrNotACommitteeInfo = errors.New("object is not an committee info")
+	// ErrNotValidatorListInfo will be returned when a cache object is not a pointer to
+	// a ValidatorList struct.
+	ErrNotValidatorListInfo = errors.New("object is not a shuffled validator list")
 
-	// maxCacheSize is 4x of the epoch length for additional cache padding.
-	// Requests should be only accessing committees within defined epoch length.
-	maxCacheSize = int(4 * params.BeaconConfig().SlotsPerEpoch)
+	// maxCacheSize can handle max 4 shuffled validator lists
+	maxCacheSize = 4
 
 	// Metrics
-	committeeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "committee_cache_miss",
-		Help: "The number of committee requests that aren't present in the cache.",
+	shuffledValidatorsCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "shuffled_validators_cache_miss",
+		Help: "The number of shuffled validators requests that aren't present in the cache.",
 	})
-	committeeCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "committee_cache_hit",
-		Help: "The number of committee requests that are present in the cache.",
-	})
-	committeeCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "committee_cache_size",
-		Help: "The number of committees in the committee cache",
+	shuffledValidatorsCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "shuffled_validators_cache_hit",
+		Help: "The number of shuffled validators requests that are present in the cache.",
 	})
 )
 
-// CommitteeInfo defines the validator committee of slot and shard combinations.
-type CommitteeInfo struct {
-	Committee []uint64
-	Shard     uint64
+
+// ShuffledValidatorsInEpoch specifies how many shuffled validators are in a given epoch and seed.
+type ShuffledValidatorsInEpoch struct {
+	Epoch       uint64
+	Seed []byte
+	ShuffledValidators []uint64
 }
 
-// CommitteesInSlot specifies how many CommitteeInfos are in a given slot.
-type CommitteesInSlot struct {
-	Slot       uint64
-	Committees []*CommitteeInfo
-}
-
-// CommitteesCache structs with 1 queue for looking up committees by slot.
-type CommitteesCache struct {
-	committeesCache *cache.FIFO
+// ShuffledValidatorsCache is a struct with 1 queue for looking up shuffled validators by epoch.
+type ShuffledValidatorsCache struct {
+	shuffledValidatorsCache *cache.FIFO
 	lock            sync.RWMutex
 }
 
-// slotKeyFn takes the string representation of the slot number as the key
-// for the committees of a given slot (CommitteesInSlot).
-func slotKeyFn(obj interface{}) (string, error) {
-	cInfo, ok := obj.(*CommitteesInSlot)
+// slotKeyFn takes the string representation of the epoch number and seed as the key
+// for the shuffled validators of a given epoch.
+func shuffleKeyFn(obj interface{}) (string, error) {
+	sInfo, ok := obj.(*ShuffledValidatorsInEpoch)
 	if !ok {
-		return "", ErrNotACommitteeInfo
+		return "", ErrNotValidatorListInfo
 	}
 
-	return strconv.Itoa(int(cInfo.Slot)), nil
+	return strconv.Itoa(int(sInfo.Epoch)) + string(sInfo.Seed), nil
 }
 
-// NewCommitteesCache creates a new committee cache for storing/accessing blockInfo from
-// memory.
-func NewCommitteesCache() *CommitteesCache {
-	return &CommitteesCache{
-		committeesCache: cache.NewFIFO(slotKeyFn),
+// NewShuffledValidatorsCache creates a new shuffled validators cache for storing/accessing shuffled validator indices
+func NewShuffledValidatorsCache() *ShuffledValidatorsCache {
+	return &ShuffledValidatorsCache{
+		shuffledValidatorsCache: cache.NewFIFO(shuffleKeyFn),
 	}
 }
 
-// CommitteesInfoBySlot fetches CommitteesInSlot by slot. Returns true with a
-// reference to the committees info, if exists. Otherwise returns false, nil.
-func (c *CommitteesCache) CommitteesInfoBySlot(slot uint64) (*CommitteesInSlot, error) {
+// ShuffledValidatorsByEpoch fetches ShuffledValidatorsInEpoch by epoch and seed. Returns true with a
+// reference to the ShuffledValidatorsInEpoch info, if exists. Otherwise returns false, nil.
+func (c *ShuffledValidatorsCache) ShuffledValidatorsByEpoch(epoch uint64, seed []byte) ([]uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-
-	obj, exists, err := c.committeesCache.GetByKey(strconv.Itoa(int(slot)))
+	key := strconv.Itoa(int(epoch)) + string(seed)
+	obj, exists, err := c.shuffledValidatorsCache.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 
 	if exists {
-		committeeCacheHit.Inc()
+		shuffledValidatorsCacheHit.Inc()
 	} else {
-		committeeCacheMiss.Inc()
+		shuffledValidatorsCacheMiss.Inc()
 		return nil, nil
 	}
 
-	cInfo, ok := obj.(*CommitteesInSlot)
+	cInfo, ok := obj.(*ShuffledValidatorsInEpoch)
 	if !ok {
-		return nil, ErrNotACommitteeInfo
+		return nil, ErrNotValidatorListInfo
 	}
 
-	return cInfo, nil
+	return cInfo.ShuffledValidators, nil
 }
 
 // AddCommittees adds CommitteesInSlot object to the cache. This method also trims the least
-// recently added committeeInfo object if the cache size has ready the max cache size limit.
-func (c *CommitteesCache) AddCommittees(committees *CommitteesInSlot) error {
+// recently added shuffled_validatorsInfo object if the cache size has ready the max cache size limit.
+func (c *ShuffledValidatorsCache) AddShuffledValidatorList(shuffledValidators *ShuffledValidatorsInEpoch) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.committeesCache.AddIfNotPresent(committees); err != nil {
+	if err := c.shuffledValidatorsCache.AddIfNotPresent(shuffledValidators); err != nil {
 		return err
 	}
 
-	trim(c.committeesCache, maxCacheSize)
-	committeeCacheSize.Set(float64(len(c.committeesCache.ListKeys())))
+	trim(c.shuffledValidatorsCache, maxCacheSize)
 	return nil
 }
 
