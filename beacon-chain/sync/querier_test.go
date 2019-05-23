@@ -20,8 +20,8 @@ type genesisPowChain struct {
 	feed *event.Feed
 }
 
-func (mp *genesisPowChain) HasChainStartLogOccurred() (bool, uint64, error) {
-	return false, 0, nil
+func (mp *genesisPowChain) HasChainStartLogOccurred() (bool, error) {
+	return false, nil
 }
 
 func (mp *genesisPowChain) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
@@ -36,8 +36,8 @@ type afterGenesisPowChain struct {
 	feed *event.Feed
 }
 
-func (mp *afterGenesisPowChain) HasChainStartLogOccurred() (bool, uint64, error) {
-	return true, 0, nil
+func (mp *afterGenesisPowChain) HasChainStartLogOccurred() (bool, error) {
+	return true, nil
 }
 
 func (mp *afterGenesisPowChain) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {

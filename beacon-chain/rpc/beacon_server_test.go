@@ -34,9 +34,13 @@ type faultyPOWChainService struct {
 	hashesByHeight map[int][]byte
 }
 
-func (f *faultyPOWChainService) HasChainStartLogOccurred() (bool, uint64, error) {
-	return false, uint64(time.Now().Unix()), nil
+func (f *faultyPOWChainService) HasChainStartLogOccurred() (bool, error) {
+	return false, nil
 }
+func (f *faultyPOWChainService) ETH2GenesisTime() (uint64, error) {
+	return 0, nil
+}
+
 func (f *faultyPOWChainService) ChainStartFeed() *event.Feed {
 	return f.chainStartFeed
 }
@@ -83,8 +87,12 @@ type mockPOWChainService struct {
 	blockTimeByHeight map[int]uint64
 }
 
-func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, uint64, error) {
-	return true, uint64(time.Unix(0, 0).Unix()), nil
+func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, error) {
+	return true, nil
+}
+
+func (m *mockPOWChainService) ETH2GenesisTime() (uint64, error) {
+	return uint64(time.Unix(0, 0).Unix()), nil
 }
 func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 	return m.chainStartFeed

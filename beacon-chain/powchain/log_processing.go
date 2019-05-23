@@ -1,8 +1,8 @@
 package powchain
 
 import (
-	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -21,23 +21,37 @@ import (
 )
 
 var (
-	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes,bytes32[32])")
-	chainStartEventSignature = []byte("ChainStart(bytes32,bytes)")
+	depositEventSignature    = []byte("Deposit(bytes,bytes,bytes,bytes,bytes)")
+	chainStartEventSignature = []byte("Eth2Genesis(bytes32,bytes,bytes)")
 )
 
 // HasChainStartLogOccurred queries all logs in the deposit contract to verify
-// if ChainStart has occurred. If so, it returns true alongside the ChainStart timestamp.
-func (w *Web3Service) HasChainStartLogOccurred() (bool, uint64, error) {
-	genesisTime, err := w.depositContractCaller.GenesisTime(&bind.CallOpts{})
+// if ChainStart has occurred.
+func (w *Web3Service) HasChainStartLogOccurred() (bool, error) {
+	return w.depositContractCaller.ChainStarted(&bind.CallOpts{})
+}
+
+func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			w.depositContractAddress,
+		},
+		Topics: [][]common.Hash{{hashutil.Hash(chainStartEventSignature)}},
+	}
+	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
 	if err != nil {
-		return false, 0, fmt.Errorf("could not query contract to verify chain started: %v", err)
+		return 0, err
 	}
-	// If chain has not yet started, the result will be an empty byte slice.
-	if bytes.Equal(genesisTime, []byte{}) {
-		return false, 0, nil
+	if len(logs) == 0 {
+		return 0, errors.New("no chainstart logs exist")
 	}
-	timestamp := binary.LittleEndian.Uint64(genesisTime)
-	return true, timestamp, nil
+
+	_, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
+	if err != nil {
+		return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
+	}
+	timestamp := binary.LittleEndian.Uint64(timestampData)
+	return timestamp, nil
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -52,7 +66,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 		w.ProcessChainStartLog(depositLog)
 		return
 	}
-	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid signature")
+	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
 }
 
 // ProcessDepositLog processes the log which had been received from
@@ -142,7 +156,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	chainStartCount.Inc()
-	chainStartDepositRoot, timestampData, err := contracts.UnpackChainStartLogData(depositLog.Data)
+	chainStartDepositRoot, _, timestampData, err := contracts.UnpackChainStartLogData(depositLog.Data)
 	if err != nil {
 		log.Errorf("Unable to unpack ChainStart log data %v", err)
 		return

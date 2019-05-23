@@ -25,7 +25,6 @@ deposit_count: public(uint256)
 full_deposit_count: public(uint256)
 chainStarted: public(bool)
 custom_chainstart_delay: public(uint256)
-genesisTime: public(bytes[8])
 drain_address: public(address)
 
 @public
