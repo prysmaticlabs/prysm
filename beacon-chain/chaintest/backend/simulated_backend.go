@@ -195,16 +195,16 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	if !reflect.DeepEqual(shuffledList, testCase.Shuffled) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledList)
 	}
-	// sl, err := utils.ShuffleList(testIndices, seed)
-	// if err != nil {
-	// 	return fmt.Errorf("running shuffle list resulted in error: %v", err)
+	sl, err := utils.ShuffleList(testIndices, seed)
+	if err != nil {
+		return fmt.Errorf("running shuffle list resulted in error: %v", err)
 
-	// }
+	}
 
-	// log.Infof("shuffledIndexList: %v", testIndices)
-	// if !reflect.DeepEqual(sl, testCase.Shuffled) {
-	// 	return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, testIndices)
-	// }
+	log.Infof("shuffledIndexList: %v", testIndices)
+	if !reflect.DeepEqual(sl, testCase.Shuffled) {
+		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, testIndices)
+	}
 
 	return nil
 }
