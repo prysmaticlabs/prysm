@@ -13,7 +13,6 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
-        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
     ],
 )
@@ -25,8 +24,5 @@ go_test(
         "shuffle_test.go",
     ],
     embed = [":go_default_library"],
-    deps = [
-        "//shared/params:go_default_library",
-        "@com_github_ethereum_go_ethereum//common:go_default_library",
-    ],
+    deps = ["//shared/params:go_default_library"],
 )
