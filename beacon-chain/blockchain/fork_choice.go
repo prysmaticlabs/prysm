@@ -205,7 +205,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 		log.WithFields(logrus.Fields{
 			"currentSlot": currentHead.Slot,
 			"currentRoot": fmt.Sprintf("%#x", bytesutil.Trunc(currentHeadRoot[:])),
-		}).Warn("Head did not change after fork choice, current head has the most votes")
+		}).Warn("head did not change after fork choice, current head has the most votes")
 	}
 
 	// If we receive forked blocks.

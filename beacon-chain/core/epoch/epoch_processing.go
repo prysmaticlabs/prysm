@@ -24,9 +24,9 @@ import (
 // MatchedAttestations is an object that contains the correctly
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
-	Source []*pb.PendingAttestation
+	source []*pb.PendingAttestation
 	Target []*pb.PendingAttestation
-	Head   []*pb.PendingAttestation
+	head   []*pb.PendingAttestation
 }
 
 // CanProcessEpoch checks the eligibility to process epoch.
@@ -419,9 +419,9 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		return nil, nil, fmt.Errorf("could not get source, target and head attestations: %v", err)
 	}
 	var attsPackage [][]*pb.PendingAttestation
-	attsPackage = append(attsPackage, atts.Source)
+	attsPackage = append(attsPackage, atts.source)
 	attsPackage = append(attsPackage, atts.Target)
-	attsPackage = append(attsPackage, atts.Head)
+	attsPackage = append(attsPackage, atts.head)
 	// Compute rewards / penalties for each attestation in the list and update
 	// the rewards and penalties lists.
 	for _, matchAtt := range attsPackage {
@@ -448,14 +448,14 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		}
 	}
 	// Apply rewards for proposer including attestations promptly.
-	indices, err := UnslashedAttestingIndices(state, atts.Source)
+	indices, err := UnslashedAttestingIndices(state, atts.source)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
 	}
 	// For every index, filter the matching source attestation that correspond to the index,
 	// sort by inclusion delay and get the one that was included on chain first.
 	for _, index := range indices {
-		att, err := earlistAttestation(state, atts.Source, index)
+		att, err := earlistAttestation(state, atts.source, index)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get the lowest inclusion delay attestation: %v", err)
 		}
@@ -623,7 +623,7 @@ func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	}
 
 	// Filter out source attestations by shard.
-	for _, att := range matchedAtts.Source {
+	for _, att := range matchedAtts.source {
 		if att.Data.Shard == shard {
 			shardAtts = append(shardAtts, att)
 		}
@@ -880,9 +880,9 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	}
 
 	return &MatchedAttestations{
-		Source: srcAtts,
+		source: srcAtts,
 		Target: tgtAtts,
-		Head:   headAtts,
+		head:   headAtts,
 	}, nil
 }
 
