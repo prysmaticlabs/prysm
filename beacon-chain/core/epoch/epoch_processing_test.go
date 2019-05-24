@@ -340,7 +340,7 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{1}}},
 		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{5}, TargetRoot: []byte{1}}},
 	}
-	if !reflect.DeepEqual(mAtts.target, wantedTgtAtts) {
+	if !reflect.DeepEqual(mAtts.Target, wantedTgtAtts) {
 		t.Error("target attestations don't match")
 	}
 
@@ -405,7 +405,7 @@ func TestMatchAttestations_CurrentEpoch(t *testing.T) {
 		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{65}}},
 		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{69}, TargetRoot: []byte{65}}},
 	}
-	if !reflect.DeepEqual(mAtts.target, wantedTgtAtts) {
+	if !reflect.DeepEqual(mAtts.Target, wantedTgtAtts) {
 		t.Error("target attestations don't match")
 	}
 
@@ -751,7 +751,7 @@ func TestProcessJustificationFinalization_LessThan2ndEpoch(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch,
 	}
-	newState, err := ProcessJustificationFinalization(state, 0, 0)
+	newState, err := ProcessJustificationAndFinalization(state, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -773,7 +773,7 @@ func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
 			{ExitEpoch: e, EffectiveBalance: a}, {ExitEpoch: e, EffectiveBalance: a}},
 	}
 	// Since Attested balances are less than total balances, nothing happened.
-	newState, err := ProcessJustificationFinalization(state, 0, 0)
+	newState, err := ProcessJustificationAndFinalization(state, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -801,7 +801,7 @@ func TestProcessJustificationFinalization_NoBlockRootCurrentEpoch(t *testing.T) 
 		LatestBlockRoots:       blockRoots,
 	}
 	attestedBalance := 4 * e * 3 / 2
-	_, err := ProcessJustificationFinalization(state, 0, attestedBalance)
+	_, err := ProcessJustificationAndFinalization(state, 0, attestedBalance)
 	want := "could not get block root for current epoch"
 	if !strings.Contains(err.Error(), want) {
 		t.Fatal("Did not receive correct error")
@@ -827,7 +827,7 @@ func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
 		LatestBlockRoots:       blockRoots,
 	}
 	attestedBalance := 4 * e * 3 / 2
-	newState, err := ProcessJustificationFinalization(state, 0, attestedBalance)
+	newState, err := ProcessJustificationAndFinalization(state, 0, attestedBalance)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -868,7 +868,7 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 		LatestBlockRoots:       blockRoots,
 	}
 	attestedBalance := 4 * e * 3 / 2
-	newState, err := ProcessJustificationFinalization(state, attestedBalance, 0)
+	newState, err := ProcessJustificationAndFinalization(state, attestedBalance, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

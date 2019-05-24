@@ -27,7 +27,7 @@ import (
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
 	source []*pb.PendingAttestation
-	target []*pb.PendingAttestation
+	Target []*pb.PendingAttestation
 	head   []*pb.PendingAttestation
 }
 
@@ -40,220 +40,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
-// CanProcessEth1Data checks the eligibility to process the eth1 data.
-// The eth1 data can be processed every EPOCHS_PER_ETH1_VOTING_PERIOD.
-//
-// Spec pseudocode definition:
-//    If next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD == 0
-func CanProcessEth1Data(state *pb.BeaconState) bool {
-	return helpers.NextEpoch(state)%
-		params.BeaconConfig().EpochsPerEth1VotingPeriod == 0
-}
-
-// CanProcessValidatorRegistry checks the eligibility to process validator registry.
-// It checks crosslink committees last changed slot and finalized slot against
-// latest change slot.
-//
-// Spec pseudocode definition:
-//    If the following are satisfied:
-//		* state.finalized_epoch > state.validator_registry_latest_change_epoch
-//		* state.latest_crosslinks[shard].epoch > state.validator_registry_update_epoch
-// 			for every shard number shard in [(state.current_epoch_start_shard + i) %
-//	 			SHARD_COUNT for i in range(get_current_epoch_committee_count(state) *
-//	 			SLOTS_PER_EPOCH)] (that is, for every shard in the current committees)
-func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
-	if state.FinalizedEpoch <= state.ValidatorRegistryUpdateEpoch {
-		return false
-	}
-	if featureconfig.FeatureConfig().EnableCrosslinks {
-		shardsProcessed := helpers.EpochCommitteeCount(state, helpers.CurrentEpoch(state)) * params.BeaconConfig().SlotsPerEpoch
-		startShard := state.CurrentShufflingStartShard
-		for i := startShard; i < shardsProcessed; i++ {
-			if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
-				state.ValidatorRegistryUpdateEpoch {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-// ProcessEth1Data processes eth1 block deposit roots by checking how many times
-// state.eth1_data_votes contains body.eth1_data.
-// With sufficient number of times (>2*SLOTS_PER_ETH1_VOTING_PERIOD), it then
-// marks the body Eth1 data as the latest data set.
-//
-// Spec pseudocode definition:
-// def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
-//     state.eth1_data_votes.append(body.eth1_data)
-//     if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
-//         state.latest_eth1_data = body.eth1_data
-func ProcessEth1Data(state *pb.BeaconState, body *pb.BeaconBlockBody) *pb.BeaconState {
-	eth1DataBlockVote := &pb.Eth1DataVote{Eth1Data: body.Eth1Data}
-	state.Eth1DataVotes = append(state.Eth1DataVotes, eth1DataBlockVote)
-	var count uint64
-	for _, eth1DataVote := range state.Eth1DataVotes {
-		if eth1DataVote.Eth1Data == body.Eth1Data {
-			count++
-		}
-	}
-	if count*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
-		state.LatestEth1Data = body.Eth1Data
-	}
-	return state
-}
-
-// ProcessRegistryUpdates rotates validators in and out of active pool.
-// the amount to rotate is determined churn limit.
-//
-// Spec pseudocode definition:
-//   def process_registry_updates(state: BeaconState) -> None:
-//     # Process activation eligibility and ejections
-//     for index, validator in enumerate(state.validator_registry):
-//         if validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH and validator.effective_balance >= MAX_EFFECTIVE_BALANCE:
-//             validator.activation_eligibility_epoch = get_current_epoch(state)
-//         if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
-//             initiate_validator_exit(state, index)
-//     # Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
-//     activation_queue = sorted([
-//         index for index, validator in enumerate(state.validator_registry) if
-//         validator.activation_eligibility_epoch != FAR_FUTURE_EPOCH and
-//         validator.activation_epoch >= get_delayed_activation_exit_epoch(state.finalized_epoch)
-//     ], key=lambda index: state.validator_registry[index].activation_eligibility_epoch)
-//     # Dequeued validators for activation up to churn limit (without resetting activation epoch)
-//     for index in activation_queue[:get_churn_limit(state)]:
-//         validator = state.validator_registry[index]
-//         if validator.activation_epoch == FAR_FUTURE_EPOCH:
-//             validator.activation_epoch = get_delayed_activation_exit_epoch(get_current_epoch(state))
-func ProcessRegistryUpdates(state *pb.BeaconState) *pb.BeaconState {
-	currentEpoch := helpers.CurrentEpoch(state)
-	validators.VStore.Lock()
-	defer validators.VStore.Unlock()
-	for idx, validator := range state.ValidatorRegistry {
-		// Activate validators within the allowable balance churn.
-		if validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
-			validator.EffectiveBalance >= params.BeaconConfig().MaxEffectiveBalance {
-			validator.ActivationEligibilityEpoch = currentEpoch
-		}
-		if helpers.IsActiveValidator(validator, currentEpoch) &&
-			validator.EffectiveBalance <= params.BeaconConfig().EjectionBalance {
-			state = validators.ExitValidator(state, uint64(idx))
-		}
-	}
-	// queue validators eligible for activation and not dequeued for activation prior to finalized epoch
-
-	activationQueue := []queueElement{}
-	for idx, validator := range state.ValidatorRegistry {
-		if validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch &&
-			validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(state.FinalizedEpoch) {
-			qe := queueElement{idx: idx,
-				ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch}
-			activationQueue = append(activationQueue, qe)
-		}
-	}
-	sort.Slice(activationQueue, func(i, j int) bool {
-		return activationQueue[i].ActivationEligibilityEpoch < activationQueue[j].ActivationEligibilityEpoch
-	})
-	// dequeued validators for activation up to churn limit (without resetting activation epoch)
-	limit := uint64(len(activationQueue))
-	cl := helpers.ChurnLimit(state)
-	if cl < limit {
-		limit = helpers.ChurnLimit(state)
-	}
-	for _, qe := range activationQueue[:limit] {
-		validator := state.ValidatorRegistry[qe.idx]
-		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
-			validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
-			log.WithFields(logrus.Fields{
-				"index":           qe.idx,
-				"activationEpoch": validator.ActivationEpoch,
-			}).Info("Validator activated")
-		}
-	}
-	return state
-}
-
-// ProcessPrevSlotShardSeed computes and sets current epoch's calculation slot
-// and start shard to previous epoch. Then it returns the updated state.
-//
-// Spec pseudocode definition:
-//	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
-//	Set state.previous_shuffling_start_shard = state.current_shuffling_start_shard
-//  Set state.previous_shuffling_seed = state.current_shuffling_seed.
-func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
-	state.PreviousShufflingEpoch = state.CurrentShufflingEpoch
-	state.PreviousShufflingStartShard = state.CurrentShufflingStartShard
-	state.PreviousShufflingSeedHash32 = state.CurrentShufflingSeedHash32
-	return state
-}
-
-// ProcessPartialValidatorRegistry processes the portion of validator registry
-// fields, it doesn't set registry latest change slot. This only gets called if
-// validator registry update did not happen.
-//
-// Spec pseudocode definition:
-//	Let epochs_since_last_registry_change = current_epoch -
-//		state.validator_registry_update_epoch
-//	If epochs_since_last_registry_update > 1 and
-//		is_power_of_two(epochs_since_last_registry_update):
-// 			set state.current_calculation_epoch = next_epoch
-// 			set state.current_shuffling_seed = generate_seed(
-// 				state, state.current_calculation_epoch)
-func ProcessPartialValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
-	epochsSinceLastRegistryChange := helpers.CurrentEpoch(state) -
-		state.ValidatorRegistryUpdateEpoch
-	if epochsSinceLastRegistryChange > 1 &&
-		mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
-		state.CurrentShufflingEpoch = helpers.NextEpoch(state)
-		// TODO(#2072)we have removed the generation of a new seed for the timebeing to get it stable for the testnet.
-		// this will be handled in Q2.
-	}
-	return state, nil
-}
-
-// CleanupAttestations removes any attestation in state's latest attestations
-// such that the attestation slot is lower than state slot minus epoch length.
-// Spec pseudocode definition:
-// 		Remove any attestation in state.latest_attestations such
-// 		that slot_to_epoch(att.data.slot) < slot_to_epoch(state) - 1
-func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
-	currEpoch := helpers.CurrentEpoch(state)
-
-	var latestAttestations []*pb.PendingAttestation
-	for _, attestation := range state.LatestAttestations {
-		if helpers.SlotToEpoch(attestation.Data.Slot) >= currEpoch {
-			latestAttestations = append(latestAttestations, attestation)
-		}
-	}
-	state.LatestAttestations = latestAttestations
-	return state
-}
-
-// UpdateLatestActiveIndexRoots updates the latest index roots. Index root
-// is computed by hashing validator indices of the next epoch + delay.
-//
-// Spec pseudocode definition:
-// Let e = state.slot // SLOTS_PER_EPOCH.
-// Set state.latest_index_roots[(next_epoch + ACTIVATION_EXIT_DELAY) %
-// 	LATEST_INDEX_ROOTS_LENGTH] =
-// 	hash_tree_root(get_active_validator_indices(state,
-// 	next_epoch + ACTIVATION_EXIT_DELAY))
-func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
-	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
-	validatorIndices := helpers.ActiveValidatorIndices(state, nextEpoch)
-	indicesBytes := []byte{}
-	for _, val := range validatorIndices {
-		buf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(buf, val)
-		indicesBytes = append(indicesBytes, buf...)
-	}
-	indexRoot := hashutil.Hash(indicesBytes)
-	state.LatestActiveIndexRoots[nextEpoch%params.BeaconConfig().LatestActiveIndexRootsLength] =
-		indexRoot[:]
-	return state, nil
-}
-
-// ProcessJustificationFinalization processes justification and finalization during
+// ProcessJustificationAndFinalization processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 //
 // Spec pseudocode definition:
@@ -299,7 +86,7 @@ func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error
 //    if (bitfield >> 0) % 4 == 0b11 and old_current_justified_epoch == current_epoch - 1:
 //        state.finalized_epoch = old_current_justified_epoch
 //        state.finalized_root = get_block_root(state, state.finalized_epoch)
-func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (
+func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (
 	*pb.BeaconState, error) {
 	// There's no reason to process justification until the 3rd epoch.
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -635,7 +422,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	}
 	var attsPackage [][]*pb.PendingAttestation
 	attsPackage = append(attsPackage, atts.source)
-	attsPackage = append(attsPackage, atts.target)
+	attsPackage = append(attsPackage, atts.Target)
 	attsPackage = append(attsPackage, atts.head)
 	// Compute rewards / penalties for each attestation in the list and update
 	// the rewards and penalties lists.
@@ -685,7 +472,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	// based on the finality delay.
 	finalityDelay := prevEpoch - state.FinalizedEpoch
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
-		targetIndices, err := UnslashedAttestingIndices(state, atts.target)
+		targetIndices, err := UnslashedAttestingIndices(state, atts.Target)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
 		}
@@ -998,7 +785,7 @@ func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uint64, error) {
 	indices, err := UnslashedAttestingIndices(state, atts)
 	if err != nil {
-		return 0, fmt.Errorf("could not get attesting balance: %v", err)
+		return 0, fmt.Errorf("could not get attesting indices: %v", err)
 	}
 	return helpers.TotalBalance(state, indices), nil
 }
@@ -1068,7 +855,6 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	} else {
 		srcAtts = state.PreviousEpochAttestations
 	}
-
 	targetRoot, err := helpers.BlockRoot(state, epoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
@@ -1096,7 +882,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 
 	return &MatchedAttestations{
 		source: srcAtts,
-		target: tgtAtts,
+		Target: tgtAtts,
 		head:   headAtts,
 	}, nil
 }
