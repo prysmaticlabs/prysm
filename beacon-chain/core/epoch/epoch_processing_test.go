@@ -328,7 +328,7 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{5}, TargetRoot: []byte{1}}},
 		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{6}}},
 	}
-	if !reflect.DeepEqual(mAtts.Source, wantedSrcAtts) {
+	if !reflect.DeepEqual(mAtts.source, wantedSrcAtts) {
 		t.Error("source attestations don't match")
 	}
 
@@ -347,7 +347,7 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{1}}},
 		{Data: &pb.AttestationData{Slot: s + 1, BeaconBlockRoot: []byte{2}, TargetRoot: []byte{6}}},
 	}
-	if !reflect.DeepEqual(mAtts.Head, wantedHeadAtts) {
+	if !reflect.DeepEqual(mAtts.head, wantedHeadAtts) {
 		t.Error("head attestations don't match")
 	}
 }
@@ -395,7 +395,7 @@ func TestMatchAttestations_CurrentEpoch(t *testing.T) {
 		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{69}, TargetRoot: []byte{65}}},
 		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{68}}},
 	}
-	if !reflect.DeepEqual(mAtts.Source, wantedSrcAtts) {
+	if !reflect.DeepEqual(mAtts.source, wantedSrcAtts) {
 		t.Error("source attestations don't match")
 	}
 
@@ -411,7 +411,7 @@ func TestMatchAttestations_CurrentEpoch(t *testing.T) {
 		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{65}}},
 		{Data: &pb.AttestationData{Slot: s + e + 1, BeaconBlockRoot: []byte{66}, TargetRoot: []byte{68}}},
 	}
-	if !reflect.DeepEqual(mAtts.Head, wantedHeadAtts) {
+	if !reflect.DeepEqual(mAtts.head, wantedHeadAtts) {
 		t.Error("head attestations don't match")
 	}
 }
