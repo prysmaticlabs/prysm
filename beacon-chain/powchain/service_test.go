@@ -279,12 +279,7 @@ func TestInitDataFromContract_OK(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, []byte{'a'}); err != nil {
-		t.Fatalf("Could not deposit to deposit contract %v", err)
-	}
 	testAcc.backend.Commit()
-
 	if err := web3Service.initDataFromContract(); err != nil {
 		t.Fatalf("Could not init from deposit contract: %v", err)
 	}
