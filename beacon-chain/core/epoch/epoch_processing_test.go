@@ -71,13 +71,12 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 				TargetEpoch: 0,
 				Shard:       uint64(i + 2),
 			},
-			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
-				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
+			AggregationBitfield: []byte{0xC0, 0xC0},
 		}
 	}
 
 	// Generate validators and state for the 2 attestations.
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/16)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -562,6 +561,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 }
 
 func TestProcessCrosslink_NoUpdate(t *testing.T) {
+	helpers.RestartShuffledValidatorCache()
 	validatorCount := 128
 	validators := make([]*pb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
@@ -958,7 +958,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 
 func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
-
+	helpers.RestartShuffledValidatorCache()
 	state := buildState(e+2, params.BeaconConfig().DepositsForChainStart/8)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 2)
