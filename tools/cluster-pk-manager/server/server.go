@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -66,11 +65,11 @@ func newServer(
 	}
 }
 
-func (s *server) makeDeposit(data []byte) error {
+func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signature []byte) error {
 	txOps := bind.NewKeyedTransactor(s.txPk)
 	txOps.Value = s.depositAmount
 	txOps.GasLimit = gasLimit
-	tx, err := s.contract.Deposit(txOps, data)
+	tx, err := s.contract.Deposit(txOps, pubkey, withdrawalCredentials, signature)
 	if err != nil {
 		return fmt.Errorf("deposit failed: %v", err)
 	}
@@ -146,10 +145,6 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 		di, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/)
 		if err != nil {
 			return nil, err
-		}
-		serializedData := new(bytes.Buffer)
-		if err := ssz.Encode(serializedData, di); err != nil {
-			return nil, fmt.Errorf("could not serialize deposit data: %v", err)
 		}
 
 		// Do the actual deposit

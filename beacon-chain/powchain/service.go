@@ -88,7 +88,7 @@ type Web3Service struct {
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.MerkleTrie
-	chainStartDeposits      [][]byte
+	chainStartDeposits      []*pb.Deposit
 	chainStarted            bool
 	chainStartETH1Data      *pb.Eth1Data
 	beaconDB                *db.BeaconDB
@@ -127,7 +127,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{{}}, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("could not setup deposit trie: %v", err)
@@ -149,7 +149,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		httpLogger:              config.HTTPLogger,
 		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
-		chainStartDeposits:      [][]byte{},
+		chainStartDeposits:      make([]*pb.Deposit, 0),
 		beaconDB:                config.BeaconDB,
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
@@ -185,7 +185,7 @@ func (w *Web3Service) ChainStartFeed() *event.Feed {
 
 // ChainStartDeposits returns a slice of validator deposit data processed
 // by the deposit contract and cached in the powchain service.
-func (w *Web3Service) ChainStartDeposits() [][]byte {
+func (w *Web3Service) ChainStartDeposits() []*pb.Deposit {
 	return w.chainStartDeposits
 }
 

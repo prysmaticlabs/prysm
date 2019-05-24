@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -209,11 +208,6 @@ func main() {
 			if err != nil {
 				log.Errorf("Could not generate deposit input data: %v", err)
 				continue
-			}
-
-			serializedData := new(bytes.Buffer)
-			if err := ssz.Encode(serializedData, data); err != nil {
-				log.Errorf("could not serialize deposit data: %v", err)
 			}
 
 			for i := int64(0); i < numberOfDeposits; i++ {

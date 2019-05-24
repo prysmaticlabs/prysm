@@ -50,7 +50,8 @@ type operationService interface {
 }
 
 type powChainService interface {
-	HasChainStartLogOccurred() (bool, uint64, error)
+	HasChainStartLogOccurred() (bool, error)
+	ETH2GenesisTime() (uint64, error)
 	ChainStartFeed() *event.Feed
 	LatestBlockHeight() *big.Int
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
@@ -58,7 +59,8 @@ type powChainService interface {
 	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
 	DepositRoot() [32]byte
 	DepositTrie() *trieutil.MerkleTrie
-	ChainStartDeposits() [][]byte
+	ChainStartDepositHashes() ([][]byte, error)
+	ChainStartDeposits() []*pbp2p.Deposit
 }
 
 type syncService interface {

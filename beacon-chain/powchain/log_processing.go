@@ -1,8 +1,8 @@
 package powchain
 
 import (
-	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -11,9 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -21,23 +21,39 @@ import (
 )
 
 var (
-	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes,bytes32[32])")
-	chainStartEventSignature = []byte("ChainStart(bytes32,bytes)")
+	depositEventSignature    = []byte("Deposit(bytes,bytes,bytes,bytes,bytes)")
+	chainStartEventSignature = []byte("Eth2Genesis(bytes32,bytes,bytes)")
 )
 
 // HasChainStartLogOccurred queries all logs in the deposit contract to verify
-// if ChainStart has occurred. If so, it returns true alongside the ChainStart timestamp.
-func (w *Web3Service) HasChainStartLogOccurred() (bool, uint64, error) {
-	genesisTime, err := w.depositContractCaller.GenesisTime(&bind.CallOpts{})
+// if ChainStart has occurred.
+func (w *Web3Service) HasChainStartLogOccurred() (bool, error) {
+	return w.depositContractCaller.ChainStarted(&bind.CallOpts{})
+}
+
+// ETH2GenesisTime retrieves the genesis time of the beacon chain
+// from the deposit contract.
+func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			w.depositContractAddress,
+		},
+		Topics: [][]common.Hash{{hashutil.Hash(chainStartEventSignature)}},
+	}
+	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
 	if err != nil {
-		return false, 0, fmt.Errorf("could not query contract to verify chain started: %v", err)
+		return 0, err
 	}
-	// If chain has not yet started, the result will be an empty byte slice.
-	if bytes.Equal(genesisTime, []byte{}) {
-		return false, 0, nil
+	if len(logs) == 0 {
+		return 0, errors.New("no chainstart logs exist")
 	}
-	timestamp := binary.LittleEndian.Uint64(genesisTime)
-	return true, timestamp, nil
+
+	_, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
+	if err != nil {
+		return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
+	}
+	timestamp := binary.LittleEndian.Uint64(timestampData)
+	return timestamp, nil
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -52,14 +68,14 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 		w.ProcessChainStartLog(depositLog)
 		return
 	}
-	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid signature")
+	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
 }
 
 // ProcessDepositLog processes the log which had been received from
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
-	_, depositData, merkleTreeIndex, _, err := contracts.UnpackDepositLogData(depositLog.Data)
+	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
 		return
@@ -77,20 +93,39 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
 	validData := true
-	depositInput, err := helpers.DecodeDepositInput(depositData)
+	depositData := &pb.DepositData{
+		Amount:                bytesutil.FromBytes8(amount),
+		Pubkey:                pubkey,
+		Signature:             signature,
+		WithdrawalCredentials: withdrawalCredentials,
+	}
+
+	depositHash, err := hashutil.DepositHash(depositData)
 	if err != nil {
-		log.Debugf("Could not decode deposit input %v", err)
-		validData = false
+		log.Errorf("Unable to determine hashed value of deposit %v", err)
+		return
+	}
+
+	if err := w.depositTrie.InsertIntoTrie(depositHash[:], int(index)); err != nil {
+		log.Errorf("Unable to insert deposit into trie %v", err)
+		return
+	}
+
+	proof, err := w.depositTrie.MerkleProof(int(index))
+	if err != nil {
+		log.Errorf("Unable to generate merkle proof for deposit %v", err)
+		return
 	}
 
 	deposit := &pb.Deposit{
-		DepositData: depositData,
-		Index:       index,
+		Data:  depositData,
+		Index: index,
+		Proof: proof,
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted && validData {
-		var pubkey = fmt.Sprintf("#%x", depositInput.Pubkey)
+		var pubkey = fmt.Sprintf("#%x", depositData.Pubkey)
 		if w.beaconDB.PubkeyInChainstart(w.ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
 		} else {
@@ -102,13 +137,13 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
 
 	if !w.chainStarted {
-		w.chainStartDeposits = append(w.chainStartDeposits, depositData)
+		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
-			"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
+			"publicKey":       fmt.Sprintf("%#x", depositData.Pubkey),
 			"merkleTreeIndex": index,
 		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
@@ -123,7 +158,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	chainStartCount.Inc()
-	chainStartDepositRoot, timestampData, err := contracts.UnpackChainStartLogData(depositLog.Data)
+	chainStartDepositRoot, _, timestampData, err := contracts.UnpackChainStartLogData(depositLog.Data)
 	if err != nil {
 		log.Errorf("Unable to unpack ChainStart log data %v", err)
 		return
@@ -139,11 +174,17 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	w.depositRoot = chainStartDepositRoot[:]
 	chainStartTime := time.Unix(int64(timestamp), 0)
 
+	depHashes, err := w.ChainStartDepositHashes()
+	if err != nil {
+		log.Errorf("Generating chainstart deposit hashes failed: %v", err)
+		return
+	}
+
 	// We then update the in-memory deposit trie from the chain start
 	// deposits at this point, as this trie will be later needed for
 	// incoming, post-chain start deposits.
 	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(
-		w.chainStartDeposits,
+		depHashes,
 		int(params.BeaconConfig().DepositContractTreeDepth),
 	)
 	if err != nil {
@@ -215,4 +256,18 @@ func (w *Web3Service) requestBatchedLogs() error {
 
 	w.lastRequestedBlock.Set(requestedBlock)
 	return nil
+}
+
+// ChainStartDepositHashes returns the hashes of all the chainstart deposits
+// stored in memory.
+func (w *Web3Service) ChainStartDepositHashes() ([][]byte, error) {
+	hashes := make([][]byte, len(w.chainStartDeposits))
+	for i, dep := range w.chainStartDeposits {
+		hash, err := hashutil.DepositHash(dep.Data)
+		if err != nil {
+			return nil, err
+		}
+		hashes[i] = hash[:]
+	}
+	return hashes, nil
 }
