@@ -166,8 +166,8 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
 	}
 	depositData := [][]byte{}
-	for i := range upToLatestEth1DataDeposits {
-		depHash, err := hashutil.DepositHash(upToLatestEth1DataDeposits[i].Data)
+	for _, dep := range upToLatestEth1DataDeposits {
+		depHash, err := hashutil.DepositHash(dep.Data)
 		if err != nil {
 			return nil, fmt.Errorf("coulf not hash deposit data %v", err)
 		}

@@ -341,18 +341,25 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	var mockSig [96]byte
+	var mockCreds [32]byte
+
 	// Using the merkleTreeIndex as the block number for this test...
 	readyDeposits := []*pbp2p.Deposit{
 		{
 			Index: 0,
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte("a"),
+				Pubkey:                []byte("a"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		},
 		{
 			Index: 1,
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte("b"),
+				Pubkey:                []byte("b"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		},
 	}
@@ -361,13 +368,17 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		{
 			Index: 2,
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte("c"),
+				Pubkey:                []byte("c"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		},
 		{
 			Index: 3,
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte("d"),
+				Pubkey:                []byte("d"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		},
 	}
@@ -429,17 +440,24 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	var mockSig [96]byte
+	var mockCreds [32]byte
+
 	readyDeposits := []*pbp2p.Deposit{
 		{
 			Index: 0,
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte("a"),
+				Pubkey:                []byte("a"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		},
 		{
 			Index: 1,
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte("b"),
+				Pubkey:                []byte("b"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		},
 	}
@@ -449,7 +467,9 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
 			Index: uint64(i),
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte{byte(i)},
+				Pubkey:                []byte{byte(i)},
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		})
 	}
@@ -512,18 +532,24 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
+	var mockSig [96]byte
+	var mockCreds [32]byte
 
 	readyDeposits := []*pbp2p.Deposit{
 		{
 			Index: 0,
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte("a"),
+				Pubkey:                []byte("a"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		},
 		{
 			Index: 1,
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte("b"),
+				Pubkey:                []byte("b"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		},
 	}
@@ -533,7 +559,9 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
 			Index: uint64(i),
 			Data: &pbp2p.DepositData{
-				Pubkey: []byte{byte(i)},
+				Pubkey:                []byte{byte(i)},
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
 			},
 		})
 	}
