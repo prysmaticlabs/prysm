@@ -110,11 +110,7 @@ func (c *ChainService) Start() {
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSub event.Subscription) {
-	initialDepositsData := c.web3Service.ChainStartDeposits()
-	initialDeposits := make([]*pb.Deposit, len(initialDepositsData))
-	for i := range initialDepositsData {
-		initialDeposits[i] = &pb.Deposit{DepositData: initialDepositsData[i]}
-	}
+	initialDeposits := c.web3Service.ChainStartDeposits()
 
 	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data())
 	if err != nil {
