@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -234,4 +235,52 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	if !proto.Equal(res, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
 	}
+}
+
+func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
+	ctx := context.Background()
+	server := &AttesterServer{
+		cache: cache.NewAttestationCache(),
+	}
+
+	req := &pb.AttestationDataRequest{
+		Shard: 1,
+		Slot:  2,
+	}
+
+	res := &pb.AttestationDataResponse{
+		HeadSlot: 55,
+	}
+
+	if err := server.cache.MarkInProgress(req); err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		response, err := server.AttestationDataAtSlot(ctx, req)
+		if err != nil {
+			t.Error(err)
+		}
+		if !proto.Equal(res, response) {
+			t.Error("Expected  equal responses from cache")
+		}
+	}()
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+
+		if err := server.cache.Put(ctx, req, res); err != nil {
+			t.Error(err)
+		}
+		if err := server.cache.MarkNotInProgress(req); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	wg.Wait()
 }

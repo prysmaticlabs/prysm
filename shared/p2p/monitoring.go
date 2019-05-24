@@ -6,18 +6,20 @@ import (
 
 	host "github.com/libp2p/go-libp2p-host"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
-	peerCountMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+	peerCountMetric = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "p2p_peer_count",
 		Help: "The number of currently connected peers",
 	})
+	propagationTimeMetric = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "p2p_propagation_time_sec",
+		Help:    "The time between message sent/received from peer",
+		Buckets: append(prometheus.DefBuckets, []float64{20, 30, 60, 90}...),
+	})
 )
-
-func init() {
-	prometheus.MustRegister(peerCountMetric)
-}
 
 // starPeerWatcher updates the peer count metric and calls to reconnect any VIP
 // peers such as the bootnode peer or relay node peer.

@@ -99,4 +99,21 @@ var (
 		Name:  "clear-db",
 		Usage: "Clears any previously stored data at the data directory",
 	}
+	// LogFormat specifies the log output format.
+	LogFormat = cli.StringFlag{
+		Name:  "log-format",
+		Usage: "Specify log formatting. Supports: text, json, fluentd.",
+		Value: "text",
+	}
+	// MaxGoroutines specifies the maximum amount of goroutines tolerated, before a status check fails.
+	MaxGoroutines = cli.Int64Flag{
+		Name:  "max-goroutines",
+		Usage: "Specifies the upper limit of goroutines running before a status check fails",
+		Value: 5000,
+	}
+	// LogFileName specifies the log output file name.
+	LogFileName = cli.StringFlag{
+		Name:  "log-file",
+		Usage: "Specify log file name, relative or absolute",
+	}
 )

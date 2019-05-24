@@ -8,9 +8,11 @@ import (
 	"strings"
 	"syscall"
 
+	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/node"
@@ -98,10 +100,6 @@ func createValidatorAccount(ctx *cli.Context) (string, string, error) {
 }
 
 func main() {
-	customFormatter := new(prefixed.TextFormatter)
-	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
-	customFormatter.FullTimestamp = true
-	logrus.SetFormatter(customFormatter)
 	log := logrus.WithField("prefix", "main")
 	app := cli.NewApp()
 	app.Name = "validator"
@@ -147,17 +145,47 @@ contract in order to activate the validator client`,
 		cmd.TraceSampleFractionFlag,
 		cmd.BootstrapNode,
 		cmd.MonitoringPortFlag,
+		cmd.LogFormat,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
 		debug.MemProfileRateFlag,
 		debug.CPUProfileFlag,
 		debug.TraceFlag,
+		cmd.LogFileName,
 	}
 
 	app.Flags = append(app.Flags, featureconfig.ValidatorFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
+		format := ctx.GlobalString(cmd.LogFormat.Name)
+		switch format {
+		case "text":
+			formatter := new(prefixed.TextFormatter)
+			formatter.TimestampFormat = "2006-01-02 15:04:05"
+			formatter.FullTimestamp = true
+			// If persistent log files are written - we disable the log messages coloring because
+			// the colors are ANSI codes and seen as Gibberish in the log files.
+			formatter.DisableColors = ctx.GlobalString(cmd.LogFileName.Name) != ""
+			logrus.SetFormatter(formatter)
+			break
+		case "fluentd":
+			logrus.SetFormatter(&joonix.FluentdFormatter{})
+			break
+		case "json":
+			logrus.SetFormatter(&logrus.JSONFormatter{})
+			break
+		default:
+			return fmt.Errorf("unknown log format %s", format)
+		}
+
+		logFileName := ctx.GlobalString(cmd.LogFileName.Name)
+		if logFileName != "" {
+			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
+				log.WithError(err).Error("Failed to configuring logging to disk.")
+			}
+		}
+
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		return debug.Setup(ctx)
 	}

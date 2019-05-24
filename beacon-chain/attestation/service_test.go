@@ -404,10 +404,13 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 		},
 	}
 
+	wanted := "bitfield points to an invalid index in the committee"
+
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
-		t.Fatalf("could not update latest attestation: %v", err)
+		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Bitfield points to an invalid index in the committee")
+
+	testutil.AssertLogsContain(t, hook, wanted)
 }
 
 func TestBatchUpdate_FromSync(t *testing.T) {
