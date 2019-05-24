@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupInitialDeposits(t *testing.T, numDeposits int) []*pb.Deposit {
+func setupInitialDeposits(numDeposits int) []*pb.Deposit {
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		balance := params.BeaconConfig().MaxDepositAmount
@@ -31,7 +31,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) []*pb.Deposit {
 func TestAttestationDataSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	deposits := setupInitialDeposits(t, 100)
+	deposits := setupInitialDeposits(100)
 	if err := db.InitializeState(context.Background(), uint64(0), deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}

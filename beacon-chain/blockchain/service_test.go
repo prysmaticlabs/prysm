@@ -178,7 +178,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 	return deposits, privKeys
 }
 
-func createPreChainStartDeposit(t *testing.T, pk []byte, index uint64) *pb.Deposit {
+func createPreChainStartDeposit(pk []byte, index uint64) *pb.Deposit {
 	balance := params.BeaconConfig().MaxDepositAmount
 	depositData := &pb.DepositData{Pubkey: pk, Amount: balance}
 
