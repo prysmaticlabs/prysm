@@ -104,7 +104,7 @@ func ComputeCommittee(
 	start := utils.SplitOffset(validatorCount, totalCommittees, index)
 	end := utils.SplitOffset(validatorCount, totalCommittees, index+1)
 
-	// Use cached shuffled validator list if we have seen the seed before.
+	// Use cached shuffled indices list if we have seen the seed before.
 	cachedShuffledList, err := shuffledIndicesCache.ShuffledIndicesBySeed(seed[:])
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func ComputeCommittee(
 		Seed:            seed[:],
 		ShuffledIndices: shuffledIndices,
 	}); err != nil {
-		return []uint64{}, fmt.Errorf("could not add shuffled validator list to cache: %v", err)
+		return []uint64{}, fmt.Errorf("could not add shuffled indices list to cache: %v", err)
 	}
 
 	return shuffledIndices[start:end], nil
@@ -337,7 +337,7 @@ func RestartCommitteeCache() {
 	committeeCache = cache.NewCommitteesCache()
 }
 
-// RestartShuffledValidatorCache restarts the shuffled validator cache from scratch.
+// RestartShuffledValidatorCache restarts the shuffled indices cache from scratch.
 func RestartShuffledValidatorCache() {
 	shuffledIndicesCache = cache.NewShuffledIndicesCache()
 }
