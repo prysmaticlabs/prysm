@@ -17,7 +17,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// TODO(#2307): Update CommitteeAssignment and delete committee cache
 var committeeCache = cache.NewCommitteesCache()
+var shuffledValidators = cache.NewShuffledValidatorsCache()
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
 type CrosslinkCommittee struct {
@@ -72,8 +74,19 @@ func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
 //        count=get_epoch_committee_count(state, epoch),
 //    )
 func CrosslinkCommitteeAtEpoch(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64, error) {
-	indices := ActiveValidatorIndices(state, epoch)
 	seed := GenerateSeed(state, epoch)
+
+	// Use cached shuffled validator list if we have seen the seed before.
+	cachedValidatorList, err := shuffledValidators.ShuffledValidatorsByEpoch(seed[:])
+	if err != nil {
+		return nil, err
+	}
+
+	if cachedValidatorList != nil {
+		
+	}
+
+	indices := ActiveValidatorIndices(state, epoch)
 	startShard, err := EpochStartShard(state, epoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get start shard: %v", err)
