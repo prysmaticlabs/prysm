@@ -344,23 +344,31 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	// Using the merkleTreeIndex as the block number for this test...
 	readyDeposits := []*pbp2p.Deposit{
 		{
-			Index:       0,
-			DepositData: []byte("a"),
+			Index: 0,
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte("a"),
+			},
 		},
 		{
-			Index:       1,
-			DepositData: []byte("b"),
+			Index: 1,
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte("b"),
+			},
 		},
 	}
 
 	recentDeposits := []*pbp2p.Deposit{
 		{
-			Index:       2,
-			DepositData: []byte("c"),
+			Index: 2,
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte("c"),
+			},
 		},
 		{
-			Index:       3,
-			DepositData: []byte("d"),
+			Index: 3,
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte("d"),
+			},
 		},
 	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -423,20 +431,26 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 
 	readyDeposits := []*pbp2p.Deposit{
 		{
-			Index:       0,
-			DepositData: []byte("a"),
+			Index: 0,
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte("a"),
+			},
 		},
 		{
-			Index:       1,
-			DepositData: []byte("b"),
+			Index: 1,
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte("b"),
+			},
 		},
 	}
 
 	var recentDeposits []*pbp2p.Deposit
 	for i := 2; i < 16; i++ {
 		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
-			Index:       uint64(i),
-			DepositData: []byte{byte(i)},
+			Index: uint64(i),
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte{byte(i)},
+			},
 		})
 	}
 
@@ -501,20 +515,26 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	readyDeposits := []*pbp2p.Deposit{
 		{
-			Index:       0,
-			DepositData: []byte("a"),
+			Index: 0,
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte("a"),
+			},
 		},
 		{
-			Index:       1,
-			DepositData: []byte("b"),
+			Index: 1,
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte("b"),
+			},
 		},
 	}
 
 	var recentDeposits []*pbp2p.Deposit
 	for i := 2; i < 22; i++ {
 		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
-			Index:       uint64(i),
-			DepositData: []byte{byte(i)},
+			Index: uint64(i),
+			Data: &pbp2p.DepositData{
+				Pubkey: []byte{byte(i)},
+			},
 		})
 	}
 
@@ -581,13 +601,21 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	deps := []*pbp2p.Deposit{
-		{Index: 0, DepositData: []byte("a")},
-		{Index: 1, DepositData: []byte("b")},
+		{Index: 0, Data: &pbp2p.DepositData{
+			Pubkey: []byte("a"),
+		}},
+		{Index: 1, Data: &pbp2p.DepositData{
+			Pubkey: []byte("b"),
+		}},
 	}
 	depsData := [][]byte{}
 	for _, dp := range deps {
 		db.InsertDeposit(context.Background(), dp, big.NewInt(0))
-		depsData = append(depsData, dp.DepositData)
+		depHash, err := hashutil.DepositHash(dp.Data)
+		if err != nil {
+			t.Errorf("Could not hash deposit")
+		}
+		depsData = append(depsData, depHash[:])
 	}
 
 	depositTrie, err := trieutil.GenerateTrieFromItems(depsData, int(params.BeaconConfig().DepositContractTreeDepth))
