@@ -97,7 +97,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
-		log.Errorf("unable to marshal the beacon state: %v", err)
+		t.Errorf("unable to marshal the beacon state: %v", err)
 		return
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])

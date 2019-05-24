@@ -47,5 +47,5 @@ func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositInput, error)
 // where withdrawal_credentials is of type bytes32.
 func withdrawalCredentialsHash(withdrawalKey *Key) []byte {
 	h := Keccak256(withdrawalKey.PublicKey.Marshal())
-	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h...)[:32]
+	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[0:]...)[:32]
 }
