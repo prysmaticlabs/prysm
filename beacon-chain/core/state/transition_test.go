@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -31,15 +30,12 @@ func setupInitialDeposits(t *testing.T, numDeposits uint64) ([]*pb.Deposit, []*b
 		if err != nil {
 			t.Fatal(err)
 		}
-		depositInput := &pb.DepositInput{
+		depositData := &pb.DepositData{
 			Pubkey: priv.PublicKey().Marshal(),
+			Amount: params.BeaconConfig().MaxDepositAmount,
 		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+
+		deposits[i] = &pb.Deposit{Data: depositData}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys
