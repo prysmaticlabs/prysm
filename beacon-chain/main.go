@@ -94,7 +94,7 @@ func main() {
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
-			logrus.SetFormatter(&joonix.FluentdFormatter{})
+			logrus.SetFormatter(joonix.NewFormatter())
 			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
