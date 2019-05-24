@@ -13,7 +13,7 @@ import (
 // of Simple Serialized deposit input followed by 8 bytes for a deposit value
 // and 8 bytes for a unix timestamp, all in LittleEndian format.
 func EncodeDepositData(
-	depositInput *pb.DepositInput,
+	depositInput *pb.DepositData,
 	depositValue uint64,
 	depositTimestamp int64,
 ) ([]byte, error) {
@@ -40,14 +40,14 @@ func EncodeDepositData(
 // algorithm.
 // TODO(#1253): Do not assume we will receive serialized proto objects - instead,
 // replace completely by a common struct which can be simple serialized.
-func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
+func DecodeDepositInput(depositData []byte) (*pb.DepositData, error) {
 	if len(depositData) < 16 {
 		return nil, fmt.Errorf(
 			"deposit data slice too small: len(depositData) = %d",
 			len(depositData),
 		)
 	}
-	depositInput := new(pb.DepositInput)
+	depositInput := new(pb.DepositData)
 	// Since the value deposited and the timestamp are both 8 bytes each,
 	// the deposit data is the chunk after the first 16 bytes.
 	depositInputBytes := depositData[16:]

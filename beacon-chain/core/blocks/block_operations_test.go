@@ -37,7 +37,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 		if err != nil {
 			t.Fatal(err)
 		}
-		depositInput := &pb.DepositInput{
+		depositInput := &pb.DepositData{
 			Pubkey: priv.PublicKey().Marshal(),
 		}
 		balance := params.BeaconConfig().MaxDepositAmount
