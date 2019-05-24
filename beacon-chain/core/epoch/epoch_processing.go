@@ -25,7 +25,7 @@ import (
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
 	source []*pb.PendingAttestation
-	target []*pb.PendingAttestation
+	Target []*pb.PendingAttestation
 	head   []*pb.PendingAttestation
 }
 
@@ -38,7 +38,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
-// ProcessJustificationFinalization processes justification and finalization during
+// ProcessJustificationAndFinalization processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 //
 // Spec pseudocode definition:
@@ -84,7 +84,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 //    if (bitfield >> 0) % 4 == 0b11 and old_current_justified_epoch == current_epoch - 1:
 //        state.finalized_epoch = old_current_justified_epoch
 //        state.finalized_root = get_block_root(state, state.finalized_epoch)
-func ProcessJustificationFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (
+func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (
 	*pb.BeaconState, error) {
 	// There's no reason to process justification until the 3rd epoch.
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -420,7 +420,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	}
 	var attsPackage [][]*pb.PendingAttestation
 	attsPackage = append(attsPackage, atts.source)
-	attsPackage = append(attsPackage, atts.target)
+	attsPackage = append(attsPackage, atts.Target)
 	attsPackage = append(attsPackage, atts.head)
 	// Compute rewards / penalties for each attestation in the list and update
 	// the rewards and penalties lists.
@@ -470,7 +470,7 @@ func AttestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	// based on the finality delay.
 	finalityDelay := prevEpoch - state.FinalizedEpoch
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
-		targetIndices, err := UnslashedAttestingIndices(state, atts.target)
+		targetIndices, err := UnslashedAttestingIndices(state, atts.Target)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
 		}
@@ -784,7 +784,7 @@ func UnslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uint64, error) {
 	indices, err := UnslashedAttestingIndices(state, atts)
 	if err != nil {
-		return 0, fmt.Errorf("could not get attesting balance: %v", err)
+		return 0, fmt.Errorf("could not get attesting indices: %v", err)
 	}
 	return helpers.TotalBalance(state, indices), nil
 }
@@ -854,7 +854,6 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	} else {
 		srcAtts = state.PreviousEpochAttestations
 	}
-
 	targetRoot, err := helpers.BlockRoot(state, epoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
@@ -882,7 +881,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 
 	return &MatchedAttestations{
 		source: srcAtts,
-		target: tgtAtts,
+		Target: tgtAtts,
 		head:   headAtts,
 	}, nil
 }
