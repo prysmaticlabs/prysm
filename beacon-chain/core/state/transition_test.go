@@ -402,11 +402,11 @@ func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
 }
 
 func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
+	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 100}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                     e,
+		Slot:                     epoch * params.BeaconConfig().SlotsPerEpoch,
 		LatestBlockRoots:         make([][]byte, 128),
 		LatestRandaoMixes:        make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots:   make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
@@ -417,11 +417,11 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 }
 
 func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
+	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}, AggregationBitfield: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                      e + 1,
+		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		LatestBlockRoots:          make([][]byte, 128),
 		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
@@ -432,11 +432,11 @@ func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
 }
 
 func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
+	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}, AggregationBitfield: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                     e + 1,
+		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		LatestBlockRoots:         make([][]byte, 128),
 		LatestRandaoMixes:        make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots:   make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
@@ -447,7 +447,7 @@ func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
 }
 
 func TestProcessEpoch_CanProcess(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
+	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}}}
 	var crosslinks []*pb.Crosslink
@@ -458,7 +458,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 		})
 	}
 	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                     e + 1,
+		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		LatestBlockRoots:         make([][]byte, 128),
 		LatestSlashedBalances:    []uint64{0, 1e9, 0},
 		LatestRandaoMixes:        make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),

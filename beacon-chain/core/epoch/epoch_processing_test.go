@@ -90,7 +90,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	indices, err := UnslashedAttestingIndices(state, atts)
+	indices, err := unslashedAttestingIndices(state, atts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	// Verify the slashed validator is filtered.
 	slashedValidator := indices[0]
 	state.ValidatorRegistry[slashedValidator].Slashed = true
-	indices, err = UnslashedAttestingIndices(state, atts)
+	indices, err = unslashedAttestingIndices(state, atts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestUnslashedAttestingIndices_CantGetIndicesBitfieldError(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	const wantedErr = "could not get attester indices: wanted participants bitfield length 0, got: 1"
-	if _, err := UnslashedAttestingIndices(state, atts); !strings.Contains(err.Error(), wantedErr) {
+	if _, err := unslashedAttestingIndices(state, atts); !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
 }
@@ -435,7 +435,7 @@ func TestCrosslinkFromAttsData_CanGetCrosslink(t *testing.T) {
 		CrosslinkDataRoot:     []byte{'A'},
 		PreviousCrosslinkRoot: []byte{'B'},
 	}
-	if !proto.Equal(CrosslinkFromAttsData(s, a), &pb.Crosslink{
+	if !proto.Equal(crosslinkFromAttsData(s, a), &pb.Crosslink{
 		Epoch:                       params.BeaconConfig().MaxCrosslinkEpochs,
 		CrosslinkDataRootHash32:     []byte{'A'},
 		PreviousCrosslinkRootHash32: []byte{'B'},
@@ -465,64 +465,10 @@ func TestAttsForCrosslink_CanGetAttestations(t *testing.T) {
 	}
 }
 
-func TestCrosslinkAttestingIndices_CanGetIndices(t *testing.T) {
-	atts := make([]*pb.PendingAttestation, 2)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
-			Data: &pb.AttestationData{
-				Slot:                  uint64(i),
-				Shard:                 uint64(i + 2),
-				PreviousCrosslinkRoot: []byte{'E'},
-				TargetEpoch:           0,
-			},
-			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
-				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
-		}
-	}
-
-	// Generate validators and state for the 2 attestations.
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	s := &pb.BeaconState{
-		Slot:              0,
-		ValidatorRegistry: validators,
-		CurrentCrosslinks: []*pb.Crosslink{
-			{Epoch: 0},
-			{Epoch: 0},
-			{Epoch: 0},
-			{Epoch: 0},
-		},
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-	c := &pb.Crosslink{
-		Epoch:                       0,
-		PreviousCrosslinkRootHash32: []byte{'E'},
-	}
-	indices, err := CrosslinkAttestingIndices(s, c, atts)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// verify the there's indices and it's sorted.
-	if len(indices) == 0 {
-		t.Error("crosslink attesting indices length can't be 0")
-	}
-	for i := 0; i < len(indices)-1; i++ {
-		if indices[i] > indices[i+1] {
-			t.Error("sorted indices not sorted")
-		}
-	}
-}
-
 func TestWinningCrosslink_CantGetMatchingAtts(t *testing.T) {
 	wanted := fmt.Sprintf("could not get matching attestations: input epoch: %d != current epoch: %d or previous epoch: %d",
 		100, 0, 0)
-	_, _, err := WinningCrosslink(&pb.BeaconState{Slot: 0}, 0, 100)
+	_, _, err := winningCrosslink(&pb.BeaconState{Slot: 0}, 0, 100)
 	if err.Error() != wanted {
 		t.Fatal(err)
 	}
@@ -546,7 +492,7 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 		PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 	}
 
-	crosslink, indices, err := WinningCrosslink(state, 0, ge)
+	crosslink, indices, err := winningCrosslink(state, 0, ge)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -602,7 +548,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	winner, indices, err := WinningCrosslink(state, 0, ge)
+	winner, indices, err := winningCrosslink(state, 0, ge)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -737,9 +683,9 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
 			Balances: []uint64{tt.a},
 		}
-		c := BaseReward(state, 0)
+		c := baseReward(state, 0)
 		if c != tt.c {
-			t.Errorf("BaseReward(%d) = %d, want = %d",
+			t.Errorf("baseReward(%d) = %d, want = %d",
 				tt.a, c, tt.c)
 		}
 	}
@@ -971,7 +917,7 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 	validatorCount := uint64(128)
 	state := buildState(e+2, validatorCount)
 
-	rewards, penalties, err := CrosslinkDelta(state)
+	rewards, penalties, err := crosslinkDelta(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -982,9 +928,9 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
 		}
 		// Since no one attested, all the validators should get penalized the same
-		if penalties[i] != BaseReward(state, i) {
+		if penalties[i] != baseReward(state, i) {
 			t.Errorf("Wanted penalty balance %d, got %d",
-				BaseReward(state, i), penalties[i])
+				baseReward(state, i), penalties[i])
 		}
 	}
 }
@@ -1035,7 +981,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 		CrosslinkDataRootHash32: []byte{'A'},
 	}
 
-	rewards, penalties, err := CrosslinkDelta(state)
+	rewards, penalties, err := crosslinkDelta(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1044,7 +990,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, winningIndices, err := WinningCrosslink(state, startShard+1, 0)
+	_, winningIndices, err := winningCrosslink(state, startShard+1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1053,7 +999,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
-		want := BaseReward(state, i) * attestingBalance / committeeBalance
+		want := baseReward(state, i) * attestingBalance / committeeBalance
 		if rewards[i] != want {
 			t.Errorf("Wanted reward balance %d, got %d", want, rewards[i])
 		}
@@ -1068,7 +1014,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 func TestCrosslinkDelta_CantGetWinningCrosslink(t *testing.T) {
 	state := buildState(0, 1)
 
-	_, _, err := CrosslinkDelta(state)
+	_, _, err := crosslinkDelta(state)
 	wanted := "could not get winning crosslink: could not get matching attestations"
 	if !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
@@ -1081,7 +1027,7 @@ func TestAttestationDelta_CantGetBlockRoot(t *testing.T) {
 	state := buildState(2*e, 1)
 	state.Slot = 0
 
-	_, _, err := AttestationDelta(state)
+	_, _, err := attestationDelta(state)
 	wanted := "could not get block root for epoch"
 	if !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
@@ -1091,7 +1037,7 @@ func TestAttestationDelta_CantGetBlockRoot(t *testing.T) {
 func TestAttestationDelta_CantGetAttestation(t *testing.T) {
 	state := buildState(0, 1)
 
-	_, _, err := AttestationDelta(state)
+	_, _, err := attestationDelta(state)
 	wanted := "could not get source, target and head attestations"
 	if !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
@@ -1114,7 +1060,7 @@ func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
 	}
 	state.PreviousEpochAttestations = atts
 
-	_, _, err := AttestationDelta(state)
+	_, _, err := attestationDelta(state)
 	wanted := "could not get attestation indices"
 	if !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
@@ -1139,7 +1085,7 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		}
 	}
 
-	rewards, penalties, err := AttestationDelta(state)
+	rewards, penalties, err := attestationDelta(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1151,7 +1097,7 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		}
 		// Since no one attested, all the validators should get penalized the same
 		// it's 3 times the penalized amount because source, target and head.
-		wanted := 3 * BaseReward(state, i)
+		wanted := 3 * baseReward(state, i)
 		if penalties[i] != wanted {
 			t.Errorf("Wanted penalty balance %d, got %d",
 				wanted, penalties[i])
@@ -1184,7 +1130,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		CrosslinkDataRootHash32: []byte{'A'},
 	}
 
-	rewards, penalties, err := AttestationDelta(state)
+	rewards, penalties, err := attestationDelta(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1199,10 +1145,10 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 
 	for _, i := range attestedIndices {
 		// Base rewards for getting source right
-		wanted := 3 * (BaseReward(state, i) * attestedBalance / totalBalance)
+		wanted := 3 * (baseReward(state, i) * attestedBalance / totalBalance)
 		// Base rewards for proposer and attesters working together getting attestation
 		// on chain in the fatest manner
-		wanted += BaseReward(state, i) * params.BeaconConfig().MinAttestationInclusionDelay
+		wanted += baseReward(state, i) * params.BeaconConfig().MinAttestationInclusionDelay
 		if rewards[i] != wanted {
 			t.Errorf("Wanted reward balance %d, got %d", wanted, rewards[i])
 		}
