@@ -49,12 +49,20 @@ docker pull gcr.io/prysmaticlabs/prysm/beacon-chain:latest
 First, clone our repository:
 
 ```
+sudo apt-get install git
 git clone https://github.com/prysmaticlabs/prysm
+cd prysm
 ```
 
 Download the Bazel build tool by Google here and ensure it works by typing:
 
 ```
+sudo apt-get install curl
+sudo apt-get install openjdk-8-jdk
+echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+curl https://bazel.build/bazel-release.pub.gpg | sudo apt-key add -
+sudo apt-get update
+sudo apt-get install bazel
 bazel version
 ```
 
@@ -111,6 +119,15 @@ Once your beacon node is up, you'll need to attach a validator client as a separ
 Using your validator deposit data from the previous step, use the instructions in https://alpha.prylabs.net/participate to deposit.
 
 It'll take a while for the nodes in the network to process your deposit, but once you're active, your validator will begin doing its responsibility! In your validator client, you'll be able to frequently see your validator balance as it goes up. If you ever go offline for a while, you'll start gradually losing your deposit until you get kicked out of the system. Congratulations, you are now running Ethereum 2.0 Phase 0 :).
+
+<b>With bazel</b>
+
+Open another terminal window
+
+```
+cd prysm
+bazel run //validator
+```
 
 # Testing
 
