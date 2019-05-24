@@ -28,7 +28,7 @@ var (
 	})
 )
 
-// ShuffledIndicessBySeed defines the shuffled validator indices per randao seed.
+// ShuffledIndicesBySeed defines the shuffled validator indices per randao seed.
 type ShuffledIndicesBySeed struct {
 	Seed            []byte
 	ShuffledIndices []uint64
@@ -82,8 +82,8 @@ func (c *ShuffledIndicesCache) ShuffledIndicesBySeed(seed []byte) ([]uint64, err
 	return cInfo.ShuffledIndices, nil
 }
 
-// AddCommittees adds CommitteesInSlot object to the cache. This method also trims the least
-// recently added ShuffledIndicessBySeed object if the cache size has ready the max cache size limit.
+// AddShuffledValidatorList adds ShuffledIndicesBySeed object to the cache. This method also trims the least
+// recently added ShuffledIndicesBySeed object if the cache size has ready the max cache size limit.
 func (c *ShuffledIndicesCache) AddShuffledValidatorList(shuffledIndices *ShuffledIndicesBySeed) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
