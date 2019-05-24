@@ -24,9 +24,9 @@ import (
 // MatchedAttestations is an object that contains the correctly
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
-	Source []*pb.PendingAttestation
+	source []*pb.PendingAttestation
 	Target []*pb.PendingAttestation
-	Head   []*pb.PendingAttestation
+	head   []*pb.PendingAttestation
 }
 
 // CanProcessEpoch checks the eligibility to process epoch.
@@ -756,9 +756,9 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		return nil, nil, fmt.Errorf("could not get source, target and head attestations: %v", err)
 	}
 	var attsPackage [][]*pb.PendingAttestation
-	attsPackage = append(attsPackage, atts.Source)
+	attsPackage = append(attsPackage, atts.source)
 	attsPackage = append(attsPackage, atts.Target)
-	attsPackage = append(attsPackage, atts.Head)
+	attsPackage = append(attsPackage, atts.head)
 	// Compute rewards / penalties for each attestation in the list and update
 	// the rewards and penalties lists.
 	for _, matchAtt := range attsPackage {
