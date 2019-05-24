@@ -6,6 +6,7 @@ go_library(
         "attestation_data.go",
         "block.go",
         "committee.go",
+        "shuffled_validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
     visibility = ["//beacon-chain:__subpackages__"],

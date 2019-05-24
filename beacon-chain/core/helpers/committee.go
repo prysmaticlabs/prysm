@@ -19,7 +19,7 @@ import (
 
 // TODO(#2307): Update CommitteeAssignment and delete committee cache
 var committeeCache = cache.NewCommitteesCache()
-var shuffledValidators = cache.NewShuffledValidatorsCache()
+var shuffledIndicesCache = cache.NewShuffledValidatorsCache()
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
 type CrosslinkCommittee struct {
@@ -75,17 +75,6 @@ func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
 //    )
 func CrosslinkCommitteeAtEpoch(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64, error) {
 	seed := GenerateSeed(state, epoch)
-
-	// Use cached shuffled validator list if we have seen the seed before.
-	cachedValidatorList, err := shuffledValidators.ShuffledValidatorsByEpoch(seed[:])
-	if err != nil {
-		return nil, err
-	}
-
-	if cachedValidatorList != nil {
-		
-	}
-
 	indices := ActiveValidatorIndices(state, epoch)
 	startShard, err := EpochStartShard(state, epoch)
 	if err != nil {
@@ -112,18 +101,35 @@ func ComputeCommittee(
 	totalCommittees uint64,
 ) ([]uint64, error) {
 	validatorCount := uint64(len(validatorIndices))
-	startOffset := utils.SplitOffset(validatorCount, totalCommittees, index)
-	endOffset := utils.SplitOffset(validatorCount, totalCommittees, index+1)
+	start := utils.SplitOffset(validatorCount, totalCommittees, index)
+	end := utils.SplitOffset(validatorCount, totalCommittees, index+1)
 
-	indices := make([]uint64, endOffset-startOffset)
-	for i := startOffset; i < endOffset; i++ {
+	// Use cached shuffled validator list if we have seen the seed before.
+	cachedShuffledList, err := shuffledIndicesCache.ShuffledValidatorsBySeed(seed[:])
+	if err != nil {
+		return nil, err
+	}
+	if cachedShuffledList != nil {
+		return cachedShuffledList[start:end], nil
+	}
+
+	// Save the shuffled indices in cache, this is only needed once per epoch or once per new seed.
+	shuffledIndices := make([]uint64, validatorCount)
+	for i := uint64(0); i < validatorCount; i++ {
 		permutedIndex, err := utils.PermutedIndex(i, validatorCount, seed)
 		if err != nil {
 			return []uint64{}, fmt.Errorf("could not get permuted index at index %d: %v", i, err)
 		}
-		indices[i-startOffset] = validatorIndices[permutedIndex]
+		shuffledIndices[i] = validatorIndices[permutedIndex]
 	}
-	return indices, nil
+
+	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.ShuffledValidatorsBySeed{
+		Seed:               seed[:],
+		ShuffledValidators: shuffledIndices,
+	}); err != nil {
+		return []uint64{}, fmt.Errorf("could not add shuffled validator list to cache: %v", err)
+	}
+	return shuffledIndices[start:end], nil
 }
 
 // AttestingIndices returns the attesting participants indices.
@@ -329,6 +335,11 @@ func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 // RestartCommitteeCache restarts the committee cache from scratch.
 func RestartCommitteeCache() {
 	committeeCache = cache.NewCommitteesCache()
+}
+
+// RestartShuffledValidatorCache restarts the shuffled validator cache from scratch.
+func RestartShuffledValidatorCache() {
+	shuffledIndicesCache = cache.NewShuffledValidatorsCache()
 }
 
 // ToCommitteeCache converts crosslink committee object

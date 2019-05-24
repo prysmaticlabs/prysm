@@ -28,17 +28,16 @@ var (
 	})
 )
 
-
 // ShuffledValidatorsBySeed defines the shuffled validator indices per randao seed.
 type ShuffledValidatorsBySeed struct {
-	Seed []byte
+	Seed               []byte
 	ShuffledValidators []uint64
 }
 
 // ShuffledValidatorsCache is a struct with 1 queue for looking up shuffled validators by seed.
 type ShuffledValidatorsCache struct {
 	shuffledValidatorsCache *cache.FIFO
-	lock            sync.RWMutex
+	lock                    sync.RWMutex
 }
 
 // slotKeyFn takes the randao seed as the key for the shuffled validators of a given epoch.
@@ -58,9 +57,9 @@ func NewShuffledValidatorsCache() *ShuffledValidatorsCache {
 	}
 }
 
-// ShuffledValidatorsByEpoch fetches ShuffledValidatorsInEpoch by epoch and seed. Returns true with a
+// ShuffledValidatorsBySeed fetches ShuffledValidatorsInEpoch by epoch and seed. Returns true with a
 // reference to the ShuffledValidatorsInEpoch info, if exists. Otherwise returns false, nil.
-func (c *ShuffledValidatorsCache) ShuffledValidatorsByEpoch(seed []byte) ([]uint64, error) {
+func (c *ShuffledValidatorsCache) ShuffledValidatorsBySeed(seed []byte) ([]uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.shuffledValidatorsCache.GetByKey(string(seed))
