@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -390,251 +389,84 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 }
 
-func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
-	t.Skip()
-	// TODO(#2307) unskip after ProcessCrosslinks is finished
-	var validatorRegistry []*pb.Validator
-	for i := uint64(0); i < 10; i++ {
-		validatorRegistry = append(validatorRegistry,
-			&pb.Validator{
-				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			})
+func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{TargetEpoch: 1}}}
+	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{CurrentEpochAttestations: atts})
+	if !strings.Contains(err.Error(), "could not get target atts prev epoch") {
+		t.Fatal("Did not receive wanted error")
 	}
-	validatorBalances := make([]uint64, len(validatorRegistry))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
-	}
+}
 
-	var attestations []*pb.PendingAttestation
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2; i++ {
-		attestations = append(attestations, &pb.PendingAttestation{
-			Data: &pb.AttestationData{
-				Slot:                     i + params.BeaconConfig().SlotsPerEpoch,
-				Shard:                    2,
-				JustifiedEpoch:           1,
-				JustifiedBlockRootHash32: []byte{0},
-			},
-			InclusionDelay: i + params.BeaconConfig().SlotsPerEpoch + 1,
+func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 100}}}
+	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
+		Slot:                     e,
+		LatestBlockRoots:         make([][]byte, 128),
+		LatestRandaoMixes:        make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:   make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentEpochAttestations: atts})
+	if !strings.Contains(err.Error(), "could not get target atts current epoch") {
+		t.Fatal("Did not receive wanted error")
+	}
+}
+
+func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}, AggregationBitfield: []byte{1}}}
+	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
+		Slot:                      e + 1,
+		LatestBlockRoots:          make([][]byte, 128),
+		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		PreviousEpochAttestations: atts})
+	if !strings.Contains(err.Error(), "could not get attesting balance prev epoch") {
+		t.Fatal("Did not receive wanted error")
+	}
+}
+
+func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}, AggregationBitfield: []byte{1}}}
+	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
+		Slot:                     e + 1,
+		LatestBlockRoots:         make([][]byte, 128),
+		LatestRandaoMixes:        make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:   make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentEpochAttestations: atts})
+	if !strings.Contains(err.Error(), "could not get attesting balance current epoch") {
+		t.Fatal("Did not receive wanted error")
+	}
+}
+
+func TestProcessEpoch_CanProcess(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}}}
+	var crosslinks []*pb.Crosslink
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks = append(crosslinks, &pb.Crosslink{
+			Epoch:                   0,
+			CrosslinkDataRootHash32: []byte{'A'},
 		})
 	}
-
-	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-
-	var randaoHashes [][]byte
-	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength; i++ {
-		randaoHashes = append(randaoHashes, []byte{byte(i)})
-	}
-
-	crosslinkRecord := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
-	newState := &pb.BeaconState{
-		Slot:               params.BeaconConfig().SlotsPerEpoch + 1,
-		LatestAttestations: attestations,
-		Balances:           validatorBalances,
-		ValidatorRegistry:  validatorRegistry,
-		LatestBlockRoots:   blockRoots,
-		LatestCrosslinks:   crosslinkRecord,
-		LatestRandaoMixes:  randaoHashes,
-		LatestActiveIndexRoots: make([][]byte,
-			params.BeaconConfig().LatestActiveIndexRootsLength),
-		LatestSlashedBalances: make([]uint64,
-			params.BeaconConfig().LatestSlashedExitLength),
-	}
-
-	_, err := state.ProcessEpoch(context.Background(), newState)
+	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
+		Slot:                     e + 1,
+		LatestBlockRoots:         make([][]byte, 128),
+		LatestSlashedBalances:    []uint64{0, 1e9, 0},
+		LatestRandaoMixes:        make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:   make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentCrosslinks:        crosslinks,
+		CurrentEpochAttestations: atts})
 	if err != nil {
-		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
-	}
-}
-
-func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
-	t.Skip()
-	// TODO(#2307) unskip after ProcessCrosslinks is finished
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCrosslinks: false,
-	})
-	var validatorRegistry []*pb.Validator
-	for i := uint64(0); i < 10; i++ {
-		validatorRegistry = append(validatorRegistry,
-			&pb.Validator{
-				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			})
-	}
-	validatorBalances := make([]uint64, len(validatorRegistry))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
+		t.Fatal(err)
 	}
 
-	var attestations []*pb.PendingAttestation
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2; i++ {
-		attestations = append(attestations, &pb.PendingAttestation{
-			Data: &pb.AttestationData{
-				Slot:                     i + params.BeaconConfig().SlotsPerEpoch,
-				Shard:                    2,
-				JustifiedEpoch:           1,
-				JustifiedBlockRootHash32: []byte{0},
-			},
-			InclusionDelay: i + params.BeaconConfig().SlotsPerEpoch + 1,
-		})
-	}
-
-	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-
-	var randaoHashes [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		randaoHashes = append(randaoHashes, []byte{byte(i)})
-	}
-
-	crosslinkRecord := make([]*pb.Crosslink, 64)
-	newState := &pb.BeaconState{
-		Slot:               params.BeaconConfig().SlotsPerEpoch + 1,
-		LatestAttestations: attestations,
-		Balances:           validatorBalances,
-		ValidatorRegistry:  validatorRegistry,
-		LatestBlockRoots:   blockRoots,
-		LatestCrosslinks:   crosslinkRecord,
-		LatestRandaoMixes:  randaoHashes,
-		LatestActiveIndexRoots: make([][]byte,
-			params.BeaconConfig().LatestActiveIndexRootsLength),
-		LatestSlashedBalances: make([]uint64,
-			params.BeaconConfig().LatestSlashedExitLength),
-		ValidatorRegistryUpdateEpoch: 0,
-		FinalizedEpoch:               1,
-	}
-
-	newState, err := state.ProcessEpoch(context.Background(), newState)
-	if err != nil {
-		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
-	}
-	if newState.ValidatorRegistryUpdateEpoch != 0 {
-		t.Errorf(
-			"Expected registry to not have been updated, received update epoch: %v",
-			newState.ValidatorRegistryUpdateEpoch,
-		)
-	}
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCrosslinks: true,
-	})
-}
-
-func TestProcessEpoch_InactiveConditions(t *testing.T) {
-	t.Skip()
-	// TODO(#2307) unskip after ProcessCrosslinks is finished
-	defaultBalance := params.BeaconConfig().MaxDepositAmount
-
-	validatorRegistry := []*pb.Validator{
-		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch},
-		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch},
-		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch},
-		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
-
-	validatorBalances := []uint64{
-		defaultBalance, defaultBalance, defaultBalance, defaultBalance,
-		defaultBalance, defaultBalance, defaultBalance, defaultBalance,
-	}
-
-	var attestations []*pb.PendingAttestation
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2; i++ {
-		attestations = append(attestations, &pb.PendingAttestation{
-			Data: &pb.AttestationData{
-				Slot:                     i + params.BeaconConfig().SlotsPerEpoch,
-				Shard:                    1,
-				JustifiedEpoch:           1,
-				JustifiedBlockRootHash32: []byte{0},
-			},
-			AggregationBitfield: []byte{},
-			InclusionDelay:      i + params.BeaconConfig().SlotsPerEpoch + 1,
-		})
-	}
-
-	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-
-	var randaoHashes [][]byte
-	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength; i++ {
-		randaoHashes = append(randaoHashes, []byte{byte(i)})
-	}
-
-	crosslinkRecord := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
-
-	newState := &pb.BeaconState{
-		Slot:               params.BeaconConfig().SlotsPerEpoch + 1,
-		LatestAttestations: attestations,
-		Balances:           validatorBalances,
-		ValidatorRegistry:  validatorRegistry,
-		LatestBlockRoots:   blockRoots,
-		LatestCrosslinks:   crosslinkRecord,
-		LatestRandaoMixes:  randaoHashes,
-		LatestActiveIndexRoots: make([][]byte,
-			params.BeaconConfig().LatestActiveIndexRootsLength),
-		LatestSlashedBalances: make([]uint64,
-			params.BeaconConfig().LatestSlashedExitLength),
-	}
-
-	_, err := state.ProcessEpoch(context.Background(), newState)
-	if err != nil {
-		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
-	}
-}
-
-func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
-	t.Skip()
-	// TODO(#2307) unskip after ProcessCrosslinks is finished
-	newState := &pb.BeaconState{
-		Slot: params.BeaconConfig().SlotsPerEpoch,
-		LatestAttestations: []*pb.PendingAttestation{
-			{Data: &pb.AttestationData{Slot: 100}},
-		}}
-
-	want := fmt.Sprintf(
-		"slot %d is not within expected range of %d to %d",
-		newState.Slot,
-		0,
-		newState.Slot,
-	)
-	if _, err := state.ProcessEpoch(context.Background(), newState); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
-	}
-}
-
-func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
-	t.Skip()
-	// TODO(#2307) unskip after ProcessCrosslinks is finished
-	latestBlockRoots := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
-	for i := 0; i < len(latestBlockRoots); i++ {
-		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
-	}
-
-	var attestations []*pb.PendingAttestation
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2; i++ {
-		attestations = append(attestations, &pb.PendingAttestation{
-			Data: &pb.AttestationData{
-				Slot:                     1,
-				Shard:                    1,
-				JustifiedBlockRootHash32: make([]byte, 32),
-			},
-			AggregationBitfield: []byte{0xff},
-		})
-	}
-
-	newState := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch,
-		LatestAttestations:     attestations,
-		LatestBlockRoots:       latestBlockRoots,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	wanted := fmt.Sprintf("could not process justification and finalization of state: slot %d is not within expected range of %d to %d",
-		64, 0, 64)
-	if _, err := state.ProcessEpoch(context.Background(), newState); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected: %s, received: %v", wanted, err)
+	wanted := uint64(1e9)
+	if newState.LatestSlashedBalances[2] != wanted {
+		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[2])
 	}
 }
