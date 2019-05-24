@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"reflect"
 	"testing"
 
@@ -97,12 +98,11 @@ func TestShardDelta_OK(t *testing.T) {
 	}
 }
 
-func TestComputeCommittee_OK(t *testing.T) {
-	t.Skip()
-	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
-	committeesPerEpoch := uint64(6)
-	// Set epoch total validators count to 6 committees per slot.
-	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
+func TestComputeCommittee_WithoutCache(t *testing.T) {
+	// Create 10 committees
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -116,31 +116,78 @@ func TestComputeCommittee_OK(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	wantedEpoch := SlotToEpoch(state.Slot)
-	shardCount := params.BeaconConfig().ShardCount
-	startShard := state.LatestStartShard
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+	committees, err := ComputeCommittee(indices, seed, 0, 1 /* Total committee*/)
+	if err != nil {
+		t.Errorf("could not compute committee: %v", err)
+	}
 
-	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().SlotsPerEpoch
-	offset := state.Slot % params.BeaconConfig().SlotsPerEpoch
-	slotStartShard := (startShard + committeesPerSlot + offset) % shardCount
-	seed := GenerateSeed(state, wantedEpoch)
+	// Test shuffled indices are correct for shard 5 committee
+	shard := uint64(5)
+	committee5, err := ComputeCommittee(indices, seed, shard, committeeCount)
+	if err != nil {
+		t.Errorf("could not compute committee: %v", err)
+	}
+	start := utils.SplitOffset(validatorCount, committeeCount, shard)
+	end := utils.SplitOffset(validatorCount, committeeCount, shard+1)
 
-	indices := ActiveValidatorIndices(state, wantedEpoch)
-	newCommittees := make([]*CrosslinkCommittee, committeesPerSlot)
-	committees := []*CrosslinkCommittee{{}}
-	for i := uint64(0); i < committeesPerSlot; i++ {
-		committee, err := ComputeCommittee(indices, seed, committeesPerSlot*offset+i, committeesPerEpoch)
-		if err != nil {
-			t.Errorf("could not compute committee: %v", err)
-		}
-		committees[i] = &CrosslinkCommittee{
-			Committee: committee,
-			Shard:     (slotStartShard + i) % shardCount,
+	if !reflect.DeepEqual(committees[start:end], committee5) {
+		t.Error("committee has different shuffled indices")
+	}
+
+	// Test shuffled indices are correct for shard 9 committee
+	shard = uint64(9)
+	committee9, err := ComputeCommittee(indices, seed, shard, committeeCount)
+	if err != nil {
+		t.Errorf("could not compute committee: %v", err)
+	}
+	start = utils.SplitOffset(validatorCount, committeeCount, shard)
+	end = utils.SplitOffset(validatorCount, committeeCount, shard+1)
+
+	if !reflect.DeepEqual(committees[start:end], committee9) {
+		t.Error("committee has different shuffled indices")
+	}
+}
+
+func TestComputeCommittee_WithCache(t *testing.T) {
+	// Create 10 committees
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*pb.Validator, validatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
-	if reflect.DeepEqual(committees, newCommittees) {
-		t.Error("Committees from different slot shall not be equal")
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		Slot:                   200,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	// Test shuffled indices are correct for shard 3 committee
+	shard := uint64(3)
+	committee3, err := ComputeCommittee(indices, seed, shard, committeeCount)
+	if err != nil {
+		t.Errorf("could not compute committee: %v", err)
+	}
+	start := utils.SplitOffset(validatorCount, committeeCount, shard)
+	end := utils.SplitOffset(validatorCount, committeeCount, shard+1)
+	cachedIndices, err := shuffledIndicesCache.ShuffledIndicesBySeed(seed[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(cachedIndices[start:end], committee3) {
+		t.Error("committee has different shuffled indices")
 	}
 }
 
