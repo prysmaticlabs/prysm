@@ -155,6 +155,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 			Pubkey:                priv.PublicKey().Marshal(),
 			WithdrawalCredentials: make([]byte, 32),
 			Signature:             make([]byte, 96),
+			Amount:                params.BeaconConfig().MaxDepositAmount,
 		}
 		deposits[i] = &pb.Deposit{Data: depositData, Index: uint64(i)}
 		privKeys[i] = priv
