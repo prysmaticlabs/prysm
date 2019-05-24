@@ -19,7 +19,7 @@ import (
 
 // TODO(#2307): Update CommitteeAssignment and delete committee cache
 var committeeCache = cache.NewCommitteesCache()
-var shuffledIndicesCache = cache.NewShuffledValidatorsCache()
+var shuffledIndicesCache = cache.NewShuffledIndicesCache()
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
 type CrosslinkCommittee struct {
@@ -105,7 +105,7 @@ func ComputeCommittee(
 	end := utils.SplitOffset(validatorCount, totalCommittees, index+1)
 
 	// Use cached shuffled validator list if we have seen the seed before.
-	cachedShuffledList, err := shuffledIndicesCache.ShuffledValidatorsBySeed(seed[:])
+	cachedShuffledList, err := shuffledIndicesCache.ShuffledIndicesBySeed(seed[:])
 	if err != nil {
 		return nil, err
 	}
@@ -123,9 +123,9 @@ func ComputeCommittee(
 		shuffledIndices[i] = validatorIndices[permutedIndex]
 	}
 
-	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.ShuffledValidatorsBySeed{
+	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.ShuffledIndicesBySeed{
 		Seed:               seed[:],
-		ShuffledValidators: shuffledIndices,
+		ShuffledIndices: shuffledIndices,
 	}); err != nil {
 		return []uint64{}, fmt.Errorf("could not add shuffled validator list to cache: %v", err)
 	}
@@ -339,7 +339,7 @@ func RestartCommitteeCache() {
 
 // RestartShuffledValidatorCache restarts the shuffled validator cache from scratch.
 func RestartShuffledValidatorCache() {
-	shuffledIndicesCache = cache.NewShuffledValidatorsCache()
+	shuffledIndicesCache = cache.NewShuffledIndicesCache()
 }
 
 // ToCommitteeCache converts crosslink committee object

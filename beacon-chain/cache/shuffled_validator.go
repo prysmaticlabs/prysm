@@ -18,31 +18,31 @@ var (
 	maxShuffledListSize = 4
 
 	// Metrics.
-	shuffledValidatorsCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+	shuffledIndicesCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "shuffled_validators_cache_miss",
 		Help: "The number of shuffled validators requests that aren't present in the cache.",
 	})
-	shuffledValidatorsCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+	shuffledIndicesCacheHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "shuffled_validators_cache_hit",
 		Help: "The number of shuffled validators requests that are present in the cache.",
 	})
 )
 
-// ShuffledValidatorsBySeed defines the shuffled validator indices per randao seed.
-type ShuffledValidatorsBySeed struct {
+// ShuffledIndicessBySeed defines the shuffled validator indices per randao seed.
+type ShuffledIndicesBySeed struct {
 	Seed               []byte
-	ShuffledValidators []uint64
+	ShuffledIndices []uint64
 }
 
-// ShuffledValidatorsCache is a struct with 1 queue for looking up shuffled validators by seed.
-type ShuffledValidatorsCache struct {
-	shuffledValidatorsCache *cache.FIFO
+// ShuffledIndicesCache is a struct with 1 queue for looking up shuffled validators by seed.
+type ShuffledIndicesCache struct {
+	shuffledIndicesCache *cache.FIFO
 	lock                    sync.RWMutex
 }
 
 // slotKeyFn takes the randao seed as the key for the shuffled validators of a given epoch.
 func shuffleKeyFn(obj interface{}) (string, error) {
-	sInfo, ok := obj.(*ShuffledValidatorsBySeed)
+	sInfo, ok := obj.(*ShuffledIndicesBySeed)
 	if !ok {
 		return "", ErrNotValidatorListInfo
 	}
@@ -50,48 +50,48 @@ func shuffleKeyFn(obj interface{}) (string, error) {
 	return string(sInfo.Seed), nil
 }
 
-// NewShuffledValidatorsCache creates a new shuffled validators cache for storing/accessing shuffled validator indices
-func NewShuffledValidatorsCache() *ShuffledValidatorsCache {
-	return &ShuffledValidatorsCache{
-		shuffledValidatorsCache: cache.NewFIFO(shuffleKeyFn),
+// NewShuffledIndicesCache creates a new shuffled validators cache for storing/accessing shuffled validator indices
+func NewShuffledIndicesCache() *ShuffledIndicesCache {
+	return &ShuffledIndicesCache{
+		shuffledIndicesCache: cache.NewFIFO(shuffleKeyFn),
 	}
 }
 
-// ShuffledValidatorsBySeed fetches ShuffledValidatorsInEpoch by epoch and seed. Returns true with a
-// reference to the ShuffledValidatorsInEpoch info, if exists. Otherwise returns false, nil.
-func (c *ShuffledValidatorsCache) ShuffledValidatorsBySeed(seed []byte) ([]uint64, error) {
+// ShuffledIndicesBySeed fetches ShuffledIndicesBySeed by epoch and seed. Returns true with a
+// reference to the ShuffledIndicesInEpoch info, if exists. Otherwise returns false, nil.
+func (c *ShuffledIndicesCache) ShuffledIndicesBySeed(seed []byte) ([]uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.shuffledValidatorsCache.GetByKey(string(seed))
+	obj, exists, err := c.shuffledIndicesCache.GetByKey(string(seed))
 	if err != nil {
 		return nil, err
 	}
 
 	if exists {
-		shuffledValidatorsCacheHit.Inc()
+		shuffledIndicesCacheHit.Inc()
 	} else {
-		shuffledValidatorsCacheMiss.Inc()
+		shuffledIndicesCacheMiss.Inc()
 		return nil, nil
 	}
 
-	cInfo, ok := obj.(*ShuffledValidatorsBySeed)
+	cInfo, ok := obj.(*ShuffledIndicesBySeed)
 	if !ok {
 		return nil, ErrNotValidatorListInfo
 	}
 
-	return cInfo.ShuffledValidators, nil
+	return cInfo.ShuffledIndices, nil
 }
 
 // AddCommittees adds CommitteesInSlot object to the cache. This method also trims the least
-// recently added shuffled_validatorsInfo object if the cache size has ready the max cache size limit.
-func (c *ShuffledValidatorsCache) AddShuffledValidatorList(shuffledValidators *ShuffledValidatorsBySeed) error {
+// recently added ShuffledIndicessBySeed object if the cache size has ready the max cache size limit.
+func (c *ShuffledIndicesCache) AddShuffledValidatorList(shuffledIndices *ShuffledIndicesBySeed) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.shuffledValidatorsCache.AddIfNotPresent(shuffledValidators); err != nil {
+	if err := c.shuffledIndicesCache.AddIfNotPresent(shuffledIndices); err != nil {
 		return err
 	}
 
-	trim(c.shuffledValidatorsCache, maxShuffledListSize)
+	trim(c.shuffledIndicesCache, maxShuffledListSize)
 	return nil
 }
