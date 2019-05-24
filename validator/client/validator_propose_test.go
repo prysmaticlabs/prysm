@@ -100,7 +100,7 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.PendingDepositsResponse{
 		PendingDeposits: []*pbp2p.Deposit{
-			{DepositData: []byte{'D', 'A', 'T', 'A'}},
+			{Data: &pbp2p.DepositData{Pubkey: []byte{'D', 'A', 'T', 'A'}}},
 		},
 	}, nil /*err*/)
 
@@ -135,7 +135,7 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if !bytes.Equal(broadcastedBlock.Body.Deposits[0].DepositData, []byte{'D', 'A', 'T', 'A'}) {
+	if !bytes.Equal(broadcastedBlock.Body.Deposits[0].Data.Pubkey, []byte{'D', 'A', 'T', 'A'}) {
 		t.Errorf("Unexpected deposit data: %v", broadcastedBlock.Body.Deposits)
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -15,17 +14,15 @@ import (
 func setupInitialDeposits(t *testing.T, numDeposits int) []*pb.Deposit {
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: []byte(strconv.Itoa(i)),
-		}
 		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
+		depositData := &pb.DepositData{
+			Pubkey: []byte(strconv.Itoa(i)),
+			Amount: balance,
 		}
+
 		deposits[i] = &pb.Deposit{
-			DepositData: depositData,
-			Index:       uint64(i),
+			Data:  depositData,
+			Index: uint64(i),
 		}
 	}
 	return deposits

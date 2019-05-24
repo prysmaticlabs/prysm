@@ -163,17 +163,15 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 		if err != nil {
 			t.Fatal(err)
 		}
-		depositInput := &pb.DepositInput{
-			Pubkey: priv.PublicKey().Marshal(),
-		}
 		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
+
+		depositData := &pb.DepositData{
+			Pubkey: priv.PublicKey().Marshal(),
+			Amount: balance,
 		}
 		deposits[i] = &pb.Deposit{
-			DepositData: depositData,
-			Index:       uint64(i),
+			Data:  depositData,
+			Index: uint64(i),
 		}
 		privKeys[i] = priv
 	}
@@ -181,19 +179,12 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 }
 
 func createPreChainStartDeposit(t *testing.T, pk []byte, index uint64) *pb.Deposit {
-	depositInput := &pb.DepositInput{Pubkey: pk}
 	balance := params.BeaconConfig().MaxDepositAmount
-	depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-	if err != nil {
-		t.Fatalf("Cannot encode data: %v", err)
-	}
+	depositData := &pb.DepositData{Pubkey: pk, Amount: balance}
+
 	return &pb.Deposit{
-		DepositData: depositData,
-		Index:       index,
-		Data: &pb.DepositData{
-			Amount: balance,
-			Pubkey: pk,
-		},
+		Index: index,
+		Data:  depositData,
 	}
 }
 
