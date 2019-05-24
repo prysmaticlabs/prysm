@@ -77,7 +77,7 @@ func TestRegister_Below1ETH(t *testing.T) {
 	}
 
 	testAccount.txOpts.Value = amountLessThan1Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{}, []byte{}, []byte{})
 	if err == nil {
 		t.Error("Validator registration should have failed with insufficient deposit")
 	}
@@ -91,7 +91,7 @@ func TestRegister_Above32Eth(t *testing.T) {
 	}
 
 	testAccount.txOpts.Value = amount33Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{}, []byte{}, []byte{})
 	if err == nil {
 		t.Error("Validator registration should have failed with more than asked deposit amount")
 	}
@@ -104,18 +104,23 @@ func TestValidatorRegister_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	testAccount.txOpts.Value = amount32Eth
+	testAccount.txOpts.GasLimit = 1000000
 
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
+	var pubkey [48]byte
+	var withdrawalCreds [32]byte
+	var sig [96]byte
+
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'B'})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'C'})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
@@ -133,15 +138,13 @@ func TestValidatorRegister_OK(t *testing.T) {
 	}
 
 	merkleTreeIndex := make([]uint64, 5)
-	depositData := make([][]byte, 5)
 
 	for i, log := range logs {
-		_, data, idx, _, err := UnpackDepositLogData(log.Data)
+		_, _, _, _, idx, err := UnpackDepositLogData(log.Data)
 		if err != nil {
 			t.Fatalf("Unable to unpack log data: %v", err)
 		}
-		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx)
-		depositData[i] = data
+		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx[:])
 	}
 
 	if merkleTreeIndex[0] != 0 {
@@ -158,15 +161,21 @@ func TestValidatorRegister_OK(t *testing.T) {
 }
 
 // normal test case, test beacon chain start log event.
-func TestChainStart_OK(t *testing.T) {
+func TestETH2Genesis_OK(t *testing.T) {
 	testAccount, err := setup()
 	if err != nil {
 		t.Fatal(err)
 	}
 	testAccount.txOpts.Value = amount32Eth
+	testAccount.txOpts.GasLimit = 1000000
+
+	var pubkey [48]byte
+	var withdrawalCreds [32]byte
+	var sig [96]byte
 
 	for i := 0; i < 8; i++ {
-		_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
+		_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
+		testAccount.backend.Commit()
 		if err != nil {
 			t.Errorf("Validator registration failed: %v", err)
 		}
@@ -185,8 +194,8 @@ func TestChainStart_OK(t *testing.T) {
 		t.Fatalf("Unable to get logs %v", err)
 	}
 
-	if logs[8].Topics[0] != hashutil.Hash([]byte("ChainStart(bytes32,bytes)")) {
-		t.Error("Chain start even did not get emitted")
+	if logs[8].Topics[0] != hashutil.Hash([]byte("Eth2Genesis(bytes32,bytes,bytes)")) {
+		t.Error("Chain start did not even get emitted")
 	}
 }
 
@@ -197,7 +206,12 @@ func TestDrain(t *testing.T) {
 	}
 	testAccount.txOpts.Value = amount32Eth
 
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
+	var pubkey [48]byte
+	var withdrawalCreds [32]byte
+	var sig [96]byte
+
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
+	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
