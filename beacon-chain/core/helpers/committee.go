@@ -124,7 +124,7 @@ func ComputeCommittee(
 	}
 
 	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.ShuffledIndicesBySeed{
-		Seed:               seed[:],
+		Seed:            seed[:],
 		ShuffledIndices: shuffledIndices,
 	}); err != nil {
 		return []uint64{}, fmt.Errorf("could not add shuffled validator list to cache: %v", err)
