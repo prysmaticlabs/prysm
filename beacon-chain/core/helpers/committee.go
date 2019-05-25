@@ -235,7 +235,7 @@ func CommitteeAssignment(
 					proposerIndex, err := BeaconProposerIndex(state)
 					if err != nil {
 						return nil, 0, 0, false, fmt.Errorf(
-							"could not get check proposer index: %v", err)
+							"could not check proposer index: %v", err)
 					}
 					isProposer := proposerIndex == validatorIndex
 					return committee, shard, slot, isProposer, nil
