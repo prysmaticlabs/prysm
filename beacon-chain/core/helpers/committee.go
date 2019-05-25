@@ -181,94 +181,69 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //   def get_committee_assignment(
 //        state: BeaconState,
 //        epoch: Epoch,
-//        validator_index: ValidatorIndex,
-//        registry_change: bool=False) -> Tuple[List[ValidatorIndex], Shard, Slot, bool]:
+//        validator_index: ValidatorIndex) -> Tuple[List[ValidatorIndex], Shard, Slot]:
 //    """
-//    Return the committee assignment in the ``epoch`` for ``validator_index`` and ``registry_change``.
+//    Return the committee assignment in the ``epoch`` for ``validator_index``.
 //    ``assignment`` returned is a tuple of the following form:
 //        * ``assignment[0]`` is the list of validators in the committee
 //        * ``assignment[1]`` is the shard to which the committee is assigned
 //        * ``assignment[2]`` is the slot at which the committee is assigned
-//        * ``assignment[3]`` is a bool signaling if the validator is expected to propose
-//            a beacon block at the assigned slot.
 //    """
-//    previous_epoch = get_previous_epoch(state)
-//    next_epoch = get_current_epoch(state)
-//    assert previous_epoch <= epoch <= next_epoch
+//    next_epoch = get_current_epoch(state) + 1
+//    assert epoch <= next_epoch
 //
+//    committees_per_slot = get_epoch_committee_count(state, epoch) // SLOTS_PER_EPOCH
 //    epoch_start_slot = get_epoch_start_slot(epoch)
-//    for slot in range(epoch_start_slot, epoch_start_slot + SLOTS_PER_EPOCH):
-//        crosslink_committees = get_crosslink_committees_at_slot(
-//            state,
-//            slot,
-//            registry_change=registry_change,
-//        )
-//        selected_committees = [
-//            committee  # Tuple[List[ValidatorIndex], Shard]
-//            for committee in crosslink_committees
-//            if validator_index in committee[0]
-//        ]
-//        if len(selected_committees) > 0:
-//            validators = selected_committees[0][0]
-//            shard = selected_committees[0][1]
-//            first_committee_at_slot = crosslink_committees[0][0]  # List[ValidatorIndex]
-//            is_proposer = first_committee_at_slot[slot % len(first_committee_at_slot)] == validator_index
-//
-//            assignment = (validators, shard, slot, is_proposer)
-//            return assignment
+//    for slot in range(epoch_start_slot, epoch_start_slot + SLOTS_PER_EPOCH)
+//        offset = committees_per_slot * (slot % SLOTS_PER_EPOCH)
+//        slot_start_shard = (get_epoch_start_shard(state, epoch) + offset) % SHARD_COUNT
+//        for i in range(committees_per_slot):
+//            shard = (slot_start_shard + i) % SHARD_COUNT
+//            committee = get_crosslink_committee(state, epoch, shard)
+//            if validator_index in committee:
+//                return committee, shard, slot
 func CommitteeAssignment(
 	state *pb.BeaconState,
-	slot uint64,
-	validatorIndex uint64,
-	registryChange bool) ([]uint64, uint64, uint64, bool, error) {
-	var selectedCommittees []*cache.CommitteeInfo
+	epoch uint64,
+	validatorIndex uint64) ([]uint64, uint64, uint64, bool, error) {
 
-	wantedEpoch := slot / params.BeaconConfig().SlotsPerEpoch
-	prevEpoch := PrevEpoch(state)
-	nextEpoch := NextEpoch(state)
-
-	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
+	if epoch > NextEpoch(state) {
 		return nil, 0, 0, false, fmt.Errorf(
-			"epoch %d out of bounds: %d <= epoch <= %d",
-			wantedEpoch,
-			prevEpoch,
-			nextEpoch,
-		)
+			"epoch %d can't be greater than next epoch %d",
+			epoch, NextEpoch(state))
 	}
 
-	var cachedCommittees *cache.CommitteesInSlot
-	var err error
-	startSlot := StartSlot(wantedEpoch)
+	committeesPerSlot := EpochCommitteeCount(state, epoch) / params.BeaconConfig().SlotsPerEpoch
+	epochStartShard, err := EpochStartShard(state, epoch)
+	if err != nil {
+		return nil, 0, 0, false, fmt.Errorf(
+			"could not get epoch start shard: %v", err)
+	}
+	startSlot := StartSlot(epoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-
-		cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
-		if err != nil {
-			return []uint64{}, 0, 0, false, err
-		}
-		if cachedCommittees == nil {
-			crosslinkCommittees := []*CrosslinkCommittee{}
-			cachedCommittees = ToCommitteeCache(slot, crosslinkCommittees)
-			if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-				return []uint64{}, 0, 0, false, err
+		offset := committeesPerSlot * (slot % params.BeaconConfig().SlotsPerEpoch)
+		slotStatShard := (epochStartShard + offset) % params.BeaconConfig().ShardCount
+		for i := uint64(0); i < committeesPerSlot; i++ {
+			shard := (slotStatShard + i) % params.BeaconConfig().ShardCount
+			committee, err := CrosslinkCommitteeAtEpoch(state, epoch, shard)
+			if err != nil {
+				return nil, 0, 0, false, fmt.Errorf(
+					"could not get crosslink committee: %v", err)
 			}
-		}
-		for _, committee := range cachedCommittees.Committees {
-			for _, idx := range committee.Committee {
-				if idx == validatorIndex {
-					selectedCommittees = append(selectedCommittees, committee)
-				}
-
-				if len(selectedCommittees) > 0 {
-					validators := selectedCommittees[0].Committee
-					shard := selectedCommittees[0].Shard
-					firstCommitteeAtSlot := cachedCommittees.Committees[0].Committee
-					isProposer := firstCommitteeAtSlot[slot%
-						uint64(len(firstCommitteeAtSlot))] == validatorIndex
-					return validators, shard, slot, isProposer, nil
+			for _, index := range committee {
+				if validatorIndex == index {
+					proposerIndex, err := BeaconProposerIndex(state)
+					if err != nil {
+						return nil, 0, 0, false, fmt.Errorf(
+							"could not get check proposer index: %v", err)
+					}
+					isProposer := proposerIndex == validatorIndex
+					return committee, shard, slot, isProposer, nil
 				}
 			}
 		}
 	}
+
 	return []uint64{}, 0, 0, false, status.Error(codes.NotFound, "validator not found found in assignments")
 }
 
