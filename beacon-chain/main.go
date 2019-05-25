@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -75,6 +76,7 @@ func main() {
 		debug.MemProfileRateFlag,
 		debug.CPUProfileFlag,
 		debug.TraceFlag,
+		cmd.LogFileName,
 	}
 
 	app.Flags = append(app.Flags, featureconfig.BeaconChainFlags...)
@@ -86,16 +88,26 @@ func main() {
 			formatter := new(prefixed.TextFormatter)
 			formatter.TimestampFormat = "2006-01-02 15:04:05"
 			formatter.FullTimestamp = true
+			// If persistent log files are written - we disable the log messages coloring because
+			// the colors are ANSI codes and seen as gibberish in the log files.
+			formatter.DisableColors = ctx.GlobalString(cmd.LogFileName.Name) != ""
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
-			logrus.SetFormatter(&joonix.FluentdFormatter{})
+			logrus.SetFormatter(joonix.NewFormatter())
 			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
 			break
 		default:
 			return fmt.Errorf("unknown log format %s", format)
+		}
+
+		logFileName := ctx.GlobalString(cmd.LogFileName.Name)
+		if logFileName != "" {
+			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
+				log.WithError(err).Error("Failed to configuring logging to disk.")
+			}
 		}
 
 		runtime.GOMAXPROCS(runtime.NumCPU())

@@ -324,7 +324,6 @@ func (b *BeaconNode) registerSyncService(_ *cli.Context) error {
 
 	cfg := &rbcsync.Config{
 		ChainService:     chainService,
-		AncestorVerifier: chainService,
 		P2P:              p2pService,
 		BeaconDB:         b.db,
 		OperationService: operationService,

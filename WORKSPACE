@@ -9,8 +9,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "3743a20704efc319070957c45e24ae4626a05ba4b1d6a8961e87520296f1b676",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.4/rules_go-0.18.4.tar.gz",
+    sha256 = "a82a352bffae6bee4e95f68a8d80a70e87f42c4741e6a448bec11998fcc82329",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.5/rules_go-0.18.5.tar.gz",
 )
 
 http_archive(
@@ -672,7 +672,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "ac0d4da0b001139583d0dfb84d614a0f907ea0a9",  # v0.9.2
+    commit = "662e8a9ffaaa74a4d050023c2cb26902cd9bab63",  # v0.9.3
     importpath = "github.com/prometheus/client_golang",
 )
 
@@ -911,7 +911,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_cobra",
-    commit = "ef82de70bb3f60c65fb8eebacbb2d122ef517385",  # v0.0.3
+    commit = "67fc4837d267bc9bfd6e47f77783fcc3dffc68de",  # v0.0.4
     importpath = "github.com/spf13/cobra",
 )
 
@@ -949,7 +949,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "fcb9a2d5f791d07be64506ab54434de65989d370",  # v0.37.4
+    commit = "775730d6e48254a2430366162cf6298e5368833c",  # v0.39.0
     importpath = "cloud.google.com/go",
 )
 
@@ -1087,6 +1087,6 @@ go_repository(
 
 go_repository(
     name = "com_github_joonix_log",
-    commit = "e0e770ceed363301a4f50bbc9599c6925c77b2d8",
+    commit = "13fe31bbdd7a6f706b9114e188cdb53856be4d64",
     importpath = "github.com/joonix/log",
 )
