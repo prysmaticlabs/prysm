@@ -780,8 +780,6 @@ func BenchmarkComputeCommittee300000_WithCache(b *testing.B) {
 	}
 }
 
-
-
 func BenchmarkComputeCommittee128000_WithOutCache(b *testing.B) {
 	RestartShuffledValidatorCache()
 	validators := make([]*pb.Validator, 128000)
