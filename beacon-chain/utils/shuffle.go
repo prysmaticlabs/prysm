@@ -10,9 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// HashFn sets the current hash function
-type HashFn func(input []byte) []byte
-
 const seedSize = int8(32)
 const roundSize = int8(1)
 const positionWindowSize = int8(4)
@@ -185,7 +182,6 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 	}
 	copy(buf[:seedSize], seed[:])
 	for {
-
 		buf[seedSize] = r
 		ph := hashutil.HashSha256(buf[:pivotViewSize])
 		pivot := bytesutil.FromBytes8(ph[:8]) % listSize
