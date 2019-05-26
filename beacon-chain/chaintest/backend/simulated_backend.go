@@ -183,22 +183,15 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	}
 	shuffledList := make([]uint64, testCase.Count)
 	for i := uint64(0); i < testCase.Count; i++ {
-		si, err := utils.UnShuffledIndex(i, testCase.Count, seed)
+		si, err := utils.ShuffledIndex(i, testCase.Count, seed)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
-		shuffledList[si] = i
+		shuffledList[i] = si
 	}
 	if !reflect.DeepEqual(shuffledList, testCase.Shuffled) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledList)
-	}
-	sl, err := utils.UnshuffleList(testIndices, seed)
-	if err != nil {
-		return fmt.Errorf("running shuffle list resulted in error: %v", err)
-	}
-	if !reflect.DeepEqual(sl, testCase.Shuffled) {
-		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, testIndices)
 	}
 	return nil
 }
