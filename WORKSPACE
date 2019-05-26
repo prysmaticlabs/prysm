@@ -1033,7 +1033,7 @@ go_repository(
 
 go_repository(
     name = "com_github_phoreproject_bls",
-    commit = "afaefda3ea643e9292b6f4596403ed5c742561b4",
+    commit = "0b6cefc7f7eee050e3ac6d66d66ae8e469a4fbf1",
     importpath = "github.com/phoreproject/bls",
 )
 
@@ -1087,6 +1087,6 @@ go_repository(
 
 go_repository(
     name = "com_github_joonix_log",
-    commit = "e0e770ceed363301a4f50bbc9599c6925c77b2d8",
+    commit = "13fe31bbdd7a6f706b9114e188cdb53856be4d64",
     importpath = "github.com/joonix/log",
 )
