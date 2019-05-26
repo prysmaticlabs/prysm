@@ -222,19 +222,19 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{21, 126},
+			wanted:          []uint64{82, 84},
 		},
 		{
 			attestationSlot: 2,
 			stateSlot:       10,
 			bitfield:        []byte{0x01},
-			wanted:          []uint64{2, 17},
+			wanted:          []uint64{32, 63},
 		},
 		{
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{79, 112},
+			wanted:          []uint64{37, 104},
 		},
 	}
 	//startShard := uint64(960)

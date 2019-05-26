@@ -290,7 +290,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	validators[12683].Slashed = false
+	validators[5297].Slashed = false
 
 	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
@@ -303,7 +303,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Fatalf("Failed to generate private key got: %v", err)
 	}
 	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[12683].Pubkey = priv.PublicKey().Marshal()
+	validators[5297].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -1325,19 +1325,19 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x01},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{21, 126},
+			wantedCustodyBit1Indices: []uint64{82, 84},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x02},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{21, 126},
+			wantedCustodyBit1Indices: []uint64{82, 84},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{21, 126},
+			wantedCustodyBit1Indices: []uint64{82, 84},
 		},
 	}
 

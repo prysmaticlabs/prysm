@@ -986,7 +986,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	}
 	committeeBalance := helpers.TotalBalance(state, committee)
 	attestingBalance := helpers.TotalBalance(state, winningIndices)
-	attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
+	attestedIndices := []uint64{350, 361, 498, 533, 537, 629, 646}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
 		want := baseReward(state, i) * attestingBalance / committeeBalance
@@ -1129,7 +1129,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
+	attestedIndices := []uint64{350, 361, 498, 533, 537, 629, 646}
 
 	attestedBalance, err := AttestingBalance(state, atts)
 	totalBalance := totalActiveBalance(state)

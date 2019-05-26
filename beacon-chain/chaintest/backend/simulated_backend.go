@@ -9,12 +9,13 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -176,7 +177,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 // algorithm, then compare the output with the expected output from the YAML file.
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	defer db.TeardownDB(sb.beaconDB)
-	seed := common.BytesToHash([]byte(testCase.Seed))
+	seed := common.HexToHash(testCase.Seed)
 
 	testIndices := make([]uint64, testCase.Count, testCase.Count)
 	for i := uint64(0); i < testCase.Count; i++ {
@@ -191,7 +192,6 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 		}
 		shuffledList[si] = i
 	}
-	log.Infof("shuffledIndexList: %v", shuffledList)
 	if !reflect.DeepEqual(shuffledList, testCase.Shuffled) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledList)
 	}
@@ -199,7 +199,6 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	if err != nil {
 		return fmt.Errorf("running shuffle list resulted in error: %v", err)
 	}
-	log.Infof("shuffledIndexList: %v", testIndices)
 	if !reflect.DeepEqual(sl, testCase.Shuffled) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, testIndices)
 	}

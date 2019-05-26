@@ -13,7 +13,9 @@ func TestShuffleList_InvalidValidatorCount(t *testing.T) {
 	list := make([]uint64, 21)
 	if _, err := ShuffleList(list, [32]byte{123, 125}); err == nil {
 		t.Error("Shuffle should have failed when validator count exceeds ModuloBias")
+		maxShuffleListSize = 1 << 40
 	}
+	maxShuffleListSize = 1 << 40
 }
 
 func TestShuffleList_OK(t *testing.T) {
@@ -137,7 +139,7 @@ func BenchmarkShuffleList(b *testing.B) {
 
 func TestShuffledIndex(t *testing.T) {
 	list := []uint64{}
-	listSize := uint64(400)
+	listSize := uint64(399)
 	for i := uint64(0); i < listSize; i++ {
 		list = append(list, i)
 	}
