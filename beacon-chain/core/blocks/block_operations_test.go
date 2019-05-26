@@ -336,7 +336,6 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 }
 
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
-	t.Skip()
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -372,7 +371,6 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 }
 
 func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
-	t.Skip()
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -844,7 +842,6 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 }
 
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
-	t.Skip()
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
