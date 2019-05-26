@@ -173,7 +173,7 @@ func (vs *ValidatorServer) assignment(
 	}
 
 	committee, shard, slot, isProposer, err :=
-		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx), false)
+		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx))
 	if err != nil {
 		return nil, err
 	}
