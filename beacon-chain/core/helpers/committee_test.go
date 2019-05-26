@@ -680,3 +680,128 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkComputeCommittee64000_WithCache(b *testing.B) {
+	RestartShuffledValidatorCache()
+	validators := make([]*pb.Validator, 64000)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	shard := uint64(3)
+	_, err := ComputeCommittee(indices, seed, shard, 500)
+	if err != nil {
+		panic(err)
+	}
+
+	b.ResetTimer()
+	for n:=0; n < b.N ; n++  {
+		_, err := CrosslinkCommitteeAtEpoch(state, epoch, 0)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkComputeCommittee128000_WithCache(b *testing.B) {
+	RestartShuffledValidatorCache()
+	validators := make([]*pb.Validator, 128000)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	shard := uint64(3)
+	_, err := ComputeCommittee(indices, seed, shard, 1000)
+	if err != nil {
+		panic(err)
+	}
+
+	b.ResetTimer()
+	for n:=0; n < b.N ; n++  {
+		_, err := CrosslinkCommitteeAtEpoch(state, epoch, 0)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkComputeCommittee300000_WithCache(b *testing.B) {
+	RestartShuffledValidatorCache()
+	validators := make([]*pb.Validator, 300000)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	shard := uint64(3)
+	_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+	if err != nil {
+		panic(err)
+	}
+
+	b.ResetTimer()
+	for n:=0; n < b.N ; n++  {
+		_, err := CrosslinkCommitteeAtEpoch(state, epoch, 0)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+
+
+func BenchmarkComputeCommittee128000_WithOutCache(b *testing.B) {
+	RestartShuffledValidatorCache()
+	validators := make([]*pb.Validator, 128000)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	b.ResetTimer()
+	for n:=0; n < b.N ; n++  {
+		_, err := CrosslinkCommitteeAtEpoch(state, epoch, 0)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
