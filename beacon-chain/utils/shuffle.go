@@ -35,13 +35,13 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 // constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
 func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
-	return innerShuffledIndex(index, indexCount, seed, true)
+	return innerShuffledIndex(index, indexCount, seed, true /* shuffle */)
 }
 
 // UnShuffledIndex returns the inverse of ShuffledIndex. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
 func UnShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
-	return innerShuffledIndex(index, indexCount, seed, false)
+	return innerShuffledIndex(index, indexCount, seed, false /* un-shuffle */)
 }
 
 // Spec pseudocode definition:
@@ -153,12 +153,12 @@ func SplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
 //   - we start at the edges, and work back to the mirror point.
 //     this makes us process each pear exactly once (instead of unnecessarily twice, like in the spec).
 func ShuffleList(input []uint64, seed [32]byte) ([]uint64, error) {
-	return innerShuffleList(input, seed, true)
+	return innerShuffleList(input, seed, true/* shuffle */)
 }
 
 // UnshuffleList un-shuffles the list by running backwards through the round count.
 func UnshuffleList(input []uint64, seed [32]byte) ([]uint64, error) {
-	return innerShuffleList(input, seed, false)
+	return innerShuffleList(input, seed, false/* un-shuffle */)
 }
 
 // shuffles or unshuffles, shuffle=false to un-shuffle.
