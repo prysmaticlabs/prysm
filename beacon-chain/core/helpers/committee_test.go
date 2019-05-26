@@ -98,7 +98,9 @@ func TestShardDelta_OK(t *testing.T) {
 }
 
 func TestComputeCommittee_OK(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
+
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(6)
 	// Set epoch total validators count to 6 committees per slot.
@@ -277,6 +279,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
 
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
@@ -373,6 +376,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 }
 
 func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
 
 	slotOffset := uint64(1111)
@@ -407,6 +411,7 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 }
 
 func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
 
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
@@ -458,8 +463,9 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
-	// TODO(#2307) unskip after CommitteeAssignments is updated
+
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
 		Slot: slotOffset,
@@ -505,8 +511,9 @@ func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
-	// TODO(#2307) unskip after CommitteeAssignments is updated
+
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{

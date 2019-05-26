@@ -26,7 +26,6 @@ func init() {
 var _ = TargetHandler(&Service{})
 
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
-	t.Skip()
 
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)

@@ -505,8 +505,6 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 }
 
 func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
-	t.Skip()
-	// TODO(#2307) unskip after ProcessCrosslinks is finished
 	e := params.BeaconConfig().SlotsPerEpoch
 	gs := uint64(0) // genesis slot
 	ge := uint64(0) // genesis epoch
@@ -537,13 +535,18 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		blockRoots[i] = []byte{byte(i + 1)}
 	}
 
-	currentCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
-	currentCrosslinks[3] = &pb.Crosslink{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}
+	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks[i] = &pb.Crosslink{
+			Epoch:                   ge,
+			CrosslinkDataRootHash32: []byte{'B'},
+		}
+	}
 	state := &pb.BeaconState{
 		Slot:                      gs + e + 2,
 		PreviousEpochAttestations: atts,
 		LatestBlockRoots:          blockRoots,
-		CurrentCrosslinks:         currentCrosslinks,
+		CurrentCrosslinks:         crosslinks,
 		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
