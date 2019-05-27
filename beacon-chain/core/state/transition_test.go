@@ -269,9 +269,9 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	beaconState.LatestBlockRoots = blockRoots
-	beaconState.LatestCrosslinks = []*pb.Crosslink{
+	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			CrosslinkDataRootHash32: []byte{1},
+			DataRoot: []byte{1},
 		},
 	}
 	blockAtt := &pb.Attestation{
@@ -386,9 +386,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	beaconState.LatestBlockRoots = blockRoots
-	beaconState.LatestCrosslinks = []*pb.Crosslink{
+	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			CrosslinkDataRootHash32: []byte{1},
+			DataRoot: []byte{1},
 		},
 	}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch

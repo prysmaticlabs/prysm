@@ -128,9 +128,6 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 
-	// Save latest block.
-	state.LatestBlock = block
-
 	// Verify block RANDAO.
 	state, err = b.ProcessRandao(state, block.Body, config.VerifySignatures, config.Logging)
 	if err != nil {

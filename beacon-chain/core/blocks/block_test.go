@@ -8,7 +8,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -153,19 +152,5 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 	if !bytes.Equal(newState.LatestBlockRoots[0], testRoot[:]) {
 		t.Fatalf("Latest Block root hash not saved."+
 			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRoots[0])
-	}
-
-	newState.Slot = newState.Slot - 1
-
-	newState = ProcessBlockRoots(newState, testRoot)
-	expectedHashes := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
-	expectedHashes[0] = testRoot[:]
-	expectedHashes[params.BeaconConfig().LatestBlockRootsLength-1] = testRoot[:]
-
-	expectedRoot := hashutil.MerkleRoot(expectedHashes)
-
-	if !bytes.Equal(newState.BatchedBlockRootHash32S[0], expectedRoot[:]) {
-		t.Errorf("saved merkle root is not equal to expected merkle root"+
-			"\n expected %#x but got %#x", expectedRoot, newState.BatchedBlockRootHash32S[0])
 	}
 }

@@ -85,9 +85,9 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 		Slot:                  3*params.BeaconConfig().SlotsPerEpoch + 1,
 		CurrentJustifiedEpoch: 2 + 0,
 		LatestBlockRoots:      make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
-		LatestCrosslinks: []*pbp2p.Crosslink{
+		CurrentCrosslinks: []*pbp2p.Crosslink{
 			{
-				CrosslinkDataRootHash32: []byte("A"),
+				DataRoot: []byte("A"),
 			},
 		},
 		CurrentJustifiedRoot: justifiedBlockRoot[:],
@@ -131,7 +131,7 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 		JustifiedEpoch:           2 + 0,
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
-			CrosslinkDataRootHash32: []byte("A"),
+			DataRoot: []byte("A"),
 		},
 	}
 
@@ -182,9 +182,9 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		Slot:                  10000,
 		CurrentJustifiedEpoch: helpers.SlotToEpoch(1500),
 		LatestBlockRoots:      make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
-		LatestCrosslinks: []*pbp2p.Crosslink{
+		CurrentCrosslinks: []*pbp2p.Crosslink{
 			{
-				CrosslinkDataRootHash32: []byte("A"),
+				DataRoot: []byte("A"),
 			},
 		},
 		CurrentJustifiedRoot: justifiedBlockRoot[:],
@@ -228,7 +228,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		JustifiedEpoch:           helpers.SlotToEpoch(1500),
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
-			CrosslinkDataRootHash32: []byte("A"),
+			DataRoot: []byte("A"),
 		},
 	}
 

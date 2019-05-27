@@ -149,9 +149,9 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	stateSlot := params.BeaconConfig().MinAttestationInclusionDelay + 100
 	beaconState := &pbp2p.BeaconState{
 		Slot: stateSlot,
-		LatestCrosslinks: []*pbp2p.Crosslink{{
-			Epoch:                   1,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+		CurrentCrosslinks: []*pbp2p.Crosslink{{
+			Epoch:    1,
+			DataRoot: params.BeaconConfig().ZeroHash[:],
 		}},
 	}
 	proposerServer := &ProposerServer{
@@ -270,9 +270,9 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		Slot:                   currentSlot + params.BeaconConfig().MinAttestationInclusionDelay,
 		CurrentJustifiedEpoch:  expectedEpoch,
 		PreviousJustifiedEpoch: expectedEpoch,
-		LatestCrosslinks: []*pbp2p.Crosslink{{
-			Epoch:                   9,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+		CurrentCrosslinks: []*pbp2p.Crosslink{{
+			Epoch:    9,
+			DataRoot: params.BeaconConfig().ZeroHash[:],
 		}},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -345,8 +345,8 @@ func TestPendingAttestations_OK(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch +
 			params.BeaconConfig().MinAttestationInclusionDelay,
-		LatestCrosslinks: []*pbp2p.Crosslink{{Epoch: 1,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}},
+		CurrentCrosslinks: []*pbp2p.Crosslink{{Epoch: 1,
+			DataRoot: params.BeaconConfig().ZeroHash[:]}},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)

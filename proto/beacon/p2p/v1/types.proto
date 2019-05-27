@@ -45,18 +45,8 @@ message BeaconState {
   repeated Eth1Data eth1_data_votes = 6002;
   uint64 deposit_index = 6003;
 
-  // Deprecated [8001-9000]
-  uint64 validator_registry_update_epoch = 8001 [deprecated=true];
-  uint64 previous_shuffling_start_shard = 8003 [deprecated=true];
-  uint64 current_shuffling_start_shard = 8004 [deprecated=true];
-  uint64 previous_shuffling_epoch = 8005 [deprecated=true];
-  uint64 current_shuffling_epoch = 8006 [deprecated=true];
-  bytes previous_shuffling_seed_hash32 = 8007 [deprecated=true];
-  bytes current_shuffling_seed_hash32 = 8008 [deprecated=true];
-  repeated bytes batched_block_root_hash32s = 8013 [deprecated=true];
-  repeated Crosslink latest_crosslinks = 8014 [deprecated=true];
-  repeated PendingAttestation latest_attestations = 8015 [deprecated=true];
-  BeaconBlock latest_block = 8016 [deprecated=true];
+  // Prysm customized field [8001-9000]
+  BeaconBlock latest_block = 8016;
 }
 
 message Fork {

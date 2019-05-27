@@ -149,9 +149,6 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return nil, fmt.Errorf("could not hash beacon block: %v", err)
 	}
 
-	// TODO(#2011): Remove this in state caching.
-	beaconState.LatestBlock = genBlock
-
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
