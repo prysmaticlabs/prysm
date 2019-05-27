@@ -321,7 +321,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "2d45a736cd16732fe6a57563cc20d8b035193e58",
+    commit = "05b4dd3047e5d6e86cb4e0477164b850cd896261",  # v0.1.0
     importpath = "github.com/minio/sha256-simd",
 )
 
