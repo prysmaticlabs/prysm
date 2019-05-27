@@ -295,7 +295,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	copy(pubKeyBuf0[:], []byte(strconv.Itoa(0)))
 	pubKeyBuf1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	copy(pubKeyBuf1[:], []byte(strconv.Itoa(1)))
-	
+
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf0, pubKeyBuf1},
