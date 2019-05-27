@@ -704,10 +704,9 @@ func BenchmarkComputeCommittee64000_WithCache(b *testing.B) {
 	if err != nil {
 		panic(err)
 	}
-
 	b.ResetTimer()
 	for n:=0; n < b.N ; n++  {
-		_, err := CrosslinkCommitteeAtEpoch(state, epoch, 0)
+		_, err := ComputeCommittee(indices, seed, 0, 500)
 		if err != nil {
 			panic(err)
 		}
@@ -740,7 +739,7 @@ func BenchmarkComputeCommittee128000_WithCache(b *testing.B) {
 
 	b.ResetTimer()
 	for n:=0; n < b.N ; n++  {
-		_, err := CrosslinkCommitteeAtEpoch(state, epoch, 0)
+		_, err := ComputeCommittee(indices, seed, shard, 1000)
 		if err != nil {
 			panic(err)
 		}
@@ -773,7 +772,7 @@ func BenchmarkComputeCommittee300000_WithCache(b *testing.B) {
 
 	b.ResetTimer()
 	for n:=0; n < b.N ; n++  {
-		_, err := CrosslinkCommitteeAtEpoch(state, epoch, 0)
+		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
 		if err != nil {
 			panic(err)
 		}
@@ -795,9 +794,13 @@ func BenchmarkComputeCommittee128000_WithOutCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	shard := uint64(3)
 	b.ResetTimer()
 	for n:=0; n < b.N ; n++  {
-		_, err := CrosslinkCommitteeAtEpoch(state, epoch, 0)
+		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
 		if err != nil {
 			panic(err)
 		}
