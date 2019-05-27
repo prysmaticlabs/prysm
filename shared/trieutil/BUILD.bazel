@@ -15,5 +15,15 @@ go_test(
     name = "go_default_test",
     srcs = ["sparse_merkle_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/hashutil:go_default_library"],
+    deps = [
+        "//contracts/deposit-contract:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/hashutil:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core:go_default_library",
+        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
+    ],
 )
