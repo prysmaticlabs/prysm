@@ -40,10 +40,16 @@ type BeaconServer struct {
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
 func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconService_WaitForChainStartServer) error {
-	ok, genesisTime, err := bs.powChainService.HasChainStartLogOccurred()
+	ok, err := bs.powChainService.HasChainStartLogOccurred()
 	if err != nil {
 		return fmt.Errorf("could not determine if ChainStart log has occurred: %v", err)
 	}
+
+	genesisTime, err := bs.powChainService.ETH2GenesisTime()
+	if err != nil {
+		return fmt.Errorf("could not determine chainstart time %v", err)
+	}
+
 	if ok {
 		res := &pb.ChainStartResponse{
 			Started:     true,
@@ -258,18 +264,25 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	}
 	// Fetch all historical deposits up to an ancestor height.
 	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
-	depositData := [][]byte{}
+	depositHashes := [][]byte{}
 	// If there are less than or equal to len(ChainStartDeposits) historical deposits, then we just fetch the default
 	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
-	chainStartDeposits := bs.powChainService.ChainStartDeposits()
+	chainStartDeposits, err := bs.powChainService.ChainStartDepositHashes()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve chainstart deposit hashes %v", err)
+	}
 	if len(allDeposits) <= len(chainStartDeposits) {
-		depositData = chainStartDeposits
+		depositHashes = chainStartDeposits
 	} else {
 		for i := range allDeposits {
-			depositData = append(depositData, allDeposits[i].DepositData)
+			hash, err := hashutil.DepositHash(allDeposits[i].Data)
+			if err != nil {
+				return nil, err
+			}
+			depositHashes = append(depositHashes, hash[:])
 		}
 	}
-	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems(depositHashes, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}

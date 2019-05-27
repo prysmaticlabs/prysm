@@ -10,6 +10,7 @@ import (
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -183,11 +184,62 @@ func ProcessBlock(
 }
 
 // ProcessEpoch describes the per epoch operations that are performed on the
-// beacon state.
+// beacon state. It focuses on the validator registry, adjusting balances, and finalizing slots.
+// Spec pseudocode definition:
+//
+//  def process_epoch(state: BeaconState) -> None:
+//    process_justification_and_finalization(state)
+//    process_crosslinks(state)
+//    process_rewards_and_penalties(state)
+//    process_registry_updates(state)
+//    process_slashings(state)
+//    process_final_updates(state)
 func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 
-	// TODO(#2307): Implement process epoch based on 0.6.
+	prevEpochAtts, err := e.MatchAttestations(state, helpers.PrevEpoch(state))
+	if err != nil {
+		return nil, fmt.Errorf("could not get target atts prev epoch %d: %v",
+			helpers.PrevEpoch(state), err)
+	}
+	currentEpochAtts, err := e.MatchAttestations(state, helpers.CurrentEpoch(state))
+	if err != nil {
+		return nil, fmt.Errorf("could not get target atts current epoch %d: %v",
+			helpers.CurrentEpoch(state), err)
+	}
+	prevEpochAttestedBalance, err := e.AttestingBalance(state, prevEpochAtts.Target)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attesting balance prev epoch: %v", err)
+	}
+	currentEpochAttestedBalance, err := e.AttestingBalance(state, currentEpochAtts.Target)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attesting balance current epoch: %v", err)
+	}
+
+	state, err = e.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
+	if err != nil {
+		return nil, fmt.Errorf("could not process justification: %v", err)
+	}
+
+	state, err = e.ProcessCrosslink(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process crosslink: %v", err)
+	}
+
+	state, err = e.ProcessRewardsAndPenalties(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process rewards and penalties: %v", err)
+	}
+
+	state = e.ProcessRegistryUpdates(state)
+
+	state = e.ProcessSlashings(state)
+
+	state, err = e.ProcessFinalUpdates(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process final updates: %v", err)
+	}
+
 	return state, nil
 }

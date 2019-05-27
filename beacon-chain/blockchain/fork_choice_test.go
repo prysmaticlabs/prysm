@@ -245,14 +245,14 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	}
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
-		log.Fatalf("could not hash block: %v", err)
+		t.Fatalf("could not hash block: %v", err)
 	}
 	if err := beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       block.Slot,
 		BlockRoot:  blockRoot[:],
 		ParentRoot: []byte{},
 	}); err != nil {
-		log.Fatalf("could not save att tgt: %v", err)
+		t.Fatalf("could not save att tgt: %v", err)
 	}
 
 	attsService := attestation.NewAttestationService(

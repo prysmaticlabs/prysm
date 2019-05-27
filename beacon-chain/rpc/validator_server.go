@@ -173,7 +173,7 @@ func (vs *ValidatorServer) assignment(
 	}
 
 	committee, shard, slot, isProposer, err :=
-		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx), false)
+		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx))
 	if err != nil {
 		return nil, err
 	}
@@ -203,15 +203,12 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	chainStarted, _, err := vs.powChainService.HasChainStartLogOccurred()
+	chainStarted, err := vs.powChainService.HasChainStartLogOccurred()
 	if err != nil {
 		return nil, err
 	}
 
-	chainStartKeys, err := vs.chainStartPubkeys()
-	if err != nil {
-		return nil, err
-	}
+	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
 }
@@ -227,16 +224,12 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	if err != nil {
 		return false, nil, err
 	}
-	chainStarted, _, err := vs.powChainService.HasChainStartLogOccurred()
+	chainStarted, err := vs.powChainService.HasChainStartLogOccurred()
 	if err != nil {
 		return false, nil, err
 	}
 
-	chainStartKeys, err := vs.chainStartPubkeys()
-	if err != nil {
-		return false, nil, err
-	}
-
+	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for i, key := range pubkeys {
 		if ctx.Err() != nil {
@@ -453,15 +446,11 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	return depositBlockSlot, nil
 }
 
-func (vs *ValidatorServer) chainStartPubkeys() (map[[96]byte]bool, error) {
+func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 	pubkeys := make(map[[96]byte]bool)
 	deposits := vs.powChainService.ChainStartDeposits()
 	for _, dep := range deposits {
-		depInput, err := helpers.DecodeDepositInput(dep)
-		if err != nil {
-			return nil, err
-		}
-		pubkeys[bytesutil.ToBytes96(depInput.Pubkey)] = true
+		pubkeys[bytesutil.ToBytes96(dep.Data.Pubkey)] = true
 	}
-	return pubkeys, nil
+	return pubkeys
 }

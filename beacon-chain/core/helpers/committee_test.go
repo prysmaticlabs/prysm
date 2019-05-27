@@ -98,7 +98,9 @@ func TestShardDelta_OK(t *testing.T) {
 }
 
 func TestComputeCommittee_OK(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
+
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(6)
 	// Set epoch total validators count to 6 committees per slot.
@@ -277,8 +279,6 @@ func TestVerifyBitfield_OK(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
-	t.Skip()
-
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -302,37 +302,36 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       151,
-			committee:  []uint64{28, 0},
-			shard:      88,
-			isProposer: true,
+			slot:       161,
+			committee:  []uint64{0, 107},
+			shard:      97,
+			isProposer: false,
 		},
 		{
 			index:      105,
-			slot:       157,
-			committee:  []uint64{105, 40},
-			shard:      94,
+			slot:       156,
+			committee:  []uint64{88, 105},
+			shard:      92,
 			isProposer: false,
 		},
 		{
 			index:      64,
-			slot:       163,
-			committee:  []uint64{64, 27},
-			shard:      100,
+			slot:       172,
+			committee:  []uint64{64, 31},
+			shard:      108,
 			isProposer: false,
 		},
 		{
 			index:      11,
-			slot:       160,
-			committee:  []uint64{11, 101},
-			shard:      97,
-			isProposer: true,
+			slot:       169,
+			committee:  []uint64{13, 11},
+			shard:      105,
+			isProposer: false,
 		},
 	}
 
 	for _, tt := range tests {
-		committee, shard, slot, isProposer, err := CommitteeAssignment(
-			state, tt.slot, tt.index, false)
+		committee, shard, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
 		if err != nil {
 			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 		}
@@ -362,7 +361,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	index := uint64(10000)
-	_, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false)
+	_, _, _, _, err := CommitteeAssignment(state, 1, index)
 	statusErr, ok := status.FromError(err)
 	if !ok {
 		t.Fatal(err)
@@ -373,6 +372,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 }
 
 func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
 
 	slotOffset := uint64(1111)
@@ -407,6 +407,7 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 }
 
 func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
 
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
@@ -458,8 +459,9 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
-	// TODO(#2307) unskip after CommitteeAssignments is updated
+
 	slotOffset := uint64(1111)
 	csInSlot := &cache.CommitteesInSlot{
 		Slot: slotOffset,
@@ -479,7 +481,7 @@ func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 	}
 
 	committee, shard, _, isProposer, err :=
-		CommitteeAssignment(beaconState, csInSlot.Slot, 105, false)
+		CommitteeAssignment(beaconState, csInSlot.Slot, 105)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -505,8 +507,9 @@ func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
+	// TODO(2682): Don't fix this test, this will be removed after merging #2682
 	t.Skip()
-	// TODO(#2307) unskip after CommitteeAssignments is updated
+
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -523,7 +526,7 @@ func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
 	}
 
 	committee, shard, _, isProposer, err :=
-		CommitteeAssignment(state, slotOffset, 105, false)
+		CommitteeAssignment(state, slotOffset, 105)
 	if err != nil {
 		t.Fatal(err)
 	}

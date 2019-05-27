@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -17,7 +16,6 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 var gasLimit = uint64(4000000)
@@ -66,11 +64,11 @@ func newServer(
 	}
 }
 
-func (s *server) makeDeposit(data []byte) error {
+func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signature []byte) error {
 	txOps := bind.NewKeyedTransactor(s.txPk)
 	txOps.Value = s.depositAmount
 	txOps.GasLimit = gasLimit
-	tx, err := s.contract.Deposit(txOps, data)
+	tx, err := s.contract.Deposit(txOps, pubkey, withdrawalCredentials, signature)
 	if err != nil {
 		return fmt.Errorf("deposit failed: %v", err)
 	}
@@ -147,13 +145,9 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 		if err != nil {
 			return nil, err
 		}
-		serializedData := new(bytes.Buffer)
-		if err := ssz.Encode(serializedData, di); err != nil {
-			return nil, fmt.Errorf("could not serialize deposit data: %v", err)
-		}
 
 		// Do the actual deposit
-		if err := s.makeDeposit(serializedData.Bytes()); err != nil {
+		if err := s.makeDeposit(di.Pubkey, di.WithdrawalCredentialsHash32, di.ProofOfPossession); err != nil {
 			return nil, err
 		}
 		// Store in database
