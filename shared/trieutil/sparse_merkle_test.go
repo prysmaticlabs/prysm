@@ -1,10 +1,66 @@
 package trieutil
 
 import (
+	"crypto/ecdsa"
+	"fmt"
+	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/crypto"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+var (
+	amount33Eth, _        = new(big.Int).SetString("33000000000000000000", 10)
+	amount32Eth, _        = new(big.Int).SetString("32000000000000000000", 10)
+	amountLessThan1Eth, _ = new(big.Int).SetString("500000000000000000", 10)
+)
+
+type testAccount struct {
+	addr         common.Address
+	contract     *contracts.DepositContract
+	contractAddr common.Address
+	backend      *backends.SimulatedBackend
+	txOpts       *bind.TransactOpts
+}
+
+func setup() (*testAccount, error) {
+	genesis := make(core.GenesisAlloc)
+	privKey, _ := crypto.GenerateKey()
+	pubKeyECDSA, ok := privKey.Public().(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("error casting public key to ECDSA")
+	}
+
+	// strip off the 0x and the first 2 characters 04 which is always the EC prefix and is not required.
+	publicKeyBytes := crypto.FromECDSAPub(pubKeyECDSA)[4:]
+	var pubKey = make([]byte, 48)
+	copy(pubKey[:], []byte(publicKeyBytes))
+
+	addr := crypto.PubkeyToAddress(privKey.PublicKey)
+	txOpts := bind.NewKeyedTransactor(privKey)
+	startingBalance, _ := new(big.Int).SetString("100000000000000000000000000000000000000", 10)
+	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
+	backend := backends.NewSimulatedBackend(genesis, 210000000000)
+
+	depositsRequired := big.NewInt(8)
+	minDeposit := big.NewInt(1e9)
+	maxDeposit := big.NewInt(32e9)
+	contractAddr, _, contract, err := contracts.DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit, big.NewInt(1), addr)
+	if err != nil {
+		return nil, err
+	}
+	backend.Commit()
+
+	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
+}
 
 func TestMerkleTrie_BranchIndices(t *testing.T) {
 	indices := BranchIndices(1024, 3 /* depth */)
@@ -40,6 +96,25 @@ func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 	if _, err := m.MerkleProof(0); err == nil {
 		t.Error("Expected out of range failure, received nil", err)
 	}
+}
+
+func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
+	trie, err := NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not create empty trie %v", err)
+	}
+
+	var zeroByte [32]byte
+	rootHash := zeroByte
+
+	for i := 1; i < int(params.BeaconConfig().DepositContractTreeDepth); i++ {
+		newRoot := parentHash(rootHash[:], rootHash[:])
+		rootHash = bytesutil.ToBytes32(newRoot)
+	}
+	if rootHash != trie.Root() {
+		t.Errorf("Trie root for an empty trie isn't as expected. Expected: %#x but got %#x", rootHash, trie.Root())
+	}
+
 }
 
 func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
@@ -121,5 +196,26 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 		if ok := VerifyMerkleProof(m.branches[0][0], items[2], 2, proof); !ok {
 			b.Error("Merkle proof did not verify")
 		}
+	}
+}
+
+func TestDepositTrieRoot_OK(t *testing.T) {
+	testAccount, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	localTrie, err := NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	depRoot, err := testAccount.contract.GetDepositRoot(&bind.CallOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if depRoot != localTrie.Root() {
+		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
 	}
 }
