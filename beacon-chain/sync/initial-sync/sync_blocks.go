@@ -131,7 +131,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}); err != nil {
 		return fmt.Errorf("could not to save attestation target: %v", err)
 	}
-	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
+	state, err = s.chainService.AdvanceState(ctx, state, block)
 	if err != nil {
 		return fmt.Errorf("could not apply block state transition: %v", err)
 	}

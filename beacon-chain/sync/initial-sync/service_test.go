@@ -62,8 +62,8 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) ApplyBlockStateTransition(
-	ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState,
+func (ms *mockChainService) AdvanceState(
+	ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
@@ -97,7 +97,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
-		log.Errorf("unable to marshal the beacon state: %v", err)
+		t.Errorf("unable to marshal the beacon state: %v", err)
 		return
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])

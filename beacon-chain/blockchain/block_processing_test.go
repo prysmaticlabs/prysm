@@ -39,7 +39,7 @@ func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *Chain
 	}
 	saveLatestBlock := beaconState.LatestBlock
 
-	computedState, err := chainService.ApplyBlockStateTransition(context.Background(), block, beaconState)
+	computedState, err := chainService.AdvanceState(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatalf("could not apply block state transition: %v", err)
 	}
@@ -115,6 +115,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
+	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
@@ -187,7 +191,10 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
+	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
@@ -243,6 +250,10 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
@@ -321,7 +332,10 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
+	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
@@ -367,6 +381,10 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
@@ -416,6 +434,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
 	}
 	if err := chainService.beaconDB.SaveJustifiedState(beaconState); err != nil {
 		t.Fatal(err)
@@ -584,6 +606,10 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
+	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
@@ -722,6 +748,10 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
+	}
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		StateRoot: []byte{},
 	}
 	block := &pb.BeaconBlock{
 		ParentBlockRoot: []byte{'a'},

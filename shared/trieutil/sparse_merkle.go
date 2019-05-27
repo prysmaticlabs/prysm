@@ -12,8 +12,43 @@ import (
 // MerkleTrie implements a sparse, general purpose Merkle trie to be used
 // across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
+	treeDepth     int
 	branches      [][][]byte
 	originalItems [][]byte // list of provided items before hashing them into leaves.
+}
+
+// NewTrie returns a new merkle trie filled with zerohashes to use.
+func NewTrie(depth int) (*MerkleTrie, error) {
+	var zeroBytes [32]byte
+	items := [][]byte{zeroBytes[:]}
+	return GenerateTrieFromItems(items, depth)
+}
+
+// InsertIntoTrie inserts an item(deposit hash) into the trie.
+func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) error {
+	// Only insert new items which follow directly after the last
+	// added element
+	if index > len(m.originalItems) {
+		return errors.New("invalid index to be inserting")
+	}
+	if index == len(m.originalItems) {
+		m.originalItems = append(m.originalItems, item)
+		return m.updateTrie()
+	}
+
+	m.originalItems[index] = item
+	return m.updateTrie()
+}
+
+// Regenerates the trie with the item list.
+func (m *MerkleTrie) updateTrie() error {
+	trie, err := GenerateTrieFromItems(m.originalItems, m.treeDepth)
+	if err != nil {
+		return err
+	}
+	m.branches = trie.branches
+	m.originalItems = trie.originalItems
+	return nil
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
@@ -36,7 +71,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	for i, j := 0, len(branches)-1; i < j; i, j = i+1, j-1 {
 		branches[i], branches[j] = branches[j], branches[i]
 	}
-	return &MerkleTrie{branches: branches, originalItems: items}, nil
+	return &MerkleTrie{branches: branches, originalItems: items, treeDepth: depth}, nil
 }
 
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
@@ -107,7 +142,7 @@ func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][]byte, error) {
 
 // parentHash takes a left and right node and hashes their concatenation.
 func parentHash(left []byte, right []byte) []byte {
-	res := hashutil.Hash(append(left, right...))
+	res := hashutil.HashSha256(append(left, right...))
 	return res[:]
 }
 
@@ -127,8 +162,12 @@ func hashLayer(layer [][]byte) [][]byte {
 // as padding along the way if an odd number of leaves are originally provided.
 func generateEmptyNodes(depth int) [][]byte {
 	nodes := make([][]byte, depth)
-	for i := 0; i < depth; i++ {
-		nodes[i] = parentHash([]byte{}, []byte{})
+	var prevNode [32]byte
+	nodes[0] = prevNode[:]
+	for i := 1; i < depth; i++ {
+		hashedNode := parentHash(prevNode[:], prevNode[:])
+		nodes[i] = hashedNode
+		prevNode = bytesutil.ToBytes32(hashedNode)
 	}
 	return nodes
 }

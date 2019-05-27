@@ -10,13 +10,11 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -164,15 +162,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	if err != nil {
 		return err
 	}
-	head, err := a.beaconDB.ChainHead()
-	if err != nil {
-		return err
-	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return err
-	}
-	return a.updateAttestation(ctx, headRoot, beaconState, attestation)
+	return a.updateAttestation(beaconState, attestation)
 }
 
 // BatchUpdateLatestAttestation updates multiple attestations and adds them into the attestation store
@@ -188,19 +178,11 @@ func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations
 	if err != nil {
 		return err
 	}
-	head, err := a.beaconDB.ChainHead()
-	if err != nil {
-		return err
-	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return err
-	}
 
 	attestations = a.sortAttestations(attestations)
 
 	for _, attestation := range attestations {
-		if err := a.updateAttestation(ctx, headRoot, beaconState, attestation); err != nil {
+		if err := a.updateAttestation(beaconState, attestation); err != nil {
 			return err
 		}
 	}
@@ -216,21 +198,8 @@ func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestatio
 	a.store.m[pubkey] = att
 }
 
-func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState,
-	attestation *pb.Attestation) error {
+func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
-
-	slot := attestation.Data.Slot
-	var err error
-
-	for beaconState.Slot < slot {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
-		)
-		if err != nil {
-			return fmt.Errorf("could not execute head transition: %v", err)
-		}
-	}
 
 	committee, err := helpers.CrosslinkCommitteeAtEpoch(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Shard)
 	if err != nil {

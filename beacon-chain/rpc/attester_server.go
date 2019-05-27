@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -100,19 +99,6 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	headState, err := as.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch head state: %v", err)
-	}
-
-	for headState.Slot < req.Slot {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-
-		headState, err = state.ExecuteStateTransition(
-			ctx, headState, nil /* block */, headRoot, state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
-		}
 	}
 
 	// Fetch the epoch boundary root = hash_tree_root(epoch_boundary)
