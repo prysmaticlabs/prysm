@@ -100,10 +100,18 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 
 	validAtts := make([]*pbp2p.Attestation, 0, len(attsReadyForInclusion))
 	for _, att := range attsReadyForInclusion {
-		if err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
-			log.WithError(err).WithField(
-				"slot", att.Data.Slot-params.BeaconConfig().GenesisSlot).Warn(
-				"Skipping, pending attestation failed verification")
+		if _, err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+
+			log.WithError(err).WithFields(logrus.Fields{
+				"slot":     att.Data.Slot,
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Info(
+				"Deleting failed pending attestation from DB")
+			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
+			}
 			continue
 		}
 		validAtts = append(validAtts, att)

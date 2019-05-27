@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func init() {
@@ -211,7 +213,18 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
+	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: []byte(strconv.Itoa(i)),
+		}
+		balance := params.BeaconConfig().MaxDepositAmount
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -262,39 +275,54 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
-	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                    0,
-			Slot:                     params.BeaconConfig().GenesisSlot,
-			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
-			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
+			TargetEpoch: 0,
+			SourceEpoch: 0,
+			SourceRoot:  []byte("tron-sucks"),
+			Crosslink: &pb.Crosslink{
+				Shard: 0,
+				Epoch: 0,
+			},
 		},
-		AggregationBitfield: []byte{1},
-		CustodyBitfield:     []byte{1},
+		AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+		CustodyBitfield:     []byte{},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	var exits []*pb.VoluntaryExit
 	for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits+1; i++ {
 		exits = append(exits, &pb.VoluntaryExit{})
 	}
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 10,
+		Slot: 4,
 		Eth1Data: &pb.Eth1Data{
 			DepositRoot: []byte{2},
 			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
-			RandaoReveal:      randaoReveal,
+			RandaoReveal:      []byte{},
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
 			VoluntaryExits:    exits,
 		},
 	}
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.CurrentCrosslinks = []*pb.Crosslink{
+		{
+			Shard: 0,
+			Epoch: 0,
+		},
+	}
+	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+
+	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
+	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 	want := "could not process validator exits"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -302,7 +330,18 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
+	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: []byte(strconv.Itoa(i)),
+		}
+		balance := params.BeaconConfig().MaxDepositAmount
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -354,18 +393,19 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		},
 	}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	beaconState.Slot = params.BeaconConfig().GenesisSlot + (params.BeaconConfig().PersistentCommitteePeriod * slotsPerEpoch)
+	beaconState.Slot = (params.BeaconConfig().PersistentCommitteePeriod * slotsPerEpoch) + params.BeaconConfig().MinAttestationInclusionDelay
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                    0,
-			Slot:                     beaconState.Slot - params.BeaconConfig().MinAttestationInclusionDelay,
-			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
-			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
+			TargetEpoch: helpers.SlotToEpoch(beaconState.Slot),
+			SourceEpoch: 0,
+			SourceRoot:  []byte("tron-sucks"),
+			Crosslink: &pb.Crosslink{
+				Shard: 0,
+				Epoch: helpers.SlotToEpoch(beaconState.Slot),
+			},
 		},
-		AggregationBitfield: []byte{1},
-		CustodyBitfield:     []byte{1},
+		AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+		CustodyBitfield:     []byte{},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	exits := []*pb.VoluntaryExit{
@@ -374,7 +414,6 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Epoch:          params.BeaconConfig().GenesisEpoch,
 		},
 	}
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot: beaconState.Slot,
 		Eth1Data: &pb.Eth1Data{
@@ -382,13 +421,28 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			BlockRoot:   []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
-			RandaoReveal:      randaoReveal,
+			RandaoReveal:      []byte{},
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
 			VoluntaryExits:    exits,
 		},
 	}
+	beaconState.CurrentCrosslinks = []*pb.Crosslink{
+		{
+			Shard: 0,
+			Epoch: helpers.SlotToEpoch(beaconState.Slot),
+		},
+	}
+	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+
+	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
+	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
 	}

@@ -39,5 +39,6 @@ go_test(
         "//shared/forkutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/ssz:go_default_library",
     ],
 )
