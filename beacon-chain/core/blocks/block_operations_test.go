@@ -1001,7 +1001,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _ := setupInitialDeposits(t, 100)
+	deposits, _ := setupInitialDeposits(t, 200)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
