@@ -41,9 +41,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "d3b257e4a8b0b228dd767616d3d549826761276d2ec627da64e46fe567c16099",
-    strip_prefix = "rules_k8s-5c9e803a0af07968f6c04daae2a4fd011b355ed5",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/5c9e803a0af07968f6c04daae2a4fd011b355ed5.tar.gz",
+    sha256 = "4c4fea5c7fb0768bd440e6bf0a893bdb0449f3f41707522eaa9ada3d1152402f",
+    strip_prefix = "rules_k8s-7475ba20133e4a3f585a3648db6d055e7d1c5f78",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/7475ba20133e4a3f585a3648db6d055e7d1c5f78.tar.gz",
 )
 
 load(
@@ -120,10 +120,6 @@ proto_library(
     sha256 = "92c8e4d408704cd636ae528aeae9b4dd7da8448ae951e76ed93c2700e56d4735",
     strip_prefix = "prysm-testnet-site-5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8",
     url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8.tar.gz",
-)""",
-    sha256 = "1626d546c696fd4fc093058d378787b8794f532acba729a9d1f5375c1f79f4a6",
-    strip_prefix = "prysm-testnet-site-0438607f2c926108a1cca238eefb35725a2bcf76",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/0438607f2c926108a1cca238eefb35725a2bcf76.tar.gz",
 )
 
 http_archive(
