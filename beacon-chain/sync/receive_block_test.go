@@ -30,9 +30,9 @@ func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [
 		}
 		// At slot 1, the parent is the genesis block.
 		if slot == 1 {
-			parent.ParentBlockRoot = genesisRoot[:]
+			parent.ParentRoot = genesisRoot[:]
 		} else {
-			parent.ParentBlockRoot = parentRoots[len(parentRoots)-1][:]
+			parent.ParentRoot = parentRoots[len(parentRoots)-1][:]
 		}
 		parentRoot, err := hashutil.HashBeaconBlock(parent)
 		if err != nil {
@@ -57,7 +57,7 @@ func setupBlocksMissingParent(parents []*pb.BeaconBlock, parentRoots [][32]byte)
 		})
 	}
 	for i := range parentRoots {
-		blocksMissingParent[i].ParentBlockRoot = parentRoots[i][:]
+		blocksMissingParent[i].ParentRoot = parentRoots[i][:]
 	}
 	return blocksMissingParent
 }

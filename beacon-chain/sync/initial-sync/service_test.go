@@ -178,8 +178,8 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			continue
 		}
 		block := &pb.BeaconBlock{
-			Slot:            uint64(i),
-			ParentBlockRoot: parentHash,
+			Slot:       uint64(i),
+			ParentRoot: parentHash,
 		}
 
 		chainHead := &pb.ChainHeadResponse{}

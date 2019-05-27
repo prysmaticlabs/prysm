@@ -39,9 +39,9 @@ func generateSimulatedBlock(
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:            beaconState.Slot + 1,
-		ParentBlockRoot: prevBlockRoot[:],
-		StateRoot:       stateRoot[:],
+		Slot:       beaconState.Slot + 1,
+		ParentRoot: prevBlockRoot[:],
+		StateRoot:  stateRoot[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{1},
@@ -93,35 +93,29 @@ func generateSimulatedBlock(
 	if simObjects.simProposerSlashing != nil {
 		block.Body.ProposerSlashings = append(block.Body.ProposerSlashings, &pb.ProposerSlashing{
 			ProposerIndex: simObjects.simProposerSlashing.ProposerIndex,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            simObjects.simProposerSlashing.Proposal1Slot,
-				Shard:           simObjects.simProposerSlashing.Proposal1Shard,
-				BlockRootHash32: []byte(simObjects.simProposerSlashing.Proposal1Root),
+			Header_1: &pb.BeaconBlockHeader{
+				Slot:     simObjects.simProposerSlashing.Proposal1Slot,
+				BodyRoot: []byte(simObjects.simProposerSlashing.Proposal1Root),
 			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            simObjects.simProposerSlashing.Proposal2Slot,
-				Shard:           simObjects.simProposerSlashing.Proposal2Shard,
-				BlockRootHash32: []byte(simObjects.simProposerSlashing.Proposal2Root),
+			Header_2: &pb.BeaconBlockHeader{
+				Slot:     simObjects.simProposerSlashing.Proposal2Slot,
+				BodyRoot: []byte(simObjects.simProposerSlashing.Proposal2Root),
 			},
 		})
 	}
 	if simObjects.simAttesterSlashing != nil {
 		block.Body.AttesterSlashings = append(block.Body.AttesterSlashings, &pb.AttesterSlashing{
-			SlashableAttestation_1: &pb.SlashableAttestation{
+			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
 					Slot:           simObjects.simAttesterSlashing.SlashableAttestation1Slot,
 					JustifiedEpoch: simObjects.simAttesterSlashing.SlashableAttestation1JustifiedEpoch,
 				},
-				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableAttestation1CustodyBitField),
-				ValidatorIndices: simObjects.simAttesterSlashing.SlashableAttestation1ValidatorIndices,
 			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
+			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
 					Slot:           simObjects.simAttesterSlashing.SlashableAttestation2Slot,
 					JustifiedEpoch: simObjects.simAttesterSlashing.SlashableAttestation2JustifiedEpoch,
 				},
-				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableAttestation2CustodyBitField),
-				ValidatorIndices: simObjects.simAttesterSlashing.SlashableAttestation2ValidatorIndices,
 			},
 		})
 	}

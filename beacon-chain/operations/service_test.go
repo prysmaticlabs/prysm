@@ -332,7 +332,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
-	cb1 := &pb.BeaconBlock{Slot: 999, ParentBlockRoot: []byte{'A'}}
+	cb1 := &pb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}
@@ -352,7 +352,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 		t.Error("Attestation should be canonical")
 	}
 
-	cb2 := &pb.BeaconBlock{Slot: 999, ParentBlockRoot: []byte{'B'}}
+	cb2 := &pb.BeaconBlock{Slot: 999, ParentRoot: []byte{'B'}}
 	if err := s.beaconDB.SaveBlock(cb2); err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +381,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 		t.Error("Attestation shouldn't be canonical")
 	}
 
-	cb1 := &pb.BeaconBlock{Slot: 999, ParentBlockRoot: []byte{'A'}}
+	cb1 := &pb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}

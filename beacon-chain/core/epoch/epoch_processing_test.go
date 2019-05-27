@@ -436,9 +436,9 @@ func TestCrosslinkFromAttsData_CanGetCrosslink(t *testing.T) {
 		PreviousCrosslinkRoot: []byte{'B'},
 	}
 	if !proto.Equal(crosslinkFromAttsData(s, a), &pb.Crosslink{
-		Epoch:                       params.BeaconConfig().MaxCrosslinkEpochs,
-		CrosslinkDataRootHash32:     []byte{'A'},
-		PreviousCrosslinkRootHash32: []byte{'B'},
+		Epoch:      params.BeaconConfig().MaxCrosslinkEpochs,
+		DataRoot:   []byte{'A'},
+		ParentRoot: []byte{'B'},
 	}) {
 		t.Error("Incorrect crosslink")
 	}
@@ -451,7 +451,7 @@ func TestAttsForCrosslink_CanGetAttestations(t *testing.T) {
 		},
 	}
 	c := &pb.Crosslink{
-		CrosslinkDataRootHash32: []byte{'B'},
+		DataRoot: []byte{'B'},
 	}
 	atts := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{CrosslinkDataRoot: []byte{'A'}}},
@@ -487,9 +487,9 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 	}
 
 	gCrosslink := &pb.Crosslink{
-		Epoch:                       0,
-		CrosslinkDataRootHash32:     params.BeaconConfig().ZeroHash[:],
-		PreviousCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+		Epoch:      0,
+		DataRoot:   params.BeaconConfig().ZeroHash[:],
+		ParentRoot: params.BeaconConfig().ZeroHash[:],
 	}
 
 	crosslink, indices, err := winningCrosslink(state, 0, ge)
@@ -538,8 +538,8 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Epoch:                   ge,
-			CrosslinkDataRootHash32: []byte{'B'},
+			Epoch:    ge,
+			DataRoot: []byte{'B'},
 		}
 	}
 	state := &pb.BeaconState{
@@ -558,7 +558,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	if len(indices) != 0 {
 		t.Errorf("gensis crosslink indices is not 0, got: %d", len(indices))
 	}
-	want := &pb.Crosslink{Epoch: ge, CrosslinkDataRootHash32: []byte{'B'}}
+	want := &pb.Crosslink{Epoch: ge, DataRoot: []byte{'B'}}
 	if !reflect.DeepEqual(winner, want) {
 		t.Errorf("Did not get genesis crosslink, got: %v", winner)
 	}
@@ -580,14 +580,14 @@ func TestProcessCrosslink_NoUpdate(t *testing.T) {
 		blockRoots[i] = []byte{byte(i + 1)}
 	}
 	oldCrosslink := &pb.Crosslink{
-		Epoch:                   0,
-		CrosslinkDataRootHash32: []byte{'A'},
+		Epoch:    0,
+		DataRoot: []byte{'A'},
 	}
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
-			Epoch:                   0,
-			CrosslinkDataRootHash32: []byte{'A'},
+			Epoch:    0,
+			DataRoot: []byte{'A'},
 		})
 	}
 	state := &pb.BeaconState{
@@ -632,8 +632,8 @@ func TestProcessCrosslink_SuccessfulUpdate(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Epoch:                   ge,
-			CrosslinkDataRootHash32: []byte{'B'},
+			Epoch:    ge,
+			DataRoot: []byte{'B'},
 		}
 	}
 	var atts []*pb.PendingAttestation
@@ -978,10 +978,10 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	}
 	state.PreviousEpochAttestations = atts
 	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
-		CrosslinkDataRootHash32: []byte{'A'},
+		DataRoot: []byte{'A'},
 	}
 	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
-		CrosslinkDataRootHash32: []byte{'A'},
+		DataRoot: []byte{'A'},
 	}
 
 	rewards, penalties, err := crosslinkDelta(state)
@@ -1127,10 +1127,10 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 	}
 	state.PreviousEpochAttestations = atts
 	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
-		CrosslinkDataRootHash32: []byte{'A'},
+		DataRoot: []byte{'A'},
 	}
 	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
-		CrosslinkDataRootHash32: []byte{'A'},
+		DataRoot: []byte{'A'},
 	}
 
 	rewards, penalties, err := attestationDelta(state)
@@ -1275,10 +1275,10 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 	}
 	state.PreviousEpochAttestations = atts
 	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
-		CrosslinkDataRootHash32: []byte{'A'},
+		DataRoot: []byte{'A'},
 	}
 	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
-		CrosslinkDataRootHash32: []byte{'A'},
+		DataRoot: []byte{'A'},
 	}
 
 	state, err := ProcessRewardsAndPenalties(state)

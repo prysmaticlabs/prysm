@@ -117,13 +117,13 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       blocks[5].Slot,
 		BlockRoot:  roots[5][:],
-		ParentRoot: blocks[5].ParentBlockRoot,
+		ParentRoot: blocks[5].ParentRoot,
 	}
 	for i := 1; i < len(deposits); i++ {
 		voteTargets[uint64(i)] = &pb.AttestationTarget{
 			Slot:       blocks[4].Slot,
 			BlockRoot:  roots[4][:],
-			ParentRoot: blocks[4].ParentBlockRoot,
+			ParentRoot: blocks[4].ParentRoot,
 		}
 	}
 	attHandler := &mockAttestationHandler{
@@ -163,8 +163,8 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	roots := make([][32]byte, 6)
 	var err error
 	blocks[0] = &pb.BeaconBlock{
-		Slot:            beaconState.Slot,
-		ParentBlockRoot: []byte{'A'},
+		Slot:       beaconState.Slot,
+		ParentRoot: []byte{'A'},
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{},
 		},
@@ -175,8 +175,8 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[1] = &pb.BeaconBlock{
-		Slot:            beaconState.Slot + 2,
-		ParentBlockRoot: roots[0][:],
+		Slot:       beaconState.Slot + 2,
+		ParentRoot: roots[0][:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{},
 		},
@@ -187,8 +187,8 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[2] = &pb.BeaconBlock{
-		Slot:            beaconState.Slot + 1,
-		ParentBlockRoot: roots[0][:],
+		Slot:       beaconState.Slot + 1,
+		ParentRoot: roots[0][:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{},
 		},
@@ -199,8 +199,8 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[3] = &pb.BeaconBlock{
-		Slot:            beaconState.Slot + 3,
-		ParentBlockRoot: roots[1][:],
+		Slot:       beaconState.Slot + 3,
+		ParentRoot: roots[1][:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{},
 		},
@@ -211,8 +211,8 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[4] = &pb.BeaconBlock{
-		Slot:            beaconState.Slot + 4,
-		ParentBlockRoot: roots[2][:],
+		Slot:       beaconState.Slot + 4,
+		ParentRoot: roots[2][:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{},
 		},
@@ -223,8 +223,8 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 	}
 
 	blocks[5] = &pb.BeaconBlock{
-		Slot:            beaconState.Slot + 5,
-		ParentBlockRoot: roots[3][:],
+		Slot:       beaconState.Slot + 5,
+		ParentRoot: roots[3][:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{},
 		},

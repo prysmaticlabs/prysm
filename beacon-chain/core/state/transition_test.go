@@ -507,8 +507,8 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
-			Epoch:                   0,
-			CrosslinkDataRootHash32: []byte{'A'},
+			Epoch:    0,
+			DataRoot: []byte{'A'},
 		})
 	}
 	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{

@@ -16,10 +16,10 @@ var clock utils.Clock = &utils.RealClock{}
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
-		Slot:            0,
-		ParentBlockRoot: params.BeaconConfig().ZeroHash[:],
-		StateRoot:       stateRoot,
-		Signature:       params.BeaconConfig().EmptySignature[:],
+		Slot:       0,
+		ParentRoot: params.BeaconConfig().ZeroHash[:],
+		StateRoot:  stateRoot,
+		Signature:  params.BeaconConfig().EmptySignature[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRoot: params.BeaconConfig().ZeroHash[:],
 			BlockRoot:   params.BeaconConfig().ZeroHash[:],
