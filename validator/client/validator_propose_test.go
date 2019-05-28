@@ -213,8 +213,8 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if !bytes.Equal(broadcastedBlock.Eth1Data.BlockRoot, []byte{'B', 'L', 'O', 'C', 'K'}) {
-		t.Errorf("Unexpected ETH1 data: %v", broadcastedBlock.Eth1Data)
+	if !bytes.Equal(broadcastedBlock.Body.Eth1Data.BlockRoot, []byte{'B', 'L', 'O', 'C', 'K'}) {
+		t.Errorf("Unexpected ETH1 data: %v", broadcastedBlock.Body.Eth1Data)
 	}
 }
 
