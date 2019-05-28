@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
-	"time"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -37,18 +36,12 @@ func TestProposeBlock_OK(t *testing.T) {
 
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		depositData, err := helpers.EncodeDepositData(
-			&pbp2p.DepositInput{
-				Pubkey: []byte(strconv.Itoa(i)),
-			},
-			params.BeaconConfig().MaxDepositAmount,
-			time.Now().Unix(),
-		)
-		if err != nil {
-			t.Fatalf("Could not encode deposit input: %v", err)
+		depositData := &pbp2p.DepositData{
+			Pubkey: []byte(strconv.Itoa(i)),
+			Amount: params.BeaconConfig().MaxDepositAmount,
 		}
 		deposits[i] = &pbp2p.Deposit{
-			DepositData: depositData,
+			Data: depositData,
 		}
 	}
 
@@ -92,18 +85,15 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		depositData, err := helpers.EncodeDepositData(
-			&pbp2p.DepositInput{
-				Pubkey: []byte(strconv.Itoa(i)),
-			},
-			params.BeaconConfig().MaxDepositAmount,
-			time.Now().Unix(),
-		)
-		if err != nil {
-			t.Fatalf("Could not encode deposit input: %v", err)
+		depositData := &pbp2p.DepositData{
+			Pubkey: []byte(strconv.Itoa(i)),
+			Amount: params.BeaconConfig().MaxDepositAmount,
 		}
 		deposits[i] = &pbp2p.Deposit{
-			DepositData: depositData,
+			Data: depositData,
+		}
+		deposits[i] = &pbp2p.Deposit{
+			Data: depositData,
 		}
 	}
 

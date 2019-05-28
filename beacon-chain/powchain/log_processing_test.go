@@ -53,19 +53,15 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      stub[:],
-		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
-	}
-
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
-		t.Fatalf("Could not serialize data %v", err)
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.txOpts.Value = amount32Eth
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+	testAcc.txOpts.GasLimit = 1000000
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -116,10 +112,10 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      stub[:],
-		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -127,15 +123,11 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	badData := []byte("bad data")
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
-	// A deposit with bad data should also be correctly processed and added to the
-	// db in the pending deposits bucket.
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, badData); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -190,19 +182,15 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      stub[:],
-		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
-	}
-
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
-		t.Fatalf("Could not serialize data %v", err)
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.txOpts.Value = amount32Eth
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+	testAcc.txOpts.GasLimit = 1000000
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 	testAcc.backend.Commit()
@@ -236,12 +224,12 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Errorf("Pubkey is not the same as the data that was put in %v", deserializeData.Pubkey)
 	}
 
-	if !bytes.Equal(deserializeData.ProofOfPossession, stub[:]) {
-		t.Errorf("Proof of Possession is not the same as the data that was put in %v", deserializeData.ProofOfPossession)
+	if !bytes.Equal(loggedSig, data.Signature) {
+		t.Errorf("Proof of Possession is not the same as the data that was put in %v", loggedSig)
 	}
 
-	if !bytes.Equal(deserializeData.WithdrawalCredentialsHash32, []byte("withdraw")) {
-		t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v", deserializeData.WithdrawalCredentialsHash32)
+	if !bytes.Equal(withCreds, data.WithdrawalCredentials) {
+		t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v", withCreds)
 	}
 
 }
@@ -271,10 +259,10 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      stub[:],
-		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -287,7 +275,7 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -360,19 +348,15 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 		var stub [48]byte
 		binary.LittleEndian.PutUint64(stub[:], uint64(i))
 
-		data := &pb.DepositInput{
-			Pubkey:                      stub[:],
-			ProofOfPossession:           stub[:],
-			WithdrawalCredentialsHash32: []byte("withdraw"),
-		}
-
-		serializedData := new(bytes.Buffer)
-		if err := ssz.Encode(serializedData, data); err != nil {
-			t.Fatalf("Could not serialize data %v", err)
+		data := &pb.DepositData{
+			Pubkey:                pubkey[:],
+			Signature:             sig[:],
+			WithdrawalCredentials: withdrawalCreds[:],
 		}
 
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		testAcc.txOpts.GasLimit = 1000000
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -440,10 +424,10 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      stub[:],
-		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -455,7 +439,7 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -508,10 +492,10 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      stub[:],
-		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -530,7 +514,7 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()
@@ -569,10 +553,10 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      stub[:],
-		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -591,7 +575,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()
@@ -621,7 +605,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	// We add in another 8 deposits after chainstart.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()

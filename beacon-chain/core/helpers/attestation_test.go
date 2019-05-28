@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -12,20 +11,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupInitialDeposits(t *testing.T, numDeposits int) []*pb.Deposit {
+func setupInitialDeposits(numDeposits int) []*pb.Deposit {
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: []byte(strconv.Itoa(i)),
-		}
 		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
+		depositData := &pb.DepositData{
+			Pubkey: []byte(strconv.Itoa(i)),
+			Amount: balance,
 		}
+
 		deposits[i] = &pb.Deposit{
-			DepositData: depositData,
-			Index:       uint64(i),
+			Data:  depositData,
+			Index: uint64(i),
 		}
 	}
 	return deposits
@@ -34,7 +31,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) []*pb.Deposit {
 func TestAttestationDataSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	deposits := setupInitialDeposits(t, 100)
+	deposits := setupInitialDeposits(100)
 	if err := db.InitializeState(context.Background(), uint64(0), deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}

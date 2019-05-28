@@ -208,13 +208,6 @@ message BeaconBlockBody {
   repeated Transfer transfers = 8;
 }
 
-message DepositInput {
-  bytes pubkey = 1;
-  bytes proof_of_possession = 2; // Type of ['uint384']??
-  // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
-  bytes withdrawal_credentials_hash32 = 3;
-}
-
 message ProposalSignedData {
   uint64 slot = 1;
   uint64 shard = 2;
@@ -234,9 +227,6 @@ message DepositData {
   // Amount in Gwei
   uint64 amount = 3;
   bytes signature = 4; //bytes96
-  // Deprecated
-  DepositInput deposit_input = 1001 [deprecated=true];
-  uint64 timestamp = 1002 [deprecated=true];
 }
 
 message ProposerSlashing {
@@ -267,9 +257,6 @@ message Deposit {
   // Index in the deposit tree
   uint64 index = 2;
   DepositData data = 3;
-  // Deprecated
-  // TODO(2307): Remove deprecated fields
-  bytes deposit_data = 1003 [deprecated=true];
 }
 
 message VoluntaryExit {
