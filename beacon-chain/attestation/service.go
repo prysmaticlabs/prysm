@@ -4,7 +4,6 @@ package attestation
 import (
 	"context"
 	"fmt"
-	"sort"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -116,7 +115,7 @@ func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uin
 	if attestation == nil {
 		return nil, nil
 	}
-	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRoot)
 	if !a.beaconDB.HasBlock(targetRoot) {
 		return nil, nil
 	}
@@ -179,8 +178,6 @@ func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations
 		return err
 	}
 
-	attestations = a.sortAttestations(attestations)
-
 	for _, attestation := range attestations {
 		if err := a.updateAttestation(beaconState, attestation); err != nil {
 			return err
@@ -201,14 +198,17 @@ func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestatio
 func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
 
-	committee, err := helpers.CrosslinkCommitteeAtEpoch(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Shard)
+	committee, err := helpers.CrosslinkCommitteeAtEpoch(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Crosslink.Shard)
 	if err != nil {
 		return err
 	}
+	slot, err := helpers.AttestationDataSlot(beaconState, attestation.Data)
+	if err != nil {
+		return fmt.Errorf("could not get attestation slot: %v", err)
+	}
 	log.WithFields(logrus.Fields{
-		"attestationSlot":    attestation.Data.Slot,
-		"attestationShard":   attestation.Data.Shard,
-		"committeesShard":    attestation.Data.Shard,
+		"attestationSlot":    slot,
+		"attestationShard":   attestation.Data.Crosslink.Shard,
 		"committeesList":     committee,
 		"lengthOfCommittees": len(committee),
 	}).Debug("Updating latest attestation")
@@ -242,12 +242,12 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
 		pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[committee[i]].Pubkey)
-		newAttestationSlot := attestation.Data.Slot
+		newAttestationSlot := slot
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
 		defer a.store.Unlock()
 		if _, exists := a.store.m[pubkey]; exists {
-			currentAttestationSlot = a.store.m[pubkey].Data.Slot
+			currentAttestationSlot = slot
 		}
 		// If the attestation is newer than this attester's one in pool.
 		if newAttestationSlot > currentAttestationSlot {
@@ -255,12 +255,12 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 
 			log.WithFields(
 				logrus.Fields{
-					"attestationSlot": attestation.Data.Slot,
-					"justifiedEpoch":  attestation.Data.JustifiedEpoch,
+					"attestationSlot": slot,
+					"sourceEpoch":  attestation.Data.SourceEpoch,
 				},
 			).Debug("Attestation store updated")
 
-			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRoot)
 			votedBlock, err := a.beaconDB.Block(blockRoot)
 			if err != nil {
 				return err
@@ -271,11 +271,3 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 	return nil
 }
 
-// sortAttestations sorts attestations by their slot number in ascending order.
-func (a *Service) sortAttestations(attestations []*pb.Attestation) []*pb.Attestation {
-	sort.SliceStable(attestations, func(i, j int) bool {
-		return attestations[i].Data.Slot < attestations[j].Data.Slot
-	})
-
-	return attestations
-}
