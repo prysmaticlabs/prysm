@@ -83,13 +83,13 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot: 0,
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{2},
-			BlockRoot:   []byte{3},
-		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
 			ProposerSlashings: slashings,
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{2},
+				BlockRoot:   []byte{3},
+			},
 		},
 	}
 	want := "could not verify block proposer slashing"
@@ -124,14 +124,14 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot: 0,
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{2},
-			BlockRoot:   []byte{3},
-		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
 			ProposerSlashings: slashings,
 			AttesterSlashings: attesterSlashings,
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{2},
+				BlockRoot:   []byte{3},
+			},
 		},
 	}
 	want := "could not verify block attester slashing"
@@ -190,15 +190,15 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot: 0,
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{2},
-			BlockRoot:   []byte{3},
-		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      blockAttestations,
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{2},
+				BlockRoot:   []byte{3},
+			},
 		},
 	}
 	want := "could not process block attestations"
@@ -287,16 +287,16 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Slot: 4,
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{2},
-			BlockRoot:   []byte{3},
-		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      []byte{},
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
 			VoluntaryExits:    exits,
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{2},
+				BlockRoot:   []byte{3},
+			},
 		},
 	}
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
@@ -405,16 +405,16 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Slot: beaconState.Slot,
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{2},
-			BlockRoot:   []byte{3},
-		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      []byte{},
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
 			VoluntaryExits:    exits,
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{2},
+				BlockRoot:   []byte{3},
+			},
 		},
 	}
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{

@@ -99,7 +99,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	block := &pbp2p.BeaconBlock{
 		Slot:       slot,
 		ParentRoot: parentTreeRoot[:],
-		Eth1Data:   eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
 			RandaoReveal:      epochSignature.Marshal(),
 			Attestations:      attResp.PendingAttestations,
@@ -107,6 +106,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 			AttesterSlashings: nil, // TODO(1438): Add after operations pool
 			Deposits:          pDepResp.PendingDeposits,
 			VoluntaryExits:    nil, // TODO(1323): Add validator exits
+			Eth1Data:          eth1DataResp.Eth1Data,
 		},
 	}
 

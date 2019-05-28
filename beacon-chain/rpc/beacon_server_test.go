@@ -771,34 +771,40 @@ func TestBlockTree_OK(t *testing.T) {
 	}
 	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
 	b1 := &pbp2p.BeaconBlock{
-		Slot:         3,
-		ParentRoot:   justifiedRoot[:],
-		RandaoReveal: []byte("A"),
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
+		Body: &pbp2p.BeaconBlockBody{
+			RandaoReveal: []byte("D"),
+		},
 	}
 	b1Root, _ := hashutil.HashBeaconBlock(b1)
 	b2 := &pbp2p.BeaconBlock{
-		Slot:         3,
-		ParentRoot:   justifiedRoot[:],
-		RandaoReveal: []byte("C"),
-	}
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
+		Body: &pbp2p.BeaconBlockBody{
+			RandaoReveal: []byte("C"),
+		}}
 	b2Root, _ := hashutil.HashBeaconBlock(b2)
 	b3 := &pbp2p.BeaconBlock{
-		Slot:         3,
-		ParentRoot:   justifiedRoot[:],
-		RandaoReveal: []byte("D"),
-	}
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
+		Body: &pbp2p.BeaconBlockBody{
+			RandaoReveal: []byte("A"),
+		}}
 	b3Root, _ := hashutil.HashBeaconBlock(b1)
 	b4 := &pbp2p.BeaconBlock{
-		Slot:         4,
-		ParentRoot:   b1Root[:],
-		RandaoReveal: []byte("B"),
-	}
+		Slot:       4,
+		ParentRoot: b1Root[:],
+		Body: &pbp2p.BeaconBlockBody{
+			RandaoReveal: []byte("B"),
+		}}
 	b4Root, _ := hashutil.HashBeaconBlock(b4)
 	b5 := &pbp2p.BeaconBlock{
-		Slot:         5,
-		ParentRoot:   b3Root[:],
-		RandaoReveal: []byte("E"),
-	}
+		Slot:       5,
+		ParentRoot: b3Root[:],
+		Body: &pbp2p.BeaconBlockBody{
+			RandaoReveal: []byte("E"),
+		}}
 	b5Root, _ := hashutil.HashBeaconBlock(b5)
 
 	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
@@ -912,10 +918,10 @@ func TestBlockTree_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Slice(resp.Tree, func(i, j int) bool {
-		return string(resp.Tree[i].Block.RandaoReveal) < string(resp.Tree[j].Block.RandaoReveal)
+		return string(resp.Tree[i].Block.Signature) < string(resp.Tree[j].Block.Signature)
 	})
 	sort.Slice(tree, func(i, j int) bool {
-		return string(tree[i].Block.RandaoReveal) < string(tree[j].Block.RandaoReveal)
+		return string(tree[i].Block.Signature) < string(tree[j].Block.Signature)
 	})
 	for i := range resp.Tree {
 		if !proto.Equal(resp.Tree[i].Block, tree[i].Block) {
