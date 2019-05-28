@@ -60,7 +60,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	emptyNodes := generateEmptyNodes(depth)
 	// Append the leaves to the branches.
 	branches := [][][]byte{leaves}
-	for i := 0; i < depth-1; i++ {
+	for i := 0; i < depth; i++ {
 		if len(branches[i])%2 == 1 {
 			branches[i] = append(branches[i], emptyNodes[i])
 		}
@@ -162,8 +162,8 @@ func hashLayer(layer [][]byte) [][]byte {
 // as padding along the way if an odd number of leaves are originally provided.
 func generateEmptyNodes(depth int) [][]byte {
 	nodes := make([][]byte, depth)
-	var prevNode [32]byte
-	nodes[0] = prevNode[:]
+	var zeroBytes, prevNode [32]byte
+	nodes[0] = zeroBytes[:]
 	for i := 1; i < depth; i++ {
 		hashedNode := parentHash(prevNode[:], prevNode[:])
 		nodes[i] = hashedNode

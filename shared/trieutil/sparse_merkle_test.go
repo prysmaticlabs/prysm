@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -103,16 +102,18 @@ func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not create empty trie %v", err)
 	}
-
-	nodes := generateEmptyNodes(int(params.BeaconConfig().DepositContractTreeDepth))
-	rootNode := nodes[len(nodes)-1]
-	var zero [32]byte
-	t.Logf("%#x", zero)
-
-	if bytesutil.ToBytes32(rootNode) != trie.Root() {
-		t.Errorf("Trie root for an empty trie isn't as expected. Expected: %#x but got %#x", rootNode, trie.Root())
+	testAccount, err := setup()
+	if err != nil {
+		t.Fatal(err)
 	}
 
+	depRoot, err := testAccount.contract.GetDepositRoot(&bind.CallOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if depRoot != trie.Root() {
+		t.Errorf("Trie root for an empty trie isn't as expected. Expected: %#x but got %#x", depRoot, trie.Root())
+	}
 }
 
 func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
