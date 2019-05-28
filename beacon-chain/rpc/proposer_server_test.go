@@ -382,4 +382,3 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		t.Error("Did not receive expected attestations")
 	}
 }
-
