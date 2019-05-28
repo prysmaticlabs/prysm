@@ -15,7 +15,7 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 	stateHash := []byte{0}
 	b1 := NewGenesisBlock(stateHash)
 
-	if b1.ParentBlockRoot == nil {
+	if b1.ParentRoot == nil {
 		t.Error("genesis block missing ParentHash field")
 	}
 

@@ -326,8 +326,8 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			continue
 		}
 		block := &pb.BeaconBlock{
-			Slot:            params.BeaconConfig().GenesisSlot + uint64(i),
-			ParentBlockRoot: parentHash,
+			Slot:       uint64(i),
+			ParentRoot: parentHash,
 		}
 
 		ss.processBlock(context.Background(), block)

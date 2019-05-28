@@ -154,7 +154,7 @@ func blocksSinceFinalized(ctx context.Context, db *db.BeaconDB, block *pb.Beacon
 	defer span.End()
 	blockAncestors := make([]*pb.BeaconBlock, 0)
 	blockAncestors = append(blockAncestors, block)
-	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
+	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	// looking up ancestors, until the finalized block.
 	for parentRoot != finalizedBlockRoot {
 		retblock, err := db.Block(parentRoot)
@@ -162,7 +162,7 @@ func blocksSinceFinalized(ctx context.Context, db *db.BeaconDB, block *pb.Beacon
 			return nil, err
 		}
 		blockAncestors = append(blockAncestors, retblock)
-		parentRoot = bytesutil.ToBytes32(retblock.ParentBlockRoot)
+		parentRoot = bytesutil.ToBytes32(retblock.ParentRoot)
 	}
 	return blockAncestors, nil
 }

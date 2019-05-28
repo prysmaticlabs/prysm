@@ -654,3 +654,41 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()
 }
+
+// respondBatchedBlocks returns the requested block list inclusive of head block but not inclusive of the finalized block.
+// the return should look like (finalizedBlock... headBlock].
+func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+	// if head block was the same as the finalized block.
+	if bytes.Equal(headRoot, finalizedRoot) {
+		return nil, nil
+	}
+
+	b, err := rs.db.Block(bytesutil.ToBytes32(headRoot))
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, fmt.Errorf("nil block %#x from db", bytesutil.Trunc(headRoot))
+	}
+
+	bList := []*pb.BeaconBlock{b}
+	parentRoot := b.ParentRoot
+	for !bytes.Equal(parentRoot, finalizedRoot) {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		b, err = rs.db.Block(bytesutil.ToBytes32(parentRoot))
+		if err != nil {
+			return nil, err
+		}
+		if b == nil {
+			return nil, fmt.Errorf("nil parent block %#x from db", bytesutil.Trunc(parentRoot[:]))
+		}
+
+		// Prepend parent to the beginning of the list.
+		bList = append([]*pb.BeaconBlock{b}, bList...)
+
+		parentRoot = b.ParentRoot
+	}
+	return bList, nil
+}

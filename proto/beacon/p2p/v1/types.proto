@@ -159,10 +159,6 @@ message Crosslink {
   bytes parent_root = 3;
   // Data root
   bytes data_root = 4;
-  // Root of the previous crosslink
-  bytes previous_crosslink_root_hash32 = 5 [deprecated=true];
-  // Root of the shard data since the previous crosslink
-  bytes crosslink_data_root_hash32 = 6 [deprecated=true];
 }
 
 message BeaconBlockHeader {
@@ -175,11 +171,10 @@ message BeaconBlockHeader {
 
 message BeaconBlock {
   uint64 slot = 1;
-  bytes parent_block_root = 2 [deprecated = true];
+  bytes parent_root = 2;
   bytes state_root = 3;
   BeaconBlockBody body = 4;
   bytes signature = 5; // bytes96
-  bytes parent_root = 6;
 
   // Deprecated
   // TODO(2307): Remove deprecated fields
@@ -223,22 +218,11 @@ message ProposerSlashing {
   uint64 proposer_index = 1;
   BeaconBlockHeader header_1 = 2;
   BeaconBlockHeader header_2 = 3;
-
-  // Deprecated
-  // TODO(2307): Remove deprecated fields
-  ProposalSignedData proposal_data_1 = 1001 [deprecated=true];
-  bytes proposal_signature_1 = 1002 [deprecated=true]; // bytes96
-  ProposalSignedData proposal_data_2 = 1003 [deprecated=true];
-  bytes proposal_signature_2 = 1004 [deprecated=true];
 }
 
 message AttesterSlashing {
   IndexedAttestation attestation_1 = 1;
   IndexedAttestation attestation_2 = 2;
-  // Deprecated
-  // TODO(2307): Remove deprecated fields
-  SlashableAttestation slashable_attestation_1 = 1001 [deprecated=true];
-  SlashableAttestation slashable_attestation_2 = 1002 [deprecated=true];
 }
 
 message Deposit {

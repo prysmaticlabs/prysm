@@ -19,6 +19,20 @@ func TestAttestHead_OK(t *testing.T) {
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
+		p2p:              &mockBroadcaster{},
+		beaconDB:         db,
+		cache:            cache.NewAttestationCache(),
+	}
+	head := &pbp2p.BeaconBlock{
+		Slot:       999,
+		ParentRoot: []byte{'a'},
+	}
+	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
+		t.Fatal(err)
+	}
+	root, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		t.Fatal(err)
 	}
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
