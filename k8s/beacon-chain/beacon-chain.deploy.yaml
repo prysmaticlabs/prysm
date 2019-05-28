@@ -54,13 +54,15 @@ spec:
             - --bootstrap-node=/dns4/bootnode/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw
             - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK
             - --p2p-port=5000
+            - --p2p-whitelist=10.0.0.0/8 # Allow only cluster internal connections. External peers reach these nodes from the relay.
             #- --enable-tracing
             - --tracing-process-name=$(POD_NAME)
             - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces
             - --trace-sample-fraction=1.0
             - --datadir=/data
             - --p2p-max-peers=50
-            - --log-format=fluentd
+            - --pprof
+            #- --log-format=fluentd
           resources:
             requests:
               memory: "500Mi"
