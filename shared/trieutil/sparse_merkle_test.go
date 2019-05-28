@@ -104,15 +104,13 @@ func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
 		t.Fatalf("Could not create empty trie %v", err)
 	}
 
-	var zeroByte [32]byte
-	rootHash := zeroByte
+	nodes := generateEmptyNodes(int(params.BeaconConfig().DepositContractTreeDepth))
+	rootNode := nodes[len(nodes)-1]
+	var zero [32]byte
+	t.Logf("%#x", zero)
 
-	for i := 1; i < int(params.BeaconConfig().DepositContractTreeDepth); i++ {
-		newRoot := parentHash(rootHash[:], rootHash[:])
-		rootHash = bytesutil.ToBytes32(newRoot)
-	}
-	if rootHash != trie.Root() {
-		t.Errorf("Trie root for an empty trie isn't as expected. Expected: %#x but got %#x", rootHash, trie.Root())
+	if bytesutil.ToBytes32(rootNode) != trie.Root() {
+		t.Errorf("Trie root for an empty trie isn't as expected. Expected: %#x but got %#x", rootNode, trie.Root())
 	}
 
 }
