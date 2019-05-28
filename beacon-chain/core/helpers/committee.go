@@ -101,7 +101,6 @@ func ComputeCommittee(
 	validatorCount := uint64(len(validatorIndices))
 	startOffset := utils.SplitOffset(validatorCount, totalCommittees, index)
 	endOffset := utils.SplitOffset(validatorCount, totalCommittees, index+1)
-
 	indices := make([]uint64, endOffset-startOffset)
 	for i := startOffset; i < endOffset; i++ {
 		permutedIndex, err := utils.PermutedIndex(i, validatorCount, seed)
