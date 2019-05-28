@@ -338,6 +338,67 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	}, nil
 }
 
+// BlockTreeBySlots returns the current tree of saved blocks and their votes starting from the justified state.
+func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockSlotRequest) (*pb.BlockTreeResponse, error) {
+	justifiedState, err := bs.beaconDB.JustifiedState()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
+	}
+	attestationTargets, err := bs.targetsFetcher.AttestationTargets(justifiedState)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+	}
+	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
+	if err != nil {
+		return nil, err
+	}
+	highestSlot := bs.beaconDB.HighestBlockSlot()
+	fullBlockTree := []*pbp2p.BeaconBlock{}
+	for i := justifiedBlock.Slot + 1; i < highestSlot; i++ {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if i >= req.SlotNumberFrom && i <= req.SlotNumberTo {
+			nextLayer, err := bs.beaconDB.BlocksBySlot(ctx, i)
+			if err != nil {
+				return nil, err
+			}
+			fullBlockTree = append(fullBlockTree, nextLayer...)
+		}
+	}
+	tree := []*pb.BlockTreeResponse_TreeNode{}
+	for _, kid := range fullBlockTree {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		participatedVotes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
+		if err != nil {
+			return nil, err
+		}
+		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		if err != nil {
+			return nil, err
+		}
+		hState, err := bs.beaconDB.HistoricalStateFromSlot(ctx, kid.Slot, blockRoot)
+		if err != nil {
+			return nil, err
+		}
+		if kid.Slot >= req.SlotNumberFrom && kid.Slot <= req.SlotNumberTo {
+			activeValidatorIndices := helpers.ActiveValidatorIndices(hState.ValidatorRegistry, helpers.CurrentEpoch(hState))
+			totalVotes := epoch.TotalBalance(hState, activeValidatorIndices)
+			tree = append(tree, &pb.BlockTreeResponse_TreeNode{
+				BlockRoot:         blockRoot[:],
+				Block:             kid,
+				ParticipatedVotes: uint64(participatedVotes),
+				TotalVotes:        uint64(totalVotes),
+			})
+		}
+	}
+	return &pb.BlockTreeResponse{
+		Tree: tree,
+	}, nil
+}
+
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
