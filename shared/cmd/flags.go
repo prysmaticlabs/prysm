@@ -94,6 +94,7 @@ var (
 		Usage: "The max number of p2p peers to maintain.",
 		Value: 30,
 	}
+	// P2PWhitelist defines a CIDR subnet to exclusively allow connections.
 	P2PWhitelist = cli.StringFlag{
 		Name: "p2p-whitelist",
 		Usage: "The CIDR subnet for whitelisting peer connections. Example: 192.168.0.0/16 " +
