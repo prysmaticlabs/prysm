@@ -137,7 +137,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 		EpochBoundaryRootHash32:  epochBoundaryRoot,
 		JustifiedEpoch:           headState.CurrentJustifiedEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot,
-		LatestCrosslink:          headState.LatestCrosslinks[req.Shard],
+		LatestCrosslink:          headState.CurrentCrosslinks[req.Shard],
 	}
 	if err := as.cache.Put(ctx, req, res); err != nil {
 		return nil, err

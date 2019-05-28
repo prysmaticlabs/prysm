@@ -1528,7 +1528,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		LatestRandaoMixes:      latestRandaoMixes,
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
-		LatestCrosslinks:       crosslinks,
+		CurrentCrosslinks:      crosslinks,
 		ValidatorRegistry:      validatorRegistry,
 		Balances:               validatorBalances,
 		LatestBlock:            gBlock,
