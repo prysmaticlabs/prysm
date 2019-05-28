@@ -117,9 +117,9 @@ proto_library(
   srcs = ["src/proto/faucet.proto"],
   visibility = ["//visibility:public"],
 )""",
-    sha256 = "1626d546c696fd4fc093058d378787b8794f532acba729a9d1f5375c1f79f4a6",
-    strip_prefix = "prysm-testnet-site-0438607f2c926108a1cca238eefb35725a2bcf76",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/0438607f2c926108a1cca238eefb35725a2bcf76.tar.gz",
+    sha256 = "92c8e4d408704cd636ae528aeae9b4dd7da8448ae951e76ed93c2700e56d4735",
+    strip_prefix = "prysm-testnet-site-5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8.tar.gz",
 )
 
 http_archive(
@@ -303,7 +303,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
-    commit = "3a70a971f94a22f2fa562ffcc7a0eb45f5daf045",
+    commit = "8029fb3788e5a4a9c00e415f586a6d033f5d38b3",  # v0.1.2
     importpath = "github.com/mattn/go-colorable",
 )
 
@@ -321,7 +321,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "2d45a736cd16732fe6a57563cc20d8b035193e58",
+    commit = "05b4dd3047e5d6e86cb4e0477164b850cd896261",  # v0.1.0
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -400,7 +400,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_isatty",
-    commit = "c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7",  # v0.0.7
+    commit = "1311e847b0cb909da63b5fecfb5370aa66236465",  # v0.0.8
     importpath = "github.com/mattn/go-isatty",
 )
 
@@ -684,7 +684,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "1ba88736f028e37bc17328369e94a537ae9e0234",  # v0.4.0
+    commit = "7d6a80ca5263a2575832c437c6f35181243c4bec",  # v0.4.1
     importpath = "github.com/prometheus/common",
 )
 
