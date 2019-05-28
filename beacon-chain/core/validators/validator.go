@@ -13,7 +13,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,34 +30,6 @@ type validatorStore struct {
 var VStore = validatorStore{
 	activatedValidators: make(map[uint64][]uint64),
 	exitedValidators:    make(map[uint64][]uint64),
-}
-
-// ValidatorIndices returns all the validator indices from the input attestations
-// and state.
-//
-// Spec pseudocode definition:
-//   Let attester_indices be the union of the validator
-//   index sets given by [get_attestation_participants(state, a.data, a.aggregation_bitfield)
-//   for a in attestations]
-func ValidatorIndices(
-	state *pb.BeaconState,
-	attestations []*pb.PendingAttestation,
-) ([]uint64, error) {
-
-	var attesterIndicesIntersection []uint64
-	for _, attestation := range attestations {
-		attesterIndices, err := helpers.AttestingIndices(
-			state,
-			attestation.Data,
-			attestation.AggregationBitfield)
-		if err != nil {
-			return nil, err
-		}
-
-		attesterIndicesIntersection = sliceutil.UnionUint64(attesterIndicesIntersection, attesterIndices)
-	}
-
-	return attesterIndicesIntersection, nil
 }
 
 // ProcessDeposit mutates a corresponding index in the beacon state for
