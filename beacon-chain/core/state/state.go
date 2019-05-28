@@ -79,14 +79,10 @@ func GenesisBeaconState(
 
 	validatorRegistry := make([]*pb.Validator, len(genesisValidatorDeposits))
 	for i, d := range genesisValidatorDeposits {
-		depositInput, err := helpers.DecodeDepositInput(d.DepositData)
-		if err != nil {
-			return nil, fmt.Errorf("could decode deposit input %v", err)
-		}
 
 		validator := &pb.Validator{
-			Pubkey:                depositInput.Pubkey,
-			WithdrawalCredentials: depositInput.WithdrawalCredentialsHash32,
+			Pubkey:                d.Data.Pubkey,
+			WithdrawalCredentials: d.Data.WithdrawalCredentials,
 			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			Slashed:               false,
@@ -151,22 +147,13 @@ func GenesisBeaconState(
 	var err error
 	validatorMap := stateutils.ValidatorIndexMap(state)
 	for _, deposit := range genesisValidatorDeposits {
-		depositData := deposit.DepositData
-		depositInput, err := helpers.DecodeDepositInput(depositData)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit input: %v", err)
-		}
-		value, _, err := helpers.DecodeDepositAmountAndTimeStamp(depositData)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit value and timestamp: %v", err)
-		}
 		state, err = v.ProcessDeposit(
 			state,
 			validatorMap,
-			depositInput.Pubkey,
-			value,
-			depositInput.ProofOfPossession,
-			depositInput.WithdrawalCredentialsHash32,
+			deposit.Data.Pubkey,
+			deposit.Data.Amount,
+			deposit.Data.Signature,
+			deposit.Data.WithdrawalCredentials,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
