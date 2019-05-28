@@ -607,7 +607,6 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 			shardAtts = append(shardAtts, att)
 		}
 	}
-
 	var candidateCrosslinks []*pb.Crosslink
 	// Filter out shard crosslinks with correct current or previous crosslink data.
 	for _, a := range shardAtts {
@@ -620,7 +619,6 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 			candidateCrosslinks = append(candidateCrosslinks, a.Data.Crosslink)
 		}
 	}
-
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
 			Epoch:      0,
