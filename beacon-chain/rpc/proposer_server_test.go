@@ -218,7 +218,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	) - 1
 
 	expectedEpoch := uint64(100)
-	crosslink := &pbp2p.Crosslink{Epoch: 9, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}
+	crosslink := &pbp2p.Crosslink{Epoch: 9, DataRoot: params.BeaconConfig().ZeroHash[:]}
 	encoded, err := ssz.TreeHash(crosslink)
 	if err != nil {
 		t.Fatal(err)
