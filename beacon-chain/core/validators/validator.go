@@ -61,39 +61,6 @@ func ValidatorIndices(
 	return attesterIndicesIntersection, nil
 }
 
-// AttestingValidatorIndices returns the crosslink committee validator indices
-// if the validators from crosslink committee is part of the input attestations.
-//
-// Spec pseudocode definition:
-// Let attesting_validator_indices(crosslink_committee, shard_block_root)
-// 	be the union of the validator index sets given by
-// 	[get_attestation_participants(state, a.data, a.participation_bitfield)
-// 	for a in current_epoch_attestations + previous_epoch_attestations
-// 		if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
-func AttestingValidatorIndices(
-	state *pb.BeaconState,
-	shard uint64,
-	crosslinkDataRoot []byte,
-	thisEpochAttestations []*pb.PendingAttestation,
-	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
-
-	var validatorIndicesCommittees []uint64
-	attestations := append(thisEpochAttestations, prevEpochAttestations...)
-
-	for _, attestation := range attestations {
-		if attestation.Data.Shard == shard &&
-			bytes.Equal(attestation.Data.CrosslinkDataRoot, crosslinkDataRoot) {
-
-			validatorIndicesCommittee, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
-			if err != nil {
-				return nil, fmt.Errorf("could not get attester indices: %v", err)
-			}
-			validatorIndicesCommittees = sliceutil.UnionUint64(validatorIndicesCommittees, validatorIndicesCommittee)
-		}
-	}
-	return validatorIndicesCommittees, nil
-}
-
 // ProcessDeposit mutates a corresponding index in the beacon state for
 // a validator depositing ETH into the beacon chain. Specifically, this function
 // adds a validator balance or tops up an existing validator's balance
