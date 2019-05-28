@@ -20,7 +20,6 @@ func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
 }
 
 func TestAttestHead_OK(t *testing.T) {
-	t.Skip()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	mockOperationService := &mockOperationService{}

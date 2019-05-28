@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -56,24 +55,28 @@ func generateSimulatedBlock(
 		},
 	}
 	if simObjects.simDeposit != nil {
-		depositInput := &pb.DepositInput{
-			Pubkey:                      []byte(simObjects.simDeposit.Pubkey),
-			WithdrawalCredentialsHash32: make([]byte, 32),
-			ProofOfPossession:           make([]byte, 96),
+		depositData := &pb.DepositData{
+			Pubkey:                []byte(simObjects.simDeposit.Pubkey),
+			WithdrawalCredentials: make([]byte, 32),
+			Signature:             make([]byte, 96),
 		}
 
-		data, err := helpers.EncodeDepositData(depositInput, simObjects.simDeposit.Amount, time.Now().Unix())
+		data, err := hashutil.DepositHash(depositData)
 		if err != nil {
-			return nil, [32]byte{}, fmt.Errorf("could not encode deposit data: %v", err)
+			return nil, [32]byte{}, fmt.Errorf("could not hash deposit: %v", err)
 		}
 
 		// We then update the deposits Merkle trie with the deposit data and return
 		// its Merkle branch leading up to the root of the trie.
 		historicalDepositData := make([][]byte, len(historicalDeposits))
 		for i := range historicalDeposits {
-			historicalDepositData[i] = historicalDeposits[i].DepositData
+			depHash, err := hashutil.DepositHash(historicalDeposits[i].Data)
+			if err != nil {
+				return nil, [32]byte{}, fmt.Errorf("could not hash deposit item %v", err)
+			}
+			historicalDepositData[i] = depHash[:]
 		}
-		newTrie, err := trieutil.GenerateTrieFromItems(append(historicalDepositData, data), int(params.BeaconConfig().DepositContractTreeDepth))
+		newTrie, err := trieutil.GenerateTrieFromItems(append(historicalDepositData, data[:]), int(params.BeaconConfig().DepositContractTreeDepth))
 		if err != nil {
 			return nil, [32]byte{}, fmt.Errorf("could not regenerate trie: %v", err)
 		}
@@ -85,9 +88,9 @@ func generateSimulatedBlock(
 		root := newTrie.Root()
 		block.Body.Eth1Data.DepositRoot = root[:]
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
-			DepositData: data,
-			Proof:       proof,
-			Index:       simObjects.simDeposit.MerkleIndex,
+			Data:  depositData,
+			Proof: proof,
+			Index: simObjects.simDeposit.MerkleIndex,
 		})
 	}
 	if simObjects.simProposerSlashing != nil {
@@ -135,7 +138,6 @@ func generateSimulatedBlock(
 // generateInitialSimulatedDeposits generates initial deposits for creating a beacon state in the simulated
 // backend based on the yaml configuration.
 func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls.SecretKey, error) {
-	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
 	deposits := make([]*pb.Deposit, numDeposits)
 	privKeys := make([]*bls.SecretKey, numDeposits)
 	for i := 0; i < len(deposits); i++ {
@@ -143,20 +145,13 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not initialize key: %v", err)
 		}
-		depositInput := &pb.DepositInput{
-			Pubkey:                      priv.PublicKey().Marshal(),
-			WithdrawalCredentialsHash32: make([]byte, 32),
-			ProofOfPossession:           make([]byte, 96),
+		depositData := &pb.DepositData{
+			Pubkey:                priv.PublicKey().Marshal(),
+			WithdrawalCredentials: make([]byte, 32),
+			Signature:             make([]byte, 96),
+			Amount:                params.BeaconConfig().MaxDepositAmount,
 		}
-		depositData, err := helpers.EncodeDepositData(
-			depositInput,
-			params.BeaconConfig().MaxDepositAmount,
-			genesisTime,
-		)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData, Index: uint64(i)}
+		deposits[i] = &pb.Deposit{Data: depositData, Index: uint64(i)}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys, nil

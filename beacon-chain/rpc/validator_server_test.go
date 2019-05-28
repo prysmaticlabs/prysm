@@ -30,18 +30,12 @@ func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 	for i := 0; i < len(deposits); i++ {
 		var pubKey [96]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
-		depositInput := &pbp2p.DepositInput{
+		depositData := &pbp2p.DepositData{
 			Pubkey: pubKey[:],
+			Amount: params.BeaconConfig().MaxDepositAmount,
 		}
-		depositData, err := helpers.EncodeDepositData(
-			depositInput,
-			params.BeaconConfig().MaxDepositAmount,
-			genesisTime,
-		)
-		if err != nil {
-			return nil, err
-		}
-		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
+
+		deposits[i] = &pbp2p.Deposit{Data: depositData}
 	}
 	return state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 }
@@ -169,8 +163,6 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 }
 
 func TestCommitteeAssignment_OK(t *testing.T) {
-	t.Skip()
-
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -212,6 +204,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	copy(pubKeyBuf[:], []byte(strconv.FormatUint(0, 10)))
+
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf},
@@ -253,8 +246,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 }
 
 func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
-	t.Skip()
-
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -298,6 +289,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	copy(pubKeyBuf0[:], []byte(strconv.Itoa(0)))
 	pubKeyBuf1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	copy(pubKeyBuf1[:], []byte(strconv.Itoa(1)))
+
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
 		PublicKeys: [][]byte{pubKeyBuf0, pubKeyBuf1},
@@ -331,18 +323,14 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-	depositInput := &pbp2p.DepositInput{
-		Pubkey:                      pubKey,
-		ProofOfPossession:           []byte("hi"),
-		WithdrawalCredentialsHash32: []byte("hey"),
-	}
-	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0 /*timestamp*/)
-	if err != nil {
-		t.Fatal(err)
+	depData := &pbp2p.DepositData{
+		Pubkey:                pubKey,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &pbp2p.Deposit{
-		DepositData: depData,
+		Data: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/)
 
@@ -377,18 +365,14 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	depositInput := &pbp2p.DepositInput{
-		Pubkey:                      pubKey,
-		ProofOfPossession:           []byte("hi"),
-		WithdrawalCredentialsHash32: []byte("hey"),
-	}
-	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
-	if err != nil {
-		t.Fatal(err)
+	depData := &pbp2p.DepositData{
+		Pubkey:                pubKey,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &pbp2p.Deposit{
-		DepositData: depData,
+		Data: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
 
@@ -451,18 +435,14 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-	depositInput := &pbp2p.DepositInput{
-		Pubkey:                      pubKey,
-		ProofOfPossession:           []byte("hi"),
-		WithdrawalCredentialsHash32: []byte("hey"),
-	}
-	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
-	if err != nil {
-		t.Fatal(err)
+	depData := &pbp2p.DepositData{
+		Pubkey:                pubKey,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &pbp2p.Deposit{
-		DepositData: depData,
+		Data: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -505,18 +485,14 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-	depositInput := &pbp2p.DepositInput{
-		Pubkey:                      pubKey,
-		ProofOfPossession:           []byte("hi"),
-		WithdrawalCredentialsHash32: []byte("hey"),
-	}
-	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
-	if err != nil {
-		t.Fatal(err)
+	depData := &pbp2p.DepositData{
+		Pubkey:                pubKey,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &pbp2p.Deposit{
-		DepositData: depData,
+		Data: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -558,18 +534,14 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-	depositInput := &pbp2p.DepositInput{
-		Pubkey:                      pubKey,
-		ProofOfPossession:           []byte("hi"),
-		WithdrawalCredentialsHash32: []byte("hey"),
-	}
-	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
-	if err != nil {
-		t.Fatal(err)
+	depData := &pbp2p.DepositData{
+		Pubkey:                pubKey,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &pbp2p.Deposit{
-		DepositData: depData,
+		Data: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -612,18 +584,14 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-	depositInput := &pbp2p.DepositInput{
-		Pubkey:                      pubKey,
-		ProofOfPossession:           []byte("hi"),
-		WithdrawalCredentialsHash32: []byte("hey"),
-	}
-	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
-	if err != nil {
-		t.Fatal(err)
+	depData := &pbp2p.DepositData{
+		Pubkey:                pubKey,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &pbp2p.Deposit{
-		DepositData: depData,
+		Data: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -666,19 +634,14 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-
-	depositInput := &pbp2p.DepositInput{
-		Pubkey:                      pubKey,
-		ProofOfPossession:           []byte("hi"),
-		WithdrawalCredentialsHash32: []byte("hey"),
-	}
-	depData, err := helpers.EncodeDepositData(depositInput, params.BeaconConfig().MaxDepositAmount, 0)
-	if err != nil {
-		t.Fatal(err)
+	depData := &pbp2p.DepositData{
+		Pubkey:                pubKey,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &pbp2p.Deposit{
-		DepositData: depData,
+		Data: depData,
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(0))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -773,16 +736,16 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-	depData, err := helpers.EncodeDepositData(&pbp2p.DepositInput{
-		Pubkey: []byte{'A'},
-	}, 10, 10)
-	if err != nil {
-		t.Fatal(err)
+	depData := &pbp2p.DepositData{
+		Pubkey:                []byte{'A'},
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
-	dep := &pbp2p.Deposit{
-		DepositData: depData,
+
+	deposit := &pbp2p.Deposit{
+		Data: depData,
 	}
-	db.InsertDeposit(context.Background(), dep, big.NewInt(10))
+	db.InsertDeposit(context.Background(), deposit, big.NewInt(10))
 
 	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
@@ -861,24 +824,26 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-	depData, err := helpers.EncodeDepositData(&pbp2p.DepositInput{
-		Pubkey: []byte{'A'},
-	}, 10, 10)
-	if err != nil {
-		t.Fatal(err)
+	depData := &pbp2p.DepositData{
+		Pubkey:                []byte{'A'},
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
+		Amount:                10,
 	}
+
 	dep := &pbp2p.Deposit{
-		DepositData: depData,
+		Data: depData,
 	}
 	db.InsertDeposit(context.Background(), dep, big.NewInt(10))
-	depData, err = helpers.EncodeDepositData(&pbp2p.DepositInput{
-		Pubkey: []byte{'C'},
-	}, 10, 10)
-	if err != nil {
-		t.Fatal(err)
+	depData = &pbp2p.DepositData{
+		Pubkey:                []byte{'C'},
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
+		Amount:                10,
 	}
+
 	dep = &pbp2p.Deposit{
-		DepositData: depData,
+		Data: depData,
 	}
 	db.InsertDeposit(context.Background(), dep, big.NewInt(15))
 

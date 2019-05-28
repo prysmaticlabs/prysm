@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -63,25 +62,18 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
-	maxDeposit := params.BeaconConfig().MaxDepositAmount
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
-		depositData, err := helpers.EncodeDepositData(
-			&pb.DepositInput{
-				Pubkey:                      []byte(strconv.Itoa(i)),
-				ProofOfPossession:           []byte{'B'},
-				WithdrawalCredentialsHash32: []byte{'C'},
-			},
-			maxDeposit,
-			time.Now().Unix(),
-		)
-		if err != nil {
-			t.Fatalf("Could not encode deposit data: %v", err)
+		depositData := &pb.DepositData{
+			Pubkey:                []byte(strconv.Itoa(i)),
+			Signature:             []byte{'B'},
+			WithdrawalCredentials: []byte{'C'},
 		}
+
 		deposits = append(deposits, &pb.Deposit{
-			Proof:       [][]byte{{1}, {2}, {3}},
-			Index:       0,
-			DepositData: depositData,
+			Proof: [][]byte{{1}, {2}, {3}},
+			Index: 0,
+			Data:  depositData,
 		})
 	}
 

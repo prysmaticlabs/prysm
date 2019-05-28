@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -30,15 +29,12 @@ func setupInitialDeposits(t testing.TB, numDeposits int) ([]*pb.Deposit, []*bls.
 		if err != nil {
 			t.Fatal(err)
 		}
-		depositInput := &pb.DepositInput{
+		depositData := &pb.DepositData{
 			Pubkey: priv.PublicKey().Marshal(),
+			Amount: params.BeaconConfig().MaxDepositAmount,
 		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+
+		deposits[i] = &pb.Deposit{Data: depositData}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys

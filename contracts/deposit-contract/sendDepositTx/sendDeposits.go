@@ -211,7 +211,7 @@ func main() {
 
 			for i := int64(0); i < numberOfDeposits; i++ {
 				//TODO(#2658): Use actual compressed pubkeys in G1 here
-				tx, err := depositContract.Deposit(txOps, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession)
+				tx, err := depositContract.Deposit(txOps, data.Pubkey, data.WithdrawalCredentials, data.Signature)
 				if err != nil {
 					log.Error("unable to send transaction to contract")
 				}

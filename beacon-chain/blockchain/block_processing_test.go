@@ -460,7 +460,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	pendingDeposits := []*pb.Deposit{
-		createPreChainStartDeposit(t, []byte{'F'}, beaconState.DepositIndex),
+		createPreChainStartDeposit([]byte{'F'}, beaconState.DepositIndex),
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {

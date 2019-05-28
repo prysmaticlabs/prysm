@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -38,15 +37,12 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 		if err != nil {
 			t.Fatal(err)
 		}
-		depositInput := &pb.DepositInput{
+		depositData := &pb.DepositData{
 			Pubkey: priv.PublicKey().Marshal(),
+			Amount: params.BeaconConfig().MaxDepositAmount,
 		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+
+		deposits[i] = &pb.Deposit{Data: depositData}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys
@@ -1241,15 +1237,12 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	}
 	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
 	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
+		depositData := &pb.DepositData{
 			Pubkey: []byte(strconv.Itoa(i)),
+			Amount: params.BeaconConfig().MaxDepositAmount,
 		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+
+		deposits[i] = &pb.Deposit{Data: depositData}
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
