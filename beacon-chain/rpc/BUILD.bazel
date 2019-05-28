@@ -65,6 +65,7 @@ go_test(
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/ssz:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

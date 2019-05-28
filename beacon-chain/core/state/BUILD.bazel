@@ -38,5 +38,6 @@ go_test(
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/ssz:go_default_library",
     ],
 )
