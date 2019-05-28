@@ -72,12 +72,13 @@ type ServerConfig struct {
 	Port                   int
 	MaxPeers               int
 	DepositContractAddress string
+	WhitelistCIDR          string
 }
 
 // NewServer creates a new p2p server instance.
 func NewServer(cfg *ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	opts := buildOptions(cfg.Port, cfg.MaxPeers)
+	opts := buildOptions(cfg)
 	if cfg.RelayNodeAddr != "" {
 		opts = append(opts, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
 	} else if cfg.HostAddress != "" {

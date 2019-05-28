@@ -53,6 +53,7 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 		Port:                   ctx.GlobalInt(cmd.P2PPort.Name),
 		MaxPeers:               ctx.GlobalInt(cmd.P2PMaxPeers.Name),
 		DepositContractAddress: contractAddress,
+		WhitelistCIDR:          ctx.GlobalString(cmd.P2PWhitelist.Name),
 	})
 	if err != nil {
 		return nil, err
