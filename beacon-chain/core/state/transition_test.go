@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -211,15 +210,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
 	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
+		depositData := &pb.DepositData{
 			Pubkey: []byte(strconv.Itoa(i)),
+			Amount: params.BeaconConfig().MaxDepositAmount,
 		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+
+		deposits[i] = &pb.Deposit{Data: depositData}
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -328,15 +324,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
 	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
+		depositData := &pb.DepositData{
 			Pubkey: []byte(strconv.Itoa(i)),
+			Amount: params.BeaconConfig().MaxDepositAmount,
 		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+
+		deposits[i] = &pb.Deposit{Data: depositData}
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
