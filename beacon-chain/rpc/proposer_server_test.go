@@ -130,6 +130,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 }
 
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
+	t.Skip()
+	// TODO(#2307): Update this runtime functionality based on v0.6.
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -182,6 +184,8 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 }
 
 func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
+	t.Skip()
+	// TODO(#2307): Update this runtime functionality based on v0.6.
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -317,6 +321,8 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 }
 
 func TestPendingAttestations_OK(t *testing.T) {
+	t.Skip()
+	// TODO(#2307): Update this runtime functionality based on v0.6.
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
