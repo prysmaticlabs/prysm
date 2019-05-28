@@ -682,18 +682,20 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        params.BeaconConfig().SlotsPerEpoch,
 					SourceEpoch: 1,
 					TargetEpoch: 1,
-					Shard:       3,
+					Crosslink: &pb.Crosslink{
+						Shard: 3,
+					},
 				},
 			},
 		},
@@ -726,20 +728,22 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1, 2},
 				CustodyBit_1Indices: []uint64{0, 1, 2},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1, 2},
 				CustodyBit_1Indices: []uint64{0, 1, 2},
@@ -772,19 +776,21 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
 			},
@@ -806,19 +812,21 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{3, 2, 1},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{3, 2, 1},
 			},
@@ -858,19 +866,21 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
@@ -1332,9 +1342,11 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	attestation := &pb.Attestation{
 		Signature: []byte("signed"),
 		Data: &pb.AttestationData{
-			Slot:        2,
-			Shard:       3,
+			SourceEpoch: 0,
 			TargetEpoch: 0,
+			Crosslink: &pb.Crosslink{
+				Shard: 3,
+			},
 		},
 	}
 	for _, tt := range tests {
