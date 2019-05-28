@@ -48,7 +48,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       finalizedState.LatestBlock.Slot,
 		BlockRoot:  finalizedBlockRoot[:],
-		ParentRoot: finalizedState.LatestBlock.ParentBlockRoot,
+		ParentRoot: finalizedState.LatestBlock.ParentRoot,
 	}); err != nil {
 		log.Errorf("Could not to save attestation target: %v", err)
 		return nil

@@ -50,7 +50,7 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 	attTarget := &pbp2p.AttestationTarget{
 		Slot:       att.Data.Slot,
 		BlockRoot:  att.Data.BeaconBlockRoot,
-		ParentRoot: head.ParentBlockRoot,
+		ParentRoot: head.ParentRoot,
 	}
 	if err := as.beaconDB.SaveAttestationTarget(ctx, attTarget); err != nil {
 		return nil, fmt.Errorf("could not save attestation target")

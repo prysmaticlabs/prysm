@@ -216,8 +216,8 @@ func TestProcessBlock_OK(t *testing.T) {
 			DepositRoot: []byte{1, 2, 3, 4, 5},
 			BlockRoot:   []byte{6, 7, 8, 9, 10},
 		},
-		ParentBlockRoot: parentRoot[:],
-		Slot:            0,
+		ParentRoot: parentRoot[:],
+		Slot:       0,
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
@@ -291,8 +291,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 			DepositRoot: []byte{1, 2, 3, 4, 5},
 			BlockRoot:   []byte{6, 7, 8, 9, 10},
 		},
-		ParentBlockRoot: parentRoot[:],
-		Slot:            1,
+		ParentRoot: parentRoot[:],
+		Slot:       1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -316,8 +316,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 			DepositRoot: []byte{11, 12, 13, 14, 15},
 			BlockRoot:   []byte{16, 17, 18, 19, 20},
 		},
-		ParentBlockRoot: []byte{},
-		Slot:            1,
+		ParentRoot: []byte{},
+		Slot:       1,
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
@@ -711,7 +711,7 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	// Construct the following chain:
 	//    /- B3
 	//	 B1  - B2 - B4
-	block1 := &pb.BeaconBlock{Slot: 1, ParentBlockRoot: []byte{'A'}}
+	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
@@ -719,16 +719,16 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	if err = ss.db.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block2 := &pb.BeaconBlock{Slot: 2, ParentBlockRoot: root1[:]}
+	block2 := &pb.BeaconBlock{Slot: 2, ParentRoot: root1[:]}
 	root2, _ := hashutil.HashBeaconBlock(block2)
 	if err = ss.db.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block3 := &pb.BeaconBlock{Slot: 3, ParentBlockRoot: root1[:]}
+	block3 := &pb.BeaconBlock{Slot: 3, ParentRoot: root1[:]}
 	if err = ss.db.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block4 := &pb.BeaconBlock{Slot: 4, ParentBlockRoot: root2[:]}
+	block4 := &pb.BeaconBlock{Slot: 4, ParentRoot: root2[:]}
 	root4, _ := hashutil.HashBeaconBlock(block4)
 	if err = ss.db.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
@@ -749,7 +749,7 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 
 	// Construct the following chain:
 	//	 B1 (finalized and head)
-	block1 := &pb.BeaconBlock{Slot: 1, ParentBlockRoot: []byte{'A'}}
+	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
@@ -781,7 +781,7 @@ func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ss := setupService(db)
 
-	block1 := &pb.BeaconBlock{Slot: 1, ParentBlockRoot: []byte{'B'}}
+	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'B'}}
 	root1, err := hashutil.HashBeaconBlock(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)

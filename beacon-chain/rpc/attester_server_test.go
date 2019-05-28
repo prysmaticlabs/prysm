@@ -30,8 +30,8 @@ func TestAttestHead_OK(t *testing.T) {
 		cache:            cache.NewAttestationCache(),
 	}
 	head := &pbp2p.BeaconBlock{
-		Slot:            999,
-		ParentBlockRoot: []byte{'a'},
+		Slot:       999,
+		ParentRoot: []byte{'a'},
 	}
 	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
 		t.Fatal(err)

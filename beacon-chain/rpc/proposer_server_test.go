@@ -60,8 +60,8 @@ func TestProposeBlock_OK(t *testing.T) {
 		powChainService: &mockPOWChainService{},
 	}
 	req := &pbp2p.BeaconBlock{
-		Slot:            5,
-		ParentBlockRoot: []byte("parent-hash"),
+		Slot:       5,
+		ParentRoot: []byte("parent-hash"),
 	}
 	if err := proposerServer.beaconDB.SaveBlock(req); err != nil {
 		t.Fatal(err)
@@ -118,8 +118,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 
 	req := &pbp2p.BeaconBlock{
-		ParentBlockRoot: nil,
-		Slot:            11,
+		ParentRoot: nil,
+		Slot:       11,
 		Body: &pbp2p.BeaconBlockBody{
 			RandaoReveal:      nil,
 			ProposerSlashings: nil,

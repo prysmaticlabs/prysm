@@ -771,33 +771,33 @@ func TestBlockTree_OK(t *testing.T) {
 	}
 	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
 	b1 := &pbp2p.BeaconBlock{
-		Slot:            3,
-		ParentBlockRoot: justifiedRoot[:],
-		RandaoReveal:    []byte("A"),
+		Slot:         3,
+		ParentRoot:   justifiedRoot[:],
+		RandaoReveal: []byte("A"),
 	}
 	b1Root, _ := hashutil.HashBeaconBlock(b1)
 	b2 := &pbp2p.BeaconBlock{
-		Slot:            3,
-		ParentBlockRoot: justifiedRoot[:],
-		RandaoReveal:    []byte("C"),
+		Slot:         3,
+		ParentRoot:   justifiedRoot[:],
+		RandaoReveal: []byte("C"),
 	}
 	b2Root, _ := hashutil.HashBeaconBlock(b2)
 	b3 := &pbp2p.BeaconBlock{
-		Slot:            3,
-		ParentBlockRoot: justifiedRoot[:],
-		RandaoReveal:    []byte("D"),
+		Slot:         3,
+		ParentRoot:   justifiedRoot[:],
+		RandaoReveal: []byte("D"),
 	}
 	b3Root, _ := hashutil.HashBeaconBlock(b1)
 	b4 := &pbp2p.BeaconBlock{
-		Slot:            4,
-		ParentBlockRoot: b1Root[:],
-		RandaoReveal:    []byte("B"),
+		Slot:         4,
+		ParentRoot:   b1Root[:],
+		RandaoReveal: []byte("B"),
 	}
 	b4Root, _ := hashutil.HashBeaconBlock(b4)
 	b5 := &pbp2p.BeaconBlock{
-		Slot:            5,
-		ParentBlockRoot: b3Root[:],
-		RandaoReveal:    []byte("E"),
+		Slot:         5,
+		ParentRoot:   b3Root[:],
+		RandaoReveal: []byte("E"),
 	}
 	b5Root, _ := hashutil.HashBeaconBlock(b5)
 
@@ -805,65 +805,65 @@ func TestBlockTree_OK(t *testing.T) {
 	// We give block A 3 votes.
 	attestationTargets[0] = &pbp2p.AttestationTarget{
 		Slot:       b1.Slot,
-		ParentRoot: b1.ParentBlockRoot,
+		ParentRoot: b1.ParentRoot,
 		BlockRoot:  b1Root[:],
 	}
 	attestationTargets[1] = &pbp2p.AttestationTarget{
 		Slot:       b1.Slot,
-		ParentRoot: b1.ParentBlockRoot,
+		ParentRoot: b1.ParentRoot,
 		BlockRoot:  b1Root[:],
 	}
 	attestationTargets[2] = &pbp2p.AttestationTarget{
 		Slot:       b1.Slot,
-		ParentRoot: b1.ParentBlockRoot,
+		ParentRoot: b1.ParentRoot,
 		BlockRoot:  b1Root[:],
 	}
 
 	// We give block C 2 votes.
 	attestationTargets[3] = &pbp2p.AttestationTarget{
 		Slot:       b2.Slot,
-		ParentRoot: b2.ParentBlockRoot,
+		ParentRoot: b2.ParentRoot,
 		BlockRoot:  b2Root[:],
 	}
 	attestationTargets[4] = &pbp2p.AttestationTarget{
 		Slot:       b2.Slot,
-		ParentRoot: b2.ParentBlockRoot,
+		ParentRoot: b2.ParentRoot,
 		BlockRoot:  b2Root[:],
 	}
 
 	// We give block D 2 votes.
 	attestationTargets[5] = &pbp2p.AttestationTarget{
 		Slot:       b3.Slot,
-		ParentRoot: b3.ParentBlockRoot,
+		ParentRoot: b3.ParentRoot,
 		BlockRoot:  b3Root[:],
 	}
 	attestationTargets[6] = &pbp2p.AttestationTarget{
 		Slot:       b3.Slot,
-		ParentRoot: b3.ParentBlockRoot,
+		ParentRoot: b3.ParentRoot,
 		BlockRoot:  b3Root[:],
 	}
 
 	// We give block B 3 votes.
 	attestationTargets[7] = &pbp2p.AttestationTarget{
 		Slot:       b4.Slot,
-		ParentRoot: b4.ParentBlockRoot,
+		ParentRoot: b4.ParentRoot,
 		BlockRoot:  b4Root[:],
 	}
 	attestationTargets[8] = &pbp2p.AttestationTarget{
 		Slot:       b4.Slot,
-		ParentRoot: b4.ParentBlockRoot,
+		ParentRoot: b4.ParentRoot,
 		BlockRoot:  b4Root[:],
 	}
 	attestationTargets[9] = &pbp2p.AttestationTarget{
 		Slot:       b4.Slot,
-		ParentRoot: b4.ParentBlockRoot,
+		ParentRoot: b4.ParentRoot,
 		BlockRoot:  b4Root[:],
 	}
 
 	// We give block E 1 vote.
 	attestationTargets[10] = &pbp2p.AttestationTarget{
 		Slot:       b5.Slot,
-		ParentRoot: b5.ParentBlockRoot,
+		ParentRoot: b5.ParentRoot,
 		BlockRoot:  b5Root[:],
 	}
 

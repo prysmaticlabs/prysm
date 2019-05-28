@@ -97,9 +97,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 
 	// 2. Construct block.
 	block := &pbp2p.BeaconBlock{
-		Slot:            slot,
-		ParentBlockRoot: parentTreeRoot[:],
-		Eth1Data:        eth1DataResp.Eth1Data,
+		Slot:       slot,
+		ParentRoot: parentTreeRoot[:],
+		Eth1Data:   eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
 			RandaoReveal:      epochSignature.Marshal(),
 			Attestations:      attResp.PendingAttestations,
