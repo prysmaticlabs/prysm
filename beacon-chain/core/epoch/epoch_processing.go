@@ -92,9 +92,13 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 
 		// If the block root at slot matches attestation's block root at slot,
 		// then we know this attestation has correctly voted for head.
-		headRoot, err := helpers.BlockRootAtSlot(state, srcAtt.Data.Slot)
+		slot, err := helpers.AttestationDataSlot(state, srcAtt.Data)
 		if err != nil {
-			return nil, fmt.Errorf("could not get block root for slot %d: %v", srcAtt.Data.Slot, err)
+			return nil, fmt.Errorf("could not get attestation slot: %v", err)
+		}
+		headRoot, err := helpers.BlockRootAtSlot(state, slot)
+		if err != nil {
+			return nil, fmt.Errorf("could not get block root for slot %d: %v", slot, err)
 		}
 		if bytes.Equal(srcAtt.Data.BeaconBlockRoot, headRoot) {
 			headAtts = append(headAtts, srcAtt)
@@ -599,27 +603,21 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 
 	// Filter out source attestations by shard.
 	for _, att := range matchedAtts.source {
-		if att.Data.Shard == shard {
+		if att.Data.Crosslink.Shard == shard {
 			shardAtts = append(shardAtts, att)
 		}
 	}
 
-	// Convert shard attestations to shard crosslinks.
-	shardCrosslinks := make([]*pb.Crosslink, len(shardAtts))
-	for i := 0; i < len(shardCrosslinks); i++ {
-		shardCrosslinks[i] = crosslinkFromAttsData(state, shardAtts[i].Data)
-	}
-
 	var candidateCrosslinks []*pb.Crosslink
 	// Filter out shard crosslinks with correct current or previous crosslink data.
-	for _, c := range shardCrosslinks {
+	for _, a := range shardAtts {
 		cFromState := state.CurrentCrosslinks[shard]
 		h, err := hashutil.HashProto(cFromState)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not hash crosslink from state: %v", err)
 		}
-		if proto.Equal(cFromState, c) || bytes.Equal(h[:], c.ParentRoot) {
-			candidateCrosslinks = append(candidateCrosslinks, c)
+		if proto.Equal(cFromState, a.Data.Crosslink) || bytes.Equal(h[:], a.Data.Crosslink.ParentRoot) {
+			candidateCrosslinks = append(candidateCrosslinks, a.Data.Crosslink)
 		}
 	}
 
@@ -909,32 +907,11 @@ func earlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, in
 	return earliest, nil
 }
 
-// crosslinkFromAttsData returns a constructed crosslink from attestation data.
-//
-// Spec pseudocode definition:
-//  def get_crosslink_from_attestation_data(state: BeaconState, data: AttestationData) -> Crosslink:
-//    return Crosslink(
-//        epoch=min(slot_to_epoch(data.slot), state.current_crosslinks[data.shard].epoch + MAX_CROSSLINK_EPOCHS),
-//        previous_crosslink_root=data.previous_crosslink_root,
-//        crosslink_data_root=data.crosslink_data_root,
-//    )
-func crosslinkFromAttsData(state *pb.BeaconState, attData *pb.AttestationData) *pb.Crosslink {
-	epoch := helpers.SlotToEpoch(attData.Slot)
-	if epoch > state.CurrentCrosslinks[attData.Shard].Epoch+params.BeaconConfig().MaxCrosslinkEpochs {
-		epoch = state.CurrentCrosslinks[attData.Shard].Epoch + params.BeaconConfig().MaxCrosslinkEpochs
-	}
-	return &pb.Crosslink{
-		Epoch:      epoch,
-		DataRoot:   attData.CrosslinkDataRoot,
-		ParentRoot: attData.PreviousCrosslinkRoot,
-	}
-}
-
 // attsForCrosslink returns the attestations of the input crosslink.
 func attsForCrosslink(state *pb.BeaconState, crosslink *pb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
 	var crosslinkAtts []*pb.PendingAttestation
 	for _, a := range atts {
-		if proto.Equal(crosslinkFromAttsData(state, a.Data), crosslink) {
+		if proto.Equal(a.Data.Crosslink, crosslink) {
 			crosslinkAtts = append(crosslinkAtts, a)
 		}
 	}
