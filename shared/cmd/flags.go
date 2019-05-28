@@ -94,6 +94,12 @@ var (
 		Usage: "The max number of p2p peers to maintain.",
 		Value: 30,
 	}
+	P2PWhitelist = cli.StringFlag{
+		Name: "p2p-whitelist",
+		Usage: "The CIDR subnet for whitelisting peer connections. Example: 192.168.0.0/16 " +
+			"would whitelist connections to peers on your local network only. The default " +
+			"is to accept all connections.",
+	}
 	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
 	ClearDB = cli.BoolFlag{
 		Name:  "clear-db",

@@ -430,7 +430,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_maddr_filter",
-    commit = "0be077b18e81a77662ed5fe22b959d4394d71540",  # v0.0.2
+    commit = "e3cdd802c04babcbec2c4711721d105cfe822cd3",  # v0.0.2
     importpath = "github.com/libp2p/go-maddr-filter",
 )
 
