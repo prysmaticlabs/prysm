@@ -166,8 +166,12 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
 	}
 	depositData := [][]byte{}
-	for i := range upToLatestEth1DataDeposits {
-		depositData = append(depositData, upToLatestEth1DataDeposits[i].DepositData)
+	for _, dep := range upToLatestEth1DataDeposits {
+		depHash, err := hashutil.DepositHash(dep.Data)
+		if err != nil {
+			return nil, fmt.Errorf("coulf not hash deposit data %v", err)
+		}
+		depositData = append(depositData, depHash[:])
 	}
 
 	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
