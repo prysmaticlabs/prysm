@@ -146,7 +146,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot:              stateSlot,
 		ValidatorRegistry: validators,
-		LatestCrosslinks: []*pbp2p.Crosslink{{
+		CurrentCrosslinks: []*pbp2p.Crosslink{{
 			Epoch:    1,
 			DataRoot: params.BeaconConfig().ZeroHash[:],
 		}},
@@ -218,7 +218,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	) - 1
 
 	expectedEpoch := uint64(100)
-	crosslink := &pbp2p.Crosslink{Epoch: 9, CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}
+	crosslink := &pbp2p.Crosslink{Epoch: 9, DataRoot: params.BeaconConfig().ZeroHash[:]}
 	encoded, err := ssz.TreeHash(crosslink)
 	if err != nil {
 		t.Fatal(err)
@@ -315,8 +315,8 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		CurrentJustifiedEpoch:  expectedEpoch,
 		PreviousJustifiedEpoch: expectedEpoch,
 		CurrentCrosslinks: []*pbp2p.Crosslink{{
-			Epoch:                   9,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+			Epoch:    9,
+			DataRoot: params.BeaconConfig().ZeroHash[:],
 		}},
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),

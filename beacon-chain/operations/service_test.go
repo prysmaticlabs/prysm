@@ -142,10 +142,11 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		}
 	}
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 64,
-		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		Slot:        64,
+		LatestBlock: &pb.BeaconBlock{Slot: 0},
+		CurrentCrosslinks: []*pb.Crosslink{{
+			Epoch:    0,
+			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
@@ -180,10 +181,10 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 
 	// At slot 200 only attestations up to from slot 137 to 139 are valid attestations.
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 200,
-		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch + 2,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		Slot: 200,
+		CurrentCrosslinks: []*pb.Crosslink{{
+			Epoch:    2,
+			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 	attestations, err := service.PendingAttestations(context.Background())
@@ -222,10 +223,10 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		}
 	}
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 15,
-		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		Slot: 15,
+		CurrentCrosslinks: []*pb.Crosslink{{
+			Epoch:    0,
+			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -302,10 +303,10 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	}
 
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 15,
-		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   params.BeaconConfig().GenesisEpoch,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		Slot: 15,
+		CurrentCrosslinks: []*pb.Crosslink{{
+			Epoch:    0,
+			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 

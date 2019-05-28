@@ -40,11 +40,10 @@ func GenesisBeaconState(
 		latestActiveIndexRoots[i] = zeroHash
 	}
 
-	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
-	for i := 0; i < len(latestCrosslinks); i++ {
-		latestCrosslinks[i] = &pb.Crosslink{
-			Epoch:                   params.BeaconConfig().GenesisEpoch,
-			CrosslinkDataRootHash32: zeroHash,
+	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := 0; i < len(crosslinks); i++ {
+		crosslinks[i] = &pb.Crosslink{
+			Shard: uint64(i),
 		}
 	}
 
@@ -83,18 +82,11 @@ func GenesisBeaconState(
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry:            validatorRegistry,
-		Balances:                     latestBalances,
-		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
+		ValidatorRegistry: validatorRegistry,
+		Balances:          latestBalances,
 
 		// Randomness and committees.
-		LatestRandaoMixes:           latestRandaoMixes,
-		PreviousShufflingStartShard: params.BeaconConfig().GenesisStartShard,
-		CurrentShufflingStartShard:  params.BeaconConfig().GenesisStartShard,
-		PreviousShufflingEpoch:      params.BeaconConfig().GenesisEpoch,
-		CurrentShufflingEpoch:       params.BeaconConfig().GenesisEpoch,
-		PreviousShufflingSeedHash32: zeroHash,
-		CurrentShufflingSeedHash32:  zeroHash,
+		LatestRandaoMixes: latestRandaoMixes,
 
 		// Finality.
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
@@ -106,12 +98,13 @@ func GenesisBeaconState(
 		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
 
 		// Recent state.
-		LatestCrosslinks:        latestCrosslinks,
-		LatestBlockRoots:        latestBlockRoots,
-		LatestActiveIndexRoots:  latestActiveIndexRoots,
-		LatestSlashedBalances:   latestSlashedExitBalances,
-		LatestAttestations:      []*pb.PendingAttestation{},
-		BatchedBlockRootHash32S: [][]byte{},
+		CurrentCrosslinks:         crosslinks,
+		PreviousCrosslinks:        crosslinks,
+		LatestActiveIndexRoots:    latestActiveIndexRoots,
+		LatestBlockRoots:          latestBlockRoots,
+		LatestSlashedBalances:     latestSlashedExitBalances,
+		CurrentEpochAttestations:  []*pb.PendingAttestation{},
+		PreviousEpochAttestations: []*pb.PendingAttestation{},
 
 		// Eth1 data.
 		LatestEth1Data: eth1Data,
