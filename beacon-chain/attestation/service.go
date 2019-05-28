@@ -256,7 +256,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 			log.WithFields(
 				logrus.Fields{
 					"attestationSlot": slot,
-					"sourceEpoch":  attestation.Data.SourceEpoch,
+					"sourceEpoch":     attestation.Data.SourceEpoch,
 				},
 			).Debug("Attestation store updated")
 
@@ -270,4 +270,3 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 	}
 	return nil
 }
-

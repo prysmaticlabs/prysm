@@ -545,7 +545,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[i].Pubkey)
 		attsService.InsertAttestationIntoStore(pubKey, &pb.Attestation{
 			Data: &pb.AttestationData{
-				BeaconBlockRootHash32: blockRoot[:],
+				BeaconBlockRoot: blockRoot[:],
 			}},
 		)
 	}
@@ -783,7 +783,6 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	beaconState.Slot = 0
 
 	currentSlot := uint64(1)
-	attestationSlot := uint64(0)
 
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block2 := &pb.BeaconBlock{
@@ -800,8 +799,10 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot:                     attestationSlot,
-					JustifiedBlockRootHash32: parentRoot[:],
+					SourceRoot: parentRoot[:],
+					Crosslink: &pb.Crosslink{
+						Shard: 960,
+					},
 				},
 			}},
 		},

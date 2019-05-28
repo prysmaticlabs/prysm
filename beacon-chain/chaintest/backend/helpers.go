@@ -110,14 +110,18 @@ func generateSimulatedBlock(
 		block.Body.AttesterSlashings = append(block.Body.AttesterSlashings, &pb.AttesterSlashing{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:           simObjects.simAttesterSlashing.SlashableAttestation1Slot,
-					JustifiedEpoch: simObjects.simAttesterSlashing.SlashableAttestation1JustifiedEpoch,
+					SourceEpoch: simObjects.simAttesterSlashing.SlashableAttestation1JustifiedEpoch,
+					Crosslink: &pb.Crosslink{
+						Shard: simObjects.simAttesterSlashing.SlashableAttestation1Slot,
+					},
 				},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:           simObjects.simAttesterSlashing.SlashableAttestation2Slot,
-					JustifiedEpoch: simObjects.simAttesterSlashing.SlashableAttestation2JustifiedEpoch,
+					SourceEpoch: simObjects.simAttesterSlashing.SlashableAttestation2JustifiedEpoch,
+					Crosslink: &pb.Crosslink{
+						Shard: simObjects.simAttesterSlashing.SlashableAttestation1Slot,
+					},
 				},
 			},
 		})
