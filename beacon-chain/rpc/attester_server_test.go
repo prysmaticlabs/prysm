@@ -14,6 +14,8 @@ import (
 )
 
 func TestAttestHead_OK(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
