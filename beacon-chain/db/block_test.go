@@ -131,17 +131,21 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 
 	slotNum := uint64(3)
 	b1 := &pb.BeaconBlock{
-		Slot:         slotNum,
-		RandaoReveal: []byte("A"),
+		Slot: slotNum,
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte("A"),
+		},
 	}
 	b2 := &pb.BeaconBlock{
-		Slot:         slotNum,
-		RandaoReveal: []byte("B"),
-	}
+		Slot: slotNum,
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte("B"),
+		}}
 	b3 := &pb.BeaconBlock{
-		Slot:         slotNum,
-		RandaoReveal: []byte("C"),
-	}
+		Slot: slotNum,
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte("C"),
+		}}
 	if err := db.SaveBlock(b1); err != nil {
 		t.Fatal(err)
 	}

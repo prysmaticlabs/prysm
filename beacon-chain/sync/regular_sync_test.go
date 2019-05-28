@@ -212,12 +212,14 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 
 	data := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{1, 2, 3, 4, 5},
-			BlockRoot:   []byte{6, 7, 8, 9, 10},
-		},
 		ParentRoot: parentRoot[:],
 		Slot:       0,
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{1, 2, 3, 4, 5},
+				BlockRoot:   []byte{6, 7, 8, 9, 10},
+			},
+		},
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
@@ -287,12 +289,14 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	}
 
 	data1 := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{1, 2, 3, 4, 5},
-			BlockRoot:   []byte{6, 7, 8, 9, 10},
-		},
 		ParentRoot: parentRoot[:],
 		Slot:       1,
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{1, 2, 3, 4, 5},
+				BlockRoot:   []byte{6, 7, 8, 9, 10},
+			},
+		},
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -312,12 +316,14 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	}
 
 	data2 := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: []byte{11, 12, 13, 14, 15},
-			BlockRoot:   []byte{16, 17, 18, 19, 20},
-		},
 		ParentRoot: []byte{},
 		Slot:       1,
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte{11, 12, 13, 14, 15},
+				BlockRoot:   []byte{16, 17, 18, 19, 20},
+			},
+		},
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{

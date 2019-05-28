@@ -110,10 +110,6 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			Slot:       tt.blockSlot,
 			StateRoot:  stateRoot[:],
 			ParentRoot: genesisRoot[:],
-			Eth1Data: &pb.Eth1Data{
-				DepositRoot: []byte("a"),
-				BlockRoot:   []byte("b"),
-			},
 		}
 		blockRoot, err := hashutil.HashBeaconBlock(block)
 		if err != nil {

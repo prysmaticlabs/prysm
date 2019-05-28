@@ -20,10 +20,6 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 		ParentRoot: params.BeaconConfig().ZeroHash[:],
 		StateRoot:  stateRoot,
 		Signature:  params.BeaconConfig().EmptySignature[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRoot: params.BeaconConfig().ZeroHash[:],
-			BlockRoot:   params.BeaconConfig().ZeroHash[:],
-		},
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      params.BeaconConfig().ZeroHash[:],
 			ProposerSlashings: []*pb.ProposerSlashing{},
@@ -31,6 +27,10 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
 			VoluntaryExits:    []*pb.VoluntaryExit{},
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: params.BeaconConfig().ZeroHash[:],
+				BlockRoot:   params.BeaconConfig().ZeroHash[:],
+			},
 		},
 	}
 	return block
@@ -44,7 +44,7 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 //		returns the block root at a recent ``slot``.
 //		"""
 //		assert state.slot <= slot + LATEST_BLOCK_ROOTS_LENGTH
-//		assert slot < state.slot
+//		assert slot < state.slote
 //		return state.latest_block_roots[slot % LATEST_BLOCK_ROOTS_LENGTH]
 func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 	earliestSlot := uint64(0)
