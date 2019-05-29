@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/libp2p/go-libp2p-peerstore"
 	"io"
 	"net"
 	"reflect"
@@ -215,15 +216,14 @@ func (s *Server) Start() {
 		startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
 	}
 
-	maxTime := time.Duration(1 << 62)
-
-	for _, peer := range s.staticPeers {
-		peerInfo, err := peerInfoFromAddr(peer)
+	for _, staticPeer := range s.staticPeers {
+		peerInfo, err := peerInfoFromAddr(staticPeer)
 		if err != nil {
 			log.Errorf("Invalid peer address: %v", err)
 		} else {
-			s.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, maxTime)
+			s.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, peerstore.PermanentAddrTTL)
 		}
+		startPeerWatcher(ctx, s.host, s.staticPeers...)
 	}
 }
 
