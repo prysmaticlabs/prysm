@@ -43,7 +43,7 @@ go_image(
     importpath = IMPORT_PATH,
     deps = DEPS,
     pure = "off", # depends on cgo for go-ethereum crypto
-    static = "on",
+    static = "off", # go-ethereum is bad about static
     tags = ["manual"],
     goarch = "amd64",
     goos = "linux",

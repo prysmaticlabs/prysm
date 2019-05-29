@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
@@ -139,8 +140,14 @@ func ProcessDeposit(
 				withdrawalCredentials,
 			)
 		}
+		newBalance := state.Balances[existingValidatorIdx] + amount
+		state.Balances[existingValidatorIdx] = newBalance
 		state.ValidatorRegistry[existingValidatorIdx].EffectiveBalance += amount
-		state.Balances[existingValidatorIdx] += amount
+
+		if !featureconfig.FeatureConfig().EnableExcessDeposits && newBalance > params.BeaconConfig().MaxDepositAmount {
+			state.Balances[existingValidatorIdx] = params.BeaconConfig().MaxDepositAmount
+			state.ValidatorRegistry[existingValidatorIdx].EffectiveBalance = params.BeaconConfig().MaxDepositAmount
+		}
 	}
 	state.DepositIndex++
 
@@ -331,6 +338,14 @@ func InsertActivatedVal(epoch uint64, validators []uint64) {
 	VStore.Lock()
 	defer VStore.Unlock()
 	VStore.activatedValidators[epoch] = validators
+}
+
+// InsertActivatedIndices locks the validator store, inserts the activated validator
+// indices corresponding to their activation epochs.
+func InsertActivatedIndices(epoch uint64, indices []uint64) {
+	VStore.Lock()
+	defer VStore.Unlock()
+	VStore.activatedValidators[epoch] = append(VStore.activatedValidators[epoch], indices...)
 }
 
 // InsertExitedVal locks the validator store, inserts the exited validator

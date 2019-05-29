@@ -634,3 +634,109 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 		}
 	}
 }
+func TestVerifyAttestationBitfield_OK(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	var activeRoots [][]byte
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		activeRoots = append(activeRoots, []byte{'A'})
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestActiveIndexRoots: activeRoots,
+		LatestRandaoMixes:      activeRoots,
+	}
+
+	tests := []struct {
+		attestation         *pb.Attestation
+		stateSlot           uint64
+		errorExists         bool
+		verificationFailure bool
+	}{
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x01},
+				Data: &pb.AttestationData{
+					Shard: 5,
+					Slot:  5,
+				},
+			},
+			stateSlot: 5,
+		},
+		{
+
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x02},
+				Data: &pb.AttestationData{
+					Shard: 10,
+					Slot:  10,
+				},
+			},
+			stateSlot: 10,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x02},
+				Data: &pb.AttestationData{
+					Shard: 20,
+					Slot:  20,
+				},
+			},
+			stateSlot: 20,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xFF, 0xC0},
+				Data: &pb.AttestationData{
+					Shard: 5,
+					Slot:  5,
+				},
+			},
+			stateSlot:   5,
+			errorExists: true,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xFF},
+				Data: &pb.AttestationData{
+					Shard: 20,
+					Slot:  20,
+				},
+			},
+			stateSlot:           20,
+			verificationFailure: true,
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+		verified, err := VerifyAttestationBitfield(state, tt.attestation)
+		if tt.errorExists {
+			if err == nil {
+				t.Error("error is nil, when verification is supposed to fail")
+			}
+			continue
+		}
+		if tt.verificationFailure {
+			if verified {
+				t.Error("verification succeeded when it was supposed to fail")
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("Failed to verify bitfield: %v", err)
+			continue
+		}
+		if !verified {
+			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBitfield)
+		}
+	}
+
+}

@@ -13,7 +13,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -149,7 +148,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		CustodyBitfield: make([]byte, (len(committee)+7)/8),
 		Signature:       []byte("signed"),
 	}
-	aggregationBitfield := bitutil.SetBitfield(4, mathutil.CeilDiv8(len(committee)))
+	aggregationBitfield, err := bitutil.SetBitfield(4, len(committee))
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedAttestation.AggregationBitfield = aggregationBitfield
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
