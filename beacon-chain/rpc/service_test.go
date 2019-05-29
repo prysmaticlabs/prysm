@@ -22,15 +22,6 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type TestLogger struct {
-	logrus.FieldLogger
-	testMap map[string]interface{}
-}
-
-func (t *TestLogger) Errorf(format string, args ...interface{}) {
-	t.testMap["error"] = true
-}
-
 type mockOperationService struct {
 	pendingAttestations []*pb.Attestation
 }
