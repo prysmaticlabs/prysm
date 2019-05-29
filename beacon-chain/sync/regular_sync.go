@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -397,8 +398,8 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRootHash32)),
-		"justifiedEpoch": attestation.Data.JustifiedEpoch,
+		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRoot)),
+		"justifiedEpoch": attestation.Data.SourceEpoch,
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
@@ -417,17 +418,27 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 	highestSlot := head.Slot
 
+	headState, err := rs.db.HeadState(rs.ctx)
+	if err != nil {
+		return err
+	}
+
+	slot, err := helpers.AttestationDataSlot(headState, attestation.Data)
+	if err != nil {
+		return fmt.Errorf("could not get attestation slot: %v", err)
+	}
+
 	span.AddAttributes(
-		trace.Int64Attribute("attestation.Data.Slot", int64(attestation.Data.Slot)),
+		trace.Int64Attribute("attestation.Data.Slot", int64(slot)),
 		trace.Int64Attribute("finalized state slot", int64(highestSlot-params.BeaconConfig().SlotsPerEpoch)),
 	)
 	oneEpochAgo := uint64(0)
 	if highestSlot > params.BeaconConfig().SlotsPerEpoch {
 		oneEpochAgo = highestSlot - params.BeaconConfig().SlotsPerEpoch
 	}
-	if attestation.Data.Slot < oneEpochAgo {
+	if slot < oneEpochAgo {
 		log.WithFields(logrus.Fields{
-			"receivedSlot": attestation.Data.Slot,
+			"receivedSlot": slot,
 			"epochSlot":    oneEpochAgo},
 		).Debug("Skipping received attestation with slot smaller than one epoch ago")
 		return nil
