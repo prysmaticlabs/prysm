@@ -2,10 +2,10 @@ package operations
 
 import (
 	"context"
-	"sort"
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -110,8 +110,8 @@ func TestIncomingAttestation_OK(t *testing.T) {
 		AggregationBitfield: []byte{'A'},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
-				Shard:    100,
-			},		}}
+				Shard: 100,
+			}}}
 	if err := service.HandleAttestations(context.Background(), attestation); err != nil {
 		t.Error(err)
 	}
@@ -129,7 +129,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
-					Shard:    uint64(i),
+					Shard: uint64(i),
 				},
 			},
 		}
@@ -166,11 +166,12 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 
 	// Save 140 attestations for slots 0 to 139.
 	origAttestations := make([]*pb.Attestation, 140)
+	shardDiff := uint64(192)
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
-					Shard:    uint64(i),
+					Shard: uint64(i) - shardDiff,
 				},
 			},
 		}
@@ -191,12 +192,13 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
+
 	if !reflect.DeepEqual(attestations, origAttestations[137:]) {
 		t.Error("Incorrect pruned attestations")
 	}
 
 	// Verify the invalid attestations are deleted.
-	hash, err := hashutil.HashProto(origAttestations[136])
+	hash, err := hashutil.HashProto(origAttestations[1])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +217,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
-					Shard:    uint64(i),
+					Shard: uint64(i),
 				},
 			},
 		}
@@ -259,7 +261,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
-					Shard:    uint64(i),
+					Shard: uint64(i),
 				},
 			},
 		}

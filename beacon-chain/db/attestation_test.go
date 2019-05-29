@@ -18,7 +18,7 @@ func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
 	a := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
-				Shard:    0,
+				Shard: 0,
 			},
 		},
 	}
@@ -59,7 +59,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
-					Shard:    uint64(i),
+					Shard: uint64(i),
 				},
 			},
 		}
@@ -85,7 +85,7 @@ func TestDeleteAttestation_OK(t *testing.T) {
 	a := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
-				Shard:    0,
+				Shard: 0,
 			},
 		},
 	}
@@ -137,7 +137,7 @@ func TestHasAttestation_OK(t *testing.T) {
 	a := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
-				Shard:    0,
+				Shard: 0,
 			},
 		},
 	}
