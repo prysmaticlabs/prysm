@@ -24,24 +24,24 @@ func TestPrivateKeyLoading(t *testing.T) {
 	defer os.Remove(file.Name())
 	key, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 	if err != nil {
-		log.WithError(err).Fatal("Could not generate key")
+		t.Fatalf("Could not generate key: %v", err)
 	}
 	marshaled, err := crypto.MarshalPrivateKey(key)
 	if err != nil {
-		log.WithError(err).Fatal("Could not marshal key")
+		t.Fatalf("Could not marshal key: %v", err)
 	}
 	keyStr := crypto.ConfigEncodeKey(marshaled)
 
 	err = ioutil.WriteFile(file.Name(), []byte(keyStr), 0600)
 	if err != nil {
-		log.WithError(err).WithField("file", file.Name()).Fatal("Could not write key to file")
+		t.Fatalf("Could not write key to file: %v", err)
 	}
 	log.WithField("file", file.Name()).WithField("key", keyStr).Info("Wrote key to file")
 
 	var cfg config.Config
 	err = cfg.Apply(privKey(file.Name()))
 	if err != nil {
-		log.WithError(err).Fatal("Could not apply option")
+		t.Fatalf("Could not apply option: %v", err)
 	}
 	newMarshaled, _ := crypto.MarshalPrivateKey(cfg.PeerKey)
 	newEncoded := crypto.ConfigEncodeKey(newMarshaled)
