@@ -47,7 +47,6 @@ func (m *MerkleTrie) updateTrie() error {
 		return err
 	}
 	m.branches = trie.branches
-	m.originalItems = trie.originalItems
 	return nil
 }
 

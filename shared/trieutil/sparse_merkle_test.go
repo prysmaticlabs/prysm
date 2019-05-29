@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -199,7 +200,7 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 }
 
 func TestDepositTrieRoot_OK(t *testing.T) {
-	testAccount, err := setup()
+	testAcc, err := setup()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +210,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	depRoot, err := testAccount.contract.GetDepositRoot(&bind.CallOpts{})
+	depRoot, err := testAcc.contract.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,4 +218,44 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	if depRoot != localTrie.Root() {
 		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
 	}
+
+	var pubkey [48]byte
+	var withdrawalCreds [32]byte
+	var sig [96]byte
+	copy(pubkey[:], []byte("testing"))
+	copy(sig[:], []byte("testing"))
+	copy(withdrawalCreds[:], []byte("testing"))
+
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
+	}
+
+	testAcc.txOpts.Value = amount32Eth
+	testAcc.txOpts.GasLimit = 1000000
+
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+		t.Fatalf("Could not deposit to deposit contract %v", err)
+	}
+	testAcc.backend.Commit()
+	item, err := hashutil.DepositHash(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = localTrie.InsertIntoTrie(item[:], 0)
+	if err != nil {
+		t.Error(err)
+	}
+
+	depRoot, err = testAcc.contract.GetDepositRoot(&bind.CallOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if depRoot != localTrie.Root() {
+		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
+	}
+
 }
