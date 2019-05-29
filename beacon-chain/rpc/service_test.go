@@ -171,6 +171,8 @@ func TestRPC_BadEndpoint(t *testing.T) {
 		SyncService: &mockSyncService{},
 	})
 
+	log.(*TestLogger).testMap = make(map[string]interface{})
+
 	if val, ok := log.(*TestLogger).testMap["error"]; ok {
 		t.Fatalf("Error in Start() occurred before expected: %v", val)
 	}
@@ -182,6 +184,7 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	}
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
+	rpcService.Stop()
 
 }
 
