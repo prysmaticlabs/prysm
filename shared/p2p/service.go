@@ -227,7 +227,9 @@ func (s *Server) Start() {
 		}
 		peersToWatch = append(peersToWatch, s.staticPeers...)
 	}
-	startPeerWatcher(ctx, s.host, peersToWatch...)
+	if len(peersToWatch) > 0 {
+		startPeerWatcher(ctx, s.host, peersToWatch...)
+	}
 }
 
 // Stop the main p2p loop.
