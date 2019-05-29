@@ -130,15 +130,15 @@ http_archive(
 )
 
 http_archive(
-   name = "com_github_prysmaticlabs_go_ssz",
-   strip_prefix = "go-ssz-85eecc65d2c7a3b20501fe662210e5045f7bcbe1",
-   url = "https://github.com/prysmaticlabs/go-ssz/archive/85eecc65d2c7a3b20501fe662210e5045f7bcbe1.tar.gz",
-   sha256 = "9e753a6e5c4f6f7f3b4af584f326b1c650aee6af85fc98416fbe7d1579d6e4d7"
+    name = "com_github_prysmaticlabs_go_ssz",
+    strip_prefix = "go-ssz-85eecc65d2c7a3b20501fe662210e5045f7bcbe1",
+    url = "https://github.com/prysmaticlabs/go-ssz/archive/85eecc65d2c7a3b20501fe662210e5045f7bcbe1.tar.gz",
+    sha256 = "9e753a6e5c4f6f7f3b4af584f326b1c650aee6af85fc98416fbe7d1579d6e4d7",
 )
 
 load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
-go_ssz_dependencies()
 
+go_ssz_dependencies()
 
 go_repository(
     name = "com_github_golang_mock",
