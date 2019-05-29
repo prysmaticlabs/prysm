@@ -416,6 +416,9 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		}
 
 		if bytes.Equal(blockRoot[:], ancestorRoot) {
+			if int(validatorIndex) >= len(state.ValidatorRegistry) {
+				return 0, fmt.Errorf("validator index exceeds length of registry, Index %d , Registry %d", validatorIndex, len(state.ValidatorRegistry))
+			}
 			balances += int(state.ValidatorRegistry[validatorIndex].EffectiveBalance)
 		}
 	}

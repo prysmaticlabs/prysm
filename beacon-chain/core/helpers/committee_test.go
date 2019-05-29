@@ -640,14 +640,18 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}
 
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	var activeRoots [][]byte
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
+		activeRoots = append(activeRoots, []byte{'A'})
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
+		ValidatorRegistry:      validators,
+		LatestActiveIndexRoots: activeRoots,
+		LatestRandaoMixes:      activeRoots,
 	}
 
 	tests := []struct {
@@ -658,7 +662,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}{
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0xC0},
+				AggregationBitfield: []byte{0x01},
 				Data: &pb.AttestationData{
 					Shard: 5,
 					Slot:  5,
@@ -669,7 +673,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		{
 
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0x80},
+				AggregationBitfield: []byte{0x02},
 				Data: &pb.AttestationData{
 					Shard: 10,
 					Slot:  10,
@@ -679,7 +683,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0xC0},
+				AggregationBitfield: []byte{0x02},
 				Data: &pb.AttestationData{
 					Shard: 20,
 					Slot:  20,
@@ -731,7 +735,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 			continue
 		}
 		if !verified {
-			t.Error("Bitfield isnt verified")
+			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBitfield)
 		}
 	}
 

@@ -434,17 +434,23 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	ctx := context.Background()
 
 	var validators []*pb.Validator
+	var latestRandaoMixes [][]byte
+	var latestActiveIndexRoots [][]byte
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
 			Pubkey:          []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
 		})
+		latestRandaoMixes = append(latestRandaoMixes, []byte{'A'})
+		latestActiveIndexRoots = append(latestActiveIndexRoots, []byte{'B'})
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:              1,
-		ValidatorRegistry: validators,
+		Slot:                   1,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      latestRandaoMixes,
+		LatestActiveIndexRoots: latestActiveIndexRoots,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -462,8 +468,9 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 		attestation := &pb.Attestation{
 			AggregationBitfield: []byte{0x80},
 			Data: &pb.AttestationData{
-				Slot:  1,
-				Shard: 1,
+				Slot:        1,
+				Shard:       1,
+				TargetEpoch: 2,
 			},
 		}
 		if err := service.handleAttestation(ctx, attestation); err != nil {

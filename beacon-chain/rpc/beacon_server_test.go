@@ -752,9 +752,14 @@ func TestBlockTree_OK(t *testing.T) {
 	//                   /->[A, Slot 3, 3 Votes]->[B, Slot 4, 3 Votes]
 	// [Justified Block]->[C, Slot 3, 2 Votes]
 	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
+	var validators []*pbp2p.Validator
+	for i := 0; i < 13; i++ {
+		validators = append(validators, &pbp2p.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+	}
 	justifiedState := &pbp2p.BeaconState{
-		Slot:     0,
-		Balances: make([]uint64, 11),
+		Slot:              0,
+		Balances:          make([]uint64, 11),
+		ValidatorRegistry: validators,
 	}
 	for i := 0; i < len(justifiedState.Balances); i++ {
 		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
@@ -769,11 +774,12 @@ func TestBlockTree_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
-	validators := []*pbp2p.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
+
 	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
 	b1 := &pbp2p.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
+		StateRoot:  []byte{0x1},
 	}
 	b1Root, _ := hashutil.HashBeaconBlock(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
@@ -786,6 +792,7 @@ func TestBlockTree_OK(t *testing.T) {
 	b2 := &pbp2p.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
+		StateRoot:  []byte{0x2},
 	}
 	b2Root, _ := hashutil.HashBeaconBlock(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
@@ -798,6 +805,7 @@ func TestBlockTree_OK(t *testing.T) {
 	b3 := &pbp2p.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
+		StateRoot:  []byte{0x3},
 	}
 	b3Root, _ := hashutil.HashBeaconBlock(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
@@ -810,6 +818,7 @@ func TestBlockTree_OK(t *testing.T) {
 	b4 := &pbp2p.BeaconBlock{
 		Slot:       4,
 		ParentRoot: b1Root[:],
+		StateRoot:  []byte{0x4},
 	}
 	b4Root, _ := hashutil.HashBeaconBlock(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
@@ -822,6 +831,7 @@ func TestBlockTree_OK(t *testing.T) {
 	b5 := &pbp2p.BeaconBlock{
 		Slot:       5,
 		ParentRoot: b3Root[:],
+		StateRoot:  []byte{0x5},
 	}
 	b5Root, _ := hashutil.HashBeaconBlock(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
@@ -941,15 +951,16 @@ func TestBlockTree_OK(t *testing.T) {
 		beaconDB:       db,
 		targetsFetcher: &mockChainService{targets: attestationTargets},
 	}
+	sort.Slice(tree, func(i, j int) bool {
+		return string(tree[i].Block.StateRoot) < string(tree[j].Block.StateRoot)
+	})
+
 	resp, err := bs.BlockTree(ctx, &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	sort.Slice(resp.Tree, func(i, j int) bool {
-		return string(resp.Tree[i].Block.Slot) < string(resp.Tree[j].Block.Slot)
-	})
-	sort.Slice(tree, func(i, j int) bool {
-		return string(tree[i].Block.Slot) < string(tree[j].Block.Slot)
+		return string(resp.Tree[i].Block.StateRoot) < string(resp.Tree[j].Block.StateRoot)
 	})
 	for i := range resp.Tree {
 		if !proto.Equal(resp.Tree[i].Block, tree[i].Block) {
