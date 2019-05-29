@@ -157,33 +157,22 @@ func TestLifecycle_OK(t *testing.T) {
 }
 
 func TestRPC_BadEndpoint(t *testing.T) {
-	fl := logrus.WithField("prefix", "rpc")
-
-	log = &TestLogger{
-		FieldLogger: fl,
-		testMap:     make(map[string]interface{}),
-	}
-
-	hook := logTest.NewLocal(fl.Logger)
+	hook := logTest.NewGlobal()
 
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:        "ralph merkle!!!",
 		SyncService: &mockSyncService{},
 	})
 
-	log.(*TestLogger).testMap = make(map[string]interface{})
-
-	if val, ok := log.(*TestLogger).testMap["error"]; ok {
-		t.Fatalf("Error in Start() occurred before expected: %v", val)
-	}
+	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not load TLS keys")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not serve gRPC")
 
 	rpcService.Start()
 
-	if _, ok := log.(*TestLogger).testMap["error"]; !ok {
-		t.Fatal("No error occurred. Expected Start() to output an error")
-	}
-
 	testutil.AssertLogsContain(t, hook, "Starting service")
+	testutil.AssertLogsContain(t, hook, "Could not listen to port in Start()")
+
 	rpcService.Stop()
 
 }
