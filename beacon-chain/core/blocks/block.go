@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 var clock utils.Clock = &utils.RealClock{}
@@ -71,4 +72,31 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 func ProcessBlockRoots(state *pb.BeaconState, parentRoot [32]byte) *pb.BeaconState {
 	state.LatestBlockRoots[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = parentRoot[:]
 	return state
+}
+
+// BlockFromHeader manufactures a block from its header. It contains all its fields,
+// expect for the block body.
+func BlockFromHeader(header *pb.BeaconBlockHeader) *pb.BeaconBlock {
+	return &pb.BeaconBlock{
+		StateRoot:  header.StateRoot,
+		Slot:       header.Slot,
+		Signature:  header.Signature,
+		ParentRoot: header.ParentRoot,
+	}
+}
+
+// HeaderFromBlock extracts the block header from a block.
+func HeaderFromBlock(block *pb.BeaconBlock) (*pb.BeaconBlockHeader, error) {
+	header := &pb.BeaconBlockHeader{
+		Slot:       block.Slot,
+		ParentRoot: block.ParentRoot,
+		Signature:  block.Signature,
+		StateRoot:  block.StateRoot,
+	}
+	root, err := ssz.TreeHash(block.Body)
+	if err != nil {
+		return nil, fmt.Errorf("could not tree hash block body %v", err)
+	}
+	header.BodyRoot = root[:]
+	return header, nil
 }

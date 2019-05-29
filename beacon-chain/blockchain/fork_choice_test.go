@@ -520,7 +520,6 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	beaconState.LatestBlock = block2
 	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
@@ -1246,6 +1245,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 
 	chainSvc := setupBeaconChain(t, beaconDB, nil)
 	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
+
 	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)
 	}
@@ -1410,7 +1410,6 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)
 	}
-	gState.LatestBlock = gBlock
 	if err := chainSvc.beaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
 		t.Fatal(err)
 	}
@@ -1452,8 +1451,14 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	computedState := &pb.BeaconState{Slot: genesisSlot + lastAvailableSlot}
-	computedState.LatestBlock = block
+	blockHeader, err := b.HeaderFromBlock(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	computedState := &pb.BeaconState{
+		Slot:              genesisSlot + lastAvailableSlot,
+		LatestBlockHeader: blockHeader,
+	}
 	if err := chainSvc.beaconDB.SaveState(ctx, computedState); err != nil {
 		t.Fatal(err)
 	}
@@ -1518,6 +1523,10 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	if err != nil {
 		t.Fatal(err)
 	}
+	gHeader, err := b.HeaderFromBlock(gBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	gState := &pb.BeaconState{
 		Slot:                   genesisSlot,
 		LatestBlockRoots:       make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
@@ -1527,12 +1536,12 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		CurrentCrosslinks:      crosslinks,
 		ValidatorRegistry:      validatorRegistry,
 		Balances:               validatorBalances,
-		LatestBlock:            gBlock,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
+		LatestBlockHeader: gHeader,
 	}
 	return gBlockRoot, gBlock, gState, privKeys
 }

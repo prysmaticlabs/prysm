@@ -16,6 +16,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"go.opencensus.io/trace"
 )
 
@@ -173,8 +174,8 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	db.serializedState = enc
 	db.stateHash = stateHash
 
-	if beaconState.LatestBlock != nil {
-		blockRoot, err := hashutil.HashBeaconBlock(beaconState.LatestBlock)
+	if beaconState.LatestBlockHeader != nil {
+		blockRoot, err := ssz.TreeHash(beaconState.LatestBlockHeader)
 		if err != nil {
 			return err
 		}
