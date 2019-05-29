@@ -6,10 +6,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
