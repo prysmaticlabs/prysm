@@ -1139,7 +1139,6 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	}
 }
 
-
 func Benchmark_Eth1Data(b *testing.B) {
 	db := internal.SetupDB(b)
 	defer internal.TeardownDB(b, db)
