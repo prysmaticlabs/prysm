@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/go-ssz"
 )
 
 // EncodeDepositData converts a deposit input proto into an a byte slice
