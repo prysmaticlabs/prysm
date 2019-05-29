@@ -7,6 +7,7 @@ import (
 
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	"github.com/libp2p/go-libp2p/config"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestBuildOptions(t *testing.T) {
@@ -16,7 +17,7 @@ func TestBuildOptions(t *testing.T) {
 }
 
 func TestPrivateKeyLoading(t *testing.T) {
-	file, err := ioutil.TempFile("", "key")
+	file, err := ioutil.TempFile(testutil.TempDir(), "key")
 	if err != nil {
 		log.Fatal(err)
 	}
