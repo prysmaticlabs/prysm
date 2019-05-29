@@ -633,6 +633,7 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 		}
 	}
 }
+
 func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
@@ -663,8 +664,9 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 			attestation: &pb.Attestation{
 				AggregationBitfield: []byte{0x01},
 				Data: &pb.AttestationData{
-					Shard: 5,
-					Slot:  5,
+					Crosslink: &pb.Crosslink{
+						Shard: 5,
+					},
 				},
 			},
 			stateSlot: 5,
@@ -674,8 +676,9 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 			attestation: &pb.Attestation{
 				AggregationBitfield: []byte{0x02},
 				Data: &pb.AttestationData{
-					Shard: 10,
-					Slot:  10,
+					Crosslink: &pb.Crosslink{
+						Shard: 10,
+					},
 				},
 			},
 			stateSlot: 10,
@@ -684,8 +687,9 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 			attestation: &pb.Attestation{
 				AggregationBitfield: []byte{0x02},
 				Data: &pb.AttestationData{
-					Shard: 20,
-					Slot:  20,
+					Crosslink: &pb.Crosslink{
+						Shard: 20,
+					},
 				},
 			},
 			stateSlot: 20,
@@ -694,8 +698,9 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 			attestation: &pb.Attestation{
 				AggregationBitfield: []byte{0xFF, 0xC0},
 				Data: &pb.AttestationData{
-					Shard: 5,
-					Slot:  5,
+					Crosslink: &pb.Crosslink{
+						Shard: 5,
+					},
 				},
 			},
 			stateSlot:   5,
@@ -705,8 +710,9 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 			attestation: &pb.Attestation{
 				AggregationBitfield: []byte{0xFF},
 				Data: &pb.AttestationData{
-					Shard: 20,
-					Slot:  20,
+					Crosslink: &pb.Crosslink{
+						Shard: 20,
+					},
 				},
 			},
 			stateSlot:           20,

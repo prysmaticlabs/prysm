@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -18,8 +17,9 @@ func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
 
 	a := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Slot:  0,
-			Shard: 0,
+			Crosslink: &pb.Crosslink{
+				Shard:    0,
+			},
 		},
 	}
 
@@ -58,8 +58,9 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:  uint64(i),
-				Shard: uint64(i),
+				Crosslink: &pb.Crosslink{
+					Shard:    uint64(i),
+				},
 			},
 		}
 		if err := db.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -72,10 +73,6 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
 
-	// Sort the retrieved attestations based on slot ordering for comparison.
-	sort.Slice(retrievedAttestations, func(i, j int) bool {
-		return retrievedAttestations[i].Data.Slot < retrievedAttestations[j].Data.Slot
-	})
 	if !reflect.DeepEqual(retrievedAttestations, attestations) {
 		t.Log("Retrieved attestations did not match generated attestations")
 	}
@@ -87,8 +84,9 @@ func TestDeleteAttestation_OK(t *testing.T) {
 
 	a := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Slot:  0,
-			Shard: 0,
+			Crosslink: &pb.Crosslink{
+				Shard:    0,
+			},
 		},
 	}
 
@@ -138,8 +136,9 @@ func TestHasAttestation_OK(t *testing.T) {
 
 	a := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Slot:  0,
-			Shard: 0,
+			Crosslink: &pb.Crosslink{
+				Shard:    0,
+			},
 		},
 	}
 	aHash, err := hashutil.HashProto(a)

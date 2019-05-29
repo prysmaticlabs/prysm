@@ -471,9 +471,10 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 		attestation := &pb.Attestation{
 			AggregationBitfield: []byte{0x80},
 			Data: &pb.AttestationData{
-				Slot:        1,
-				Shard:       1,
 				TargetEpoch: 2,
+				Crosslink: &pb.Crosslink{
+					Shard: 1,
+				},
 			},
 		}
 		if err := service.handleAttestation(ctx, attestation); err != nil {

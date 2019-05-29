@@ -3,6 +3,7 @@ package operations
 
 import (
 	"bytes"
+	"sort"
 	"context"
 	"fmt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -124,6 +125,10 @@ func (s *Service) PendingAttestations(ctx context.Context) ([]*pb.Attestation, e
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
 	}
+
+	sort.Slice(attestationsFromDB, func(i, j int) bool {
+		return attestationsFromDB[i].Data.Crosslink.Shard < attestationsFromDB[j].Data.Crosslink.Shard
+	})
 
 	var validAttsCount uint64
 	for _, att := range attestationsFromDB {
