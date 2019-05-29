@@ -426,11 +426,6 @@ func TestMatchAttestations_EpochOutOfBound(t *testing.T) {
 }
 
 func TestAttsForCrosslink_CanGetAttestations(t *testing.T) {
-	s := &pb.BeaconState{
-		CurrentCrosslinks: []*pb.Crosslink{
-			{Epoch: 0},
-		},
-	}
 	c := &pb.Crosslink{
 		DataRoot: []byte{'B'},
 	}
