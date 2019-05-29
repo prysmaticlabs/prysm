@@ -207,6 +207,9 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, err
 	}
+	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
+	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
+}
 
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
@@ -224,18 +227,25 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	if err != nil {
 		return false, nil, err
 	}
-	chainStarted, err := vs.powChainService.HasChainStartLogOccurred()
+	chainStarted, _, err := vs.powChainService.HasChainStartLogOccurred()
 	if err != nil {
 		return false, nil, err
 	}
 
-	chainStartKeys := vs.chainStartPubkeys()
+	chainStartKeys, err := vs.chainStartPubkeys()
+	if err != nil {
+		return false, nil, err
+	}
+
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for i, key := range pubkeys {
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
 		status := vs.validatorStatus(ctx, key, chainStarted, chainStartKeys, validatorIndexMap, beaconState)
+		if status == nil {
+			continue
+		}
 		resp := &pb.ValidatorActivationResponse_Status{
 			Status:    status,
 			PublicKey: key,
@@ -247,6 +257,34 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	}
 
 	return activeValidatorExists, statusResponses, nil
+}
+
+// ExitedValidators queries validator statuses for a give list of validators
+// and returns a filtered list of validator keys that are exited.
+func (vs *ValidatorServer) ExitedValidators(
+	ctx context.Context,
+	req *pb.ExitedValidatorsRequest) (*pb.ExitedValidatorsResponse, error) {
+
+	_, statuses, err := vs.MultipleValidatorStatus(ctx, req.PublicKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	exitedKeys := make([][]byte, 0)
+	for _, status := range statuses {
+		s := status.Status.Status
+		if s == pb.ValidatorStatus_EXITED ||
+			s == pb.ValidatorStatus_EXITED_SLASHED ||
+			s == pb.ValidatorStatus_INITIATED_EXIT {
+			exitedKeys = append(exitedKeys, status.PublicKey)
+		}
+	}
+
+	resp := &pb.ExitedValidatorsResponse{
+		PublicKeys: exitedKeys,
+	}
+
+	return resp, nil
 }
 
 func (vs *ValidatorServer) validatorStatus(

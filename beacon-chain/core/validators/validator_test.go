@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -378,6 +379,90 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	}
 }
 
+func TestProcessDepositFlag_NotEnabled(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			Pubkey:                      []byte{1, 2, 3},
+			WithdrawalCredentialsHash32: []byte{2},
+		},
+		{
+			Pubkey:                      []byte{4, 5, 6},
+			WithdrawalCredentialsHash32: []byte{1},
+		},
+	}
+	balances := []uint64{0, 32e9}
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().SlotsPerEpoch,
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{4, 5, 6}
+	deposit := uint64(32e9)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+
+	newState, err := ProcessDeposit(
+		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if newState.ValidatorBalances[1] != 32e9 {
+		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.ValidatorBalances[1])
+	}
+}
+
+func TestProcessDepositFlag_Enabled(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableExcessDeposits: true,
+	})
+
+	registry := []*pb.Validator{
+		{
+			Pubkey:                      []byte{1, 2, 3},
+			WithdrawalCredentialsHash32: []byte{2},
+		},
+		{
+			Pubkey:                      []byte{4, 5, 6},
+			WithdrawalCredentialsHash32: []byte{1},
+		},
+	}
+	balances := []uint64{0, 32e9}
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().SlotsPerEpoch,
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{4, 5, 6}
+	deposit := uint64(32e9)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+
+	newState, err := ProcessDeposit(
+		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if newState.ValidatorBalances[1] != 64e9 {
+		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.ValidatorBalances[1])
+	}
+	// Un-setting flag
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableExcessDeposits: false,
+	})
+}
+
 func TestActivateValidatorGenesis_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{
@@ -571,5 +656,16 @@ func TestInitializeValidatoreStore(t *testing.T) {
 
 	if !reflect.DeepEqual(retrievedIndices, indices) {
 		t.Errorf("Saved active indices are not the same as the one in the validator store, got %v but expected %v", retrievedIndices, indices)
+	}
+}
+
+func TestInsertActivatedIndices_Works(t *testing.T) {
+	InsertActivatedIndices(100, []uint64{1, 2, 3})
+	if !reflect.DeepEqual(vStore.activatedValidators[100], []uint64{1, 2, 3}) {
+		t.Error("Activated validators aren't the same")
+	}
+	InsertActivatedIndices(100, []uint64{100})
+	if !reflect.DeepEqual(vStore.activatedValidators[100], []uint64{1, 2, 3, 100}) {
+		t.Error("Activated validators aren't the same")
 	}
 }

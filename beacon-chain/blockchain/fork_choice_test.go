@@ -115,6 +115,10 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		blockRoot, err := hashutil.HashBeaconBlock(block)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}

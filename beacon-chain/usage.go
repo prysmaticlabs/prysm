@@ -51,10 +51,12 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.DataDirFlag,
 			cmd.VerbosityFlag,
 			cmd.EnableTracingFlag,
+			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
+			cmd.MaxGoroutines,
 		},
 	},
 	{

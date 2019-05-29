@@ -109,21 +109,19 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			}
 			continue
 		}
-
-		if featureconfig.FeatureConfig().EnableCanonicalAttestationFilter {
-			canonical, err := ps.operationService.IsAttCanonical(ctx, att)
-			if err != nil {
-				// Delete attestation that failed to verify as canonical.
-				if err := ps.beaconDB.DeleteAttestation(att); err != nil {
-					return nil, fmt.Errorf("could not delete failed attestation: %v", err)
-				}
-				return nil, fmt.Errorf("could not verify canonical attestation: %v", err)
+		canonical, err := ps.operationService.IsAttCanonical(ctx, att)
+		if err != nil {
+			// Delete attestation that failed to verify as canonical.
+			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
 			}
-			// Skip the attestation if it's not canonical.
-			if !canonical {
-				continue
-			}
+			return nil, fmt.Errorf("could not verify canonical attestation: %v", err)
 		}
+		// Skip the attestation if it's not canonical.
+		if !canonical {
+			continue
+		}
+
 		validAtts = append(validAtts, att)
 	}
 
