@@ -135,11 +135,11 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	// Validator index is at index 4 in the mocked committee defined in this test.
 	expectedAttestation := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			BeaconBlockRoot:    []byte("A"),
-			TargetRoot:  []byte("B"),
-			SourceRoot: []byte("C"),
-			Crosslink:          &pbp2p.Crosslink{Shard:5, DataRoot: []byte{'D'}},
-			SourceEpoch:           3,
+			BeaconBlockRoot: []byte("A"),
+			TargetRoot:      []byte("B"),
+			SourceRoot:      []byte("C"),
+			Crosslink:       &pbp2p.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
+			SourceEpoch:     3,
 		},
 		CustodyBitfield: make([]byte, (len(committee)+7)/8),
 		Signature:       []byte("signed"),

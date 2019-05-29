@@ -440,7 +440,7 @@ func TestAttsForCrosslink_CanGetAttestations(t *testing.T) {
 		{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{DataRoot: []byte{'C'}}}},
 		{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{DataRoot: []byte{'B'}}}}} // Selected
 
-	if !reflect.DeepEqual(attsForCrosslink(s, c, atts), []*pb.PendingAttestation{
+	if !reflect.DeepEqual(attsForCrosslink(c, atts), []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{DataRoot: []byte{'B'}}}},
 		{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{DataRoot: []byte{'B'}}}}}) {
 		t.Error("Incorrect attestations for crosslink")

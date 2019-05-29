@@ -272,7 +272,7 @@ func (s *Service) removeOperations() error {
 				log.Errorf("Could not remove processed attestations from DB: %v", err)
 				return nil
 			}
-			if err := s.removeEpochOldAttestations(state, block.Slot); err != nil {
+			if err := s.removeEpochOldAttestations(state); err != nil {
 				log.Errorf("Could not remove old attestations from DB at slot %d: %v", block.Slot, err)
 				return nil
 			}
@@ -307,7 +307,7 @@ func (s *Service) removePendingAttestations(attestations []*pb.Attestation) erro
 }
 
 // removeEpochOldAttestations removes attestations that's older than one epoch length from current slot.
-func (s *Service) removeEpochOldAttestations(beaconState *pb.BeaconState, slot uint64) error {
+func (s *Service) removeEpochOldAttestations(beaconState *pb.BeaconState) error {
 	attestations, err := s.beaconDB.Attestations()
 	if err != nil {
 		return err
