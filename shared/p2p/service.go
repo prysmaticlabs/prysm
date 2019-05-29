@@ -21,6 +21,7 @@ import (
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	libp2pnet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
+	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
@@ -191,6 +192,7 @@ func (s *Server) Start() {
 	defer span.End()
 	log.Info("Starting service")
 
+	peersToWatch := []string{}
 	if !s.noDiscovery {
 		if s.bootstrapNode != "" {
 			if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
@@ -212,18 +214,20 @@ func (s *Server) Start() {
 			log.Errorf("Could not start peer discovery via mDNS: %v", err)
 		}
 
-		startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
+		peersToWatch = append(peersToWatch, s.bootstrapNode, s.relayNodeAddr)
 	}
 
-	maxTime := time.Duration(1 << 62)
-
-	for _, peer := range s.staticPeers {
-		peerInfo, err := peerInfoFromAddr(peer)
+	for _, staticPeer := range s.staticPeers {
+		peerInfo, err := peerInfoFromAddr(staticPeer)
 		if err != nil {
 			log.Errorf("Invalid peer address: %v", err)
 		} else {
-			s.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, maxTime)
+			s.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, peerstore.PermanentAddrTTL)
 		}
+		peersToWatch = append(peersToWatch, s.staticPeers...)
+	}
+	if len(peersToWatch) > 0 {
+		startPeerWatcher(ctx, s.host, peersToWatch...)
 	}
 }
 
