@@ -62,8 +62,9 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
-			Slot:  1,
-			Shard: 2,
+			Crosslink: &pb.Crosslink{
+				Shard: 1,
+			},
 		},
 	}
 
@@ -71,10 +72,10 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[60].Pubkey)
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	if service.store.m[pubkey].Data.Crosslink.Shard !=
+		attestation.Data.Crosslink.Shard {
+		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
+			attestation.Data.Crosslink.Shard, service.store.m[pubkey].Data.Crosslink.Shard)
 	}
 
 	beaconState = &pb.BeaconState{
@@ -88,15 +89,14 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		t.Fatalf("could not save state: %v", err)
 	}
 
-	attestation.Data.Slot = 36
-	attestation.Data.Shard = 36
+	attestation.Data.Crosslink.Shard = 36
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	if service.store.m[pubkey].Data.Crosslink.Shard !=
+		attestation.Data.Crosslink.Shard {
+		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
+			attestation.Data.Crosslink.Shard, service.store.m[pubkey].Data.Crosslink.Shard)
 	}
 }
 
@@ -133,8 +133,9 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x80},
 		Data: &pb.AttestationData{
-			Slot:  1,
-			Shard: 1,
+			Crosslink: &pb.Crosslink{
+				Shard: 1,
+			},
 		},
 	}
 
@@ -200,7 +201,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
-			BeaconBlockRootHash32: blockRoot[:],
+			BeaconBlockRoot: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	service.store.m[pubKey48] = attestation
@@ -256,8 +257,9 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
-			Slot:  1,
-			Shard: 2,
+			Crosslink: &pb.Crosslink{
+				Shard: 1,
+			},
 		},
 	}
 
@@ -265,14 +267,13 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[60].Pubkey)
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	if service.store.m[pubkey].Data.Crosslink.Shard !=
+		attestation.Data.Crosslink.Shard {
+		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
+			attestation.Data.Crosslink.Shard, service.store.m[pubkey].Data.Crosslink.Shard)
 	}
 
-	attestation.Data.Slot = 36
-	attestation.Data.Shard = 36
+	attestation.Data.Crosslink.Shard = 36
 
 	beaconState = &pb.BeaconState{
 		Slot:                   36,
@@ -288,14 +289,14 @@ func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	if service.store.m[pubkey].Data.Crosslink.Shard !=
+		attestation.Data.Crosslink.Shard {
+		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
+			attestation.Data.Crosslink.Shard, service.store.m[pubkey].Data.Crosslink.Shard)
 	}
 
 	// Verify the committee for attestation's data slot was cached.
-	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Slot)
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Crosslink.Shard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,8 +350,9 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
-			Slot:  slot,
-			Shard: shard,
+			Crosslink: &pb.Crosslink{
+				Shard: shard,
+			},
 		},
 	}
 
@@ -372,10 +374,10 @@ func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	if service.store.m[pubkey].Data.Crosslink.Shard !=
+		attestation.Data.Crosslink.Shard {
+		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
+			attestation.Data.Crosslink.Shard, service.store.m[pubkey].Data.Crosslink.Shard)
 	}
 }
 
@@ -414,8 +416,9 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0xC0},
 		Data: &pb.AttestationData{
-			Slot:  1,
-			Shard: 1,
+			Crosslink: &pb.Crosslink{
+				Shard: 1,
+			},
 		},
 	}
 
@@ -468,9 +471,10 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 		attestation := &pb.Attestation{
 			AggregationBitfield: []byte{0x80},
 			Data: &pb.AttestationData{
-				Slot:        1,
-				Shard:       1,
 				TargetEpoch: 2,
+				Crosslink: &pb.Crosslink{
+					Shard: 1,
+				},
 			},
 		}
 		if err := service.handleAttestation(ctx, attestation); err != nil {
@@ -518,8 +522,9 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 		attestations = append(attestations, &pb.Attestation{
 			AggregationBitfield: []byte{0x80},
 			Data: &pb.AttestationData{
-				Slot:  1,
-				Shard: 1,
+				Crosslink: &pb.Crosslink{
+					Shard: 1,
+				},
 			},
 		})
 	}

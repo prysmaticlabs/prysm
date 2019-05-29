@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,67 +31,6 @@ type validatorStore struct {
 var VStore = validatorStore{
 	activatedValidators: make(map[uint64][]uint64),
 	exitedValidators:    make(map[uint64][]uint64),
-}
-
-// ValidatorIndices returns all the validator indices from the input attestations
-// and state.
-//
-// Spec pseudocode definition:
-//   Let attester_indices be the union of the validator
-//   index sets given by [get_attestation_participants(state, a.data, a.aggregation_bitfield)
-//   for a in attestations]
-func ValidatorIndices(
-	state *pb.BeaconState,
-	attestations []*pb.PendingAttestation,
-) ([]uint64, error) {
-
-	var attesterIndicesIntersection []uint64
-	for _, attestation := range attestations {
-		attesterIndices, err := helpers.AttestingIndices(
-			state,
-			attestation.Data,
-			attestation.AggregationBitfield)
-		if err != nil {
-			return nil, err
-		}
-
-		attesterIndicesIntersection = sliceutil.UnionUint64(attesterIndicesIntersection, attesterIndices)
-	}
-
-	return attesterIndicesIntersection, nil
-}
-
-// AttestingValidatorIndices returns the crosslink committee validator indices
-// if the validators from crosslink committee is part of the input attestations.
-//
-// Spec pseudocode definition:
-// Let attesting_validator_indices(crosslink_committee, shard_block_root)
-// 	be the union of the validator index sets given by
-// 	[get_attestation_participants(state, a.data, a.participation_bitfield)
-// 	for a in current_epoch_attestations + previous_epoch_attestations
-// 		if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
-func AttestingValidatorIndices(
-	state *pb.BeaconState,
-	shard uint64,
-	crosslinkDataRoot []byte,
-	thisEpochAttestations []*pb.PendingAttestation,
-	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
-
-	var validatorIndicesCommittees []uint64
-	attestations := append(thisEpochAttestations, prevEpochAttestations...)
-
-	for _, attestation := range attestations {
-		if attestation.Data.Shard == shard &&
-			bytes.Equal(attestation.Data.CrosslinkDataRoot, crosslinkDataRoot) {
-
-			validatorIndicesCommittee, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
-			if err != nil {
-				return nil, fmt.Errorf("could not get attester indices: %v", err)
-			}
-			validatorIndicesCommittees = sliceutil.UnionUint64(validatorIndicesCommittees, validatorIndicesCommittee)
-		}
-	}
-	return validatorIndicesCommittees, nil
 }
 
 // ProcessDeposit mutates a corresponding index in the beacon state for

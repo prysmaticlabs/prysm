@@ -50,22 +50,28 @@ func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.At
 		{
 			AggregationBitfield: []byte{0xC0},
 			Data: &pb.AttestationData{
-				Slot:              params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard:    params.BeaconConfig().SlotsPerEpoch,
+					DataRoot: params.BeaconConfig().ZeroHash[:],
+				},
 			},
 		},
 		{
 			AggregationBitfield: []byte{0xC1},
 			Data: &pb.AttestationData{
-				Slot:              params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard:    params.BeaconConfig().SlotsPerEpoch,
+					DataRoot: params.BeaconConfig().ZeroHash[:],
+				},
 			},
 		},
 		{
 			AggregationBitfield: []byte{0xC2},
 			Data: &pb.AttestationData{
-				Slot:              params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard:    params.BeaconConfig().SlotsPerEpoch,
+					DataRoot: params.BeaconConfig().ZeroHash[:],
+				},
 			},
 		},
 	}, nil

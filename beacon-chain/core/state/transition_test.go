@@ -164,19 +164,21 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
@@ -239,20 +241,20 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
-				},
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					}},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
-				},
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					}},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
 		},
@@ -353,19 +355,21 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
@@ -448,7 +452,7 @@ func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
 func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 100}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 100}}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                     epoch * params.BeaconConfig().SlotsPerEpoch,
 		LatestBlockRoots:         make([][]byte, 128),
@@ -463,7 +467,7 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}, AggregationBitfield: []byte{1}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBitfield: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		LatestBlockRoots:          make([][]byte, 128),
@@ -478,7 +482,7 @@ func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
 func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}, AggregationBitfield: []byte{1}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBitfield: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		LatestBlockRoots:         make([][]byte, 128),
@@ -493,7 +497,7 @@ func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
 func TestProcessEpoch_CanProcess(t *testing.T) {
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Slot: 1}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}}}
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{

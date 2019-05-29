@@ -257,7 +257,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 
 	att := &pb.Attestation{
 		Data: &pb.AttestationData{
-			BeaconBlockRootHash32: blockRoot[:],
+			BeaconBlockRoot: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	attsService.InsertAttestationIntoStore(pubKey48, att)

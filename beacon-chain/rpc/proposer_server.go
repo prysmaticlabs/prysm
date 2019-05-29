@@ -89,20 +89,30 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 
 	var attsReadyForInclusion []*pbp2p.Attestation
 	for _, att := range atts {
-		if att.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
+		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
+		if err != nil {
+			return nil, fmt.Errorf("could not get attestation slot: %v", err)
+		}
+		if slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
 			attsReadyForInclusion = append(attsReadyForInclusion, att)
 		}
 	}
 
 	validAtts := make([]*pbp2p.Attestation, 0, len(attsReadyForInclusion))
 	for _, att := range attsReadyForInclusion {
+		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
+		if err != nil {
+			return nil, fmt.Errorf("could not get attestation slot: %v", err)
+		}
+
 		if _, err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
+
 			log.WithError(err).WithFields(logrus.Fields{
-				"slot":     att.Data.Slot,
-				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Info(
+				"slot":     slot,
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot))}).Info(
 				"Deleting failed pending attestation from DB")
 			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
