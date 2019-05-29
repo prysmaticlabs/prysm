@@ -70,6 +70,7 @@ type ServerConfig struct {
 	BootstrapNodeAddr      string
 	RelayNodeAddr          string
 	HostAddress            string
+	PrvKey                 string
 	Port                   int
 	MaxPeers               int
 	DepositContractAddress string
