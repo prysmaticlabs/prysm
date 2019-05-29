@@ -312,7 +312,7 @@ func ToCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *c
 // VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
 // to the committees at that slot.
 func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (bool, error) {
-	committee, err := CrosslinkCommitteeAtEpoch(bState, att.Data.TargetEpoch, att.Data.Shard)
+	committee, err := CrosslinkCommitteeAtEpoch(bState, att.Data.TargetEpoch, att.Data.Crosslink.Shard)
 	if err != nil {
 		return false, fmt.Errorf("could not retrieve crosslink committees at slot: %v", err)
 	}

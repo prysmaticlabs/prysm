@@ -41,12 +41,33 @@ func TestAttestHead_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	validators := make([]*pbp2p.Validator, params.BeaconConfig().DepositsForChainStart/16)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pbp2p.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxDepositAmount,
+		}
+	}
+
+	state := &pbp2p.BeaconState{
+		Slot:                   params.BeaconConfig().SlotsPerEpoch + 1,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	if err := db.SaveState(context.Background(), state); err != nil {
+		t.Fatal(err)
+	}
+
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:              999,
-			Shard:             1,
-			CrosslinkDataRoot: []byte{'a'},
-			BeaconBlockRoot:   root[:],
+			BeaconBlockRoot: root[:],
+			Crosslink: &pbp2p.Crosslink{
+				Shard:    935,
+				DataRoot: []byte{'a'},
+			},
 		},
 	}
 	if _, err := attesterServer.AttestHead(context.Background(), req); err != nil {

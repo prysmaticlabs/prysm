@@ -422,7 +422,6 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	if err != nil {
 		return err
 	}
-
 	slot, err := helpers.AttestationDataSlot(headState, attestation.Data)
 	if err != nil {
 		return fmt.Errorf("could not get attestation slot: %v", err)
