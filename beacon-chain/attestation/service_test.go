@@ -422,10 +422,67 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 		},
 	}
 
+	wanted := "bitfield points to an invalid index in the committee"
+
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
-		t.Fatalf("could not update latest attestation: %v", err)
+		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Bitfield points to an invalid index in the committee")
+
+	testutil.AssertLogsContain(t, hook, wanted)
+}
+
+func TestBatchUpdate_FromSync(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	var latestRandaoMixes [][]byte
+	var latestActiveIndexRoots [][]byte
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
+		})
+		latestRandaoMixes = append(latestRandaoMixes, []byte{'A'})
+		latestActiveIndexRoots = append(latestActiveIndexRoots, []byte{'B'})
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot:                   1,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      latestRandaoMixes,
+		LatestActiveIndexRoots: latestActiveIndexRoots,
+	}
+	block := &pb.BeaconBlock{
+		Slot: 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+	service.poolLimit = 9
+	for i := 0; i < 10; i++ {
+		attestation := &pb.Attestation{
+			AggregationBitfield: []byte{0x80},
+			Data: &pb.AttestationData{
+				Slot:        1,
+				Shard:       1,
+				TargetEpoch: 2,
+			},
+		}
+		if err := service.handleAttestation(ctx, attestation); err != nil {
+			t.Fatalf("could not update latest attestation: %v", err)
+		}
+	}
+	if len(service.pooledAttestations) != 0 {
+		t.Errorf("pooled attestations were not cleared out, still %d attestations in pool", len(service.pooledAttestations))
+	}
 }
 
 func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {

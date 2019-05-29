@@ -171,7 +171,8 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
+	depChainStart := params.BeaconConfig().DepositsForChainStart / 16
+	state, err := genesisState(depChainStart)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -179,7 +180,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 	var wg sync.WaitGroup
-	numOfValidators := int(params.BeaconConfig().DepositsForChainStart)
+	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -224,7 +225,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	// Test the last validator in registry.
-	lastValidatorIndex := params.BeaconConfig().DepositsForChainStart - 1
+	lastValidatorIndex := depChainStart - 1
 	pubKeyBuf = make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	copy(pubKeyBuf[:], []byte(strconv.FormatUint(lastValidatorIndex, 10)))
 	req = &pb.CommitteeAssignmentsRequest{
@@ -254,7 +255,8 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
+	depChainStart := params.BeaconConfig().DepositsForChainStart / 16
+	state, err := genesisState(depChainStart)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -262,7 +264,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 	var wg sync.WaitGroup
-	numOfValidators := int(params.BeaconConfig().DepositsForChainStart)
+	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)

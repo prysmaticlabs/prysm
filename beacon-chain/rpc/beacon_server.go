@@ -7,10 +7,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -239,7 +238,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		votes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
+		participatedVotes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
 		if err != nil {
 			return nil, err
 		}
@@ -248,9 +247,9 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 			return nil, err
 		}
 		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
-			BlockRoot: blockRoot[:],
-			Block:     kid,
-			Votes:     uint64(votes),
+			BlockRoot:         blockRoot[:],
+			Block:             kid,
+			ParticipatedVotes: uint64(participatedVotes),
 		})
 	}
 	return &pb.BlockTreeResponse{

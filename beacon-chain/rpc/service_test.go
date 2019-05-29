@@ -22,15 +22,6 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type TestLogger struct {
-	logrus.FieldLogger
-	testMap map[string]interface{}
-}
-
-func (t *TestLogger) Errorf(format string, args ...interface{}) {
-	t.testMap["error"] = true
-}
-
 type mockOperationService struct {
 	pendingAttestations []*pb.Attestation
 }
@@ -57,21 +48,21 @@ func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.At
 	}
 	return []*pb.Attestation{
 		{
-			AggregationBitfield: []byte("A"),
+			AggregationBitfield: []byte{0xC0},
 			Data: &pb.AttestationData{
 				Slot:              params.BeaconConfig().SlotsPerEpoch,
 				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
-			AggregationBitfield: []byte("B"),
+			AggregationBitfield: []byte{0xC1},
 			Data: &pb.AttestationData{
 				Slot:              params.BeaconConfig().SlotsPerEpoch,
 				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
-			AggregationBitfield: []byte("C"),
+			AggregationBitfield: []byte{0xC2},
 			Data: &pb.AttestationData{
 				Slot:              params.BeaconConfig().SlotsPerEpoch,
 				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
@@ -157,31 +148,23 @@ func TestLifecycle_OK(t *testing.T) {
 }
 
 func TestRPC_BadEndpoint(t *testing.T) {
-	fl := logrus.WithField("prefix", "rpc")
-
-	log = &TestLogger{
-		FieldLogger: fl,
-		testMap:     make(map[string]interface{}),
-	}
-
-	hook := logTest.NewLocal(fl.Logger)
+	hook := logTest.NewGlobal()
 
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:        "ralph merkle!!!",
 		SyncService: &mockSyncService{},
 	})
 
-	if val, ok := log.(*TestLogger).testMap["error"]; ok {
-		t.Fatalf("Error in Start() occurred before expected: %v", val)
-	}
+	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not load TLS keys")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not serve gRPC")
 
 	rpcService.Start()
 
-	if _, ok := log.(*TestLogger).testMap["error"]; !ok {
-		t.Fatal("No error occurred. Expected Start() to output an error")
-	}
-
 	testutil.AssertLogsContain(t, hook, "Starting service")
+	testutil.AssertLogsContain(t, hook, "Could not listen to port in Start()")
+
+	rpcService.Stop()
 
 }
 

@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -76,6 +77,17 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	}
 
 	if err := as.cache.MarkInProgress(req); err != nil {
+		if err == cache.ErrAlreadyInProgress {
+			res, err := as.cache.Get(ctx, req)
+			if err != nil {
+				return nil, err
+			}
+
+			if res == nil {
+				return nil, errors.New("a request was in progress and resolved to nil")
+			}
+			return res, nil
+		}
 		return nil, err
 	}
 	defer func() {
