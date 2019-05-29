@@ -9,9 +9,9 @@ import (
 	"io"
 	"os"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/sirupsen/logrus"
 )
 

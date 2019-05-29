@@ -14,10 +14,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/go-ssz"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 var gasLimit = uint64(4000000)
