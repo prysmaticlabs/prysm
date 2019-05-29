@@ -30,14 +30,14 @@ type CrosslinkCommittee struct {
 // Spec pseudocode definition:
 //   def get_epoch_committee_count(state: BeaconState, epoch: Epoch) -> int:
 //    """
-//    Return the number of committees in one epoch.
+//    Return the number of committees at ``epoch``.
 //    """
-//    active_validators = get_active_validator_indices(state, epoch)
+//    active_validator_indices = get_active_validator_indices(state, epoch)
 //    return max(
 //        1,
 //        min(
 //            SHARD_COUNT // SLOTS_PER_EPOCH,
-//            len(active_validators) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
+//            len(active_validator_indices) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //        )
 //    ) * SLOTS_PER_EPOCH
 func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
@@ -49,8 +49,8 @@ func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
 	if params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch > minCommitteePerSlot {
 		committeeSizesPerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().SlotsPerEpoch
 	}
-
-	var currCommitteePerSlot = activeValidatorCount / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
+	count := uint64(len(activeIndices))
+	var currCommitteePerSlot = count / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 
 	if currCommitteePerSlot > committeeSizesPerSlot {
 		return committeeSizesPerSlot * params.BeaconConfig().SlotsPerEpoch
@@ -125,7 +125,7 @@ func ComputeCommittee(
 //    assert verify_bitfield(bitfield, len(committee))
 //    return sorted([index for i, index in enumerate(committee) if get_bitfield_bit(bitfield, i) == 0b1])
 func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield []byte) ([]uint64, error) {
-	committee, err := CrosslinkCommitteeAtEpoch(state, data.TargetEpoch, data.Shard)
+	committee, err := CrosslinkCommitteeAtEpoch(state, data.TargetEpoch, data.Crosslink.Shard)
 	if err != nil {
 		return nil, fmt.Errorf("could not get committee: %v", err)
 	}
@@ -260,6 +260,33 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 	return minShardDelta
 }
 
+// EpochStartShard returns the start shard used to process crosslink
+// of a given epoch.
+//
+// Spec pseudocode definition:
+//   def get_epoch_start_shard(state: BeaconState, epoch: Epoch) -> Shard:
+//    assert epoch <= get_current_epoch(state) + 1
+//    check_epoch = get_current_epoch(state) + 1
+//    shard = (state.latest_start_shard + get_shard_delta(state, get_current_epoch(state))) % SHARD_COUNT
+//    while check_epoch > epoch:
+//        check_epoch -= 1
+//        shard = (shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT
+//    return shard
+func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	currentEpoch := CurrentEpoch(state)
+	checkEpoch := currentEpoch + 1
+	if epoch > checkEpoch {
+		return 0, fmt.Errorf("epoch %d can't be greater than %d",
+			epoch, checkEpoch)
+	}
+	shard := (state.LatestStartShard + ShardDelta(state, currentEpoch)) % params.BeaconConfig().ShardCount
+	for checkEpoch > epoch {
+		checkEpoch--
+		shard = (shard + params.BeaconConfig().ShardCount - ShardDelta(state, checkEpoch)) % params.BeaconConfig().ShardCount
+	}
+	return shard, nil
+}
+
 // RestartCommitteeCache restarts the committee cache from scratch.
 func RestartCommitteeCache() {
 	committeeCache = cache.NewCommitteesCache()
@@ -280,4 +307,18 @@ func ToCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *c
 		Committees: cacheCommittee,
 	}
 	return committees
+}
+
+// VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
+// to the committees at that slot.
+func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (bool, error) {
+	committee, err := CrosslinkCommitteeAtEpoch(bState, att.Data.TargetEpoch, att.Data.Crosslink.Shard)
+	if err != nil {
+		return false, fmt.Errorf("could not retrieve crosslink committees at slot: %v", err)
+	}
+
+	if committee == nil {
+		return false, fmt.Errorf("no committee exist for shard in the attestation")
+	}
+	return VerifyBitfield(att.AggregationBitfield, len(committee))
 }

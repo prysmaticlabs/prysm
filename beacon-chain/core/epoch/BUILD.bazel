@@ -29,6 +29,5 @@ go_test(
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
     ],
 )

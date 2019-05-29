@@ -58,10 +58,8 @@ message Fork {
 message PendingAttestation {
   bytes aggregation_bitfield = 1;
   AttestationData data = 2;
-  uint64 inclusion_slot = 3 [deprecated = true];
-  bytes custody_bitfield = 4 [deprecated = true];
-  uint64 inclusion_delay = 5;
-  uint64 proposer_index = 6;
+  uint64 inclusion_delay = 3;
+  uint64 proposer_index = 4;
 }
 
 message Attestation {
@@ -73,28 +71,16 @@ message Attestation {
 
 message AttestationData {
   // LMD GHOST vote
-  uint64 slot = 1 [deprecated=true];
-  bytes beacon_block_root = 2;
+  bytes beacon_block_root = 1;
 
   // FFG vote
-  uint64 source_epoch = 3;
-  bytes source_root = 4;
-  uint64 target_epoch = 5;
-  bytes target_root = 6;
+  uint64 source_epoch = 2;
+  bytes source_root = 3;
+  uint64 target_epoch = 4;
+  bytes target_root = 5;
 
   // Crosslink vote
-  uint64 shard = 7 [deprecated=true];
-  bytes previous_crosslink_root = 8 [deprecated=true];
-  bytes crosslink_data_root = 9 [deprecated=true];
-  Crosslink crosslink = 10;
-
-  // Deprecated
-  // TODO(2307): Remove deprecated fields
-  bytes epoch_boundary_root_hash32 = 1000 [deprecated=true];
-  Crosslink latest_crosslink = 1001 [deprecated=true];
-  uint64 justified_epoch = 1002 [deprecated=true];
-  bytes justified_block_root_hash32 = 1003 [deprecated=true];
-  bytes beacon_block_root_hash32 = 1004 [deprecated=true];
+  Crosslink crosslink = 6;
 }
 
 message AttestationTarget {

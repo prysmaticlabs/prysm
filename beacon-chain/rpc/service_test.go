@@ -10,7 +10,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -21,15 +20,6 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
-}
-
-type TestLogger struct {
-	logrus.FieldLogger
-	testMap map[string]interface{}
-}
-
-func (t *TestLogger) Errorf(format string, args ...interface{}) {
-	t.testMap["error"] = true
 }
 
 type mockOperationService struct {
@@ -48,30 +38,40 @@ func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Me
 	return nil
 }
 
+func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *pb.Attestation) (bool, error) {
+	return true, nil
+}
+
 func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
 	}
 	return []*pb.Attestation{
 		{
-			AggregationBitfield: []byte("A"),
+			AggregationBitfield: []byte{0xC0},
 			Data: &pb.AttestationData{
-				Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard:    params.BeaconConfig().SlotsPerEpoch,
+					DataRoot: params.BeaconConfig().ZeroHash[:],
+				},
 			},
 		},
 		{
-			AggregationBitfield: []byte("B"),
+			AggregationBitfield: []byte{0xC1},
 			Data: &pb.AttestationData{
-				Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard:    params.BeaconConfig().SlotsPerEpoch,
+					DataRoot: params.BeaconConfig().ZeroHash[:],
+				},
 			},
 		},
 		{
-			AggregationBitfield: []byte("C"),
+			AggregationBitfield: []byte{0xC2},
 			Data: &pb.AttestationData{
-				Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard:    params.BeaconConfig().SlotsPerEpoch,
+					DataRoot: params.BeaconConfig().ZeroHash[:],
+				},
 			},
 		},
 	}, nil
@@ -83,6 +83,7 @@ type mockChainService struct {
 	attestationFeed      *event.Feed
 	stateInitializedFeed *event.Feed
 	canonicalBlocks      map[uint64][]byte
+	targets              map[uint64]*pb.AttestationTarget
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
@@ -101,6 +102,10 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (m *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
+
+}
+
 func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
 	return nil
 }
@@ -109,12 +114,8 @@ func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return bytes.Equal(m.canonicalBlocks[slot], hash)
 }
 
-func (m mockChainService) InsertsCanonical(slot uint64, hash []byte) {
-	m.canonicalBlocks[slot] = hash
-}
-
-func (m mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
-	return nil
+func (m *mockChainService) AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
+	return m.targets, nil
 }
 
 func newMockChainService() *mockChainService {
@@ -153,31 +154,23 @@ func TestLifecycle_OK(t *testing.T) {
 }
 
 func TestRPC_BadEndpoint(t *testing.T) {
-	fl := logrus.WithField("prefix", "rpc")
-
-	log = &TestLogger{
-		FieldLogger: fl,
-		testMap:     make(map[string]interface{}),
-	}
-
-	hook := logTest.NewLocal(fl.Logger)
+	hook := logTest.NewGlobal()
 
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:        "ralph merkle!!!",
 		SyncService: &mockSyncService{},
 	})
 
-	if val, ok := log.(*TestLogger).testMap["error"]; ok {
-		t.Fatalf("Error in Start() occurred before expected: %v", val)
-	}
+	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not load TLS keys")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not serve gRPC")
 
 	rpcService.Start()
 
-	if _, ok := log.(*TestLogger).testMap["error"]; !ok {
-		t.Fatal("No error occurred. Expected Start() to output an error")
-	}
-
 	testutil.AssertLogsContain(t, hook, "Starting service")
+	testutil.AssertLogsContain(t, hook, "Could not listen to port in Start()")
+
+	rpcService.Stop()
 
 }
 

@@ -63,15 +63,11 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
+	ps.chainService.UpdateCanonicalRoots(blk, h)
 	log.WithFields(logrus.Fields{
-		"headRoot":  fmt.Sprintf("0x%x", bytesutil.Trunc(h[:])),
-		"headSlot":  blk.Slot - params.BeaconConfig().GenesisSlot,
-		"stateSlot": beaconState.Slot - params.BeaconConfig().GenesisSlot,
+		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headSlot": blk.Slot,
 	}).Info("Chain head block and state updated")
-
-	if err := ps.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
-	}
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
@@ -92,27 +88,50 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	beaconState.Slot++
 
 	var attsReadyForInclusion []*pbp2p.Attestation
-	for _, val := range atts {
-		if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
-			attsReadyForInclusion = append(attsReadyForInclusion, val)
+	for _, att := range atts {
+		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
+		if err != nil {
+			return nil, fmt.Errorf("could not get attestation slot: %v", err)
+		}
+		if slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
+			attsReadyForInclusion = append(attsReadyForInclusion, att)
 		}
 	}
 
 	validAtts := make([]*pbp2p.Attestation, 0, len(attsReadyForInclusion))
 	for _, att := range attsReadyForInclusion {
+		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
+		if err != nil {
+			return nil, fmt.Errorf("could not get attestation slot: %v", err)
+		}
+
 		if _, err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
+
 			log.WithError(err).WithFields(logrus.Fields{
-				"slot":     att.Data.Slot,
-				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Info(
+				"slot":     slot,
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot))}).Info(
 				"Deleting failed pending attestation from DB")
 			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
 			}
 			continue
 		}
+		canonical, err := ps.operationService.IsAttCanonical(ctx, att)
+		if err != nil {
+			// Delete attestation that failed to verify as canonical.
+			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
+			}
+			return nil, fmt.Errorf("could not verify canonical attestation: %v", err)
+		}
+		// Skip the attestation if it's not canonical.
+		if !canonical {
+			continue
+		}
+
 		validAtts = append(validAtts, att)
 	}
 

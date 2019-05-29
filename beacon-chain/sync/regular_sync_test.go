@@ -2,7 +2,9 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -12,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -48,11 +49,14 @@ func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) 
 	return nil
 }
 
+func (mp *mockP2P) Reputation(_ peer.ID, val int) {
+
+}
+
 type mockChainService struct {
-	sFeed           *event.Feed
-	cFeed           *event.Feed
-	db              *db.BeaconDB
-	canonicalBlocks map[uint64][]byte
+	sFeed *event.Feed
+	cFeed *event.Feed
+	db    *db.BeaconDB
 }
 
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
@@ -98,12 +102,7 @@ func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return true
 }
 
-func (ms *mockChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
-	return nil
-}
-
-func (ms mockChainService) InsertsCanonical(slot uint64, hash []byte) {
-	ms.canonicalBlocks[slot] = hash
+func (ms *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
 }
 
 type mockOperationService struct{}
@@ -202,7 +201,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	ss := NewRegularSyncService(context.Background(), cfg)
 
 	parentBlock := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 	}
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -224,9 +223,10 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Slot:              0,
-			Shard:             0,
-			CrosslinkDataRoot: []byte{'A'},
+			Crosslink: &pb.Crosslink{
+				Shard:    0,
+				DataRoot: []byte{'A'},
+			},
 		},
 	}
 
@@ -279,7 +279,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	ss := NewRegularSyncService(context.Background(), cfg)
 
 	parentBlock := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 	}
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -304,8 +304,10 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Block: data1,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				CrosslinkDataRoot: []byte{},
-				Slot:              params.BeaconConfig().GenesisSlot,
+				Crosslink: &pb.Crosslink{
+					Shard:    0,
+					DataRoot: []byte{},
+				},
 			},
 		},
 	}
@@ -331,8 +333,10 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Block: data2,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				CrosslinkDataRoot: []byte{},
-				Slot:              0,
+				Crosslink: &pb.Crosslink{
+					Shard:    0,
+					DataRoot: []byte{},
+				},
 			},
 		},
 	}
@@ -354,56 +358,6 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	hook.Reset()
 }
 
-func TestBlockRequest_InvalidMsg(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ss := setupService(db)
-
-	malformedRequest := &pb.BeaconBlockAnnounce{
-		Hash: []byte{'t', 'e', 's', 't'},
-	}
-
-	invalidmsg := p2p.Message{
-		Ctx:  context.Background(),
-		Data: malformedRequest,
-		Peer: "",
-	}
-
-	if err := ss.handleBlockRequestBySlot(invalidmsg); err == nil {
-		t.Error("Expected error, received nil")
-	}
-	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
-}
-
-func TestBlockRequest_OK(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ss := setupService(db)
-
-	request1 := &pb.BeaconBlockRequestBySlotNumber{
-		SlotNumber: 20,
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Data: request1,
-		Peer: "",
-	}
-	if err := db.SaveBlock(&pb.BeaconBlock{Slot: 20}); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := ss.handleBlockRequestBySlot(msg1); err != nil {
-		t.Error(err)
-	}
-
-	testutil.AssertLogsContain(t, hook, "Sending requested block to peer")
-}
-
 func TestReceiveAttestation_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
@@ -413,7 +367,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 2,
+		Slot: 2,
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
@@ -439,8 +393,9 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	request1 := &pb.AttestationResponse{
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + 1,
-			},
+				Crosslink: &pb.Crosslink{
+					Shard: 1,
+				}},
 		},
 	}
 
@@ -464,11 +419,19 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch}
+	state := &pb.BeaconState{Slot: 2 * params.BeaconConfig().SlotsPerEpoch}
 	if err := db.SaveState(ctx, state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
+	headBlock := &pb.BeaconBlock{Slot: state.Slot}
+	if err := db.SaveBlock(headBlock); err != nil {
+		t.Fatalf("failed to save block: %v", err)
+	}
+	if err := db.UpdateChainHead(ctx, headBlock, state); err != nil {
+		t.Fatalf("failed to update chain head: %v", err)
+	}
 	cfg := &RegularSyncConfig{
+		AttsService:      &mockAttestationService{},
 		ChainService:     ms,
 		OperationService: os,
 		P2P:              &mockP2P{},
@@ -479,8 +442,9 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	request1 := &pb.AttestationResponse{
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot,
-			},
+				Crosslink: &pb.Crosslink{
+					Shard: 900,
+				}},
 		},
 	}
 

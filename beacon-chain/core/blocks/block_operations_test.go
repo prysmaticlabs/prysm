@@ -17,7 +17,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -343,10 +342,10 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
+	epoch := uint64(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
@@ -378,10 +377,10 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
+	epoch := uint64(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
@@ -477,10 +476,10 @@ func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 		{
 			ProposerIndex: 1,
 			Header_1: &pb.BeaconBlockHeader{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
+				Slot: params.BeaconConfig().SlotsPerEpoch + 1,
 			},
 			Header_2: &pb.BeaconBlockHeader{
-				Slot: params.BeaconConfig().GenesisSlot,
+				Slot: 0,
 			},
 		},
 	}
@@ -511,10 +510,10 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 		{
 			ProposerIndex: 1,
 			Header_1: &pb.BeaconBlockHeader{
-				Slot: params.BeaconConfig().GenesisEpoch,
+				Slot: 0,
 			},
 			Header_2: &pb.BeaconBlockHeader{
-				Slot: params.BeaconConfig().GenesisEpoch,
+				Slot: 0,
 			},
 		},
 	}
@@ -544,8 +543,8 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		{
 			Pubkey:            []byte("key"),
 			Slashed:           true,
-			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
-			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch:   0,
+			WithdrawableEpoch: 0,
 		},
 	}
 	currentSlot := uint64(0)
@@ -553,11 +552,11 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		{
 			ProposerIndex: 0,
 			Header_1: &pb.BeaconBlockHeader{
-				Slot:      params.BeaconConfig().GenesisSlot,
+				Slot:      0,
 				Signature: []byte("A"),
 			},
 			Header_2: &pb.BeaconBlockHeader{
-				Slot:      params.BeaconConfig().GenesisSlot,
+				Slot:      0,
 				Signature: []byte("B"),
 			},
 		},
@@ -595,9 +594,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			EffectiveBalance:  params.BeaconConfig().MaxDepositAmount,
 			Slashed:           false,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:      params.BeaconConfig().GenesisEpoch + 1,
+			SlashedEpoch:      1,
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch:   0,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -609,16 +608,16 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			ProposerIndex: 1,
 			Header_1: &pb.BeaconBlockHeader{
-				Slot:      params.BeaconConfig().GenesisSlot,
+				Slot:      0,
 				Signature: []byte("A"),
 			},
 			Header_2: &pb.BeaconBlockHeader{
-				Slot:      params.BeaconConfig().GenesisSlot,
+				Slot:      0,
 				Signature: []byte("B"),
 			},
 		},
 	}
-	currentSlot := params.BeaconConfig().GenesisSlot
+	currentSlot := uint64(0)
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:      validators,
 		Slot:                   currentSlot,
@@ -683,18 +682,20 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        params.BeaconConfig().SlotsPerEpoch,
 					SourceEpoch: 1,
 					TargetEpoch: 1,
-					Shard:       3,
+					Crosslink: &pb.Crosslink{
+						Shard: 3,
+					},
 				},
 			},
 		},
@@ -727,20 +728,22 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1, 2},
 				CustodyBit_1Indices: []uint64{0, 1, 2},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1, 2},
 				CustodyBit_1Indices: []uint64{0, 1, 2},
@@ -773,19 +776,21 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
 			},
@@ -807,19 +812,21 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{3, 2, 1},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{3, 2, 1},
 			},
@@ -844,10 +851,10 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch:   0,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 			Slashed:           false,
-			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().SlotsPerEpoch,
+			WithdrawableEpoch: 1 * params.BeaconConfig().SlotsPerEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -859,26 +866,28 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
 		},
 	}
 
-	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
+	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:      validators,
 		Slot:                   currentSlot,
@@ -1299,7 +1308,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 5,
+		Slot:                   5,
 		ValidatorRegistry:      validators,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
@@ -1314,28 +1323,30 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x01},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{37, 100},
+			wantedCustodyBit1Indices: []uint64{21, 126},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x02},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{37, 100},
+			wantedCustodyBit1Indices: []uint64{21, 126},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{37, 100},
+			wantedCustodyBit1Indices: []uint64{21, 126},
 		},
 	}
 
 	attestation := &pb.Attestation{
 		Signature: []byte("signed"),
 		Data: &pb.AttestationData{
-			Slot:        params.BeaconConfig().GenesisSlot + 2,
-			Shard:       3,
-			TargetEpoch: params.BeaconConfig().GenesisEpoch,
+			SourceEpoch: 0,
+			TargetEpoch: 0,
+			Crosslink: &pb.Crosslink{
+				Shard: 3,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -1520,7 +1531,7 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Balances:          balances,
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		GenesisTime:       uint64(0),
 		DepositIndex:      1,
 		LatestEth1Data: &pb.Eth1Data{
@@ -1737,12 +1748,12 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch: 0,
 		},
 	}
 	state := &pb.BeaconState{
 		ValidatorRegistry: registry,
-		Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*5,
+		Slot:              params.BeaconConfig().SlotsPerEpoch * 5,
 	}
 	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
 	block := &pb.BeaconBlock{
@@ -1802,7 +1813,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	}
 	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
 	state := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot,
+		Slot:              0,
 		ValidatorRegistry: registry,
 		Balances:          balances,
 	}
@@ -1849,7 +1860,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	}
 
 	state.ValidatorRegistry[0].WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
-	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().GenesisEpoch
+	state.ValidatorRegistry[0].ActivationEligibilityEpoch = 0
 	block.Body.Transfers = []*pb.Transfer{
 		{
 			Fee:    params.BeaconConfig().MinDepositAmount,
@@ -1866,7 +1877,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	state.ValidatorRegistry[0].WithdrawableEpoch = params.BeaconConfig().GenesisEpoch
+	state.ValidatorRegistry[0].WithdrawableEpoch = 0
 	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
 	pubKey := []byte("B")
@@ -1898,10 +1909,10 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ActivationEpoch:   params.BeaconConfig().GenesisEpoch,
+			ActivationEpoch:   0,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 			Slashed:           false,
-			WithdrawableEpoch: params.BeaconConfig().GenesisEpoch,
+			WithdrawableEpoch: 0,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -1911,7 +1922,7 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry:      validators,
-		Slot:                   params.BeaconConfig().GenesisSlot,
+		Slot:                   0,
 		Balances:               validatorBalances,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
