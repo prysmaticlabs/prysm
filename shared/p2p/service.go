@@ -69,6 +69,7 @@ type ServerConfig struct {
 	BootstrapNodeAddr      string
 	RelayNodeAddr          string
 	HostAddress            string
+	PrvKey                 string
 	Port                   int
 	MaxPeers               int
 	DepositContractAddress string
@@ -77,8 +78,10 @@ type ServerConfig struct {
 
 // NewServer creates a new p2p server instance.
 func NewServer(cfg *ServerConfig) (*Server, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	opts := buildOptions(cfg)
+	opts, err := buildOptions(cfg)
+	if err != nil {
+		return nil, err
+	}
 	if cfg.RelayNodeAddr != "" {
 		opts = append(opts, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
 	} else if cfg.HostAddress != "" {
@@ -93,9 +96,9 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		}))
 	}
 	if !checkAvailablePort(cfg.Port) {
-		cancel()
 		return nil, fmt.Errorf("error listening on p2p, port %d already taken", cfg.Port)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		cancel()

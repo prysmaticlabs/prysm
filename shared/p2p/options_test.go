@@ -5,7 +5,7 @@ import (
 )
 
 func TestBuildOptions(t *testing.T) {
-	opts := buildOptions(&ServerConfig{})
+	opts, _ := buildOptions(&ServerConfig{})
 
 	_ = opts
 }
