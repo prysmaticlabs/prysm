@@ -215,37 +215,34 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	tests := []struct {
 		attestationSlot uint64
 		stateSlot       uint64
-		shard           uint64
 		bitfield        []byte
 		wanted          []uint64
 	}{
 		{
-			attestationSlot: 2,
+			attestationSlot: 3,
 			stateSlot:       5,
-			shard:           3,
 			bitfield:        []byte{0x03},
 			wanted:          []uint64{21, 126},
 		},
 		{
-			attestationSlot: 1,
+			attestationSlot: 2,
 			stateSlot:       10,
-			shard:           2,
 			bitfield:        []byte{0x01},
 			wanted:          []uint64{2, 17},
 		},
 		{
-			attestationSlot: 10,
+			attestationSlot: 11,
 			stateSlot:       10,
-			shard:           11,
 			bitfield:        []byte{0x03},
 			wanted:          []uint64{79, 112},
 		},
 	}
-
+	//startShard := uint64(960)
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
-		attestationData.Slot = tt.attestationSlot
-		attestationData.Shard = tt.shard
+		attestationData.Crosslink = &pb.Crosslink{
+			Shard: tt.attestationSlot,
+		}
 		attestationData.TargetEpoch = 0
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
@@ -280,7 +277,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
-	attestationData := &pb.AttestationData{}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
 
 	if _, err := AttestingIndices(state, attestationData, []byte{}); err == nil {
 		t.Error("attestation participants should have failed with incorrect bitfield")
@@ -434,8 +431,9 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 	}
 
 	attestationData := &pb.AttestationData{
-		Shard: 234,
-		Slot:  uint64(slotOffset),
+		Crosslink: &pb.Crosslink{
+			Shard: uint64(960 + slotOffset),
+		},
 	}
 	result, err := AttestingIndices(&pb.BeaconState{}, attestationData, []byte{0x03})
 	if err != nil {
@@ -472,8 +470,9 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 	}
 
 	attestationData := &pb.AttestationData{
-		Shard: 11,
-		Slot:  slotOffset,
+		Crosslink: &pb.Crosslink{
+			Shard: uint64(960 + slotOffset),
+		},
 	}
 	result, err := AttestingIndices(state, attestationData, []byte{0x03})
 	if err != nil {
@@ -679,4 +678,116 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
 		}
 	}
+}
+
+func TestVerifyAttestationBitfield_OK(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	var activeRoots [][]byte
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		activeRoots = append(activeRoots, []byte{'A'})
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestActiveIndexRoots: activeRoots,
+		LatestRandaoMixes:      activeRoots,
+	}
+
+	tests := []struct {
+		attestation         *pb.Attestation
+		stateSlot           uint64
+		errorExists         bool
+		verificationFailure bool
+	}{
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x01},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 5,
+					},
+				},
+			},
+			stateSlot: 5,
+		},
+		{
+
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x02},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 10,
+					},
+				},
+			},
+			stateSlot: 10,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x02},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 20,
+					},
+				},
+			},
+			stateSlot: 20,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xFF, 0xC0},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 5,
+					},
+				},
+			},
+			stateSlot:   5,
+			errorExists: true,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xFF},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 20,
+					},
+				},
+			},
+			stateSlot:           20,
+			verificationFailure: true,
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+		verified, err := VerifyAttestationBitfield(state, tt.attestation)
+		if tt.errorExists {
+			if err == nil {
+				t.Error("error is nil, when verification is supposed to fail")
+			}
+			continue
+		}
+		if tt.verificationFailure {
+			if verified {
+				t.Error("verification succeeded when it was supposed to fail")
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("Failed to verify bitfield: %v", err)
+			continue
+		}
+		if !verified {
+			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBitfield)
+		}
+	}
+
 }

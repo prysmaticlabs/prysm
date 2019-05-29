@@ -38,14 +38,14 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 		t.Errorf("Mismatched pubkeys in deposit input. Want = %x, got = %x", result.Pubkey, k1.PublicKey.Marshal())
 	}
 
-	sig, err := bls.SignatureFromBytes(result.ProofOfPossession)
+	sig, err := bls.SignatureFromBytes(result.Signature)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify that the proof of possession is a signed copy of the input data.
-	proofOfPossessionInputPb := proto.Clone(result).(*pb.DepositInput)
-	proofOfPossessionInputPb.ProofOfPossession = nil
+	proofOfPossessionInputPb := proto.Clone(result).(*pb.DepositData)
+	proofOfPossessionInputPb.Signature = nil
 	buf := new(bytes.Buffer)
 	if err := ssz.Encode(buf, proofOfPossessionInputPb); err != nil {
 		t.Fatal(err)

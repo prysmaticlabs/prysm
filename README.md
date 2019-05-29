@@ -50,10 +50,14 @@ docker pull gcr.io/prysmaticlabs/prysm/beacon-chain:latest
 First, clone our repository:
 
 ```
+sudo apt-get install git
 git clone https://github.com/prysmaticlabs/prysm
+cd prysm
 ```
 
-Download the Bazel build tool by Google here and ensure it works by typing:
+Download the Bazel build tool by Google here: https://docs.bazel.build/versions/master/install-ubuntu.html
+
+And ensure it works by typing:
 
 ```
 bazel version
@@ -71,17 +75,32 @@ Prysm ships with two important components: a beacon node and a validator client.
 Another critical component of Ethereum 2.0 is the Validator Deposit Contract, which is a smart contract deployed on the Ethereum 1.0 chain which can be used for current holders of ETH to do a one-way transfer into Ethereum 2.0.
 
 ### Running an Ethereum 2.0 Beacon Node
-With docker:
+<b>With Docker</b>
 
+Docker on Linux/Mac: 
 ```
 docker run -v /tmp/prysm-data:/data -p 4000:4000 \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data
   --clear-db
 ```
+Docker on Windows:
+
+1) You will need to share the local drive you wish to mount to to container (e.g. C:)
+    1. Enter Docker settings (right click tray icon)
+    2. Click Shared Drives
+    3. Select Drive to share
+    4. Click Apply
+    
+2) You will next need to create a folder in the drive to use as your data directory (Docker will not create this if it does not exist). For the purposes of these instructions, C: is shared, and we created the /tmp/prysm-data/ directory within. This path must be used for the local data directory for chain data for the Beacon Node, and when creating an account and keystore for the validator, and when running the validator.
+
+3) Run the beacon node (Docker CLI in Windows seems to have trouble ingesting with escapes and new lines, so keep it on one line):
+```
+docker run -it -v c:/tmp/prysm-data:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
+```
+<b>With Bazel</b>
 
 To start your beacon node with bazel:
-
 ```
 bazel run //beacon-chain -- --clear-db --datadir=/tmp/prysm-data
 ```
@@ -97,6 +116,15 @@ Once your beacon node is up, you'll need to attach a validator client as a separ
 Using your validator deposit data from the previous step, use the instructions in https://alpha.prylabs.net/participate to deposit.
 
 It'll take a while for the nodes in the network to process your deposit, but once you're active, your validator will begin doing its responsibility! In your validator client, you'll be able to frequently see your validator balance as it goes up. If you ever go offline for a while, you'll start gradually losing your deposit until you get kicked out of the system. Congratulations, you are now running Ethereum 2.0 Phase 0 :).
+
+<b>With bazel</b>
+
+Open another terminal window
+
+```
+cd prysm
+bazel run //validator
+```
 
 # Testing
 

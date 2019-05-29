@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -37,20 +38,29 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 		return nil, err
 	}
 
+	headState, err := as.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	slot, err := helpers.AttestationDataSlot(headState, att.Data)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attestation slot: %v", err)
+	}
+
 	// Update attestation target for RPC server to run necessary fork choice.
 	// We need to retrieve the head block to get its parent root.
-	head, err := as.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRootHash32))
+	head, err := as.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
 	if err != nil {
 		return nil, err
 	}
 	// If the head block is nil, we can't save the attestation target.
 	if head == nil {
-		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))
+		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRoot))
 	}
 	attTarget := &pbp2p.AttestationTarget{
-		Slot:       att.Data.Slot,
-		BlockRoot:  att.Data.BeaconBlockRootHash32,
-		ParentRoot: head.ParentBlockRoot,
+		Slot:       slot,
+		BlockRoot:  att.Data.BeaconBlockRoot,
+		ParentRoot: head.ParentRoot,
 	}
 	if err := as.beaconDB.SaveAttestationTarget(ctx, attTarget); err != nil {
 		return nil, fmt.Errorf("could not save attestation target")
@@ -76,6 +86,17 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	}
 
 	if err := as.cache.MarkInProgress(req); err != nil {
+		if err == cache.ErrAlreadyInProgress {
+			res, err := as.cache.Get(ctx, req)
+			if err != nil {
+				return nil, err
+			}
+
+			if res == nil {
+				return nil, errors.New("a request was in progress and resolved to nil")
+			}
+			return res, nil
+		}
 		return nil, err
 	}
 	defer func() {
@@ -137,7 +158,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 		EpochBoundaryRootHash32:  epochBoundaryRoot,
 		JustifiedEpoch:           headState.CurrentJustifiedEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot,
-		LatestCrosslink:          headState.LatestCrosslinks[req.Shard],
+		LatestCrosslink:          headState.CurrentCrosslinks[req.Shard],
 	}
 	if err := as.cache.Put(ctx, req, res); err != nil {
 		return nil, err

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -78,7 +79,6 @@ func TestRoutineContextClosing_Ok(t *testing.T) {
 	}()
 	s.cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "operations service context closed, exiting remove goroutine")
 	testutil.AssertLogsContain(t, hook, "operations service context closed, exiting save goroutine")
 }
 
@@ -109,8 +109,9 @@ func TestIncomingAttestation_OK(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{'A'},
 		Data: &pb.AttestationData{
-			Slot: 100,
-		}}
+			Crosslink: &pb.Crosslink{
+				Shard: 100,
+			}}}
 	if err := service.HandleAttestations(context.Background(), attestation); err != nil {
 		t.Error(err)
 	}
@@ -127,8 +128,9 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:              uint64(i),
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard: uint64(i),
+				},
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -138,9 +140,9 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot:        64,
 		LatestBlock: &pb.BeaconBlock{Slot: 0},
-		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   0,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		CurrentCrosslinks: []*pb.Crosslink{{
+			Epoch:    0,
+			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
@@ -148,8 +150,11 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
+	sort.Slice(attestations, func(i, j int) bool {
+		return attestations[i].Data.Crosslink.Shard < attestations[j].Data.Crosslink.Shard
+	})
 
-	if !reflect.DeepEqual(attestations, origAttestations[1:128]) {
+	if !reflect.DeepEqual(attestations, origAttestations[0:127]) {
 		t.Error("Retrieved attestations did not match")
 	}
 }
@@ -161,11 +166,13 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 
 	// Save 140 attestations for slots 0 to 139.
 	origAttestations := make([]*pb.Attestation, 140)
+	shardDiff := uint64(192)
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:              uint64(i),
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard: uint64(i) - shardDiff,
+				},
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -176,21 +183,22 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	// At slot 200 only attestations up to from slot 137 to 139 are valid attestations.
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 200,
-		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   2,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		CurrentCrosslinks: []*pb.Crosslink{{
+			Epoch:    2,
+			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 	attestations, err := service.PendingAttestations(context.Background())
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
+
 	if !reflect.DeepEqual(attestations, origAttestations[137:]) {
 		t.Error("Incorrect pruned attestations")
 	}
 
 	// Verify the invalid attestations are deleted.
-	hash, err := hashutil.HashProto(origAttestations[136])
+	hash, err := hashutil.HashProto(origAttestations[1])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,8 +216,9 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:              uint64(i),
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard: uint64(i),
+				},
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -218,9 +227,9 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	}
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
-		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   0,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		CurrentCrosslinks: []*pb.Crosslink{{
+			Epoch:    0,
+			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -242,42 +251,6 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	}
 }
 
-func TestCleanUpAttestations_OlderThanOneEpoch(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
-
-	// Construct attestations for slot 0..99.
-	slot := uint64(99)
-	attestations := make([]*pb.Attestation, slot+1)
-	for i := 0; i < len(attestations); i++ {
-		attestations[i] = &pb.Attestation{
-			Data: &pb.AttestationData{
-				Slot:  uint64(i),
-				Shard: uint64(i),
-			},
-		}
-		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
-			t.Fatalf("Failed to save attestation: %v", err)
-		}
-	}
-
-	// Assume current slot is 99. All the attestations before (99 - 64) should get removed.
-	if err := s.removeEpochOldAttestations(slot); err != nil {
-		t.Fatalf("Could not remove old attestations: %v", err)
-	}
-	attestations, err := s.beaconDB.Attestations()
-	if err != nil {
-		t.Fatalf("Could not retrieve attestations: %v", err)
-	}
-	for _, a := range attestations {
-		if a.Data.Slot < slot-params.BeaconConfig().SlotsPerEpoch {
-			t.Errorf("Attestation slot %d can't be lower than %d",
-				a.Data.Slot, slot-params.BeaconConfig().SlotsPerEpoch)
-		}
-	}
-}
-
 func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -287,8 +260,9 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:              uint64(i),
-				CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:],
+				Crosslink: &pb.Crosslink{
+					Shard: uint64(i),
+				},
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -298,9 +272,9 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
-		LatestCrosslinks: []*pb.Crosslink{{
-			Epoch:                   0,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+		CurrentCrosslinks: []*pb.Crosslink{{
+			Epoch:    0,
+			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -332,7 +306,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
-	cb1 := &pb.BeaconBlock{Slot: 999, ParentBlockRoot: []byte{'A'}}
+	cb1 := &pb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +317,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1 := &pb.Attestation{Data: &pb.AttestationData{BeaconBlockRootHash32: r1[:]}}
+	att1 := &pb.Attestation{Data: &pb.AttestationData{BeaconBlockRoot: r1[:]}}
 	canonical, err := s.IsAttCanonical(context.Background(), att1)
 	if err != nil {
 		t.Fatal(err)
@@ -352,7 +326,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 		t.Error("Attestation should be canonical")
 	}
 
-	cb2 := &pb.BeaconBlock{Slot: 999, ParentBlockRoot: []byte{'B'}}
+	cb2 := &pb.BeaconBlock{Slot: 999, ParentRoot: []byte{'B'}}
 	if err := s.beaconDB.SaveBlock(cb2); err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +355,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 		t.Error("Attestation shouldn't be canonical")
 	}
 
-	cb1 := &pb.BeaconBlock{Slot: 999, ParentBlockRoot: []byte{'A'}}
+	cb1 := &pb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +363,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1 := &pb.Attestation{Data: &pb.AttestationData{BeaconBlockRootHash32: r1[:]}}
+	att1 := &pb.Attestation{Data: &pb.AttestationData{BeaconBlockRoot: r1[:]}}
 	canonical, err = s.IsAttCanonical(context.Background(), att1)
 	if err != nil {
 		t.Fatal(err)

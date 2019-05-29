@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -63,25 +62,18 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
-	maxDeposit := params.BeaconConfig().MaxDepositAmount
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
-		depositData, err := helpers.EncodeDepositData(
-			&pb.DepositInput{
-				Pubkey:                      []byte(strconv.Itoa(i)),
-				ProofOfPossession:           []byte{'B'},
-				WithdrawalCredentialsHash32: []byte{'C'},
-			},
-			maxDeposit,
-			time.Now().Unix(),
-		)
-		if err != nil {
-			t.Fatalf("Could not encode deposit data: %v", err)
+		depositData := &pb.DepositData{
+			Pubkey:                []byte(strconv.Itoa(i)),
+			Signature:             []byte{'B'},
+			WithdrawalCredentials: []byte{'C'},
 		}
+
 		deposits = append(deposits, &pb.Deposit{
-			Proof:       [][]byte{{1}, {2}, {3}},
-			Index:       0,
-			DepositData: depositData,
+			Proof: [][]byte{{1}, {2}, {3}},
+			Index: 0,
+			Data:  depositData,
 		})
 	}
 
@@ -112,9 +104,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Validator registry fields checks.
-	if newState.ValidatorRegistryUpdateEpoch != 0 {
-		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
-	}
 	if len(newState.ValidatorRegistry) != depositsForChainStart {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
@@ -142,18 +131,22 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Recent state checks.
-	if len(newState.LatestCrosslinks) != shardCount {
-		t.Error("Length of LatestCrosslinks was not correctly initialized")
+	if len(newState.CurrentCrosslinks) != shardCount {
+		t.Error("Length of CurrentCrosslinks was not correctly initialized")
+	}
+	if len(newState.PreviousCrosslinks) != shardCount {
+		t.Error("Length of PreviousCrosslinks was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.LatestSlashedBalances, make([]uint64, params.BeaconConfig().LatestSlashedExitLength)) {
 		t.Error("LatestSlashedBalances was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.LatestAttestations, []*pb.PendingAttestation{}) {
-		t.Error("LatestAttestations was not correctly initialized")
+	if !reflect.DeepEqual(newState.CurrentEpochAttestations, []*pb.PendingAttestation{}) {
+		t.Error("CurrentEpochAttestations was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.BatchedBlockRootHash32S, [][]byte{}) {
-		t.Error("BatchedBlockRootHash32S was not correctly initialized")
+	if !reflect.DeepEqual(newState.PreviousEpochAttestations, []*pb.PendingAttestation{}) {
+		t.Error("PreviousEpochAttestations was not correctly initialized")
 	}
+
 	activeValidators := helpers.ActiveValidatorIndices(newState, 0)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {

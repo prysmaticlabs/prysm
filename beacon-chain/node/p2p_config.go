@@ -1,6 +1,8 @@
 package node
 
 import (
+	"strings"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -36,15 +38,22 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 			return nil, err
 		}
 	}
+	staticPeers := []string{}
+	for _, entry := range ctx.GlobalStringSlice(cmd.StaticPeers.Name) {
+		peers := strings.Split(entry, ",")
+		staticPeers = append(staticPeers, peers...)
+	}
 
 	s, err := p2p.NewServer(&p2p.ServerConfig{
 		NoDiscovery:            ctx.GlobalBool(cmd.NoDiscovery.Name),
+		StaticPeers:            staticPeers,
 		BootstrapNodeAddr:      ctx.GlobalString(cmd.BootstrapNode.Name),
 		RelayNodeAddr:          ctx.GlobalString(cmd.RelayNode.Name),
 		HostAddress:            ctx.GlobalString(cmd.P2PHost.Name),
 		Port:                   ctx.GlobalInt(cmd.P2PPort.Name),
 		MaxPeers:               ctx.GlobalInt(cmd.P2PMaxPeers.Name),
 		DepositContractAddress: contractAddress,
+		WhitelistCIDR:          ctx.GlobalString(cmd.P2PWhitelist.Name),
 	})
 	if err != nil {
 		return nil, err
