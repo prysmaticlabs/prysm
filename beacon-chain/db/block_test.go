@@ -170,7 +170,7 @@ func TestDeleteBlockInCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
+	block := &pb.BeaconBlock{Slot: 0}
 	h, _ := hashutil.HashBeaconBlock(block)
 
 	err := db.SaveBlock(block)
@@ -507,7 +507,7 @@ func TestClearBlockCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
+	block := &pb.BeaconBlock{Slot: 0}
 
 	err := db.SaveBlock(block)
 	if err != nil {

@@ -207,10 +207,6 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, err
 	}
-	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
-	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
-}
-
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
@@ -227,16 +223,12 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	if err != nil {
 		return false, nil, err
 	}
-	chainStarted, _, err := vs.powChainService.HasChainStartLogOccurred()
+	chainStarted, err := vs.powChainService.HasChainStartLogOccurred()
 	if err != nil {
 		return false, nil, err
 	}
 
-	chainStartKeys, err := vs.chainStartPubkeys()
-	if err != nil {
-		return false, nil, err
-	}
-
+	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for i, key := range pubkeys {
 		if ctx.Err() != nil {

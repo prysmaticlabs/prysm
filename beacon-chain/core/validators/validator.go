@@ -338,17 +338,14 @@ func InsertActivatedVal(epoch uint64, validators []uint64) {
 	VStore.Lock()
 	defer VStore.Unlock()
 	VStore.activatedValidators[epoch] = validators
-	activeValidatorIndices := helpers.ActiveValidatorIndices(
-		bState.ValidatorRegistry, currentEpoch)
-	vStore.activatedValidators[currentEpoch] = activeValidatorIndices
 }
 
 // InsertActivatedIndices locks the validator store, inserts the activated validator
 // indices corresponding to their activation epochs.
 func InsertActivatedIndices(epoch uint64, indices []uint64) {
-	vStore.Lock()
-	defer vStore.Unlock()
-	vStore.activatedValidators[epoch] = append(vStore.activatedValidators[epoch], indices...)
+	VStore.Lock()
+	defer VStore.Unlock()
+	VStore.activatedValidators[epoch] = append(VStore.activatedValidators[epoch], indices...)
 }
 
 // InsertExitedVal locks the validator store, inserts the exited validator

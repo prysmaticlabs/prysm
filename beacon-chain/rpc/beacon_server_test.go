@@ -753,11 +753,11 @@ func TestBlockTree_OK(t *testing.T) {
 	// [Justified Block]->[C, Slot 3, 2 Votes]
 	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
 	justifiedState := &pbp2p.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot,
-		ValidatorBalances: make([]uint64, 11),
+		Slot:     0,
+		Balances: make([]uint64, 11),
 	}
-	for i := 0; i < len(justifiedState.ValidatorBalances); i++ {
-		justifiedState.ValidatorBalances[i] = params.BeaconConfig().MaxDepositAmount
+	for i := 0; i < len(justifiedState.Balances); i++ {
+		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
@@ -772,67 +772,62 @@ func TestBlockTree_OK(t *testing.T) {
 	validators := []*pbp2p.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
 	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
 	b1 := &pbp2p.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 3,
-		ParentRootHash32: justifiedRoot[:],
-		RandaoReveal:     []byte("A"),
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
 	}
 	b1Root, _ := hashutil.HashBeaconBlock(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 3,
+		Slot:              3,
 		ValidatorRegistry: validators,
-		ValidatorBalances: balances,
+		Balances:          balances,
 	}, b1Root); err != nil {
 		t.Fatal(err)
 	}
 	b2 := &pbp2p.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 3,
-		ParentRootHash32: justifiedRoot[:],
-		RandaoReveal:     []byte("C"),
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
 	}
 	b2Root, _ := hashutil.HashBeaconBlock(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 3,
+		Slot:              3,
 		ValidatorRegistry: validators,
-		ValidatorBalances: balances,
+		Balances:          balances,
 	}, b2Root); err != nil {
 		t.Fatal(err)
 	}
 	b3 := &pbp2p.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 3,
-		ParentRootHash32: justifiedRoot[:],
-		RandaoReveal:     []byte("D"),
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
 	}
 	b3Root, _ := hashutil.HashBeaconBlock(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 3,
+		Slot:              3,
 		ValidatorRegistry: validators,
-		ValidatorBalances: balances,
+		Balances:          balances,
 	}, b3Root); err != nil {
 		t.Fatal(err)
 	}
 	b4 := &pbp2p.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 4,
-		ParentRootHash32: b1Root[:],
-		RandaoReveal:     []byte("B"),
+		Slot:       4,
+		ParentRoot: b1Root[:],
 	}
 	b4Root, _ := hashutil.HashBeaconBlock(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 4,
+		Slot:              4,
 		ValidatorRegistry: validators,
-		ValidatorBalances: balances,
+		Balances:          balances,
 	}, b4Root); err != nil {
 		t.Fatal(err)
 	}
 	b5 := &pbp2p.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 5,
-		ParentRootHash32: b3Root[:],
-		RandaoReveal:     []byte("E"),
+		Slot:       5,
+		ParentRoot: b3Root[:],
 	}
 	b5Root, _ := hashutil.HashBeaconBlock(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 5,
+		Slot:              5,
 		ValidatorRegistry: validators,
-		ValidatorBalances: balances,
+		Balances:          balances,
 	}, b5Root); err != nil {
 		t.Fatal(err)
 	}
@@ -951,10 +946,10 @@ func TestBlockTree_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Slice(resp.Tree, func(i, j int) bool {
-		return string(resp.Tree[i].Block.RandaoReveal) < string(resp.Tree[j].Block.RandaoReveal)
+		return string(resp.Tree[i].Block.Slot) < string(resp.Tree[j].Block.Slot)
 	})
 	sort.Slice(tree, func(i, j int) bool {
-		return string(tree[i].Block.RandaoReveal) < string(tree[j].Block.RandaoReveal)
+		return string(tree[i].Block.Slot) < string(tree[j].Block.Slot)
 	})
 	for i := range resp.Tree {
 		if !proto.Equal(resp.Tree[i].Block, tree[i].Block) {

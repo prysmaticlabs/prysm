@@ -39,6 +39,7 @@ func (m *MockAttesterServiceClient) EXPECT() *MockAttesterServiceClientMockRecor
 
 // AttestHead mocks base method
 func (m *MockAttesterServiceClient) AttestHead(arg0 context.Context, arg1 *v1.Attestation, arg2 ...grpc.CallOption) (*v10.AttestResponse, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -51,12 +52,14 @@ func (m *MockAttesterServiceClient) AttestHead(arg0 context.Context, arg1 *v1.At
 
 // AttestHead indicates an expected call of AttestHead
 func (mr *MockAttesterServiceClientMockRecorder) AttestHead(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestHead", reflect.TypeOf((*MockAttesterServiceClient)(nil).AttestHead), varargs...)
 }
 
 // AttestationDataAtSlot mocks base method
 func (m *MockAttesterServiceClient) AttestationDataAtSlot(arg0 context.Context, arg1 *v10.AttestationDataRequest, arg2 ...grpc.CallOption) (*v10.AttestationDataResponse, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -69,6 +72,7 @@ func (m *MockAttesterServiceClient) AttestationDataAtSlot(arg0 context.Context, 
 
 // AttestationDataAtSlot indicates an expected call of AttestationDataAtSlot
 func (mr *MockAttesterServiceClientMockRecorder) AttestationDataAtSlot(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestationDataAtSlot", reflect.TypeOf((*MockAttesterServiceClient)(nil).AttestationDataAtSlot), varargs...)
 }

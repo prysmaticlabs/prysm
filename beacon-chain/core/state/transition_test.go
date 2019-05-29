@@ -521,12 +521,12 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 
 func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 	newState := &pb.BeaconState{
-		LatestIndexRootHash32S: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().SlotsPerEpoch),
 	}
 	config := state.DefaultConfig()
 	config.Logging = true
 
-	state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, config)
+	state.ProcessEpoch(context.Background(), newState)
 }

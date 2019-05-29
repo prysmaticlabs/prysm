@@ -7,11 +7,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -249,17 +246,10 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		if err != nil {
 			return nil, err
 		}
-		hState, err := bs.beaconDB.HistoricalStateFromSlot(ctx, kid.Slot, blockRoot)
-		if err != nil {
-			return nil, err
-		}
-		activeValidatorIndices := helpers.ActiveValidatorIndices(hState.ValidatorRegistry, helpers.CurrentEpoch(hState))
-		totalVotes := epoch.TotalBalance(hState, activeValidatorIndices)
 		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
 			BlockRoot:         blockRoot[:],
 			Block:             kid,
 			ParticipatedVotes: uint64(participatedVotes),
-			TotalVotes:        uint64(totalVotes),
 		})
 	}
 	return &pb.BlockTreeResponse{

@@ -661,10 +661,10 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 				AggregationBitfield: []byte{0xC0},
 				Data: &pb.AttestationData{
 					Shard: 5,
-					Slot:  params.BeaconConfig().GenesisSlot + 5,
+					Slot:  5,
 				},
 			},
-			stateSlot: params.BeaconConfig().GenesisSlot + 5,
+			stateSlot: 5,
 		},
 		{
 
@@ -672,30 +672,30 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 				AggregationBitfield: []byte{0x80},
 				Data: &pb.AttestationData{
 					Shard: 10,
-					Slot:  params.BeaconConfig().GenesisSlot + 10,
+					Slot:  10,
 				},
 			},
-			stateSlot: params.BeaconConfig().GenesisSlot + 10,
+			stateSlot: 10,
 		},
 		{
 			attestation: &pb.Attestation{
 				AggregationBitfield: []byte{0xC0},
 				Data: &pb.AttestationData{
 					Shard: 20,
-					Slot:  params.BeaconConfig().GenesisSlot + 20,
+					Slot:  20,
 				},
 			},
-			stateSlot: params.BeaconConfig().GenesisSlot + 20,
+			stateSlot: 20,
 		},
 		{
 			attestation: &pb.Attestation{
 				AggregationBitfield: []byte{0xFF, 0xC0},
 				Data: &pb.AttestationData{
 					Shard: 5,
-					Slot:  params.BeaconConfig().GenesisSlot + 5,
+					Slot:  5,
 				},
 			},
-			stateSlot:   params.BeaconConfig().GenesisSlot + 5,
+			stateSlot:   5,
 			errorExists: true,
 		},
 		{
@@ -703,10 +703,10 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 				AggregationBitfield: []byte{0xFF},
 				Data: &pb.AttestationData{
 					Shard: 20,
-					Slot:  params.BeaconConfig().GenesisSlot + 20,
+					Slot:  20,
 				},
 			},
-			stateSlot:           params.BeaconConfig().GenesisSlot + 20,
+			stateSlot:           20,
 			verificationFailure: true,
 		},
 	}

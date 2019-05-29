@@ -437,17 +437,17 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
 			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
 		})
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		Slot:              1,
 		ValidatorRegistry: validators,
 	}
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 1,
+		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -462,7 +462,7 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 		attestation := &pb.Attestation{
 			AggregationBitfield: []byte{0x80},
 			Data: &pb.AttestationData{
-				Slot:  params.BeaconConfig().GenesisSlot + 1,
+				Slot:  1,
 				Shard: 1,
 			},
 		}

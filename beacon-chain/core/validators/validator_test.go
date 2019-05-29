@@ -382,18 +382,18 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 func TestProcessDepositFlag_NotEnabled(t *testing.T) {
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{0, 32e9}
 	beaconState := &pb.BeaconState{
 		Slot:              params.BeaconConfig().SlotsPerEpoch,
-		ValidatorBalances: balances,
+		Balances:          balances,
 		ValidatorRegistry: registry,
 	}
 	pubkey := []byte{4, 5, 6}
@@ -412,8 +412,8 @@ func TestProcessDepositFlag_NotEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if newState.ValidatorBalances[1] != 32e9 {
-		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.ValidatorBalances[1])
+	if newState.Balances[1] != 32e9 {
+		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.Balances[1])
 	}
 }
 
@@ -424,18 +424,18 @@ func TestProcessDepositFlag_Enabled(t *testing.T) {
 
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
 		},
 		{
-			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
 		},
 	}
 	balances := []uint64{0, 32e9}
 	beaconState := &pb.BeaconState{
 		Slot:              params.BeaconConfig().SlotsPerEpoch,
-		ValidatorBalances: balances,
+		Balances:          balances,
 		ValidatorRegistry: registry,
 	}
 	pubkey := []byte{4, 5, 6}
@@ -454,8 +454,8 @@ func TestProcessDepositFlag_Enabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if newState.ValidatorBalances[1] != 64e9 {
-		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.ValidatorBalances[1])
+	if newState.Balances[1] != 64e9 {
+		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.Balances[1])
 	}
 	// Un-setting flag
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
@@ -661,11 +661,11 @@ func TestInitializeValidatoreStore(t *testing.T) {
 
 func TestInsertActivatedIndices_Works(t *testing.T) {
 	InsertActivatedIndices(100, []uint64{1, 2, 3})
-	if !reflect.DeepEqual(vStore.activatedValidators[100], []uint64{1, 2, 3}) {
+	if !reflect.DeepEqual(VStore.activatedValidators[100], []uint64{1, 2, 3}) {
 		t.Error("Activated validators aren't the same")
 	}
 	InsertActivatedIndices(100, []uint64{100})
-	if !reflect.DeepEqual(vStore.activatedValidators[100], []uint64{1, 2, 3, 100}) {
+	if !reflect.DeepEqual(VStore.activatedValidators[100], []uint64{1, 2, 3, 100}) {
 		t.Error("Activated validators aren't the same")
 	}
 }

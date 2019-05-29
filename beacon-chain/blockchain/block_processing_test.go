@@ -692,12 +692,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err := db.SaveHistoricalState(ctx, beaconState, rootF); err != nil {
 		t.Fatal(err)
 	}
-	rootF, _ := hashutil.HashBeaconBlock(blockF)
-	if err := db.SaveHistoricalState(ctx, beaconState, rootF); err != nil {
-		t.Fatal(err)
-	}
-	initBlockStateRoot(t, blockF, chainService)
 
+	initBlockStateRoot(t, blockF, chainService)
 	computedState, err := chainService.ReceiveBlock(ctx, blockF)
 	if err != nil {
 		t.Fatal(err)
