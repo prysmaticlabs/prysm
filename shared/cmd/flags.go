@@ -90,9 +90,8 @@ var (
 	}
 	// P2PPrivKey defines a flag to specify the location of the private key file for libp2p.
 	P2PPrivKey = cli.StringFlag{
-		Name: "p2p-priv-key",
-		Usage: "The file containing the private key to use in communications with other peers. " +
-			"If unspecified a private key will be generated and saved to disk.",
+		Name:  "p2p-priv-key",
+		Usage: "The file containing the private key to use in communications with other peers.",
 		Value: "",
 	}
 	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
