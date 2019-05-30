@@ -153,12 +153,12 @@ func SplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
 //   - we start at the edges, and work back to the mirror point.
 //     this makes us process each pear exactly once (instead of unnecessarily twice, like in the spec).
 func ShuffleList(input []uint64, seed [32]byte) ([]uint64, error) {
-	return innerShuffleList(input, seed, true/* shuffle */)
+	return innerShuffleList(input, seed, true /* shuffle */)
 }
 
 // UnshuffleList un-shuffles the list by running backwards through the round count.
 func UnshuffleList(input []uint64, seed [32]byte) ([]uint64, error) {
-	return innerShuffleList(input, seed, false/* un-shuffle */)
+	return innerShuffleList(input, seed, false /* un-shuffle */)
 }
 
 // shuffles or unshuffles, shuffle=false to un-shuffle.
@@ -216,6 +216,8 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 	return input, nil
 }
 
+// swapOrNot describes the main algorithm behind the shuffle where we
+// swap bytes depending on if the conditions are met.
 func swapOrNot(buf []byte, byteV byte, i uint64, input []uint64, j uint64, source [32]byte) (byte, [32]byte) {
 	if j&0xff == 0xff {
 		// just overwrite the last part of the buffer, reuse the start (seed, round)
