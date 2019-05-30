@@ -4,11 +4,12 @@ import (
 	"context"
 
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"go.opencensus.io/trace"
 )
 
@@ -19,22 +20,24 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 	finalizedState := data.FinalizedState
 	recState.Inc()
 
+	// save a block with an empty body.
+	blockWithNoBody := blocks.BlockFromHeader(finalizedState.LatestBlockHeader)
 	if err := s.db.SaveFinalizedState(finalizedState); err != nil {
 		log.Errorf("Unable to set received last finalized state in db: %v", err)
 		return nil
 	}
 
-	if err := s.db.SaveFinalizedBlock(finalizedState.LatestBlock); err != nil {
+	if err := s.db.SaveFinalizedBlock(blockWithNoBody); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
 		return nil
 	}
 
-	if err := s.db.SaveBlock(finalizedState.LatestBlock); err != nil {
+	if err := s.db.SaveBlock(blockWithNoBody); err != nil {
 		log.Errorf("Could not save block %v", err)
 		return nil
 	}
 
-	finalizedBlockRoot, err := hashutil.HashBeaconBlock(finalizedState.LatestBlock)
+	finalizedBlockRoot, err := ssz.TreeHash(finalizedState.LatestBlockHeader)
 	if err != nil {
 		log.Errorf("Could not hash finalized block %v", err)
 		return nil
@@ -46,9 +49,9 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 	}
 
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:       finalizedState.LatestBlock.Slot,
+		Slot:       finalizedState.LatestBlockHeader.Slot,
 		BlockRoot:  finalizedBlockRoot[:],
-		ParentRoot: finalizedState.LatestBlock.ParentRoot,
+		ParentRoot: finalizedState.LatestBlockHeader.ParentRoot,
 	}); err != nil {
 		log.Errorf("Could not to save attestation target: %v", err)
 		return nil
@@ -59,7 +62,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	if err := s.db.SaveJustifiedBlock(finalizedState.LatestBlock); err != nil {
+	if err := s.db.SaveJustifiedBlock(blockWithNoBody); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
 		return nil
 	}
@@ -76,7 +79,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 
 	s.db.PrunePendingDeposits(ctx, finalizedState.DepositIndex)
 
-	if err := s.db.UpdateChainHead(ctx, finalizedState.LatestBlock, finalizedState); err != nil {
+	if err := s.db.UpdateChainHead(ctx, blockWithNoBody, finalizedState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)
 		return nil
 	}

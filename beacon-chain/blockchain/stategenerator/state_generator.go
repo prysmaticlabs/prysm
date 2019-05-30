@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -43,11 +43,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		)
 	}
 
-	if fState.LatestBlock == nil {
+	if fState.LatestBlockHeader == nil {
 		return nil, fmt.Errorf("latest head in state is nil %v", err)
 	}
 
-	fRoot, err := hashutil.HashBeaconBlock(fState.LatestBlock)
+	fRoot, err := ssz.TreeHash(fState.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get block root %v", err)
 	}

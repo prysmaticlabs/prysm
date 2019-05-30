@@ -216,14 +216,13 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 				Crosslink: &pb.Crosslink{
 					Shard: uint64(i),
 				}},
-			InclusionDelay: uint64(i + 100),
-			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+			InclusionDelay:      uint64(i + 100),
+			AggregationBitfield: []byte{0xC0, 0xC0},
 		}
 	}
 
 	// Generate validators with balances and state for the 2 attestations.
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/16)
 	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -986,7 +985,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	}
 	committeeBalance := helpers.TotalBalance(state, committee)
 	attestingBalance := helpers.TotalBalance(state, winningIndices)
-	attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
+	attestedIndices := []uint64{350, 361, 498, 533, 537, 629, 646}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
 		want := baseReward(state, i) * attestingBalance / committeeBalance
@@ -1129,7 +1128,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{1932, 500, 1790, 1015, 1477, 1211, 69}
+	attestedIndices := []uint64{350, 361, 498, 533, 537, 629, 646}
 
 	attestedBalance, err := AttestingBalance(state, atts)
 	totalBalance := totalActiveBalance(state)
