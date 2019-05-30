@@ -16,6 +16,7 @@ var (
 	metricsPort         = flag.Int("metrics-port", 9090, "The port to serve /metrics")
 	privateKey          = flag.String("private-key", "", "The private key of funder")
 	rpcPath             = flag.String("rpc", "https://goerli.prylabs.net", "RPC address of a running ETH1 node")
+	beaconRPCPath       = flag.String("beaconRPC", "localhost:4000", "RPC address of Beacon Node")
 	depositContractAddr = flag.String("deposit-contract", "", "Address of the deposit contract")
 	depositAmount       = flag.Int64("deposit-amount", 0, "The amount of wei to deposit into the contract")
 	dbPath              = flag.String("db-path", "", "The file path for database storage")
@@ -35,6 +36,9 @@ func main() {
 		wt := newWatchtower(db)
 		go wt.WatchPods()
 	}
+
+	kc := newkeyChecker(db, *beaconRPCPath)
+	go kc.run()
 
 	s := grpc.NewServer()
 	pb.RegisterPrivateKeyServiceServer(s, srv)

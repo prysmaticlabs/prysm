@@ -102,7 +102,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		return fmt.Errorf("could not generate simulated beacon block %v", err)
 	}
 	newState := sb.state
-	newState.LatestEth1Data = newBlock.Eth1Data
+	newState.LatestEth1Data = newBlock.Body.Eth1Data
 	newState, err = state.ExecuteStateTransition(
 		context.Background(),
 		sb.state,
@@ -176,17 +176,22 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 // algorithm, then compare the output with the expected output from the YAML file.
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	defer db.TeardownDB(sb.beaconDB)
-	seed := common.BytesToHash([]byte(testCase.Seed))
-	indexList := make([]uint64, len(testCase.Input.Validators), len(testCase.Input.Validators))
-	for i, v := range testCase.Input.Validators {
-		indexList[i] = uint64(v.OriginalIndex)
+	seed := common.HexToHash(testCase.Seed)
+	testIndices := make([]uint64, testCase.Count, testCase.Count)
+	for i := uint64(0); i < testCase.Count; i++ {
+		testIndices[i] = i
 	}
-	output, err := utils.ShuffleIndices(seed, indexList)
-	if err != nil {
-		return err
+	shuffledList := make([]uint64, testCase.Count)
+	for i := uint64(0); i < testCase.Count; i++ {
+		si, err := utils.ShuffledIndex(i, testCase.Count, seed)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		shuffledList[i] = si
 	}
-	if !reflect.DeepEqual(output, testCase.Output) {
-		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Output, output)
+	if !reflect.DeepEqual(shuffledList, testCase.Shuffled) {
+		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledList)
 	}
 	return nil
 }

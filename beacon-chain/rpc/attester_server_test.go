@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -20,7 +21,6 @@ func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
 }
 
 func TestAttestHead_OK(t *testing.T) {
-	t.Skip()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	mockOperationService := &mockOperationService{}
@@ -31,8 +31,8 @@ func TestAttestHead_OK(t *testing.T) {
 		cache:            cache.NewAttestationCache(),
 	}
 	head := &pbp2p.BeaconBlock{
-		Slot:            999,
-		ParentBlockRoot: []byte{'a'},
+		Slot:       999,
+		ParentRoot: []byte{'a'},
 	}
 	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
 		t.Fatal(err)
@@ -41,12 +41,33 @@ func TestAttestHead_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	validators := make([]*pbp2p.Validator, params.BeaconConfig().DepositsForChainStart/16)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pbp2p.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxDepositAmount,
+		}
+	}
+
+	state := &pbp2p.BeaconState{
+		Slot:                   params.BeaconConfig().SlotsPerEpoch + 1,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	if err := db.SaveState(context.Background(), state); err != nil {
+		t.Fatal(err)
+	}
+
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:              999,
-			Shard:             1,
-			CrosslinkDataRoot: []byte{'a'},
-			BeaconBlockRoot:   root[:],
+			BeaconBlockRoot: root[:],
+			Crosslink: &pbp2p.Crosslink{
+				Shard:    935,
+				DataRoot: []byte{'a'},
+			},
 		},
 	}
 	if _, err := attesterServer.AttestHead(context.Background(), req); err != nil {
@@ -85,9 +106,9 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 		Slot:                  3*params.BeaconConfig().SlotsPerEpoch + 1,
 		CurrentJustifiedEpoch: 2 + 0,
 		LatestBlockRoots:      make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
-		LatestCrosslinks: []*pbp2p.Crosslink{
+		CurrentCrosslinks: []*pbp2p.Crosslink{
 			{
-				CrosslinkDataRootHash32: []byte("A"),
+				DataRoot: []byte("A"),
 			},
 		},
 		CurrentJustifiedRoot: justifiedBlockRoot[:],
@@ -131,7 +152,7 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 		JustifiedEpoch:           2 + 0,
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
-			CrosslinkDataRootHash32: []byte("A"),
+			DataRoot: []byte("A"),
 		},
 	}
 
@@ -182,9 +203,9 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		Slot:                  10000,
 		CurrentJustifiedEpoch: helpers.SlotToEpoch(1500),
 		LatestBlockRoots:      make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
-		LatestCrosslinks: []*pbp2p.Crosslink{
+		CurrentCrosslinks: []*pbp2p.Crosslink{
 			{
-				CrosslinkDataRootHash32: []byte("A"),
+				DataRoot: []byte("A"),
 			},
 		},
 		CurrentJustifiedRoot: justifiedBlockRoot[:],
@@ -228,11 +249,59 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		JustifiedEpoch:           helpers.SlotToEpoch(1500),
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
-			CrosslinkDataRootHash32: []byte("A"),
+			DataRoot: []byte("A"),
 		},
 	}
 
 	if !proto.Equal(res, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
 	}
+}
+
+func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
+	ctx := context.Background()
+	server := &AttesterServer{
+		cache: cache.NewAttestationCache(),
+	}
+
+	req := &pb.AttestationDataRequest{
+		Shard: 1,
+		Slot:  2,
+	}
+
+	res := &pb.AttestationDataResponse{
+		HeadSlot: 55,
+	}
+
+	if err := server.cache.MarkInProgress(req); err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		response, err := server.AttestationDataAtSlot(ctx, req)
+		if err != nil {
+			t.Error(err)
+		}
+		if !proto.Equal(res, response) {
+			t.Error("Expected  equal responses from cache")
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		if err := server.cache.Put(ctx, req, res); err != nil {
+			t.Error(err)
+		}
+		if err := server.cache.MarkNotInProgress(req); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	wg.Wait()
 }

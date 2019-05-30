@@ -1,11 +1,11 @@
 package helpers
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -215,37 +215,34 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	tests := []struct {
 		attestationSlot uint64
 		stateSlot       uint64
-		shard           uint64
 		bitfield        []byte
 		wanted          []uint64
 	}{
 		{
-			attestationSlot: 2,
+			attestationSlot: 3,
 			stateSlot:       5,
-			shard:           3,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{21, 126},
+			wanted:          []uint64{82, 84},
 		},
 		{
-			attestationSlot: 1,
+			attestationSlot: 2,
 			stateSlot:       10,
-			shard:           2,
 			bitfield:        []byte{0x01},
-			wanted:          []uint64{2, 17},
+			wanted:          []uint64{32, 63},
 		},
 		{
-			attestationSlot: 10,
+			attestationSlot: 11,
 			stateSlot:       10,
-			shard:           11,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{79, 112},
+			wanted:          []uint64{37, 104},
 		},
 	}
-
+	//startShard := uint64(960)
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
-		attestationData.Slot = tt.attestationSlot
-		attestationData.Shard = tt.shard
+		attestationData.Crosslink = &pb.Crosslink{
+			Shard: tt.attestationSlot,
+		}
 		attestationData.TargetEpoch = 0
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
@@ -280,7 +277,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
-	attestationData := &pb.AttestationData{}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
 
 	if _, err := AttestingIndices(state, attestationData, []byte{}); err == nil {
 		t.Error("attestation participants should have failed with incorrect bitfield")
@@ -348,30 +345,30 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       161,
-			committee:  []uint64{0, 107},
-			shard:      97,
+			slot:       186,
+			committee:  []uint64{0, 45},
+			shard:      122,
 			isProposer: false,
 		},
 		{
 			index:      105,
-			slot:       156,
-			committee:  []uint64{88, 105},
-			shard:      92,
+			slot:       135,
+			committee:  []uint64{111, 105},
+			shard:      71,
 			isProposer: false,
 		},
 		{
 			index:      64,
-			slot:       172,
-			committee:  []uint64{64, 31},
-			shard:      108,
+			slot:       170,
+			committee:  []uint64{64, 80},
+			shard:      106,
 			isProposer: false,
 		},
 		{
 			index:      11,
-			slot:       169,
-			committee:  []uint64{13, 11},
-			shard:      105,
+			slot:       191,
+			committee:  []uint64{102, 11},
+			shard:      127,
 			isProposer: false,
 		},
 	}
@@ -434,8 +431,9 @@ func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
 	}
 
 	attestationData := &pb.AttestationData{
-		Shard: 234,
-		Slot:  uint64(slotOffset),
+		Crosslink: &pb.Crosslink{
+			Shard: uint64(960 + slotOffset),
+		},
 	}
 	result, err := AttestingIndices(&pb.BeaconState{}, attestationData, []byte{0x03})
 	if err != nil {
@@ -472,8 +470,9 @@ func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
 	}
 
 	attestationData := &pb.AttestationData{
-		Shard: 11,
-		Slot:  slotOffset,
+		Crosslink: &pb.Crosslink{
+			Shard: uint64(960 + slotOffset),
+		},
 	}
 	result, err := AttestingIndices(state, attestationData, []byte{0x03})
 	if err != nil {
@@ -705,7 +704,7 @@ func BenchmarkComputeCommittee64000_WithCache(b *testing.B) {
 		panic(err)
 	}
 	b.ResetTimer()
-	for n:=0; n < b.N ; n++  {
+	for n := 0; n < b.N; n++ {
 		_, err := ComputeCommittee(indices, seed, 0, 500)
 		if err != nil {
 			panic(err)
@@ -738,7 +737,7 @@ func BenchmarkComputeCommittee128000_WithCache(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for n:=0; n < b.N ; n++  {
+	for n := 0; n < b.N; n++ {
 		_, err := ComputeCommittee(indices, seed, shard, 1000)
 		if err != nil {
 			panic(err)
@@ -771,7 +770,7 @@ func BenchmarkComputeCommittee300000_WithCache(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for n:=0; n < b.N ; n++  {
+	for n := 0; n < b.N; n++ {
 		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
 		if err != nil {
 			panic(err)
@@ -799,7 +798,7 @@ func BenchmarkComputeCommittee128000_WithOutCache(b *testing.B) {
 
 	shard := uint64(3)
 	b.ResetTimer()
-	for n:=0; n < b.N ; n++  {
+	for n := 0; n < b.N; n++ {
 		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
 		if err != nil {
 			panic(err)

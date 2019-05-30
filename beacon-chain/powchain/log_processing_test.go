@@ -55,15 +55,15 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	copy(sig[:], []byte("testing"))
 	copy(withdrawalCreds[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.txOpts.Value = amount32Eth
 	testAcc.txOpts.GasLimit = 1000000
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -118,20 +118,20 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	copy(sig[:], []byte("testing"))
 	copy(withdrawalCreds[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.txOpts.Value = amount32Eth
 	testAcc.txOpts.GasLimit = 1000000
 
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -189,15 +189,15 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.txOpts.Value = amount32Eth
 	testAcc.txOpts.GasLimit = 1000000
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 	testAcc.backend.Commit()
@@ -226,11 +226,11 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Errorf("Pubkey is not the same as the data that was put in %v", loggedPubkey)
 	}
 
-	if !bytes.Equal(loggedSig, data.ProofOfPossession) {
+	if !bytes.Equal(loggedSig, data.Signature) {
 		t.Errorf("Proof of Possession is not the same as the data that was put in %v", loggedSig)
 	}
 
-	if !bytes.Equal(withCreds, data.WithdrawalCredentialsHash32) {
+	if !bytes.Equal(withCreds, data.WithdrawalCredentials) {
 		t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v", withCreds)
 	}
 
@@ -265,10 +265,10 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.txOpts.Value = amount32Eth
@@ -279,7 +279,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -358,15 +358,15 @@ func TestProcessETH2GenesisLog_8UniquePubkeys(t *testing.T) {
 		copy(sig[:], []byte("sig"))
 		copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-		data := &pb.DepositInput{
-			Pubkey:                      pubkey[:],
-			ProofOfPossession:           sig[:],
-			WithdrawalCredentialsHash32: withdrawalCreds[:],
+		data := &pb.DepositData{
+			Pubkey:                pubkey[:],
+			Signature:             sig[:],
+			WithdrawalCredentials: withdrawalCreds[:],
 		}
 
 		testAcc.txOpts.Value = amount32Eth
 		testAcc.txOpts.GasLimit = 1000000
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -438,10 +438,10 @@ func TestUnpackETH2GenesisLogData_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.txOpts.Value = amount32Eth
@@ -451,7 +451,7 @@ func TestUnpackETH2GenesisLogData_OK(t *testing.T) {
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -508,10 +508,10 @@ func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.txOpts.Value = amount32Eth
@@ -529,8 +529,7 @@ func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		testAcc.txOpts.GasLimit = 1000000
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()
@@ -573,10 +572,10 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.txOpts.Value = amount32Eth
@@ -594,7 +593,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()
@@ -624,7 +623,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	// We add in another 8 deposits after chainstart.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()

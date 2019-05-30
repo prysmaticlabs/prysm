@@ -21,7 +21,11 @@ import (
 //        int_to_bytes32(epoch)
 //    )
 func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) [32]byte {
-	randaoMix := RandaoMix(state, wantedEpoch-params.BeaconConfig().MinSeedLookahead)
+	lookAheadEpoch := wantedEpoch - params.BeaconConfig().MinSeedLookahead
+	if params.BeaconConfig().MinSeedLookahead > wantedEpoch {
+		lookAheadEpoch = 0
+	}
+	randaoMix := RandaoMix(state, lookAheadEpoch)
 
 	indexRoot := ActiveIndexRoot(state, wantedEpoch)
 

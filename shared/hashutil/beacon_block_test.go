@@ -14,8 +14,9 @@ func TestHashBeaconBlock_doesntMutate(t *testing.T) {
 			Attestations: []*pb.Attestation{
 				{
 					Data: &pb.AttestationData{
-						Slot:  123,
-						Shard: 456,
+						Crosslink: &pb.Crosslink{
+							Shard: 456,
+						},
 					},
 				},
 			},

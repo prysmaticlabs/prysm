@@ -8,8 +8,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"reflect"
-	"sort"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -335,10 +333,10 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 	if !isSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
-	if err := validateIndexedAttestation(att1, verifySignatures); err != nil {
+	if err := ValidateIndexedAttestation(att1, verifySignatures); err != nil {
 		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
-	if err := validateIndexedAttestation(att2, verifySignatures); err != nil {
+	if err := ValidateIndexedAttestation(att2, verifySignatures); err != nil {
 		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
 	return nil
@@ -360,7 +358,7 @@ func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.Attestation
 	return isDoubleVote || isSurroundVote
 }
 
-// validateIndexedAttestation verifies an attestation's custody and bls bit information.
+// ValidateIndexedAttestation verifies an attestation's custody and bls bit information.
 //  """
 //    Verify validity of ``indexed_attestation``.
 //    """
@@ -387,7 +385,7 @@ func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.Attestation
 //        ],
 //        signature=indexed_attestation.signature,
 //        domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target_epoch),
-func validateIndexedAttestation(attestation *pb.IndexedAttestation, verifySignatures bool) error {
+func ValidateIndexedAttestation(attestation *pb.IndexedAttestation, verifySignatures bool) error {
 	bit0Indices := attestation.CustodyBit_0Indices
 	bit1Indices := attestation.CustodyBit_1Indices
 	if len(bit1Indices) != 0 {
@@ -426,19 +424,7 @@ func slashableAttesterIndices(slashing *pb.AttesterSlashing) []uint64 {
 //   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
 //
 //   For each attestation in block.body.attestations:
-//     Verify that `attestation.data.slot >= GENESIS_SLOT`.
-//     Verify that `attestation.data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot`.
-//     Verify that `state.slot < attestation.data.slot + SLOTS_PER_EPOCH.
-//     Verify that attestation.data.justified_epoch is equal to state.justified_epoch
-//       if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state)) else state.previous_justified_epoch.
-//     Verify that attestation.data.justified_block_root is equal to
-//       get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
-//     Verify that either attestation.data.latest_crosslink_root or
-//       attestation.data.shard_block_root equals state.latest_crosslinks[shard].shard_block_root.
-//     Verify bitfields and aggregate signature using BLS.
-//     [TO BE REMOVED IN PHASE 1] Verify that attestation.data.shard_block_root == ZERO_HASH.
-//     Append PendingAttestation(data=attestation.data, aggregation_bitfield=attestation.aggregation_bitfield,
-//       custody_bitfield=attestation.custody_bitfield, inclusion_slot=state.slot) to state.latest_attestations
+//     VerifyAttestation(attestation)
 func ProcessBlockAttestations(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -453,122 +439,145 @@ func ProcessBlockAttestations(
 		)
 	}
 
+	var err error
 	for idx, attestation := range atts {
-		if err := VerifyAttestation(beaconState, attestation, verifySignatures); err != nil {
+		beaconState, err = VerifyAttestation(beaconState, attestation, verifySignatures)
+		if err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
-
-		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
-			Data:                attestation.Data,
-			AggregationBitfield: attestation.AggregationBitfield,
-		})
 	}
 
 	return beaconState, nil
 }
 
 // VerifyAttestation verifies an input attestation can pass through processing using the given beacon state.
-func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
-	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay
-	if att.Data.Slot+inclusionDelay > beaconState.Slot {
-		return fmt.Errorf(
-			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
-			att.Data.Slot,
-			inclusionDelay,
+//   data = attestation.data
+//   attestation_slot = get_attestation_data_slot(state, data)
+//   assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
+//
+//   pending_attestation = PendingAttestation(
+//     data=data,
+//     aggregation_bitfield=attestation.aggregation_bitfield,
+//     inclusion_delay=state.slot - attestation_slot,
+//     proposer_index=get_beacon_proposer_index(state),
+//   )
+//
+//   assert data.target_epoch in (get_previous_epoch(state), get_current_epoch(state))
+//   if data.target_epoch == get_current_epoch(state):
+//     ffg_data = (state.current_justified_epoch, state.current_justified_root, get_current_epoch(state))
+//     parent_crosslink = state.current_crosslinks[data.crosslink.shard]
+//     state.current_epoch_attestations.append(pending_attestation)
+//   else:
+//     ffg_data = (state.previous_justified_epoch, state.previous_justified_root, get_previous_epoch(state))
+//     parent_crosslink = state.previous_crosslinks[data.crosslink.shard]
+//     state.previous_epoch_attestations.append(pending_attestation)
+//
+//   # Check FFG data, crosslink data, and signature
+//   assert ffg_data == (data.source_epoch, data.source_root, data.target_epoch)
+//   assert data.crosslink.epoch == min(data.target_epoch, parent_crosslink.epoch + MAX_EPOCHS_PER_CROSSLINK)
+//   assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
+//   assert data.crosslink.data_root == ZERO_HASH  # [to be removed in phase 1]
+//   validate_indexed_attestation(state, convert_to_indexed(state, attestation))
+func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) (*pb.BeaconState, error) {
+	data := att.Data
+	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attestation slot: %v", err)
+	}
+	minInclusionCheck := attestationSlot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot
+	epochInclusionCheck := beaconState.Slot <= attestationSlot+params.BeaconConfig().SlotsPerEpoch
+
+	if !minInclusionCheck {
+		return nil, fmt.Errorf(
+			"attestation slot %d + inclusion delay %d > state slot %d",
+			attestationSlot,
+			params.BeaconConfig().MinAttestationInclusionDelay,
 			beaconState.Slot,
 		)
 	}
-	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < beaconState.Slot {
-		return fmt.Errorf(
-			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
-			att.Data.Slot,
+	if !epochInclusionCheck {
+		return nil, fmt.Errorf(
+			"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
+			beaconState.Slot,
+			attestationSlot,
 			params.BeaconConfig().SlotsPerEpoch,
-			beaconState.Slot,
 		)
 	}
-	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
-	// and verify that `attestation.data.justified_root` is equal to `state.justified_root
-	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
-	// 	else state.previous_justified_epoch`.
-	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
-		if att.Data.JustifiedEpoch != beaconState.CurrentJustifiedEpoch {
-			return fmt.Errorf(
-				"expected attestation.JustifiedEpoch == state.CurrentJustifiedEpoch, received %d == %d",
-				att.Data.JustifiedEpoch,
-				beaconState.CurrentJustifiedEpoch,
-			)
-		}
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return nil, err
+	}
+	pendingAtt := &pb.PendingAttestation{
+		Data:                data,
+		AggregationBitfield: att.AggregationBitfield,
+		InclusionDelay:      beaconState.Slot - attestationSlot,
+		ProposerIndex:       proposerIndex,
+	}
 
-		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.CurrentJustifiedRoot) {
-			return fmt.Errorf(
-				"expected attestation.JustifiedRoot == state.CurrentJustifiedRoot, received %#x == %#x",
-				att.Data.JustifiedBlockRootHash32,
-				beaconState.CurrentJustifiedRoot,
-			)
-		}
+	if !(data.TargetEpoch == helpers.PrevEpoch(beaconState) || data.TargetEpoch == helpers.CurrentEpoch(beaconState)) {
+		return nil, fmt.Errorf(
+			"expected target epoch %d == %d or %d",
+			data.TargetEpoch,
+			helpers.PrevEpoch(beaconState),
+			helpers.CurrentEpoch(beaconState),
+		)
+	}
+
+	var ffgSourceEpoch uint64
+	var ffgSourceRoot []byte
+	var ffgTargetEpoch uint64
+	var parentCrosslink *pb.Crosslink
+	if data.TargetEpoch == helpers.CurrentEpoch(beaconState) {
+		ffgSourceEpoch = beaconState.CurrentJustifiedEpoch
+		ffgSourceRoot = beaconState.CurrentJustifiedRoot
+		ffgTargetEpoch = helpers.CurrentEpoch(beaconState)
+		parentCrosslink = beaconState.CurrentCrosslinks[data.Crosslink.Shard]
+		beaconState.CurrentEpochAttestations = append(beaconState.CurrentEpochAttestations, pendingAtt)
 	} else {
-		if att.Data.JustifiedEpoch != beaconState.PreviousJustifiedEpoch {
-			return fmt.Errorf(
-				"expected attestation.JustifiedEpoch == state.PreviousJustifiedEpoch, received %d == %d",
-				att.Data.JustifiedEpoch,
-				beaconState.PreviousJustifiedEpoch,
-			)
-		}
-		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.PreviousJustifiedRoot) {
-			return fmt.Errorf(
-				"expected attestation.JustifiedRoot == state.PreviousJustifiedRoot, received %#x == %#x",
-				att.Data.JustifiedBlockRootHash32,
-				beaconState.CurrentJustifiedRoot,
-			)
-		}
+		ffgSourceEpoch = beaconState.PreviousJustifiedEpoch
+		ffgSourceRoot = beaconState.PreviousJustifiedRoot
+		ffgTargetEpoch = helpers.PrevEpoch(beaconState)
+		parentCrosslink = beaconState.PreviousCrosslinks[data.Crosslink.Shard]
+		beaconState.PreviousEpochAttestations = append(beaconState.PreviousEpochAttestations, pendingAtt)
 	}
-	// Verify that either:
-	// 1.) Crosslink(shard_block_root=attestation.data.shard_block_root,
-	// 	epoch=slot_to_epoch(attestation.data.slot)) equals
-	// 	state.latest_crosslinks[attestation.data.shard]
-	// 2.) attestation.data.latest_crosslink
-	// 	equals state.latest_crosslinks[attestation.data.shard]
-	shard := att.Data.Shard
-	crosslink := &pb.Crosslink{
-		CrosslinkDataRootHash32: att.Data.CrosslinkDataRoot,
-		Epoch:                   helpers.SlotToEpoch(att.Data.Slot),
+	if data.SourceEpoch != ffgSourceEpoch {
+		return nil, fmt.Errorf("expected source epoch %d, received %d", ffgSourceEpoch, data.SourceEpoch)
 	}
-	crosslinkFromAttestation := att.Data.LatestCrosslink
-	crosslinkFromState := beaconState.LatestCrosslinks[shard]
-
-	if !(reflect.DeepEqual(crosslinkFromState, crosslink) ||
-		reflect.DeepEqual(crosslinkFromState, crosslinkFromAttestation)) {
-		return fmt.Errorf(
-			"incoming attestation does not match crosslink in state for shard %d",
-			shard,
+	if !bytes.Equal(data.SourceRoot, ffgSourceRoot) {
+		return nil, fmt.Errorf("expected source root %#x, received %#x", ffgSourceRoot, data.SourceRoot)
+	}
+	if data.TargetEpoch != ffgTargetEpoch {
+		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.TargetEpoch)
+	}
+	minCrosslinkEpoch := parentCrosslink.Epoch + params.BeaconConfig().MaxCrosslinkEpochs
+	if data.TargetEpoch < minCrosslinkEpoch {
+		minCrosslinkEpoch = data.TargetEpoch
+	}
+	if data.Crosslink.Epoch != minCrosslinkEpoch {
+		return nil, fmt.Errorf("expected crosslink epoch %d, received %d", minCrosslinkEpoch, data.Crosslink.Epoch)
+	}
+	crosslinkParentRoot, err := ssz.TreeHash(parentCrosslink)
+	if err != nil {
+		return nil, fmt.Errorf("could not tree hash parent crosslink: %v", err)
+	}
+	if !bytes.Equal(data.Crosslink.ParentRoot, crosslinkParentRoot[:]) {
+		return nil, fmt.Errorf(
+			"mismatched parent crosslink root, expected %#x, received %#x",
+			crosslinkParentRoot,
+			data.Crosslink.ParentRoot,
 		)
 	}
-
-	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.Data.CrosslinkDataRoot, params.BeaconConfig().ZeroHash[:]) {
-		return fmt.Errorf(
-			"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
-			params.BeaconConfig().ZeroHash[:],
-			att.Data.CrosslinkDataRoot,
-		)
+	if !bytes.Equal(data.Crosslink.DataRoot, params.BeaconConfig().ZeroHash[:]) {
+		return nil, fmt.Errorf("expected data root %#x == ZERO_HASH", data.Crosslink.DataRoot)
 	}
-	if verifySignatures {
-		// TODO(#258): Integrate BLS signature verification for attestation.
-		// assert bls_verify_multiple(
-		//   pubkeys=[
-		//	 bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_participants]),
-		//   bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_participants]),
-		//   ],
-		//   message_hash=[
-		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b0)),
-		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b1)),
-		//   ],
-		//   signature=attestation.aggregate_signature,
-		//   domain=get_domain(state.fork, slot_to_epoch(attestation.data.slot), DOMAIN_ATTESTATION),
-		// )
-		return nil
+	indexedAtt, err := ConvertToIndexed(beaconState, att)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert to indexed attestation: %v", err)
 	}
-	return nil
+	if err := ValidateIndexedAttestation(indexedAtt, verifySignatures); err != nil {
+		return nil, fmt.Errorf("could not verify indexed attestation: %v", err)
+	}
+	return beaconState, nil
 }
 
 // ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
@@ -592,95 +601,29 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 	if err != nil {
 		return nil, err
 	}
-	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
-	if err != nil {
-		return nil, err
-	}
-	cb1iMap := make(map[uint64]bool)
-	for _, in := range cb1i {
-		cb1iMap[in] = true
-	}
-	cb0i := []uint64{}
-	for _, index := range attI {
-		_, ok := cb1iMap[index]
-		if !ok {
-			cb0i = append(cb0i, index)
-		}
-	}
+	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
 	inAtt := &pb.IndexedAttestation{
 		Data:                attestation.Data,
 		Signature:           attestation.Signature,
-		CustodyBit_0Indices: cb0i,
-		CustodyBit_1Indices: cb1i,
+		CustodyBit_0Indices: []uint64{},
+		CustodyBit_1Indices: []uint64{},
+	}
+	if len(cb1i) > 0 {
+		cb1iMap := make(map[uint64]bool)
+		for _, in := range cb1i {
+			cb1iMap[in] = true
+		}
+		cb0i := []uint64{}
+		for _, index := range attI {
+			_, ok := cb1iMap[index]
+			if !ok {
+				cb0i = append(cb0i, index)
+			}
+		}
+		inAtt.CustodyBit_0Indices = cb0i
+		inAtt.CustodyBit_1Indices = cb1i
 	}
 	return inAtt, nil
-}
-
-// VerifyIndexedAttestation determines the validity of an indexed attestation.
-// WIP - signing is not implemented until BLS is integrated into Prysm.
-//
-// Spec pseudocode definition:
-//  def verify_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
-//    """
-//    Verify validity of ``indexed_attestation`` fields.
-//    """
-//    custody_bit_0_indices = indexed_attestation.custody_bit_0_indices
-//    custody_bit_1_indices = indexed_attestation.custody_bit_1_indices
-//
-//    # Ensure no duplicate indices across custody bits
-//    assert len(set(custody_bit_0_indices).intersection(set(custody_bit_1_indices))) == 0
-//
-//    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
-//        return False
-//
-//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
-//        return False
-//
-//    if custody_bit_0_indices != sorted(custody_bit_0_indices):
-//        return False
-//
-//    if custody_bit_1_indices != sorted(custody_bit_1_indices):
-//        return False
-//
-//    return bls_verify_multiple(
-//        pubkeys=[
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_indices]),
-//        ],
-//        message_hashes=[
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
-//        ],
-//        signature=indexed_attestation.signature,
-//        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
-//    )
-func VerifyIndexedAttestation(state *pb.BeaconState, indexedAtt *pb.IndexedAttestation) (bool, error) {
-	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
-	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
-
-	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
-	if len(custodyBitIntersection) != 0 {
-		return false, fmt.Errorf("custody bit indice should not contain duplicates, received: %v", custodyBitIntersection)
-	}
-
-	// To be removed in phase 1
-	if len(custodyBit1Indices) > 0 {
-		return false, nil
-	}
-
-	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
-	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
-	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
-		return false, nil
-	}
-
-	if !sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
-		return custodyBit0Indices[i] < custodyBit0Indices[j]
-	}) {
-		return false, nil
-	}
-
-	return true, nil
 }
 
 // ProcessValidatorDeposits is one of the operations performed on each processed

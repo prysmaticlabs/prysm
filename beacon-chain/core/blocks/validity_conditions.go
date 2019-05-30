@@ -35,7 +35,7 @@ func IsValidBlock(
 
 	// Pre-Processing Condition 1:
 	// Check that the parent Block has been processed and saved.
-	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
+	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parentBlock := HasBlock(parentRoot)
 	if !parentBlock {
 		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", parentRoot)

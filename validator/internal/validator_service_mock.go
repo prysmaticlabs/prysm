@@ -57,6 +57,26 @@ func (mr *MockValidatorServiceClientMockRecorder) CommitteeAssignment(arg0, arg1
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitteeAssignment", reflect.TypeOf((*MockValidatorServiceClient)(nil).CommitteeAssignment), varargs...)
 }
 
+// ExitedValidators mocks base method
+func (m *MockValidatorServiceClient) ExitedValidators(arg0 context.Context, arg1 *v1.ExitedValidatorsRequest, arg2 ...grpc.CallOption) (*v1.ExitedValidatorsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExitedValidators", varargs...)
+	ret0, _ := ret[0].(*v1.ExitedValidatorsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExitedValidators indicates an expected call of ExitedValidators
+func (mr *MockValidatorServiceClientMockRecorder) ExitedValidators(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExitedValidators", reflect.TypeOf((*MockValidatorServiceClient)(nil).ExitedValidators), varargs...)
+}
+
 // ValidatorIndex mocks base method
 func (m *MockValidatorServiceClient) ValidatorIndex(arg0 context.Context, arg1 *v1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1.ValidatorIndexResponse, error) {
 	m.ctrl.T.Helper()

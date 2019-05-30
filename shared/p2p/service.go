@@ -12,6 +12,7 @@ import (
 
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/types"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
@@ -58,23 +59,26 @@ type Server struct {
 	bootstrapNode string
 	relayNodeAddr string
 	noDiscovery   bool
+	staticPeers   []string
 }
 
 // ServerConfig for peer to peer networking.
 type ServerConfig struct {
 	NoDiscovery            bool
+	StaticPeers            []string
 	BootstrapNodeAddr      string
 	RelayNodeAddr          string
 	HostAddress            string
 	Port                   int
 	MaxPeers               int
 	DepositContractAddress string
+	WhitelistCIDR          string
 }
 
 // NewServer creates a new p2p server instance.
 func NewServer(cfg *ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	opts := buildOptions(cfg.Port, cfg.MaxPeers)
+	opts := buildOptions(cfg)
 	if cfg.RelayNodeAddr != "" {
 		opts = append(opts, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
 	} else if cfg.HostAddress != "" {
@@ -138,6 +142,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		}
 		info, err := peerInfoFromAddr(addr)
 		if err != nil {
+			cancel()
 			return nil, err
 		}
 		exclusions = append(exclusions, info.ID)
@@ -158,6 +163,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		bootstrapNode: cfg.BootstrapNodeAddr,
 		relayNodeAddr: cfg.RelayNodeAddr,
 		noDiscovery:   cfg.NoDiscovery,
+		staticPeers:   cfg.StaticPeers,
 	}, nil
 }
 
@@ -185,29 +191,39 @@ func (s *Server) Start() {
 	defer span.End()
 	log.Info("Starting service")
 
-	if !s.noDiscovery && s.bootstrapNode != "" {
-		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
-			log.Errorf("Could not start peer discovery via DHT: %v", err)
-		}
-		bcfg := kaddht.DefaultBootstrapConfig
-		bcfg.Period = time.Duration(30 * time.Second)
-		if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
-			log.Errorf("Failed to bootstrap DHT: %v", err)
-		}
-	}
-	if !s.noDiscovery && s.relayNodeAddr != "" {
-		if err := dialRelayNode(ctx, s.host, s.relayNodeAddr); err != nil {
-			log.Errorf("Could not dial relay node: %v", err)
-		}
-	}
-
-	if err := startmDNSDiscovery(ctx, s.host); err != nil {
-		log.Errorf("Could not start peer discovery via mDNS: %v", err)
-		return
-	}
-
 	if !s.noDiscovery {
+		if s.bootstrapNode != "" {
+			if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
+				log.Errorf("Could not start peer discovery via DHT: %v", err)
+			}
+			bcfg := kaddht.DefaultBootstrapConfig
+			bcfg.Period = time.Duration(30 * time.Second)
+			if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
+				log.Errorf("Failed to bootstrap DHT: %v", err)
+			}
+		}
+		if s.relayNodeAddr != "" {
+			if err := dialRelayNode(ctx, s.host, s.relayNodeAddr); err != nil {
+				log.Errorf("Could not dial relay node: %v", err)
+			}
+		}
+
+		if err := startmDNSDiscovery(ctx, s.host); err != nil {
+			log.Errorf("Could not start peer discovery via mDNS: %v", err)
+		}
+
 		startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
+	}
+
+	maxTime := time.Duration(1 << 62)
+
+	for _, peer := range s.staticPeers {
+		peerInfo, err := peerInfoFromAddr(peer)
+		if err != nil {
+			log.Errorf("Invalid peer address: %v", err)
+		} else {
+			s.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, maxTime)
+		}
 	}
 }
 
@@ -273,6 +289,18 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 			trace.StringAttribute("topic", topic),
 			trace.StringAttribute("peerID", peerID.String()),
 		)
+
+		if msg.Timestamp != nil && msg.Timestamp.Seconds > 0 {
+			t, err := types.TimestampFromProto(msg.Timestamp)
+			if err == nil {
+				propagationTimeMetric.Observe(time.Now().Sub(t).Seconds())
+				span.AddAttributes(
+					trace.StringAttribute("timestamp", t.String()),
+				)
+			} else {
+				log.WithError(err).Debug("Message received without timestamp")
+			}
+		}
 
 		data := proto.Clone(message)
 		if err := proto.Unmarshal(msg.Payload, data); err != nil {
@@ -423,6 +451,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 	envelope := &pb.Envelope{
 		SpanContext: propagation.Binary(span.SpanContext()),
 		Payload:     b,
+		Timestamp:   types.TimestampNow(),
 	}
 
 	return w.WriteMsg(envelope)
@@ -485,6 +514,7 @@ func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
 	envelope := &pb.Envelope{
 		SpanContext: propagation.Binary(span.SpanContext()),
 		Payload:     b,
+		Timestamp:   types.TimestampNow(),
 	}
 
 	data, err := proto.Marshal(envelope)
