@@ -3,6 +3,7 @@ package cache
 import (
 	"errors"
 	"sync"
+	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -30,6 +31,7 @@ var (
 
 // ShuffledIndicesBySeed defines the shuffled validator indices per randao seed.
 type ShuffledIndicesBySeed struct {
+	Index			uint64
 	Seed            []byte
 	ShuffledIndices []uint64
 }
@@ -47,7 +49,7 @@ func shuffleKeyFn(obj interface{}) (string, error) {
 		return "", ErrNotValidatorListInfo
 	}
 
-	return string(sInfo.Seed), nil
+	return string(sInfo.Seed) + strconv.Itoa(int(sInfo.Index)), nil
 }
 
 // NewShuffledIndicesCache creates a new shuffled validators cache for storing/accessing shuffled validator indices
@@ -59,10 +61,11 @@ func NewShuffledIndicesCache() *ShuffledIndicesCache {
 
 // ShuffledIndicesBySeed fetches ShuffledIndicesBySeed by epoch and seed. Returns true with a
 // reference to the ShuffledIndicesInEpoch info, if exists. Otherwise returns false, nil.
-func (c *ShuffledIndicesCache) ShuffledIndicesBySeed(seed []byte) ([]uint64, error) {
+func (c *ShuffledIndicesCache) ShuffledIndicesBySeed(index uint64, seed []byte) ([]uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.shuffledIndicesCache.GetByKey(string(seed))
+	key := string(seed) + strconv.Itoa(int(index))
+	obj, exists, err := c.shuffledIndicesCache.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

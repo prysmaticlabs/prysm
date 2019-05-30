@@ -2,11 +2,13 @@ package cache
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 )
 
 func TestShuffleKeyFn_OK(t *testing.T) {
 	sInfo := &ShuffledIndicesBySeed{
+		Index: 			999,
 		Seed:            []byte{'A'},
 		ShuffledIndices: []uint64{1, 2, 3, 4, 5},
 	}
@@ -15,8 +17,8 @@ func TestShuffleKeyFn_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if key != string(sInfo.Seed) {
-		t.Errorf("Incorrect hash key: %s, expected %s", key, string(sInfo.Seed))
+	if key != string(sInfo.Seed) + strconv.Itoa(int(sInfo.Index)) {
+		t.Errorf("Incorrect hash key: %s, expected %s", key, string(sInfo.Seed) + strconv.Itoa(int(sInfo.Index)))
 	}
 }
 
@@ -31,11 +33,12 @@ func TestShuffledIndicesCache_ShuffledIndicesBySeed2(t *testing.T) {
 	cache := NewShuffledIndicesCache()
 
 	sInfo := &ShuffledIndicesBySeed{
+		Index: 			99,
 		Seed:            []byte{'A'},
 		ShuffledIndices: []uint64{1, 2, 3, 4},
 	}
 
-	shuffledIndices, err := cache.ShuffledIndicesBySeed(sInfo.Seed)
+	shuffledIndices, err := cache.ShuffledIndicesBySeed(sInfo.Index, sInfo.Seed)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +49,7 @@ func TestShuffledIndicesCache_ShuffledIndicesBySeed2(t *testing.T) {
 	if err := cache.AddShuffledValidatorList(sInfo); err != nil {
 		t.Fatal(err)
 	}
-	shuffledIndices, err = cache.ShuffledIndicesBySeed(sInfo.Seed)
+	shuffledIndices, err = cache.ShuffledIndicesBySeed(sInfo.Index, sInfo.Seed)
 	if err != nil {
 		t.Fatal(err)
 	}
