@@ -29,11 +29,12 @@ func TestIsActiveValidator_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
+	RestartShuffledValidatorCache()
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/8)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -53,23 +54,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  1,
-			index: 828,
+			index: 1499,
 		},
 		{
 			slot:  5,
-			index: 11151,
+			index: 892,
 		},
 		{
 			slot:  19,
-			index: 3805,
+			index: 891,
 		},
 		{
 			slot:  30,
-			index: 4507,
+			index: 1636,
 		},
 		{
 			slot:  43,
-			index: 9753,
+			index: 455,
 		},
 	}
 

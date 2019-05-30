@@ -42,6 +42,7 @@ go_test(
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/internal:go_default_library",
+        "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",

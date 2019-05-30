@@ -588,6 +588,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
+	helpers.RestartShuffledValidatorCache()
 	validators := make([]*pb.Validator, 100)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -1296,6 +1297,7 @@ func TestValidateIndexedAttestation_OK(t *testing.T) {
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
+	helpers.RestartShuffledValidatorCache()
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -1903,10 +1905,11 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 }
 
 func TestProcessBeaconTransfers_OK(t *testing.T) {
+	helpers.RestartShuffledValidatorCache()
 	testConfig := params.BeaconConfig()
 	testConfig.MaxTransfers = 1
 	params.OverrideBeaconConfig(testConfig)
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/32)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ActivationEpoch:   0,
