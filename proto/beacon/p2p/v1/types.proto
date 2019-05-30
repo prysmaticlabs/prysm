@@ -44,9 +44,6 @@ message BeaconState {
   Eth1Data latest_eth1_data = 6001;
   repeated Eth1Data eth1_data_votes = 6002;
   uint64 deposit_index = 6003;
-
-  // Prysm customized field [8001-9000]
-  BeaconBlock latest_block = 8016;
 }
 
 message Fork {

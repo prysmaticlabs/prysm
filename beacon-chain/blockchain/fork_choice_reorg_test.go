@@ -58,7 +58,6 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(blocks[0]); err != nil {
 		t.Fatal(err)
 	}
-	justifiedState.LatestBlock = blocks[0]
 	if err := chainService.beaconDB.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
 	}
