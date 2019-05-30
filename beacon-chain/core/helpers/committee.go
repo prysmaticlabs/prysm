@@ -307,32 +307,12 @@ func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	return shard, nil
 }
 
-// RestartCommitteeCache restarts the committee cache from scratch.
-func RestartCommitteeCache() {
-	committeeCache = cache.NewCommitteesCache()
-}
 
 // RestartShuffledValidatorCache restarts the shuffled indices cache from scratch.
 func RestartShuffledValidatorCache() {
 	shuffledIndicesCache = cache.NewShuffledIndicesCache()
 }
 
-// ToCommitteeCache converts crosslink committee object
-// into a cache format, to be saved in cache.
-func ToCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *cache.CommitteesInSlot {
-	var cacheCommittee []*cache.CommitteeInfo
-	for _, crosslinkCommittee := range crosslinkCommittees {
-		cacheCommittee = append(cacheCommittee, &cache.CommitteeInfo{
-			Committee: crosslinkCommittee.Committee,
-			Shard:     crosslinkCommittee.Shard,
-		})
-	}
-	committees := &cache.CommitteesInSlot{
-		Slot:       slot,
-		Committees: cacheCommittee,
-	}
-	return committees
-}
 
 // VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
 // to the committees at that slot.
