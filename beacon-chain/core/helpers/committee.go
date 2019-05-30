@@ -116,9 +116,9 @@ func ComputeCommittee(
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new seed.
 	shuffledIndices := make([]uint64, validatorCount)
 	for i := uint64(0); i < validatorCount; i++ {
-		permutedIndex, err := utils.PermutedIndex(i, validatorCount, seed)
+		permutedIndex, err := utils.ShuffledIndex(i, validatorCount, seed)
 		if err != nil {
-			return []uint64{}, fmt.Errorf("could not get permuted index at index %d: %v", i, err)
+			return []uint64{}, fmt.Errorf("could not get shuffled index at index %d: %v", i, err)
 		}
 		shuffledIndices[i] = validatorIndices[permutedIndex]
 	}

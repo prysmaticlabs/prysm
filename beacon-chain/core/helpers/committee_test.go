@@ -1,9 +1,10 @@
 package helpers
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -222,19 +223,19 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{21, 126},
+			wanted:          []uint64{82, 84},
 		},
 		{
 			attestationSlot: 2,
 			stateSlot:       10,
 			bitfield:        []byte{0x01},
-			wanted:          []uint64{2, 17},
+			wanted:          []uint64{32, 63},
 		},
 		{
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{79, 112},
+			wanted:          []uint64{37, 104},
 		},
 	}
 	//startShard := uint64(960)
@@ -345,30 +346,30 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       161,
-			committee:  []uint64{0, 107},
-			shard:      97,
+			slot:       186,
+			committee:  []uint64{0, 45},
+			shard:      122,
 			isProposer: false,
 		},
 		{
 			index:      105,
-			slot:       156,
-			committee:  []uint64{88, 105},
-			shard:      92,
+			slot:       135,
+			committee:  []uint64{111, 105},
+			shard:      71,
 			isProposer: false,
 		},
 		{
 			index:      64,
-			slot:       172,
-			committee:  []uint64{64, 31},
-			shard:      108,
+			slot:       170,
+			committee:  []uint64{64, 80},
+			shard:      106,
 			isProposer: false,
 		},
 		{
 			index:      11,
-			slot:       169,
-			committee:  []uint64{13, 11},
-			shard:      105,
+			slot:       191,
+			committee:  []uint64{102, 11},
+			shard:      127,
 			isProposer: false,
 		},
 	}
