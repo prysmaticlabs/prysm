@@ -353,10 +353,10 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 		return nil, err
 	}
 	if req == nil {
-		return nil, fmt.Errorf("argument 'TreeBlockSlotRequest' cannot be nil")
+		return nil, errors.New("argument 'TreeBlockSlotRequest' cannot be nil")
 	}
-	if !(req.GetSlotNumberFrom() <= req.GetSlotNumberTo()) {
-		return nil, fmt.Errorf("upper limit (%d) of slot range cannot be lower than the lower limit (%d)", req.GetSlotNumberTo(), req.GetSlotNumberFrom())
+	if !(req.SlotNumberFrom() <= req.SlotNumberTo()) {
+		return nil, fmt.Errorf("upper limit (%d) of slot range cannot be lower than the lower limit (%d)", req.SlotNumberTo(), req.SlotNumberFrom())
 	}
 	highestSlot := bs.beaconDB.HighestBlockSlot()
 	fullBlockTree := []*pbp2p.BeaconBlock{}
