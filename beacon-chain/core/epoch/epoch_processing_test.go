@@ -216,14 +216,13 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 				Crosslink: &pb.Crosslink{
 					Shard: uint64(i),
 				}},
-			InclusionDelay: uint64(i + 100),
-			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+			InclusionDelay:      uint64(i + 100),
+			AggregationBitfield: []byte{0xC0, 0xC0},
 		}
 	}
 
 	// Generate validators with balances and state for the 2 attestations.
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/16)
 	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
