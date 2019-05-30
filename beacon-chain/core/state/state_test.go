@@ -104,9 +104,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Validator registry fields checks.
-	if newState.ValidatorRegistryUpdateEpoch != 0 {
-		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
-	}
 	if len(newState.ValidatorRegistry) != depositsForChainStart {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
@@ -134,18 +131,22 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Recent state checks.
-	if len(newState.LatestCrosslinks) != shardCount {
-		t.Error("Length of LatestCrosslinks was not correctly initialized")
+	if len(newState.CurrentCrosslinks) != shardCount {
+		t.Error("Length of CurrentCrosslinks was not correctly initialized")
+	}
+	if len(newState.PreviousCrosslinks) != shardCount {
+		t.Error("Length of PreviousCrosslinks was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.LatestSlashedBalances, make([]uint64, params.BeaconConfig().LatestSlashedExitLength)) {
 		t.Error("LatestSlashedBalances was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.LatestAttestations, []*pb.PendingAttestation{}) {
-		t.Error("LatestAttestations was not correctly initialized")
+	if !reflect.DeepEqual(newState.CurrentEpochAttestations, []*pb.PendingAttestation{}) {
+		t.Error("CurrentEpochAttestations was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.BatchedBlockRootHash32S, [][]byte{}) {
-		t.Error("BatchedBlockRootHash32S was not correctly initialized")
+	if !reflect.DeepEqual(newState.PreviousEpochAttestations, []*pb.PendingAttestation{}) {
+		t.Error("PreviousEpochAttestations was not correctly initialized")
 	}
+
 	activeValidators := helpers.ActiveValidatorIndices(newState, 0)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {

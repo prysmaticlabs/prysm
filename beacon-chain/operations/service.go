@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -124,14 +126,21 @@ func (s *Service) PendingAttestations(ctx context.Context) ([]*pb.Attestation, e
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
 	}
+
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
-		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
+		return attestationsFromDB[i].Data.Crosslink.Shard < attestationsFromDB[j].Data.Crosslink.Shard
 	})
+
 	var validAttsCount uint64
 	for _, att := range attestationsFromDB {
+		slot, err := helpers.AttestationDataSlot(state, att.Data)
+		if err != nil {
+			return nil, fmt.Errorf("could not get attestation slot: %v", err)
+		}
 		// Delete the attestation if the attestation is one epoch older than head state,
 		// we don't want to pass these attestations to RPC for proposer to include.
-		if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch <= state.Slot {
+		if slot+params.BeaconConfig().SlotsPerEpoch <= state.Slot {
+			fmt.Println(att)
 			if err := s.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, err
 			}
@@ -216,7 +225,7 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 //	2.) retrieve the canonical block by using voted block's slot number
 //	3.) return true if voted block root and the canonical block root are the same
 func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool, error) {
-	votedBlk, err := s.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRootHash32))
+	votedBlk, err := s.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
 	if err != nil {
 		return false, fmt.Errorf("could not hash block: %v", err)
 	}
@@ -234,33 +243,38 @@ func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool
 	if err != nil {
 		return false, fmt.Errorf("could not hash block: %v", err)
 	}
-	return bytes.Equal(att.Data.BeaconBlockRootHash32, canonicalRoot[:]), nil
+	return bytes.Equal(att.Data.BeaconBlockRoot, canonicalRoot[:]), nil
 }
 
 // removeOperations removes the processed operations from operation pool and DB.
-func (s *Service) removeOperations() {
+func (s *Service) removeOperations() error {
 	incomingBlockSub := s.incomingProcessedBlockFeed.Subscribe(s.incomingProcessedBlock)
 	defer incomingBlockSub.Unsubscribe()
+
+	state, err := s.beaconDB.HeadState(s.ctx)
+	if err != nil {
+		return fmt.Errorf("could not retrieve attestations from DB")
+	}
 
 	for {
 		select {
 		case <-incomingBlockSub.Err():
 			log.Debug("Subscriber closed, exiting goroutine")
-			return
+			return nil
 		case <-s.ctx.Done():
 			log.Debug("operations service context closed, exiting remove goroutine")
-			return
+			return nil
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
 			handler.SafelyHandleMessage(s.ctx, s.handleProcessedBlock, block)
 			// Removes the pending attestations received from processed block body in DB.
 			if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
 				log.Errorf("Could not remove processed attestations from DB: %v", err)
-				return
+				return nil
 			}
-			if err := s.removeEpochOldAttestations(block.Slot); err != nil {
+			if err := s.removeEpochOldAttestations(state); err != nil {
 				log.Errorf("Could not remove old attestations from DB at slot %d: %v", block.Slot, err)
-				return
+				return nil
 			}
 		}
 	}
@@ -286,21 +300,25 @@ func (s *Service) removePendingAttestations(attestations []*pb.Attestation) erro
 			if err := s.beaconDB.DeleteAttestation(attestation); err != nil {
 				return err
 			}
-			log.WithField("slot", attestation.Data.Slot).Debug("Attestation removed")
+			log.WithField("root", fmt.Sprintf("%#x", hash)).Debug("Attestation removed")
 		}
 	}
 	return nil
 }
 
 // removeEpochOldAttestations removes attestations that's older than one epoch length from current slot.
-func (s *Service) removeEpochOldAttestations(slot uint64) error {
+func (s *Service) removeEpochOldAttestations(beaconState *pb.BeaconState) error {
 	attestations, err := s.beaconDB.Attestations()
 	if err != nil {
 		return err
 	}
 	for _, a := range attestations {
+		slot, err := helpers.AttestationDataSlot(beaconState, a.Data)
+		if err != nil {
+			return fmt.Errorf("could not get attestation slot: %v", err)
+		}
 		// Remove attestation from DB if it's one epoch older than slot.
-		if slot-params.BeaconConfig().SlotsPerEpoch >= a.Data.Slot {
+		if slot-params.BeaconConfig().SlotsPerEpoch >= slot {
 			if err := s.beaconDB.DeleteAttestation(a); err != nil {
 				return err
 			}

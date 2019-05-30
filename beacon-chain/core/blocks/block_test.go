@@ -8,15 +8,15 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 	stateHash := []byte{0}
 	b1 := NewGenesisBlock(stateHash)
 
-	if b1.ParentBlockRoot == nil {
+	if b1.ParentRoot == nil {
 		t.Error("genesis block missing ParentHash field")
 	}
 
@@ -35,7 +35,7 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 		DepositRoot: params.BeaconConfig().ZeroHash[:],
 		BlockRoot:   params.BeaconConfig().ZeroHash[:],
 	}
-	if !proto.Equal(b1.Eth1Data, expectedEth1) {
+	if !proto.Equal(b1.Body.Eth1Data, expectedEth1) {
 		t.Error("genesis block Eth1Data isn't initialized correctly")
 	}
 }
@@ -154,18 +154,65 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 		t.Fatalf("Latest Block root hash not saved."+
 			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRoots[0])
 	}
+}
 
-	newState.Slot = newState.Slot - 1
+func TestHeaderFromBlock(t *testing.T) {
+	dummyBody := &pb.BeaconBlockBody{
+		RandaoReveal: []byte("Reveal"),
+	}
 
-	newState = ProcessBlockRoots(newState, testRoot)
-	expectedHashes := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
-	expectedHashes[0] = testRoot[:]
-	expectedHashes[params.BeaconConfig().LatestBlockRootsLength-1] = testRoot[:]
+	dummyBlock := &pb.BeaconBlock{
+		Slot:       10,
+		Signature:  []byte{'S'},
+		ParentRoot: []byte("Parent"),
+		StateRoot:  []byte("State"),
+		Body:       dummyBody,
+	}
 
-	expectedRoot := hashutil.MerkleRoot(expectedHashes)
+	header, err := HeaderFromBlock(dummyBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if !bytes.Equal(newState.BatchedBlockRootHash32S[0], expectedRoot[:]) {
-		t.Errorf("saved merkle root is not equal to expected merkle root"+
-			"\n expected %#x but got %#x", expectedRoot, newState.BatchedBlockRootHash32S[0])
+	expectedHeader := &pb.BeaconBlockHeader{
+		Slot:       dummyBlock.Slot,
+		Signature:  dummyBlock.Signature,
+		ParentRoot: dummyBlock.ParentRoot,
+		StateRoot:  dummyBlock.StateRoot,
+	}
+
+	bodyRoot, err := ssz.TreeHash(dummyBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedHeader.BodyRoot = bodyRoot[:]
+
+	if !proto.Equal(expectedHeader, header) {
+		t.Errorf("Expected Header not Equal to Retrieved Header. Expected %v , Got %v",
+			proto.MarshalTextString(expectedHeader), proto.MarshalTextString(header))
+	}
+}
+
+func TestBlockFromHeader(t *testing.T) {
+	dummyHeader := &pb.BeaconBlockHeader{
+		Slot:       10,
+		Signature:  []byte{'S'},
+		ParentRoot: []byte("Parent"),
+		StateRoot:  []byte("State"),
+	}
+
+	block := BlockFromHeader(dummyHeader)
+
+	expectedBlock := &pb.BeaconBlock{
+		Slot:       dummyHeader.Slot,
+		Signature:  dummyHeader.Signature,
+		ParentRoot: dummyHeader.ParentRoot,
+		StateRoot:  dummyHeader.StateRoot,
+	}
+
+	if !proto.Equal(expectedBlock, block) {
+		t.Errorf("Expected block not equal to retrieved block. Expected %v , Got %v",
+			proto.MarshalTextString(expectedBlock), proto.MarshalTextString(block))
 	}
 }

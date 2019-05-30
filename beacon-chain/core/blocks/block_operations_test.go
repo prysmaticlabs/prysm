@@ -290,7 +290,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	validators[12683].Slashed = false
+	validators[5297].Slashed = false
 
 	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
@@ -303,7 +303,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Fatalf("Failed to generate private key got: %v", err)
 	}
 	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[12683].Pubkey = priv.PublicKey().Marshal()
+	validators[5297].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -588,6 +588,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
+	helpers.RestartShuffledValidatorCache()
 	validators := make([]*pb.Validator, 100)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -682,18 +683,20 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        params.BeaconConfig().SlotsPerEpoch,
 					SourceEpoch: 1,
 					TargetEpoch: 1,
-					Shard:       3,
+					Crosslink: &pb.Crosslink{
+						Shard: 3,
+					},
 				},
 			},
 		},
@@ -726,20 +729,22 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1, 2},
 				CustodyBit_1Indices: []uint64{0, 1, 2},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1, 2},
 				CustodyBit_1Indices: []uint64{0, 1, 2},
@@ -772,19 +777,21 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
 			},
@@ -806,19 +813,21 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{3, 2, 1},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{3, 2, 1},
 			},
@@ -858,19 +867,21 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					Slot:        5,
 					SourceEpoch: 0,
 					TargetEpoch: 0,
-					Shard:       4,
+					Crosslink: &pb.Crosslink{
+						Shard: 4,
+					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1},
 			},
@@ -1286,6 +1297,7 @@ func TestValidateIndexedAttestation_OK(t *testing.T) {
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
+	helpers.RestartShuffledValidatorCache()
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -1313,28 +1325,30 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x01},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{21, 126},
+			wantedCustodyBit1Indices: []uint64{82, 84},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x02},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{21, 126},
+			wantedCustodyBit1Indices: []uint64{82, 84},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{21, 126},
+			wantedCustodyBit1Indices: []uint64{82, 84},
 		},
 	}
 
 	attestation := &pb.Attestation{
 		Signature: []byte("signed"),
 		Data: &pb.AttestationData{
-			Slot:        2,
-			Shard:       3,
+			SourceEpoch: 0,
 			TargetEpoch: 0,
+			Crosslink: &pb.Crosslink{
+				Shard: 3,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -1891,10 +1905,11 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 }
 
 func TestProcessBeaconTransfers_OK(t *testing.T) {
+	helpers.RestartShuffledValidatorCache()
 	testConfig := params.BeaconConfig()
 	testConfig.MaxTransfers = 1
 	params.OverrideBeaconConfig(testConfig)
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/32)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ActivationEpoch:   0,

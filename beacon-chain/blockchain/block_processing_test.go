@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"math/big"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +29,7 @@ import (
 var _ = BlockProcessor(&ChainService{})
 
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
-	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
+	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := chainService.beaconDB.Block(parentRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -37,14 +38,12 @@ func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *Chain
 	if err != nil {
 		t.Fatalf("Unable to retrieve state %v", err)
 	}
-	saveLatestBlock := beaconState.LatestBlock
 
 	computedState, err := chainService.AdvanceState(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatalf("could not apply block state transition: %v", err)
 	}
 
-	computedState.LatestBlock = saveLatestBlock
 	stateRoot, err := hashutil.HashProto(computedState)
 	if err != nil {
 		t.Fatalf("could not tree hash state: %v", err)
@@ -81,8 +80,8 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:            2,
-		ParentBlockRoot: parentRoot[:],
+		Slot:       2,
+		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
@@ -144,9 +143,9 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	block := &pb.BeaconBlock{
-		Slot:            beaconState.Slot,
-		StateRoot:       stateRoot[:],
-		ParentBlockRoot: parentHash[:],
+		Slot:       beaconState.Slot,
+		StateRoot:  stateRoot[:],
+		ParentRoot: parentHash[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
@@ -209,9 +208,9 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	}
 	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
 	block := &pb.BeaconBlock{
-		Slot:            beaconState.Slot + 4,
-		StateRoot:       stateRoot[:],
-		ParentBlockRoot: parentHash[:],
+		Slot:       beaconState.Slot + 4,
+		StateRoot:  stateRoot[:],
+		ParentRoot: parentHash[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
@@ -271,9 +270,9 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	beaconState.Slot++
 
 	block := &pb.BeaconBlock{
-		Slot:            beaconState.Slot,
-		StateRoot:       stateRoot[:],
-		ParentBlockRoot: parentHash[:],
+		Slot:       beaconState.Slot,
+		StateRoot:  stateRoot[:],
+		ParentRoot: parentHash[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
@@ -347,8 +346,8 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 
 	beaconState.Slot++
 	goodStateBlock := &pb.BeaconBlock{
-		Slot:            beaconState.Slot,
-		ParentBlockRoot: parentHash[:],
+		Slot:       beaconState.Slot,
+		ParentRoot: parentHash[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data:     &pb.Eth1Data{},
 			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
@@ -397,9 +396,9 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 
 	beaconState.Slot++
 	invalidStateBlock := &pb.BeaconBlock{
-		Slot:            beaconState.Slot,
-		StateRoot:       []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
-		ParentBlockRoot: parentHash[:],
+		Slot:       beaconState.Slot,
+		StateRoot:  []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
+		ParentRoot: parentHash[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data:     &pb.Eth1Data{},
 			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
@@ -489,9 +488,9 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:            currentSlot + 1,
-		StateRoot:       stateRoot[:],
-		ParentBlockRoot: parentHash[:],
+		Slot:       currentSlot + 1,
+		StateRoot:  stateRoot[:],
+		ParentRoot: parentHash[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
@@ -502,7 +501,6 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		},
 	}
 
-	beaconState.LatestBlock = block
 	beaconState.Slot--
 	beaconState.DepositIndex = 0
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
@@ -545,7 +543,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[i].Pubkey)
 		attsService.InsertAttestationIntoStore(pubKey, &pb.Attestation{
 			Data: &pb.AttestationData{
-				BeaconBlockRootHash32: blockRoot[:],
+				BeaconBlockRoot: blockRoot[:],
 			}},
 		)
 	}
@@ -615,7 +613,6 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
-	beaconState.LatestBlock = genesisBlock
 	if err := db.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -628,9 +625,9 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	blockSlots := []uint64{1, 2, 3, 5, 8}
 	for _, slot := range blockSlots {
 		block := &pb.BeaconBlock{
-			Slot:            genesisSlot + slot,
-			StateRoot:       stateRoot[:],
-			ParentBlockRoot: parentHash[:],
+			Slot:       genesisSlot + slot,
+			StateRoot:  stateRoot[:],
+			ParentRoot: parentHash[:],
 			Body: &pb.BeaconBlockBody{
 				Eth1Data:     &pb.Eth1Data{},
 				RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
@@ -648,7 +645,6 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err = db.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
-		computedState.LatestBlock = block
 		if err = db.UpdateChainHead(ctx, block, computedState); err != nil {
 			t.Fatal(err)
 		}
@@ -679,9 +675,9 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 	// Then we receive the block `f` from slot 6
 	blockF := &pb.BeaconBlock{
-		Slot:            genesisSlot + 6,
-		ParentBlockRoot: parentHash[:],
-		StateRoot:       stateRoot[:],
+		Slot:       genesisSlot + 6,
+		ParentRoot: parentHash[:],
+		StateRoot:  stateRoot[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data:     &pb.Eth1Data{},
 			RandaoReveal: createRandaoReveal(t, beaconState, privKeys),
@@ -691,8 +687,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err := db.SaveHistoricalState(ctx, beaconState, rootF); err != nil {
 		t.Fatal(err)
 	}
-	initBlockStateRoot(t, blockF, chainService)
 
+	initBlockStateRoot(t, blockF, chainService)
 	computedState, err := chainService.ReceiveBlock(ctx, blockF)
 	if err != nil {
 		t.Fatal(err)
@@ -714,9 +710,9 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 
 	// Then we apply block `g` from slot 7
 	blockG := &pb.BeaconBlock{
-		Slot:            genesisSlot + 7,
-		ParentBlockRoot: parentHash[:],
-		StateRoot:       stateRoot[:],
+		Slot:       genesisSlot + 7,
+		ParentRoot: parentHash[:],
+		StateRoot:  stateRoot[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data:     &pb.Eth1Data{},
 			RandaoReveal: createRandaoReveal(t, computedState, privKeys),
@@ -754,7 +750,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		StateRoot: []byte{},
 	}
 	block := &pb.BeaconBlock{
-		ParentBlockRoot: []byte{'a'},
+		ParentRoot: []byte{'a'},
 	}
 
 	if err := chainService.VerifyBlockValidity(ctx, block, beaconState); err == nil {
@@ -783,13 +779,12 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	beaconState.Slot = 0
 
 	currentSlot := uint64(1)
-	attestationSlot := uint64(0)
 
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block2 := &pb.BeaconBlock{
-		Slot:            currentSlot,
-		StateRoot:       stateRoot[:],
-		ParentBlockRoot: parentRoot[:],
+		Slot:       currentSlot,
+		StateRoot:  stateRoot[:],
+		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
@@ -800,8 +795,10 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot:                     attestationSlot,
-					JustifiedBlockRootHash32: parentRoot[:],
+					SourceRoot: parentRoot[:],
+					Crosslink: &pb.Crosslink{
+						Shard: 960,
+					},
 				},
 			}},
 		},
@@ -816,7 +813,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(2)
-	v.InsertActivatedVal(epoch+1, []uint64{0, 1, 2})
+	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	v.InsertExitedVal(epoch+1, []uint64{0, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
@@ -859,7 +856,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(1)
-	v.InsertActivatedVal(epoch+1, []uint64{0, 1, 2})
+	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -888,5 +885,48 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 
 	if v.ActivatedValFromEpoch(epoch) != nil {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
+	}
+}
+
+func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	epoch := uint64(100)
+
+	// Tried to insert 5 active indices to DB with only 3 validators in state.
+	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2, 3, 4})
+	var validators []*pb.Validator
+	for i := 0; i < 3; i++ {
+		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.PutUvarint(pubKeyBuf, uint64(i))
+		validators = append(validators, &pb.Validator{
+			Pubkey: pubKeyBuf,
+		})
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+	}
+	chainService := setupBeaconChain(t, db, nil)
+	if err := chainService.saveValidatorIdx(state); err != nil {
+		t.Fatalf("Could not save validator idx: %v", err)
+	}
+
+	wantedIdx := uint64(2)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	if err != nil {
+		t.Fatalf("Could not get validator index: %v", err)
+	}
+	if wantedIdx != idx {
+		t.Errorf("Wanted: %d, got: %d", wantedIdx, idx)
+	}
+
+	if v.ActivatedValFromEpoch(epoch) != nil {
+		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
+	}
+
+	// Verify the skipped validators are included in the next epoch.
+	if !reflect.DeepEqual(v.ActivatedValFromEpoch(epoch+2), []uint64{3, 4}) {
+		t.Error("Did not get wanted validator from activation queue")
 	}
 }

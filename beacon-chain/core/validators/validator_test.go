@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -45,134 +46,6 @@ func TestHasVoted_OK(t *testing.T) {
 		if i%2 == 1 && !voted {
 			t.Error("validator voted but received didn't vote")
 		}
-	}
-}
-
-func TestBoundaryAttesterIndices_OK(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	state := &pb.BeaconState{
-		Slot:                   0,
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	boundaryAttestations := []*pb.PendingAttestation{
-		{
-			Data: &pb.AttestationData{
-				Slot:        0,
-				TargetEpoch: 0,
-				Shard:       1,
-			},
-			AggregationBitfield: []byte{0x03}}, // returns indices 242
-		{
-			Data: &pb.AttestationData{
-				Slot:        0,
-				TargetEpoch: 0,
-				Shard:       1,
-			},
-			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
-	}
-
-	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
-	if err != nil {
-		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
-	}
-
-	if !reflect.DeepEqual(attesterIndices, []uint64{16, 113}) {
-		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{16, 113}, attesterIndices)
-	}
-}
-
-func TestAttestingValidatorIndices_OK(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	validators := make([]*pb.Validator, 128)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	state := &pb.BeaconState{
-		Slot:                   0,
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	prevAttestation := &pb.PendingAttestation{
-		Data: &pb.AttestationData{
-			Slot:              3,
-			TargetEpoch:       0,
-			Shard:             6,
-			CrosslinkDataRoot: []byte{'B'},
-		},
-		AggregationBitfield: []byte{1},
-	}
-
-	indices, err := AttestingValidatorIndices(
-		state,
-		6,
-		[]byte{'B'},
-		nil,
-		[]*pb.PendingAttestation{prevAttestation})
-	if err != nil {
-		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
-	}
-
-	if !reflect.DeepEqual(indices, []uint64{13, 51}) {
-		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{13, 51}, indices)
-	}
-}
-
-func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*9)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	state := &pb.BeaconState{
-		Slot:                   5,
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	attestation := &pb.PendingAttestation{
-		Data: &pb.AttestationData{
-			Slot:              0,
-			Shard:             1,
-			CrosslinkDataRoot: []byte{'B'},
-		},
-		AggregationBitfield: []byte{'A'}, // 01000001 = 1,7
-	}
-
-	_, err := AttestingValidatorIndices(
-		state,
-		1,
-		[]byte{'B'},
-		[]*pb.PendingAttestation{attestation},
-		nil)
-
-	// This will fail because participation bitfield is length:1, committee bitfield is length 0.
-	if err == nil {
-		t.Error("AttestingValidatorIndices should have failed with incorrect bitfield")
 	}
 }
 
@@ -378,6 +251,90 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	}
 }
 
+func TestProcessDepositFlag_NotEnabled(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{0, 32e9}
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().SlotsPerEpoch,
+		Balances:          balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{4, 5, 6}
+	deposit := uint64(32e9)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+
+	newState, err := ProcessDeposit(
+		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if newState.Balances[1] != 32e9 {
+		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.Balances[1])
+	}
+}
+
+func TestProcessDepositFlag_Enabled(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableExcessDeposits: true,
+	})
+
+	registry := []*pb.Validator{
+		{
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{0, 32e9}
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().SlotsPerEpoch,
+		Balances:          balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{4, 5, 6}
+	deposit := uint64(32e9)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+
+	newState, err := ProcessDeposit(
+		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if newState.Balances[1] != 64e9 {
+		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.Balances[1])
+	}
+	// Un-setting flag
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableExcessDeposits: false,
+	})
+}
+
 func TestActivateValidatorGenesis_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{
@@ -571,5 +528,16 @@ func TestInitializeValidatoreStore(t *testing.T) {
 
 	if !reflect.DeepEqual(retrievedIndices, indices) {
 		t.Errorf("Saved active indices are not the same as the one in the validator store, got %v but expected %v", retrievedIndices, indices)
+	}
+}
+
+func TestInsertActivatedIndices_Works(t *testing.T) {
+	InsertActivatedIndices(100, []uint64{1, 2, 3})
+	if !reflect.DeepEqual(VStore.activatedValidators[100], []uint64{1, 2, 3}) {
+		t.Error("Activated validators aren't the same")
+	}
+	InsertActivatedIndices(100, []uint64{100})
+	if !reflect.DeepEqual(VStore.activatedValidators[100], []uint64{1, 2, 3, 100}) {
+		t.Error("Activated validators aren't the same")
 	}
 }

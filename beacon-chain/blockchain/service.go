@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -49,6 +50,7 @@ type ChainService struct {
 	canonicalBlocks      map[uint64][]byte
 	canonicalBlocksLock  sync.RWMutex
 	receiveBlockLock     sync.Mutex
+	maxRoutines          int64
 }
 
 // Config options for the service.
@@ -60,6 +62,7 @@ type Config struct {
 	OpsPoolService operations.OperationFeeds
 	DevMode        bool
 	P2p            p2p.Broadcaster
+	MaxRoutines    int64
 }
 
 // NewChainService instantiates a new service instance that will
@@ -78,6 +81,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
 		canonicalBlocks:      make(map[uint64][]byte),
+		maxRoutines:          cfg.MaxRoutines,
 	}, nil
 }
 
@@ -149,16 +153,13 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return nil, fmt.Errorf("could not hash beacon block: %v", err)
 	}
 
-	// TODO(#2011): Remove this in state caching.
-	beaconState.LatestBlock = genBlock
-
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       genBlock.Slot,
 		BlockRoot:  genBlockRoot[:],
-		ParentRoot: genBlock.ParentBlockRoot,
+		ParentRoot: genBlock.ParentRoot,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to save attestation target: %v", err)
 	}
@@ -191,6 +192,9 @@ func (c *ChainService) Stop() error {
 // Status always returns nil.
 // TODO(1202): Add service health checks.
 func (c *ChainService) Status() error {
+	if runtime.NumGoroutine() > int(c.maxRoutines) {
+		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
+	}
 	return nil
 }
 

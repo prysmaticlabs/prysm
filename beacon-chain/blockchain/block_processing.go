@@ -57,7 +57,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
+	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := c.beaconDB.Block(parentRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get parent block: %v", err)
@@ -69,7 +69,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	saveLatestBlock := beaconState.LatestBlock
 
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
@@ -114,13 +113,10 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	// Check state root
 	if featureconfig.FeatureConfig().EnableCheckBlockStateRoot {
-		// Calc state hash with previous block
-		beaconState.LatestBlock = saveLatestBlock
 		stateRoot, err := hashutil.HashProto(beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not hash beacon state: %v", err)
 		}
-		beaconState.LatestBlock = block
 		if !bytes.Equal(block.StateRoot, stateRoot[:]) {
 			return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRoot)
 		}
@@ -173,7 +169,7 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.Beac
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       block.Slot,
 		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentBlockRoot,
+		ParentRoot: block.ParentRoot,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}
@@ -214,6 +210,7 @@ func (c *ChainService) AdvanceState(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
+	finalizedEpoch := beaconState.FinalizedEpoch
 	newState, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
@@ -225,6 +222,10 @@ func (c *ChainService) AdvanceState(
 	)
 	if err != nil {
 		return beaconState, &BlockFailedProcessingErr{err}
+	}
+	// Prune the block cache on every new finalized epoch.
+	if newState.FinalizedEpoch > finalizedEpoch {
+		c.beaconDB.ClearBlockCache()
 	}
 	log.WithField(
 		"slotsSinceGenesis", newState.Slot,
@@ -269,13 +270,24 @@ func (c *ChainService) AdvanceState(
 // validators were activated from current epoch. After it saves, current epoch key
 // is deleted from ActivatedValidators mapping.
 func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
-	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state) + 1)
+	nextEpoch := helpers.CurrentEpoch(state) + 1
+	activatedValidators := validators.ActivatedValFromEpoch(nextEpoch)
+	var idxNotInState []uint64
 	for _, idx := range activatedValidators {
+		// If for some reason the activated validator indices is not in state,
+		// we skip them and save them to process for next epoch.
+		if int(idx) >= len(state.ValidatorRegistry) {
+			idxNotInState = append(idxNotInState, idx)
+			continue
+		}
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
 			return fmt.Errorf("could not save validator index: %v", err)
 		}
 	}
+	// Since we are processing next epoch, save the can't processed validator indices
+	// to the epoch after that.
+	validators.InsertActivatedIndices(nextEpoch+1, idxNotInState)
 	validators.DeleteActivatedVal(helpers.CurrentEpoch(state))
 	return nil
 }

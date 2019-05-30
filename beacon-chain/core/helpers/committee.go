@@ -17,7 +17,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// TODO(#2307): Update CommitteeAssignment and delete committee cache
 var committeeCache = cache.NewCommitteesCache()
+var shuffledIndicesCache = cache.NewShuffledIndicesCache()
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
 type CrosslinkCommittee struct {
@@ -72,8 +74,8 @@ func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
 //        count=get_epoch_committee_count(state, epoch),
 //    )
 func CrosslinkCommitteeAtEpoch(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64, error) {
-	indices := ActiveValidatorIndices(state, epoch)
 	seed := GenerateSeed(state, epoch)
+	indices := ActiveValidatorIndices(state, epoch)
 	startShard, err := EpochStartShard(state, epoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get start shard: %v", err)
@@ -99,17 +101,35 @@ func ComputeCommittee(
 	totalCommittees uint64,
 ) ([]uint64, error) {
 	validatorCount := uint64(len(validatorIndices))
-	startOffset := utils.SplitOffset(validatorCount, totalCommittees, index)
-	endOffset := utils.SplitOffset(validatorCount, totalCommittees, index+1)
-	indices := make([]uint64, endOffset-startOffset)
-	for i := startOffset; i < endOffset; i++ {
-		permutedIndex, err := utils.PermutedIndex(i, validatorCount, seed)
-		if err != nil {
-			return []uint64{}, fmt.Errorf("could not get permuted index at index %d: %v", i, err)
-		}
-		indices[i-startOffset] = validatorIndices[permutedIndex]
+	start := utils.SplitOffset(validatorCount, totalCommittees, index)
+	end := utils.SplitOffset(validatorCount, totalCommittees, index+1)
+
+	// Use cached shuffled indices list if we have seen the seed before.
+	cachedShuffledList, err := shuffledIndicesCache.ShuffledIndicesBySeed(seed[:])
+	if err != nil {
+		return nil, err
 	}
-	return indices, nil
+	if cachedShuffledList != nil {
+		return cachedShuffledList[start:end], nil
+	}
+
+	// Save the shuffled indices in cache, this is only needed once per epoch or once per new seed.
+	shuffledIndices := make([]uint64, validatorCount)
+	for i := uint64(0); i < validatorCount; i++ {
+		permutedIndex, err := utils.ShuffledIndex(i, validatorCount, seed)
+		if err != nil {
+			return []uint64{}, fmt.Errorf("could not get shuffled index at index %d: %v", i, err)
+		}
+		shuffledIndices[i] = validatorIndices[permutedIndex]
+	}
+	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.ShuffledIndicesBySeed{
+		Seed:            seed[:],
+		ShuffledIndices: shuffledIndices,
+	}); err != nil {
+		return []uint64{}, fmt.Errorf("could not add shuffled indices list to cache: %v", err)
+	}
+
+	return shuffledIndices[start:end], nil
 }
 
 // AttestingIndices returns the attesting participants indices.
@@ -125,7 +145,7 @@ func ComputeCommittee(
 //    assert verify_bitfield(bitfield, len(committee))
 //    return sorted([index for i, index in enumerate(committee) if get_bitfield_bit(bitfield, i) == 0b1])
 func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield []byte) ([]uint64, error) {
-	committee, err := CrosslinkCommitteeAtEpoch(state, data.TargetEpoch, data.Shard)
+	committee, err := CrosslinkCommitteeAtEpoch(state, data.TargetEpoch, data.Crosslink.Shard)
 	if err != nil {
 		return nil, fmt.Errorf("could not get committee: %v", err)
 	}
@@ -292,6 +312,11 @@ func RestartCommitteeCache() {
 	committeeCache = cache.NewCommitteesCache()
 }
 
+// RestartShuffledValidatorCache restarts the shuffled indices cache from scratch.
+func RestartShuffledValidatorCache() {
+	shuffledIndicesCache = cache.NewShuffledIndicesCache()
+}
+
 // ToCommitteeCache converts crosslink committee object
 // into a cache format, to be saved in cache.
 func ToCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *cache.CommitteesInSlot {
@@ -307,4 +332,18 @@ func ToCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *c
 		Committees: cacheCommittee,
 	}
 	return committees
+}
+
+// VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
+// to the committees at that slot.
+func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (bool, error) {
+	committee, err := CrosslinkCommitteeAtEpoch(bState, att.Data.TargetEpoch, att.Data.Crosslink.Shard)
+	if err != nil {
+		return false, fmt.Errorf("could not retrieve crosslink committees at slot: %v", err)
+	}
+
+	if committee == nil {
+		return false, fmt.Errorf("no committee exist for shard in the attestation")
+	}
+	return VerifyBitfield(att.AggregationBitfield, len(committee))
 }

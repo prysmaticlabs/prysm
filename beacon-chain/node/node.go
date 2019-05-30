@@ -55,6 +55,7 @@ type BeaconNode struct {
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if err := tracing.Setup(
 		"beacon-chain", // service name
+		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
 		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
 		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
 		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
@@ -193,7 +194,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	return b.services.RegisterService(beaconp2p)
 }
 
-func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
+func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Web3Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -210,6 +211,7 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
+	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
 
 	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		BeaconDB:       b.db,
@@ -217,6 +219,7 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 		OpsPoolService: opsService,
 		AttsService:    attsService,
 		P2p:            p2pService,
+		MaxRoutines:    maxRoutines,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)

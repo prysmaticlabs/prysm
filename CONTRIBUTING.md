@@ -63,7 +63,7 @@ $ go test <file_you_are_working_on>
 Changes that affect multiple files can be tested with ...
 
 ```
-$ gometalinter && bazel test
+$ golangci-lint run && bazel test //...
 ```
 
 **10. Stage the file or files that you want to commit.**
@@ -88,10 +88,10 @@ You can use the –amend flag to include previous commits that have not yet been
 $ git fetch prysm
 ```
 
-**13. Rebase your branch atop of the latest version of Prysm.**
+**13. Pull latest version of Prysm.**
 
 ```
-$ git rebase prysm/master
+$ git pull origin master
 ```
 
 If there are conflicts between your edits and those made by others since you started work Git will ask you to resolve them. To find out which files have conflicts run ...
@@ -115,10 +115,10 @@ The code from the Prysm repo is inserted between <<< and === while the change yo
 
 **14. Push your changes to your fork of the Prysm repo.**
 
-Rebasing a pull request changes the history on your branch, so Git will reject a normal git push after a rebase. Use a force push to move your changes to your fork of the repo.
+Use git push to move your changes to your fork of the repo.
 
 ```
-$ git push myrepo feature-in-progress-branch -f
+$ git push myrepo feature-in-progress-branch
 ```
 
 **15. Check to be sure your fork of the Prysm repo contains your feature branch with the latest edits.**
