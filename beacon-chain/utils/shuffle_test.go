@@ -5,29 +5,23 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestShuffleIndices_InvalidValidatorCount(t *testing.T) {
-	var list []uint64
-
-	upperBound := 1<<(params.BeaconConfig().RandBytes*8) - 1
-
-	for i := 0; i < upperBound+1; i++ {
-		list = append(list, uint64(i))
-	}
-
-	if _, err := ShuffleIndices(common.Hash{'a'}, list); err == nil {
+func TestShuffleList_InvalidValidatorCount(t *testing.T) {
+	maxShuffleListSize = 20
+	list := make([]uint64, 21)
+	if _, err := ShuffleList(list, [32]byte{123, 125}); err == nil {
 		t.Error("Shuffle should have failed when validator count exceeds ModuloBias")
+		maxShuffleListSize = 1 << 40
 	}
+	maxShuffleListSize = 1 << 40
 }
 
-func TestShuffleIndices_OK(t *testing.T) {
-	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
-	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
+func TestShuffleList_OK(t *testing.T) {
 	var list1 []uint64
-
+	seed1 := [32]byte{1, 128, 12}
+	seed2 := [32]byte{2, 128, 12}
 	for i := 0; i < 10; i++ {
 		list1 = append(list1, uint64(i))
 	}
@@ -35,12 +29,12 @@ func TestShuffleIndices_OK(t *testing.T) {
 	list2 := make([]uint64, len(list1))
 	copy(list2, list1)
 
-	list1, err := ShuffleIndices(hash1, list1)
+	list1, err := ShuffleList(list1, seed1)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
 
-	list2, err = ShuffleIndices(hash2, list2)
+	list2, err = ShuffleList(list2, seed2)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
@@ -48,11 +42,11 @@ func TestShuffleIndices_OK(t *testing.T) {
 	if reflect.DeepEqual(list1, list2) {
 		t.Errorf("2 shuffled lists shouldn't be equal")
 	}
-	if !reflect.DeepEqual(list1, []uint64{5, 4, 9, 6, 7, 3, 0, 1, 8, 2}) {
-		t.Errorf("list 1 was incorrectly shuffled")
+	if !reflect.DeepEqual(list1, []uint64{0, 7, 8, 6, 3, 9, 4, 5, 2, 1}) {
+		t.Errorf("list 1 was incorrectly shuffled got: %v", list1)
 	}
-	if !reflect.DeepEqual(list2, []uint64{9, 0, 1, 5, 3, 2, 4, 7, 8, 6}) {
-		t.Errorf("list 2 was incorrectly shuffled")
+	if !reflect.DeepEqual(list2, []uint64{0, 5, 2, 1, 6, 8, 7, 3, 4, 9}) {
+		t.Errorf("list 2 was incorrectly shuffled got: %v", list2)
 	}
 }
 
@@ -74,17 +68,102 @@ func TestSplitIndices_OK(t *testing.T) {
 	}
 }
 
-func BenchmarkPermuteIndex(b *testing.B) {
+func TestShuffleList_Vs_ShuffleIndex(t *testing.T) {
+	list := []uint64{}
+	listSize := uint64(1000)
+	seed := [32]byte{123, 42}
+	for i := uint64(0); i < listSize; i++ {
+		list = append(list, i)
+	}
+	shuffledListByIndex := make([]uint64, listSize)
+	for i := uint64(0); i < listSize; i++ {
+		si, err := ShuffledIndex(i, listSize, seed)
+		if err != nil {
+			t.Error(err)
+		}
+		shuffledListByIndex[si] = i
+	}
+	shuffledList, err := ShuffleList(list, seed)
+	if err != nil {
+		t.Fatalf("shuffled list error: %v", err)
+
+	}
+	if !reflect.DeepEqual(shuffledList, shuffledListByIndex) {
+		t.Errorf("shuffled lists ar not equal shuffled list: %v shuffled list by index: %v", shuffledList, shuffledListByIndex)
+	}
+
+}
+
+func BenchmarkShuffledIndex(b *testing.B) {
 	listSizes := []uint64{4000000, 40000, 400}
-	// Random 32 bytes seed for testing.
 	seed := [32]byte{123, 42}
 	for _, listSize := range listSizes {
-		b.Run(fmt.Sprintf("PermuteIndex_%d", listSize), func(ib *testing.B) {
+		b.Run(fmt.Sprintf("ShuffledIndex_%d", listSize), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				PermutedIndex(i%listSize, listSize, seed)
+				ShuffledIndex(i%listSize, listSize, seed)
 			}
 		})
 	}
+}
+
+func BenchmarkIndexComparison(b *testing.B) {
+	listSizes := []uint64{400000, 40000, 400}
+	seed := [32]byte{123, 42}
+	for _, listSize := range listSizes {
+		b.Run(fmt.Sprintf("Indexwise_ShuffleList_%d", listSize), func(ib *testing.B) {
+			for i := 0; i < ib.N; i++ {
+				// Simulate a list-shuffle by running shuffle-index listSize times.
+				for j := uint64(0); j < listSize; j++ {
+					ShuffledIndex(j, listSize, seed)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkShuffleList(b *testing.B) {
+	listSizes := []uint64{400000, 40000, 400}
+	seed := [32]byte{123, 42}
+	for _, listSize := range listSizes {
+		testIndices := make([]uint64, listSize, listSize)
+		for i := uint64(0); i < listSize; i++ {
+			testIndices[i] = i
+		}
+		b.Run(fmt.Sprintf("ShuffleList_%d", listSize), func(ib *testing.B) {
+			for i := 0; i < ib.N; i++ {
+				ShuffleList(testIndices, seed)
+			}
+		})
+	}
+}
+
+func TestShuffledIndex(t *testing.T) {
+	list := []uint64{}
+	listSize := uint64(399)
+	for i := uint64(0); i < listSize; i++ {
+		list = append(list, i)
+	}
+	shuffledList := make([]uint64, listSize)
+	unShuffledList := make([]uint64, listSize)
+	seed := [32]byte{123, 42}
+	for i := uint64(0); i < listSize; i++ {
+		si, err := ShuffledIndex(i, listSize, seed)
+		if err != nil {
+			t.Error(err)
+		}
+		shuffledList[si] = i
+	}
+	for i := uint64(0); i < listSize; i++ {
+		ui, err := UnShuffledIndex(i, listSize, seed)
+		if err != nil {
+			t.Error(err)
+		}
+		unShuffledList[ui] = shuffledList[i]
+	}
+	if !reflect.DeepEqual(unShuffledList, list) {
+		t.Errorf("Want: %v got: %v", list, unShuffledList)
+	}
+
 }
 
 func TestSplitIndicesAndOffset_OK(t *testing.T) {

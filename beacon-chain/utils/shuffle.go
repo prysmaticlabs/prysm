@@ -2,10 +2,9 @@
 package utils
 
 import (
-	"errors"
+	"encoding/binary"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -16,57 +15,8 @@ const roundSize = int8(1)
 const positionWindowSize = int8(4)
 const pivotViewSize = seedSize + roundSize
 const totalSize = seedSize + roundSize + positionWindowSize
-const maxShuffleListSize = 1 << 40
 
-// ShuffleIndices returns a list of pseudorandomly sampled
-// indices. This is used to shuffle validators on ETH2.0 beacon chain.
-func ShuffleIndices(seed common.Hash, indicesList []uint64) ([]uint64, error) {
-	// Each entropy is consumed from the seed in randBytes chunks.
-	randBytes := params.BeaconConfig().RandBytes
-
-	maxValidatorsPerRandBytes := params.BeaconConfig().MaxNumLog2Validators / randBytes
-	upperBound := 1<<(randBytes*maxValidatorsPerRandBytes) - 1
-	// Since we are consuming randBytes of entropy at a time in the loop,
-	// we have a bias at 2**24, this check defines our max list size and is used to remove the bias.
-	// more info on modulo bias: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator.
-	if len(indicesList) >= upperBound {
-		return nil, errors.New("input list exceeded upper bound and reached modulo bias")
-	}
-
-	// Rehash the seed to obtain a new pattern of bytes.
-	hashSeed := hashutil.Hash(seed[:])
-	totalCount := len(indicesList)
-	index := 0
-	for index < totalCount-1 {
-		// Iterate through the hashSeed bytes in chunks of size randBytes.
-		for i := 0; i < 32-(32%int(randBytes)); i += int(randBytes) {
-			// Determine the number of indices remaining and exit if last index reached.
-			remaining := totalCount - index
-			if remaining == 1 {
-				break
-			}
-			// Read randBytes of hashSeed as a maxValidatorsPerRandBytes x randBytes big-endian integer.
-			randChunk := hashSeed[i : i+int(randBytes)]
-			var randValue int
-			for j := 0; j < int(randBytes); j++ {
-				randValue |= int(randChunk[j])
-			}
-
-			// Sample values greater than or equal to sampleMax will cause
-			// modulo bias when mapped into the remaining range.
-			randMax := upperBound - upperBound%remaining
-
-			// Perform swap if the consumed entropy will not cause modulo bias.
-			if randValue < randMax {
-				// Select replacement index from the current index.
-				replacementIndex := (randValue % remaining) + index
-				indicesList[index], indicesList[replacementIndex] = indicesList[replacementIndex], indicesList[index]
-				index++
-			}
-		}
-	}
-	return indicesList, nil
-}
+var maxShuffleListSize uint64 = 1 << 40
 
 // SplitIndices splits a list into n pieces.
 func SplitIndices(l []uint64, n uint64) [][]uint64 {
@@ -80,52 +30,67 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 	return divided
 }
 
-// PermutedIndex returns `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
+// ShuffledIndex returns `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
 // We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
 // constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
-//
+func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
+	return innerShuffledIndex(index, indexCount, seed, true /* shuffle */)
+}
+
+// UnShuffledIndex returns the inverse of ShuffledIndex. This implementation is based
+// on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
+func UnShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
+	return innerShuffledIndex(index, indexCount, seed, false /* un-shuffle */)
+}
+
 // Spec pseudocode definition:
-// def get_permuted_index(index: int, list_size: int, seed: Bytes32) -> int:
+//   def get_shuffled_index(index: ValidatorIndex, index_count: int, seed: Bytes32) -> ValidatorIndex:
 //     """
-//     Return `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
-//     Utilizes 'swap or not' shuffling found in
-//     https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf
-//     See the 'generalized domain' algorithm on page 3.
+//     Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
 //     """
-//     assert index < list_size
-//     assert list_size <= 2**40
+//     assert index < index_count
+//     assert index_count <= 2**40
+//     # Swap or not (https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf)
+//     # See the 'generalized domain' algorithm on page 3
 //     for round in range(SHUFFLE_ROUND_COUNT):
-//         pivot = bytes_to_int(hash(seed + int_to_bytes1(round))[0:8]) % list_size
-//         flip = (pivot - index) % list_size
+//         pivot = bytes_to_int(hash(seed + int_to_bytes(round, length=1))[0:8]) % index_count
+//         flip = (pivot + index_count - index) % index_count
 //         position = max(index, flip)
-//         source = hash(seed + int_to_bytes1(round) + int_to_bytes4(position // 256))
+//         source = hash(seed + int_to_bytes(round, length=1) + int_to_bytes(position // 256, length=4))
 //         byte = source[(position % 256) // 8]
 //         bit = (byte >> (position % 8)) % 2
 //         index = flip if bit else index
 //     return index
-func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error) {
+func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffle bool) (uint64, error) {
 	if params.BeaconConfig().ShuffleRoundCount == 0 {
 		return index, nil
 	}
-	if index >= listSize {
+	if index >= indexCount {
 		return 0, fmt.Errorf("input index %d out of bounds: %d",
-			index, listSize)
+			index, indexCount)
 	}
-	if listSize > maxShuffleListSize {
+	if indexCount > maxShuffleListSize {
 		return 0, fmt.Errorf("list size %d out of bounds",
-			listSize)
+			indexCount)
+	}
+	rounds := uint8(params.BeaconConfig().ShuffleRoundCount)
+	round := uint8(0)
+	if !shuffle {
+		// Starting last round and iterating through the rounds in reverse, un-swaps everything,
+		// effectively un-shuffling the list.
+		round = rounds - 1
 	}
 	buf := make([]byte, totalSize, totalSize)
 	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
 	copy(buf[:32], seed[:])
-	for round := uint8(0); round < uint8(params.BeaconConfig().ShuffleRoundCount); round++ {
+	for {
 		buf[seedSize] = round
-		hash := hashutil.Hash(buf[:pivotViewSize])
+		hash := hashutil.HashSha256(buf[:pivotViewSize])
 		hash8 := hash[:8]
-		pivot := bytesutil.FromBytes8(hash8) % listSize
-		flip := (pivot - index) % listSize
-		// spec: position = max(index, flip)
+		hash8Int := bytesutil.FromBytes8(hash8)
+		pivot := hash8Int % indexCount
+		flip := (pivot + indexCount - index) % indexCount
 		// Consider every pair only once by picking the highest pair index to retrieve randomness.
 		position := index
 		if flip > position {
@@ -133,9 +98,9 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 		}
 		// Add position except its last byte to []buf for randomness,
 		// it will be used later to select a bit from the resulting hash.
-		position4bytes := bytesutil.Bytes4(position >> 8)
+		position4bytes := bytesutil.ToBytes(position>>8, 4)
 		copy(buf[pivotViewSize:], position4bytes[:])
-		source := hashutil.Hash(buf)
+		source := hashutil.HashSha256(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,
 		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
 		byteV := source[(position&0xff)>>3]
@@ -144,6 +109,17 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 		// index = flip if bit else index
 		if bitV == 1 {
 			index = flip
+		}
+		if shuffle {
+			round++
+			if round == rounds {
+				break
+			}
+		} else {
+			if round == 0 {
+				break
+			}
+			round--
 		}
 	}
 	return index, nil
@@ -160,4 +136,101 @@ func PermutedIndex(index uint64, listSize uint64, seed [32]byte) (uint64, error)
 //     return (list_size * index) // chunks
 func SplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
 	return (listSize * index) / chunks
+}
+
+// ShuffleList returns list of shuffled indexes in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
+// We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
+// constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
+// on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
+//  improvements:
+//   - seed is always the first 32 bytes of the hash input, we just copy it into the buffer one time.
+//   - add round byte to seed and hash that part of the buffer.
+//   - split up the for-loop in two:
+//    1. Handle the part from 0 (incl) to pivot (incl). This is mirrored around (pivot / 2).
+//    2. Handle the part from pivot (excl) to N (excl). This is mirrored around ((pivot / 2) + (size/2)).
+//   - hash source every 256 iterations.
+//   - change byteV every 8 iterations.
+//   - we start at the edges, and work back to the mirror point.
+//     this makes us process each pear exactly once (instead of unnecessarily twice, like in the spec).
+func ShuffleList(input []uint64, seed [32]byte) ([]uint64, error) {
+	return innerShuffleList(input, seed, true /* shuffle */)
+}
+
+// UnshuffleList un-shuffles the list by running backwards through the round count.
+func UnshuffleList(input []uint64, seed [32]byte) ([]uint64, error) {
+	return innerShuffleList(input, seed, false /* un-shuffle */)
+}
+
+// shuffles or unshuffles, shuffle=false to un-shuffle.
+func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, error) {
+	if len(input) <= 1 {
+		return input, nil
+	}
+	if uint64(len(input)) > maxShuffleListSize {
+		return nil, fmt.Errorf("list size %d out of bounds",
+			len(input))
+	}
+	rounds := uint8(params.BeaconConfig().ShuffleRoundCount)
+	if rounds == 0 {
+		return input, nil
+	}
+	listSize := uint64(len(input))
+	buf := make([]byte, totalSize, totalSize)
+	r := uint8(0)
+	if !shuffle {
+		r = rounds - 1
+	}
+	copy(buf[:seedSize], seed[:])
+	for {
+		buf[seedSize] = r
+		ph := hashutil.HashSha256(buf[:pivotViewSize])
+		pivot := bytesutil.FromBytes8(ph[:8]) % listSize
+		mirror := (pivot + 1) >> 1
+		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(pivot>>8))
+		source := hashutil.HashSha256(buf)
+		byteV := source[(pivot&0xff)>>3]
+		for i, j := uint64(0), pivot; i < mirror; i, j = i+1, j-1 {
+			byteV, source = swapOrNot(buf, byteV, i, input, j, source)
+		}
+		// Now repeat, but for the part after the pivot.
+		mirror = (pivot + listSize + 1) >> 1
+		end := listSize - 1
+		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(end>>8))
+		source = hashutil.HashSha256(buf)
+		byteV = source[(end&0xff)>>3]
+		for i, j := pivot+1, end; i < mirror; i, j = i+1, j-1 {
+			byteV, source = swapOrNot(buf, byteV, i, input, j, source)
+		}
+		if shuffle {
+			r++
+			if r == rounds {
+				break
+			}
+		} else {
+			if r == 0 {
+				break
+			}
+			r--
+		}
+	}
+	return input, nil
+}
+
+// swapOrNot describes the main algorithm behind the shuffle where we swap bytes in the inputted value
+// depending on if the conditions are met.
+func swapOrNot(buf []byte, byteV byte, i uint64, input []uint64, j uint64, source [32]byte) (byte, [32]byte) {
+	if j&0xff == 0xff {
+		// just overwrite the last part of the buffer, reuse the start (seed, round)
+		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(j>>8))
+		source = hashutil.HashSha256(buf)
+	}
+	if j&0x7 == 0x7 {
+		byteV = source[(j&0xff)>>3]
+	}
+	bitV := (byteV >> (j & 0x7)) & 0x1
+
+	if bitV == 1 {
+		input[i], input[j] = input[j], input[i]
+	}
+	return byteV, source
 }

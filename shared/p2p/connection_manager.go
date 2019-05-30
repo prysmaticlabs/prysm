@@ -34,6 +34,10 @@ func optionConnectionManager(maxPeers int) libp2p.Option {
 // Reputation adds (or subtracts) a given reward/penalty against a peer.
 // Eventually, the lowest scoring peers will be pruned from the connections.
 func (s *Server) Reputation(peer peer.ID, val int) {
+	ti := s.host.ConnManager().GetTagInfo(peer)
+	if ti != nil {
+		val += ti.Value
+	}
 	s.host.ConnManager().TagPeer(peer, TagReputation, val)
 }
 

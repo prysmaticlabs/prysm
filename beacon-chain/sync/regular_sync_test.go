@@ -223,9 +223,10 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Slot:              0,
-			Shard:             0,
-			CrosslinkDataRoot: []byte{'A'},
+			Crosslink: &pb.Crosslink{
+				Shard:    0,
+				DataRoot: []byte{'A'},
+			},
 		},
 	}
 
@@ -303,8 +304,10 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Block: data1,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				CrosslinkDataRoot: []byte{},
-				Slot:              0,
+				Crosslink: &pb.Crosslink{
+					Shard:    0,
+					DataRoot: []byte{},
+				},
 			},
 		},
 	}
@@ -330,8 +333,10 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Block: data2,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				CrosslinkDataRoot: []byte{},
-				Slot:              0,
+				Crosslink: &pb.Crosslink{
+					Shard:    0,
+					DataRoot: []byte{},
+				},
 			},
 		},
 	}
@@ -388,8 +393,9 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	request1 := &pb.AttestationResponse{
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot: 1,
-			},
+				Crosslink: &pb.Crosslink{
+					Shard: 1,
+				}},
 		},
 	}
 
@@ -436,8 +442,9 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	request1 := &pb.AttestationResponse{
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot: 0,
-			},
+				Crosslink: &pb.Crosslink{
+					Shard: 900,
+				}},
 		},
 	}
 

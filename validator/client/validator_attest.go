@@ -38,7 +38,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	// First the validator should construct attestation_data, an AttestationData
 	// object based upon the state at the assigned slot.
 	attData := &pbp2p.AttestationData{
-		CrosslinkDataRoot: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
+		Crosslink: &pbp2p.Crosslink{
+			DataRoot: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
+		},
 	}
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
@@ -51,6 +53,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	for _, amnt := range v.assignments.Assignment {
 		if bytes.Equal(pubKey, amnt.PublicKey) {
 			assignment = amnt
+			break
 		}
 	}
 	idxReq := &pb.ValidatorIndexRequest{
@@ -63,7 +66,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	}
 	// Set the attestation data's shard as the shard associated with the validator's
 	// committee as retrieved by CrosslinkCommitteesAtSlot.
-	attData.Shard = assignment.Shard
+	attData.Crosslink.Shard = assignment.Shard
 
 	// Fetch other necessary information from the beacon node in order to attest
 	// including the justified epoch, epoch boundary information, and more.
@@ -80,26 +83,23 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 
 	committeeLength := mathutil.CeilDiv8(len(assignment.Committee))
 
-	// Set the attestation data's slot to head_state.slot where the slot
-	// is the canonical head of the beacon chain.
-	attData.Slot = infoRes.HeadSlot
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head
 	// is the validator's view of the head block of the beacon chain during the slot.
-	attData.BeaconBlockRootHash32 = infoRes.BeaconBlockRootHash32
+	attData.BeaconBlockRoot = infoRes.BeaconBlockRootHash32
 	// Set the attestation data's epoch boundary root = hash_tree_root(epoch_boundary)
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(slot_to_epoch(head.slot)).
-	attData.EpochBoundaryRootHash32 = infoRes.EpochBoundaryRootHash32
+	attData.TargetRoot = infoRes.EpochBoundaryRootHash32
 	// Set the attestation data's latest crosslink root = state.latest_crosslinks[shard].shard_block_root
 	// where state is the beacon state at head and shard is the validator's assigned shard.
-	attData.LatestCrosslink = infoRes.LatestCrosslink
+	attData.Crosslink = infoRes.LatestCrosslink
 	// Set the attestation data's justified epoch = state.justified_epoch where state
 	// is the beacon state at the head.
-	attData.JustifiedEpoch = infoRes.JustifiedEpoch
+	attData.SourceEpoch = infoRes.JustifiedEpoch
 	// Set the attestation data's justified block root = hash_tree_root(justified_block) where
 	// justified_block is the block at state.justified_epoch in the chain defined by head.
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
-	attData.JustifiedBlockRootHash32 = infoRes.JustifiedBlockRootHash32
+	attData.SourceRoot = infoRes.JustifiedBlockRootHash32
 
 	// The validator now creates an Attestation object using the AttestationData as
 	// set in the code above after all properties have been set.
@@ -121,17 +121,28 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		}
 	}
 
-	aggregationBitfield := bitutil.SetBitfield(indexInCommittee, committeeLength)
+	aggregationBitfield, err := bitutil.SetBitfield(indexInCommittee, len(assignment.Committee))
+	if err != nil {
+		log.Errorf("Could not set bitfield: %v", err)
+	}
 	attestation.AggregationBitfield = aggregationBitfield
 
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.Signature = []byte("signed")
 
 	log.WithFields(logrus.Fields{
-		"shard":     attData.Shard,
+		"shard":     attData.Crosslink.Shard,
 		"slot":      slot,
 		"validator": truncatedPk,
 	}).Info("Attesting to beacon chain head...")
+
+	span.AddAttributes(
+		trace.Int64Attribute("slot", int64(slot)),
+		trace.Int64Attribute("shard", int64(attData.Crosslink.Shard)),
+		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", attestation.Data.BeaconBlockRoot)),
+		trace.Int64Attribute("justifiedEpoch", int64(attData.SourceEpoch)),
+		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
+	)
 
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
@@ -139,17 +150,16 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attData.BeaconBlockRootHash32)),
-		"slot":      attData.Slot,
-		"shard":     attData.Shard,
+		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attData.BeaconBlockRoot)),
+		"shard":     attData.Crosslink.Shard,
 		"validator": truncatedPk,
 	}).Info("Attested latest head")
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationHash)),
-		trace.Int64Attribute("shard", int64(attData.Shard)),
-		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32)),
-		trace.Int64Attribute("justifiedEpoch", int64(attData.JustifiedEpoch)),
+		trace.Int64Attribute("shard", int64(attData.Crosslink.Shard)),
+		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", attestation.Data.BeaconBlockRoot)),
+		trace.Int64Attribute("justifiedEpoch", int64(attData.SourceEpoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
 }
