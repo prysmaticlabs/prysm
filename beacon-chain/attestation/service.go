@@ -279,6 +279,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 		// If the attestation is newer than this attester's one in pool.
 		if newAttestationSlot > currentAttestationSlot {
 			a.store.m[pubkey] = attestation
+
 			log.WithFields(
 				logrus.Fields{
 					"attestationSlot": slot,
