@@ -595,7 +595,6 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			EffectiveBalance:  params.BeaconConfig().MaxDepositAmount,
 			Slashed:           false,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:      1,
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 			ActivationEpoch:   0,
 		}

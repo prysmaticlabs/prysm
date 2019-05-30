@@ -1,9 +1,10 @@
 package helpers
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

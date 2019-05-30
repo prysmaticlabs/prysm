@@ -337,6 +337,7 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	currEpoch := helpers.CurrentEpoch(beaconState)
+	activationEpoch := params.BeaconConfig().FarFutureEpoch
 	var validatorInState *pbp2p.Validator
 	var validatorIndex uint64
 	for idx, val := range beaconState.ValidatorRegistry {
@@ -346,12 +347,7 @@ func (vs *ValidatorServer) validatorStatus(
 
 		if bytes.Equal(val.Pubkey, pubKey) {
 			if helpers.IsActiveValidator(val, currEpoch) {
-				return &pb.ValidatorStatusResponse{
-					Status:                 pb.ValidatorStatus_ACTIVE,
-					ActivationEpoch:        val.ActivationEpoch,
-					Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
-					DepositInclusionSlot:   depositBlockSlot,
-				}
+				activationEpoch = val.ActivationEpoch
 			}
 			validatorInState = val
 			validatorIndex = uint64(idx)
@@ -379,7 +375,7 @@ func (vs *ValidatorServer) validatorStatus(
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
 		PositionInActivationQueue: positionInQueue,
 		DepositInclusionSlot:      depositBlockSlot,
-		ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
+		ActivationEpoch:           activationEpoch,
 	}
 }
 
@@ -387,19 +383,20 @@ func (vs *ValidatorServer) lookupValidatorStatusFlag(validatorIdx uint64, beacon
 	var status pb.ValidatorStatus
 	v := beaconState.ValidatorRegistry[validatorIdx]
 	epoch := helpers.CurrentEpoch(beaconState)
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
-	if v.ActivationEpoch > epoch {
+	if epoch < v.ActivationEpoch {
 		status = pb.ValidatorStatus_PENDING_ACTIVE
-	} else if epoch >= v.ActivationEpoch && epoch < v.ExitEpoch {
+	} else if v.ExitEpoch == farFutureEpoch {
 		status = pb.ValidatorStatus_ACTIVE
-	} else if v.StatusFlags == pbp2p.Validator_INITIATED_EXIT {
-		status = pb.ValidatorStatus_INITIATED_EXIT
-	} else if v.StatusFlags == pbp2p.Validator_WITHDRAWABLE {
+	} else if epoch >= v.WithdrawableEpoch {
 		status = pb.ValidatorStatus_WITHDRAWABLE
-	} else if epoch >= v.ExitEpoch && epoch >= v.SlashedEpoch {
+	} else if v.Slashed && epoch >= v.ExitEpoch {
 		status = pb.ValidatorStatus_EXITED_SLASHED
 	} else if epoch >= v.ExitEpoch {
 		status = pb.ValidatorStatus_EXITED
+	} else if v.ExitEpoch != farFutureEpoch {
+		status = pb.ValidatorStatus_INITIATED_EXIT
 	} else {
 		status = pb.ValidatorStatus_UNKNOWN_STATUS
 	}

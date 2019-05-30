@@ -79,7 +79,7 @@ func reportStateMetrics(state *pb.BeaconState) {
 		// Track individual Validator's slashed epochs
 		validatorSlashedGauge.WithLabelValues(
 			strconv.Itoa(i), //Validator index
-		).Set(float64(v.SlashedEpoch))
+		).Set(float64(v.WithdrawableEpoch))
 		// Total number of active validators
 		if v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch {
 			active++

@@ -1210,15 +1210,16 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	epoch := uint64(5)
 	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawalDelay
 	state := &pb.BeaconState{
 		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
 		ValidatorRegistry: []*pb.Validator{
 			{
-				ExitEpoch:   exitEpoch,
-				StatusFlags: pb.Validator_INITIATED_EXIT},
+				ExitEpoch:         exitEpoch,
+				WithdrawableEpoch: exitEpoch + minWithdrawalDelay},
 			{
-				ExitEpoch:   exitEpoch,
-				StatusFlags: pb.Validator_INITIATED_EXIT},
+				ExitEpoch:         exitEpoch,
+				WithdrawableEpoch: exitEpoch + minWithdrawalDelay},
 		},
 		Balances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
@@ -1231,7 +1232,8 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
 				i,
 				exitEpoch,
-				validator.ExitEpoch)
+				validator.ExitEpoch,
+			)
 		}
 	}
 }
