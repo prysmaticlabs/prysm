@@ -8,7 +8,7 @@ import (
 
 func TestShuffleKeyFn_OK(t *testing.T) {
 	sInfo := &ShuffledIndicesBySeed{
-		Index: 			999,
+		Index:           999,
 		Seed:            []byte{'A'},
 		ShuffledIndices: []uint64{1, 2, 3, 4, 5},
 	}
@@ -17,8 +17,8 @@ func TestShuffleKeyFn_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if key != string(sInfo.Seed) + strconv.Itoa(int(sInfo.Index)) {
-		t.Errorf("Incorrect hash key: %s, expected %s", key, string(sInfo.Seed) + strconv.Itoa(int(sInfo.Index)))
+	if key != string(sInfo.Seed)+strconv.Itoa(int(sInfo.Index)) {
+		t.Errorf("Incorrect hash key: %s, expected %s", key, string(sInfo.Seed)+strconv.Itoa(int(sInfo.Index)))
 	}
 }
 
@@ -33,7 +33,7 @@ func TestShuffledIndicesCache_ShuffledIndicesBySeed2(t *testing.T) {
 	cache := NewShuffledIndicesCache()
 
 	sInfo := &ShuffledIndicesBySeed{
-		Index: 			99,
+		Index:           99,
 		Seed:            []byte{'A'},
 		ShuffledIndices: []uint64{1, 2, 3, 4},
 	}

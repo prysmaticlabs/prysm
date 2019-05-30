@@ -105,30 +105,31 @@ func ComputeCommittee(
 	end := utils.SplitOffset(validatorCount, totalCommittees, index+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
-	cachedShuffledList, err := shuffledIndicesCache.ShuffledIndicesBySeed(seed[:])
+	cachedShuffledList, err := shuffledIndicesCache.ShuffledIndicesBySeed(index, seed[:])
 	if err != nil {
 		return nil, err
 	}
 	if cachedShuffledList != nil {
-		return cachedShuffledList[start:end], nil
+		return cachedShuffledList, nil
 	}
 
-	// Save the shuffled indices in cache, this is only needed once per epoch or once per new seed.
-	shuffledIndices := make([]uint64, validatorCount)
-	for i := uint64(0); i < validatorCount; i++ {
+	// Save the shuffled indices in cache, this is only needed once per epoch or once per new shard index.
+	shuffledIndices := make([]uint64, end-start)
+	for i := start; i < end; i++ {
 		permutedIndex, err := utils.ShuffledIndex(i, validatorCount, seed)
 		if err != nil {
 			return []uint64{}, fmt.Errorf("could not get shuffled index at index %d: %v", i, err)
 		}
-		shuffledIndices[i] = validatorIndices[permutedIndex]
+		shuffledIndices[i-start] = validatorIndices[permutedIndex]
 	}
 	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.ShuffledIndicesBySeed{
+		Index:           index,
 		Seed:            seed[:],
 		ShuffledIndices: shuffledIndices,
 	}); err != nil {
 		return []uint64{}, fmt.Errorf("could not add shuffled indices list to cache: %v", err)
 	}
-	return shuffledIndices[start:end], nil
+	return shuffledIndices, nil
 }
 
 // AttestingIndices returns the attesting participants indices.

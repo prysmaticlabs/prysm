@@ -2,8 +2,8 @@ package cache
 
 import (
 	"errors"
-	"sync"
 	"strconv"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -31,7 +31,7 @@ var (
 
 // ShuffledIndicesBySeed defines the shuffled validator indices per randao seed.
 type ShuffledIndicesBySeed struct {
-	Index			uint64
+	Index           uint64
 	Seed            []byte
 	ShuffledIndices []uint64
 }
