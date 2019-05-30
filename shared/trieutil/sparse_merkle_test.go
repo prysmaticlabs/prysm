@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -222,40 +223,115 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
 	var sig [96]byte
-	copy(pubkey[:], []byte("testing"))
-	copy(sig[:], []byte("testing"))
-	copy(withdrawalCreds[:], []byte("testing"))
 
 	data := &pb.DepositData{
 		Pubkey:                pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
+		Amount:                big.NewInt(0).Div(amount32Eth, big.NewInt(1e9)).Uint64(), // In Gwei
 	}
 
 	testAcc.txOpts.Value = amount32Eth
 	testAcc.txOpts.GasLimit = 1000000
 
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
-		t.Fatalf("Could not deposit to deposit contract %v", err)
+	for i := 0; i < 10000; i++ {
+		copy(data.Pubkey, []byte(strconv.Itoa(i)))
+		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
+		copy(data.Signature, []byte(strconv.Itoa(i)))
+
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+			t.Fatalf("Could not deposit to deposit contract %v", err)
+		}
+
+		testAcc.backend.Commit()
+		item, err := hashutil.DepositHash(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = localTrie.InsertIntoTrie(item[:], i)
+		if err != nil {
+			t.Error(err)
+		}
+
+		depRoot, err = testAcc.contract.GetDepositRoot(&bind.CallOpts{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if depRoot != localTrie.Root() {
+			t.Errorf("Local deposit trie root and contract deposit trie root are not equal for index %d. Expected %#x , Got %#x", i, depRoot, localTrie.Root())
+		}
 	}
-	testAcc.backend.Commit()
-	item, err := hashutil.DepositHash(data)
+
+}
+
+func TestDepositTrieRoot_Fail(t *testing.T) {
+	testAcc, err := setup()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = localTrie.InsertIntoTrie(item[:], 0)
+	localTrie, err := NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	depRoot, err = testAcc.contract.GetDepositRoot(&bind.CallOpts{})
+	depRoot, err := testAcc.contract.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if depRoot != localTrie.Root() {
 		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
+	}
+
+	var pubkey [48]byte
+	var withdrawalCreds [32]byte
+	var sig [96]byte
+
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
+		Amount:                big.NewInt(0).Div(amount32Eth, big.NewInt(1e9)).Uint64(), // In Gwei
+	}
+
+	testAcc.txOpts.Value = amount32Eth
+	testAcc.txOpts.GasLimit = 1000000
+
+	for i := 0; i < 100; i++ {
+		copy(data.Pubkey, []byte(strconv.Itoa(i)))
+		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
+		copy(data.Signature, []byte(strconv.Itoa(i)))
+
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+			t.Fatalf("Could not deposit to deposit contract %v", err)
+		}
+
+		copy(data.Pubkey, []byte(strconv.Itoa(i+10)))
+		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i+10)))
+		copy(data.Signature, []byte(strconv.Itoa(i+10)))
+
+		testAcc.backend.Commit()
+		item, err := hashutil.DepositHash(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = localTrie.InsertIntoTrie(item[:], i)
+		if err != nil {
+			t.Error(err)
+		}
+
+		depRoot, err = testAcc.contract.GetDepositRoot(&bind.CallOpts{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if depRoot == localTrie.Root() {
+			t.Errorf("Local deposit trie root and contract deposit trie root are equal for index %d when they were expected to be not equal", i)
+		}
 	}
 
 }
