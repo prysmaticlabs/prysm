@@ -234,7 +234,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	testAcc.txOpts.Value = amount32Eth
 	testAcc.txOpts.GasLimit = 1000000
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		copy(data.Pubkey, []byte(strconv.Itoa(i)))
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
 		copy(data.Signature, []byte(strconv.Itoa(i)))
