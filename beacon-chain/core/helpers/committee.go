@@ -17,8 +17,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// TODO(#2307): Update CommitteeAssignment and delete committee cache
-var committeeCache = cache.NewCommitteesCache()
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
@@ -307,12 +305,10 @@ func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	return shard, nil
 }
 
-
 // RestartShuffledValidatorCache restarts the shuffled indices cache from scratch.
 func RestartShuffledValidatorCache() {
 	shuffledIndicesCache = cache.NewShuffledIndicesCache()
 }
-
 
 // VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
 // to the committees at that slot.

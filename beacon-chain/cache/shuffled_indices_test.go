@@ -23,8 +23,8 @@ func TestShuffleKeyFn_OK(t *testing.T) {
 }
 
 func TestShuffleKeyFn_InvalidObj(t *testing.T) {
-	_, err := slotKeyFn("bad")
-	if err != ErrNotACommitteeInfo {
+	_, err := shuffleKeyFn("bad")
+	if err != ErrNotValidatorListInfo {
 		t.Errorf("Expected error %v, got %v", ErrNotValidatorListInfo, err)
 	}
 }
