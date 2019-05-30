@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func init() {

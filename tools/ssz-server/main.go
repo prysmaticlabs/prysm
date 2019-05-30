@@ -13,8 +13,8 @@ import (
 	"log"
 	"net/http"
 
+	ssz "github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func main() {
