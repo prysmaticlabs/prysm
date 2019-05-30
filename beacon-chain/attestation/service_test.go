@@ -452,7 +452,6 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
