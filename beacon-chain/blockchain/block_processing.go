@@ -72,7 +72,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	saveLatestBlock := beaconState.LatestBlock
 
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
@@ -117,13 +116,10 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	// Check state root
 	if featureconfig.FeatureConfig().EnableCheckBlockStateRoot {
-		// Calc state hash with previous block
-		beaconState.LatestBlock = saveLatestBlock
 		stateRoot, err := hashutil.HashProto(beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not hash beacon state: %v", err)
 		}
-		beaconState.LatestBlock = block
 		if !bytes.Equal(block.StateRoot, stateRoot[:]) {
 			return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRoot)
 		}

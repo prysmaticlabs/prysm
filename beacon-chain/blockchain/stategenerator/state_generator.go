@@ -8,8 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -25,7 +24,7 @@ var log = logrus.WithField("prefix", "stategenerator")
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.stategenerator.GenerateStateFromBlock")
 	defer span.End()
-	fState, err := db.HistoricalStateFromSlot(ctx, slot)
+	fState, err := db.HistoricalStateFromSlot(ctx, slot, [32]byte{})
 	if err != nil {
 		return nil, err
 	}
@@ -39,25 +38,26 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	if fState.Slot > slot {
 		return nil, fmt.Errorf(
 			"requested slot %d < current slot %d in the finalized beacon state",
-			slot-params.BeaconConfig().GenesisSlot,
-			fState.Slot-params.BeaconConfig().GenesisSlot,
+			slot,
+			fState.Slot,
 		)
 	}
 
-	if fState.LatestBlock == nil {
+	if fState.LatestBlockHeader == nil {
 		return nil, fmt.Errorf("latest head in state is nil %v", err)
 	}
 
-	fRoot, err := hashutil.HashBeaconBlock(fState.LatestBlock)
+	fRoot, err := ssz.TreeHash(fState.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get block root %v", err)
 	}
 
 	// from input slot, retrieve its corresponding block and call that the most recent block.
-	mostRecentBlock, err := db.BlockBySlot(ctx, slot)
+	mostRecentBlocks, err := db.BlocksBySlot(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
+	mostRecentBlock := mostRecentBlocks[0]
 
 	// if the most recent block is a skip block, we get its parent block.
 	// ex:
@@ -66,10 +66,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	lastSlot := slot
 	for mostRecentBlock == nil {
 		lastSlot--
-		mostRecentBlock, err = db.BlockBySlot(ctx, lastSlot)
+		blocks, err := db.BlocksBySlot(ctx, lastSlot)
 		if err != nil {
 			return nil, err
 		}
+		mostRecentBlock = blocks[0]
 	}
 
 	// retrieve the block list to recompute state of the input slot.
@@ -79,7 +80,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	log.Infof("Recompute state starting last finalized slot %d and ending slot %d",
-		fState.Slot-params.BeaconConfig().GenesisSlot, slot-params.BeaconConfig().GenesisSlot)
+		fState.Slot, slot)
 	postState := fState
 	// this recomputes state up to the last available block.
 	//	ex: 1A - 2B (finalized) - 3C - 4 - 5 - 6C - 7 - 8 (C is the last block).
@@ -137,7 +138,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	log.Infof("Finished recompute state with slot %d and finalized epoch %d",
-		postState.Slot-params.BeaconConfig().GenesisSlot, postState.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		postState.Slot, postState.FinalizedEpoch)
 
 	return postState, nil
 }

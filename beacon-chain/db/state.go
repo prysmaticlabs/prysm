@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -15,6 +16,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"go.opencensus.io/trace"
 )
 
@@ -44,7 +46,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
 	blockEnc, _ := proto.Marshal(genesisBlock)
-	zeroBinary := encodeSlotNumber(0)
+	zeroBinary := encodeSlotNumberRoot(0, blockRoot)
 
 	db.serializedState = stateEnc
 	db.stateHash = stateHash
@@ -63,8 +65,12 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 			return fmt.Errorf("failed to record block height: %v", err)
 		}
 
-		if err := mainChain.Put(zeroBinary, blockRoot[:]); err != nil {
+		if err := mainChain.Put(zeroBinary, blockEnc); err != nil {
 			return fmt.Errorf("failed to record block hash: %v", err)
+		}
+
+		if err := chainInfo.Put(canonicalHeadKey, blockRoot[:]); err != nil {
+			return fmt.Errorf("failed to record block as canonical: %v", err)
 		}
 
 		if err := blockBkt.Put(blockRoot[:], blockEnc); err != nil {
@@ -91,6 +97,10 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 
 // HeadState fetches the canonical beacon chain's head state from the DB.
 func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
 	defer span.End()
 
@@ -164,8 +174,15 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	db.serializedState = enc
 	db.stateHash = stateHash
 
-	if err := db.SaveHistoricalState(ctx, beaconState); err != nil {
-		return err
+	if beaconState.LatestBlockHeader != nil {
+		blockRoot, err := ssz.TreeHash(beaconState.LatestBlockHeader)
+		if err != nil {
+			return err
+		}
+
+		if err := db.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
+			return err
+		}
 	}
 
 	return db.update(func(tx *bolt.Tx) error {
@@ -207,11 +224,11 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 }
 
 // SaveHistoricalState saves the last finalized state in the db.
-func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.BeaconState) error {
+func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.SaveHistoricalState")
 	defer span.End()
 
-	slotBinary := encodeSlotNumber(beaconState.Slot)
+	slotRootBinary := encodeSlotNumberRoot(beaconState.Slot, blockRoot)
 	stateHash, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return err
@@ -220,7 +237,7 @@ func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.Bea
 	return db.update(func(tx *bolt.Tx) error {
 		histState := tx.Bucket(histStateBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
-		if err := histState.Put(slotBinary, stateHash[:]); err != nil {
+		if err := histState.Put(slotRootBinary, stateHash[:]); err != nil {
 			return err
 		}
 		beaconStateEnc, err := proto.Marshal(beaconState)
@@ -267,10 +284,13 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 
 // HistoricalStateFromSlot retrieves the state that is closest to the input slot,
 // while being smaller than or equal to the input slot.
-func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
+func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64, blockRoot [32]byte) (*pb.BeaconState, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	_, span := trace.StartSpan(ctx, "BeaconDB.HistoricalStateFromSlot")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slotSinceGenesis", int64(slot)))
+	span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		var err error
@@ -283,8 +303,11 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 		hsCursor := histState.Cursor()
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
-			slotNumber := decodeToSlotNumber(k)
-			if slotNumber == slot {
+			slotBinary := k[:8]
+			blockRootBinary := k[8:]
+			slotNumber := decodeToSlotNumber(slotBinary)
+
+			if slotNumber == slot && bytes.Equal(blockRootBinary, blockRoot[:]) {
 				stateExists = true
 				highestStateSlot = slotNumber
 				histStateKey = v
@@ -295,9 +318,10 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64) (*
 		// If no historical state exists, retrieve and decode the finalized state.
 		if !stateExists {
 			for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
-				slotNumber := decodeToSlotNumber(k)
+				slotBinary := k[:8]
+				slotNumber := decodeToSlotNumber(slotBinary)
 				// find the state with slot closest to the requested slot
-				if slotNumber > highestStateSlot && slotNumber <= slot {
+				if slotNumber >= highestStateSlot && slotNumber <= slot {
 					stateExists = true
 					highestStateSlot = slotNumber
 					histStateKey = v
@@ -399,9 +423,9 @@ func (db *BeaconDB) ValidatorFromState(ctx context.Context, index uint64) (*pb.V
 	return beaconState.ValidatorRegistry[index], err
 }
 
-// ValidatorBalances fetches the current validator balances stored in state.
-func (db *BeaconDB) ValidatorBalances(ctx context.Context) ([]uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorBalances")
+// Balances fetches the current validator balances stored in state.
+func (db *BeaconDB) Balances(ctx context.Context) ([]uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.Balances")
 	defer span.End()
 
 	db.stateLock.RLock()
@@ -454,7 +478,8 @@ func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
 		hsCursor := histState.Cursor()
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
-			keySlotNumber := decodeToSlotNumber(k)
+			slotBinary := k[:8]
+			keySlotNumber := decodeToSlotNumber(slotBinary)
 			if keySlotNumber < slot {
 				if err := histState.Delete(k); err != nil {
 					return err
