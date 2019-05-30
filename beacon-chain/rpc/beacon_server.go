@@ -355,8 +355,8 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 	if req == nil {
 		return nil, errors.New("argument 'TreeBlockSlotRequest' cannot be nil")
 	}
-	if !(req.SlotNumberFrom <= req.SlotNumberTo) {
-		return nil, fmt.Errorf("upper limit (%d) of slot range cannot be lower than the lower limit (%d)", req.SlotNumberTo, req.SlotNumberFrom)
+	if !(req.SlotFrom <= req.SlotTo) {
+		return nil, fmt.Errorf("upper limit (%d) of slot range cannot be lower than the lower limit (%d)", req.SlotTo, req.SlotFrom)
 	}
 	highestSlot := bs.beaconDB.HighestBlockSlot()
 	fullBlockTree := []*pbp2p.BeaconBlock{}
@@ -364,7 +364,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		if i >= req.SlotNumberFrom && i <= req.SlotNumberTo {
+		if i >= req.SlotFrom && i <= req.SlotTo {
 			nextLayer, err := bs.beaconDB.BlocksBySlot(ctx, i)
 			if err != nil {
 				return nil, err
@@ -373,7 +373,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 				fullBlockTree = append(fullBlockTree, nextLayer...)
 			}
 		}
-		if i > req.SlotNumberTo {
+		if i > req.SlotTo {
 			break
 		}
 	}
@@ -394,7 +394,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 		if err != nil {
 			return nil, err
 		}
-		if kid.Slot >= req.SlotNumberFrom && kid.Slot <= req.SlotNumberTo {
+		if kid.Slot >= req.SlotFrom && kid.Slot <= req.SlotTo {
 			activeValidatorIndices := helpers.ActiveValidatorIndices(hState.ValidatorRegistry, helpers.CurrentEpoch(hState))
 			totalVotes := epoch.TotalBalance(hState, activeValidatorIndices)
 			tree = append(tree, &pb.BlockTreeResponse_TreeNode{

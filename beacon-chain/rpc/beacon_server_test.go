@@ -1125,8 +1125,8 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		t.Fatal(err)
 	}
 	slotRange := &pb.TreeBlockSlotRequest{
-		SlotNumberFrom: params.BeaconConfig().GenesisSlot + 4,
-		SlotNumberTo:   params.BeaconConfig().GenesisSlot + 3,
+		SlotFrom: params.BeaconConfig().GenesisSlot + 4,
+		SlotTo:   params.BeaconConfig().GenesisSlot + 3,
 	}
 	if _, err := bs.BlockTreeBySlots(ctx, slotRange); err == nil {
 		// There should be a 'Upper limit of slot range cannot be lower than the lower limit' error.
@@ -1337,8 +1337,8 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		targetsFetcher: &mockChainService{targets: attestationTargets},
 	}
 	slotRange := &pb.TreeBlockSlotRequest{
-		SlotNumberFrom: params.BeaconConfig().GenesisSlot + 3,
-		SlotNumberTo:   params.BeaconConfig().GenesisSlot + 4,
+		SlotFrom: params.BeaconConfig().GenesisSlot + 3,
+		SlotTo:   params.BeaconConfig().GenesisSlot + 4,
 	}
 	resp, err := bs.BlockTreeBySlots(ctx, slotRange)
 	if err != nil {

@@ -199,6 +199,6 @@ enum ValidatorStatus {
 }
 
 message TreeBlockSlotRequest {
-  uint64 slot_number_from = 1 ;
-  uint64 slot_number_to = 2 ;
+  uint64 slot_from = 1 ;
+  uint64 slot_to = 2 ;
 }
