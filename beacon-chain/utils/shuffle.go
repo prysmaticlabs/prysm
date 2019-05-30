@@ -216,8 +216,8 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 	return input, nil
 }
 
-// swapOrNot describes the main algorithm behind the shuffle where we
-// swap bytes depending on if the conditions are met.
+// swapOrNot describes the main algorithm behind the shuffle where we swap bytes in the inputted value
+// depending on if the conditions are met.
 func swapOrNot(buf []byte, byteV byte, i uint64, input []uint64, j uint64, source [32]byte) (byte, [32]byte) {
 	if j&0xff == 0xff {
 		// just overwrite the last part of the buffer, reuse the start (seed, round)
