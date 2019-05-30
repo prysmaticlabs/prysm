@@ -369,7 +369,9 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 			if err != nil {
 				return nil, err
 			}
-			fullBlockTree = append(fullBlockTree, nextLayer...)
+			if nextLayer != nil {
+				fullBlockTree = append(fullBlockTree, nextLayer...)
+			}
 		}
 		if i > req.SlotNumberTo {
 			break
