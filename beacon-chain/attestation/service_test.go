@@ -24,8 +24,6 @@ func init() {
 var _ = TargetHandler(&Service{})
 
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
-	t.Skip()
-
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -68,7 +66,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[60].Pubkey)
+	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[12].Pubkey)
 	if service.store.m[pubkey].Data.Crosslink.Shard !=
 		attestation.Data.Crosslink.Shard {
 		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
@@ -97,7 +95,6 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 }
 
 func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
-	t.Skip()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
