@@ -88,11 +88,24 @@ var (
 		Usage: "The IP address advertised by libp2p. This may be used to advertise an external IP.",
 		Value: "",
 	}
+	// P2PPrivKey defines a flag to specify the location of the private key file for libp2p.
+	P2PPrivKey = cli.StringFlag{
+		Name:  "p2p-priv-key",
+		Usage: "The file containing the private key to use in communications with other peers.",
+		Value: "",
+	}
 	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
 	P2PMaxPeers = cli.Int64Flag{
 		Name:  "p2p-max-peers",
 		Usage: "The max number of p2p peers to maintain.",
 		Value: 30,
+	}
+	// P2PWhitelist defines a CIDR subnet to exclusively allow connections.
+	P2PWhitelist = cli.StringFlag{
+		Name: "p2p-whitelist",
+		Usage: "The CIDR subnet for whitelisting peer connections. Example: 192.168.0.0/16 " +
+			"would whitelist connections to peers on your local network only. The default " +
+			"is to accept all connections.",
 	}
 	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
 	ClearDB = cli.BoolFlag{
