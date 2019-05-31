@@ -17,6 +17,7 @@ func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		EnableCrosslinks: true,
 	})
+	helpers.RestartShuffledValidatorCache()
 }
 
 func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
@@ -132,13 +133,14 @@ func TestUnslashedAttestingIndices_CantGetIndicesBitfieldError(t *testing.T) {
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
-	const wantedErr = "could not get attester indices: wanted participants bitfield length 0, got: 1"
+	const wantedErr = "could not get attester indices: wanted participants bitfield length 2, got: 1"
 	if _, err := unslashedAttestingIndices(state, atts); !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
 }
 
 func TestAttestingBalance_CorrectBalance(t *testing.T) {
+	helpers.RestartShuffledValidatorCache()
 	// Generate 2 attestations.
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
@@ -182,6 +184,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 }
 
 func TestAttestingBalance_CantGetIndicesBitfieldError(t *testing.T) {
+	helpers.RestartShuffledValidatorCache()
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
@@ -207,6 +210,7 @@ func TestAttestingBalance_CantGetIndicesBitfieldError(t *testing.T) {
 }
 
 func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
+	helpers.RestartShuffledValidatorCache()
 	// Generate 2 attestations.
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
@@ -244,7 +248,7 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantedInclusion := uint64(18446744073709551615)
+	wantedInclusion := uint64(100)
 	if att.InclusionDelay != wantedInclusion {
 		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionDelay)
 
@@ -252,6 +256,7 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 }
 
 func TestEarliestAttestation_CantGetIndicesBitfieldError(t *testing.T) {
+	helpers.RestartShuffledValidatorCache()
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{

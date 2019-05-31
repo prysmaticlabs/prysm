@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -20,7 +19,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "attestation")
-var committeeCache = cache.NewCommitteesCache()
 
 // TargetHandler provides an interface for fetching latest attestation targets
 // and updating attestations in batches.
