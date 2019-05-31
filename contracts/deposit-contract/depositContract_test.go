@@ -194,7 +194,7 @@ func TestETH2Genesis_OK(t *testing.T) {
 		t.Fatalf("Unable to get logs %v", err)
 	}
 
-	if logs[8].Topics[0] != hashutil.Hash([]byte("Eth2Genesis(bytes32,bytes,bytes)")) {
+	if logs[8].Topics[0] != hashutil.HashKeccak256([]byte("Eth2Genesis(bytes32,bytes,bytes)")) {
 		t.Error("Chain start did not even get emitted")
 	}
 }
