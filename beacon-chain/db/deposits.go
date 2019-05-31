@@ -22,19 +22,20 @@ var (
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int) {
+func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int, depositRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
 		log.WithFields(logrus.Fields{
-			"block":   blockNum,
-			"deposit": d,
+			"block":        blockNum,
+			"deposit":      d,
+			"deposit root": depositRoot,
 		}).Debug("Ignoring nil deposit insertion")
 		return
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum})
+	db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum, depositRoot: depositRoot})
 	historicalDepositsCount.Inc()
 }
 
@@ -80,6 +81,19 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 	})
 
 	return deposits
+}
+
+func (db *BeaconDB) DepositTrieRootByIndex(ctx context.Context, idx uint64) [32]byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.GetDepositTrieRootByBlock")
+	defer span.End()
+	db.depositsLock.RLock()
+	defer db.depositsLock.RUnlock()
+	for _, ctnr := range db.deposits {
+		if ctnr.deposit.Index == idx {
+			return ctnr.depositRoot
+		}
+	}
+	return [32]byte{}
 }
 
 // DepositByPubkey looks through historical deposits and finds one which contains

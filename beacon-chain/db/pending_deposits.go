@@ -22,13 +22,14 @@ var (
 // Container object for holding the deposit and a reference to the block in
 // which the deposit transaction was included in the proof of work chain.
 type depositContainer struct {
-	deposit *pb.Deposit
-	block   *big.Int
+	deposit     *pb.Deposit
+	block       *big.Int
+	depositRoot [32]byte
 }
 
 // InsertPendingDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int) {
+func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int, depositRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertPendingDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
@@ -40,7 +41,7 @@ func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blo
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.pendingDeposits = append(db.pendingDeposits, &depositContainer{deposit: d, block: blockNum})
+	db.pendingDeposits = append(db.pendingDeposits, &depositContainer{deposit: d, block: blockNum, depositRoot: depositRoot})
 	pendingDepositsCount.Inc()
 }
 

@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -125,9 +126,37 @@ func (bs *BeaconServer) DomainData(ctx context.Context, request *pb.DomainReques
 // state.latest_eth1_data is updated, and validator deposits up to this root can be processed.
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
-//
-// TODO(#2307): Refactor for v0.6.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
+	beaconState, err := bs.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	votes := beaconState.Eth1DataVotes
+	d := []*pbp2p.Eth1DataVote{}
+	for _, vote := range votes {
+		exist, height, err := bs.powChainService.BlockExists(ctx, common.BytesToHash(vote.BlockRoot))
+		if err != nil || !exist {
+			continue
+		}
+		if height.Uint64() < bs.powChainService.LatestBlockHeight().Uint64()-params.BeaconConfig().Eth1FollowDistance {
+			continue
+		}
+		exist, currentBlockHeight, err := bs.powChainService.BlockExists(ctx, common.BytesToHash(beaconState.LatestEth1Data.BlockRoot))
+		if err != nil || !exist {
+			return nil, fmt.Errorf("latest beacon state PoW block root could not be found or got error while trying to fetch it: %v", err)
+		}
+		if height.Cmp(currentBlockHeight) <= 0 {
+			continue
+		}
+
+		upToHeightEth1DataDeposits := bs.beaconDB.AllDeposits(ctx, height)
+		depositCount := len(upToHeightEth1DataDeposits)
+		depositRoot := bs.beaconDB.DepositTrieRootByIndex(ctx, upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].Index)
+		ed := &pbp2p.Eth1Data{DepositRoot: depositRoot[:], DepositCount: uint64(depositCount)}
+		d = append(d, &pbp2p.Eth1DataVote{Eth1Data: ed})
+
+	}
+
 	return nil, nil
 }
 
