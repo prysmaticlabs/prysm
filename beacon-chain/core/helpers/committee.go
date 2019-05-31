@@ -17,8 +17,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// TODO(#2307): Update CommitteeAssignment and delete committee cache
-var committeeCache = cache.NewCommitteesCache()
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
@@ -105,7 +103,7 @@ func ComputeCommittee(
 	end := utils.SplitOffset(validatorCount, totalCommittees, index+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
-	cachedShuffledList, err := shuffledIndicesCache.ShuffledIndicesBySeed(index, seed[:])
+	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +120,7 @@ func ComputeCommittee(
 		}
 		shuffledIndices[i-start] = validatorIndices[permutedIndex]
 	}
-	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.ShuffledIndicesBySeed{
+	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.IndicesByIndexSeed{
 		Index:           index,
 		Seed:            seed[:],
 		ShuffledIndices: shuffledIndices,
@@ -307,31 +305,9 @@ func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	return shard, nil
 }
 
-// RestartCommitteeCache restarts the committee cache from scratch.
-func RestartCommitteeCache() {
-	committeeCache = cache.NewCommitteesCache()
-}
-
 // RestartShuffledValidatorCache restarts the shuffled indices cache from scratch.
 func RestartShuffledValidatorCache() {
 	shuffledIndicesCache = cache.NewShuffledIndicesCache()
-}
-
-// ToCommitteeCache converts crosslink committee object
-// into a cache format, to be saved in cache.
-func ToCommitteeCache(slot uint64, crosslinkCommittees []*CrosslinkCommittee) *cache.CommitteesInSlot {
-	var cacheCommittee []*cache.CommitteeInfo
-	for _, crosslinkCommittee := range crosslinkCommittees {
-		cacheCommittee = append(cacheCommittee, &cache.CommitteeInfo{
-			Committee: crosslinkCommittee.Committee,
-			Shard:     crosslinkCommittee.Shard,
-		})
-	}
-	committees := &cache.CommitteesInSlot{
-		Slot:       slot,
-		Committees: cacheCommittee,
-	}
-	return committees
 }
 
 // VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
