@@ -18,7 +18,9 @@ var (
 	amountLessThan1Eth = "500000000000000000"
 )
 
-type testAccount struct {
+// TestAccount represents a test account in the simulated backend,
+// through which we can perform actions on the eth1.0 chain.
+type TestAccount struct {
 	Addr         common.Address
 	Contract     *DepositContract
 	ContractAddr common.Address
@@ -27,7 +29,7 @@ type testAccount struct {
 }
 
 // Setup creates the simulated backedn with the deposit contract deployed
-func Setup() (*testAccount, error) {
+func Setup() (*TestAccount, error) {
 	genesis := make(core.GenesisAlloc)
 	privKey, _ := crypto.GenerateKey()
 	pubKeyECDSA, ok := privKey.Public().(*ecdsa.PublicKey)
@@ -55,7 +57,7 @@ func Setup() (*testAccount, error) {
 	}
 	backend.Commit()
 
-	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
+	return &TestAccount{addr, contract, contractAddr, backend, txOpts}, nil
 }
 
 // Amount32Eth returns 32Eth(in wei) in terms of the big.Int type.
