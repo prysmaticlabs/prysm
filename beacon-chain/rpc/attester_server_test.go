@@ -258,8 +258,8 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 
 	var wg sync.WaitGroup
 
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		response, err := server.AttestationDataAtSlot(ctx, req)
 		if err != nil {
@@ -270,8 +270,8 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 		}
 	}()
 
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 
 		if err := server.cache.Put(ctx, req, res); err != nil {

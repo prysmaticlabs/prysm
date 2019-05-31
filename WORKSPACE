@@ -9,8 +9,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "3743a20704efc319070957c45e24ae4626a05ba4b1d6a8961e87520296f1b676",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.4/rules_go-0.18.4.tar.gz",
+    sha256 = "a82a352bffae6bee4e95f68a8d80a70e87f42c4741e6a448bec11998fcc82329",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.5/rules_go-0.18.5.tar.gz",
 )
 
 http_archive(
@@ -117,9 +117,9 @@ proto_library(
   srcs = ["src/proto/faucet.proto"],
   visibility = ["//visibility:public"],
 )""",
-    sha256 = "1626d546c696fd4fc093058d378787b8794f532acba729a9d1f5375c1f79f4a6",
-    strip_prefix = "prysm-testnet-site-0438607f2c926108a1cca238eefb35725a2bcf76",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/0438607f2c926108a1cca238eefb35725a2bcf76.tar.gz",
+    sha256 = "92c8e4d408704cd636ae528aeae9b4dd7da8448ae951e76ed93c2700e56d4735",
+    strip_prefix = "prysm-testnet-site-5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8.tar.gz",
 )
 
 http_archive(
@@ -128,6 +128,17 @@ http_archive(
     strip_prefix = "repo-infra-df02ded38f9506e5bbcbf21702034b4fef815f2f",
     url = "https://github.com/kubernetes/repo-infra/archive/df02ded38f9506e5bbcbf21702034b4fef815f2f.tar.gz",
 )
+
+http_archive(
+    name = "com_github_prysmaticlabs_go_ssz",
+    strip_prefix = "go-ssz-85eecc65d2c7a3b20501fe662210e5045f7bcbe1",
+    url = "https://github.com/prysmaticlabs/go-ssz/archive/85eecc65d2c7a3b20501fe662210e5045f7bcbe1.tar.gz",
+    sha256 = "9e753a6e5c4f6f7f3b4af584f326b1c650aee6af85fc98416fbe7d1579d6e4d7",
+)
+
+load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
+
+go_ssz_dependencies()
 
 go_repository(
     name = "com_github_golang_mock",
@@ -303,7 +314,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
-    commit = "3a70a971f94a22f2fa562ffcc7a0eb45f5daf045",
+    commit = "8029fb3788e5a4a9c00e415f586a6d033f5d38b3",  # v0.1.2
     importpath = "github.com/mattn/go-colorable",
 )
 
@@ -321,7 +332,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "2d45a736cd16732fe6a57563cc20d8b035193e58",
+    commit = "05b4dd3047e5d6e86cb4e0477164b850cd896261",  # v0.1.0
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -400,7 +411,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_isatty",
-    commit = "c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7",  # v0.0.7
+    commit = "1311e847b0cb909da63b5fecfb5370aa66236465",  # v0.0.8
     importpath = "github.com/mattn/go-isatty",
 )
 
@@ -430,7 +441,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_maddr_filter",
-    commit = "0be077b18e81a77662ed5fe22b959d4394d71540",  # v0.0.2
+    commit = "e3cdd802c04babcbec2c4711721d105cfe822cd3",  # v0.0.2
     importpath = "github.com/libp2p/go-maddr-filter",
 )
 
@@ -672,7 +683,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "ac0d4da0b001139583d0dfb84d614a0f907ea0a9",  # v0.9.2
+    commit = "662e8a9ffaaa74a4d050023c2cb26902cd9bab63",  # v0.9.3
     importpath = "github.com/prometheus/client_golang",
 )
 
@@ -684,7 +695,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "1ba88736f028e37bc17328369e94a537ae9e0234",  # v0.4.0
+    commit = "7d6a80ca5263a2575832c437c6f35181243c4bec",  # v0.4.1
     importpath = "github.com/prometheus/common",
 )
 
@@ -911,7 +922,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_cobra",
-    commit = "ef82de70bb3f60c65fb8eebacbb2d122ef517385",  # v0.0.3
+    commit = "67fc4837d267bc9bfd6e47f77783fcc3dffc68de",  # v0.0.4
     importpath = "github.com/spf13/cobra",
 )
 
@@ -949,7 +960,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "fcb9a2d5f791d07be64506ab54434de65989d370",  # v0.37.4
+    commit = "775730d6e48254a2430366162cf6298e5368833c",  # v0.39.0
     importpath = "cloud.google.com/go",
 )
 
@@ -1033,7 +1044,7 @@ go_repository(
 
 go_repository(
     name = "com_github_phoreproject_bls",
-    commit = "afaefda3ea643e9292b6f4596403ed5c742561b4",
+    commit = "0b6cefc7f7eee050e3ac6d66d66ae8e469a4fbf1",
     importpath = "github.com/phoreproject/bls",
 )
 
@@ -1087,6 +1098,6 @@ go_repository(
 
 go_repository(
     name = "com_github_joonix_log",
-    commit = "e0e770ceed363301a4f50bbc9599c6925c77b2d8",
+    commit = "13fe31bbdd7a6f706b9114e188cdb53856be4d64",
     importpath = "github.com/joonix/log",
 )

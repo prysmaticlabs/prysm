@@ -16,6 +16,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 var (
@@ -111,10 +112,9 @@ func CurrentBlock() uint64 {
 
 // ToEther from Wei.
 func ToEther(o *big.Int) *big.Float {
-	pul, int := big.NewFloat(0), big.NewFloat(0)
-	int.SetInt(o)
-	pul.Mul(big.NewFloat(0.000000000000000001), int)
-	return pul
+	wei := big.NewFloat(0)
+	wei.SetInt(o)
+	return new(big.Float).Quo(wei, big.NewFloat(params.Ether))
 }
 
 // MetricsHTTP - HTTP response handler for /metrics.
