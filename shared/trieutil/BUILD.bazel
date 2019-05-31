@@ -21,9 +21,5 @@ go_test(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
-        "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
-        "@com_github_ethereum_go_ethereum//common:go_default_library",
-        "@com_github_ethereum_go_ethereum//core:go_default_library",
-        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
     ],
 )
