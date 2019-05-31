@@ -66,7 +66,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[12].Pubkey)
+	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[10].Pubkey)
 	if service.store.m[pubkey].Data.Crosslink.Shard !=
 		attestation.Data.Crosslink.Shard {
 		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",

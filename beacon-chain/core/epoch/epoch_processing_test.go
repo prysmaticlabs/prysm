@@ -248,7 +248,7 @@ func TestEarliestAttestation_CanGetEarliest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantedInclusion := uint64(100)
+	wantedInclusion := uint64(18446744073709551615)
 	if att.InclusionDelay != wantedInclusion {
 		t.Errorf("wanted inclusion slot: %d, got: %d", wantedInclusion, att.InclusionDelay)
 
@@ -990,7 +990,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	}
 	committeeBalance := helpers.TotalBalance(state, committee)
 	attestingBalance := helpers.TotalBalance(state, winningIndices)
-	attestedIndices := []uint64{350, 361, 498, 533, 537, 629, 646}
+	attestedIndices := []uint64{79, 127, 232, 473, 569, 754, 774}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
 		want := baseReward(state, i) * attestingBalance / committeeBalance
@@ -1133,7 +1133,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{350, 361, 498, 533, 537, 629, 646}
+	attestedIndices := []uint64{79, 127, 232, 473, 569, 754, 774}
 
 	attestedBalance, err := AttestingBalance(state, atts)
 	totalBalance := totalActiveBalance(state)
