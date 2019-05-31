@@ -590,7 +590,7 @@ func BenchmarkProcessEpoch(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		_, err := state.ProcessEpoch(context.Background(), s)
 		if err != nil {
-			panic(err)
+			b.Fatal(err)
 		}
 	}
 }

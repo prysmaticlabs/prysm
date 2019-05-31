@@ -44,6 +44,10 @@ func IsSlashableValidator(validator *pb.Validator, epoch uint64) bool {
 // ActiveValidatorIndices filters out active validators based on validator status
 // and returns their indices in a list.
 //
+// WARNING: This method allocates a new copy of the validator index set and is
+// considered to be very memory expensive. Avoid using this unless you really
+// need the active validator indices for some specific reason.
+//
 // Spec pseudocode definition:
 //  def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> List[ValidatorIndex]:
 //    """
@@ -58,6 +62,18 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) []uint64 {
 		}
 	}
 	return indices
+}
+
+// ActiveValidatorCount returns the number of active validators in the state
+// at the given epoch.
+func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) uint64 {
+	var count uint64
+	for _, v := range state.ValidatorRegistry {
+		if IsActiveValidator(v, epoch) {
+			count++
+		}
+	}
+	return count
 }
 
 // DelayedActivationExitEpoch takes in epoch number and returns when

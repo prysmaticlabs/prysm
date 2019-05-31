@@ -544,7 +544,14 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 //  def get_total_active_balance(state: BeaconState) -> Gwei:
 //    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
 func totalActiveBalance(state *pb.BeaconState) uint64 {
-	return helpers.TotalBalance(state, helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state)))
+	var balance uint64
+	epoch := helpers.CurrentEpoch(state)
+	for i, v := range state.ValidatorRegistry {
+		if helpers.IsActiveValidator(v, epoch) {
+			balance += state.ValidatorRegistry[i].EffectiveBalance
+		}
+	}
+	return balance
 }
 
 // unslashedAttestingIndices returns all the attesting indices from a list of attestations,
