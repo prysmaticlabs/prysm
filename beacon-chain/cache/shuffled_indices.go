@@ -29,8 +29,8 @@ var (
 	})
 )
 
-// ShuffledIndicesBySeed defines the shuffled validator indices per randao seed.
-type ShuffledIndicesBySeed struct {
+// IndicesByIndexSeed defines the shuffled validator indices per randao seed.
+type IndicesByIndexSeed struct {
 	Index           uint64
 	Seed            []byte
 	ShuffledIndices []uint64
@@ -44,7 +44,7 @@ type ShuffledIndicesCache struct {
 
 // slotKeyFn takes the randao seed as the key for the shuffled validators of a given epoch.
 func shuffleKeyFn(obj interface{}) (string, error) {
-	sInfo, ok := obj.(*ShuffledIndicesBySeed)
+	sInfo, ok := obj.(*IndicesByIndexSeed)
 	if !ok {
 		return "", ErrNotValidatorListInfo
 	}
@@ -59,9 +59,9 @@ func NewShuffledIndicesCache() *ShuffledIndicesCache {
 	}
 }
 
-// ShuffledIndicesBySeed fetches ShuffledIndicesBySeed by epoch and seed. Returns true with a
+// IndicesByIndexSeed fetches IndicesByIndexSeed by epoch and seed. Returns true with a
 // reference to the ShuffledIndicesInEpoch info, if exists. Otherwise returns false, nil.
-func (c *ShuffledIndicesCache) ShuffledIndicesBySeed(index uint64, seed []byte) ([]uint64, error) {
+func (c *ShuffledIndicesCache) IndicesByIndexSeed(index uint64, seed []byte) ([]uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	key := string(seed) + strconv.Itoa(int(index))
@@ -77,7 +77,7 @@ func (c *ShuffledIndicesCache) ShuffledIndicesBySeed(index uint64, seed []byte) 
 		return nil, nil
 	}
 
-	cInfo, ok := obj.(*ShuffledIndicesBySeed)
+	cInfo, ok := obj.(*IndicesByIndexSeed)
 	if !ok {
 		return nil, ErrNotValidatorListInfo
 	}
@@ -85,9 +85,9 @@ func (c *ShuffledIndicesCache) ShuffledIndicesBySeed(index uint64, seed []byte) 
 	return cInfo.ShuffledIndices, nil
 }
 
-// AddShuffledValidatorList adds ShuffledIndicesBySeed object to the cache. This method also trims the least
-// recently added ShuffledIndicesBySeed object if the cache size has ready the max cache size limit.
-func (c *ShuffledIndicesCache) AddShuffledValidatorList(shuffledIndices *ShuffledIndicesBySeed) error {
+// AddShuffledValidatorList adds IndicesByIndexSeed object to the cache. This method also trims the least
+// recently added IndicesByIndexSeed object if the cache size has ready the max cache size limit.
+func (c *ShuffledIndicesCache) AddShuffledValidatorList(shuffledIndices *IndicesByIndexSeed) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

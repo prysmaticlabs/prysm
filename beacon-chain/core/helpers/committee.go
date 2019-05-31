@@ -103,7 +103,7 @@ func ComputeCommittee(
 	end := utils.SplitOffset(validatorCount, totalCommittees, index+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
-	cachedShuffledList, err := shuffledIndicesCache.ShuffledIndicesBySeed(index, seed[:])
+	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func ComputeCommittee(
 		}
 		shuffledIndices[i-start] = validatorIndices[permutedIndex]
 	}
-	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.ShuffledIndicesBySeed{
+	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.IndicesByIndexSeed{
 		Index:           index,
 		Seed:            seed[:],
 		ShuffledIndices: shuffledIndices,
