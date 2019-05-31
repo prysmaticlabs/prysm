@@ -1,4 +1,4 @@
-package testutils
+package depositcontract
 
 import (
 	"crypto/ecdsa"
@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
-	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 )
 
 var (
@@ -21,7 +20,7 @@ var (
 
 type testAccount struct {
 	Addr         common.Address
-	Contract     *contract.DepositContract
+	Contract     *DepositContract
 	ContractAddr common.Address
 	Backend      *backends.SimulatedBackend
 	TxOpts       *bind.TransactOpts
@@ -50,7 +49,7 @@ func Setup() (*testAccount, error) {
 	depositsRequired := big.NewInt(8)
 	minDeposit := big.NewInt(1e9)
 	maxDeposit := big.NewInt(32e9)
-	contractAddr, _, contract, err := contract.DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit, big.NewInt(1), addr)
+	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit, big.NewInt(1), addr)
 	if err != nil {
 		return nil, err
 	}

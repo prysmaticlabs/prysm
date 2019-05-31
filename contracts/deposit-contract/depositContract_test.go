@@ -9,12 +9,11 @@ import (
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/contracts/deposit-contract/testutils"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestSetupRegistrationContract_OK(t *testing.T) {
-	_, err := testutils.Setup()
+	_, err := Setup()
 	if err != nil {
 		log.Fatalf("Can not deploy validator registration contract: %v", err)
 	}
@@ -22,12 +21,12 @@ func TestSetupRegistrationContract_OK(t *testing.T) {
 
 // negative test case, deposit with less than 1 ETH which is less than the top off amount.
 func TestRegister_Below1ETH(t *testing.T) {
-	testAccount, err := testutils.Setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testAccount.TxOpts.Value = testutils.LessThan1Eth()
+	testAccount.TxOpts.Value = LessThan1Eth()
 	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, []byte{}, []byte{}, []byte{})
 	if err == nil {
 		t.Error("Validator registration should have failed with insufficient deposit")
@@ -36,12 +35,12 @@ func TestRegister_Below1ETH(t *testing.T) {
 
 // negative test case, deposit with more than 32 ETH which is more than the asked amount.
 func TestRegister_Above32Eth(t *testing.T) {
-	testAccount, err := testutils.Setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testAccount.TxOpts.Value = testutils.Amount33Eth()
+	testAccount.TxOpts.Value = Amount33Eth()
 	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, []byte{}, []byte{}, []byte{})
 	if err == nil {
 		t.Error("Validator registration should have failed with more than asked deposit amount")
@@ -50,11 +49,11 @@ func TestRegister_Above32Eth(t *testing.T) {
 
 // normal test case, test depositing 32 ETH and verify HashChainValue event is correctly emitted.
 func TestValidatorRegister_OK(t *testing.T) {
-	testAccount, err := testutils.Setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
-	testAccount.TxOpts.Value = testutils.Amount32Eth()
+	testAccount.TxOpts.Value = Amount32Eth()
 	testAccount.TxOpts.GasLimit = 1000000
 
 	var pubkey [48]byte
@@ -113,11 +112,11 @@ func TestValidatorRegister_OK(t *testing.T) {
 
 // normal test case, test beacon chain start log event.
 func TestETH2Genesis_OK(t *testing.T) {
-	testAccount, err := testutils.Setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
-	testAccount.TxOpts.Value = testutils.Amount32Eth()
+	testAccount.TxOpts.Value = Amount32Eth()
 	testAccount.TxOpts.GasLimit = 1000000
 
 	var pubkey [48]byte
@@ -151,11 +150,11 @@ func TestETH2Genesis_OK(t *testing.T) {
 }
 
 func TestDrain(t *testing.T) {
-	testAccount, err := testutils.Setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
-	testAccount.TxOpts.Value = testutils.Amount32Eth()
+	testAccount.TxOpts.Value = Amount32Eth()
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
@@ -174,7 +173,7 @@ func TestDrain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bal.Cmp(testutils.Amount32Eth()) != 0 {
+	if bal.Cmp(Amount32Eth()) != 0 {
 		t.Fatal("deposit didnt work")
 	}
 
