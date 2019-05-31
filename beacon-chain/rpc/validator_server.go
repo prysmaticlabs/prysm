@@ -177,7 +177,7 @@ func (vs *ValidatorServer) assignment(
 	if err != nil {
 		return nil, err
 	}
-	status := vs.lookupValidatorStatusFlag(idx, beaconState)
+	status := vs.lookupValidatorStatus(idx, beaconState)
 	return &pb.CommitteeAssignmentResponse_CommitteeAssignment{
 		Committee:  committee,
 		Shard:      shard,
@@ -369,7 +369,7 @@ func (vs *ValidatorServer) validatorStatus(
 		positionInQueue = validatorIndex - lastActivatedValidatorIdx
 	}
 
-	status := vs.lookupValidatorStatusFlag(uint64(valIdx), beaconState)
+	status := vs.lookupValidatorStatus(uint64(valIdx), beaconState)
 	return &pb.ValidatorStatusResponse{
 		Status:                    status,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
@@ -379,7 +379,7 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 }
 
-func (vs *ValidatorServer) lookupValidatorStatusFlag(validatorIdx uint64, beaconState *pbp2p.BeaconState) pb.ValidatorStatus {
+func (vs *ValidatorServer) lookupValidatorStatus(validatorIdx uint64, beaconState *pbp2p.BeaconState) pb.ValidatorStatus {
 	var status pb.ValidatorStatus
 	v := beaconState.ValidatorRegistry[validatorIdx]
 	epoch := helpers.CurrentEpoch(beaconState)
@@ -435,7 +435,7 @@ func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(
 	for _, pk := range pubkeys {
 		hexPk := bytesutil.ToBytes32(pk)
 		if valIdx, ok := validatorMap[hexPk]; !ok || !helpers.IsActiveValidator(beaconState.ValidatorRegistry[validatorMap[hexPk]], currentEpoch) {
-			status := vs.lookupValidatorStatusFlag(uint64(valIdx), beaconState) //nolint:gosec
+			status := vs.lookupValidatorStatus(uint64(valIdx), beaconState) //nolint:gosec
 			if !ok {
 				status = pb.ValidatorStatus_UNKNOWN_STATUS
 			}
