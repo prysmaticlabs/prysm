@@ -46,7 +46,9 @@ func (g *Gateway) Start() {
 		pb.RegisterBeaconServiceHandler,
 	} {
 		if err := f(ctx, gwmux, conn); err != nil {
-			panic(err) // TODO before merge
+			log.WithError(err).Error("Failed to start gateway")
+			g.startFailure = err
+			return
 		}
 	}
 
