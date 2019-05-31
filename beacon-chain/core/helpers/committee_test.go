@@ -180,7 +180,7 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 		t.Errorf("could not compute committee: %v", err)
 	}
 
-	cachedIndices, err := shuffledIndicesCache.ShuffledIndicesBySeed(shard, seed[:])
+	cachedIndices, err := shuffledIndicesCache.IndicesByIndexSeed(shard, seed[:])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -753,7 +753,6 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 		if err != nil {
 			panic(err)
 		}
-
 		if i < params.BeaconConfig().TargetCommitteeSize {
 			shard = (shard + 1) % params.BeaconConfig().ShardCount
 			i = 0
