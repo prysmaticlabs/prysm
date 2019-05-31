@@ -534,3 +534,63 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 
 	state.ProcessEpoch(context.Background(), newState)
 }
+
+func BenchmarkProcessEpoch(b *testing.B) {
+	helpers.RestartShuffledValidatorCache()
+	epoch := uint64(1)
+
+	validatorCount := params.BeaconConfig().DepositsForChainStart / 4
+	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*pb.Validator, validatorCount)
+	balances := make([]uint64, validatorCount)
+
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxDepositAmount,
+		}
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+
+	var atts []*pb.PendingAttestation
+	for i := uint64(0); i < shardCount; i++ {
+		atts = append(atts, &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Crosslink: &pb.Crosslink{
+					Shard: i,
+				},
+			},
+			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+			InclusionDelay:      1,
+		})
+	}
+
+	var crosslinks []*pb.Crosslink
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks = append(crosslinks, &pb.Crosslink{
+			Epoch:    0,
+			DataRoot: []byte{'A'},
+		})
+	}
+
+	s := &pb.BeaconState{
+		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		ValidatorRegistry:         validators,
+		Balances:                  balances,
+		LatestStartShard:          64,
+		LatestBlockRoots:          make([][]byte, 254),
+		LatestSlashedBalances:     []uint64{0, 1e9, 0},
+		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentCrosslinks:         crosslinks,
+		PreviousEpochAttestations: atts,
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := state.ProcessEpoch(context.Background(), s)
+		if err != nil {
+			panic(err)
+		}
+	}
+}

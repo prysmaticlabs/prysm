@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -16,7 +17,7 @@ var (
 	ErrNotValidatorListInfo = errors.New("object is not a shuffled validator list")
 
 	// maxShuffledListSize defines the max number of shuffled list can cache.
-	maxShuffledListSize = 4
+	maxShuffledListSize = int(params.BeaconConfig().ShardCount)
 
 	// Metrics.
 	shuffledIndicesCacheMiss = promauto.NewCounter(prometheus.CounterOpts{

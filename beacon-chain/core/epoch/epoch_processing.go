@@ -776,11 +776,13 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			}
 		}
 	}
+
 	// Apply rewards for proposer including attestations promptly.
 	indices, err := unslashedAttestingIndices(state, atts.source)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
 	}
+
 	// For every index, filter the matching source attestation that correspond to the index,
 	// sort by inclusion delay and get the one that was included on chain first.
 	for _, index := range indices {
@@ -788,6 +790,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get the lowest inclusion delay attestation: %v", err)
 		}
+
 		// The reward for the proposer is based upon the value toward finality of the attestation
 		// they included which is based upon the index of the attestation signer.
 		rewards[att.ProposerIndex] += baseReward(state, index) / params.BeaconConfig().ProposerRewardQuotient
@@ -815,6 +818,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			}
 		}
 	}
+
 	return rewards, penalties, nil
 }
 
