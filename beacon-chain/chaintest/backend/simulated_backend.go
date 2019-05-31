@@ -348,18 +348,38 @@ func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 		)
 	}
 	for _, slashed := range testCase.Results.SlashedValidators {
-		if sb.state.ValidatorRegistry[slashed].SlashedEpoch == params.BeaconConfig().FarFutureEpoch {
+		if !sb.state.ValidatorRegistry[slashed].Slashed {
 			return fmt.Errorf(
 				"expected validator at index %d to have been slashed",
 				slashed,
 			)
 		}
+		if sb.state.ValidatorRegistry[slashed].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			return fmt.Errorf(
+				"expected validator at index %d to have exited",
+				slashed,
+			)
+		}
+		if sb.state.ValidatorRegistry[slashed].WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
+			return fmt.Errorf(
+				"expected validator at index %d withdrawable epoch to have been changed, received: %d",
+				slashed,
+				sb.state.ValidatorRegistry[slashed].WithdrawableEpoch,
+			)
+		}
 	}
 	for _, exited := range testCase.Results.ExitedValidators {
-		if sb.state.ValidatorRegistry[exited].StatusFlags != pb.Validator_INITIATED_EXIT {
+		if sb.state.ValidatorRegistry[exited].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
 				"expected validator at index %d to have exited",
 				exited,
+			)
+		}
+		if sb.state.ValidatorRegistry[exited].WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
+			return fmt.Errorf(
+				"expected validator at index %d withdrawable epoch to have been changed, received: %d",
+				exited,
+				sb.state.ValidatorRegistry[exited].WithdrawableEpoch,
 			)
 		}
 	}

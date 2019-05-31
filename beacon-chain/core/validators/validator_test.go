@@ -457,29 +457,6 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	}
 }
 
-func TestEligibleToExit_OK(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 1,
-		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-		},
-	}
-	if eligibleToExit(state, 0) {
-		t.Error("eligible to exit should be true but got false")
-	}
-
-	state = &pb.BeaconState{
-		Slot: params.BeaconConfig().MinValidatorWithdrawalDelay,
-		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
-				SlashedEpoch: 1},
-		},
-	}
-	if eligibleToExit(state, 0) {
-		t.Error("eligible to exit should be true but got false")
-	}
-}
-
 func TestMaxBalanceChurn_OK(t *testing.T) {
 	maxDepositAmount := params.BeaconConfig().MaxDepositAmount
 	tests := []struct {

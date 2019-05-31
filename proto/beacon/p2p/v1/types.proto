@@ -115,16 +115,6 @@ message Validator {
   bool slashed = 7;
   // Effective balance
   uint64 effective_balance = 8;
-
-  // Deprecated
-  // TODO(2307): Remove deprecated fields
-  uint64 slashed_epoch = 1002 [deprecated=true];
-  enum StatusFlags {
-    INITIAL = 0 [deprecated=true]; // validator status initial value.
-    INITIATED_EXIT = 1 [deprecated=true]; // validator initiated exit.
-    WITHDRAWABLE = 2 [deprecated=true]; // validator deposit is withdrawable.
-  }
-  StatusFlags status_flags = 1003 [deprecated=true];
 }
 
 message ShardReassignmentRecord {
