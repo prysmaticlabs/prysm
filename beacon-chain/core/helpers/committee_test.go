@@ -753,6 +753,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 		if err != nil {
 			panic(err)
 		}
+
 		if i < params.BeaconConfig().TargetCommitteeSize {
 			shard = (shard + 1) % params.BeaconConfig().ShardCount
 			i = 0
