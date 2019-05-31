@@ -16,6 +16,8 @@ import (
 
 var _ = shared.Service(&Gateway{})
 
+// Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward
+// it to the beacon-chain gRPC server.
 type Gateway struct {
 	conn        *grpc.ClientConn
 	ctx         context.Context
@@ -28,11 +30,13 @@ type Gateway struct {
 	startFailure error
 }
 
+// Start the gateway service. This serves the HTTP JSON traffic on the specified
+// port.
 func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
-	conn, err := Dial(ctx, "tcp", g.remoteAddr)
+	conn, err := dial(ctx, "tcp", g.remoteAddr)
 	if err != nil {
 		log.WithError(err).Error("Failed to connect to gRPC server")
 		g.startFailure = err
@@ -69,6 +73,7 @@ func (g *Gateway) Start() {
 	return
 }
 
+// Status of grpc gateway. Returns an error if this service is unhealthy.
 func (g *Gateway) Status() error {
 	log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway.")
 
@@ -83,6 +88,7 @@ func (g *Gateway) Status() error {
 	return nil
 }
 
+// Stop the gateway with a graceful shutdown.
 func (g *Gateway) Stop() error {
 	if err := g.server.Shutdown(g.ctx); err != nil {
 		log.WithError(err).Error("Failed to shut down server")
@@ -110,7 +116,8 @@ func New(ctx context.Context, remoteAddress, gatewayAddress string, mux *http.Se
 	}
 }
 
-func Dial(ctx context.Context, network, addr string) (*grpc.ClientConn, error) {
+// dial the gRPC server.
+func dial(ctx context.Context, network, addr string) (*grpc.ClientConn, error) {
 	switch network {
 	case "tcp":
 		return dialTCP(ctx, addr)
