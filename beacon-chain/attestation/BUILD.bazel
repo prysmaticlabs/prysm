@@ -9,7 +9,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/attestation",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
@@ -30,7 +29,6 @@ go_test(
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/internal:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
