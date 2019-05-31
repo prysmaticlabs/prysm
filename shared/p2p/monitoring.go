@@ -22,7 +22,7 @@ var (
 )
 
 // starPeerWatcher updates the peer count metric and calls to reconnect any VIP
-// peers such as the bootnode peer or relay node peer.
+// peers such as the bootnode peer, the relay node peer or the static peers.
 func startPeerWatcher(ctx context.Context, h host.Host, reconnectPeers ...string) {
 
 	go (func() {
@@ -67,7 +67,7 @@ func ensurePeerConnections(ctx context.Context, h host.Host, peers ...string) {
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
 			if err := h.Connect(ctx, *peer); err != nil {
-				log.Errorf("Failed to reconnect to peer %v", err)
+				log.WithField("peer", peer.ID).WithField("addrs", peer.Addrs).Errorf("Failed to reconnect to peer %v", err)
 				continue
 			}
 		}

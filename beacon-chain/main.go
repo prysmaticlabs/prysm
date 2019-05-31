@@ -59,6 +59,8 @@ func main() {
 		cmd.P2PPort,
 		cmd.P2PHost,
 		cmd.P2PMaxPeers,
+		cmd.P2PPrivKey,
+		cmd.P2PWhitelist,
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
 		cmd.EnableTracingFlag,
