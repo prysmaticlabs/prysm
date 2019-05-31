@@ -37,10 +37,6 @@ const testTopic = "test_topic"
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-
-	// Security required for swarm testing.
-	// https://github.com/libp2p/go-libp2p-swarm/issues/124
-	disableSecurity = false
 }
 
 func TestNewServer_InvalidMultiaddress(t *testing.T) {

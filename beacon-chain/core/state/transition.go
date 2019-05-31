@@ -7,10 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strconv"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -27,15 +24,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
-
-var (
-	correctAttestedValidatorGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "correct_attested_validator_rate",
-		Help: "The % of validators correctly attested for source and target",
-	}, []string{
-		"epoch",
-	})
-)
 
 // TransitionConfig defines important configuration options
 // for executing a state transition, which can have logging and signature
@@ -504,11 +492,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
 
-	// Log the useful metrics via prometheus.
-	correctAttestedValidatorGauge.WithLabelValues(
-		strconv.Itoa(int(currentEpoch)),
-	).Set(float64(len(currentBoundaryAttesterIndices) / len(activeValidatorIndices)))
-
 	if config.Logging {
 		log.WithField("currentEpochAttestations", len(currentEpochAttestations)).Info("Number of current epoch attestations")
 		log.WithField("attesterIndices", currentBoundaryAttesterIndices).Debug("Current epoch boundary attester indices")
@@ -536,26 +519,28 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 		log.WithField(
 			"activeValidators", len(activeValidatorIndices),
 		).Info("Active validators")
-		totalBalance := float32(0)
-		lowestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
-		highestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
-		for _, idx := range activeValidatorIndices {
-			if float32(state.ValidatorBalances[idx]) < lowestBalance {
-				lowestBalance = float32(state.ValidatorBalances[idx])
+		if len(activeValidatorIndices) > 0 {
+			totalBalance := float32(0)
+			lowestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
+			highestBalance := float32(state.ValidatorBalances[activeValidatorIndices[0]])
+			for _, idx := range activeValidatorIndices {
+				if float32(state.ValidatorBalances[idx]) < lowestBalance {
+					lowestBalance = float32(state.ValidatorBalances[idx])
+				}
+				if float32(state.ValidatorBalances[idx]) > highestBalance {
+					highestBalance = float32(state.ValidatorBalances[idx])
+				}
+				totalBalance += float32(state.ValidatorBalances[idx])
 			}
-			if float32(state.ValidatorBalances[idx]) > highestBalance {
-				highestBalance = float32(state.ValidatorBalances[idx])
-			}
-			totalBalance += float32(state.ValidatorBalances[idx])
+			avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
+			lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
+			highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
+			log.WithFields(logrus.Fields{
+				"averageBalance": avgBalance,
+				"lowestBalance":  lowestBalance,
+				"highestBalance": highestBalance,
+			}).Info("Active validator balances")
 		}
-		avgBalance := totalBalance / float32(len(activeValidatorIndices)) / float32(params.BeaconConfig().GweiPerEth)
-		lowestBalance = lowestBalance / float32(params.BeaconConfig().GweiPerEth)
-		highestBalance = highestBalance / float32(params.BeaconConfig().GweiPerEth)
-		log.WithFields(logrus.Fields{
-			"averageBalance": avgBalance,
-			"lowestBalance":  lowestBalance,
-			"highestBalance": highestBalance,
-		}).Info("Active validator balances")
 	}
 
 	return state, nil
