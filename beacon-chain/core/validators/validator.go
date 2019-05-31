@@ -61,7 +61,6 @@ func ProcessDeposit(
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 			Slashed:               false,
-			StatusFlags:           0,
 			WithdrawalCredentials: withdrawalCredentials,
 			EffectiveBalance:      amount,
 		}
@@ -356,26 +355,4 @@ func maxBalanceChurn(totalBalance uint64) uint64 {
 		return maxBalanceChurn
 	}
 	return params.BeaconConfig().MaxDepositAmount
-}
-
-// eligibleToExit checks if a validator is eligible to exit whether it was
-// slashed or not.
-//
-// Spec pseudocode definition:
-// def eligible(index):
-//    validator = state.validator_registry[index]
-//    if validator.slashed_epoch <= current_epoch:
-//         slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
-//        return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
-//    else:
-//        return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
-func eligibleToExit(state *pb.BeaconState, idx uint64) bool {
-	currentEpoch := helpers.CurrentEpoch(state)
-	validator := state.ValidatorRegistry[idx]
-
-	if validator.SlashedEpoch <= currentEpoch {
-		slashedWithdrawalEpochs := params.BeaconConfig().LatestSlashedExitLength / 2
-		return currentEpoch >= validator.SlashedEpoch+slashedWithdrawalEpochs
-	}
-	return currentEpoch >= validator.ExitEpoch+params.BeaconConfig().MinValidatorWithdrawalDelay
 }
