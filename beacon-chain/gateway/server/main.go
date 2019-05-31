@@ -40,7 +40,7 @@ var (
 )
 
 func init() {
-	logrus.SetFormatter(&joonix.FluentdFormatter{})
+	logrus.SetFormatter(joonix.NewFormatter())
 }
 
 var log = logrus.New()

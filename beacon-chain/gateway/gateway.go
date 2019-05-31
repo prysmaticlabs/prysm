@@ -68,6 +68,8 @@ func (g *Gateway) Start() {
 }
 
 func (g *Gateway) Status() error {
+	log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway.")
+
 	if g.startFailure != nil {
 		return g.startFailure
 	}

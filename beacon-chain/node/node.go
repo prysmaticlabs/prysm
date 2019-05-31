@@ -404,12 +404,11 @@ func (b *BeaconNode) registerAttestationService() error {
 }
 
 func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
-	jsonRPCPort := ctx.GlobalInt(utils.JSONRPCPort.Name)
-	if jsonRPCPort > 0 {
-		// TODO: Run gRPC gateway
-		selfAddress := ""
-		gatewayAddress := ""
-		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil))
+	gatewayPort := ctx.GlobalInt(utils.GRPCGatewayPort.Name)
+	if gatewayPort > 0 {
+		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(utils.RPCPort.Name))
+		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
+		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
 	}
 	return nil
 }
