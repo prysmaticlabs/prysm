@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "block.go",
-        "committee.go",
+        "common.go",
         "shuffled_indices.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
@@ -22,7 +22,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "block_test.go",
-        "committee_test.go",
         "shuffled_indices_test.go",
     ],
     embed = [":go_default_library"],
