@@ -1,67 +1,16 @@
 package trieutil
 
 import (
-	"crypto/ecdsa"
-	"fmt"
 	"math/big"
 	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/crypto"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-var (
-	amount33Eth, _        = new(big.Int).SetString("33000000000000000000", 10)
-	amount32Eth, _        = new(big.Int).SetString("32000000000000000000", 10)
-	amountLessThan1Eth, _ = new(big.Int).SetString("500000000000000000", 10)
-)
-
-type testAccount struct {
-	addr         common.Address
-	contract     *contracts.DepositContract
-	contractAddr common.Address
-	backend      *backends.SimulatedBackend
-	txOpts       *bind.TransactOpts
-}
-
-func setup() (*testAccount, error) {
-	genesis := make(core.GenesisAlloc)
-	privKey, _ := crypto.GenerateKey()
-	pubKeyECDSA, ok := privKey.Public().(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("error casting public key to ECDSA")
-	}
-
-	// strip off the 0x and the first 2 characters 04 which is always the EC prefix and is not required.
-	publicKeyBytes := crypto.FromECDSAPub(pubKeyECDSA)[4:]
-	var pubKey = make([]byte, 48)
-	copy(pubKey[:], []byte(publicKeyBytes))
-
-	addr := crypto.PubkeyToAddress(privKey.PublicKey)
-	txOpts := bind.NewKeyedTransactor(privKey)
-	startingBalance, _ := new(big.Int).SetString("100000000000000000000000000000000000000", 10)
-	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
-	backend := backends.NewSimulatedBackend(genesis, 210000000000)
-
-	depositsRequired := big.NewInt(8)
-	minDeposit := big.NewInt(1e9)
-	maxDeposit := big.NewInt(32e9)
-	contractAddr, _, contract, err := contracts.DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit, big.NewInt(1), addr)
-	if err != nil {
-		return nil, err
-	}
-	backend.Commit()
-
-	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
-}
 
 func TestMerkleTrie_BranchIndices(t *testing.T) {
 	indices := BranchIndices(1024, 3 /* depth */)
@@ -104,12 +53,12 @@ func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not create empty trie %v", err)
 	}
-	testAccount, err := setup()
+	testAccount, err := contracts.Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	depRoot, err := testAccount.contract.GetDepositRoot(&bind.CallOpts{})
+	depRoot, err := testAccount.Contract.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +150,7 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 }
 
 func TestDepositTrieRoot_OK(t *testing.T) {
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +160,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	depRoot, err := testAcc.contract.GetDepositRoot(&bind.CallOpts{})
+	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,22 +177,22 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 		Pubkey:                pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
-		Amount:                big.NewInt(0).Div(amount32Eth, big.NewInt(1e9)).Uint64(), // In Gwei
+		Amount:                big.NewInt(0).Div(contracts.Amount32Eth(), big.NewInt(1e9)).Uint64(), // In Gwei
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	testAcc.txOpts.GasLimit = 1000000
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
 
 	for i := 0; i < 100; i++ {
 		copy(data.Pubkey, []byte(strconv.Itoa(i)))
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
 		copy(data.Signature, []byte(strconv.Itoa(i)))
 
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
-		testAcc.backend.Commit()
+		testAcc.Backend.Commit()
 		item, err := hashutil.DepositHash(data)
 		if err != nil {
 			t.Fatal(err)
@@ -254,7 +203,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 			t.Error(err)
 		}
 
-		depRoot, err = testAcc.contract.GetDepositRoot(&bind.CallOpts{})
+		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -267,7 +216,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 }
 
 func TestDepositTrieRoot_Fail(t *testing.T) {
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +226,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	depRoot, err := testAcc.contract.GetDepositRoot(&bind.CallOpts{})
+	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,18 +243,18 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		Pubkey:                pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
-		Amount:                big.NewInt(0).Div(amount32Eth, big.NewInt(1e9)).Uint64(), // In Gwei
+		Amount:                big.NewInt(0).Div(contracts.Amount32Eth(), big.NewInt(1e9)).Uint64(), // In Gwei
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	testAcc.txOpts.GasLimit = 1000000
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
 
 	for i := 0; i < 100; i++ {
 		copy(data.Pubkey, []byte(strconv.Itoa(i)))
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
 		copy(data.Signature, []byte(strconv.Itoa(i)))
 
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -313,7 +262,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i+10)))
 		copy(data.Signature, []byte(strconv.Itoa(i+10)))
 
-		testAcc.backend.Commit()
+		testAcc.Backend.Commit()
 		item, err := hashutil.DepositHash(data)
 		if err != nil {
 			t.Fatal(err)
@@ -324,7 +273,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 			t.Error(err)
 		}
 
-		depRoot, err = testAcc.contract.GetDepositRoot(&bind.CallOpts{})
+		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
