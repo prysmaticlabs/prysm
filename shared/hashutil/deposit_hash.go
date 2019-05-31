@@ -30,13 +30,13 @@ func DepositHash(dep *pb.DepositData) ([32]byte, error) {
 
 	var zeroBytes [32]byte
 
-	pubkeyRoot := HashSha256(append(dep.Pubkey, zeroBytes[:15]...))
-	sigHash := HashSha256(dep.Signature[:63])
-	sigZeroBytesHash := HashSha256(append(dep.Signature[63:95], zeroBytes[:]...))
+	pubkeyRoot := HashSha256(append(dep.Pubkey, zeroBytes[:16]...))
+	sigHash := HashSha256(dep.Signature[:64])
+	sigZeroBytesHash := HashSha256(append(dep.Signature[64:96], zeroBytes[:]...))
 	sigRoot := HashSha256(append(sigHash[:], sigZeroBytesHash[:]...))
 
 	pubRootWCredsHash := HashSha256(append(pubkeyRoot[:], dep.WithdrawalCredentials...))
-	amountSigHash := HashSha256(append(append(bytesutil.Bytes8(dep.Amount), zeroBytes[:23]...), sigRoot[:]...))
+	amountSigHash := HashSha256(append(append(bytesutil.Bytes8(dep.Amount), zeroBytes[:24]...), sigRoot[:]...))
 
 	return HashSha256(append(pubRootWCredsHash[:], amountSigHash[:]...)), nil
 }
