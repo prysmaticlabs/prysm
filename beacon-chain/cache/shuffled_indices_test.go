@@ -7,7 +7,7 @@ import (
 )
 
 func TestShuffleKeyFn_OK(t *testing.T) {
-	sInfo := &ShuffledIndicesBySeed{
+	sInfo := &IndicesByIndexSeed{
 		Index:           999,
 		Seed:            []byte{'A'},
 		ShuffledIndices: []uint64{1, 2, 3, 4, 5},
@@ -32,13 +32,13 @@ func TestShuffleKeyFn_InvalidObj(t *testing.T) {
 func TestShuffledIndicesCache_ShuffledIndicesBySeed2(t *testing.T) {
 	cache := NewShuffledIndicesCache()
 
-	sInfo := &ShuffledIndicesBySeed{
+	sInfo := &IndicesByIndexSeed{
 		Index:           99,
 		Seed:            []byte{'A'},
 		ShuffledIndices: []uint64{1, 2, 3, 4},
 	}
 
-	shuffledIndices, err := cache.ShuffledIndicesBySeed(sInfo.Index, sInfo.Seed)
+	shuffledIndices, err := cache.IndicesByIndexSeed(sInfo.Index, sInfo.Seed)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestShuffledIndicesCache_ShuffledIndicesBySeed2(t *testing.T) {
 	if err := cache.AddShuffledValidatorList(sInfo); err != nil {
 		t.Fatal(err)
 	}
-	shuffledIndices, err = cache.ShuffledIndicesBySeed(sInfo.Index, sInfo.Seed)
+	shuffledIndices, err = cache.IndicesByIndexSeed(sInfo.Index, sInfo.Seed)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestShuffledIndices_MaxSize(t *testing.T) {
 	cache := NewShuffledIndicesCache()
 
 	for i := 0; i < maxShuffledListSize+10; i++ {
-		sInfo := &ShuffledIndicesBySeed{
+		sInfo := &IndicesByIndexSeed{
 			Seed: []byte{byte(i)},
 		}
 		if err := cache.AddShuffledValidatorList(sInfo); err != nil {
