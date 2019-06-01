@@ -18,12 +18,7 @@ import (
 )
 
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
-
-// CrosslinkCommittee defines the validator committee of slot and shard combinations.
-type CrosslinkCommittee struct {
-	Committee []uint64
-	Shard     uint64
-}
+var startShardCache = make(map[uint64]uint64)
 
 // EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //
@@ -278,7 +273,8 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 }
 
 // EpochStartShard returns the start shard used to process crosslink
-// of a given epoch.
+// of a given epoch. The start shard is cached using epoch as key,
+// it gets rewritten where there's a reorg or a new finalized block.
 //
 // Spec pseudocode definition:
 //   def get_epoch_start_shard(state: BeaconState, epoch: Epoch) -> Shard:
@@ -290,6 +286,10 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 //        shard = (shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT
 //    return shard
 func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	if _, ok := startShardCache[epoch]; ok {
+		return startShardCache[epoch], nil
+	}
+
 	currentEpoch := CurrentEpoch(state)
 	checkEpoch := currentEpoch + 1
 	if epoch > checkEpoch {
@@ -301,12 +301,10 @@ func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		checkEpoch--
 		shard = (shard + params.BeaconConfig().ShardCount - ShardDelta(state, checkEpoch)) % params.BeaconConfig().ShardCount
 	}
-	return shard, nil
-}
 
-// RestartShuffledValidatorCache restarts the shuffled indices cache from scratch.
-func RestartShuffledValidatorCache() {
-	shuffledIndicesCache = cache.NewShuffledIndicesCache()
+	startShardCache[epoch] = shard
+
+	return shard, nil
 }
 
 // VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
@@ -321,4 +319,14 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 		return false, fmt.Errorf("no committee exist for shard in the attestation")
 	}
 	return VerifyBitfield(att.AggregationBitfield, len(committee))
+}
+
+// RestartShuffledValidatorCache restarts the shuffled indices cache from scratch.
+func RestartShuffledValidatorCache() {
+	shuffledIndicesCache = cache.NewShuffledIndicesCache()
+}
+
+// RestartStartShardCache restarts the start shard cache from scratch.
+func RestartStartShardCache() {
+	startShardCache = make(map[uint64]uint64)
 }

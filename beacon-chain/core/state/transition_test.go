@@ -539,7 +539,7 @@ func BenchmarkProcessEpoch(b *testing.B) {
 	helpers.RestartShuffledValidatorCache()
 	epoch := uint64(1)
 
-	validatorCount := params.BeaconConfig().DepositsForChainStart / 4
+	validatorCount := params.BeaconConfig().DepositsForChainStart / 2
 	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
 	validators := make([]*pb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
@@ -560,8 +560,9 @@ func BenchmarkProcessEpoch(b *testing.B) {
 					Shard: i,
 				},
 			},
-			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-			InclusionDelay:      1,
+			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+			InclusionDelay: 1,
 		})
 	}
 

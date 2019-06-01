@@ -4,6 +4,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+var totalBalanceCache = make(map[uint64]uint64)
+var totalActiveBalanceCache = make(map[uint64]uint64)
+
 // TotalBalance returns the total amount at stake in Gwei
 // of input validators.
 //
@@ -14,25 +17,38 @@ import (
 //    """
 //    return sum([state.validator_registry[index].effective_balance for index in indices])
 func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
-	var total uint64
+	epoch := CurrentEpoch(state)
+	if _, ok := totalBalanceCache[epoch]; ok {
+		return totalBalanceCache[epoch]
+	}
 
+	var total uint64
 	for _, idx := range indices {
 		total += state.ValidatorRegistry[idx].EffectiveBalance
 	}
+
+	totalBalanceCache[epoch] = total
+
 	return total
 }
 
 // TotalActiveBalance returns the total amount at stake in Gwei
 // of active validators.
 func TotalActiveBalance(state *pb.BeaconState) uint64 {
-	var total uint64
 	epoch := CurrentEpoch(state)
+	if _, ok := totalActiveBalanceCache[epoch]; ok {
+		return totalActiveBalanceCache[epoch]
+	}
 
+	var total uint64
 	for i, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
 			total += state.ValidatorRegistry[i].EffectiveBalance
 		}
 	}
+
+	totalActiveBalanceCache[epoch] = total
+
 	return total
 }
 
@@ -63,4 +79,14 @@ func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.Beacon
 	}
 	state.Balances[idx] -= delta
 	return state
+}
+
+// RestartTotalBalanceCache restarts the total validator balance cache from scratch.
+func RestartTotalBalanceCache() {
+	totalBalanceCache = make(map[uint64]uint64)
+}
+
+// RestartTotalActiveBalanceCache restarts the total active validator balance cache from scratch.
+func RestartTotalActiveBalanceCache() {
+	totalActiveBalanceCache = make(map[uint64]uint64)
 }

@@ -9,6 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+var activeIndicesCache = make(map[uint64][]uint64)
+var activeCountCache = make(map[uint64]uint64)
+
 // IsActiveValidator returns the boolean value on whether the validator
 // is active or not.
 //
@@ -55,24 +58,38 @@ func IsSlashableValidator(validator *pb.Validator, epoch uint64) bool {
 //    """
 //    return [i for i, v in enumerate(state.validator_registry) if is_active_validator(v, epoch)]
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) []uint64 {
+	if _, ok := activeIndicesCache[epoch]; ok {
+		return activeIndicesCache[epoch]
+	}
+
 	indices := make([]uint64, 0, len(state.ValidatorRegistry))
 	for i, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
 	}
+
+	activeIndicesCache[epoch] = indices
+
 	return indices
 }
 
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
 func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) uint64 {
+	if _, ok := activeCountCache[epoch]; ok {
+		return activeCountCache[epoch]
+	}
+
 	var count uint64
 	for _, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
 			count++
 		}
 	}
+
+	activeCountCache[epoch] = count
+
 	return count
 }
 
@@ -195,4 +212,14 @@ func DomainVersion(state *pb.BeaconState, epoch uint64, domainType uint64) uint6
 	by = append(by, forkVersion[:4]...)
 	by = append(by, bytesutil.Bytes4(domainType)...)
 	return bytesutil.FromBytes8(by)
+}
+
+// RestartActiveCountCache restarts the active validator count cache from scratch.
+func RestartActiveCountCache() {
+	activeCountCache = make(map[uint64]uint64)
+}
+
+// RestartActiveIndicesCache restarts the active validator indices cache from scratch.
+func RestartActiveIndicesCache() {
+	activeIndicesCache = make(map[uint64][]uint64)
 }
