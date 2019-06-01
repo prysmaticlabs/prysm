@@ -60,6 +60,11 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Slot: 5,
+		LatestBlockHeader: &pb.BeaconBlockHeader{
+			StateRoot: params.BeaconConfig().ZeroHash[:],
+		},
+		LatestBlockRoots: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestStateRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}
 	block := &pb.BeaconBlock{
 		Slot: 4,
@@ -67,6 +72,47 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	want := "expected state.slot"
 	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestExecuteStateTransition_OK(t *testing.T) {
+	beaconState := &pb.BeaconState{
+		Slot: 5,
+		LatestBlockHeader: &pb.BeaconBlockHeader{
+			StateRoot: params.BeaconConfig().ZeroHash[:],
+		},
+		LatestBlockRoots: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestStateRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+	}
+	latestRandaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
+	for i := 0; i < len(latestRandaoMixes); i++ {
+		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
+	}
+	beaconState.LatestRandaoMixes = latestRandaoMixes
+	block := &pb.BeaconBlock{
+		Slot: 6,
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte{},
+		},
+	}
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block, state.DefaultConfig()); err != nil {
+		t.Errorf("Received %v", err)
+	}
+}
+
+func TestProcessSlot_OK(t *testing.T) {
+	slot := uint64(5)
+	beaconState := &pb.BeaconState{
+		Slot: slot,
+		LatestBlockHeader: &pb.BeaconBlockHeader{
+			StateRoot: params.BeaconConfig().ZeroHash[:],
+		},
+		LatestBlockRoots: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestStateRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+	}
+	beaconState, err := state.ProcessSlot(context.Background(), beaconState)
+	if err != nil {
+		t.Error(err)
 	}
 }
 
@@ -436,7 +482,11 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); err != nil {
+	cfg := &state.TransitionConfig{
+		Logging:          true,
+		VerifySignatures: state.DefaultConfig().VerifySignatures,
+	}
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, cfg); err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
 	}
 }

@@ -9,6 +9,55 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func TestBlockRoot_CorrectBlockRoot(t *testing.T) {
+	var blockRoots [][]byte
+
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	s := &pb.BeaconState{
+		LatestBlockRoots: blockRoots,
+	}
+
+	tests := []struct {
+		epoch        uint64
+		stateSlot    uint64
+		expectedRoot []byte
+	}{
+		{
+			epoch:        0,
+			stateSlot:    1,
+			expectedRoot: []byte{0},
+		},
+		{
+			epoch:        2,
+			stateSlot:    params.BeaconConfig().SlotsPerEpoch * 3,
+			expectedRoot: []byte{128},
+		},
+		{
+			epoch:        3,
+			stateSlot:    params.BeaconConfig().SlotsPerEpoch * 5,
+			expectedRoot: []byte{192},
+		},
+	}
+	for _, tt := range tests {
+		s.Slot = tt.stateSlot
+		wantedEpoch := tt.epoch
+		result, err := BlockRoot(s, wantedEpoch)
+		if err != nil {
+			t.Fatalf("failed to get block root at epoch %d: %v",
+				wantedEpoch, err)
+		}
+		if !bytes.Equal(result, tt.expectedRoot) {
+			t.Errorf(
+				"result block root was an unexpected value, wanted %v, got %v",
+				tt.expectedRoot,
+				result,
+			)
+		}
+	}
+}
+
 func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	var blockRoots [][]byte
 

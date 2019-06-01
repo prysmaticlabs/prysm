@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -409,6 +410,18 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	}
 	if statusErr.Code() != codes.NotFound {
 		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestCommitteeAssignment_OutOfEpochBounds(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: params.BeaconConfig().SlotsPerEpoch,
+	}
+	index := uint64(10000)
+	_, _, _, _, err := CommitteeAssignment(state, 3, index)
+	wanted := "epoch 3 can't be greater than next epoch 2"
+	if err == nil || !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected out of bounds error, wanted: %s, received: %s", wanted, err.Error())
 	}
 }
 
