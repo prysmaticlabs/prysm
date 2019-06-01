@@ -85,6 +85,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	// with the same log twice, causing an inconsistent state root.
 	index := binary.LittleEndian.Uint64(merkleTreeIndex)
 	if int64(index) <= w.lastReceivedMerkleIndex {
+		log.Debugf("log has already been processed with index %d", index)
 		return
 	}
 	w.lastReceivedMerkleIndex = int64(index)
