@@ -1136,7 +1136,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 	attestedIndices := []uint64{350, 361, 498, 533, 537, 629, 646}
 
 	attestedBalance, err := AttestingBalance(state, atts)
-	totalBalance := totalActiveBalance(state)
+	totalBalance := helpers.TotalActiveBalance(state)
 	if err != nil {
 		t.Fatal(err)
 	}

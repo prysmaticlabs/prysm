@@ -5,7 +5,7 @@ import (
 )
 
 // TotalBalance returns the total amount at stake in Gwei
-// of all active validators.
+// of input validators.
 //
 // Spec pseudocode definition:
 //   def get_total_balance(state: BeaconState, indices: List[ValidatorIndex]) -> Gwei:
@@ -18,6 +18,20 @@ func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
 
 	for _, idx := range indices {
 		total += state.ValidatorRegistry[idx].EffectiveBalance
+	}
+	return total
+}
+
+// TotalActiveBalance returns the total amount at stake in Gwei
+// of active validators.
+func TotalActiveBalance(state *pb.BeaconState) uint64 {
+	var total uint64
+	epoch := CurrentEpoch(state)
+
+	for i, v := range state.ValidatorRegistry {
+		if IsActiveValidator(v, epoch) {
+			total += state.ValidatorRegistry[i].EffectiveBalance
+		}
 	}
 	return total
 }

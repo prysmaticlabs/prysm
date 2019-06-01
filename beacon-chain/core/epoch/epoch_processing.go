@@ -180,7 +180,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	}
 
 	prevEpoch := helpers.PrevEpoch(state)
-	totalBal := totalActiveBalance(state)
+	totalBal := helpers.TotalActiveBalance(state)
 	oldPrevJustifiedEpoch := state.PreviousJustifiedEpoch
 	oldPrevJustifiedRoot := state.PreviousJustifiedRoot
 	oldCurrJustifiedEpoch := state.CurrentJustifiedEpoch
@@ -407,8 +407,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) *pb.BeaconState {
 //            decrease_balance(state, index, penalty)
 func ProcessSlashings(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-	activeIndices := helpers.ActiveValidatorIndices(state, currentEpoch)
-	totalBalance := helpers.TotalBalance(state, activeIndices)
+	totalBalance := helpers.TotalActiveBalance(state)
 
 	// Compute the total penalties.
 	exitLength := params.BeaconConfig().LatestSlashedExitLength
@@ -538,22 +537,6 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
-// totalActiveBalance returns the combined balances of all the active validators.
-//
-// Spec pseudocode definition:
-//  def get_total_active_balance(state: BeaconState) -> Gwei:
-//    return get_total_balance(state, get_active_validator_indices(state, get_current_epoch(state)))
-func totalActiveBalance(state *pb.BeaconState) uint64 {
-	var balance uint64
-	epoch := helpers.CurrentEpoch(state)
-	for i, v := range state.ValidatorRegistry {
-		if helpers.IsActiveValidator(v, epoch) {
-			balance += state.ValidatorRegistry[i].EffectiveBalance
-		}
-	}
-	return balance
-}
-
 // unslashedAttestingIndices returns all the attesting indices from a list of attestations,
 // it sorts the indices and filters out the slashed ones.
 //
@@ -675,7 +658,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 //        return 0
 //    return state.validator_registry[index].effective_balance // adjusted_quotient // BASE_REWARDS_PER_EPOCH
 func baseReward(state *pb.BeaconState, index uint64) uint64 {
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalActiveBalance(state) /
+	adjustedQuotient := mathutil.IntegerSquareRoot(helpers.TotalActiveBalance(state) /
 		params.BeaconConfig().BaseRewardQuotient)
 	if adjustedQuotient == 0 {
 		return 0
@@ -733,7 +716,7 @@ func baseReward(state *pb.BeaconState, index uint64) uint64 {
 //    return rewards, penalties
 func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	prevEpoch := helpers.PrevEpoch(state)
-	totalBalance := totalActiveBalance(state)
+	totalBalance := helpers.TotalActiveBalance(state)
 	rewards := make([]uint64, len(state.ValidatorRegistry))
 	penalties := make([]uint64, len(state.ValidatorRegistry))
 
