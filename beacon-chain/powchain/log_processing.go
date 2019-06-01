@@ -59,11 +59,11 @@ func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
 // logs from the deposit contract on the ETH1.0 chain.
 func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 	// Process logs according to their event signature.
-	if depositLog.Topics[0] == hashutil.Hash(depositEventSignature) {
+	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
 		return
 	}
-	if depositLog.Topics[0] == hashutil.Hash(chainStartEventSignature) && !w.chainStarted {
+	if depositLog.Topics[0] == hashutil.HashKeccak256(chainStartEventSignature) && !w.chainStarted {
 		w.ProcessChainStartLog(depositLog)
 		return
 	}

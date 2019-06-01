@@ -290,7 +290,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	validators[5297].Slashed = false
+	validators[5593].Slashed = false
 
 	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
@@ -595,7 +595,6 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			EffectiveBalance:  params.BeaconConfig().MaxDepositAmount,
 			Slashed:           false,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:      1,
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 			ActivationEpoch:   0,
 		}
@@ -1325,19 +1324,19 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x01},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{82, 84},
+			wantedCustodyBit1Indices: []uint64{71, 127},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x02},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{82, 84},
+			wantedCustodyBit1Indices: []uint64{71, 127},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{82, 84},
+			wantedCustodyBit1Indices: []uint64{71, 127},
 		},
 	}
 

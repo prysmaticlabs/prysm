@@ -86,7 +86,7 @@ func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffle 
 	copy(buf[:32], seed[:])
 	for {
 		buf[seedSize] = round
-		hash := hashutil.HashSha256(buf[:pivotViewSize])
+		hash := hashutil.Hash(buf[:pivotViewSize])
 		hash8 := hash[:8]
 		hash8Int := bytesutil.FromBytes8(hash8)
 		pivot := hash8Int % indexCount
@@ -100,7 +100,7 @@ func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffle 
 		// it will be used later to select a bit from the resulting hash.
 		position4bytes := bytesutil.ToBytes(position>>8, 4)
 		copy(buf[pivotViewSize:], position4bytes[:])
-		source := hashutil.HashSha256(buf)
+		source := hashutil.Hash(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,
 		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
 		byteV := source[(position&0xff)>>3]
@@ -183,11 +183,11 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 	copy(buf[:seedSize], seed[:])
 	for {
 		buf[seedSize] = r
-		ph := hashutil.HashSha256(buf[:pivotViewSize])
+		ph := hashutil.Hash(buf[:pivotViewSize])
 		pivot := bytesutil.FromBytes8(ph[:8]) % listSize
 		mirror := (pivot + 1) >> 1
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(pivot>>8))
-		source := hashutil.HashSha256(buf)
+		source := hashutil.Hash(buf)
 		byteV := source[(pivot&0xff)>>3]
 		for i, j := uint64(0), pivot; i < mirror; i, j = i+1, j-1 {
 			byteV, source = swapOrNot(buf, byteV, i, input, j, source)
@@ -196,7 +196,7 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 		mirror = (pivot + listSize + 1) >> 1
 		end := listSize - 1
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(end>>8))
-		source = hashutil.HashSha256(buf)
+		source = hashutil.Hash(buf)
 		byteV = source[(end&0xff)>>3]
 		for i, j := pivot+1, end; i < mirror; i, j = i+1, j-1 {
 			byteV, source = swapOrNot(buf, byteV, i, input, j, source)
@@ -222,7 +222,7 @@ func swapOrNot(buf []byte, byteV byte, i uint64, input []uint64, j uint64, sourc
 	if j&0xff == 0xff {
 		// just overwrite the last part of the buffer, reuse the start (seed, round)
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(j>>8))
-		source = hashutil.HashSha256(buf)
+		source = hashutil.Hash(buf)
 	}
 	if j&0x7 == 0x7 {
 		byteV = source[(j&0xff)>>3]
