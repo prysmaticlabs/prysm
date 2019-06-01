@@ -44,15 +44,19 @@ func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
 		return 0, err
 	}
 	if len(logs) == 0 {
-		return 0, nil
+		return 0, fmt.Errorf("no chainstart logs exist")
 	}
 
 	_, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
 	if err != nil {
 		return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
 	}
-	timestamp := binary.LittleEndian.Uint64(timestampData)
-	return timestamp, nil
+	timestampBoundary := binary.LittleEndian.Uint64(timestampData)
+	block, err := w.blockFetcher.BlockByNumber(w.ctx, big.NewInt(int64(logs[0].BlockNumber)))
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve block %v", err)
+	}
+	return block.Time() + timestampBoundary, nil
 }
 
 // ProcessLog is the main method which handles the processing of all

@@ -44,12 +44,12 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 		return fmt.Errorf("could not determine if ChainStart log has occurred: %v", err)
 	}
 
-	genesisTime, err := bs.powChainService.ETH2GenesisTime()
-	if err != nil {
-		return fmt.Errorf("could not determine chainstart time %v", err)
-	}
-
-	if ok && genesisTime != 0 {
+	if ok {
+		genesisTime, err := bs.powChainService.ETH2GenesisTime()
+		if err != nil {
+			return fmt.Errorf("could not determine chainstart time %v", err)
+		}
+		log.Info("time %v", genesisTime)
 		res := &pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,

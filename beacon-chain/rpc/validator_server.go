@@ -167,7 +167,7 @@ func (vs *ValidatorServer) assignment(
 		)
 	}
 
-	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
+	idx, err := vs.beaconDB.ValidatorIndex(pubkey[:48])
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
@@ -287,6 +287,7 @@ func (vs *ValidatorServer) validatorStatus(
 	valIdx, ok := idxMap[pk]
 	_, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, pubKey)
 	if eth1BlockNumBigInt == nil {
+		log.Error("No deposit")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -295,6 +296,7 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	if !ok {
+		log.Error("Not in index map")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -303,6 +305,7 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	if !chainStarted {
+		log.Error("chain hasnt started")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -310,7 +313,8 @@ func (vs *ValidatorServer) validatorStatus(
 		}
 	}
 
-	if exists := chainStartKeys[bytesutil.ToBytes96(pubKey)]; exists {
+	if exists := chainStartKeys[bytesutil.ToBytes96(pubKey[:48])]; exists {
+		log.Error("1")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_ACTIVE,
 			ActivationEpoch:        0,
@@ -321,6 +325,7 @@ func (vs *ValidatorServer) validatorStatus(
 
 	depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
 	if err != nil {
+		log.Error("2")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -329,6 +334,7 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	if depositBlockSlot == 0 {
+		log.Error("3")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -370,6 +376,7 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	status := vs.lookupValidatorStatus(uint64(valIdx), beaconState)
+	log.Error("4")
 	return &pb.ValidatorStatusResponse{
 		Status:                    status,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
@@ -410,7 +417,7 @@ func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState
 	// Generate a map for O(1) lookup of existence of pub keys in request.
 	pkMap := make(map[string]bool)
 	for _, pk := range pubkeys {
-		pkMap[hex.EncodeToString(pk)] = true
+		pkMap[hex.EncodeToString(pk[:48])] = true
 	}
 
 	var activeKeys [][]byte

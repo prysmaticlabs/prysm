@@ -119,16 +119,17 @@ func (ss *Service) Status() error {
 
 func (ss *Service) run() {
 	ss.Querier.Start()
-	synced, err := ss.Querier.IsSynced()
-	if err != nil {
-		slog.Fatalf("Unable to retrieve result from sync querier %v", err)
-	}
+	/*
+		synced, err := ss.Querier.IsSynced()
+		if err != nil {
+			slog.Fatalf("Unable to retrieve result from sync querier %v", err)
+		} */
 	ss.querierFinished = true
 
-	if synced {
-		ss.RegularSync.Start()
-		return
-	}
+	//if synced {
+	ss.RegularSync.Start()
+	//	return
+	//}
 
-	ss.InitialSync.Start(ss.Querier.chainHeadResponses)
+	//ss.InitialSync.Start(ss.Querier.chainHeadResponses)
 }

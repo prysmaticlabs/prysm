@@ -230,7 +230,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	BatchBlockLimit:           64 * 4, // Process blocks in batches of 4 epochs of blocks (threshold before casper penalties).
 	MaxNumLog2Validators:      24,
 	LogBlockDelay:             2,
-	BLSPubkeyLength:           96,
+	BLSPubkeyLength:           48,
 	DefaultBufferSize:         10000,
 	HashCacheSize:             100000,
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
