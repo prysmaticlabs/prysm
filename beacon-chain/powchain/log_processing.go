@@ -2,6 +2,7 @@ package powchain
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -33,30 +34,10 @@ func (w *Web3Service) HasChainStartLogOccurred() (bool, error) {
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
 func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			w.depositContractAddress,
-		},
-		Topics: [][]common.Hash{{hashutil.Hash(chainStartEventSignature)}},
+	if w.genesisTime != time.Unix(0, 0) {
+		return uint64(w.genesisTime.Unix()), nil
 	}
-	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
-	if err != nil {
-		return 0, err
-	}
-	if len(logs) == 0 {
-		return 0, fmt.Errorf("no chainstart logs exist")
-	}
-
-	_, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
-	if err != nil {
-		return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
-	}
-	timestampBoundary := binary.LittleEndian.Uint64(timestampData)
-	block, err := w.blockFetcher.BlockByNumber(w.ctx, big.NewInt(int64(logs[0].BlockNumber)))
-	if err != nil {
-		return 0, fmt.Errorf("could not retrieve block %v", err)
-	}
-	return block.Time() + timestampBoundary, nil
+	return 0, errors.New("chain hasn't started yet")
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -173,10 +154,17 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 		DepositRoot: chainStartDepositRoot[:],
 	}
 
-	timestamp := binary.LittleEndian.Uint64(timestampData)
+	timestampBoundary := binary.LittleEndian.Uint64(timestampData)
 	w.chainStarted = true
 	w.depositRoot = chainStartDepositRoot[:]
-	chainStartTime := time.Unix(int64(timestamp), 0)
+
+	block, err := w.blockFetcher.BlockByNumber(w.ctx, big.NewInt(int64(depositLog.BlockNumber)))
+	if err != nil {
+		log.Errorf("could not retrieve block %v", err)
+		return
+	}
+	chainStartTime := time.Unix(int64(block.Time()+timestampBoundary), 0)
+	w.genesisTime = chainStartTime
 
 	depHashes, err := w.ChainStartDepositHashes()
 	if err != nil {

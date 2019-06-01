@@ -200,9 +200,12 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	log.Infof("Slot %d", slot)
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
+	if slot == 0 {
+		return nil
+	}
 
 	req := &pb.CommitteeAssignmentsRequest{
-		EpochStart: slot / params.BeaconConfig().SlotsPerEpoch,
+		EpochStart: slot,
 		PublicKeys: v.pubkeys,
 	}
 
