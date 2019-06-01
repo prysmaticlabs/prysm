@@ -24,16 +24,22 @@ import (
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositData, error) {
+	var pubkey [48]byte
+	var withdrawalCreds [32]byte
+	var sig [96]byte
+	copy(pubkey[:], depositKey.PublicKey.Marshal())
+	copy(withdrawalCreds[:], withdrawalCredentialsHash(withdrawalKey))
 	di := &pb.DepositData{
-		Pubkey:                depositKey.PublicKey.Marshal(),
-		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
+		Pubkey:                pubkey[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	buf := new(bytes.Buffer)
 	if err := ssz.Encode(buf, di); err != nil {
 		return nil, err
 	}
-	di.Signature = depositKey.SecretKey.Sign(buf.Bytes(), params.BeaconConfig().DomainDeposit).Marshal()
+	copy(sig[:], depositKey.SecretKey.Sign(buf.Bytes(), params.BeaconConfig().DomainDeposit).Marshal())
+	di.Signature = sig[:]
 
 	return di, nil
 }

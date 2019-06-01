@@ -123,6 +123,11 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 	for _, status := range validatorStatuses {
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
+			log.WithFields(logrus.Fields{
+				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+				"status":    status.Status.Status.String(),
+			}).Info("Validator has been Activated")
+			continue
 		}
 		if status.Status.Status == pb.ValidatorStatus_EXITED {
 			log.WithFields(logrus.Fields{

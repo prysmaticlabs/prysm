@@ -49,7 +49,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 		return fmt.Errorf("could not determine chainstart time %v", err)
 	}
 
-	if ok {
+	if ok && genesisTime != 0 {
 		res := &pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,

@@ -2,7 +2,6 @@ package powchain
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -45,7 +44,7 @@ func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
 		return 0, err
 	}
 	if len(logs) == 0 {
-		return 0, errors.New("no chainstart logs exist")
+		return 0, nil
 	}
 
 	_, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
