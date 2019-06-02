@@ -541,7 +541,7 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 	state.ProcessEpoch(context.Background(), newState)
 }
 
-func BenchmarkProcessEpoch(b *testing.B) {
+func BenchmarkProcessEpoch65536(b *testing.B) {
 	helpers.ClearShuffledValidatorCache()
 	epoch := uint64(1)
 
@@ -591,6 +591,13 @@ func BenchmarkProcessEpoch(b *testing.B) {
 		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		CurrentCrosslinks:         crosslinks,
 		PreviousEpochAttestations: atts,
+	}
+
+	// Precache the shuffled indices
+	for i := uint64(0); i < shardCount; i++ {
+		if _, err := helpers.CrosslinkCommitteeAtEpoch(s, 0, i); err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	b.ResetTimer()

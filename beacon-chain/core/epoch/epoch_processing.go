@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
@@ -113,6 +112,10 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 }
 
 // AttestingBalance returns the total balance from all the attesting indices.
+//
+// WARNING: This method allocates a new copy of the attesting validator indices set and is
+// considered to be very memory expensive. Avoid using this unless you really
+// need to get attesting balance from attestations.
 //
 // Spec pseudocode definition:
 //  def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
@@ -553,7 +556,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 		if err != nil {
 			return nil, fmt.Errorf("could not get attester indices: %v", err)
 		}
-		setIndices = sliceutil.UnionUint64(setIndices, indices)
+		setIndices = append(setIndices, indices...)
 	}
 	// Sort the attesting set indices by increasing order.
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
@@ -741,22 +744,28 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	attsPackage = append(attsPackage, atts.source)
 	attsPackage = append(attsPackage, atts.Target)
 	attsPackage = append(attsPackage, atts.head)
+
+	// Cache the validators who voted correctly for source in a map
+	// to calculate earliest attestation rewards later.
+	attestersVotedSoruce := make(map[uint64]*pb.PendingAttestation)
 	// Compute rewards / penalties for each attestation in the list and update
 	// the rewards and penalties lists.
-	for _, matchAtt := range attsPackage {
+	for i, matchAtt := range attsPackage {
 		indices, err := unslashedAttestingIndices(state, matchAtt)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
 		}
+
 		attested := make(map[uint64]bool)
 		// Construct a map to look up validators that voted for source, target or head.
 		for _, index := range indices {
+			if i == 0 {
+				attestersVotedSoruce[index] = &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
+			}
 			attested[index] = true
 		}
-		attestedBalance, err := AttestingBalance(state, matchAtt)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get attesting balance: %v", err)
-		}
+		attestedBalance := helpers.TotalBalance(state, indices)
+
 		// Update rewards and penalties to each eligible validator index.
 		for _, index := range eligible {
 			if _, ok := attested[index]; ok {
@@ -767,24 +776,25 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		}
 	}
 
-	// Apply rewards for proposer including attestations promptly.
-	indices, err := unslashedAttestingIndices(state, atts.source)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
-	}
-
 	// For every index, filter the matching source attestation that correspond to the index,
 	// sort by inclusion delay and get the one that was included on chain first.
-	for _, index := range indices {
-		att, err := earlistAttestation(state, atts.source, index)
+	for _, att := range atts.source {
+		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBitfield)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not get the lowest inclusion delay attestation: %v", err)
+			return nil, nil, fmt.Errorf("could not get attester indices: %v", err)
 		}
+		for _, i := range indices {
+			if _, ok := attestersVotedSoruce[i]; ok {
+				if attestersVotedSoruce[i].InclusionDelay > att.InclusionDelay {
+					attestersVotedSoruce[i] = att
+				}
+			}
+		}
+	}
 
-		// The reward for the proposer is based upon the value toward finality of the attestation
-		// they included which is based upon the index of the attestation signer.
-		rewards[att.ProposerIndex] += baseReward(state, index) / params.BeaconConfig().ProposerRewardQuotient
-		rewards[index] += baseReward(state, index) * params.BeaconConfig().MinAttestationInclusionDelay / att.InclusionDelay
+	for i, a := range attestersVotedSoruce {
+		rewards[a.ProposerIndex] += baseReward(state, i) / params.BeaconConfig().ProposerRewardQuotient
+		rewards[i] += baseReward(state, i) * params.BeaconConfig().MinAttestationInclusionDelay / a.InclusionDelay
 	}
 
 	// Apply penalties for quadratic leaks.

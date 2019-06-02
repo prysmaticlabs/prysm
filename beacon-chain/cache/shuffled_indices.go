@@ -91,7 +91,6 @@ func (c *ShuffledIndicesCache) IndicesByIndexSeed(index uint64, seed []byte) ([]
 func (c *ShuffledIndicesCache) AddShuffledValidatorList(shuffledIndices *IndicesByIndexSeed) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
 	if err := c.shuffledIndicesCache.AddIfNotPresent(shuffledIndices); err != nil {
 		return err
 	}
