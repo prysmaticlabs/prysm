@@ -135,7 +135,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
-	signingRoot, err := ssz.SigningRoot(block)
+	signingRoot, err := hashutil.BlockSigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash header: %v", err)
 	}
@@ -172,23 +172,23 @@ func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
-	root, err := hashutil.HashBeaconBlock(block)
+	signingRoot, err := hashutil.BlockSigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
 
 	// Delete the block from the cache.
-	delete(db.blocks, root)
+	delete(db.blocks, signingRoot)
 	blockCacheSize.Set(float64(len(db.blocks)))
 
-	slotRootBinary := encodeSlotNumberRoot(block.Slot, root)
+	slotRootBinary := encodeSlotNumberRoot(block.Slot, signingRoot)
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 		if err := bucket.Delete(slotRootBinary); err != nil {
 			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
 		}
-		return bucket.Delete(root[:])
+		return bucket.Delete(signingRoot[:])
 	})
 }
 
