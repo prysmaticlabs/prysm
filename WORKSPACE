@@ -130,10 +130,20 @@ http_archive(
 )
 
 http_archive(
+    name = "com_github_bazelbuild_buildtools",
+    strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
+    url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
+)
+
+load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
+
+buildifier_dependencies()
+
+http_archive(
     name = "com_github_prysmaticlabs_go_ssz",
+    sha256 = "9e753a6e5c4f6f7f3b4af584f326b1c650aee6af85fc98416fbe7d1579d6e4d7",
     strip_prefix = "go-ssz-85eecc65d2c7a3b20501fe662210e5045f7bcbe1",
     url = "https://github.com/prysmaticlabs/go-ssz/archive/85eecc65d2c7a3b20501fe662210e5045f7bcbe1.tar.gz",
-    sha256 = "9e753a6e5c4f6f7f3b4af584f326b1c650aee6af85fc98416fbe7d1579d6e4d7",
 )
 
 load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
@@ -1100,4 +1110,16 @@ go_repository(
     name = "com_github_joonix_log",
     commit = "13fe31bbdd7a6f706b9114e188cdb53856be4d64",
     importpath = "github.com/joonix/log",
+)
+
+go_repository(
+    name = "grpc_ecosystem_grpc_gateway",
+    commit = "8fd5fd9d19ce68183a6b0934519dfe7fe6269612",
+    importpath = "github.com/grpc-ecosystem/grpc-gateway",
+)
+
+go_repository(
+    name = "com_github_ghodss_yaml",
+    commit = "25d852aebe32c875e9c044af3eef9c7dc6bc777f",
+    importpath = "github.com/ghodss/yaml",
 )
