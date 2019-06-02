@@ -367,8 +367,6 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 }
 
 func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
-	// TODO(2167): Unskip this test.
-	t.Skip()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
