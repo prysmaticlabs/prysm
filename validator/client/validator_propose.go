@@ -41,7 +41,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 		log.WithError(err).Error("Failed to fetch CanonicalHead")
 		return
 	}
-	parentTreeRoot, err := hashutil.HashBeaconBlock(headBlock)
+	parentTreeRoot, err := blockutil.BlockSigningRoot(headBlock)
 	if err != nil {
 		log.WithError(err).Error("Failed to hash parent block")
 		return

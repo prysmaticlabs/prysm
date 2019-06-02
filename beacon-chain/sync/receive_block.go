@@ -85,7 +85,7 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2
 		return nil
 	}
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 
 	response := blockMsg.Data.(*pb.BeaconBlockResponse)
 	block := response.Block
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
@@ -180,7 +180,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	headRoot, err := hashutil.HashBeaconBlock(head)
+	headRoot, err := blockutil.BlockSigningRoot(head)
 	if err != nil {
 		log.Errorf("Could not hash head block: %v", err)
 		return nil, nil, false, err

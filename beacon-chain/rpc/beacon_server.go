@@ -242,7 +242,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		if err != nil {
 			return nil, err
 		}
-		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		blockRoot, err := blockutil.BlockSigningRoot(kid)
 		if err != nil {
 			return nil, err
 		}

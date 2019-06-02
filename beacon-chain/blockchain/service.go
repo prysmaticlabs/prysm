@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"runtime"
 	"sync"
 	"time"
@@ -148,7 +149,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
-	genBlockRoot, err := hashutil.HashBeaconBlock(genBlock)
+	genBlockRoot, err := blockutil.BlockSigningRoot(genBlock)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon block: %v", err)
 	}
@@ -218,7 +219,7 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("could not retrieve chain head: %v", err)
 	}
 
-	root, err := hashutil.HashBeaconBlock(head)
+	root, err := blockutil.BlockSigningRoot(head)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
 	}

@@ -339,7 +339,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve chain head: %v", err)
 		return err
 	}
-	headBlkRoot, err := hashutil.HashBeaconBlock(head)
+	headBlkRoot, err := blockutil.BlockSigningRoot(head)
 	if err != nil {
 		log.Errorf("Could not hash chain head: %v", err)
 	}
@@ -348,7 +348,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve finalized block: %v", err)
 		return err
 	}
-	finalizedBlkRoot, err := hashutil.HashBeaconBlock(finalizedBlk)
+	finalizedBlkRoot, err := blockutil.BlockSigningRoot(finalizedBlk)
 	if err != nil {
 		log.Errorf("Could not hash finalized block: %v", err)
 	}

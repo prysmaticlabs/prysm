@@ -24,7 +24,7 @@ func TestNilDB_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{}
-	h, _ := hashutil.HashBeaconBlock(block)
+	h, _ := blockutil.BlockSigningRoot(block)
 
 	hasBlock := db.HasBlock(h)
 	if hasBlock {
@@ -45,7 +45,7 @@ func TestSaveBlock_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block1 := &pb.BeaconBlock{}
-	h1, _ := hashutil.HashBeaconBlock(block1)
+	h1, _ := blockutil.BlockSigningRoot(block1)
 
 	err := db.SaveBlock(block1)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestSaveBlock_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	h1Prime, _ := hashutil.HashBeaconBlock(b1Prime)
+	h1Prime, _ := blockutil.BlockSigningRoot(b1Prime)
 
 	if b1Prime == nil || h1 != h1Prime {
 		t.Fatalf("get should return b1: %x", h1)
@@ -65,7 +65,7 @@ func TestSaveBlock_OK(t *testing.T) {
 	block2 := &pb.BeaconBlock{
 		Slot: 0,
 	}
-	h2, _ := hashutil.HashBeaconBlock(block2)
+	h2, _ := blockutil.BlockSigningRoot(block2)
 
 	err = db.SaveBlock(block2)
 	if err != nil {
@@ -76,7 +76,7 @@ func TestSaveBlock_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	h2Prime, _ := hashutil.HashBeaconBlock(b2Prime)
+	h2Prime, _ := blockutil.BlockSigningRoot(b2Prime)
 	if b2Prime == nil || h2 != h2Prime {
 		t.Fatalf("get should return b2: %x", h2)
 	}
@@ -87,7 +87,7 @@ func TestSaveBlock_NilBlkInCache(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{Slot: 999}
-	h1, _ := hashutil.HashBeaconBlock(block)
+	h1, _ := blockutil.BlockSigningRoot(block)
 
 	// Save a nil block to with block root.
 	db.blocks[h1] = nil
@@ -115,7 +115,7 @@ func TestSaveBlockInCache_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{Slot: 999}
-	h, _ := hashutil.HashBeaconBlock(block)
+	h, _ := blockutil.BlockSigningRoot(block)
 
 	err := db.SaveBlock(block)
 	if err != nil {
@@ -140,7 +140,7 @@ func TestDeleteBlock_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{Slot: 0}
-	h, _ := hashutil.HashBeaconBlock(block)
+	h, _ := blockutil.BlockSigningRoot(block)
 
 	err := db.SaveBlock(block)
 	if err != nil {
@@ -171,7 +171,7 @@ func TestDeleteBlockInCache_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{Slot: 0}
-	h, _ := hashutil.HashBeaconBlock(block)
+	h, _ := blockutil.BlockSigningRoot(block)
 
 	err := db.SaveBlock(block)
 	if err != nil {
@@ -274,7 +274,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get genesis block: %v", err)
 	}
-	bHash, err := hashutil.HashBeaconBlock(block)
+	bHash, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		t.Fatalf("failed to get hash of b: %v", err)
 	}
@@ -288,7 +288,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		Slot:       1,
 		ParentRoot: bHash[:],
 	}
-	b2Hash, err := hashutil.HashBeaconBlock(block2)
+	b2Hash, err := blockutil.BlockSigningRoot(block2)
 	if err != nil {
 		t.Fatalf("failed to hash b2: %v", err)
 	}
@@ -308,11 +308,11 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to retrieve head: %v", err)
 	}
 
-	b2PrimeHash, err := hashutil.HashBeaconBlock(b2Prime)
+	b2PrimeHash, err := blockutil.BlockSigningRoot(b2Prime)
 	if err != nil {
 		t.Fatalf("failed to hash b2Prime: %v", err)
 	}
-	b2SigmaHash, err := hashutil.HashBeaconBlock(b2Sigma)
+	b2SigmaHash, err := blockutil.BlockSigningRoot(b2Sigma)
 	if err != nil {
 		t.Fatalf("failed to hash b2Sigma: %v", err)
 	}
@@ -463,7 +463,7 @@ func TestHasBlock_returnsTrue(t *testing.T) {
 		Slot: uint64(44),
 	}
 
-	root, err := hashutil.HashBeaconBlock(block)
+	root, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -169,7 +169,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	if err := s.db.SaveBlock(block); err != nil {
 		return err
 	}
-	root, err := hashutil.HashBeaconBlock(block)
+	root, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}

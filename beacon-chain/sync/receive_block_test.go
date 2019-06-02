@@ -34,7 +34,7 @@ func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [
 		} else {
 			parent.ParentRoot = parentRoots[len(parentRoots)-1][:]
 		}
-		parentRoot, err := hashutil.HashBeaconBlock(parent)
+		parentRoot, err := blockutil.BlockSigningRoot(parent)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -104,7 +104,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	genesisBlock := &pb.BeaconBlock{
 		Slot: 0,
 	}
-	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
+	genesisRoot, err := blockutil.BlockSigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}

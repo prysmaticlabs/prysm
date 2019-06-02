@@ -94,7 +94,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if block == nil {
 		return errors.New("received nil block")
 	}
-	root, err := hashutil.HashBeaconBlock(block)
+	root, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return err
 	}

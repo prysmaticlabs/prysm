@@ -166,7 +166,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
-	h, err := hashutil.HashBeaconBlock(blks[0])
+	h, err := blockutil.BlockSigningRoot(blks[0])
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
@@ -192,7 +192,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Block unable to be saved %v", err)
 		}
 
-		hash, err := hashutil.HashBeaconBlock(block)
+		hash, err := blockutil.BlockSigningRoot(block)
 		if err != nil {
 			t.Fatalf("Could not hash block %v", err)
 		}

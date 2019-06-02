@@ -312,7 +312,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	if err := s.beaconDB.UpdateChainHead(context.Background(), cb1, &pb.BeaconState{}); err != nil {
 		t.Fatal(err)
 	}
-	r1, err := hashutil.HashBeaconBlock(cb1)
+	r1, err := blockutil.BlockSigningRoot(cb1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,7 +358,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}
-	r1, err := hashutil.HashBeaconBlock(cb1)
+	r1, err := blockutil.BlockSigningRoot(cb1)
 	if err != nil {
 		t.Fatal(err)
 	}

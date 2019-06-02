@@ -25,7 +25,7 @@ func TestHashBeaconBlock_doesntMutate(t *testing.T) {
 	}
 	b := proto.Clone(a).(*pb.BeaconBlock)
 
-	_, err := hashutil.HashBeaconBlock(b)
+	_, err := blockutil.BlockSigningRoot(b)
 	if err != nil {
 		t.Error(err)
 	}
@@ -37,7 +37,7 @@ func TestHashBeaconBlock_doesntMutate(t *testing.T) {
 
 func TestHashBeaconBlock_nil(t *testing.T) {
 	var blk *pb.BeaconBlock
-	_, err := hashutil.HashBeaconBlock(blk)
+	_, err := blockutil.BlockSigningRoot(blk)
 	if err != hashutil.ErrNilProto {
 		t.Fatalf("Error from hashing nil block is not the correct type, instead it is: %v", err)
 	}

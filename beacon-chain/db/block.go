@@ -5,14 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"go.opencensus.io/trace"
 )
 
@@ -135,7 +134,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
-	signingRoot, err := hashutil.BlockSigningRoot(block)
+	signingRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash header: %v", err)
 	}
@@ -172,7 +171,7 @@ func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
-	signingRoot, err := hashutil.BlockSigningRoot(block)
+	signingRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
@@ -286,9 +285,9 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.UpdateChainHead")
 	defer span.End()
 
-	blockRoot, err := ssz.SigningRoot(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
-		return fmt.Errorf("unable to tree hash block: %v", err)
+		return fmt.Errorf("unable to determine block signing root: %v", err)
 	}
 
 	slotBinary := encodeSlotNumber(block.Slot)

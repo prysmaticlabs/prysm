@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -276,7 +277,7 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 		return fmt.Errorf("could not tree hash state: %v", err)
 	}
 	genesisBlock := b.NewGenesisBlock(stateRoot[:])
-	genesisBlockRoot, err := hashutil.HashBeaconBlock(genesisBlock)
+	genesisBlockRoot, err := blockutil.BlockSigningRoot(genesisBlock)
 	if err != nil {
 		return fmt.Errorf("could not tree hash genesis block: %v", err)
 	}
