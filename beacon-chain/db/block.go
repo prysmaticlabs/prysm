@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -134,24 +135,24 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
-	root, err := hashutil.HashBeaconBlock(block)
+	signingRoot, err := ssz.SigningRoot(block)
 	if err != nil {
-		return fmt.Errorf("failed to tree hash block: %v", err)
+		return fmt.Errorf("failed to tree hash header: %v", err)
 	}
 
 	// Skip saving block to DB if it exists in the cache.
-	if blk, exists := db.blocks[root]; exists && blk != nil {
+	if blk, exists := db.blocks[signingRoot]; exists && blk != nil {
 		return nil
 	}
 	// Save it to the cache if it's not in the cache.
-	db.blocks[root] = block
+	db.blocks[signingRoot] = block
 	blockCacheSize.Set(float64(len(db.blocks)))
 
 	enc, err := proto.Marshal(block)
 	if err != nil {
 		return fmt.Errorf("failed to encode block: %v", err)
 	}
-	slotRootBinary := encodeSlotNumberRoot(block.Slot, root)
+	slotRootBinary := encodeSlotNumberRoot(block.Slot, signingRoot)
 
 	if block.Slot > db.highestBlockSlot {
 		db.highestBlockSlot = block.Slot
@@ -162,7 +163,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 		if err := bucket.Put(slotRootBinary, enc); err != nil {
 			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
 		}
-		return bucket.Put(root[:], enc)
+		return bucket.Put(signingRoot[:], enc)
 	})
 }
 
@@ -285,7 +286,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.UpdateChainHead")
 	defer span.End()
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("unable to tree hash block: %v", err)
 	}

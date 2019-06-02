@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"strconv"
 	"strings"
 	"testing"
@@ -76,12 +77,27 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot: genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot: bodyRoot[:],
+	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var slashings []*pb.ProposerSlashing
 	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings+1; i++ {
 		slashings = append(slashings, &pb.ProposerSlashing{})
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
+		ParentRoot: parentRoot[:],
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -122,7 +138,22 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 		attesterSlashings = append(attesterSlashings, &pb.AttesterSlashing{})
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot: genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot: bodyRoot[:],
+	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
+		ParentRoot: parentRoot[:],
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -190,7 +221,22 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		blockAttestations = append(blockAttestations, &pb.Attestation{})
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot: genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot: bodyRoot[:],
+	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
+		ParentRoot: parentRoot[:],
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
@@ -287,7 +333,22 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits+1; i++ {
 		exits = append(exits, &pb.VoluntaryExit{})
 	}
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot: genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot: bodyRoot[:],
+	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
+		ParentRoot: parentRoot[:],
 		Slot: 4,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      []byte{},
@@ -336,6 +397,16 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
+	}
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot: genesisBlock.Slot,
+        ParentRoot: genesisBlock.ParentRoot,
+        BodyRoot: bodyRoot[:],
 	}
 	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -407,7 +478,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Epoch:          0,
 		},
 	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
+		ParentRoot: parentRoot[:],
 		Slot: beaconState.Slot,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      []byte{},

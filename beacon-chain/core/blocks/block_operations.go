@@ -537,12 +537,21 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 //         signature=attestation.signature,
 //     )
 func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
-	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
+	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get attesting indices: %v", err)
 	}
-	// Custody bit 0 indices should be an empty slice for phase 0.
+	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
+	cb1Map := make(map[uint64]bool)
+	for _, idx := range cb1i {
+		cb1Map[idx] = true
+	}
 	cb0i := []uint64{}
+	for _, idx := range attIndices {
+		if !cb1Map[idx] {
+			cb0i = append(cb0i, idx)
+		}
+	}
 	inAtt := &pb.IndexedAttestation{
 		Data:                attestation.Data,
 		Signature:           attestation.Signature,
