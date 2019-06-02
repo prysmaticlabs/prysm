@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// TODO(2740): Use a more memory friendly structure
 var activeIndicesCache = make(map[uint64][]uint64)
 var activeCountCache = make(map[uint64]uint64)
 
