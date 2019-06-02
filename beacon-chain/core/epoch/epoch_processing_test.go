@@ -558,6 +558,8 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 }
 
 func TestProcessCrosslink_NoUpdate(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	validatorCount := 128
 	validators := make([]*pb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
@@ -572,10 +574,7 @@ func TestProcessCrosslink_NoUpdate(t *testing.T) {
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i + 1)}
 	}
-	oldCrosslink := &pb.Crosslink{
-		Epoch:    0,
-		DataRoot: []byte{'A'},
-	}
+
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
@@ -597,8 +596,13 @@ func TestProcessCrosslink_NoUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	wanted := &pb.Crosslink{
+		Epoch:      0,
+		DataRoot:   params.BeaconConfig().ZeroHash[:],
+		ParentRoot: params.BeaconConfig().ZeroHash[:],
+	}
 	// Since there has been no attestation, crosslink stayed the same.
-	if !reflect.DeepEqual(oldCrosslink, newState.CurrentCrosslinks[0]) {
+	if !reflect.DeepEqual(wanted, newState.CurrentCrosslinks[0]) {
 		t.Errorf("Did not get correct crosslink back")
 	}
 }
