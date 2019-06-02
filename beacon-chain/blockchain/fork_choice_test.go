@@ -1624,10 +1624,14 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 }
 
 func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
-	t.Skip()
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1642,7 +1646,21 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 	}
 	pHeadHash2, _ := hashutil.HashBeaconBlock(potentialHead2)
 
-	beaconState := &pb.BeaconState{Balances: []uint64{1e9, 1e9}}
+	// We store these potential heads in the DB.
+	if err := beaconDB.SaveBlock(potentialHead); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState := &pb.BeaconState{
+		Balances: []uint64{1e9, 1e9},
+		ValidatorRegistry: []*pb.Validator{
+			{EffectiveBalance: 1e9},
+			{EffectiveBalance: 1e9},
+		},
+	}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -1671,7 +1689,7 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	count, err := VoteCount(genesisBlock, beaconState, voteTargets, nil)
+	count, err := VoteCount(genesisBlock, beaconState, voteTargets, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not fetch vote balances: %v", err)
 	}
