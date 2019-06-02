@@ -36,6 +36,8 @@ func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
+	log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway.")
+
 	conn, err := dial(ctx, "tcp", g.remoteAddr)
 	if err != nil {
 		log.WithError(err).Error("Failed to connect to gRPC server")
@@ -75,8 +77,6 @@ func (g *Gateway) Start() {
 
 // Status of grpc gateway. Returns an error if this service is unhealthy.
 func (g *Gateway) Status() error {
-	log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway.")
-
 	if g.startFailure != nil {
 		return g.startFailure
 	}
