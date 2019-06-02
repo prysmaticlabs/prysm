@@ -13,8 +13,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -120,7 +118,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
+		LatestCrosslink:          &pbp2p.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
 		JustifiedEpoch:           3,
 	}, nil)
 
@@ -137,19 +135,19 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	// Validator index is at index 4 in the mocked committee defined in this test.
 	expectedAttestation := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:                     30,
-			Shard:                    5,
-			BeaconBlockRootHash32:    []byte("A"),
-			EpochBoundaryRootHash32:  []byte("B"),
-			JustifiedBlockRootHash32: []byte("C"),
-			LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
-			CrosslinkDataRoot:        params.BeaconConfig().ZeroHash[:],
-			JustifiedEpoch:           3,
+			BeaconBlockRoot: []byte("A"),
+			TargetRoot:      []byte("B"),
+			SourceRoot:      []byte("C"),
+			Crosslink:       &pbp2p.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
+			SourceEpoch:     3,
 		},
 		CustodyBitfield: make([]byte, (len(committee)+7)/8),
 		Signature:       []byte("signed"),
 	}
-	aggregationBitfield := bitutil.SetBitfield(4, mathutil.CeilDiv8(len(committee)))
+	aggregationBitfield, err := bitutil.SetBitfield(4, len(committee))
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedAttestation.AggregationBitfield = aggregationBitfield
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
@@ -214,7 +212,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
+		LatestCrosslink:          &pbp2p.Crosslink{DataRoot: []byte{'D'}},
 		JustifiedEpoch:           3,
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
@@ -263,7 +261,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
+		LatestCrosslink:          &pbp2p.Crosslink{DataRoot: []byte{'D'}},
 		JustifiedEpoch:           3,
 	}, nil)
 

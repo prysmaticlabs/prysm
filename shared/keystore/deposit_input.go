@@ -23,17 +23,17 @@ import (
 //   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing deposit along with serialize(deposit_input) as the singular bytes input along with a deposit amount in Gwei.
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/validator/0_beacon-chain-validator.md#submit-deposit
-func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositInput, error) {
-	di := &pb.DepositInput{
-		Pubkey:                      depositKey.PublicKey.Marshal(),
-		WithdrawalCredentialsHash32: withdrawalCredentialsHash(withdrawalKey),
+func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositData, error) {
+	di := &pb.DepositData{
+		Pubkey:                depositKey.PublicKey.Marshal(),
+		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
 	}
 
 	buf := new(bytes.Buffer)
 	if err := ssz.Encode(buf, di); err != nil {
 		return nil, err
 	}
-	di.ProofOfPossession = depositKey.SecretKey.Sign(buf.Bytes(), params.BeaconConfig().DomainDeposit).Marshal()
+	di.Signature = depositKey.SecretKey.Sign(buf.Bytes(), params.BeaconConfig().DomainDeposit).Marshal()
 
 	return di, nil
 }

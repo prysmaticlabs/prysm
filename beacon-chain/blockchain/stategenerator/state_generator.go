@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -43,11 +43,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		)
 	}
 
-	if fState.LatestBlock == nil {
+	if fState.LatestBlockHeader == nil {
 		return nil, fmt.Errorf("latest head in state is nil %v", err)
 	}
 
-	fRoot, err := hashutil.HashBeaconBlock(fState.LatestBlock)
+	fRoot, err := ssz.TreeHash(fState.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get block root %v", err)
 	}
@@ -155,7 +155,7 @@ func blocksSinceFinalized(ctx context.Context, db *db.BeaconDB, block *pb.Beacon
 	defer span.End()
 	blockAncestors := make([]*pb.BeaconBlock, 0)
 	blockAncestors = append(blockAncestors, block)
-	parentRoot := bytesutil.ToBytes32(block.ParentBlockRoot)
+	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	// looking up ancestors, until the finalized block.
 	for parentRoot != finalizedBlockRoot {
 		retblock, err := db.Block(parentRoot)
@@ -163,7 +163,7 @@ func blocksSinceFinalized(ctx context.Context, db *db.BeaconDB, block *pb.Beacon
 			return nil, err
 		}
 		blockAncestors = append(blockAncestors, retblock)
-		parentRoot = bytesutil.ToBytes32(retblock.ParentBlockRoot)
+		parentRoot = bytesutil.ToBytes32(retblock.ParentRoot)
 	}
 	return blockAncestors, nil
 }

@@ -7,10 +7,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -166,8 +165,12 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
 	}
 	depositData := [][]byte{}
-	for i := range upToLatestEth1DataDeposits {
-		depositData = append(depositData, upToLatestEth1DataDeposits[i].DepositData)
+	for _, dep := range upToLatestEth1DataDeposits {
+		depHash, err := hashutil.DepositHash(dep.Data)
+		if err != nil {
+			return nil, fmt.Errorf("coulf not hash deposit data %v", err)
+		}
+		depositData = append(depositData, depHash[:])
 	}
 
 	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
@@ -235,7 +238,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		votes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
+		participatedVotes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
 		if err != nil {
 			return nil, err
 		}
@@ -244,9 +247,9 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 			return nil, err
 		}
 		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
-			BlockRoot: blockRoot[:],
-			Block:     kid,
-			Votes:     uint64(votes),
+			BlockRoot:         blockRoot[:],
+			Block:             kid,
+			ParticipatedVotes: uint64(participatedVotes),
 		})
 	}
 	return &pb.BlockTreeResponse{

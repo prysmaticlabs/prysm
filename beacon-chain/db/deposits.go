@@ -8,7 +8,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -94,12 +93,7 @@ func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Dep
 	var deposit *pb.Deposit
 	var blockNum *big.Int
 	for _, ctnr := range db.deposits {
-		depositInput, err := helpers.DecodeDepositInput(ctnr.deposit.DepositData)
-		if err != nil {
-			log.Debugf("Could not decode deposit input: %v", err)
-			continue
-		}
-		if bytes.Equal(depositInput.Pubkey, pubKey) {
+		if bytes.Equal(ctnr.deposit.Data.Pubkey, pubKey) {
 			deposit = ctnr.deposit
 			blockNum = ctnr.block
 			break

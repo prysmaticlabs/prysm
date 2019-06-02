@@ -100,8 +100,8 @@ func TestGenerateSeed_OK(t *testing.T) {
 
 	got := GenerateSeed(state, 10)
 
-	wanted := [32]byte{184, 125, 45, 85, 9, 149, 28, 150, 244, 26, 107, 190, 20,
-		226, 23, 62, 239, 72, 184, 214, 219, 91, 33, 42, 123, 110, 161, 17, 6, 206, 182, 195}
+	wanted := [32]byte{239, 112, 63, 86, 124, 180, 155, 181, 91, 67, 231, 178,
+		94, 149, 243, 101, 176, 169, 153, 35, 37, 19, 115, 154, 6, 102, 125, 91, 81, 153, 186, 84}
 	if got != wanted {
 		t.Errorf("Incorrect generated seeds. Got: %v, wanted: %v",
 			got, wanted)

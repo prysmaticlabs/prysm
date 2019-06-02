@@ -77,9 +77,15 @@ func reportStateMetrics(state *pb.BeaconState) {
 			strconv.Itoa(i), //Validator index
 		).Set(float64(v.ExitEpoch))
 		// Track individual Validator's slashed epochs
-		validatorSlashedGauge.WithLabelValues(
-			strconv.Itoa(i), //Validator index
-		).Set(float64(v.SlashedEpoch))
+		if v.Slashed {
+			validatorSlashedGauge.WithLabelValues(
+				strconv.Itoa(i), //Validator index
+			).Set(float64(v.WithdrawableEpoch - params.BeaconConfig().LatestSlashedExitLength))
+		} else {
+			validatorSlashedGauge.WithLabelValues(
+				strconv.Itoa(i), //Validator index
+			).Set(float64(params.BeaconConfig().FarFutureEpoch))
+		}
 		// Total number of active validators
 		if v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch {
 			active++

@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -26,8 +24,6 @@ func init() {
 var _ = TargetHandler(&Service{})
 
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
-	t.Skip()
-
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -53,7 +49,6 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -62,19 +57,20 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
-			Slot:  1,
-			Shard: 2,
+			Crosslink: &pb.Crosslink{
+				Shard: 1,
+			},
 		},
 	}
 
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[60].Pubkey)
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[10].Pubkey)
+	if service.store.m[pubkey].Data.Crosslink.Shard !=
+		attestation.Data.Crosslink.Shard {
+		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
+			attestation.Data.Crosslink.Shard, service.store.m[pubkey].Data.Crosslink.Shard)
 	}
 
 	beaconState = &pb.BeaconState{
@@ -83,25 +79,22 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 
-	attestation.Data.Slot = 36
-	attestation.Data.Shard = 36
+	attestation.Data.Crosslink.Shard = 36
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	if service.store.m[pubkey].Data.Crosslink.Shard !=
+		attestation.Data.Crosslink.Shard {
+		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
+			attestation.Data.Crosslink.Shard, service.store.m[pubkey].Data.Crosslink.Shard)
 	}
 }
 
 func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
-	t.Skip()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -124,7 +117,6 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -133,8 +125,9 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x80},
 		Data: &pb.AttestationData{
-			Slot:  1,
-			Shard: 1,
+			Crosslink: &pb.Crosslink{
+				Shard: 1,
+			},
 		},
 	}
 
@@ -150,7 +143,6 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{}},
-		LatestBlock:       &pb.BeaconBlock{Slot: 0},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -175,7 +167,6 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
-		LatestBlock:       &pb.BeaconBlock{Slot: 0},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -200,7 +191,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
-			BeaconBlockRootHash32: blockRoot[:],
+			BeaconBlockRoot: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	service.store.m[pubKey48] = attestation
@@ -217,165 +208,6 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	if !bytes.Equal(blockRoot[:], latestAttestedTarget.BlockRoot) {
 		t.Errorf("Wanted: %v, got: %v", blockRoot[:], latestAttestedTarget.BlockRoot)
-	}
-}
-
-func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
-	t.Skip()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	var validators []*pb.Validator
-	for i := 0; i < 64; i++ {
-		validators = append(validators, &pb.Validator{
-			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: 0,
-			ExitEpoch:       10,
-		})
-	}
-
-	beaconState := &pb.BeaconState{
-		Slot:                   1,
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-	block := &pb.BeaconBlock{
-		Slot: 1,
-	}
-	if err := beaconDB.SaveBlock(block); err != nil {
-		t.Fatal(err)
-	}
-	beaconState.LatestBlock = block
-	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
-		t.Fatal(err)
-	}
-	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-
-	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x01},
-		Data: &pb.AttestationData{
-			Slot:  1,
-			Shard: 2,
-		},
-	}
-
-	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
-		t.Fatalf("could not update latest attestation: %v", err)
-	}
-	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[60].Pubkey)
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
-	}
-
-	attestation.Data.Slot = 36
-	attestation.Data.Shard = 36
-
-	beaconState = &pb.BeaconState{
-		Slot:                   36,
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-	beaconState.LatestBlock = block
-	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-
-	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
-		t.Fatalf("could not update latest attestation: %v", err)
-	}
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
-	}
-
-	// Verify the committee for attestation's data slot was cached.
-	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Slot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	wantedCommittee := []uint64{12}
-	if !reflect.DeepEqual(wantedCommittee, fetchedCommittees.Committees[0].Committee) {
-		t.Errorf(
-			"Result indices was an unexpected value. Wanted %d, got %d",
-			wantedCommittee,
-			fetchedCommittees.Committees[0].Committee,
-		)
-	}
-}
-
-func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
-	t.Skip()
-	var validators []*pb.Validator
-	for i := 0; i < 64; i++ {
-		validators = append(validators, &pb.Validator{
-			Pubkey:          []byte{byte(i)},
-			ActivationEpoch: 0,
-			ExitEpoch:       10,
-		})
-	}
-
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	beaconState := &pb.BeaconState{
-		Slot:                   2,
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-	block := &pb.BeaconBlock{
-		Slot: 2,
-	}
-	if err := beaconDB.SaveBlock(block); err != nil {
-		t.Fatal(err)
-	}
-	beaconState.LatestBlock = block
-	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
-		t.Fatal(err)
-	}
-
-	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-
-	slot := uint64(2)
-	shard := uint64(3)
-	index := uint64(4)
-	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x01},
-		Data: &pb.AttestationData{
-			Slot:  slot,
-			Shard: shard,
-		},
-	}
-
-	csInSlot := &cache.CommitteesInSlot{
-		Slot: slot,
-		Committees: []*cache.CommitteeInfo{
-			{Shard: shard, Committee: []uint64{index, 999}},
-		}}
-
-	if err := committeeCache.AddCommittees(csInSlot); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
-		t.Fatalf("could not update latest attestation: %v", err)
-	}
-	pubkey := bytesutil.ToBytes48([]byte{byte(index)})
-	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
-		t.Fatalf("could not update latest attestation: %v", err)
-	}
-
-	if service.store.m[pubkey].Data.Slot !=
-		attestation.Data.Slot {
-		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
 }
 
@@ -406,7 +238,6 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -414,15 +245,73 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0xC0},
 		Data: &pb.AttestationData{
-			Slot:  1,
-			Shard: 1,
+			Crosslink: &pb.Crosslink{
+				Shard: 1,
+			},
 		},
 	}
 
+	wanted := "bitfield points to an invalid index in the committee"
+
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
-		t.Fatalf("could not update latest attestation: %v", err)
+		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Bitfield points to an invalid index in the committee")
+
+	testutil.AssertLogsContain(t, hook, wanted)
+}
+
+func TestBatchUpdate_FromSync(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	var latestRandaoMixes [][]byte
+	var latestActiveIndexRoots [][]byte
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
+		})
+		latestRandaoMixes = append(latestRandaoMixes, []byte{'A'})
+		latestActiveIndexRoots = append(latestActiveIndexRoots, []byte{'B'})
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot:                   1,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      latestRandaoMixes,
+		LatestActiveIndexRoots: latestActiveIndexRoots,
+	}
+	block := &pb.BeaconBlock{
+		Slot: 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+	service.poolLimit = 9
+	for i := 0; i < 10; i++ {
+		attestation := &pb.Attestation{
+			AggregationBitfield: []byte{0x80},
+			Data: &pb.AttestationData{
+				TargetEpoch: 2,
+				Crosslink: &pb.Crosslink{
+					Shard: 1,
+				},
+			},
+		}
+		if err := service.handleAttestation(ctx, attestation); err != nil {
+			t.Fatalf("could not update latest attestation: %v", err)
+		}
+	}
+	if len(service.pooledAttestations) != 0 {
+		t.Errorf("pooled attestations were not cleared out, still %d attestations in pool", len(service.pooledAttestations))
+	}
 }
 
 func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
@@ -451,7 +340,6 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -461,8 +349,9 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 		attestations = append(attestations, &pb.Attestation{
 			AggregationBitfield: []byte{0x80},
 			Data: &pb.AttestationData{
-				Slot:  1,
-				Shard: 1,
+				Crosslink: &pb.Crosslink{
+					Shard: 1,
+				},
 			},
 		})
 	}

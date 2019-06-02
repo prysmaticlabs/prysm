@@ -71,7 +71,7 @@ func decodeDepositData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	di := &pb.DepositInput{}
+	di := &pb.DepositData{}
 
 	if err := ssz.Decode(bytes.NewReader(encodedData), di); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

@@ -29,24 +29,24 @@ func init() {
 
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
@@ -55,19 +55,19 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	copy(sig[:], []byte("testing"))
 	copy(withdrawalCreds[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	testAcc.txOpts.GasLimit = 1000000
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
+	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
@@ -75,7 +75,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
@@ -92,24 +92,24 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
@@ -118,24 +118,24 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	copy(sig[:], []byte("testing"))
 	copy(withdrawalCreds[:], []byte("testing"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	testAcc.txOpts.GasLimit = 1000000
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
 
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
@@ -143,7 +143,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
@@ -160,23 +160,23 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 }
 
 func TestUnpackDepositLogData_OK(t *testing.T) {
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
 	if err := web3Service.initDataFromContract(); err != nil {
 		t.Fatalf("Could not init from contract: %v", err)
@@ -189,18 +189,18 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	testAcc.txOpts.GasLimit = 1000000
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
+	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
@@ -208,7 +208,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		},
 	}
 
-	logz, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	logz, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
@@ -226,11 +226,11 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Errorf("Pubkey is not the same as the data that was put in %v", loggedPubkey)
 	}
 
-	if !bytes.Equal(loggedSig, data.ProofOfPossession) {
+	if !bytes.Equal(loggedSig, data.Signature) {
 		t.Errorf("Proof of Possession is not the same as the data that was put in %v", loggedSig)
 	}
 
-	if !bytes.Equal(withCreds, data.WithdrawalCredentialsHash32) {
+	if !bytes.Equal(withCreds, data.WithdrawalCredentials) {
 		t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v", withCreds)
 	}
 
@@ -238,25 +238,25 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
-	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	testAcc.Backend.Commit()
+	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
@@ -265,25 +265,25 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	testAcc.txOpts.GasLimit = 1000000
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
-		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
-		testAcc.backend.Commit()
+		testAcc.Backend.Commit()
 	}
 
 	query := ethereum.FilterQuery{
@@ -292,7 +292,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
@@ -325,25 +325,25 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 
 func TestProcessETH2GenesisLog_8UniquePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
-	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	testAcc.Backend.Commit()
+	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
@@ -358,19 +358,19 @@ func TestProcessETH2GenesisLog_8UniquePubkeys(t *testing.T) {
 		copy(sig[:], []byte("sig"))
 		copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-		data := &pb.DepositInput{
-			Pubkey:                      pubkey[:],
-			ProofOfPossession:           sig[:],
-			WithdrawalCredentialsHash32: withdrawalCreds[:],
+		data := &pb.DepositData{
+			Pubkey:                pubkey[:],
+			Signature:             sig[:],
+			WithdrawalCredentials: withdrawalCreds[:],
 		}
 
-		testAcc.txOpts.Value = amount32Eth
-		testAcc.txOpts.GasLimit = 1000000
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		testAcc.TxOpts.GasLimit = 1000000
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
-		testAcc.backend.Commit()
+		testAcc.Backend.Commit()
 	}
 
 	query := ethereum.FilterQuery{
@@ -379,7 +379,7 @@ func TestProcessETH2GenesisLog_8UniquePubkeys(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
@@ -411,25 +411,25 @@ func TestProcessETH2GenesisLog_8UniquePubkeys(t *testing.T) {
 }
 
 func TestUnpackETH2GenesisLogData_OK(t *testing.T) {
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
-	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
@@ -438,24 +438,24 @@ func TestUnpackETH2GenesisLogData_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	testAcc.txOpts.GasLimit = 1000000
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
-		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
-		testAcc.backend.Commit()
+		testAcc.Backend.Commit()
 	}
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
@@ -463,7 +463,7 @@ func TestUnpackETH2GenesisLogData_OK(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
@@ -481,25 +481,25 @@ func TestUnpackETH2GenesisLogData_OK(t *testing.T) {
 }
 
 func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
-		Logger:          testAcc.backend,
+		Logger:          testAcc.Backend,
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
-	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
@@ -508,14 +508,14 @@ func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	testAcc.txOpts.GasLimit = 1000000
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
 
 	ok, err := web3Service.HasChainStartLogOccurred()
 	if err != nil {
@@ -528,12 +528,11 @@ func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
-		testAcc.txOpts.Value = amount32Eth
-		testAcc.txOpts.GasLimit = 1000000
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
-		testAcc.backend.Commit()
+		testAcc.Backend.Commit()
 	}
 	ok, err = web3Service.HasChainStartLogOccurred()
 	if err != nil {
@@ -545,26 +544,26 @@ func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
 }
 
 func TestETH1DataGenesis_OK(t *testing.T) {
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
-		Logger:          testAcc.backend,
+		Logger:          testAcc.Backend,
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 		BeaconDB:        &db.BeaconDB{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
-	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
@@ -573,14 +572,14 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositInput{
-		Pubkey:                      pubkey[:],
-		ProofOfPossession:           sig[:],
-		WithdrawalCredentialsHash32: withdrawalCreds[:],
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	testAcc.txOpts.GasLimit = 1000000
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
 
 	ok, err := web3Service.HasChainStartLogOccurred()
 	if err != nil {
@@ -593,11 +592,11 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
-		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
-		testAcc.backend.Commit()
+		testAcc.Backend.Commit()
 	}
 	ok, err = web3Service.HasChainStartLogOccurred()
 	if err != nil {
@@ -607,7 +606,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 		t.Error("Expected chain start log to have occurred")
 	}
 
-	eth2GenesisIterator, err := testAcc.contract.FilterEth2Genesis(nil)
+	eth2GenesisIterator, err := testAcc.Contract.FilterEth2Genesis(nil)
 	if err != nil {
 		t.Fatalf("Could not create chainstart iterator: %v", err)
 	}
@@ -623,11 +622,11 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 
 	// We add in another 8 deposits after chainstart.
 	for i := 0; i < depositsReqForChainStart; i++ {
-		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, data.Pubkey, data.WithdrawalCredentialsHash32, data.ProofOfPossession); err != nil {
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
-		testAcc.backend.Commit()
+		testAcc.Backend.Commit()
 	}
 
 	query := ethereum.FilterQuery{
@@ -636,7 +635,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}

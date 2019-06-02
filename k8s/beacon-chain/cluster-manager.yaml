@@ -61,6 +61,7 @@ spec:
         - --deposit-amount=3200000000000000000
         - --db-path=/data
         - --verbose
+        - --beaconRPC=beacon-chain.beacon-chain.svc.cluster.local:4000
         ports:
         - containerPort: 8000
           name: grpc-service

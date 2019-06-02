@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -97,14 +97,12 @@ func TestShardDelta_OK(t *testing.T) {
 	}
 }
 
-func TestComputeCommittee_OK(t *testing.T) {
-	// TODO(2682): Don't fix this test, this will be removed after merging #2682
-	t.Skip()
+func TestComputeCommittee_WithoutCache(t *testing.T) {
+	// Create 10 committees
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*pb.Validator, validatorCount)
 
-	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
-	committeesPerEpoch := uint64(6)
-	// Set epoch total validators count to 6 committees per slot.
-	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -118,31 +116,77 @@ func TestComputeCommittee_OK(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	wantedEpoch := SlotToEpoch(state.Slot)
-	shardCount := params.BeaconConfig().ShardCount
-	startShard := state.LatestStartShard
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+	committees, err := ComputeCommittee(indices, seed, 0, 1 /* Total committee*/)
+	if err != nil {
+		t.Errorf("could not compute committee: %v", err)
+	}
 
-	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().SlotsPerEpoch
-	offset := state.Slot % params.BeaconConfig().SlotsPerEpoch
-	slotStartShard := (startShard + committeesPerSlot + offset) % shardCount
-	seed := GenerateSeed(state, wantedEpoch)
+	// Test shuffled indices are correct for shard 5 committee
+	shard := uint64(5)
+	committee5, err := ComputeCommittee(indices, seed, shard, committeeCount)
+	if err != nil {
+		t.Errorf("could not compute committee: %v", err)
+	}
+	start := utils.SplitOffset(validatorCount, committeeCount, shard)
+	end := utils.SplitOffset(validatorCount, committeeCount, shard+1)
 
-	indices := ActiveValidatorIndices(state, wantedEpoch)
-	newCommittees := make([]*CrosslinkCommittee, committeesPerSlot)
-	committees := []*CrosslinkCommittee{{}}
-	for i := uint64(0); i < committeesPerSlot; i++ {
-		committee, err := ComputeCommittee(indices, seed, committeesPerSlot*offset+i, committeesPerEpoch)
-		if err != nil {
-			t.Errorf("could not compute committee: %v", err)
-		}
-		committees[i] = &CrosslinkCommittee{
-			Committee: committee,
-			Shard:     (slotStartShard + i) % shardCount,
+	if !reflect.DeepEqual(committees[start:end], committee5) {
+		t.Error("committee has different shuffled indices")
+	}
+
+	// Test shuffled indices are correct for shard 9 committee
+	shard = uint64(9)
+	committee9, err := ComputeCommittee(indices, seed, shard, committeeCount)
+	if err != nil {
+		t.Errorf("could not compute committee: %v", err)
+	}
+	start = utils.SplitOffset(validatorCount, committeeCount, shard)
+	end = utils.SplitOffset(validatorCount, committeeCount, shard+1)
+
+	if !reflect.DeepEqual(committees[start:end], committee9) {
+		t.Error("committee has different shuffled indices")
+	}
+}
+
+func TestComputeCommittee_WithCache(t *testing.T) {
+	// Create 10 committees
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*pb.Validator, validatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
-	if reflect.DeepEqual(committees, newCommittees) {
-		t.Error("Committees from different slot shall not be equal")
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		Slot:                   200,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	// Test shuffled indices are correct for shard 3 committee
+	shard := uint64(3)
+	committee3, err := ComputeCommittee(indices, seed, shard, committeeCount)
+	if err != nil {
+		t.Errorf("could not compute committee: %v", err)
+	}
+
+	cachedIndices, err := shuffledIndicesCache.IndicesByIndexSeed(shard, seed[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(cachedIndices, committee3) {
+		t.Error("committee has different shuffled indices")
 	}
 }
 
@@ -169,37 +213,34 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	tests := []struct {
 		attestationSlot uint64
 		stateSlot       uint64
-		shard           uint64
 		bitfield        []byte
 		wanted          []uint64
 	}{
 		{
-			attestationSlot: 2,
+			attestationSlot: 3,
 			stateSlot:       5,
-			shard:           3,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{21, 126},
+			wanted:          []uint64{71, 127},
 		},
 		{
-			attestationSlot: 1,
+			attestationSlot: 2,
 			stateSlot:       10,
-			shard:           2,
 			bitfield:        []byte{0x01},
-			wanted:          []uint64{2, 17},
+			wanted:          []uint64{85, 103},
 		},
 		{
-			attestationSlot: 10,
+			attestationSlot: 11,
 			stateSlot:       10,
-			shard:           11,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{79, 112},
+			wanted:          []uint64{68, 102},
 		},
 	}
-
+	//startShard := uint64(960)
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
-		attestationData.Slot = tt.attestationSlot
-		attestationData.Shard = tt.shard
+		attestationData.Crosslink = &pb.Crosslink{
+			Shard: tt.attestationSlot,
+		}
 		attestationData.TargetEpoch = 0
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
@@ -234,7 +275,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
-	attestationData := &pb.AttestationData{}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
 
 	if _, err := AttestingIndices(state, attestationData, []byte{}); err == nil {
 		t.Error("attestation participants should have failed with incorrect bitfield")
@@ -302,30 +343,30 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       161,
-			committee:  []uint64{0, 107},
-			shard:      97,
+			slot:       146,
+			committee:  []uint64{0, 3},
+			shard:      82,
 			isProposer: false,
 		},
 		{
 			index:      105,
-			slot:       156,
-			committee:  []uint64{88, 105},
-			shard:      92,
+			slot:       160,
+			committee:  []uint64{105, 20},
+			shard:      96,
 			isProposer: false,
 		},
 		{
 			index:      64,
-			slot:       172,
-			committee:  []uint64{64, 31},
-			shard:      108,
-			isProposer: false,
+			slot:       183,
+			committee:  []uint64{64, 33},
+			shard:      119,
+			isProposer: true,
 		},
 		{
 			index:      11,
-			slot:       169,
-			committee:  []uint64{13, 11},
-			shard:      105,
+			slot:       135,
+			committee:  []uint64{119, 11},
+			shard:      71,
 			isProposer: false,
 		},
 	}
@@ -368,201 +409,6 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	}
 	if statusErr.Code() != codes.NotFound {
 		t.Errorf("Unexpected error: %v", err)
-	}
-}
-
-func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
-	// TODO(2682): Don't fix this test, this will be removed after merging #2682
-	t.Skip()
-
-	slotOffset := uint64(1111)
-	csInSlot := &cache.CommitteesInSlot{
-		Slot: slotOffset,
-		Committees: []*cache.CommitteeInfo{
-			{Shard: 123, Committee: []uint64{55, 105}},
-			{Shard: 234, Committee: []uint64{11, 14}},
-		}}
-
-	if err := committeeCache.AddCommittees(csInSlot); err != nil {
-		t.Fatal(err)
-	}
-
-	attestationData := &pb.AttestationData{
-		Shard: 234,
-		Slot:  uint64(slotOffset),
-	}
-	result, err := AttestingIndices(&pb.BeaconState{}, attestationData, []byte{0x03})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wanted := []uint64{11, 14}
-	if !reflect.DeepEqual(wanted, result) {
-		t.Errorf(
-			"Result indices was an unexpected value. Wanted %d, got %d",
-			wanted,
-			result,
-		)
-	}
-}
-
-func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
-	// TODO(2682): Don't fix this test, this will be removed after merging #2682
-	t.Skip()
-
-	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	slotOffset := uint64(10)
-	state := &pb.BeaconState{
-		Slot:                   slotOffset,
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	attestationData := &pb.AttestationData{
-		Shard: 11,
-		Slot:  slotOffset,
-	}
-	result, err := AttestingIndices(state, attestationData, []byte{0x03})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wanted := []uint64{49, 92}
-	if !reflect.DeepEqual(wanted, result) {
-		t.Errorf(
-			"Result indices was an unexpected value. Wanted %d, got %d",
-			wanted,
-			result,
-		)
-	}
-
-	// Verify the committee for offset slot was cached.
-	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(slotOffset)
-	if err != nil {
-		t.Fatal(err)
-	}
-	wanted = []uint64{92, 49}
-	if !reflect.DeepEqual(wanted, fetchedCommittees.Committees[0].Committee) {
-		t.Errorf(
-			"Result indices was an unexpected value. Wanted %d, got %d",
-			wanted,
-			fetchedCommittees.Committees[0].Committee,
-		)
-	}
-}
-
-func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
-	// TODO(2682): Don't fix this test, this will be removed after merging #2682
-	t.Skip()
-
-	slotOffset := uint64(1111)
-	csInSlot := &cache.CommitteesInSlot{
-		Slot: slotOffset,
-		Committees: []*cache.CommitteeInfo{
-			{Shard: 123, Committee: []uint64{55, 105}},
-			{Shard: 234, Committee: []uint64{11, 14}},
-		}}
-
-	if err := committeeCache.AddCommittees(csInSlot); err != nil {
-		t.Fatal(err)
-	}
-
-	beaconState := &pb.BeaconState{
-		Slot:                   csInSlot.Slot,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	committee, shard, _, isProposer, err :=
-		CommitteeAssignment(beaconState, csInSlot.Slot, 105)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wanted := []uint64{55, 105}
-	if !reflect.DeepEqual(wanted, committee) {
-		t.Errorf(
-			"Result indices was an unexpected value. Wanted %d, got %d",
-			wanted,
-			committee,
-		)
-	}
-	if shard != csInSlot.Committees[0].Shard {
-		t.Errorf(
-			"Result shard was an expected value. Wanted %d, got %d",
-			csInSlot.Committees[0].Shard,
-			shard,
-		)
-	}
-	if !isProposer {
-		t.Error("Wanted proposer true")
-	}
-}
-
-func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
-	// TODO(2682): Don't fix this test, this will be removed after merging #2682
-	t.Skip()
-
-	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	slotOffset := uint64(10)
-	state := &pb.BeaconState{
-		Slot:                   slotOffset,
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-	}
-
-	committee, shard, _, isProposer, err :=
-		CommitteeAssignment(state, slotOffset, 105)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wantedCommittee := []uint64{44, 105}
-	if !reflect.DeepEqual(wantedCommittee, committee) {
-		t.Errorf(
-			"Result indices was an unexpected value. Wanted %d, got %d",
-			wantedCommittee,
-			committee,
-		)
-	}
-
-	wantedShard := uint64(43)
-	if shard != wantedShard {
-		t.Errorf(
-			"Result shard was an expected value. Wanted %d, got %d",
-			wantedShard,
-			shard,
-		)
-	}
-	if isProposer {
-		t.Error("Wanted proposer false")
-	}
-
-	// Verify the committee for offset slot was cached.
-	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(slotOffset)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(wantedCommittee, fetchedCommittees.Committees[0].Committee) {
-		t.Errorf(
-			"Result indices was an unexpected value. Wanted %d, got %d",
-			wantedCommittee,
-			fetchedCommittees.Committees[0].Committee,
-		)
 	}
 }
 
@@ -631,6 +477,285 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 		}
 		if test.startShard != startShard {
 			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
+		}
+	}
+}
+
+func TestVerifyAttestationBitfield_OK(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	var activeRoots [][]byte
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		activeRoots = append(activeRoots, []byte{'A'})
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestActiveIndexRoots: activeRoots,
+		LatestRandaoMixes:      activeRoots,
+	}
+
+	tests := []struct {
+		attestation         *pb.Attestation
+		stateSlot           uint64
+		errorExists         bool
+		verificationFailure bool
+	}{
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x01},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 5,
+					},
+				},
+			},
+			stateSlot: 5,
+		},
+		{
+
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x02},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 10,
+					},
+				},
+			},
+			stateSlot: 10,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x02},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 20,
+					},
+				},
+			},
+			stateSlot: 20,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xFF, 0xC0},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 5,
+					},
+				},
+			},
+			stateSlot:   5,
+			errorExists: true,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xFF},
+				Data: &pb.AttestationData{
+					Crosslink: &pb.Crosslink{
+						Shard: 20,
+					},
+				},
+			},
+			stateSlot:           20,
+			verificationFailure: true,
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+		verified, err := VerifyAttestationBitfield(state, tt.attestation)
+		if tt.errorExists {
+			if err == nil {
+				t.Error("error is nil, when verification is supposed to fail")
+			}
+			continue
+		}
+		if tt.verificationFailure {
+			if verified {
+				t.Error("verification succeeded when it was supposed to fail")
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("Failed to verify bitfield: %v", err)
+			continue
+		}
+		if !verified {
+			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBitfield)
+		}
+	}
+}
+
+func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
+	RestartShuffledValidatorCache()
+	validators := make([]*pb.Validator, 300000)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	shard := uint64(3)
+	_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+	if err != nil {
+		panic(err)
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
+	RestartShuffledValidatorCache()
+	validators := make([]*pb.Validator, 3000000)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	shard := uint64(3)
+	_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+	if err != nil {
+		panic(err)
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
+	RestartShuffledValidatorCache()
+	validators := make([]*pb.Validator, 128000)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	i := uint64(0)
+	shard := uint64(0)
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		i++
+		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		if err != nil {
+			panic(err)
+		}
+		if i < params.BeaconConfig().TargetCommitteeSize {
+			shard = (shard + 1) % params.BeaconConfig().ShardCount
+			i = 0
+		}
+	}
+}
+
+func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
+	RestartShuffledValidatorCache()
+	validators := make([]*pb.Validator, 1000000)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	i := uint64(0)
+	shard := uint64(0)
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		i++
+		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		if err != nil {
+			panic(err)
+		}
+		if i < params.BeaconConfig().TargetCommitteeSize {
+			shard = (shard + 1) % params.BeaconConfig().ShardCount
+			i = 0
+		}
+	}
+}
+
+func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
+	RestartShuffledValidatorCache()
+	validators := make([]*pb.Validator, 4000000)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+
+	epoch := CurrentEpoch(state)
+	indices := ActiveValidatorIndices(state, epoch)
+	seed := GenerateSeed(state, epoch)
+
+	i := uint64(0)
+	shard := uint64(0)
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		i++
+		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		if err != nil {
+			panic(err)
+		}
+		if i < params.BeaconConfig().TargetCommitteeSize {
+			shard = (shard + 1) % params.BeaconConfig().ShardCount
+			i = 0
 		}
 	}
 }

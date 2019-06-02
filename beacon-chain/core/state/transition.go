@@ -128,9 +128,6 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 
-	// Save latest block.
-	state.LatestBlock = block
-
 	// Process the block's header into the state.
 	state, err = b.ProcessBlockHeader(state, block)
 	if err != nil {
