@@ -599,7 +599,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 }
 
 func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 300000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -632,7 +632,7 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 3000000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -665,7 +665,7 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 128000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -699,7 +699,7 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 1000000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -733,7 +733,7 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 4000000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{

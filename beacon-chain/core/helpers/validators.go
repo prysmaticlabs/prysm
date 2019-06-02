@@ -214,12 +214,12 @@ func DomainVersion(state *pb.BeaconState, epoch uint64, domainType uint64) uint6
 	return bytesutil.FromBytes8(by)
 }
 
-// RestartActiveCountCache restarts the active validator count cache from scratch.
-func RestartActiveCountCache() {
+// ClearActiveCountCache restarts the active validator count cache from scratch.
+func ClearActiveCountCache() {
 	activeCountCache = make(map[uint64]uint64)
 }
 
-// RestartActiveIndicesCache restarts the active validator indices cache from scratch.
-func RestartActiveIndicesCache() {
+// ClearActiveIndicesCache restarts the active validator indices cache from scratch.
+func ClearActiveIndicesCache() {
 	activeIndicesCache = make(map[uint64][]uint64)
 }

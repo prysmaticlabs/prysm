@@ -7,6 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+var currentEpochSeed = [32]byte{}
+
 // GenerateSeed generates the randao seed of a given epoch.
 //
 // Spec pseudocode definition:
@@ -21,6 +23,10 @@ import (
 //        int_to_bytes32(epoch)
 //    )
 func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) [32]byte {
+	if currentEpochSeed != [32]byte{} {
+		return currentEpochSeed
+	}
+
 	lookAheadEpoch := wantedEpoch - params.BeaconConfig().MinSeedLookahead
 	if params.BeaconConfig().MinSeedLookahead > wantedEpoch {
 		lookAheadEpoch = 0
@@ -31,7 +37,10 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) [32]byte {
 
 	th := append(randaoMix, indexRoot...)
 	th = append(th, bytesutil.Bytes32(wantedEpoch)...)
-	return hashutil.Hash(th)
+
+	currentEpochSeed = hashutil.Hash(th)
+
+	return currentEpochSeed
 }
 
 // ActiveIndexRoot returns the index root of a given epoch.

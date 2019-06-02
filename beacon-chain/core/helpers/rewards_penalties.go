@@ -81,12 +81,12 @@ func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.Beacon
 	return state
 }
 
-// RestartTotalBalanceCache restarts the total validator balance cache from scratch.
-func RestartTotalBalanceCache() {
+// ClearTotalBalanceCache restarts the total validator balance cache from scratch.
+func ClearTotalBalanceCache() {
 	totalBalanceCache = make(map[uint64]uint64)
 }
 
-// RestartTotalActiveBalanceCache restarts the total active validator balance cache from scratch.
-func RestartTotalActiveBalanceCache() {
+// ClearTotalActiveBalanceCache restarts the total active validator balance cache from scratch.
+func ClearTotalActiveBalanceCache() {
 	totalActiveBalanceCache = make(map[uint64]uint64)
 }

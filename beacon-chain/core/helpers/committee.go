@@ -5,8 +5,6 @@ package helpers
 import (
 	"errors"
 	"fmt"
-	"sort"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -124,7 +122,8 @@ func ComputeCommittee(
 	return shuffledIndices, nil
 }
 
-// AttestingIndices returns the attesting participants indices.
+// AttestingIndices returns the attesting participants indices. We removed sorting because it's irrelevant
+// in production, we don't need to reduce the surface of possible valid input.
 //
 // Spec pseudocode definition:
 //   def get_attesting_indices(state: BeaconState,
@@ -147,7 +146,7 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 		}
 		return nil, errors.New("bitfield is unable to be verified")
 	}
-	sort.Slice(committee, func(i, j int) bool { return committee[i] < committee[j] })
+
 	return committee, nil
 }
 
@@ -321,22 +320,22 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 	return VerifyBitfield(att.AggregationBitfield, len(committee))
 }
 
-// RestartShuffledValidatorCache clears the shuffled indices cache from scratch.
-func RestartShuffledValidatorCache() {
+// ClearShuffledValidatorCache clears the shuffled indices cache from scratch.
+func ClearShuffledValidatorCache() {
 	shuffledIndicesCache = cache.NewShuffledIndicesCache()
 }
 
-// RestartStartShardCache clears the start shard cache from scratch.
-func RestartStartShardCache() {
+// ClearStartShardCache clears the start shard cache from scratch.
+func ClearStartShardCache() {
 	startShardCache = make(map[uint64]uint64)
 }
 
 // ClearAllCaches clears all the helpers caches from scratch.
 func ClearAllCaches() {
-	RestartActiveIndicesCache()
-	RestartActiveCountCache()
-	RestartStartShardCache()
-	RestartShuffledValidatorCache()
-	RestartTotalActiveBalanceCache()
-	RestartTotalBalanceCache()
+	ClearActiveIndicesCache()
+	ClearActiveCountCache()
+	ClearStartShardCache()
+	ClearShuffledValidatorCache()
+	ClearTotalActiveBalanceCache()
+	ClearTotalBalanceCache()
 }

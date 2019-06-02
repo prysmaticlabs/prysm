@@ -542,10 +542,10 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 }
 
 func BenchmarkProcessEpoch(b *testing.B) {
-	helpers.RestartShuffledValidatorCache()
+	helpers.ClearShuffledValidatorCache()
 	epoch := uint64(1)
 
-	validatorCount := params.BeaconConfig().DepositsForChainStart / 2
+	validatorCount := params.BeaconConfig().DepositsForChainStart * 4
 	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
 	validators := make([]*pb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
@@ -584,7 +584,7 @@ func BenchmarkProcessEpoch(b *testing.B) {
 		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		ValidatorRegistry:         validators,
 		Balances:                  balances,
-		LatestStartShard:          64,
+		LatestStartShard:          512,
 		LatestBlockRoots:          make([][]byte, 254),
 		LatestSlashedBalances:     []uint64{0, 1e9, 0},
 		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),

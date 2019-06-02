@@ -17,7 +17,7 @@ func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		EnableCrosslinks: true,
 	})
-	helpers.RestartShuffledValidatorCache()
+	helpers.ClearShuffledValidatorCache()
 }
 
 func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
@@ -966,7 +966,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
-	helpers.RestartShuffledValidatorCache()
+	helpers.ClearShuffledValidatorCache()
 	state := buildState(e+2, params.BeaconConfig().DepositsForChainStart/8)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 2)
