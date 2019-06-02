@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"math/big"
 	"sort"
 	"strings"

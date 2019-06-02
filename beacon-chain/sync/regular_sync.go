@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"runtime/debug"
 	"sync"
 	"time"

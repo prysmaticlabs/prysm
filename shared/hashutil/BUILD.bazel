@@ -3,7 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "beacon_block.go",
         "deposit_hash.go",
         "hash.go",
         "merkleRoot.go",
@@ -21,16 +20,13 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "beacon_block_test.go",
         "hash_test.go",
         "merkleRoot_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
     ],
 )

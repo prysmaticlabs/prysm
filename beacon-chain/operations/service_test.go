@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"reflect"
 	"sort"
 	"testing"
@@ -301,6 +302,8 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 }
 
 func TestIsCanonical_CanGetCanonical(t *testing.T) {
+	t.Skip()
+	// TODO(#2307): This will be irrelevant after the revamp of our DB package post v0.6.
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
@@ -325,7 +328,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 		t.Error("Attestation should be canonical")
 	}
 
-	cb2 := &pb.BeaconBlock{Slot: 999, ParentRoot: []byte{'B'}}
+	cb2 := &pb.BeaconBlock{Slot: 1000, ParentRoot: []byte{'B'}}
 	if err := s.beaconDB.SaveBlock(cb2); err != nil {
 		t.Fatal(err)
 	}

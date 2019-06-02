@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"testing"
 	"time"
 
