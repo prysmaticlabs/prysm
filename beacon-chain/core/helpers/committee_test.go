@@ -222,7 +222,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{71, 127},
+			wanted:          []uint64{127, 71},
 		},
 		{
 			attestationSlot: 2,
@@ -234,11 +234,12 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{68, 102},
+			wanted:          []uint64{102, 68},
 		},
 	}
-	//startShard := uint64(960)
+
 	for _, tt := range tests {
+		ClearAllCaches()
 		state.Slot = tt.stateSlot
 		attestationData.Crosslink = &pb.Crosslink{
 			Shard: tt.attestationSlot,
@@ -362,7 +363,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			slot:       183,
 			committee:  []uint64{64, 33},
 			shard:      119,
-			isProposer: true,
+			isProposer: false,
 		},
 		{
 			index:      11,

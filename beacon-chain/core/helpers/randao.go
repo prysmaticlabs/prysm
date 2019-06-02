@@ -72,3 +72,8 @@ func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
 	return state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength]
 }
+
+// ClearCurrentEpochSeed clears the current epoch seed.
+func ClearCurrentEpochSeed() {
+	currentEpochSeed = [32]byte{}
+}

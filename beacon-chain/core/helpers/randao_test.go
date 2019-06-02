@@ -80,6 +80,8 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 }
 
 func TestGenerateSeed_OK(t *testing.T) {
+	ClearAllCaches()
+
 	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)

@@ -338,4 +338,5 @@ func ClearAllCaches() {
 	ClearShuffledValidatorCache()
 	ClearTotalActiveBalanceCache()
 	ClearTotalBalanceCache()
+	ClearCurrentEpochSeed()
 }
