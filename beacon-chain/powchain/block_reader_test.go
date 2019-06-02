@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -16,7 +17,7 @@ import (
 var endpoint = "ws://127.0.0.1"
 
 func TestLatestMainchainInfo_OK(t *testing.T) {
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
@@ -27,18 +28,18 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
 	exitRoutine := make(chan bool)
 
