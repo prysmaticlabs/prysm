@@ -321,12 +321,22 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 	return VerifyBitfield(att.AggregationBitfield, len(committee))
 }
 
-// RestartShuffledValidatorCache restarts the shuffled indices cache from scratch.
+// RestartShuffledValidatorCache clears the shuffled indices cache from scratch.
 func RestartShuffledValidatorCache() {
 	shuffledIndicesCache = cache.NewShuffledIndicesCache()
 }
 
-// RestartStartShardCache restarts the start shard cache from scratch.
+// RestartStartShardCache clears the start shard cache from scratch.
 func RestartStartShardCache() {
 	startShardCache = make(map[uint64]uint64)
+}
+
+// ClearAllCaches clears all the helpers caches from scratch.
+func ClearAllCaches() {
+	RestartActiveIndicesCache()
+	RestartActiveCountCache()
+	RestartStartShardCache()
+	RestartShuffledValidatorCache()
+	RestartTotalActiveBalanceCache()
+	RestartTotalBalanceCache()
 }

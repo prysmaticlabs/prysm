@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"io/ioutil"
 	"reflect"
 	"strconv"
@@ -412,6 +413,8 @@ func TestReceiveAttestation_OK(t *testing.T) {
 }
 
 func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}

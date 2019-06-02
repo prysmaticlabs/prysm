@@ -71,6 +71,8 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -210,6 +212,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
 	for i := 0; i < len(deposits); i++ {
 		depositData := &pb.DepositData{
@@ -465,6 +469,8 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 }
 
 func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBitfield: []byte{1}}}

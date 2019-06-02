@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"reflect"
 	"sort"
 	"testing"
@@ -118,6 +119,8 @@ func TestIncomingAttestation_OK(t *testing.T) {
 }
 
 func TestRetrieveAttestations_OK(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -159,6 +162,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 }
 
 func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})

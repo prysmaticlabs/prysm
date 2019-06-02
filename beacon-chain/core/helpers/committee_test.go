@@ -27,6 +27,7 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 		{32 * validatorsPerEpoch, 16 * params.BeaconConfig().SlotsPerEpoch},
 	}
 	for _, test := range tests {
+		ClearAllCaches()
 		vals := make([]*pb.Validator, test.validatorCount)
 		for i := 0; i < len(vals); i++ {
 			vals[i] = &pb.Validator{
@@ -81,6 +82,7 @@ func TestShardDelta_OK(t *testing.T) {
 		{500000, minShardDelta}, // 5 Mil, above shard delta
 	}
 	for _, test := range tests {
+		ClearAllCaches()
 		vals := make([]*pb.Validator, test.validatorCount)
 		for i := 0; i < len(vals); i++ {
 			vals[i] = &pb.Validator{
@@ -372,6 +374,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		ClearAllCaches()
 		committee, shard, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
 		if err != nil {
 			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
@@ -427,6 +430,7 @@ func TestShardDelta_Ok(t *testing.T) {
 		{32 * validatorsPerEpoch, min},
 	}
 	for _, test := range tests {
+		ClearAllCaches()
 		validators := make([]*pb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &pb.Validator{
@@ -464,6 +468,7 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 		{32 * validatorsPerEpoch, 212},
 	}
 	for _, test := range tests {
+		ClearAllCaches()
 		validators := make([]*pb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &pb.Validator{
@@ -568,6 +573,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		ClearAllCaches()
 		state.Slot = tt.stateSlot
 		verified, err := VerifyAttestationBitfield(state, tt.attestation)
 		if tt.errorExists {

@@ -332,6 +332,8 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 }
 
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -993,6 +995,10 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
+	helpers.RestartActiveIndicesCache()
+	helpers.RestartActiveCountCache()
+	helpers.RestartStartShardCache()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1031,6 +1037,8 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1092,6 +1100,8 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1153,6 +1163,8 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1226,6 +1238,8 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_OK(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1297,7 +1311,11 @@ func TestValidateIndexedAttestation_OK(t *testing.T) {
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
+	helpers.RestartActiveIndicesCache()
+	helpers.RestartActiveCountCache()
+	helpers.RestartStartShardCache()
 	helpers.RestartShuffledValidatorCache()
+
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
