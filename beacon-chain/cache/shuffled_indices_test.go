@@ -1,10 +1,11 @@
 package cache
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestShuffleKeyFn_OK(t *testing.T) {

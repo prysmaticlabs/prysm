@@ -541,7 +541,7 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 	state.ProcessEpoch(context.Background(), newState)
 }
 
-func BenchmarkProcessEpoch65536(b *testing.B) {
+func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	helpers.ClearShuffledValidatorCache()
 	epoch := uint64(1)
 
