@@ -47,14 +47,8 @@ service BeaconService {
   rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
   rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
   rpc ForkData(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.Fork);
-  rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse) {
-    option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
-      summary: "Fetches block tree since last finalized block.";
-    };
-    option (google.api.http) = {
-      get: "/v1/beacon/blocktree";
-    };
-  }
+  rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse);
+  rpc BlockTreeBySlots(TreeBlockSlotRequest) returns (BlockTreeResponse);
 }
 
 service AttesterService {
@@ -234,4 +228,9 @@ enum ValidatorStatus {
   WITHDRAWABLE = 4;
   EXITED = 5;
   EXITED_SLASHED = 6;
+}
+
+message TreeBlockSlotRequest {
+  uint64 slot_from = 1 ;
+  uint64 slot_to = 2 ;
 }
