@@ -231,8 +231,6 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 }
 
 func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
-	t.Skip()
-	// TODO(#2307): Update test for v0.6.
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		EnableCheckBlockStateRoot: false,
 	})
@@ -240,7 +238,10 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, db, nil)
+	attsService := attestation.NewAttestationService(
+		context.Background(),
+		&attestation.Config{BeaconDB: db})
+	chainService := setupBeaconChain(t, db, attsService)
 	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
 		DepositRoot: []byte{},
@@ -279,7 +280,11 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 				BlockRoot:   []byte("b"),
 			},
 			RandaoReveal: []byte{},
-			Attestations: []*pb.Attestation{},
+			Attestations: []*pb.Attestation{{
+				Data: &pb.AttestationData{
+					TargetEpoch: 5,
+				},
+			}},
 		},
 	}
 
@@ -293,7 +298,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	case *BlockFailedProcessingErr:
 		t.Log("Block failed processing as expected")
 	default:
-		t.Errorf("Unexpected block processing error: %v", err)
+		t.Errorf("Expected block processing to fail, received: %v", err)
 	}
 
 	savedBlock, err := db.Block(blockRoot)
