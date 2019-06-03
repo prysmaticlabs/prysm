@@ -1114,7 +1114,7 @@ go_repository(
 
 go_repository(
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "8fd5fd9d19ce68183a6b0934519dfe7fe6269612",
+    commit = "8fd5fd9d19ce68183a6b0934519dfe7fe6269612",  # v1.9.0
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
 )
 
