@@ -115,6 +115,10 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		blockRoot, err := hashutil.HashBeaconBlock(block)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
@@ -520,6 +524,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
+	beaconState.LatestBlock = block2
 	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
@@ -1410,6 +1415,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)
 	}
+	gState.LatestBlock = gBlock
 	if err := chainSvc.beaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
 		t.Fatal(err)
 	}

@@ -28,10 +28,10 @@ var (
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
 	}
 	// RPCPort defines a beacon node RPC port to open.
-	RPCPort = cli.StringFlag{
+	RPCPort = cli.IntFlag{
 		Name:  "rpc-port",
 		Usage: "RPC port exposed by a beacon node",
-		Value: "4000",
+		Value: 4000,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = cli.StringFlag{
@@ -47,5 +47,10 @@ var (
 	EnableDBCleanup = cli.BoolFlag{
 		Name:  "enable-db-cleanup",
 		Usage: "Enable automatic DB cleanup routine",
+	}
+	// GRPCGatewayPort enables a gRPC gateway to be exposed for Prysm.
+	GRPCGatewayPort = cli.IntFlag{
+		Name:  "grpc-gateway-port",
+		Usage: "Enable gRPC gateway for JSON requests",
 	}
 )

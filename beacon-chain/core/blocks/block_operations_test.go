@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -19,7 +19,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
