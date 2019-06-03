@@ -95,3 +95,8 @@ func (c *ActiveIndicesCache) AddActiveIndicesList(activeIndices *ActiveIndicesBy
 	trim(c.activeIndicesCache, maxActiveIndicesListSize)
 	return nil
 }
+
+// ActiveIndicesKeys returns the keys of the active indices cache.
+func (c *ActiveIndicesCache) ActiveIndicesKeys() []string {
+	return c.activeIndicesCache.ListKeys()
+}
