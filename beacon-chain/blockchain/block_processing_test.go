@@ -935,3 +935,39 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		t.Error("Did not get wanted validator from activation queue")
 	}
 }
+
+func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	e := params.BeaconConfig().FarFutureEpoch
+	a := params.BeaconConfig().MaxDepositAmount
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i)}
+	}
+	s := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().SlotsPerEpoch*2 - 1,
+		PreviousJustifiedEpoch: 0,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
+		CurrentJustifiedEpoch:  0,
+		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		JustificationBitfield:  3,
+		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
+		LatestBlockRoots:       blockRoots,
+	}
+	b := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().SlotsPerEpoch*2,
+	}
+	//attestedBalance := 4 * e * 3 / 2
+	//newState, err := ProcessJustificationAndFinalization(state, 0, attestedBalance)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+
+	chainService := setupBeaconChain(t, db, nil)
+
+	if _, err := chainService.AdvanceState(context.Background(), s, b); err != nil {
+		t.Fatal(err)
+	}
+}
