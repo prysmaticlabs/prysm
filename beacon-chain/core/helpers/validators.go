@@ -94,6 +94,7 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		return count, nil
 	}
 
+	count = 0
 	for _, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
 			count++

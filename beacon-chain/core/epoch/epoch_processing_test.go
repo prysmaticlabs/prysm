@@ -1011,20 +1011,10 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	committee, err := helpers.CrosslinkCommitteeAtEpoch(state, 0, startShard)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	committeeBalance, _ := helpers.TotalBalance(state, committee)
 	attestedIndices := []uint64{79, 127, 232, 473, 569, 754, 774}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
-		base, err := baseReward(state, i)
-		if err != nil {
-			t.Fatal(err)
-		}
-		want := base / committeeBalance
+		want := uint64(4472)
 		if rewards[i] != want {
 			t.Errorf("Wanted reward balance %d, got %d", want, rewards[i])
 		}

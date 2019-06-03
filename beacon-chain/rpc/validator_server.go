@@ -101,8 +101,16 @@ func (vs *ValidatorServer) ValidatorPerformance(
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 
-	activeCount := helpers.ActiveValidatorCount(head, helpers.SlotToEpoch(req.Slot))
-	totalActiveBalance := helpers.TotalActiveBalance(head)
+	activeCount, err := helpers.ActiveValidatorCount(head, helpers.SlotToEpoch(req.Slot))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve active validator count: %v", err)
+	}
+
+	totalActiveBalance, err := helpers.TotalActiveBalance(head)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve active balance: %v", err)
+	}
+
 	validatorBalances, err := vs.beaconDB.Balances(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve validator balances %v", err)
