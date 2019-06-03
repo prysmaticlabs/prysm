@@ -12,7 +12,7 @@ import (
 
 var (
 	// ErrNotActiveIndicesInfo will be returned when a cache object is not a pointer to
-	// a ActiveIndices struct.
+	// a ActiveIndicesByEpoch struct.
 	ErrNotActiveIndicesInfo = errors.New("object is not a active indices list")
 
 	// maxActiveIndicesListSize defines the max number of active indices can cache.
