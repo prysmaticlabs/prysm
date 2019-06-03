@@ -899,7 +899,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(100)
 
-	// Tried to insert 5 active indices to DB with only 3 validators in state.
+	// Tried to insert 5 active indices to DB with only 3 validators in state
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2, 3, 4})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
@@ -931,7 +931,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
 	}
 
-	// Verify the skipped validators are included in the next epoch.
+	// Verify the skipped validators are included in the next epoch
 	if !reflect.DeepEqual(v.ActivatedValFromEpoch(epoch+2), []uint64{3, 4}) {
 		t.Error("Did not get wanted validator from activation queue")
 	}
@@ -943,7 +943,7 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxDepositAmount
 
-	// Set up state and block to process epoch to get a new finalized block.
+	// Set up state and block to process epoch to get a new finalized block
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*3+1)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
@@ -978,8 +978,6 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 
 	b := &pb.BeaconBlock{
 		Slot: s.Slot + 1,
-		//StateRoot:  stateRoot[:],
-		//ParentRoot: parentHash[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
@@ -992,7 +990,7 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db, nil)
 
-	// Set up cache to make sure they are cleared after a new finalized block.
+	// Set up cache to make sure they are cleared after a new finalized block
 	if _, err := helpers.ActiveValidatorIndices(s, helpers.CurrentEpoch(s)); err != nil {
 		t.Fatal(err)
 	}
