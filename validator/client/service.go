@@ -73,7 +73,10 @@ func (v *ValidatorService) Start() {
 	pubkeys := make([][]byte, 0)
 	for i := range v.keys {
 		log.WithField("publicKey", fmt.Sprintf("%#x", v.keys[i].PublicKey.Marshal())).Info("Initializing new validator service")
-		pubkeys = append(pubkeys, v.keys[i].PublicKey.Marshal())
+		pubkey := v.keys[i].PublicKey.Marshal()
+		// TODO(#2652): Since Pubkeys are not in G1 we have to truncate the key like this. Once our bls library,
+		//  changes we can remove this assertion.
+		pubkeys = append(pubkeys, pubkey[:48])
 	}
 
 	var dialOpt grpc.DialOption

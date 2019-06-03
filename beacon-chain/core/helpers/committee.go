@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/prometheus/common/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -223,7 +224,7 @@ func CommitteeAssignment(
 	state *pb.BeaconState,
 	epoch uint64,
 	validatorIndex uint64) ([]uint64, uint64, uint64, bool, error) {
-
+	log.Infof("Validator Index %d", validatorIndex)
 	/*
 		if epoch > NextEpoch(state) {
 			return nil, 0, 0, false, fmt.Errorf(

@@ -136,6 +136,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
 	activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
+	log.Info(activeKeys)
 	for _, pk := range activeKeys {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -167,7 +168,7 @@ func (vs *ValidatorServer) assignment(
 		)
 	}
 
-	idx, err := vs.beaconDB.ValidatorIndex(pubkey[:48])
+	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
@@ -310,7 +311,7 @@ func (vs *ValidatorServer) validatorStatus(
 		}
 	}
 
-	if exists := chainStartKeys[bytesutil.ToBytes96(pubKey[:48])]; exists {
+	if exists := chainStartKeys[bytesutil.ToBytes96(pubKey)]; exists {
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_ACTIVE,
 			ActivationEpoch:        0,
@@ -411,7 +412,7 @@ func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState
 	// Generate a map for O(1) lookup of existence of pub keys in request.
 	pkMap := make(map[string]bool)
 	for _, pk := range pubkeys {
-		pkMap[hex.EncodeToString(pk[:48])] = true
+		pkMap[hex.EncodeToString(pk)] = true
 	}
 
 	var activeKeys [][]byte
