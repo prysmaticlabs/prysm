@@ -287,7 +287,6 @@ func (vs *ValidatorServer) validatorStatus(
 	valIdx, ok := idxMap[pk]
 	_, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, pubKey)
 	if eth1BlockNumBigInt == nil {
-		log.Error("No deposit")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -296,7 +295,6 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	if !ok {
-		log.Error("Not in index map")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -305,7 +303,6 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	if !chainStarted {
-		log.Error("chain hasnt started")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -314,7 +311,6 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	if exists := chainStartKeys[bytesutil.ToBytes96(pubKey[:48])]; exists {
-		log.Error("1")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_ACTIVE,
 			ActivationEpoch:        0,
@@ -325,7 +321,6 @@ func (vs *ValidatorServer) validatorStatus(
 
 	depositBlockSlot, err := vs.depositBlockSlot(ctx, beaconState.Slot, eth1BlockNumBigInt, beaconState)
 	if err != nil {
-		log.Error("2")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -376,7 +371,6 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	status := vs.lookupValidatorStatus(uint64(valIdx), beaconState)
-	log.Error("4")
 	return &pb.ValidatorStatusResponse{
 		Status:                    status,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
