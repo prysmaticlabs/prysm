@@ -2,12 +2,12 @@ package cache
 
 import (
 	"errors"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"strconv"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
 
