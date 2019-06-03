@@ -1,11 +1,15 @@
 package helpers
 
 import (
+	"fmt"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var totalBalanceCache = make(map[uint64]uint64)
-var totalActiveBalanceCache = make(map[uint64]uint64)
+var totalBalanceCache = cache.NewTotalBalanceCache()
+var totalActiveBalanceCache = cache.NewActiveBalanceCache()
 
 // TotalBalance returns the total amount at stake in Gwei
 // of input validators.
@@ -16,40 +20,54 @@ var totalActiveBalanceCache = make(map[uint64]uint64)
 //    Return the combined effective balance of an array of ``validators``.
 //    """
 //    return sum([state.validator_registry[index].effective_balance for index in indices])
-func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
+func TotalBalance(state *pb.BeaconState, indices []uint64) (uint64, error) {
 	epoch := CurrentEpoch(state)
-	if _, ok := totalBalanceCache[epoch]; ok {
-		return totalBalanceCache[epoch]
+	total, err := totalBalanceCache.TotalBalanceInEpoch(epoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve total balance from cache: %v", err)
+	}
+	if total != params.BeaconConfig().FarFutureEpoch {
+		return total, nil
 	}
 
-	var total uint64
 	for _, idx := range indices {
 		total += state.ValidatorRegistry[idx].EffectiveBalance
 	}
 
-	totalBalanceCache[epoch] = total
-
-	return total
+	if err := totalBalanceCache.AddTotalBalance(&cache.TotalBalanceByEpoch{
+		Epoch:        epoch,
+		TotalBalance: total,
+	}); err != nil {
+		return 0, fmt.Errorf("could not save total balance for cache: %v", err)
+	}
+	return total, nil
 }
 
 // TotalActiveBalance returns the total amount at stake in Gwei
 // of active validators.
-func TotalActiveBalance(state *pb.BeaconState) uint64 {
+func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
 	epoch := CurrentEpoch(state)
-	if _, ok := totalActiveBalanceCache[epoch]; ok {
-		return totalActiveBalanceCache[epoch]
+	total, err := totalActiveBalanceCache.ActiveBalanceInEpoch(epoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve total balance from cache: %v", err)
+	}
+	if total != params.BeaconConfig().FarFutureEpoch {
+		return total, nil
 	}
 
-	var total uint64
 	for i, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
 			total += state.ValidatorRegistry[i].EffectiveBalance
 		}
 	}
 
-	totalActiveBalanceCache[epoch] = total
-
-	return total
+	if err := totalActiveBalanceCache.AddActiveBalance(&cache.ActiveBalanceByEpoch{
+		Epoch:         epoch,
+		ActiveBalance: total,
+	}); err != nil {
+		return 0, fmt.Errorf("could not save active balance for cache: %v", err)
+	}
+	return total, nil
 }
 
 // IncreaseBalance increases validator with the given 'index' balance by 'delta' in Gwei.
@@ -79,14 +97,4 @@ func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.Beacon
 	}
 	state.Balances[idx] -= delta
 	return state
-}
-
-// ClearTotalBalanceCache restarts the total validator balance cache from scratch.
-func ClearTotalBalanceCache() {
-	totalBalanceCache = make(map[uint64]uint64)
-}
-
-// ClearTotalActiveBalanceCache restarts the total active validator balance cache from scratch.
-func ClearTotalActiveBalanceCache() {
-	totalActiveBalanceCache = make(map[uint64]uint64)
 }

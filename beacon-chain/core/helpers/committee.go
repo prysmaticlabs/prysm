@@ -17,7 +17,7 @@ import (
 )
 
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
-var startShardCache = make(map[uint64]uint64)
+var startShardCache = cache.NewStartShardCache()
 
 // EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //
@@ -286,8 +286,12 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 //        shard = (shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT
 //    return shard
 func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
-	if _, ok := startShardCache[epoch]; ok {
-		return startShardCache[epoch], nil
+	startShard, err := startShardCache.StartShardInEpoch(epoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve start shard from cache: %v", err)
+	}
+	if startShard != params.BeaconConfig().FarFutureEpoch {
+		return startShard, nil
 	}
 
 	currentEpoch := CurrentEpoch(state)
@@ -296,15 +300,20 @@ func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		return 0, fmt.Errorf("epoch %d can't be greater than %d",
 			epoch, checkEpoch)
 	}
-	shard := (state.LatestStartShard + ShardDelta(state, currentEpoch)) % params.BeaconConfig().ShardCount
+	startShard = (state.LatestStartShard + ShardDelta(state, currentEpoch)) % params.BeaconConfig().ShardCount
 	for checkEpoch > epoch {
 		checkEpoch--
-		shard = (shard + params.BeaconConfig().ShardCount - ShardDelta(state, checkEpoch)) % params.BeaconConfig().ShardCount
+		startShard = (startShard + params.BeaconConfig().ShardCount - ShardDelta(state, checkEpoch)) % params.BeaconConfig().ShardCount
 	}
 
-	startShardCache[epoch] = shard
+	if err := startShardCache.AddStartShard(&cache.StartShardByEpoch{
+		Epoch:      epoch,
+		StartShard: startShard,
+	}); err != nil {
+		return 0, fmt.Errorf("could not save start shard for cache: %v", err)
+	}
 
-	return shard, nil
+	return startShard, nil
 }
 
 // VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
@@ -319,25 +328,4 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 		return false, fmt.Errorf("no committee exist for shard in the attestation")
 	}
 	return VerifyBitfield(att.AggregationBitfield, len(committee))
-}
-
-// ClearShuffledValidatorCache clears the shuffled indices cache from scratch.
-func ClearShuffledValidatorCache() {
-	shuffledIndicesCache = cache.NewShuffledIndicesCache()
-}
-
-// ClearStartShardCache clears the start shard cache from scratch.
-func ClearStartShardCache() {
-	startShardCache = make(map[uint64]uint64)
-}
-
-// ClearAllCaches clears all the helpers caches from scratch.
-func ClearAllCaches() {
-	ClearActiveIndicesCache()
-	ClearActiveCountCache()
-	ClearStartShardCache()
-	ClearShuffledValidatorCache()
-	ClearTotalActiveBalanceCache()
-	ClearTotalBalanceCache()
-	ClearCurrentEpochSeed()
 }

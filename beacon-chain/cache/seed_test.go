@@ -45,7 +45,7 @@ func TestSeedCache_SeedByEpoch(t *testing.T) {
 		t.Error("Expected seed not to exist in empty cache")
 	}
 
-	if err := cache.AddSeedList(tInfo); err != nil {
+	if err := cache.AddSeed(tInfo); err != nil {
 		t.Fatal(err)
 	}
 	seed, err = cache.SeedInEpoch(tInfo.Epoch)
@@ -68,7 +68,7 @@ func TestSeed_MaxSize(t *testing.T) {
 		tInfo := &SeedByEpoch{
 			Epoch: i,
 		}
-		if err := cache.AddSeedList(tInfo); err != nil {
+		if err := cache.AddSeed(tInfo); err != nil {
 			t.Fatal(err)
 		}
 	}

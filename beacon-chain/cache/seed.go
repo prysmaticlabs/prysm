@@ -84,9 +84,9 @@ func (c *SeedCache) SeedInEpoch(epoch uint64) ([]byte, error) {
 	return sInfo.Seed, nil
 }
 
-// AddActiveValidatorList adds SeedByEpoch object to the cache. This method also trims the least
+// AddSeed adds SeedByEpoch object to the cache. This method also trims the least
 // recently added SeedByEpoch object if the cache size has ready the max cache size limit.
-func (c *SeedCache) AddSeedList(seed *SeedByEpoch) error {
+func (c *SeedCache) AddSeed(seed *SeedByEpoch) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.seedCache.AddIfNotPresent(seed); err != nil {

@@ -45,7 +45,7 @@ func TestTotalBalanceCache_TotalBalanceByEpoch(t *testing.T) {
 		t.Error("Expected total balance not to exist in empty cache")
 	}
 
-	if err := cache.AddTotalBalanceList(tInfo); err != nil {
+	if err := cache.AddTotalBalance(tInfo); err != nil {
 		t.Fatal(err)
 	}
 	totalBalance, err = cache.TotalBalanceInEpoch(tInfo.Epoch)
@@ -68,7 +68,7 @@ func TestTotalBalance_MaxSize(t *testing.T) {
 		tInfo := &TotalBalanceByEpoch{
 			Epoch: i,
 		}
-		if err := cache.AddTotalBalanceList(tInfo); err != nil {
+		if err := cache.AddTotalBalance(tInfo); err != nil {
 			t.Fatal(err)
 		}
 	}

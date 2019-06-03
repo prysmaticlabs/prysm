@@ -84,9 +84,9 @@ func (c *ActiveCountCache) ActiveCountInEpoch(epoch uint64) (uint64, error) {
 	return aInfo.ActiveCount, nil
 }
 
-// AddActiveValidatorList adds ActiveCountByEpoch object to the cache. This method also trims the least
+// AddActiveCount adds ActiveCountByEpoch object to the cache. This method also trims the least
 // recently added ActiveCountByEpoch object if the cache size has ready the max cache size limit.
-func (c *ActiveCountCache) AddActiveCountList(activeCount *ActiveCountByEpoch) error {
+func (c *ActiveCountCache) AddActiveCount(activeCount *ActiveCountByEpoch) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.activeCountCache.AddIfNotPresent(activeCount); err != nil {

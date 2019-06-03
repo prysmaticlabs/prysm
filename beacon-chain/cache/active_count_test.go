@@ -45,7 +45,7 @@ func TestActiveCountCache_ActiveCountByEpoch(t *testing.T) {
 		t.Error("Expected active count not to exist in empty cache")
 	}
 
-	if err := cache.AddActiveCountList(aInfo); err != nil {
+	if err := cache.AddActiveCount(aInfo); err != nil {
 		t.Fatal(err)
 	}
 	activeCount, err = cache.ActiveCountInEpoch(aInfo.Epoch)
@@ -68,7 +68,7 @@ func TestActiveCount_MaxSize(t *testing.T) {
 		aInfo := &ActiveCountByEpoch{
 			Epoch: i,
 		}
-		if err := cache.AddActiveCountList(aInfo); err != nil {
+		if err := cache.AddActiveCount(aInfo); err != nil {
 			t.Fatal(err)
 		}
 	}

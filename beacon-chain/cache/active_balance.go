@@ -84,9 +84,9 @@ func (c *ActiveBalanceCache) ActiveBalanceInEpoch(epoch uint64) (uint64, error) 
 	return tInfo.ActiveBalance, nil
 }
 
-// AddActiveValidatorList adds ActiveBalanceByEpoch object to the cache. This method also trims the least
+// AddActiveBalance adds ActiveBalanceByEpoch object to the cache. This method also trims the least
 // recently added ActiveBalanceByEpoch object if the cache size has ready the max cache size limit.
-func (c *ActiveBalanceCache) AddActiveBalanceList(activeBalance *ActiveBalanceByEpoch) error {
+func (c *ActiveBalanceCache) AddActiveBalance(activeBalance *ActiveBalanceByEpoch) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.activeBalanceCache.AddIfNotPresent(activeBalance); err != nil {

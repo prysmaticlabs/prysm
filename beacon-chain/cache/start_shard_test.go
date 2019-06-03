@@ -45,7 +45,7 @@ func TestStartShardCache_StartShardByEpoch(t *testing.T) {
 		t.Error("Expected start shard not to exist in empty cache")
 	}
 
-	if err := cache.AddStartShardList(tInfo); err != nil {
+	if err := cache.AddStartShard(tInfo); err != nil {
 		t.Fatal(err)
 	}
 	startShard, err = cache.StartShardInEpoch(tInfo.Epoch)
@@ -68,7 +68,7 @@ func TestStartShard_MaxSize(t *testing.T) {
 		tInfo := &StartShardByEpoch{
 			Epoch: i,
 		}
-		if err := cache.AddStartShardList(tInfo); err != nil {
+		if err := cache.AddStartShard(tInfo); err != nil {
 			t.Fatal(err)
 		}
 	}

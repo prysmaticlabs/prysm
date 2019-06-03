@@ -1,13 +1,16 @@
 package helpers
 
 import (
+	"fmt"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var currentEpochSeed = [32]byte{}
+var currentEpochSeed = cache.NewSeedCache()
 
 // GenerateSeed generates the randao seed of a given epoch.
 //
@@ -22,25 +25,36 @@ var currentEpochSeed = [32]byte{}
 //        get_active_index_root(state, epoch) +
 //        int_to_bytes32(epoch)
 //    )
-func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) [32]byte {
-	if currentEpochSeed != [32]byte{} {
-		return currentEpochSeed
+func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
+	seed, err := currentEpochSeed.SeedInEpoch(epoch)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not retrieve total balance from cache: %v", err)
+	}
+	if seed != nil {
+		return bytesutil.ToBytes32(seed), nil
 	}
 
-	lookAheadEpoch := wantedEpoch - params.BeaconConfig().MinSeedLookahead
-	if params.BeaconConfig().MinSeedLookahead > wantedEpoch {
+	lookAheadEpoch := epoch - params.BeaconConfig().MinSeedLookahead
+	if params.BeaconConfig().MinSeedLookahead > epoch {
 		lookAheadEpoch = 0
 	}
 	randaoMix := RandaoMix(state, lookAheadEpoch)
 
-	indexRoot := ActiveIndexRoot(state, wantedEpoch)
+	indexRoot := ActiveIndexRoot(state, epoch)
 
 	th := append(randaoMix, indexRoot...)
-	th = append(th, bytesutil.Bytes32(wantedEpoch)...)
+	th = append(th, bytesutil.Bytes32(epoch)...)
 
-	currentEpochSeed = hashutil.Hash(th)
+	seed = hashutil.Hash(th)[:]
 
-	return currentEpochSeed
+	if err := currentEpochSeed.AddSeed(&cache.SeedByEpoch{
+		Epoch: epoch,
+		Seed:  seed,
+	}); err != nil {
+		return [32]byte{}, fmt.Errorf("could not save active balance for cache: %v", err)
+	}
+
+	return bytesutil.ToBytes32(seed), nil
 }
 
 // ActiveIndexRoot returns the index root of a given epoch.
@@ -71,9 +85,4 @@ func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
 //    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
 	return state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength]
-}
-
-// ClearCurrentEpochSeed clears the current epoch seed.
-func ClearCurrentEpochSeed() {
-	currentEpochSeed = [32]byte{}
 }
