@@ -14,7 +14,7 @@ func TestSeedKeyFn_OK(t *testing.T) {
 		Seed:  []byte{'A'},
 	}
 
-	key, err := startShardKeyFn(tInfo)
+	key, err := seedKeyFn(tInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestSeedKeyFn_OK(t *testing.T) {
 }
 
 func TestSeedKeyFn_InvalidObj(t *testing.T) {
-	_, err := startShardKeyFn("bad")
+	_, err := seedKeyFn("bad")
 	if err != ErrNotSeedInfo {
 		t.Errorf("Expected error %v, got %v", ErrNotSeedInfo, err)
 	}
