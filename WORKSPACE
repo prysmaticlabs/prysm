@@ -21,9 +21,9 @@ http_archive(
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "723f53b4ea6d1524c921b2bc373d3fc7d37322311d9b3bac011314f6d6a56d0d",
-    strip_prefix = "bazel-tools-20cbdb188d18c5470697783258cd2ec2b531b710",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/20cbdb188d18c5470697783258cd2ec2b531b710.tar.gz"],
+    sha256 = "cff7e0efb05799f2a9015aafd922a5049f7af953beb0050dc1d78e0dbeec2c9f",
+    strip_prefix = "bazel-tools-f04c7c0ec6851ea378f90c74c855bcb87d9793b5",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/f04c7c0ec6851ea378f90c74c855bcb87d9793b5.tar.gz"],
 )
 
 http_archive(
@@ -141,9 +141,9 @@ buildifier_dependencies()
 
 http_archive(
     name = "com_github_prysmaticlabs_go_ssz",
-    sha256 = "9e753a6e5c4f6f7f3b4af584f326b1c650aee6af85fc98416fbe7d1579d6e4d7",
-    strip_prefix = "go-ssz-85eecc65d2c7a3b20501fe662210e5045f7bcbe1",
-    url = "https://github.com/prysmaticlabs/go-ssz/archive/85eecc65d2c7a3b20501fe662210e5045f7bcbe1.tar.gz",
+    sha256 = "f6fd5d623a988337810b956ddaf612dce771d9d0f9256934c8f4b1379f1cb2f6",
+    strip_prefix = "go-ssz-2e84733edbac32aca6d47feafc4441e43b10047f",
+    url = "https://github.com/prysmaticlabs/go-ssz/archive/2e84733edbac32aca6d47feafc4441e43b10047f.tar.gz",
 )
 
 load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
@@ -649,7 +649,7 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "fd90d04f12c9f72a32364672932b5a21005b8d7e",  # v0.21.0
+    commit = "7bbec1755a8162b5923fc214a494773a701d506a",  # v0.22.0
     importpath = "go.opencensus.io",
 )
 
@@ -711,7 +711,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "bbced9601137e764853b2fad7ec3e2dc4c504e02",
+    commit = "35bfdb8c16e3737d7f866fb650f22260bf3e65b8",  # v0.0.1
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -1114,12 +1114,12 @@ go_repository(
 
 go_repository(
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "8fd5fd9d19ce68183a6b0934519dfe7fe6269612",
+    commit = "8fd5fd9d19ce68183a6b0934519dfe7fe6269612",  # v1.9.0
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
 )
 
 go_repository(
     name = "com_github_ghodss_yaml",
-    commit = "25d852aebe32c875e9c044af3eef9c7dc6bc777f",
+    commit = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",  # v1.0.0
     importpath = "github.com/ghodss/yaml",
 )
