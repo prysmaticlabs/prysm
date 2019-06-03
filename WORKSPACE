@@ -1120,6 +1120,6 @@ go_repository(
 
 go_repository(
     name = "com_github_ghodss_yaml",
-    commit = "25d852aebe32c875e9c044af3eef9c7dc6bc777f",
+    commit = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",  # v1.0.0
     importpath = "github.com/ghodss/yaml",
 )
