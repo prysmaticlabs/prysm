@@ -17,7 +17,7 @@ var (
 	ErrNotTotalBalanceInfo = errors.New("object is not a total balance obj")
 
 	// maxTotalBalanceListSize defines the max number of total balance can cache.
-	maxTotalBalanceListSize = int(params.BeaconConfig().LatestRandaoMixesLength)
+	maxTotalBalanceListSize = 1000
 
 	// Metrics.
 	totalBalanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{

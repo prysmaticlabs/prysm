@@ -7,7 +7,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -17,7 +16,7 @@ var (
 	ErrNotSeedInfo = errors.New("object is not a seed obj")
 
 	// maxSeedListSize defines the max number of seed can cache.
-	maxSeedListSize = int(params.BeaconConfig().LatestRandaoMixesLength)
+	maxSeedListSize = 1000
 
 	// Metrics.
 	seedCacheMiss = promauto.NewCounter(prometheus.CounterOpts{

@@ -64,7 +64,7 @@ func TestActiveBalanceCache_ActiveBalanceByEpoch(t *testing.T) {
 func TestActiveBalance_MaxSize(t *testing.T) {
 	cache := NewActiveBalanceCache()
 
-	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength+100; i++ {
+	for i := uint64(0); i < 1001; i++ {
 		tInfo := &ActiveBalanceByEpoch{
 			Epoch: i,
 		}

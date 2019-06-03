@@ -64,7 +64,7 @@ func TestStartShardCache_StartShardByEpoch(t *testing.T) {
 func TestStartShard_MaxSize(t *testing.T) {
 	cache := NewStartShardCache()
 
-	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength+100; i++ {
+	for i := uint64(0); i < params.BeaconConfig().ShardCount + 1; i++ {
 		tInfo := &StartShardByEpoch{
 			Epoch: i,
 		}

@@ -17,7 +17,7 @@ var (
 	ErrNotActiveCountInfo = errors.New("object is not a active count obj")
 
 	// maxActiveCountListSize defines the max number of active count can cache.
-	maxActiveCountListSize = int(params.BeaconConfig().LatestRandaoMixesLength)
+	maxActiveCountListSize = 1000
 
 	// Metrics.
 	activeCountCacheMiss = promauto.NewCounter(prometheus.CounterOpts{

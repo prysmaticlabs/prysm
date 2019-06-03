@@ -17,7 +17,7 @@ var (
 	ErrNotActiveBalanceInfo = errors.New("object is not a active balance obj")
 
 	// maxActiveBalanceListSize defines the max number of active balance can cache.
-	maxActiveBalanceListSize = int(params.BeaconConfig().LatestRandaoMixesLength)
+	maxActiveBalanceListSize = 1000
 
 	// Metrics.
 	activeBalanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{

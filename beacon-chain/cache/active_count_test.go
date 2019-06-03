@@ -64,7 +64,7 @@ func TestActiveCountCache_ActiveCountByEpoch(t *testing.T) {
 func TestActiveCount_MaxSize(t *testing.T) {
 	cache := NewActiveCountCache()
 
-	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength+100; i++ {
+	for i := uint64(0); i < 1001; i++ {
 		aInfo := &ActiveCountByEpoch{
 			Epoch: i,
 		}

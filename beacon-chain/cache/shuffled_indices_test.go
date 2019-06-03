@@ -4,8 +4,6 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestShuffleKeyFn_OK(t *testing.T) {
@@ -67,7 +65,7 @@ func TestShuffledIndicesCache_ShuffledIndicesBySeed2(t *testing.T) {
 func TestShuffledIndices_MaxSize(t *testing.T) {
 	cache := NewShuffledIndicesCache()
 
-	for i := uint64(0); i < params.BeaconConfig().ShardCount+1; i++ {
+	for i := uint64(0); i < 1001; i++ {
 		sInfo := &IndicesByIndexSeed{
 			Index: i,
 			Seed:  []byte{byte(i)},
