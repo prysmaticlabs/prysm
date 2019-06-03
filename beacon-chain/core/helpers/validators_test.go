@@ -140,7 +140,10 @@ func TestChurnLimit_OK(t *testing.T) {
 			LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 			LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		}
-		resultChurn := ChurnLimit(beaconState)
+		resultChurn, err := ChurnLimit(beaconState)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if resultChurn != test.wantedChurn {
 			t.Errorf("ChurnLimit(%d) = %d, want = %d",
 				test.validatorCount, resultChurn, test.wantedChurn)

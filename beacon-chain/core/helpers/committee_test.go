@@ -37,9 +37,13 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 		s := &pb.BeaconState{
 			ValidatorRegistry: vals,
 		}
-		if test.committeeCount != EpochCommitteeCount(s, 1) {
+		count, err := EpochCommitteeCount(s, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.committeeCount != count {
 			t.Errorf("wanted: %d, got: %d",
-				test.committeeCount, EpochCommitteeCount(s, 1))
+				test.committeeCount, count)
 		}
 	}
 }
@@ -62,9 +66,13 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 	s := &pb.BeaconState{
 		ValidatorRegistry: vals,
 	}
-	if EpochCommitteeCount(s, 1) != validatorCount/testConfig.TargetCommitteeSize {
+	count, err := EpochCommitteeCount(s, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != validatorCount/testConfig.TargetCommitteeSize {
 		t.Errorf("wanted: %d, got: %d",
-			validatorCount/testConfig.TargetCommitteeSize, EpochCommitteeCount(s, 1))
+			validatorCount/testConfig.TargetCommitteeSize, count)
 	}
 	params.OverrideBeaconConfig(productionConfig)
 }
@@ -92,9 +100,13 @@ func TestShardDelta_OK(t *testing.T) {
 		s := &pb.BeaconState{
 			ValidatorRegistry: vals,
 		}
-		if test.shardCount != ShardDelta(s, 1) {
+		delta, err := ShardDelta(s, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.shardCount != delta {
 			t.Errorf("wanted: %d, got: %d",
-				test.shardCount, ShardDelta(s, 1))
+				test.shardCount, delta)
 		}
 	}
 }
@@ -119,8 +131,14 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
 	committees, err := ComputeCommittee(indices, seed, 0, 1 /* Total committee*/)
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
@@ -172,8 +190,14 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Test shuffled indices are correct for shard 3 committee
 	shard := uint64(3)
@@ -439,9 +463,13 @@ func TestShardDelta_Ok(t *testing.T) {
 			}
 		}
 		state := &pb.BeaconState{ValidatorRegistry: validators}
-		if test.shardDelta != ShardDelta(state, 0) {
+		delta, err := ShardDelta(state, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.shardDelta != delta {
 			t.Errorf("wanted: %d, got: %d",
-				test.shardDelta, ShardDelta(state, 0))
+				test.shardDelta, delta)
 		}
 	}
 }
@@ -614,11 +642,17 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	shard := uint64(3)
-	_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+	_, err = ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
 	if err != nil {
 		panic(err)
 	}
@@ -647,11 +681,17 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	shard := uint64(3)
-	_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+	_, err = ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
 	if err != nil {
 		panic(err)
 	}
@@ -680,8 +720,14 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	i := uint64(0)
 	shard := uint64(0)
@@ -714,8 +760,14 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	i := uint64(0)
 	shard := uint64(0)
@@ -748,8 +800,14 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	i := uint64(0)
 	shard := uint64(0)

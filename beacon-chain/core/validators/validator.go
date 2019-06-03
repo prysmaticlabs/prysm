@@ -145,10 +145,10 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 //   # Set validator exit epoch and withdrawable epoch
 //   validator.exit_epoch = exit_queue_epoch
 //   validator.withdrawable_epoch = validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
-func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
+func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[idx]
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return state
+		return state, nil
 	}
 	exitEpochs := []uint64{}
 	for _, val := range state.ValidatorRegistry {
@@ -173,13 +173,17 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 			exitQueueChurn++
 		}
 	}
+	churn, err := helpers.ChurnLimit(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not get churn limit: %v", err)
+	}
 
-	if uint64(exitQueueChurn) >= helpers.ChurnLimit(state) {
+	if uint64(exitQueueChurn) >= churn {
 		exitQueueEpoch++
 	}
 	state.ValidatorRegistry[idx].ExitEpoch = exitQueueEpoch
 	state.ValidatorRegistry[idx].WithdrawableEpoch = exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
-	return state
+	return state, nil
 }
 
 // ExitValidator takes in validator index and does house
@@ -258,14 +262,17 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 
 // InitializeValidatorStore sets the current active validators from the current
 // state.
-func InitializeValidatorStore(bState *pb.BeaconState) {
+func InitializeValidatorStore(bState *pb.BeaconState) error {
 	VStore.Lock()
 	defer VStore.Unlock()
 
 	currentEpoch := helpers.CurrentEpoch(bState)
-	activeValidatorIndices := helpers.ActiveValidatorIndices(bState, currentEpoch)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(bState, currentEpoch)
+	if err != nil {
+		return err
+	}
 	VStore.activatedValidators[currentEpoch] = activeValidatorIndices
-
+	return nil
 }
 
 // InsertActivatedVal locks the validator store, inserts the activated validator

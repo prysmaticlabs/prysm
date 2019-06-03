@@ -168,7 +168,11 @@ func ChurnLimit(state *pb.BeaconState) (uint64, error) {
 func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	// Calculate the offset for slot and shard
 	e := CurrentEpoch(state)
-	committesPerSlot := EpochCommitteeCount(state, e) / params.BeaconConfig().SlotsPerEpoch
+	committeeCount, err := EpochCommitteeCount(state, e)
+	if err != nil {
+		return 0, err
+	}
+	committesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
 	offSet := committesPerSlot * (state.Slot % params.BeaconConfig().SlotsPerEpoch)
 
 	// Calculate which shards get assigned given the epoch start shard

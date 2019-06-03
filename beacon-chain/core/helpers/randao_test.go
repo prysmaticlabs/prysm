@@ -100,7 +100,10 @@ func TestGenerateSeed_OK(t *testing.T) {
 		LatestRandaoMixes:      randaoMixes,
 		Slot:                   slot}
 
-	got := GenerateSeed(state, 10)
+	got, err := GenerateSeed(state, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	wanted := [32]byte{239, 112, 63, 86, 124, 180, 155, 181, 91, 67, 231, 178,
 		94, 149, 243, 101, 176, 169, 153, 35, 37, 19, 115, 154, 6, 102, 125, 91, 81, 153, 186, 84}

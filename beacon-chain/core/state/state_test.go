@@ -147,7 +147,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("PreviousEpochAttestations was not correctly initialized")
 	}
 
-	activeValidators := helpers.ActiveValidatorIndices(newState, 0)
+	activeValidators, _ := helpers.ActiveValidatorIndices(newState, 0)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)

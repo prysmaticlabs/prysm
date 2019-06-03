@@ -45,16 +45,16 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 	th := append(randaoMix, indexRoot...)
 	th = append(th, bytesutil.Bytes32(epoch)...)
 
-	seed = hashutil.Hash(th)[:]
+	seed32 := hashutil.Hash(th)
 
 	if err := currentEpochSeed.AddSeed(&cache.SeedByEpoch{
 		Epoch: epoch,
-		Seed:  seed,
+		Seed:  seed32[:],
 	}); err != nil {
 		return [32]byte{}, fmt.Errorf("could not save active balance for cache: %v", err)
 	}
 
-	return bytesutil.ToBytes32(seed), nil
+	return seed32, nil
 }
 
 // ActiveIndexRoot returns the index root of a given epoch.

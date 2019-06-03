@@ -776,7 +776,7 @@ func ProcessValidatorExits(
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-
+	var err error
 	exits := block.Body.VoluntaryExits
 	if uint64(len(exits)) > params.BeaconConfig().MaxVoluntaryExits {
 		return nil, fmt.Errorf(
@@ -790,7 +790,10 @@ func ProcessValidatorExits(
 		if err := verifyExit(beaconState, exit, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
-		beaconState = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
+		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return beaconState, nil
 }

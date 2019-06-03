@@ -688,7 +688,10 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
 			Balances: []uint64{tt.a},
 		}
-		c := baseReward(state, 0)
+		c, err := baseReward(state, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if c != tt.c {
 			t.Errorf("baseReward(%d) = %d, want = %d",
 				tt.a, c, tt.c)
@@ -845,7 +848,10 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 		Balances:              []uint64{params.BeaconConfig().MaxDepositAmount},
 		LatestSlashedBalances: []uint64{0, 1e9},
 	}
-	newState := ProcessSlashings(s)
+	newState, err := ProcessSlashings(s)
+	if err != nil {
+		t.Fatal(err)
+	}
 	wanted := params.BeaconConfig().MaxDepositAmount
 	if newState.Balances[0] != wanted {
 		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[0])
@@ -864,7 +870,10 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 		Balances:              []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
 		LatestSlashedBalances: []uint64{0, 1e9},
 	}
-	newState := ProcessSlashings(s)
+	newState, err := ProcessSlashings(s)
+	if err != nil {
+		t.Fatal(err)
+	}
 	wanted := uint64(31 * 1e9)
 	if newState.Balances[0] != wanted {
 		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[0])
@@ -935,9 +944,13 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
 		}
 		// Since no one attested, all the validators should get penalized the same
-		if penalties[i] != baseReward(state, i) {
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if penalties[i] != base {
 			t.Errorf("Wanted penalty balance %d, got %d",
-				baseReward(state, i), penalties[i])
+				base, penalties[i])
 		}
 	}
 }
@@ -954,7 +967,10 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState := ProcessRegistryUpdates(state)
+	newState, err := ProcessRegistryUpdates(state)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
@@ -999,16 +1015,16 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, winningIndices, err := winningCrosslink(state, startShard+1, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committeeBalance := helpers.TotalBalance(state, committee)
-	attestingBalance := helpers.TotalBalance(state, winningIndices)
+
+	committeeBalance, _ := helpers.TotalBalance(state, committee)
 	attestedIndices := []uint64{79, 127, 232, 473, 569, 754, 774}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
-		want := baseReward(state, i) * attestingBalance / committeeBalance
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := base / committeeBalance
 		if rewards[i] != want {
 			t.Errorf("Wanted reward balance %d, got %d", want, rewards[i])
 		}
@@ -1109,7 +1125,8 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		}
 		// Since no one attested, all the validators should get penalized the same
 		// it's 3 times the penalized amount because source, target and head.
-		wanted := 3 * baseReward(state, i)
+		base, _ := baseReward(state, i)
+		wanted := 3 * base
 		if penalties[i] != wanted {
 			t.Errorf("Wanted penalty balance %d, got %d",
 				wanted, penalties[i])
@@ -1152,17 +1169,18 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 	attestedIndices := []uint64{79, 127, 232, 473, 569, 754, 774}
 
 	attestedBalance, err := AttestingBalance(state, atts)
-	totalBalance := helpers.TotalActiveBalance(state)
+	totalBalance, _ := helpers.TotalActiveBalance(state)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, i := range attestedIndices {
+		base, _ := baseReward(state, i)
 		// Base rewards for getting source right
-		wanted := 3 * (baseReward(state, i) * attestedBalance / totalBalance)
+		wanted := 3 * (base * attestedBalance / totalBalance)
 		// Base rewards for proposer and attesters working together getting attestation
 		// on chain in the fatest manner
-		wanted += baseReward(state, i) * params.BeaconConfig().MinAttestationInclusionDelay
+		wanted += base * params.BeaconConfig().MinAttestationInclusionDelay
 		if rewards[i] != wanted {
 			t.Errorf("Wanted reward balance %d, got %d", wanted, rewards[i])
 		}
@@ -1178,7 +1196,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 	}
-	limit := helpers.ChurnLimit(state)
+	limit, _ := helpers.ChurnLimit(state)
 	for i := 0; i < int(limit)+10; i++ {
 		state.ValidatorRegistry = append(state.ValidatorRegistry, &pb.Validator{
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1187,7 +1205,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		})
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	newState := ProcessRegistryUpdates(state)
+	newState, _ := ProcessRegistryUpdates(state)
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ActivationEligibilityEpoch != currentEpoch {
 			t.Errorf("could not update registry %d, wanted activation eligibility epoch %d got %d",
@@ -1218,7 +1236,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState := ProcessRegistryUpdates(state)
+	newState, _ := ProcessRegistryUpdates(state)
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
@@ -1246,7 +1264,10 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState := ProcessRegistryUpdates(state)
+	newState, err := ProcessRegistryUpdates(state)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ExitEpoch != exitEpoch {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
