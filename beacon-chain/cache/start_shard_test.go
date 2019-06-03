@@ -42,7 +42,7 @@ func TestStartShardCache_StartShardByEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if startShard != params.BeaconConfig().FarFutureEpoch {
-		t.Error("Expected total balance not to exist in empty cache")
+		t.Error("Expected start shard not to exist in empty cache")
 	}
 
 	if err := cache.AddStartShardList(tInfo); err != nil {
@@ -54,7 +54,7 @@ func TestStartShardCache_StartShardByEpoch(t *testing.T) {
 	}
 	if !reflect.DeepEqual(startShard, tInfo.StartShard) {
 		t.Errorf(
-			"Expected fetched total balance to be %v, got %v",
+			"Expected fetched start shard to be %v, got %v",
 			tInfo.StartShard,
 			startShard,
 		)
