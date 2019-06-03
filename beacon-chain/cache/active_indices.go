@@ -83,7 +83,7 @@ func (c *ActiveIndicesCache) ActiveIndicesInEpoch(epoch uint64) ([]uint64, error
 	return aInfo.ActiveIndices, nil
 }
 
-// AddActiveValidatorList adds ActiveIndicesByEpoch object to the cache. This method also trims the least
+// AddActiveIndicesList adds ActiveIndicesByEpoch object to the cache. This method also trims the least
 // recently added ActiveIndicesByEpoch object if the cache size has ready the max cache size limit.
 func (c *ActiveIndicesCache) AddActiveIndicesList(activeIndices *ActiveIndicesByEpoch) error {
 	c.lock.Lock()
