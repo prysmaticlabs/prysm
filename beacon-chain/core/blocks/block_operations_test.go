@@ -266,6 +266,8 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 }
 
 func TestProcessBlockHeader_OK(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Fatalf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -290,7 +292,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	validators[5593].Slashed = false
+	validators[4880].Slashed = false
 
 	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
@@ -303,7 +305,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Fatalf("Failed to generate private key got: %v", err)
 	}
 	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[5297].Pubkey = priv.PublicKey().Marshal()
+	validators[4880].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
