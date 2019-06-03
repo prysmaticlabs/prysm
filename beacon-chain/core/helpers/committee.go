@@ -224,11 +224,12 @@ func CommitteeAssignment(
 	epoch uint64,
 	validatorIndex uint64) ([]uint64, uint64, uint64, bool, error) {
 
-	if epoch > NextEpoch(state) {
-		return nil, 0, 0, false, fmt.Errorf(
-			"epoch %d can't be greater than next epoch %d",
-			epoch, NextEpoch(state))
-	}
+	/*
+		if epoch > NextEpoch(state) {
+			return nil, 0, 0, false, fmt.Errorf(
+				"epoch %d can't be greater than next epoch %d",
+				epoch, NextEpoch(state))
+		} */
 
 	committeesPerSlot := EpochCommitteeCount(state, epoch) / params.BeaconConfig().SlotsPerEpoch
 	epochStartShard, err := EpochStartShard(state, epoch)
@@ -293,10 +294,11 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	currentEpoch := CurrentEpoch(state)
 	checkEpoch := currentEpoch + 1
-	if epoch > checkEpoch {
-		return 0, fmt.Errorf("epoch %d can't be greater than %d",
-			epoch, checkEpoch)
-	}
+	/*
+		if epoch > checkEpoch {
+			return 0, fmt.Errorf("epoch %d can't be greater than %d",
+				epoch, checkEpoch)
+		} */
 	shard := (state.LatestStartShard + ShardDelta(state, currentEpoch)) % params.BeaconConfig().ShardCount
 	for checkEpoch > epoch {
 		checkEpoch--

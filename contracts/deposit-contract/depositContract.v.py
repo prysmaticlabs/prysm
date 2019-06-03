@@ -153,11 +153,12 @@ def deposit(pubkey: bytes[PUBKEY_LENGTH],
     if deposit_amount >= self.FULL_DEPOSIT_AMOUNT:
         self.full_deposit_count += 1
         if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
-            timestamp_day_boundary: uint256 = (
-                    as_unitless_number(block.timestamp) -
-                    as_unitless_number(block.timestamp) % SECONDS_PER_DAY +
-                    2 * SECONDS_PER_DAY
-            )
+            timestamp_day_boundary: uint256
+            if self.custom_chainstart_delay > 0:
+                timestamp_day_boundary = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % self.custom_chainstart_delay + self.custom_chainstart_delay
+            else:
+                timestamp_day_boundary = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % SECONDS_PER_DAY + 2*SECONDS_PER_DAY
+
             log.Eth2Genesis(new_deposit_root,
                             self.to_little_endian_64(self.deposit_count),
                             self.to_little_endian_64(timestamp_day_boundary))

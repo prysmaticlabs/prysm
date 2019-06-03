@@ -158,12 +158,12 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	w.chainStarted = true
 	w.depositRoot = chainStartDepositRoot[:]
 
-	block, err := w.blockFetcher.BlockByNumber(w.ctx, big.NewInt(int64(depositLog.BlockNumber)))
+	_, err = w.blockFetcher.BlockByNumber(w.ctx, big.NewInt(int64(depositLog.BlockNumber)))
 	if err != nil {
 		log.Errorf("could not retrieve block %v", err)
 		return
 	}
-	chainStartTime := time.Unix(int64(block.Time()+timestampBoundary), 0)
+	chainStartTime := time.Unix(int64(timestampBoundary), 0)
 	w.genesisTime = chainStartTime
 
 	depHashes, err := w.ChainStartDepositHashes()

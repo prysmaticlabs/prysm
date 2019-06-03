@@ -8,7 +8,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -173,8 +172,6 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	log.Errorf("Slot: %d", head.Slot)
-	log.Errorf("Head: %v", proto.MarshalTextString(head))
 	return head.Slot, nil
 }
 
@@ -197,7 +194,6 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
-	log.Infof("Slot %d", slot)
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 	if slot == 0 {
@@ -212,6 +208,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
 		v.assignments = nil // Clear assignments so we know to retry the request.
+		log.Error(err)
 		return err
 	}
 
