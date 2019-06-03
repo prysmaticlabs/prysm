@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -688,7 +689,9 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
 			Balances: []uint64{tt.a},
 		}
-		c, err := baseReward(state, 0)
+		totalBalance, _ := helpers.TotalActiveBalance(state)
+		adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
+		c, err := baseReward(state, 0, adjustedQuotient)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -937,14 +940,15 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	totalBalance, _ := helpers.TotalActiveBalance(state)
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
 	for i := uint64(0); i < validatorCount; i++ {
 		// Since no one attested, all the validators should gain 0 reward
 		if rewards[i] != 0 {
 			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
 		}
 		// Since no one attested, all the validators should get penalized the same
-		base, err := baseReward(state, i)
+		base, err := baseReward(state, i, adjustedQuotient)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1107,7 +1111,8 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	totalBalance, _ := helpers.TotalActiveBalance(state)
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
 	for i := uint64(0); i < validatorCount; i++ {
 		// Since no one attested, all the validators should gain 0 reward
 		if rewards[i] != 0 {
@@ -1115,7 +1120,7 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		}
 		// Since no one attested, all the validators should get penalized the same
 		// it's 3 times the penalized amount because source, target and head.
-		base, _ := baseReward(state, i)
+		base, _ := baseReward(state, i, adjustedQuotient)
 		wanted := 3 * base
 		if penalties[i] != wanted {
 			t.Errorf("Wanted penalty balance %d, got %d",
@@ -1163,9 +1168,9 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
 	for _, i := range attestedIndices {
-		base, _ := baseReward(state, i)
+		base, _ := baseReward(state, i, adjustedQuotient)
 		// Base rewards for getting source right
 		wanted := 3 * (base * attestedBalance / totalBalance)
 		// Base rewards for proposer and attesters working together getting attestation
