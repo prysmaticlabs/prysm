@@ -682,9 +682,11 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 // baseReward takes state and validator index and calculate
 // individual validator's base reward quotient.
 //
+// Note: Adjusted quotient is calculated of base reward because it's too inefficient
+// to repeat the same calculation for every validator versus just doing it once.
+//
 // Spec pseudocode definition:
 //  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
-//    adjusted_quotient = integer_squareroot(get_total_active_balance(state)) // BASE_REWARD_QUOTIENT
 //    if adjusted_quotient == 0:
 //        return 0
 //    return state.validator_registry[index].effective_balance // adjusted_quotient // BASE_REWARDS_PER_EPOCH
@@ -700,6 +702,9 @@ func baseReward(state *pb.BeaconState, index uint64, adjustedQuotient uint64) (u
 // validator for voting the correct FFG source, FFG target, and head. It
 // also calculates proposer delay inclusion and inactivity rewards
 // and penalties. Individual rewards and penalties are returned in list.
+//
+// Note: we calculated adjusted quotient outside of base reward because it's too inefficient
+// to repeat the same calculation for every validator versus just doing it once.
 //
 // Spec pseudocode definition:
 //  def get_attestation_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
@@ -870,6 +875,9 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 // crosslinkDelta calculates the rewards and penalties of individual
 // validator for submitting the correct crosslink.
 // Individual rewards and penalties are returned in list.
+//
+// Note: we calculated adjusted quotient outside of base reward because it's too inefficient
+// to repeat the same calculation for every validator versus just doing it once.
 //
 // Spec pseudocode definition:
 //  def get_crosslink_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
