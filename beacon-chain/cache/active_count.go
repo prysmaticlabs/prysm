@@ -21,12 +21,12 @@ var (
 
 	// Metrics.
 	activeCountCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "active_count_cache_miss",
-		Help: "The number of active count requests that aren't present in the cache.",
+		Name: "active_validator_count_cache_miss",
+		Help: "The number of active validator count requests that aren't present in the cache.",
 	})
 	activeCountCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "active_count_cache_hit",
-		Help: "The number of active count requests that are present in the cache.",
+		Name: "active_validator_count_cache_hit",
+		Help: "The number of active validator count requests that are present in the cache.",
 	})
 )
 
