@@ -682,20 +682,15 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 // baseReward takes state and validator index and calculate
 // individual validator's base reward quotient.
 //
+// Note: Adjusted quotient is calculated of base reward because it's too inefficient
+// to repeat the same calculation for every validator versus just doing it once.
+//
 // Spec pseudocode definition:
 //  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
-//    adjusted_quotient = integer_squareroot(get_total_active_balance(state)) // BASE_REWARD_QUOTIENT
 //    if adjusted_quotient == 0:
 //        return 0
 //    return state.validator_registry[index].effective_balance // adjusted_quotient // BASE_REWARDS_PER_EPOCH
-func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
-	totalBal, err := helpers.TotalActiveBalance(state)
-	if err != nil {
-		return 0, fmt.Errorf("could not get total balance: %v", err)
-	}
-
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalBal /
-		params.BeaconConfig().BaseRewardQuotient)
+func baseReward(state *pb.BeaconState, index uint64, adjustedQuotient uint64) (uint64, error) {
 	if adjustedQuotient == 0 {
 		return 0, nil
 	}
@@ -707,6 +702,9 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 // validator for voting the correct FFG source, FFG target, and head. It
 // also calculates proposer delay inclusion and inactivity rewards
 // and penalties. Individual rewards and penalties are returned in list.
+//
+// Note: we calculated adjusted quotient outside of base reward because it's too inefficient
+// to repeat the same calculation for every validator versus just doing it once.
 //
 // Spec pseudocode definition:
 //  def get_attestation_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
@@ -756,6 +754,8 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get total active balance: %v", err)
 	}
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance /
+		params.BeaconConfig().BaseRewardQuotient)
 	rewards := make([]uint64, len(state.ValidatorRegistry))
 	penalties := make([]uint64, len(state.ValidatorRegistry))
 
@@ -807,7 +807,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 		// Update rewards and penalties to each eligible validator index.
 		for _, index := range eligible {
-			base, err := baseReward(state, index)
+			base, err := baseReward(state, index, adjustedQuotient)
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 			}
@@ -836,7 +836,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	}
 
 	for i, a := range attestersVotedSoruce {
-		base, err := baseReward(state, i)
+		base, err := baseReward(state, i, adjustedQuotient)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 		}
@@ -858,7 +858,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			attestedTarget[index] = true
 		}
 		for _, index := range eligible {
-			base, err := baseReward(state, index)
+			base, err := baseReward(state, index, adjustedQuotient)
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 			}
@@ -875,6 +875,9 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 // crosslinkDelta calculates the rewards and penalties of individual
 // validator for submitting the correct crosslink.
 // Individual rewards and penalties are returned in list.
+//
+// Note: we calculated adjusted quotient outside of base reward because it's too inefficient
+// to repeat the same calculation for every validator versus just doing it once.
 //
 // Spec pseudocode definition:
 //  def get_crosslink_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
@@ -895,6 +898,13 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 //                penalties[index] += base_reward
 //    return rewards, penalties
 func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
+	totalBalance, err := helpers.TotalActiveBalance(state)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get total active balance: %v", err)
+	}
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance /
+		params.BeaconConfig().BaseRewardQuotient)
+
 	rewards := make([]uint64, len(state.ValidatorRegistry))
 	penalties := make([]uint64, len(state.ValidatorRegistry))
 	epoch := helpers.PrevEpoch(state)
@@ -931,7 +941,7 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			return nil, nil, fmt.Errorf("could not get total attested balance: %v", err)
 		}
 		for _, index := range committee {
-			base, err := baseReward(state, index)
+			base, err := baseReward(state, index, adjustedQuotient)
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 			}
