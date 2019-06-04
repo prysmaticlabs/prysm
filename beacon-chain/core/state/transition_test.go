@@ -71,6 +71,8 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -210,6 +212,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
 	for i := 0; i < len(deposits); i++ {
 		depositData := &pb.DepositData{
@@ -465,6 +469,8 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 }
 
 func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBitfield: []byte{1}}}
@@ -533,4 +539,72 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 	config.Logging = true
 
 	state.ProcessEpoch(context.Background(), newState)
+}
+
+func BenchmarkProcessEpoch65536Validators(b *testing.B) {
+	helpers.ClearShuffledValidatorCache()
+	epoch := uint64(1)
+
+	validatorCount := params.BeaconConfig().DepositsForChainStart * 4
+	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*pb.Validator, validatorCount)
+	balances := make([]uint64, validatorCount)
+
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxDepositAmount,
+		}
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+
+	var atts []*pb.PendingAttestation
+	for i := uint64(0); i < shardCount; i++ {
+		atts = append(atts, &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Crosslink: &pb.Crosslink{
+					Shard: i,
+				},
+			},
+			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+			InclusionDelay: 1,
+		})
+	}
+
+	var crosslinks []*pb.Crosslink
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks = append(crosslinks, &pb.Crosslink{
+			Epoch:    0,
+			DataRoot: []byte{'A'},
+		})
+	}
+
+	s := &pb.BeaconState{
+		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		ValidatorRegistry:         validators,
+		Balances:                  balances,
+		LatestStartShard:          512,
+		LatestBlockRoots:          make([][]byte, 254),
+		LatestSlashedBalances:     []uint64{0, 1e9, 0},
+		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentCrosslinks:         crosslinks,
+		PreviousEpochAttestations: atts,
+	}
+
+	// Precache the shuffled indices
+	for i := uint64(0); i < shardCount; i++ {
+		if _, err := helpers.CrosslinkCommitteeAtEpoch(s, 0, i); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := state.ProcessEpoch(context.Background(), s)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
 }

@@ -161,7 +161,11 @@ func GenesisBeaconState(
 			}
 		}
 	}
-	activeValidators := helpers.ActiveValidatorIndices(state, 0)
+	activeValidators, err := helpers.ActiveValidatorIndices(state, 0)
+	if err != nil {
+		return nil, fmt.Errorf("could not get active validator indices: %v", err)
+	}
+
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)

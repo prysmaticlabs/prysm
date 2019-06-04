@@ -5,7 +5,6 @@ package helpers
 import (
 	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -18,12 +17,7 @@ import (
 )
 
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
-
-// CrosslinkCommittee defines the validator committee of slot and shard combinations.
-type CrosslinkCommittee struct {
-	Committee []uint64
-	Shard     uint64
-}
+var startShardCache = cache.NewStartShardCache()
 
 // EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //
@@ -40,25 +34,28 @@ type CrosslinkCommittee struct {
 //            len(active_validator_indices) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //        )
 //    ) * SLOTS_PER_EPOCH
-func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
+func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	minCommitteePerSlot := uint64(1)
-	activeIndices := ActiveValidatorIndices(state, epoch)
 	// Max committee count per slot will be 0 when shard count is less than epoch length, this
 	// covers the special case to ensure there's always 1 max committee count per slot.
 	var committeeSizesPerSlot = minCommitteePerSlot
 	if params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch > minCommitteePerSlot {
 		committeeSizesPerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().SlotsPerEpoch
 	}
-	count := uint64(len(activeIndices))
+	count, err := ActiveValidatorCount(state, epoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not get active count: %v", err)
+	}
+
 	var currCommitteePerSlot = count / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 
 	if currCommitteePerSlot > committeeSizesPerSlot {
-		return committeeSizesPerSlot * params.BeaconConfig().SlotsPerEpoch
+		return committeeSizesPerSlot * params.BeaconConfig().SlotsPerEpoch, nil
 	}
 	if currCommitteePerSlot < 1 {
-		return minCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch
+		return minCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch, nil
 	}
-	return currCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch
+	return currCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch, nil
 }
 
 // CrosslinkCommitteeAtEpoch returns the crosslink committee of a given epoch.
@@ -72,15 +69,28 @@ func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
 //        count=get_epoch_committee_count(state, epoch),
 //    )
 func CrosslinkCommitteeAtEpoch(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64, error) {
-	seed := GenerateSeed(state, epoch)
-	indices := ActiveValidatorIndices(state, epoch)
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get seed: %v", err)
+	}
+
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get active indices: %v", err)
+	}
+
 	startShard, err := EpochStartShard(state, epoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get start shard: %v", err)
 	}
+
 	shardCount := params.BeaconConfig().ShardCount
 	currentShard := (shard + shardCount - startShard) % shardCount
-	committeeCount := EpochCommitteeCount(state, epoch)
+	committeeCount, err := EpochCommitteeCount(state, epoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get committee count: %v", err)
+	}
+
 	return ComputeCommittee(indices, seed, currentShard, committeeCount)
 }
 
@@ -130,7 +140,8 @@ func ComputeCommittee(
 	return shuffledIndices, nil
 }
 
-// AttestingIndices returns the attesting participants indices.
+// AttestingIndices returns the attesting participants indices. We removed sorting because it's irrelevant
+// in production, we don't need to reduce the surface of possible valid input.
 //
 // Spec pseudocode definition:
 //   def get_attesting_indices(state: BeaconState,
@@ -153,7 +164,7 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 		}
 		return nil, errors.New("bitfield is unable to be verified")
 	}
-	sort.Slice(committee, func(i, j int) bool { return committee[i] < committee[j] })
+
 	return committee, nil
 }
 
@@ -230,7 +241,12 @@ func CommitteeAssignment(
 			epoch, NextEpoch(state))
 	}
 
-	committeesPerSlot := EpochCommitteeCount(state, epoch) / params.BeaconConfig().SlotsPerEpoch
+	committeeCount, err := EpochCommitteeCount(state, epoch)
+	if err != nil {
+		return nil, 0, 0, false, fmt.Errorf("could not get committee count: %v", err)
+	}
+	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
+
 	epochStartShard, err := EpochStartShard(state, epoch)
 	if err != nil {
 		return nil, 0, 0, false, fmt.Errorf(
@@ -269,17 +285,22 @@ func CommitteeAssignment(
 // Spec pseudocode definition:
 // 	def get_shard_delta(state: BeaconState, epoch: Epoch) -> int:
 //    return min(get_epoch_committee_count(state, epoch), SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH)
-func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
+func ShardDelta(beaconState *pb.BeaconState, epoch uint64) (uint64, error) {
 	shardCount := params.BeaconConfig().ShardCount
 	minShardDelta := shardCount - shardCount/params.BeaconConfig().SlotsPerEpoch
-	if EpochCommitteeCount(beaconState, epoch) < minShardDelta {
-		return EpochCommitteeCount(beaconState, epoch)
+	committeeCount, err := EpochCommitteeCount(beaconState, epoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not get committee count: %v", err)
 	}
-	return minShardDelta
+	if committeeCount < minShardDelta {
+		return committeeCount, nil
+	}
+	return minShardDelta, nil
 }
 
 // EpochStartShard returns the start shard used to process crosslink
-// of a given epoch.
+// of a given epoch. The start shard is cached using epoch as key,
+// it gets rewritten where there's a reorg or a new finalized block.
 //
 // Spec pseudocode definition:
 //   def get_epoch_start_shard(state: BeaconState, epoch: Epoch) -> Shard:
@@ -291,23 +312,43 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 //        shard = (shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT
 //    return shard
 func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	startShard, err := startShardCache.StartShardInEpoch(epoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve start shard from cache: %v", err)
+	}
+	if startShard != params.BeaconConfig().FarFutureEpoch {
+		return startShard, nil
+	}
+
 	currentEpoch := CurrentEpoch(state)
 	checkEpoch := currentEpoch + 1
 	if epoch > checkEpoch {
 		return 0, fmt.Errorf("epoch %d can't be greater than %d",
 			epoch, checkEpoch)
 	}
-	shard := (state.LatestStartShard + ShardDelta(state, currentEpoch)) % params.BeaconConfig().ShardCount
+	delta, err := ShardDelta(state, currentEpoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not get shard delta: %v", err)
+	}
+
+	startShard = (state.LatestStartShard + delta) % params.BeaconConfig().ShardCount
 	for checkEpoch > epoch {
 		checkEpoch--
-		shard = (shard + params.BeaconConfig().ShardCount - ShardDelta(state, checkEpoch)) % params.BeaconConfig().ShardCount
+		delta, err = ShardDelta(state, checkEpoch)
+		if err != nil {
+			return 0, fmt.Errorf("could not get shard delta: %v", err)
+		}
+		startShard = (startShard + params.BeaconConfig().ShardCount - delta) % params.BeaconConfig().ShardCount
 	}
-	return shard, nil
-}
 
-// RestartShuffledValidatorCache restarts the shuffled indices cache from scratch.
-func RestartShuffledValidatorCache() {
-	shuffledIndicesCache = cache.NewShuffledIndicesCache()
+	if err := startShardCache.AddStartShard(&cache.StartShardByEpoch{
+		Epoch:      epoch,
+		StartShard: startShard,
+	}); err != nil {
+		return 0, fmt.Errorf("could not save start shard for cache: %v", err)
+	}
+
+	return startShard, nil
 }
 
 // VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect

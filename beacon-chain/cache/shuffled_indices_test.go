@@ -65,9 +65,10 @@ func TestShuffledIndicesCache_ShuffledIndicesBySeed2(t *testing.T) {
 func TestShuffledIndices_MaxSize(t *testing.T) {
 	cache := NewShuffledIndicesCache()
 
-	for i := 0; i < maxShuffledListSize+10; i++ {
+	for i := uint64(0); i < 1001; i++ {
 		sInfo := &IndicesByIndexSeed{
-			Seed: []byte{byte(i)},
+			Index: i,
+			Seed:  []byte{byte(i)},
 		}
 		if err := cache.AddShuffledValidatorList(sInfo); err != nil {
 			t.Fatal(err)

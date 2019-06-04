@@ -1,11 +1,16 @@
 package helpers
 
 import (
+	"fmt"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+var currentEpochSeed = cache.NewSeedCache()
 
 // GenerateSeed generates the randao seed of a given epoch.
 //
@@ -20,18 +25,36 @@ import (
 //        get_active_index_root(state, epoch) +
 //        int_to_bytes32(epoch)
 //    )
-func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) [32]byte {
-	lookAheadEpoch := wantedEpoch - params.BeaconConfig().MinSeedLookahead
-	if params.BeaconConfig().MinSeedLookahead > wantedEpoch {
+func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
+	seed, err := currentEpochSeed.SeedInEpoch(epoch)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not retrieve total balance from cache: %v", err)
+	}
+	if seed != nil {
+		return bytesutil.ToBytes32(seed), nil
+	}
+
+	lookAheadEpoch := epoch - params.BeaconConfig().MinSeedLookahead
+	if params.BeaconConfig().MinSeedLookahead > epoch {
 		lookAheadEpoch = 0
 	}
 	randaoMix := RandaoMix(state, lookAheadEpoch)
 
-	indexRoot := ActiveIndexRoot(state, wantedEpoch)
+	indexRoot := ActiveIndexRoot(state, epoch)
 
 	th := append(randaoMix, indexRoot...)
-	th = append(th, bytesutil.Bytes32(wantedEpoch)...)
-	return hashutil.Hash(th)
+	th = append(th, bytesutil.Bytes32(epoch)...)
+
+	seed32 := hashutil.Hash(th)
+
+	if err := currentEpochSeed.AddSeed(&cache.SeedByEpoch{
+		Epoch: epoch,
+		Seed:  seed32[:],
+	}); err != nil {
+		return [32]byte{}, fmt.Errorf("could not save active balance for cache: %v", err)
+	}
+
+	return seed32, nil
 }
 
 // ActiveIndexRoot returns the index root of a given epoch.
