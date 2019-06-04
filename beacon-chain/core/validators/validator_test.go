@@ -380,7 +380,10 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{
 		ExitEpoch: exitEpoch},
 	}}
-	newState := InitiateValidatorExit(state, 0)
+	newState, err := InitiateValidatorExit(state, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if newState.ValidatorRegistry[0].ExitEpoch != exitEpoch {
 		t.Errorf("Already exited, wanted exit epoch %d, got %d",
 			exitEpoch, newState.ValidatorRegistry[0].ExitEpoch)
@@ -396,7 +399,10 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 	}}
-	newState := InitiateValidatorExit(state, idx)
+	newState, err := InitiateValidatorExit(state, idx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if newState.ValidatorRegistry[idx].ExitEpoch != exitedEpoch+2 {
 		t.Errorf("Exit epoch was not the highest, wanted exit epoch %d, got %d",
 			exitedEpoch+2, newState.ValidatorRegistry[idx].ExitEpoch)
@@ -413,7 +419,10 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 		{ExitEpoch: exitedEpoch + 2}, //over flow here
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 	}}
-	newState := InitiateValidatorExit(state, idx)
+	newState, err := InitiateValidatorExit(state, idx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Because of exit queue overflow,
 	// validator who init exited has to wait one more epoch.
@@ -454,29 +463,6 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	state = ExitValidator(state, 0)
 	if state.ValidatorRegistry[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 		t.Error("Expected exited validator to stay exited")
-	}
-}
-
-func TestEligibleToExit_OK(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 1,
-		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-		},
-	}
-	if eligibleToExit(state, 0) {
-		t.Error("eligible to exit should be true but got false")
-	}
-
-	state = &pb.BeaconState{
-		Slot: params.BeaconConfig().MinValidatorWithdrawalDelay,
-		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
-				SlashedEpoch: 1},
-		},
-	}
-	if eligibleToExit(state, 0) {
-		t.Error("eligible to exit should be true but got false")
 	}
 }
 

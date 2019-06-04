@@ -131,6 +131,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 }
 
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()

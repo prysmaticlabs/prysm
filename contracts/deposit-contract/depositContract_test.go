@@ -2,68 +2,18 @@ package depositcontract
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/binary"
-	"fmt"
 	"log"
 	"math/big"
 	"testing"
 
 	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-var (
-	amount33Eth, _        = new(big.Int).SetString("33000000000000000000", 10)
-	amount32Eth, _        = new(big.Int).SetString("32000000000000000000", 10)
-	amountLessThan1Eth, _ = new(big.Int).SetString("500000000000000000", 10)
-)
-
-type testAccount struct {
-	addr         common.Address
-	contract     *DepositContract
-	contractAddr common.Address
-	backend      *backends.SimulatedBackend
-	txOpts       *bind.TransactOpts
-}
-
-func setup() (*testAccount, error) {
-	genesis := make(core.GenesisAlloc)
-	privKey, _ := crypto.GenerateKey()
-	pubKeyECDSA, ok := privKey.Public().(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("error casting public key to ECDSA")
-	}
-
-	// strip off the 0x and the first 2 characters 04 which is always the EC prefix and is not required.
-	publicKeyBytes := crypto.FromECDSAPub(pubKeyECDSA)[4:]
-	var pubKey = make([]byte, 48)
-	copy(pubKey[:], []byte(publicKeyBytes))
-
-	addr := crypto.PubkeyToAddress(privKey.PublicKey)
-	txOpts := bind.NewKeyedTransactor(privKey)
-	startingBalance, _ := new(big.Int).SetString("100000000000000000000000000000000000000", 10)
-	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
-	backend := backends.NewSimulatedBackend(genesis, 210000000000)
-
-	depositsRequired := big.NewInt(8)
-	minDeposit := big.NewInt(1e9)
-	maxDeposit := big.NewInt(32e9)
-	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit, big.NewInt(1), addr)
-	if err != nil {
-		return nil, err
-	}
-
-	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
-}
-
 func TestSetupRegistrationContract_OK(t *testing.T) {
-	_, err := setup()
+	_, err := Setup()
 	if err != nil {
 		log.Fatalf("Can not deploy validator registration contract: %v", err)
 	}
@@ -71,13 +21,13 @@ func TestSetupRegistrationContract_OK(t *testing.T) {
 
 // negative test case, deposit with less than 1 ETH which is less than the top off amount.
 func TestRegister_Below1ETH(t *testing.T) {
-	testAccount, err := setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testAccount.txOpts.Value = amountLessThan1Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{}, []byte{}, []byte{})
+	testAccount.TxOpts.Value = LessThan1Eth()
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, []byte{}, []byte{}, []byte{})
 	if err == nil {
 		t.Error("Validator registration should have failed with insufficient deposit")
 	}
@@ -85,13 +35,13 @@ func TestRegister_Below1ETH(t *testing.T) {
 
 // negative test case, deposit with more than 32 ETH which is more than the asked amount.
 func TestRegister_Above32Eth(t *testing.T) {
-	testAccount, err := setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testAccount.txOpts.Value = amount33Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{}, []byte{}, []byte{})
+	testAccount.TxOpts.Value = Amount33Eth()
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, []byte{}, []byte{}, []byte{})
 	if err == nil {
 		t.Error("Validator registration should have failed with more than asked deposit amount")
 	}
@@ -99,40 +49,40 @@ func TestRegister_Above32Eth(t *testing.T) {
 
 // normal test case, test depositing 32 ETH and verify HashChainValue event is correctly emitted.
 func TestValidatorRegister_OK(t *testing.T) {
-	testAccount, err := setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
-	testAccount.txOpts.Value = amount32Eth
-	testAccount.txOpts.GasLimit = 1000000
+	testAccount.TxOpts.Value = Amount32Eth()
+	testAccount.TxOpts.GasLimit = 1000000
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
 	var sig [96]byte
 
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
-	testAccount.backend.Commit()
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubkey[:], withdrawalCreds[:], sig[:])
+	testAccount.Backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
-	testAccount.backend.Commit()
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubkey[:], withdrawalCreds[:], sig[:])
+	testAccount.Backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
-	testAccount.backend.Commit()
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubkey[:], withdrawalCreds[:], sig[:])
+	testAccount.Backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			testAccount.contractAddr,
+			testAccount.ContractAddr,
 		},
 	}
 
-	logs, err := testAccount.backend.FilterLogs(context.Background(), query)
+	logs, err := testAccount.Backend.FilterLogs(context.Background(), query)
 	if err != nil {
 		t.Fatalf("Unable to get logs of deposit contract: %v", err)
 	}
@@ -162,79 +112,79 @@ func TestValidatorRegister_OK(t *testing.T) {
 
 // normal test case, test beacon chain start log event.
 func TestETH2Genesis_OK(t *testing.T) {
-	testAccount, err := setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
-	testAccount.txOpts.Value = amount32Eth
-	testAccount.txOpts.GasLimit = 1000000
+	testAccount.TxOpts.Value = Amount32Eth()
+	testAccount.TxOpts.GasLimit = 1000000
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
 	var sig [96]byte
 
 	for i := 0; i < 8; i++ {
-		_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
-		testAccount.backend.Commit()
+		_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubkey[:], withdrawalCreds[:], sig[:])
+		testAccount.Backend.Commit()
 		if err != nil {
 			t.Errorf("Validator registration failed: %v", err)
 		}
 	}
 
-	testAccount.backend.Commit()
+	testAccount.Backend.Commit()
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			testAccount.contractAddr,
+			testAccount.ContractAddr,
 		},
 	}
 
-	logs, err := testAccount.backend.FilterLogs(context.Background(), query)
+	logs, err := testAccount.Backend.FilterLogs(context.Background(), query)
 	if err != nil {
 		t.Fatalf("Unable to get logs %v", err)
 	}
 
-	if logs[8].Topics[0] != hashutil.Hash([]byte("Eth2Genesis(bytes32,bytes,bytes)")) {
+	if logs[8].Topics[0] != hashutil.HashKeccak256([]byte("Eth2Genesis(bytes32,bytes,bytes)")) {
 		t.Error("Chain start did not even get emitted")
 	}
 }
 
 func TestDrain(t *testing.T) {
-	testAccount, err := setup()
+	testAccount, err := Setup()
 	if err != nil {
 		t.Fatal(err)
 	}
-	testAccount.txOpts.Value = amount32Eth
+	testAccount.TxOpts.Value = Amount32Eth()
 
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
 	var sig [96]byte
 
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubkey[:], withdrawalCreds[:], sig[:])
-	testAccount.backend.Commit()
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubkey[:], withdrawalCreds[:], sig[:])
+	testAccount.Backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
 
-	testAccount.backend.Commit()
+	testAccount.Backend.Commit()
 
 	ctx := context.Background()
-	bal, err := testAccount.backend.BalanceAt(ctx, testAccount.contractAddr, nil)
+	bal, err := testAccount.Backend.BalanceAt(ctx, testAccount.ContractAddr, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bal.Cmp(amount32Eth) != 0 {
+	if bal.Cmp(Amount32Eth()) != 0 {
 		t.Fatal("deposit didnt work")
 	}
 
-	testAccount.txOpts.Value = big.NewInt(0)
-	if _, err := testAccount.contract.Drain(testAccount.txOpts); err != nil {
+	testAccount.TxOpts.Value = big.NewInt(0)
+	if _, err := testAccount.Contract.Drain(testAccount.TxOpts); err != nil {
 		t.Fatal(err)
 	}
 
-	testAccount.backend.Commit()
+	testAccount.Backend.Commit()
 
-	bal, err = testAccount.backend.BalanceAt(ctx, testAccount.contractAddr, nil)
+	bal, err = testAccount.Backend.BalanceAt(ctx, testAccount.ContractAddr, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

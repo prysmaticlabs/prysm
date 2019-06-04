@@ -163,6 +163,8 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 }
 
 func TestCommitteeAssignment_OK(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -436,12 +438,18 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	// Initiated exit because validator status flag = Validator_INITIATED_EXIT.
+	// Initiated exit because validator exit epoch and withdrawable epoch are not FAR_FUTURE_EPOCH
+	slot := uint64(10000)
+	epoch := helpers.SlotToEpoch(slot)
+	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: 10000,
+		Slot: slot,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			StatusFlags: pbp2p.Validator_INITIATED_EXIT,
-			Pubkey:      pubKey},
+			Pubkey:            pubKey,
+			ActivationEpoch:   0,
+			ExitEpoch:         exitEpoch,
+			WithdrawableEpoch: withdrawableEpoch},
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -490,12 +498,15 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	// Withdrawable exit because validator status flag = Validator_WITHDRAWABLE.
+	// Withdrawable exit because current epoch is after validator withdrawable epoch.
+	slot := uint64(10000)
+	epoch := helpers.SlotToEpoch(slot)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: 10000,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			StatusFlags: pbp2p.Validator_WITHDRAWABLE,
-			Pubkey:      pubKey},
+			WithdrawableEpoch: epoch - 1,
+			ExitEpoch:         epoch - 2,
+			Pubkey:            pubKey},
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -544,11 +555,15 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	// Exit slashed because exit epoch and slashed epoch are =< current epoch.
+	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
+	slot := uint64(10000)
+	epoch := helpers.SlotToEpoch(slot)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: 10000,
+		Slot: slot,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			Pubkey: pubKey},
+			Slashed:           true,
+			Pubkey:            pubKey,
+			WithdrawableEpoch: epoch + 1},
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -598,11 +613,13 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	}
 
 	// Exit because only exit epoch is =< current epoch.
+	slot := uint64(10000)
+	epoch := helpers.SlotToEpoch(slot)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
-		Slot: 10000,
+		Slot: slot,
 		ValidatorRegistry: []*pbp2p.Validator{{
-			Pubkey:       pubKey,
-			SlashedEpoch: params.BeaconConfig().FarFutureEpoch},
+			Pubkey:            pubKey,
+			WithdrawableEpoch: epoch + 1},
 		}}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -753,14 +770,17 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
-		ValidatorRegistry: []*pbp2p.Validator{{
-			ActivationEpoch: 0,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			Pubkey:          pubKeys[0]},
+		ValidatorRegistry: []*pbp2p.Validator{
 			{
 				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				Pubkey:          pubKeys[1]},
+				Pubkey:          pubKeys[0],
+			},
+			{
+				ActivationEpoch: 0,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+				Pubkey:          pubKeys[1],
+			},
 		},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -806,9 +826,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			Statuses: []*pb.ValidatorActivationResponse_Status{
 				{PublicKey: []byte{'A'},
 					Status: &pb.ValidatorStatusResponse{
-						Status:                 pb.ValidatorStatus_ACTIVE,
-						Eth1DepositBlockNumber: 10,
-						DepositInclusionSlot:   3413,
+						Status:                    pb.ValidatorStatus_ACTIVE,
+						Eth1DepositBlockNumber:    10,
+						DepositInclusionSlot:      3413,
+						PositionInActivationQueue: params.BeaconConfig().FarFutureEpoch,
 					},
 				},
 				{PublicKey: []byte{'B'},

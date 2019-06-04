@@ -223,9 +223,15 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, fmt.Errorf("could not process rewards and penalties: %v", err)
 	}
 
-	state = e.ProcessRegistryUpdates(state)
+	state, err = e.ProcessRegistryUpdates(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process registry updates: %v", err)
+	}
 
-	state = e.ProcessSlashings(state)
+	state, err = e.ProcessSlashings(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process slashings: %v", err)
+	}
 
 	state, err = e.ProcessFinalUpdates(state)
 	if err != nil {

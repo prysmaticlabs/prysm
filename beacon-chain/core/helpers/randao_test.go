@@ -80,6 +80,8 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 }
 
 func TestGenerateSeed_OK(t *testing.T) {
+	ClearAllCaches()
+
 	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
@@ -98,10 +100,13 @@ func TestGenerateSeed_OK(t *testing.T) {
 		LatestRandaoMixes:      randaoMixes,
 		Slot:                   slot}
 
-	got := GenerateSeed(state, 10)
+	got, err := GenerateSeed(state, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	wanted := [32]byte{184, 125, 45, 85, 9, 149, 28, 150, 244, 26, 107, 190, 20,
-		226, 23, 62, 239, 72, 184, 214, 219, 91, 33, 42, 123, 110, 161, 17, 6, 206, 182, 195}
+	wanted := [32]byte{239, 112, 63, 86, 124, 180, 155, 181, 91, 67, 231, 178,
+		94, 149, 243, 101, 176, 169, 153, 35, 37, 19, 115, 154, 6, 102, 125, 91, 81, 153, 186, 84}
 	if got != wanted {
 		t.Errorf("Incorrect generated seeds. Got: %v, wanted: %v",
 			got, wanted)

@@ -141,7 +141,7 @@ func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][]byte, error) {
 
 // parentHash takes a left and right node and hashes their concatenation.
 func parentHash(left []byte, right []byte) []byte {
-	res := hashutil.HashSha256(append(left, right...))
+	res := hashutil.Hash(append(left, right...))
 	return res[:]
 }
 

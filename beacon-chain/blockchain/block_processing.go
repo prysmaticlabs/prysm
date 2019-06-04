@@ -223,8 +223,9 @@ func (c *ChainService) AdvanceState(
 	if err != nil {
 		return beaconState, &BlockFailedProcessingErr{err}
 	}
-	// Prune the block cache on every new finalized epoch.
+	// Prune the block cache and helper caches on every new finalized epoch.
 	if newState.FinalizedEpoch > finalizedEpoch {
+		helpers.ClearAllCaches()
 		c.beaconDB.ClearBlockCache()
 	}
 	log.WithField(

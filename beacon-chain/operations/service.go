@@ -140,7 +140,6 @@ func (s *Service) PendingAttestations(ctx context.Context) ([]*pb.Attestation, e
 		// Delete the attestation if the attestation is one epoch older than head state,
 		// we don't want to pass these attestations to RPC for proposer to include.
 		if slot+params.BeaconConfig().SlotsPerEpoch <= state.Slot {
-			fmt.Println(att)
 			if err := s.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, err
 			}
@@ -152,6 +151,7 @@ func (s *Service) PendingAttestations(ctx context.Context) ([]*pb.Attestation, e
 		if validAttsCount == params.BeaconConfig().MaxAttestations {
 			break
 		}
+
 		attestations = append(attestations, att)
 	}
 	return attestations, nil

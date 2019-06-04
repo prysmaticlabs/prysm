@@ -29,7 +29,8 @@ func TestIsActiveValidator_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
-	RestartShuffledValidatorCache()
+	ClearAllCaches()
+
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -54,23 +55,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  1,
-			index: 537,
+			index: 1114,
 		},
 		{
 			slot:  5,
-			index: 1313,
+			index: 1207,
 		},
 		{
 			slot:  19,
-			index: 1321,
+			index: 264,
 		},
 		{
 			slot:  30,
-			index: 340,
+			index: 1421,
 		},
 		{
 			slot:  43,
-			index: 612,
+			index: 318,
 		},
 	}
 
@@ -92,6 +93,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
+	ClearAllCaches()
 	beaconState := &pb.BeaconState{
 		Slot:                   0,
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
@@ -124,6 +126,7 @@ func TestChurnLimit_OK(t *testing.T) {
 		{validatorCount: 2000000, wantedChurn: 30 /* validatorCount/churnLimitQuotient */},
 	}
 	for _, test := range tests {
+		ClearAllCaches()
 		validators := make([]*pb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &pb.Validator{
@@ -137,7 +140,10 @@ func TestChurnLimit_OK(t *testing.T) {
 			LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 			LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		}
-		resultChurn := ChurnLimit(beaconState)
+		resultChurn, err := ChurnLimit(beaconState)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if resultChurn != test.wantedChurn {
 			t.Errorf("ChurnLimit(%d) = %d, want = %d",
 				test.validatorCount, resultChurn, test.wantedChurn)
