@@ -40,7 +40,7 @@ type Eth1DataVoteCache struct {
 	lock              sync.RWMutex
 }
 
-// eth1DataVoteKeyFn takes the epoch as the key for the eth1DataVote of a given epoch.
+// eth1DataVoteKeyFn takes the deposit root as the key for the eth1 data vote count of a given root.
 func eth1DataVoteKeyFn(obj interface{}) (string, error) {
 	eInfo, ok := obj.(*Eth1DataVote)
 	if !ok {
