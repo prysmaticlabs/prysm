@@ -124,6 +124,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 			RandaoReveal:      nil,
 			ProposerSlashings: nil,
 			AttesterSlashings: nil,
+			Eth1Data: &pbp2p.Eth1Data{},
 		},
 	}
 

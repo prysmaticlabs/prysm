@@ -226,8 +226,10 @@ func (c *ChainService) AdvanceState(
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if newState.FinalizedEpoch > finalizedEpoch {
 		helpers.ClearAllCaches()
+		b.ClearEth1DataVoteCache()
 		c.beaconDB.ClearBlockCache()
 	}
+
 	log.WithField(
 		"slotsSinceGenesis", newState.Slot,
 	).Info("Slot transition successfully processed")
