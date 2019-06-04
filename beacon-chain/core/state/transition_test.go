@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -542,6 +543,8 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 }
 
 func BenchmarkProcessEpoch65536Validators(b *testing.B) {
+	logrus.SetLevel(logrus.PanicLevel)
+
 	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
@@ -610,6 +613,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 }
 
 func BenchmarkProcessBlock65536Validators(b *testing.B) {
+	logrus.SetLevel(logrus.PanicLevel)
 	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
@@ -664,13 +668,6 @@ func BenchmarkProcessBlock65536Validators(b *testing.B) {
 		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		CurrentCrosslinks:         crosslinks,
 		PreviousEpochAttestations: atts,
-	}
-
-	// Precache the shuffled indices
-	for i := uint64(0); i < shardCount; i++ {
-		if _, err := helpers.CrosslinkCommitteeAtEpoch(s, 0, i); err != nil {
-			b.Fatal(err)
-		}
 	}
 
 	c := &state.TransitionConfig{
