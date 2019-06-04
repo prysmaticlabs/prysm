@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-
 	"github.com/golang/mock/gomock"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -22,6 +21,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
@@ -334,7 +334,11 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/)
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, depositTrie.Root())
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
@@ -376,7 +380,11 @@ func TestValidatorStatus_Active(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, depositTrie.Root())
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
@@ -446,7 +454,11 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -496,7 +508,11 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -545,7 +561,11 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -595,7 +615,11 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -645,7 +669,11 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -747,8 +775,11 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(context.Background(), deposit, big.NewInt(10))
-
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
+	db.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, depositTrie.Root())
 	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
@@ -836,7 +867,11 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	dep := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(context.Background(), dep, big.NewInt(10))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
+	db.InsertDeposit(ctx, dep, big.NewInt(10) /*blockNum*/, depositTrie.Root())
 	depData = &pbp2p.DepositData{
 		Pubkey:                []byte{'C'},
 		Signature:             []byte("hi"),
@@ -847,7 +882,8 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	dep = &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(context.Background(), dep, big.NewInt(15))
+	depositTrie.InsertIntoTrie(dep.Data.Signature, 15)
+	db.InsertDeposit(context.Background(), dep, big.NewInt(15), depositTrie.Root())
 
 	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)

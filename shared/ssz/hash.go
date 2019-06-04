@@ -107,7 +107,7 @@ func makeHasher(typ reflect.Type) (hasher, error) {
 		return getEncoding, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 ||
 		kind == reflect.Array && typ.Elem().Kind() == reflect.Uint8:
-		return hashedEncoding, nil
+		return HashedEncoding, nil
 	case kind == reflect.Slice || kind == reflect.Array:
 		if useCache {
 			return makeSliceHasherCache(typ)
@@ -141,7 +141,8 @@ func getEncoding(val reflect.Value) ([]byte, error) {
 	return writer.Bytes(), nil
 }
 
-func hashedEncoding(val reflect.Value) ([]byte, error) {
+// HashedEncoding returns a unique hash of an object.
+func HashedEncoding(val reflect.Value) ([]byte, error) {
 	encoding, err := getEncoding(val)
 	if err != nil {
 		return nil, err
@@ -206,7 +207,7 @@ func makePtrHasher(typ reflect.Type) (hasher, error) {
 
 	hasher := func(val reflect.Value) ([]byte, error) {
 		if val.IsNil() {
-			return hashedEncoding(val)
+			return HashedEncoding(val)
 		}
 		return elemSSZUtils.hasher(val.Elem())
 	}

@@ -82,7 +82,7 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 		return [32]byte{}, newHashError("untyped nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
-	hs, err := hashedEncoding(rval)
+	hs, err := HashedEncoding(rval)
 	if err != nil {
 		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 	}
@@ -117,7 +117,7 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 // size limit.
 func (b *hashCacheS) MerkleHashCached(byteSlice [][]byte) ([]byte, error) {
 	mh := []byte{}
-	hs, err := hashedEncoding(reflect.ValueOf(byteSlice))
+	hs, err := HashedEncoding(reflect.ValueOf(byteSlice))
 	if err != nil {
 		return mh, newHashError(fmt.Sprint(err), reflect.TypeOf(byteSlice))
 	}
@@ -163,7 +163,7 @@ func makeSliceHasherCache(typ reflect.Type) (hasher, error) {
 		return nil, fmt.Errorf("failed to get ssz utils: %v", err)
 	}
 	hasher := func(val reflect.Value) ([]byte, error) {
-		hs, err := hashedEncoding(val)
+		hs, err := HashedEncoding(val)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
 		}
@@ -206,7 +206,7 @@ func makeStructHasherCache(typ reflect.Type) (hasher, error) {
 		return nil, err
 	}
 	hasher := func(val reflect.Value) ([]byte, error) {
-		hs, err := hashedEncoding(val)
+		hs, err := HashedEncoding(val)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
 		}

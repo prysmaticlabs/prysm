@@ -382,11 +382,35 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			},
 		},
 	}
-	for _, dp := range append(readyDeposits, recentDeposits...) {
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
+	for _, dp := range append(readyDeposits, recentDeposits...) {
+		depositHash, err := hashutil.DepositHash(dp.Data)
+		if err != nil {
+			t.Fatalf("Unable to determine hashed value of deposit %v", err)
+		}
+
+		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
+			t.Fatalf("Unable to insert deposit into trie %v", err)
+
+		}
+
+		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
+	}
+	
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		depositHash, err := hashutil.DepositHash(dp.Data)
+		if err != nil {
+			t.Fatalf("Unable to determine hashed value of deposit %v", err)
+		}
+
+		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
+			t.Fatalf("Unable to insert deposit into trie %v", err)
+
+		}
+		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
 	}
 
 	bs := &BeaconServer{
@@ -474,11 +498,38 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 		})
 	}
 
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		depositHash, err := hashutil.DepositHash(dp.Data)
+		if err != nil {
+			t.Fatalf("Unable to determine hashed value of deposit %v", err)
+		}
+
+		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
+			t.Fatalf("Unable to insert deposit into trie %v", err)
+
+		}
+
+		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
+	}
+	depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		depositHash, err := hashutil.DepositHash(dp.Data)
+		if err != nil {
+			t.Fatalf("Unable to determine hashed value of deposit %v", err)
+		}
+
+		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
+			t.Fatalf("Unable to insert deposit into trie %v", err)
+
+		}
+		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
 	}
 
 	bs := &BeaconServer{
@@ -566,11 +617,38 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		})
 	}
 
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
+	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		depositHash, err := hashutil.DepositHash(dp.Data)
+		if err != nil {
+			t.Fatalf("Unable to determine hashed value of deposit %v", err)
+		}
+
+		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
+			t.Fatalf("Unable to insert deposit into trie %v", err)
+
+		}
+
+		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
+	}
+	depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		depositHash, err := hashutil.DepositHash(dp.Data)
+		if err != nil {
+			t.Fatalf("Unable to determine hashed value of deposit %v", err)
+		}
+
+		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
+			t.Fatalf("Unable to insert deposit into trie %v", err)
+
+		}
+		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
 	}
 
 	bs := &BeaconServer{
@@ -622,7 +700,6 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 }
 
 func TestEth1Data_EmptyVotesOk(t *testing.T) {
-	t.Skip()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -630,25 +707,28 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	deps := []*pbp2p.Deposit{
 		{Index: 0, Data: &pbp2p.DepositData{
-			Pubkey: []byte("a"),
+			Pubkey:                []byte("a"),
+			WithdrawalCredentials: make([]byte, 32),
+			Signature:             make([]byte, 96),
 		}},
 		{Index: 1, Data: &pbp2p.DepositData{
-			Pubkey: []byte("b"),
+			Pubkey:                []byte("b"),
+			WithdrawalCredentials: make([]byte, 32),
+			Signature:             make([]byte, 96),
 		}},
 	}
 	depsData := [][]byte{}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("could not setup deposit trie: %v", err)
+	}
 	for _, dp := range deps {
-		db.InsertDeposit(context.Background(), dp, big.NewInt(0))
+		db.InsertDeposit(context.Background(), dp, big.NewInt(0), depositTrie.Root())
 		depHash, err := hashutil.DepositHash(dp.Data)
 		if err != nil {
 			t.Errorf("Could not hash deposit")
 		}
 		depsData = append(depsData, depHash[:])
-	}
-
-	depositTrie, err := trieutil.GenerateTrieFromItems(depsData, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatal(err)
 	}
 	depositRoot := depositTrie.Root()
 	beaconState := &pbp2p.BeaconState{
@@ -690,7 +770,6 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 }
 
 func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
-	t.Skip()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
