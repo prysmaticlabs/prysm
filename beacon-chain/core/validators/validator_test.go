@@ -362,7 +362,10 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{
 		ExitEpoch: exitEpoch},
 	}}
-	newState := InitiateValidatorExit(state, 0)
+	newState, err := InitiateValidatorExit(state, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if newState.ValidatorRegistry[0].ExitEpoch != exitEpoch {
 		t.Errorf("Already exited, wanted exit epoch %d, got %d",
 			exitEpoch, newState.ValidatorRegistry[0].ExitEpoch)
@@ -378,7 +381,10 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 	}}
-	newState := InitiateValidatorExit(state, idx)
+	newState, err := InitiateValidatorExit(state, idx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if newState.ValidatorRegistry[idx].ExitEpoch != exitedEpoch+2 {
 		t.Errorf("Exit epoch was not the highest, wanted exit epoch %d, got %d",
 			exitedEpoch+2, newState.ValidatorRegistry[idx].ExitEpoch)
@@ -395,7 +401,10 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 		{ExitEpoch: exitedEpoch + 2}, //over flow here
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 	}}
-	newState := InitiateValidatorExit(state, idx)
+	newState, err := InitiateValidatorExit(state, idx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Because of exit queue overflow,
 	// validator who init exited has to wait one more epoch.

@@ -15,7 +15,11 @@ import (
 //     offset = (data.crosslink.shard + SHARD_COUNT - get_epoch_start_shard(state, data.target_epoch)) % SHARD_COUNT
 //     return get_epoch_start_slot(data.target_epoch) + offset // (committee_count // SLOTS_PER_EPOCH)
 func AttestationDataSlot(state *pb.BeaconState, data *pb.AttestationData) (uint64, error) {
-	commiteeCount := EpochCommitteeCount(state, data.TargetEpoch)
+	commiteeCount, err := EpochCommitteeCount(state, data.TargetEpoch)
+	if err != nil {
+		return 0, err
+	}
+
 	epochStartShardNumber, err := EpochStartShard(state, data.TargetEpoch)
 	if err != nil {
 		return 0, fmt.Errorf("could not determine epoch start shard: %v", err)

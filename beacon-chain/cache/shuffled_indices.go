@@ -16,7 +16,7 @@ var (
 	ErrNotValidatorListInfo = errors.New("object is not a shuffled validator list")
 
 	// maxShuffledListSize defines the max number of shuffled list can cache.
-	maxShuffledListSize = 4
+	maxShuffledListSize = 1000
 
 	// Metrics.
 	shuffledIndicesCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -90,7 +90,6 @@ func (c *ShuffledIndicesCache) IndicesByIndexSeed(index uint64, seed []byte) ([]
 func (c *ShuffledIndicesCache) AddShuffledValidatorList(shuffledIndices *IndicesByIndexSeed) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
 	if err := c.shuffledIndicesCache.AddIfNotPresent(shuffledIndices); err != nil {
 		return err
 	}

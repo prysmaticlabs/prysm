@@ -11,6 +11,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -901,7 +902,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(100)
 
-	// Tried to insert 5 active indices to DB with only 3 validators in state.
+	// Tried to insert 5 active indices to DB with only 3 validators in state
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2, 3, 4})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
@@ -933,8 +934,80 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
 	}
 
-	// Verify the skipped validators are included in the next epoch.
+	// Verify the skipped validators are included in the next epoch
 	if !reflect.DeepEqual(v.ActivatedValFromEpoch(epoch+2), []uint64{3, 4}) {
 		t.Error("Did not get wanted validator from activation queue")
+	}
+}
+
+func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	e := params.BeaconConfig().FarFutureEpoch
+	a := params.BeaconConfig().MaxDepositAmount
+
+	// Set up state and block to process epoch to get a new finalized block
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*3+1)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = []byte{byte(i)}
+	}
+	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = params.BeaconConfig().ZeroHash[:]
+	}
+	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks[i] = &pb.Crosslink{
+			Epoch: params.BeaconConfig().SlotsPerEpoch,
+		}
+	}
+	s := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().SlotsPerEpoch*3 - 1,
+		PreviousJustifiedEpoch: 0,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
+		CurrentJustifiedEpoch:  1,
+		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		JustificationBitfield:  3,
+		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
+		LatestBlockRoots:       blockRoots,
+		LatestStateRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		LatestBlockHeader:      &pb.BeaconBlockHeader{},
+		LatestRandaoMixes:      randaoMixes,
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentCrosslinks:      crosslinks,
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+	}
+
+	b := &pb.BeaconBlock{
+		Slot: s.Slot + 1,
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockRoot:   []byte("b"),
+			},
+			RandaoReveal: []byte{},
+			Attestations: nil,
+		},
+	}
+
+	chainService := setupBeaconChain(t, db, nil)
+
+	// Set up cache to make sure they are cleared after a new finalized block
+	if _, err := helpers.ActiveValidatorIndices(s, helpers.CurrentEpoch(s)); err != nil {
+		t.Fatal(err)
+	}
+	if len(helpers.ActiveIndicesKeys()) == 0 {
+		t.Error("Cache is empty")
+	}
+
+	// Advance state get a a new finalized block
+	if _, err := chainService.AdvanceState(context.Background(), s, b); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the cache is cleared
+	if len(helpers.ActiveIndicesKeys()) != 0 {
+		t.Errorf("Finalized epoch did not clear the cache, got %d", len(helpers.ActiveIndicesKeys()))
 	}
 }

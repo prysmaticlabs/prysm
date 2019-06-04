@@ -690,7 +690,14 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 //    if adjusted_quotient == 0:
 //        return 0
 //    return state.validator_registry[index].effective_balance // adjusted_quotient // BASE_REWARDS_PER_EPOCH
-func baseReward(state *pb.BeaconState, index uint64, adjustedQuotient uint64) (uint64, error) {
+func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
+	totalBal, err := helpers.TotalActiveBalance(state)
+	if err != nil {
+		return 0, fmt.Errorf("could not get total balance: %v", err)
+	}
+
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalBal /
+		params.BeaconConfig().BaseRewardQuotient)
 	if adjustedQuotient == 0 {
 		return 0, nil
 	}
