@@ -83,6 +83,7 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 	return deposits
 }
 
+// DepositTrieRootByIndex returns a deposit root by its index.
 func (db *BeaconDB) DepositTrieRootByIndex(ctx context.Context, idx uint64) [32]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GetDepositTrieRootByBlock")
 	defer span.End()
