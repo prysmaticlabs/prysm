@@ -1128,7 +1128,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: []*pbp2p.Eth1Data{},
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockRoot: []byte("stub"),
+			BlockRoot: []byte{'b', 'l', 'o', 'c', 'k', 0},
 		},
 	}
 	var mockSig [96]byte
@@ -1157,13 +1157,16 @@ func Benchmark_Eth1Data(b *testing.B) {
 		copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)})
 		db.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), root)
 	}
-	numOfVotes := 1000
+	numOfVotes := 10000
+	var root [32]byte
+	copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', 1})
 	for i := 0; i < numOfVotes; i++ {
 		blockhash := []byte{'b', 'l', 'o', 'c', 'k', byte(i)}
-		deposit := []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)}
 		beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, &pbp2p.Eth1Data{
-			BlockRoot:   blockhash,
-			DepositRoot: deposit,
+
+			BlockRoot:    []byte{'b', 'l', 'o', 'c', 'k', 1},
+			DepositRoot:  root[:],
+			DepositCount: 2,
 		})
 		hashesByHeight[i] = blockhash
 	}
@@ -1172,7 +1175,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		b.Fatal(err)
 	}
-	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
+	currentHeight := params.BeaconConfig().Eth1FollowDistance + uint64(numOfVotes+1)
 	beaconServer := &BeaconServer{
 		beaconDB: db,
 		powChainService: &mockPOWChainService{
