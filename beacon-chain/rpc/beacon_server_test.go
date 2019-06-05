@@ -85,6 +85,8 @@ type mockPOWChainService struct {
 	latestBlockNumber *big.Int
 	hashesByHeight    map[int][]byte
 	blockTimeByHeight map[int]uint64
+	heightsByHash     map[[32]byte]int
+	initHeights       bool
 }
 
 func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, error) {
@@ -104,15 +106,21 @@ func (m *mockPOWChainService) LatestBlockHeight() *big.Int {
 func (m *mockPOWChainService) DepositTrie() *trieutil.MerkleTrie {
 	return &trieutil.MerkleTrie{}
 }
-
-func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
+func (m *mockPOWChainService) InitHeightsByHash() {
 	// Reverse the map of heights by hash.
-	heightsByHash := make(map[[32]byte]int)
+	m.heightsByHash = make(map[[32]byte]int)
 	for k, v := range m.hashesByHeight {
 		h := bytesutil.ToBytes32(v)
-		heightsByHash[h] = k
+		m.heightsByHash[h] = k
 	}
-	val, ok := heightsByHash[hash]
+}
+
+func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
+	if !m.initHeights {
+		m.InitHeightsByHash()
+		m.initHeights = true
+	}
+	val, ok := m.heightsByHash[hash]
 	if !ok {
 		return false, nil, fmt.Errorf("could not fetch height for hash: %#x", hash)
 	}
