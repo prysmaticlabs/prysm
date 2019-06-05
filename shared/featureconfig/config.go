@@ -82,7 +82,6 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Info("Disabled gossipsub, using floodsub")
 		cfg.DisableGossipSub = true
 	}
-
 	InitFeatureConfig(cfg)
 }
 

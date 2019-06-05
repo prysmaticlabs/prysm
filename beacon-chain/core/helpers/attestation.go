@@ -10,10 +10,10 @@ import (
 // AttestationDataSlot returns current slot of AttestationData for given state
 //
 // Spec pseudocode definition:
-// def get_attestation_data_slot(state: BeaconState, data: AttestationData) -> Slot:
-// committee_count = get_epoch_committee_count(state, data.target_epoch)
-// offset = (data.crosslink.shard + SHARD_COUNT - get_epoch_start_shard(state, data.target_epoch)) % SHARD_COUNT
-// return get_epoch_start_slot(data.target_epoch) + offset // (committee_count // SLOTS_PER_EPOCH)
+//   def get_attestation_data_slot(state: BeaconState, data: AttestationData) -> Slot:
+//     committee_count = get_epoch_committee_count(state, data.target_epoch)
+//     offset = (data.crosslink.shard + SHARD_COUNT - get_epoch_start_shard(state, data.target_epoch)) % SHARD_COUNT
+//     return get_epoch_start_slot(data.target_epoch) + offset // (committee_count // SLOTS_PER_EPOCH)
 func AttestationDataSlot(state *pb.BeaconState, data *pb.AttestationData) (uint64, error) {
 	commiteeCount := EpochCommitteeCount(state, data.TargetEpoch)
 	epochStartShardNumber, err := EpochStartShard(state, data.TargetEpoch)
