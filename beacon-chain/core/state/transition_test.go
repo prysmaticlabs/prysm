@@ -620,7 +620,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	testConfig := params.BeaconConfig()
 	testConfig.MaxTransfers = 1
 
-	validatorCount := params.BeaconConfig().DepositsForChainStart*4
+	validatorCount := params.BeaconConfig().DepositsForChainStart * 4
 	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
 	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -650,14 +650,14 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 
 	s := &pb.BeaconState{
-		Slot: 20,
+		Slot:                   20,
 		LatestBlockRoots:       make([][]byte, 254),
 		LatestRandaoMixes:      randaoMixes,
 		ValidatorRegistry:      validators,
 		Balances:               validatorBalances,
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		CurrentJustifiedRoot:  []byte("tron-sucks"),
+		CurrentJustifiedRoot:   []byte("tron-sucks"),
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
@@ -748,7 +748,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	// Set up transfer object for block
 	transfers := []*pb.Transfer{
 		{
-			Slot: s.Slot,
+			Slot:      s.Slot,
 			Sender:    3,
 			Recipient: 4,
 			Fee:       params.BeaconConfig().MinDepositAmount,
@@ -772,11 +772,11 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				SourceRoot:  []byte("tron-sucks"),
+				SourceRoot: []byte("tron-sucks"),
 				Crosslink: &pb.Crosslink{
-					Shard: uint64(i),
+					Shard:      uint64(i),
 					ParentRoot: encoded[:],
-					DataRoot: params.BeaconConfig().ZeroHash[:],
+					DataRoot:   params.BeaconConfig().ZeroHash[:],
 				},
 			},
 			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
