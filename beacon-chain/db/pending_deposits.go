@@ -24,7 +24,7 @@ var (
 type depositContainer struct {
 	deposit     *pb.Deposit
 	block       *big.Int
-	depositRoot [32]byte
+	DepositRoot [32]byte
 }
 
 // InsertPendingDeposit into the database. If deposit or block number are nil

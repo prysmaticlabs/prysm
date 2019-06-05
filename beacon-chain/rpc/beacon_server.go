@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -182,9 +182,9 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		// at the block defined by vote.eth1_data.block_hash.
 		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
 		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
-		upToHeightEth1DataDeposits := bs.beaconDB.AllDeposits(ctx, currentHeight)
+		upToHeightEth1DataDeposits := bs.beaconDB.DepositsContainersTillBlock(ctx, currentHeight)
 		correctDepositCount := uint64(len(upToHeightEth1DataDeposits)) == vote.DepositCount
-		depositRootAtHeight := bs.beaconDB.DepositTrieRootByIndex(ctx, upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].Index)
+		depositRootAtHeight := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
 		correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
 		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data && correctDepositCount && correctDepositRoot {
 			dataVotes = append(dataVotes, vote)

@@ -83,18 +83,25 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 	return deposits
 }
 
-// DepositTrieRootByIndex returns a deposit root by its index.
-func (db *BeaconDB) DepositTrieRootByIndex(ctx context.Context, idx uint64) [32]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.GetDepositTrieRootByBlock")
+// DepositsContainersTillBlock returns the deposit containers sorted by block height till block height.
+func (db *BeaconDB) DepositsContainersTillBlock(ctx context.Context, beforeBlk *big.Int) []*depositContainer {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDepositsWithTrieRoots")
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
+
+	var deposits []*depositContainer
 	for _, ctnr := range db.deposits {
-		if ctnr.deposit.Index == idx {
-			return ctnr.depositRoot
+		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
+			deposits = append(deposits, ctnr)
 		}
 	}
-	return [32]byte{}
+	// Sort the deposits by Merkle index.
+	sort.SliceStable(deposits, func(i, j int) bool {
+		return deposits[i].deposit.Index < deposits[j].deposit.Index
+	})
+
+	return deposits
 }
 
 // DepositByPubkey looks through historical deposits and finds one which contains
