@@ -35,7 +35,7 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum, depositRoot: depositRoot})
+	db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum, DepositRoot: depositRoot})
 	historicalDepositsCount.Inc()
 }
 

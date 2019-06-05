@@ -12,7 +12,7 @@ import (
 
 func TestInsertPendingDeposit_OK(t *testing.T) {
 	db := BeaconDB{}
-	db.InsertPendingDeposit(context.Background(), &pb.Deposit{}, big.NewInt(111))
+	db.InsertPendingDeposit(context.Background(), &pb.Deposit{}, big.NewInt(111), [32]byte{})
 
 	if len(db.pendingDeposits) != 1 {
 		t.Error("Deposit not inserted")
@@ -21,7 +21,7 @@ func TestInsertPendingDeposit_OK(t *testing.T) {
 
 func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 	db := BeaconDB{}
-	db.InsertPendingDeposit(context.Background(), nil /*deposit*/, nil /*blockNum*/)
+	db.InsertPendingDeposit(context.Background(), nil /*deposit*/, nil /*blockNum*/, [32]byte{})
 
 	if len(db.pendingDeposits) > 0 {
 		t.Error("Unexpected deposit insertion")
@@ -55,7 +55,7 @@ func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 func TestPendingDeposit_RoundTrip(t *testing.T) {
 	db := BeaconDB{}
 	dep := &pb.Deposit{Index: 123}
-	db.InsertPendingDeposit(context.Background(), dep, big.NewInt(111))
+	db.InsertPendingDeposit(context.Background(), dep, big.NewInt(111), [32]byte{})
 	db.RemovePendingDeposit(context.Background(), dep)
 	if len(db.pendingDeposits) != 0 {
 		t.Error("Failed to insert & delete a pending deposit")

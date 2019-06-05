@@ -399,7 +399,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
 	}
-	
+
 	for _, dp := range recentDeposits {
 		depositHash, err := hashutil.DepositHash(dp.Data)
 		if err != nil {
@@ -515,20 +515,8 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 
 		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
 	}
-	depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
-	}
+
 	for _, dp := range recentDeposits {
-		depositHash, err := hashutil.DepositHash(dp.Data)
-		if err != nil {
-			t.Fatalf("Unable to determine hashed value of deposit %v", err)
-		}
-
-		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
-			t.Fatalf("Unable to insert deposit into trie %v", err)
-
-		}
 		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
 	}
 
@@ -634,20 +622,8 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
 	}
-	depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
-	}
+
 	for _, dp := range recentDeposits {
-		depositHash, err := hashutil.DepositHash(dp.Data)
-		if err != nil {
-			t.Fatalf("Unable to determine hashed value of deposit %v", err)
-		}
-
-		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
-			t.Fatalf("Unable to insert deposit into trie %v", err)
-
-		}
 		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
 	}
 
@@ -673,7 +649,6 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 }
 
 func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
-	t.Skip()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -772,9 +747,80 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
 
-	eth1DataVotes := []*pbp2p.Eth1Data{}
+	ctx := context.Background()
+	eth1DataVotes := []*pbp2p.Eth1Data{
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block0"),
+			DepositRoot:  []byte("deposit0001234567890123456789012"),
+			DepositCount: 2,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block1"),
+			DepositRoot:  []byte("deposit1001234567890123456789012"),
+			DepositCount: 2,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block1"),
+			DepositRoot:  []byte("deposit1001234567890123456789012"),
+			DepositCount: 2,
+		},
+		// We include the case in which the vote counts might match and in that
+		// case we break ties by checking which block hash has the greatest
+		// block height in the eth1.0 chain, accordingly.
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block2"),
+			DepositRoot:  []byte("deposit2001234567890123456789012"),
+			DepositCount: 2,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block2"),
+			DepositRoot:  []byte("deposit2001234567890123456789012"),
+			DepositCount: 2,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block2"),
+			DepositRoot:  []byte("deposit2001234567890123456789012"),
+			DepositCount: 2,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block4"),
+			DepositRoot:  []byte("deposit3001234567890123456789012"),
+			DepositCount: 2,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block4"),
+			DepositRoot:  []byte("deposit3001234567890123456789012"),
+			DepositCount: 2,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block4"),
+			DepositRoot:  []byte("deposit3001234567890123456789012"),
+			DepositCount: 2,
+		},
+		// We include a case with higher vote count but wrong deposit count
+		// that shouldnt be counted at all
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block4"),
+			DepositRoot:  []byte("deposit4001234567890123456789012"),
+			DepositCount: 1,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block4"),
+			DepositRoot:  []byte("deposit4001234567890123456789012"),
+			DepositCount: 1,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block4"),
+			DepositRoot:  []byte("deposit4001234567890123456789012"),
+			DepositCount: 1,
+		},
+		&pbp2p.Eth1Data{
+			BlockRoot:    []byte("block4"),
+			DepositRoot:  []byte("deposit4001234567890123456789012"),
+			DepositCount: 1,
+		},
+	}
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: eth1DataVotes,
 		LatestEth1Data: &pbp2p.Eth1Data{
@@ -783,6 +829,33 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
+	}
+
+	var mockSig [96]byte
+	var mockCreds [32]byte
+	deposits := []*pbp2p.Deposit{
+		{
+			Index: 0,
+			Data: &pbp2p.DepositData{
+				Pubkey:                []byte("a"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
+			},
+		},
+		{
+			Index: 1,
+			Data: &pbp2p.DepositData{
+				Pubkey:                []byte("b"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
+			},
+		},
+	}
+
+	for i, dp := range deposits {
+		var root [32]byte
+		copy(root[:], eth1DataVotes[i].DepositRoot)
+		db.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), root)
 	}
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
 	beaconServer := &BeaconServer{

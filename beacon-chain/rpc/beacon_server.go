@@ -154,7 +154,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		height   *big.Int
 		eth1Data *pbp2p.Eth1Data
 	}
-	var voteCountMap map[string]voteHierarchy
+	voteCountMap := make(map[string]voteHierarchy)
 	bestVoteHeight := big.NewInt(0)
 	var mostVotes uint64
 	var bestVoteHash string
@@ -360,8 +360,8 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
 	// Fetch all historical deposits up to an ancestor height.
-	upToHeightEth1DataDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
-	depositRootAtHeight := bs.beaconDB.DepositTrieRootByIndex(ctx, upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].Index)
+	upToHeightEth1DataDeposits := bs.beaconDB.DepositsContainersTillBlock(ctx, ancestorHeight)
+	depositRootAtHeight := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
 
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
