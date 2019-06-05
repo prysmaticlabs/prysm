@@ -672,7 +672,7 @@ func BenchmarkProcessBlock65536Validators(b *testing.B) {
 
 	c := &state.TransitionConfig{
 		VerifySignatures: false, // We disable signature verification for now.
-		Logging:          false,  // We enable logging in this state transition call.
+		Logging:          false, // We enable logging in this state transition call.
 	}
 
 	blk := &pb.BeaconBlock{

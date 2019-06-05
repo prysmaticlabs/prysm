@@ -60,17 +60,15 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 				voteCount++
 			}
 		}
-		if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-			DepositRoot: block.Body.Eth1Data.DepositRoot,
-			VoteCount:   voteCount,
-		}); err != nil {
-			return nil, fmt.Errorf("could not save eth1 data vote cache: %v", err)
-		}
 	} else {
-		voteCount, err = eth1DataCache.IncrementEth1DataVote(block.Body.Eth1Data.DepositRoot)
-		if err != nil {
-			return nil, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
-		}
+		voteCount++
+	}
+
+	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
+		DepositRoot: block.Body.Eth1Data.DepositRoot,
+		VoteCount:   voteCount,
+	}); err != nil {
+		return nil, fmt.Errorf("could not save eth1 data vote cache: %v", err)
 	}
 
 	if voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
