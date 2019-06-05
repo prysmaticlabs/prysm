@@ -612,7 +612,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	}
 }
 
-func BenchmarkProcessBlock65536Validators(b *testing.B) {
+func BenchmarkProcessBlock_65536Validators(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
 	helpers.ClearAllCaches()
 	epoch := uint64(1)
