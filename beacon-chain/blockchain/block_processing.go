@@ -11,12 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -27,8 +25,7 @@ type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
 	IsCanonical(slot uint64, hash []byte) bool
-	InsertsCanonical(slot uint64, hash []byte)
-	RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot
+	UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte)
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
@@ -68,7 +65,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if parent == nil {
 		return nil, errors.New("parent does not exist in DB")
 	}
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot)
+	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -86,11 +83,11 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err := c.SaveAndBroadcastBlock(ctx, block); err != nil {
 		return beaconState, fmt.Errorf(
 			"could not save and broadcast beacon block with slot %d: %v",
-			block.Slot-params.BeaconConfig().GenesisSlot, err,
+			block.Slot, err,
 		)
 	}
 
-	log.WithField("slotNumber", block.Slot-params.BeaconConfig().GenesisSlot).Info(
+	log.WithField("slotNumber", block.Slot).Info(
 		"Executing state transition")
 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
@@ -110,8 +107,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	log.WithFields(logrus.Fields{
-		"slotNumber":   block.Slot - params.BeaconConfig().GenesisSlot,
-		"currentEpoch": helpers.SlotToEpoch(block.Slot) - params.BeaconConfig().GenesisEpoch,
+		"slotNumber":   block.Slot,
+		"currentEpoch": helpers.SlotToEpoch(block.Slot),
 	}).Info("State transition complete")
 
 	// Check state root
@@ -131,7 +128,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
 	}
 
-	log.WithField("slot", block.Slot-params.BeaconConfig().GenesisSlot).Info("Finished processing beacon block")
+	log.WithField("slot", block.Slot).Info("Finished processing beacon block")
 	return beaconState, nil
 }
 
@@ -146,9 +143,9 @@ func (c *ChainService) VerifyBlockValidity(
 	block *pb.BeaconBlock,
 	beaconState *pb.BeaconState,
 ) error {
-	if block.Slot == params.BeaconConfig().GenesisSlot {
+	if block.Slot == 0 {
 		return fmt.Errorf("cannot process a genesis block: received block with slot %d",
-			block.Slot-params.BeaconConfig().GenesisSlot)
+			block.Slot)
 	}
 	powBlockFetcher := c.web3Service.Client().BlockByHash
 	if err := b.IsValidBlock(ctx, beaconState, block,
@@ -213,6 +210,7 @@ func (c *ChainService) AdvanceState(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
+	finalizedEpoch := beaconState.FinalizedEpoch
 	newState, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
@@ -225,17 +223,28 @@ func (c *ChainService) AdvanceState(
 	if err != nil {
 		return beaconState, &BlockFailedProcessingErr{err}
 	}
+	// Prune the block cache and helper caches on every new finalized epoch.
+	if newState.FinalizedEpoch > finalizedEpoch {
+		helpers.ClearAllCaches()
+		b.ClearEth1DataVoteCache()
+		c.beaconDB.ClearBlockCache()
+	}
+
 	log.WithField(
-		"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
+		"slotsSinceGenesis", newState.Slot,
 	).Info("Slot transition successfully processed")
 
 	if block != nil {
 		log.WithField(
-			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
+			"slotsSinceGenesis", newState.Slot,
 		).Info("Block transition successfully processed")
 
+		blockRoot, err := hashutil.HashBeaconBlock(block)
+		if err != nil {
+			return nil, err
+		}
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState); err != nil {
+		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
 	}
@@ -254,7 +263,7 @@ func (c *ChainService) AdvanceState(
 			return newState, fmt.Errorf("could not update FFG checkpts: %v", err)
 		}
 		log.WithField(
-			"SlotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
+			"SlotsSinceGenesis", newState.Slot,
 		).Info("Epoch transition successfully processed")
 	}
 	return newState, nil
@@ -264,13 +273,24 @@ func (c *ChainService) AdvanceState(
 // validators were activated from current epoch. After it saves, current epoch key
 // is deleted from ActivatedValidators mapping.
 func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
-	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state) + 1)
+	nextEpoch := helpers.CurrentEpoch(state) + 1
+	activatedValidators := validators.ActivatedValFromEpoch(nextEpoch)
+	var idxNotInState []uint64
 	for _, idx := range activatedValidators {
+		// If for some reason the activated validator indices is not in state,
+		// we skip them and save them to process for next epoch.
+		if int(idx) >= len(state.ValidatorRegistry) {
+			idxNotInState = append(idxNotInState, idx)
+			continue
+		}
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
 			return fmt.Errorf("could not save validator index: %v", err)
 		}
 	}
+	// Since we are processing next epoch, save the can't processed validator indices
+	// to the epoch after that.
+	validators.InsertActivatedIndices(nextEpoch+1, idxNotInState)
 	validators.DeleteActivatedVal(helpers.CurrentEpoch(state))
 	return nil
 }
