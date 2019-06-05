@@ -48,24 +48,6 @@ func TestHasVoted_OK(t *testing.T) {
 	}
 }
 
-func TestAllValidatorIndices_OK(t *testing.T) {
-	tests := []struct {
-		registries []*pb.Validator
-		indices    []uint64
-	}{
-		{registries: []*pb.Validator{}, indices: []uint64{}},
-		{registries: []*pb.Validator{{}}, indices: []uint64{0}},
-		{registries: []*pb.Validator{{}, {}, {}, {}}, indices: []uint64{0, 1, 2, 3}},
-	}
-	for _, tt := range tests {
-		state := &pb.BeaconState{ValidatorRegistry: tt.registries}
-		if !reflect.DeepEqual(allValidatorsIndices(state), tt.indices) {
-			t.Errorf("AllValidatorsIndices(%v) = %v, wanted:%v",
-				tt.registries, allValidatorsIndices(state), tt.indices)
-		}
-	}
-}
-
 func TestProcessDeposit_BadWithdrawalCredentials(t *testing.T) {
 	registry := []*pb.Validator{
 		{
@@ -378,27 +360,6 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	state = ExitValidator(state, 0)
 	if state.ValidatorRegistry[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 		t.Error("Expected exited validator to stay exited")
-	}
-}
-
-func TestMaxBalanceChurn_OK(t *testing.T) {
-	maxDepositAmount := params.BeaconConfig().MaxDepositAmount
-	tests := []struct {
-		totalBalance    uint64
-		maxBalanceChurn uint64
-	}{
-		{totalBalance: 1e9, maxBalanceChurn: maxDepositAmount},
-		{totalBalance: maxDepositAmount, maxBalanceChurn: maxDepositAmount},
-		{totalBalance: maxDepositAmount * 10, maxBalanceChurn: maxDepositAmount},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount * 1000, maxBalanceChurn: 5 * 1e11},
-	}
-
-	for _, tt := range tests {
-		churn := maxBalanceChurn(tt.totalBalance)
-		if tt.maxBalanceChurn != churn {
-			t.Errorf("MaxBalanceChurn was not an expected value. Wanted: %d, got: %d",
-				tt.maxBalanceChurn, churn)
-		}
 	}
 }
 
