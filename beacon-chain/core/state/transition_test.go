@@ -614,13 +614,15 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	}
 }
 
-func BenchmarkProcessBlk_65536Validators_NoAttestation(b *testing.B) {
+func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
 	helpers.ClearAllCaches()
 	testConfig := params.BeaconConfig()
 	testConfig.MaxTransfers = 1
 
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart*4)
+	validatorCount := params.BeaconConfig().DepositsForChainStart*4
+	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			EffectiveBalance:           params.BeaconConfig().MaxDepositAmount,
@@ -639,17 +641,28 @@ func BenchmarkProcessBlk_65536Validators_NoAttestation(b *testing.B) {
 		randaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
+	var crosslinks []*pb.Crosslink
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks = append(crosslinks, &pb.Crosslink{
+			Epoch:    0,
+			DataRoot: []byte{'A'},
+		})
+	}
+
 	s := &pb.BeaconState{
+		Slot: 20,
 		LatestBlockRoots:       make([][]byte, 254),
 		LatestRandaoMixes:      randaoMixes,
 		ValidatorRegistry:      validators,
 		Balances:               validatorBalances,
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		CurrentJustifiedRoot:  []byte("tron-sucks"),
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
+		CurrentCrosslinks: crosslinks,
 	}
 
 	c := &state.TransitionConfig{
@@ -677,8 +690,6 @@ func BenchmarkProcessBlk_65536Validators_NoAttestation(b *testing.B) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
 					},
@@ -687,8 +698,6 @@ func BenchmarkProcessBlk_65536Validators_NoAttestation(b *testing.B) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
 					},
@@ -731,15 +740,15 @@ func BenchmarkProcessBlk_65536Validators_NoAttestation(b *testing.B) {
 		b.Fatal(err)
 	}
 	s.ValidatorRegistry[proposerIdx].Pubkey = priv.PublicKey().Marshal()
-	epoch := uint64(0)
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(s, epoch, params.BeaconConfig().DomainRandao)
+	binary.LittleEndian.PutUint64(buf, 0)
+	domain := helpers.DomainVersion(s, 0, params.BeaconConfig().DomainRandao)
 	epochSignature := priv.Sign(buf, domain)
 
 	// Set up transfer object for block
 	transfers := []*pb.Transfer{
 		{
+			Slot: s.Slot,
 			Sender:    3,
 			Recipient: 4,
 			Fee:       params.BeaconConfig().MinDepositAmount,
@@ -753,6 +762,29 @@ func BenchmarkProcessBlk_65536Validators_NoAttestation(b *testing.B) {
 	buf = append(buf, hashed[:]...)
 	s.ValidatorRegistry[3].WithdrawalCredentials = buf
 
+	// Set up attestations obj for block.
+	encoded, err := ssz.TreeHash(s.CurrentCrosslinks[0])
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	attestations := make([]*pb.Attestation, 128)
+	for i := 0; i < len(attestations); i++ {
+		attestations[i] = &pb.Attestation{
+			Data: &pb.AttestationData{
+				SourceRoot:  []byte("tron-sucks"),
+				Crosslink: &pb.Crosslink{
+					Shard: uint64(i),
+					ParentRoot: encoded[:],
+					DataRoot: params.BeaconConfig().ZeroHash[:],
+				},
+			},
+			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
+				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
+			CustodyBitfield: []byte{},
+		}
+	}
+
 	blk := &pb.BeaconBlock{
 		Slot: s.Slot + 1,
 		Body: &pb.BeaconBlockBody{
@@ -761,11 +793,18 @@ func BenchmarkProcessBlk_65536Validators_NoAttestation(b *testing.B) {
 				BlockRoot:   root[:],
 			},
 			RandaoReveal:      epochSignature.Marshal(),
-			Attestations:      nil,
+			Attestations:      attestations,
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Transfers:         transfers,
 		},
+	}
+
+	// Precache the shuffled indices
+	for i := uint64(0); i < shardCount; i++ {
+		if _, err := helpers.CrosslinkCommitteeAtEpoch(s, 0, i); err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	b.ResetTimer()
