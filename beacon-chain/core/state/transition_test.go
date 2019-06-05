@@ -265,7 +265,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	beaconState.LatestBlockRoots = blockRoots
@@ -381,7 +381,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		},
 	}
 	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	beaconState.LatestBlockRoots = blockRoots
@@ -612,7 +612,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	}
 }
 
-func BenchmarkProcessBlock65536Validators(b *testing.B) {
+func BenchmarkProcessBlock_65536Validators(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
 	helpers.ClearAllCaches()
 	epoch := uint64(1)
