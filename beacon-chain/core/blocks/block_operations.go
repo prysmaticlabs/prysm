@@ -681,6 +681,7 @@ func ProcessValidatorDeposits(
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
+	var err error
 	deposits := block.Body.Deposits
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
 		return nil, fmt.Errorf(
@@ -689,7 +690,8 @@ func ProcessValidatorDeposits(
 			params.BeaconConfig().MaxDeposits,
 		)
 	}
-	var err error
+
+	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
@@ -697,7 +699,6 @@ func ProcessValidatorDeposits(
 		beaconState.DepositIndex++
 		pubKey := deposit.Data.Pubkey
 		amount := deposit.Data.Amount
-		valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 		index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 		if !ok {
 			if verifySignatures {
