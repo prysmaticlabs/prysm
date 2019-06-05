@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -23,6 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
+
+var eth1DataCache = cache.NewEth1DataVoteCache()
 
 // VerifyProposerSignature uses BLS signature verification to ensure
 // the correct proposer created an incoming beacon block during state
@@ -43,18 +46,36 @@ func VerifyProposerSignature(
 //   state.eth1_data_votes.append(body.eth1_data)
 //   if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
 //     state.latest_eth1_data = body.eth1_data
-func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
+func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, block.Body.Eth1Data)
-	numVotes := uint64(0)
-	for _, vote := range beaconState.Eth1DataVotes {
-		if proto.Equal(vote, block.Body.Eth1Data) {
-			numVotes++
-		}
+
+	voteCount, err := eth1DataCache.Eth1DataVote(block.Body.Eth1Data.DepositRoot)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
 	}
-	if numVotes*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
+
+	if voteCount == 0 {
+		for _, vote := range beaconState.Eth1DataVotes {
+			if proto.Equal(vote, block.Body.Eth1Data) {
+				voteCount++
+			}
+		}
+	} else {
+		voteCount++
+	}
+
+	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
+		DepositRoot: block.Body.Eth1Data.DepositRoot,
+		VoteCount:   voteCount,
+	}); err != nil {
+		return nil, fmt.Errorf("could not save eth1 data vote cache: %v", err)
+	}
+
+	if voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
 		beaconState.LatestEth1Data = block.Body.Eth1Data
 	}
-	return beaconState
+
+	return beaconState, nil
 }
 
 // ProcessBlockHeader validates a block by its header.
@@ -950,4 +971,9 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 		// TODO(#258): Integrate BLS signature verification for transfers.
 	}
 	return nil
+}
+
+// ClearEth1DataVoteCache clears the eth1 data vote count cache.
+func ClearEth1DataVoteCache() {
+	eth1DataCache = cache.NewEth1DataVoteCache()
 }
