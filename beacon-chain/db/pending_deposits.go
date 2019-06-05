@@ -19,9 +19,9 @@ var (
 	})
 )
 
-// Container object for holding the deposit and a reference to the block in
+// DepositContainer container object for holding the deposit and a reference to the block in
 // which the deposit transaction was included in the proof of work chain.
-type depositContainer struct {
+type DepositContainer struct {
 	deposit     *pb.Deposit
 	block       *big.Int
 	DepositRoot [32]byte
@@ -41,7 +41,7 @@ func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blo
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.pendingDeposits = append(db.pendingDeposits, &depositContainer{deposit: d, block: blockNum, DepositRoot: depositRoot})
+	db.pendingDeposits = append(db.pendingDeposits, &DepositContainer{deposit: d, block: blockNum, DepositRoot: depositRoot})
 	pendingDepositsCount.Inc()
 }
 
@@ -108,7 +108,7 @@ func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex ui
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
 
-	var cleanDeposits []*depositContainer
+	var cleanDeposits []*DepositContainer
 	for _, dp := range db.pendingDeposits {
 		if dp.deposit.Index >= merkleTreeIndex {
 			cleanDeposits = append(cleanDeposits, dp)

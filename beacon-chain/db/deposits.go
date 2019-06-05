@@ -35,7 +35,7 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum, DepositRoot: depositRoot})
+	db.deposits = append(db.deposits, &DepositContainer{deposit: d, block: blockNum, DepositRoot: depositRoot})
 	historicalDepositsCount.Inc()
 }
 
@@ -84,13 +84,13 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 }
 
 // DepositsContainersTillBlock returns the deposit containers sorted by block height till block height.
-func (db *BeaconDB) DepositsContainersTillBlock(ctx context.Context, beforeBlk *big.Int) []*depositContainer {
+func (db *BeaconDB) DepositsContainersTillBlock(ctx context.Context, beforeBlk *big.Int) []*DepositContainer {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDepositsWithTrieRoots")
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
 
-	var deposits []*depositContainer
+	var deposits []*DepositContainer
 	for _, ctnr := range db.deposits {
 		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
 			deposits = append(deposits, ctnr)
