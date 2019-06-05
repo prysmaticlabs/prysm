@@ -458,7 +458,7 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().GoerliBlockTime) * time.Second
 	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
 
-	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
+	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().SlotsPerEth1VotingPeriod / params.BeaconConfig().SlotsPerEpoch)
 	votingPeriodSeconds := time.Duration(votingPeriodSlots*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclusion := eth1UnixTime.Add(votingPeriodSeconds)
 

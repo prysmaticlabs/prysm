@@ -44,33 +44,33 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 //		"""
 //		returns the block root at a recent ``slot``.
 //		"""
-//		assert state.slot <= slot + LATEST_BLOCK_ROOTS_LENGTH
+//		assert state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
 //		assert slot < state.slote
-//		return state.latest_block_roots[slot % LATEST_BLOCK_ROOTS_LENGTH]
+//		return state.latest_block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
 func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	earliestSlot := state.Slot - params.BeaconConfig().LatestBlockRootsLength
+	earliestSlot := uint64(0)
+	if state.Slot > params.BeaconConfig().SlotsPerHistoricalRoot {
+		earliestSlot = state.Slot - params.BeaconConfig().SlotsPerHistoricalRoot
+	}
 
 	if slot < earliestSlot || slot >= state.Slot {
-		if earliestSlot < params.BeaconConfig().GenesisSlot {
-			earliestSlot = params.BeaconConfig().GenesisSlot
-		}
 		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
-			slot-params.BeaconConfig().GenesisSlot,
-			earliestSlot-params.BeaconConfig().GenesisSlot,
-			state.Slot-params.BeaconConfig().GenesisSlot,
+			slot,
+			earliestSlot,
+			state.Slot,
 		)
 	}
 
-	return state.LatestBlockRoots[slot%params.BeaconConfig().LatestBlockRootsLength], nil
+	return state.LatestBlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot], nil
 }
 
 // ProcessBlockRoots processes the previous block root into the state, by appending it
 // to the most recent block roots.
 // Spec:
 //  Let previous_block_root be the tree_hash_root of the previous beacon block processed in the chain.
-//	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root.
+//	Set state.latest_block_roots[(state.slot - 1) % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root.
 func ProcessBlockRoots(state *pb.BeaconState, parentRoot [32]byte) *pb.BeaconState {
-	state.LatestBlockRoots[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = parentRoot[:]
+	state.LatestBlockRoots[(state.Slot-1)%params.BeaconConfig().SlotsPerHistoricalRoot] = parentRoot[:]
 	return state
 }
 

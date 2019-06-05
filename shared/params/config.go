@@ -17,15 +17,6 @@ type BeaconChainConfig struct {
 	ChurnLimitQuotient       uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`        // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	ShuffleRoundCount        uint64 `yaml:"SHUFFLE_ROUND_COUNT"`         // ShuffleRoundCount is used for retrieving the permuted index.
-	// TODO(2307): Remove deprecated fields
-	// Deprecated: Do not use.
-	MaxBalanceChurnQuotient uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
-	// Deprecated: Do not use.
-	BeaconChainShardNumber uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
-	// Deprecated: Do not use.
-	MaxIndicesPerSlashableVote uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
-	// Deprecated: Do not use.
-	MaxExitDequeuesPerEpoch uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte `yaml:"DEPOSIT_CONTRACT_ADDRESS"`    // DepositContractAddress is the address of the deposit contract in PoW chain.
@@ -37,21 +28,11 @@ type BeaconChainConfig struct {
 	MaxEffectiveBalance       uint64 `yaml:"MAX_EFFECTIVE_BALANCE"`       // MaxEffectiveBalance is the maximal amount of Gwie that is effective for staking.
 	EjectionBalance           uint64 `yaml:"EJECTION_BALANCE"`            // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	EffectiveBalanceIncrement uint64 `yaml:"EFFECTIVE_BALANCE_INCREMENT"` // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
-	// TODO(2307): Remove deprecated fields
-	//Deprecated: Do not use.
-	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
 
 	// Initial value constants.
 	FarFutureEpoch          uint64   `yaml:"FAR_FUTURE_EPOCH"` // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 	BLSWithdrawalPrefixByte byte     `yaml:"BLS_WITHDRAWAL_PREFIX_BYTE"` // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
-	// TODO(2307): Remove deprecated fields
-	// Deprecated: Do not use.
-	GenesisForkVersion []byte `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
-	// Deprecated: Do not use.
-	GenesisStartShard uint64 // GenesisStartShard is the first shard to assign validators.
-	// Deprecated: Do not use.
-	EmptySignature [96]byte // EmptySignature is used to represent a zeroed out BLS Signature.
 
 	// Time parameters constants.
 	SecondsPerSlot               uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
@@ -66,17 +47,11 @@ type BeaconChainConfig struct {
 	MaxCrosslinkEpochs           uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxCrosslinkEpochs defines the max epoch from current a crosslink can be formed at.
 	MinEpochsToInactivityPenalty uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
-	// TODO(2307): Remove deprecated fields
-	// Deprecated: Do not use.
-	EpochsPerEth1VotingPeriod uint64 // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 
 	// State list lengths
 	LatestRandaoMixesLength      uint64 `yaml:"LATEST_RANDAO_MIXES_LENGTH"`       // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	LatestActiveIndexRootsLength uint64 `yaml:"LATEST_ACTIVE_INDEX_ROOTS_LENGTH"` // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	LatestSlashedExitLength      uint64 `yaml:"LATEST_SLASHED_EXIT_LENGTH"`       // LatestSlashedExitLength is used to track penalized exit balances per time interval.
-	// TODO(2307): Remove deprecated fields
-	// Deprecated: Do not use.
-	LatestBlockRootsLength uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient           uint64 `yaml:"BASE_REWARD_QUOTIENT"`           // BaseRewardQuotient is used to calculate validator per-slot interest rate.
@@ -84,9 +59,6 @@ type BeaconChainConfig struct {
 	ProposerRewardQuotient       uint64 `yaml:"PROPOSER_REWARD_QUOTIENT"`       // ProposerRewardQuotient is used to calculate the reward for proposers.
 	InactivityPenaltyQuotient    uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT"`    // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
 	MinSlashingPenaltyQuotient   uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT"`  // MinSlashingPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
-	// TODO(2307): Remove deprecated fields
-	// Deprecated: Do not use.
-	AttestationInclusionRewardQuotient uint64 // AttestationInclusionRewardQuotient defines the reward quotient of proposer for including attestations.
 
 	// Max operations per block constants.
 	MaxProposerSlashings uint64 `yaml:"MAX_PROPOSER_SLASHINGS"` // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
@@ -120,6 +92,9 @@ type BeaconChainConfig struct {
 	HashCacheSize             int64         // HashCacheSize defines the size of object hashes that are cached.
 	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
 	TestnetContractEndpoint   string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
+	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
+	GenesisForkVersion []byte `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
+	EmptySignature [96]byte // EmptySignature is used to represent a zeroed out BLS Signature.
 }
 
 // DepositContractConfig contains the deposits for
@@ -145,13 +120,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	BaseRewardsPerEpoch:      5,
 	ShuffleRoundCount:        90,
 
-	// TODO(2307): Remove deprecated fields
-	// Deprecated.
-	MaxBalanceChurnQuotient:    32,
-	BeaconChainShardNumber:     1<<64 - 1,
-	MaxIndicesPerSlashableVote: 4096,
-	MaxExitDequeuesPerEpoch:    4,
-
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
 
@@ -161,20 +129,11 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxEffectiveBalance:        32 * 1e9,
 	EjectionBalance:            16 * 1e9,
 	EffectiveBalanceIncrement:  1 * 1e9,
-	ForkChoiceBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
-	GenesisSlot:             1 << 63,
-	GenesisEpoch:            1 << 63 / 64,
 	FarFutureEpoch:          1<<64 - 1,
 	ZeroHash:                [32]byte{},
 	BLSWithdrawalPrefixByte: byte(0),
-
-	// TODO(2307): Remove deprecated fields
-	// Deprecated.
-	GenesisForkVersion: 0,
-	GenesisStartShard:  0,
-	EmptySignature:     [96]byte{},
 
 	// Time parameter constants.
 	SecondsPerSlot:               6,
@@ -195,16 +154,10 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestActiveIndexRootsLength: 8192,
 	LatestSlashedExitLength:      8192,
 
-	// TODO(2307): Remove deprecated fields
-	// Deprecated.
-	EpochsPerEth1VotingPeriod: 16,
-	LatestBlockRootsLength:    8192,
-
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:                 32,
 	ProposerRewardQuotient:             8,
 	WhistleBlowingRewardQuotient:       512,
-	AttestationInclusionRewardQuotient: 8,
 	InactivityPenaltyQuotient:          1 << 25,
 	MinSlashingPenaltyQuotient:         32,
 
@@ -237,6 +190,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
 	RPCSyncCheck:              1,
+	GoerliBlockTime:           14, // 14 seconds on average for a goerli block to be created.
+	GenesisForkVersion: []byte{0, 0, 0, 0},
+	EmptySignature:     [96]byte{},
 
 	// Testnet misc values.
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
@@ -270,17 +226,16 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.TargetCommitteeSize = 1
 	demoConfig.DepositsForChainStart = 8
 	demoConfig.SlotsPerEpoch = 8
-	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3.2 * 1e9
-	demoConfig.EjectionBalance = 3.15 * 1e9
+	demoConfig.EjectionBalance = 3.175 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
-	demoConfig.EpochsPerEth1VotingPeriod = 1
+	demoConfig.SlotsPerEth1VotingPeriod = 1
 	demoConfig.LatestRandaoMixesLength = 5 * demoConfig.SlotsPerEpoch
 	demoConfig.LatestActiveIndexRootsLength = 5 * demoConfig.SlotsPerEpoch
 	demoConfig.LatestSlashedExitLength = 5 * demoConfig.SlotsPerEpoch
-	demoConfig.LatestBlockRootsLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.SlotsPerHistoricalRoot = 5 * demoConfig.SlotsPerEpoch
 
 	return &demoConfig
 }

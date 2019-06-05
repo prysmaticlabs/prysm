@@ -47,7 +47,7 @@ func GenesisBeaconState(
 		}
 	}
 
-	latestBlockRoots := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
+	latestBlockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(latestBlockRoots); i++ {
 		latestBlockRoots[i] = zeroHash
 	}
