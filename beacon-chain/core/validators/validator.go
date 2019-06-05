@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -80,11 +79,6 @@ func ProcessDeposit(
 		newBalance := state.Balances[existingValidatorIdx] + amount
 		state.Balances[existingValidatorIdx] = newBalance
 		state.ValidatorRegistry[existingValidatorIdx].EffectiveBalance += amount
-
-		if !featureconfig.FeatureConfig().EnableExcessDeposits && newBalance > params.BeaconConfig().MaxDepositAmount {
-			state.Balances[existingValidatorIdx] = params.BeaconConfig().MaxDepositAmount
-			state.ValidatorRegistry[existingValidatorIdx].EffectiveBalance = params.BeaconConfig().MaxDepositAmount
-		}
 	}
 	state.DepositIndex++
 
