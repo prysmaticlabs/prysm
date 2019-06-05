@@ -143,7 +143,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
 	}
 	// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
-	// in the canonical, eth1.0 chain.
+	// in the canonical eth1.0 chain.
 	_, stateLatestEth1Height, err := bs.powChainService.BlockExists(ctx, stateLatestEth1Hash)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block with hash exists in Eth1 chain: %#x: %v", stateLatestEth1Hash, err)
@@ -183,6 +183,9 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
 		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
 		upToHeightEth1DataDeposits := bs.beaconDB.DepositsContainersTillBlock(ctx, currentHeight)
+		if len(upToHeightEth1DataDeposits) == 0 {
+			continue
+		}
 		correctDepositCount := uint64(len(upToHeightEth1DataDeposits)) == vote.DepositCount
 		depositRootAtHeight := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
 		correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
@@ -361,6 +364,9 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	}
 	// Fetch all historical deposits up to an ancestor height.
 	upToHeightEth1DataDeposits := bs.beaconDB.DepositsContainersTillBlock(ctx, ancestorHeight)
+	if len(upToHeightEth1DataDeposits) == 0 {
+		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE deposits")
+	}
 	depositRootAtHeight := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
 
 	return &pb.Eth1DataResponse{

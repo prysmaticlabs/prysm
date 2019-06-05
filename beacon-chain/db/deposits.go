@@ -83,7 +83,8 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 	return deposits
 }
 
-// DepositsContainersTillBlock returns the deposit containers sorted by block height till block height.
+// DepositsContainersTillBlock returns the deposit containers sorted by block height where
+// block height lower then beforeBlk.
 func (db *BeaconDB) DepositsContainersTillBlock(ctx context.Context, beforeBlk *big.Int) []*DepositContainer {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDepositsWithTrieRoots")
 	defer span.End()
@@ -96,7 +97,7 @@ func (db *BeaconDB) DepositsContainersTillBlock(ctx context.Context, beforeBlk *
 			deposits = append(deposits, ctnr)
 		}
 	}
-	// Sort the deposits by Merkle index.
+	// Sort the deposits by Merkle index in an ascending order.
 	sort.SliceStable(deposits, func(i, j int) bool {
 		return deposits[i].deposit.Index < deposits[j].deposit.Index
 	})

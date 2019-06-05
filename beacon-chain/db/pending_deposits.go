@@ -19,8 +19,8 @@ var (
 	})
 )
 
-// DepositContainer container object for holding the deposit and a reference to the block in
-// which the deposit transaction was included in the proof of work chain.
+// DepositContainer contains object for holding the deposit and a reference to the block in
+// which the deposit transaction was included in the eth1 chain.
 type DepositContainer struct {
 	deposit     *pb.Deposit
 	block       *big.Int

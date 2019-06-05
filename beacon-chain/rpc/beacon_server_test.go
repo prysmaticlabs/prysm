@@ -394,7 +394,6 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
-
 		}
 
 		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
@@ -510,7 +509,6 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 
 		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
-
 		}
 
 		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
@@ -617,7 +615,6 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
-
 		}
 
 		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
@@ -765,9 +762,9 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 			DepositRoot:  []byte("deposit1001234567890123456789012"),
 			DepositCount: 2,
 		},
-		// We include the case in which the vote counts might match and in that
-		// case we break ties by checking which block hash has the greatest
-		// block height in the eth1.0 chain, accordingly.
+		// We include the case in which the vote counts might match, and in that
+		// case we break ties by checking which block hash has the highest
+		// block height in the eth1.0 chain.
 		&pbp2p.Eth1Data{
 			BlockRoot:    []byte("block2"),
 			DepositRoot:  []byte("deposit2001234567890123456789012"),
@@ -799,7 +796,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 			DepositCount: 2,
 		},
 		// We include a case with higher vote count but wrong deposit count
-		// that shouldnt be counted at all
+		// that shouldnt be counted at all.
 		&pbp2p.Eth1Data{
 			BlockRoot:    []byte("block4"),
 			DepositRoot:  []byte("deposit4001234567890123456789012"),
@@ -1133,6 +1130,32 @@ func Benchmark_Eth1Data(b *testing.B) {
 		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockRoot: []byte("stub"),
 		},
+	}
+	var mockSig [96]byte
+	var mockCreds [32]byte
+	deposits := []*pbp2p.Deposit{
+		{
+			Index: 0,
+			Data: &pbp2p.DepositData{
+				Pubkey:                []byte("a"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
+			},
+		},
+		{
+			Index: 1,
+			Data: &pbp2p.DepositData{
+				Pubkey:                []byte("b"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
+			},
+		},
+	}
+
+	for i, dp := range deposits {
+		var root [32]byte
+		copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)})
+		db.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), root)
 	}
 	numOfVotes := 1000
 	for i := 0; i < numOfVotes; i++ {
