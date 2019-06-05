@@ -245,7 +245,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	return state, nil
 }
 
-// ProcessCrosslink processes crosslink and finds the crosslink
+// ProcessCrosslinks processes crosslink and finds the crosslink
 // with enough state to make it canonical in state.
 //
 // Spec pseudocode definition:
@@ -258,7 +258,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 //            winning_crosslink, attesting_indices = get_winning_crosslink_and_attesting_indices(state, epoch, shard)
 //            if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
 //                state.current_crosslinks[shard] = winning_crosslink
-func ProcessCrosslink(state *pb.BeaconState) (*pb.BeaconState, error) {
+func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.PreviousCrosslinks = state.CurrentCrosslinks
 	epochs := []uint64{helpers.PrevEpoch(state), helpers.CurrentEpoch(state)}
 	for _, e := range epochs {
@@ -953,33 +953,6 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		}
 	}
 	return rewards, penalties, nil
-}
-
-// EarlistAttestation returns attestation with the earliest inclusion slot.
-//
-// Spec pseudocode definition:
-//  def get_earliest_attestation(state: BeaconState, attestations: List[PendingAttestation], index: ValidatorIndex) -> PendingAttestation:
-//    return min([
-//        a for a in attestations if index in get_attesting_indices(state, a.data, a.aggregation_bitfield)
-//    ], key=lambda a: a.inclusion_slot)
-func earlistAttestation(state *pb.BeaconState, atts []*pb.PendingAttestation, index uint64) (*pb.PendingAttestation, error) {
-	earliest := &pb.PendingAttestation{
-		InclusionDelay: params.BeaconConfig().FarFutureEpoch,
-	}
-	for _, att := range atts {
-		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBitfield)
-		if err != nil {
-			return nil, fmt.Errorf("could not get attester indices: %v", err)
-		}
-		for _, i := range indices {
-			if index == i {
-				if earliest.InclusionDelay > att.InclusionDelay {
-					earliest = att
-				}
-			}
-		}
-	}
-	return earliest, nil
 }
 
 // attsForCrosslink returns the attestations of the input crosslink.

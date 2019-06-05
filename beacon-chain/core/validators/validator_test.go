@@ -289,52 +289,6 @@ func TestProcessDepositFlag_NotEnabled(t *testing.T) {
 	}
 }
 
-func TestProcessDepositFlag_Enabled(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableExcessDeposits: true,
-	})
-
-	registry := []*pb.Validator{
-		{
-			Pubkey:                []byte{1, 2, 3},
-			WithdrawalCredentials: []byte{2},
-		},
-		{
-			Pubkey:                []byte{4, 5, 6},
-			WithdrawalCredentials: []byte{1},
-		},
-	}
-	balances := []uint64{0, 32e9}
-	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().SlotsPerEpoch,
-		Balances:          balances,
-		ValidatorRegistry: registry,
-	}
-	pubkey := []byte{4, 5, 6}
-	deposit := uint64(32e9)
-	proofOfPossession := []byte{}
-	withdrawalCredentials := []byte{1}
-
-	newState, err := ProcessDeposit(
-		beaconState,
-		stateutils.ValidatorIndexMap(beaconState),
-		pubkey,
-		deposit,
-		proofOfPossession,
-		withdrawalCredentials,
-	)
-	if err != nil {
-		t.Fatalf("Process deposit failed: %v", err)
-	}
-	if newState.Balances[1] != 64e9 {
-		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.Balances[1])
-	}
-	// Un-setting flag
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableExcessDeposits: false,
-	})
-}
-
 func TestActivateValidatorGenesis_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{

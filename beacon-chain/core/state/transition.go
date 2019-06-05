@@ -213,7 +213,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, fmt.Errorf("could not process justification: %v", err)
 	}
 
-	state, err = e.ProcessCrosslink(state)
+	state, err = e.ProcessCrosslinks(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not process crosslink: %v", err)
 	}
