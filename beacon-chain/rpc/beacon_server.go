@@ -37,6 +37,12 @@ type BeaconServer struct {
 	chainStartChan      chan time.Time
 }
 
+type voteHierarchy struct {
+	votes    uint64
+	height   *big.Int
+	eth1Data *pbp2p.Eth1Data
+}
+
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain
 // has started its runtime and validators begin their responsibilities. If it has not, it then
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
@@ -149,11 +155,6 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		return nil, fmt.Errorf("could not verify block with hash exists in Eth1 chain: %#x: %v", stateLatestEth1Hash, err)
 	}
 	dataVotes := []*pbp2p.Eth1Data{}
-	type voteHierarchy struct {
-		votes    uint64
-		height   *big.Int
-		eth1Data *pbp2p.Eth1Data
-	}
 	voteCountMap := make(map[string]voteHierarchy)
 	bestVoteHeight := big.NewInt(0)
 	var mostVotes uint64
