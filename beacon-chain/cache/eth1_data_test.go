@@ -89,7 +89,7 @@ func TestEth1DataVoteCache_CanIncrement(t *testing.T) {
 func TestEth1Data_MaxSize(t *testing.T) {
 	cache := NewEth1DataVoteCache()
 
-	for i := 0; i < maxEth1DataVoteSize + 1; i++ {
+	for i := 0; i < maxEth1DataVoteSize+1; i++ {
 		eInfo := &Eth1DataVote{
 			DepositRoot: []byte(strconv.Itoa(i)),
 		}
