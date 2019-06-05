@@ -60,17 +60,15 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 				voteCount++
 			}
 		}
-		if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-			DepositRoot: block.Body.Eth1Data.DepositRoot,
-			VoteCount:   voteCount,
-		}); err != nil {
-			return nil, fmt.Errorf("could not save eth1 data vote cache: %v", err)
-		}
 	} else {
-		voteCount, err = eth1DataCache.IncrementEth1DataVote(block.Body.Eth1Data.DepositRoot)
-		if err != nil {
-			return nil, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
-		}
+		voteCount++
+	}
+
+	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
+		DepositRoot: block.Body.Eth1Data.DepositRoot,
+		VoteCount:   voteCount,
+	}); err != nil {
+		return nil, fmt.Errorf("could not save eth1 data vote cache: %v", err)
 	}
 
 	if voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
@@ -298,18 +296,25 @@ func verifyProposerSlashing(
 //   Verify that len(block.body.attester_slashings) <= MAX_ATTESTER_SLASHINGS.
 //
 //   For each attester_slashing in block.body.attester_slashings:
-//     Let slashable_attestation_1 = attester_slashing.slashable_attestation_1.
-//     Let slashable_attestation_2 = attester_slashing.slashable_attestation_2.
-//     Verify that slashable_attestation_1.data != slashable_attestation_2.data.
-//     Verify that is_double_vote(slashable_attestation_1.data, slashable_attestation_2.data)
-//       or is_surround_vote(slashable_attestation_1.data, slashable_attestation_2.data).
-//     Verify that verify_slashable_attestation(state, slashable_attestation_1).
-//     Verify that verify_slashable_attestation(state, slashable_attestation_2).
-//     Let slashable_indices = [index for index in slashable_attestation_1.validator_indices if
-//       index in slashable_attestation_2.validator_indices and
-//       state.validator_registry[index].slashed_epoch > get_current_epoch(state)].
-//     Verify that len(slashable_indices) >= 1.
-//     Run slash_validator(state, index) for each index in slashable_indices.
+//   def process_attester_slashing(state: BeaconState,
+//   	attester_slashing: AttesterSlashing) -> None:
+//     """
+//     Process ``AttesterSlashing`` operation.
+//     """
+//     attestation_1 = attester_slashing.attestation_1
+//     attestation_2 = attester_slashing.attestation_2
+//     assert is_slashable_attestation_data(attestation_1.data, attestation_2.data)
+//     assert verify_indexed_attestation(state, attestation_1)
+//     assert verify_indexed_attestation(state, attestation_2)
+//
+//     slashed_any = False
+//     attesting_indices_1 = attestation_1.custody_bit_0_indices + attestation_1.custody_bit_1_indices
+//     attesting_indices_2 = attestation_2.custody_bit_0_indices + attestation_2.custody_bit_1_indices
+//     for index in sorted(set(attesting_indices_1).intersection(attesting_indices_2)):
+//     if is_slashable_validator(state.validator_registry[index], get_current_epoch(state)):
+//     slash_validator(state, index)
+//     slashed_any = True
+//     assert slashed_any
 func ProcessAttesterSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -697,6 +702,7 @@ func ProcessValidatorDeposits(
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
+	var err error
 	deposits := block.Body.Deposits
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
 		return nil, fmt.Errorf(
@@ -705,7 +711,8 @@ func ProcessValidatorDeposits(
 			params.BeaconConfig().MaxDeposits,
 		)
 	}
-	var err error
+
+	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
@@ -713,7 +720,6 @@ func ProcessValidatorDeposits(
 		beaconState.DepositIndex++
 		pubKey := deposit.Data.Pubkey
 		amount := deposit.Data.Amount
-		valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 		index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 		if !ok {
 			if verifySignatures {

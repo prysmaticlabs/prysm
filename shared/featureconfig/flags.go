@@ -50,12 +50,6 @@ var (
 		Name:  "disable-gossip-sub",
 		Usage: "Disable gossip sub messaging and use floodsub messaging",
 	}
-	// EnableExcessDepositsFlag enables a validator to have total amount deposited as more than the
-	// max deposit amount.
-	EnableExcessDepositsFlag = cli.BoolFlag{
-		Name:  "enables-excess-deposit",
-		Usage: "Enables balances more than max deposit amount for a validator",
-	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -72,5 +66,4 @@ var BeaconChainFlags = []cli.Flag{
 	DisableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
 	CacheTreeHashFlag,
-	EnableExcessDepositsFlag,
 }

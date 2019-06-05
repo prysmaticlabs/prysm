@@ -87,7 +87,7 @@ func (c *Eth1DataVoteCache) Eth1DataVote(depositRoot []byte) (uint64, error) {
 func (c *Eth1DataVoteCache) AddEth1DataVote(eth1DataVote *Eth1DataVote) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if err := c.eth1DataVoteCache.AddIfNotPresent(eth1DataVote); err != nil {
+	if err := c.eth1DataVoteCache.Add(eth1DataVote); err != nil {
 		return err
 	}
 
