@@ -23,7 +23,7 @@ var (
 // which the deposit transaction was included in the eth1 chain.
 type DepositContainer struct {
 	deposit     *pb.Deposit
-	block       *big.Int
+	Block       *big.Int
 	DepositRoot [32]byte
 }
 
@@ -41,7 +41,7 @@ func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blo
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.pendingDeposits = append(db.pendingDeposits, &DepositContainer{deposit: d, block: blockNum, DepositRoot: depositRoot})
+	db.pendingDeposits = append(db.pendingDeposits, &DepositContainer{deposit: d, Block: blockNum, DepositRoot: depositRoot})
 	pendingDepositsCount.Inc()
 }
 
@@ -56,7 +56,7 @@ func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*
 
 	var deposits []*pb.Deposit
 	for _, ctnr := range db.pendingDeposits {
-		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
+		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
 			deposits = append(deposits, ctnr.deposit)
 		}
 	}

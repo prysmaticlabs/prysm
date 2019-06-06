@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"sort"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -159,6 +160,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	bestVoteHeight := big.NewInt(0)
 	var mostVotes uint64
 	var bestVoteHash string
+	depContainers := bs.beaconDB.DepositsContainersTillBlock(ctx, nil)
 	for _, vote := range beaconState.Eth1DataVotes {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -183,12 +185,12 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		// at the block defined by vote.eth1_data.block_hash.
 		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
 		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
-		upToHeightEth1DataDeposits := bs.beaconDB.DepositsContainersTillBlock(ctx, currentHeight)
-		if len(upToHeightEth1DataDeposits) == 0 {
+		heightIdx := sort.Search(len(depContainers), func(i int) bool { return depContainers[i].Block.Cmp(currentHeight) >= 0 })
+		if heightIdx == 0 {
 			continue
 		}
-		correctDepositCount := uint64(len(upToHeightEth1DataDeposits)) == vote.DepositCount
-		depositRootAtHeight := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
+		correctDepositCount := uint64(heightIdx) == vote.DepositCount
+		depositRootAtHeight := depContainers[heightIdx-1].DepositRoot
 		correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
 		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data && correctDepositCount && correctDepositRoot {
 			dataVotes = append(dataVotes, vote)
