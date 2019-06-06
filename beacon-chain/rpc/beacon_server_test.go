@@ -1141,7 +1141,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	var mockSig [96]byte
 	var mockCreds [32]byte
-	numOfDeposits := 1000
+	numOfDeposits := 100000
 	deposits := []*pbp2p.Deposit{
 		{
 			Index: 0,
