@@ -89,7 +89,7 @@ func ProcessDeposit(
 // validator's activation slot.
 //
 // Spec pseudocode definition:
-// def activate_validator(state: BeaconState, index: ValidatorIndex, is_genesis: bool) -> None:
+//  def activate_validator(state: BeaconState, index: ValidatorIndex, is_genesis: bool) -> None:
 //    """
 //    Activate the validator of the given ``index``.
 //    Note that this function mutates ``state``.
@@ -120,7 +120,7 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 // validator with correct voluntary exit parameters.
 //
 // Spec pseudocode definition:
-// def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
+//  def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
 //   """
 //   Initiate the exit of the validator of the given ``index``.
 //   """
@@ -184,7 +184,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 // keeping work to exit validator with entry exit delay.
 //
 // Spec pseudocode definition:
-// def exit_validator(state: BeaconState, index: ValidatorIndex) -> None:
+//  def exit_validator(state: BeaconState, index: ValidatorIndex) -> None:
 //    """
 //    Exit the validator of the given ``index``.
 //    Note that this function mutates ``state``.
@@ -210,7 +210,7 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 // the whistleblower's balance.
 //
 // Spec pseudocode definition:
-// def slash_validator(state: BeaconState, index: ValidatorIndex) -> None:
+//  def slash_validator(state: BeaconState, index: ValidatorIndex) -> None:
 //    """
 //    Slash the validator of the given ``index``.
 //    Note that this function mutates ``state``.
