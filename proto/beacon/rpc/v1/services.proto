@@ -32,6 +32,7 @@ service ValidatorService {
   rpc CommitteeAssignment(CommitteeAssignmentsRequest) returns (CommitteeAssignmentResponse);
   rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
   rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
+  rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
 }
 
 message ValidatorPerformanceRequest {
