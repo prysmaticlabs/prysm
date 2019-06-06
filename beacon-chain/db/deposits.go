@@ -35,7 +35,7 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.deposits = append(db.deposits, &DepositContainer{deposit: d, block: blockNum, DepositRoot: depositRoot})
+	db.deposits = append(db.deposits, &DepositContainer{deposit: d, Block: blockNum, DepositRoot: depositRoot})
 	historicalDepositsCount.Inc()
 }
 
@@ -71,7 +71,7 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 
 	var deposits []*pb.Deposit
 	for _, ctnr := range db.deposits {
-		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
+		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
 			deposits = append(deposits, ctnr.deposit)
 		}
 	}
@@ -93,7 +93,7 @@ func (db *BeaconDB) DepositsContainersTillBlock(ctx context.Context, beforeBlk *
 
 	var deposits []*DepositContainer
 	for _, ctnr := range db.deposits {
-		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
+		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
 			deposits = append(deposits, ctnr)
 		}
 	}
@@ -118,7 +118,7 @@ func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Dep
 	for _, ctnr := range db.deposits {
 		if bytes.Equal(ctnr.deposit.Data.Pubkey, pubKey) {
 			deposit = ctnr.deposit
-			blockNum = ctnr.block
+			blockNum = ctnr.Block
 			break
 		}
 	}
