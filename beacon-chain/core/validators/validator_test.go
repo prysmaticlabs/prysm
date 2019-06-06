@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -45,24 +44,6 @@ func TestHasVoted_OK(t *testing.T) {
 		}
 		if i%2 == 1 && !voted {
 			t.Error("validator voted but received didn't vote")
-		}
-	}
-}
-
-func TestAllValidatorIndices_OK(t *testing.T) {
-	tests := []struct {
-		registries []*pb.Validator
-		indices    []uint64
-	}{
-		{registries: []*pb.Validator{}, indices: []uint64{}},
-		{registries: []*pb.Validator{{}}, indices: []uint64{0}},
-		{registries: []*pb.Validator{{}, {}, {}, {}}, indices: []uint64{0, 1, 2, 3}},
-	}
-	for _, tt := range tests {
-		state := &pb.BeaconState{ValidatorRegistry: tt.registries}
-		if !reflect.DeepEqual(allValidatorsIndices(state), tt.indices) {
-			t.Errorf("AllValidatorsIndices(%v) = %v, wanted:%v",
-				tt.registries, allValidatorsIndices(state), tt.indices)
 		}
 	}
 }
@@ -251,90 +232,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	}
 }
 
-func TestProcessDepositFlag_NotEnabled(t *testing.T) {
-	registry := []*pb.Validator{
-		{
-			Pubkey:                []byte{1, 2, 3},
-			WithdrawalCredentials: []byte{2},
-		},
-		{
-			Pubkey:                []byte{4, 5, 6},
-			WithdrawalCredentials: []byte{1},
-		},
-	}
-	balances := []uint64{0, 32e9}
-	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().SlotsPerEpoch,
-		Balances:          balances,
-		ValidatorRegistry: registry,
-	}
-	pubkey := []byte{4, 5, 6}
-	deposit := uint64(32e9)
-	proofOfPossession := []byte{}
-	withdrawalCredentials := []byte{1}
-
-	newState, err := ProcessDeposit(
-		beaconState,
-		stateutils.ValidatorIndexMap(beaconState),
-		pubkey,
-		deposit,
-		proofOfPossession,
-		withdrawalCredentials,
-	)
-	if err != nil {
-		t.Fatalf("Process deposit failed: %v", err)
-	}
-	if newState.Balances[1] != 32e9 {
-		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.Balances[1])
-	}
-}
-
-func TestProcessDepositFlag_Enabled(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableExcessDeposits: true,
-	})
-
-	registry := []*pb.Validator{
-		{
-			Pubkey:                []byte{1, 2, 3},
-			WithdrawalCredentials: []byte{2},
-		},
-		{
-			Pubkey:                []byte{4, 5, 6},
-			WithdrawalCredentials: []byte{1},
-		},
-	}
-	balances := []uint64{0, 32e9}
-	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().SlotsPerEpoch,
-		Balances:          balances,
-		ValidatorRegistry: registry,
-	}
-	pubkey := []byte{4, 5, 6}
-	deposit := uint64(32e9)
-	proofOfPossession := []byte{}
-	withdrawalCredentials := []byte{1}
-
-	newState, err := ProcessDeposit(
-		beaconState,
-		stateutils.ValidatorIndexMap(beaconState),
-		pubkey,
-		deposit,
-		proofOfPossession,
-		withdrawalCredentials,
-	)
-	if err != nil {
-		t.Fatalf("Process deposit failed: %v", err)
-	}
-	if newState.Balances[1] != 64e9 {
-		t.Errorf("Balances have been updated despite flag being not applied: %d", newState.Balances[1])
-	}
-	// Un-setting flag
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableExcessDeposits: false,
-	})
-}
-
 func TestActivateValidatorGenesis_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{
@@ -463,27 +360,6 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	state = ExitValidator(state, 0)
 	if state.ValidatorRegistry[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 		t.Error("Expected exited validator to stay exited")
-	}
-}
-
-func TestMaxBalanceChurn_OK(t *testing.T) {
-	maxDepositAmount := params.BeaconConfig().MaxDepositAmount
-	tests := []struct {
-		totalBalance    uint64
-		maxBalanceChurn uint64
-	}{
-		{totalBalance: 1e9, maxBalanceChurn: maxDepositAmount},
-		{totalBalance: maxDepositAmount, maxBalanceChurn: maxDepositAmount},
-		{totalBalance: maxDepositAmount * 10, maxBalanceChurn: maxDepositAmount},
-		{totalBalance: params.BeaconConfig().MaxDepositAmount * 1000, maxBalanceChurn: 5 * 1e11},
-	}
-
-	for _, tt := range tests {
-		churn := maxBalanceChurn(tt.totalBalance)
-		if tt.maxBalanceChurn != churn {
-			t.Errorf("MaxBalanceChurn was not an expected value. Wanted: %d, got: %d",
-				tt.maxBalanceChurn, churn)
-		}
 	}
 }
 

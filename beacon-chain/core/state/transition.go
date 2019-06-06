@@ -134,7 +134,10 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not verify and process randao: %v", err)
 	}
 	// Process ETH1 data.
-	state = b.ProcessEth1DataInBlock(state, block)
+	state, err = b.ProcessEth1DataInBlock(state, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not process eth1 data: %v", err)
+	}
 	state, err = b.ProcessAttesterSlashings(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
@@ -213,7 +216,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, fmt.Errorf("could not process justification: %v", err)
 	}
 
-	state, err = e.ProcessCrosslink(state)
+	state, err = e.ProcessCrosslinks(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not process crosslink: %v", err)
 	}

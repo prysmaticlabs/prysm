@@ -105,7 +105,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			return nil, fmt.Errorf("could not get attestation slot: %v", err)
 		}
 
-		if _, err := blocks.VerifyAttestation(beaconState, att, false); err != nil {
+		if _, err := blocks.ProcessAttestation(beaconState, att, false); err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}

@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -80,11 +79,6 @@ func ProcessDeposit(
 		newBalance := state.Balances[existingValidatorIdx] + amount
 		state.Balances[existingValidatorIdx] = newBalance
 		state.ValidatorRegistry[existingValidatorIdx].EffectiveBalance += amount
-
-		if !featureconfig.FeatureConfig().EnableExcessDeposits && newBalance > params.BeaconConfig().MaxDepositAmount {
-			state.Balances[existingValidatorIdx] = params.BeaconConfig().MaxDepositAmount
-			state.ValidatorRegistry[existingValidatorIdx].EffectiveBalance = params.BeaconConfig().MaxDepositAmount
-		}
 	}
 	state.DepositIndex++
 
@@ -337,29 +331,4 @@ func DeleteExitedVal(epoch uint64) {
 	VStore.Lock()
 	defer VStore.Unlock()
 	delete(VStore.exitedValidators, epoch)
-}
-
-// allValidatorsIndices returns all validator indices from 0 to
-// the last validator.
-func allValidatorsIndices(state *pb.BeaconState) []uint64 {
-	validatorIndices := make([]uint64, len(state.ValidatorRegistry))
-	for i := 0; i < len(validatorIndices); i++ {
-		validatorIndices[i] = uint64(i)
-	}
-	return validatorIndices
-}
-
-// maxBalanceChurn returns the maximum balance churn in Gwei,
-// this determines how many validators can be rotated
-// in and out of the validator pool.
-// Spec pseudocode definition:
-//     max_balance_churn = max(
-//        MAX_DEPOSIT_AMOUNT,
-//        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
-func maxBalanceChurn(totalBalance uint64) uint64 {
-	maxBalanceChurn := totalBalance / (2 * params.BeaconConfig().MaxBalanceChurnQuotient)
-	if maxBalanceChurn > params.BeaconConfig().MaxDepositAmount {
-		return maxBalanceChurn
-	}
-	return params.BeaconConfig().MaxDepositAmount
 }

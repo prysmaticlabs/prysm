@@ -15,16 +15,16 @@ var currentEpochSeed = cache.NewSeedCache()
 // GenerateSeed generates the randao seed of a given epoch.
 //
 // Spec pseudocode definition:
-//   def generate_seed(state: BeaconState,
-// 	            epoch: Epoch) -> Bytes32:
-//    """
-//    Generate a seed for the given ``epoch``.
-//    """
-//    return hash(
-//        get_randao_mix(state, epoch - MIN_SEED_LOOKAHEAD) +
-//        get_active_index_root(state, epoch) +
-//        int_to_bytes32(epoch)
-//    )
+// def generate_seed(state: BeaconState,
+//     epoch: Epoch) -> Bytes32:
+//     """
+//     Generate a seed for the given ``epoch``.
+//     """
+//     return hash(
+//     get_randao_mix(state, epoch + LATEST_RANDAO_MIXES_LENGTH - MIN_SEED_LOOKAHEAD) +
+//     get_active_index_root(state, epoch) +
+//     int_to_bytes32(epoch)
+// )
 func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 	seed, err := currentEpochSeed.SeedInEpoch(epoch)
 	if err != nil {
@@ -34,10 +34,9 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 		return bytesutil.ToBytes32(seed), nil
 	}
 
-	lookAheadEpoch := epoch - params.BeaconConfig().MinSeedLookahead
-	if params.BeaconConfig().MinSeedLookahead > epoch {
-		lookAheadEpoch = 0
-	}
+	lookAheadEpoch := epoch + params.BeaconConfig().LatestRandaoMixesLength -
+		params.BeaconConfig().MinSeedLookahead
+
 	randaoMix := RandaoMix(state, lookAheadEpoch)
 
 	indexRoot := ActiveIndexRoot(state, epoch)

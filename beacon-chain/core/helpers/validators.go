@@ -2,8 +2,8 @@ package helpers
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"

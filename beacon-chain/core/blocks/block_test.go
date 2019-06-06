@@ -46,7 +46,7 @@ func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 	}
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
@@ -106,7 +106,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
@@ -144,8 +144,8 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 	state := &pb.BeaconState{}
 
-	state.LatestBlockRoots = make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
-	state.Slot = params.BeaconConfig().LatestBlockRootsLength + 1
+	state.LatestBlockRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	state.Slot = params.BeaconConfig().SlotsPerHistoricalRoot + 1
 
 	testRoot := [32]byte{'a'}
 
