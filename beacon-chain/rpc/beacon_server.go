@@ -38,6 +38,8 @@ type BeaconServer struct {
 	chainStartChan      chan time.Time
 }
 
+// voteHierarchy is a structure we use in order to count deposit votes and
+// break ties between similarly voted deposits
 type voteHierarchy struct {
 	votes    uint64
 	height   *big.Int
@@ -368,7 +370,7 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	// Fetch all historical deposits up to an ancestor height.
 	upToHeightEth1DataDeposits := bs.beaconDB.DepositsContainersTillBlock(ctx, ancestorHeight)
 	if len(upToHeightEth1DataDeposits) == 0 {
-		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE deposits")
+		return nil, errors.New("could not fetch ETH1_FOLLOW_DISTANCE deposits")
 	}
 	depositRootAtHeight := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
 

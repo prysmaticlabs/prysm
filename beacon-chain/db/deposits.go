@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"math/big"
 	"sort"
 
@@ -29,7 +30,7 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 		log.WithFields(logrus.Fields{
 			"block":        blockNum,
 			"deposit":      d,
-			"deposit root": depositRoot,
+			"deposit root": hex.EncodeToString(depositRoot[:]),
 		}).Debug("Ignoring nil deposit insertion")
 		return
 	}
