@@ -487,12 +487,12 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}
 
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
-	var activeRoots [][]byte
+	activeRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
-		activeRoots = append(activeRoots, []byte{'A'})
+		activeRoots[i] = []byte{'A'}
 	}
 
 	state := &pb.BeaconState{
