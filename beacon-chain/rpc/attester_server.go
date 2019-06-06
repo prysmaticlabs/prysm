@@ -2,22 +2,27 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
+	p2p              p2p.Broadcaster
 	beaconDB         *db.BeaconDB
 	operationService operationService
+	cache            *cache.AttestationCache
 }
 
 // AttestHead is a function called by an attester in a sharding validator to vote
@@ -70,6 +75,35 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 // and beacon state for an assigned attester to perform necessary responsibilities. This includes
 // fetching the epoch boundary roots, the latest justified block root, among others.
 func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.AttestationDataRequest) (*pb.AttestationDataResponse, error) {
+	res, err := as.cache.Get(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if res != nil {
+		return res, nil
+	}
+
+	if err := as.cache.MarkInProgress(req); err != nil {
+		if err == cache.ErrAlreadyInProgress {
+			res, err := as.cache.Get(ctx, req)
+			if err != nil {
+				return nil, err
+			}
+
+			if res == nil {
+				return nil, errors.New("a request was in progress and resolved to nil")
+			}
+			return res, nil
+		}
+		return nil, err
+	}
+	defer func() {
+		if err := as.cache.MarkNotInProgress(req); err != nil {
+			log.WithError(err).Error("Failed to mark cache not in progress")
+		}
+	}()
+
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head
 	// is the validator's view of the head block of the beacon chain during the slot.
 	head, err := as.beaconDB.ChainHead()
@@ -97,7 +131,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	if epochStartSlot == headState.Slot {
 		epochBoundaryRoot = headRoot[:]
 	} else {
-		epochBoundaryRoot, err = blocks.BlockRoot(headState, epochStartSlot)
+		epochBoundaryRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch boundary block for slot %d: %v",
 				epochStartSlot, err)
@@ -112,12 +146,12 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	justifiedBlockRoot := headState.CurrentJustifiedRoot
 
 	// If an attester has to attest for genesis block.
-	if headState.Slot == params.BeaconConfig().GenesisSlot {
+	if headState.Slot == 0 {
 		epochBoundaryRoot = params.BeaconConfig().ZeroHash[:]
 		justifiedBlockRoot = params.BeaconConfig().ZeroHash[:]
 	}
 
-	return &pb.AttestationDataResponse{
+	res = &pb.AttestationDataResponse{
 		HeadSlot:                 headState.Slot,
 		BeaconBlockRootHash32:    headRoot[:],
 		EpochBoundaryRootHash32:  epochBoundaryRoot,

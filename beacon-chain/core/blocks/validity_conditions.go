@@ -1,6 +1,3 @@
-// Package blocks contains block processing libraries. These libraries
-// process and verify block specific messages such as PoW receipt root,
-// RANDAO, validator deposits, exits and slashing proofs.
 package blocks
 
 import (
@@ -19,12 +16,6 @@ import (
 var log = logrus.WithField("prefix", "core/blocks")
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
-// Spec:
-//  For a beacon chain block, block, to be processed by a node, the following conditions must be met:
-//  The parent block with root block.parent_root has been processed and accepted.
-//  The node has processed its state up to slot, block.slot - 1.
-//  The Ethereum 1.0 block pointed to by the state.processed_pow_receipt_root has been processed and accepted.
-//  The node's local clock time is greater than or equal to state.genesis_time + block.slot * SECONDS_PER_SLOT.
 func IsValidBlock(
 	ctx context.Context,
 	state *pb.BeaconState,

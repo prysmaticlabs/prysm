@@ -1,5 +1,4 @@
-// Package helpers contains helper functions outlined in ETH2.0 spec:
-// https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#helper-functions
+// Package helpers contains helper functions outlined in ETH2.0 spec beacon chain spec
 package helpers
 
 import (
@@ -64,7 +63,7 @@ func EpochCommitteeCount(state *pb.BeaconState, epoch uint64) uint64 {
 // CrosslinkCommitteeAtEpoch returns the crosslink committee of a given epoch.
 //
 // Spec pseudocode definition:
-//  def get_crosslink_committee(state: BeaconState, epoch: Epoch, shard: Shard) -> List[ValidatorIndex]:
+//   def get_crosslink_committee(state: BeaconState, epoch: Epoch, shard: Shard) -> List[ValidatorIndex]:
 //    return compute_committee(
 //        indices=get_active_validator_indices(state, epoch),
 //        seed=generate_seed(state, epoch),
@@ -267,7 +266,7 @@ func CommitteeAssignment(
 // ShardDelta returns the minimum number of shards get processed in one epoch.
 //
 // Spec pseudocode definition:
-// 	def get_shard_delta(state: BeaconState, epoch: Epoch) -> int:
+//  def get_shard_delta(state: BeaconState, epoch: Epoch) -> int:
 //    return min(get_epoch_committee_count(state, epoch), SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH)
 func ShardDelta(beaconState *pb.BeaconState, epoch uint64) uint64 {
 	shardCount := params.BeaconConfig().ShardCount

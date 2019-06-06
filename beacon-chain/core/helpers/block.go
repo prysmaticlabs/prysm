@@ -9,8 +9,9 @@ import (
 
 // BlockRootAtSlot returns the block root stored in the BeaconState for a recent slot.
 // It returns an error if the requested block root is not within the slot range.
+//
 // Spec pseudocode definition:
-// 	def get_block_root_at_slot(state: BeaconState,
+//  def get_block_root_at_slot(state: BeaconState,
 //                           slot: Slot) -> Bytes32:
 //    """
 //    Return the block root at a recent ``slot``.
@@ -36,7 +37,9 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 }
 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.
-// 	def get_block_root(state: BeaconState,
+//
+// Spec pseudocode definition:
+//  def get_block_root(state: BeaconState,
 //                   epoch: Epoch) -> Bytes32:
 //    """
 //    Return the block root at a recent ``epoch``.
