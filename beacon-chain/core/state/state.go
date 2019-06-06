@@ -17,8 +17,9 @@ import (
 
 // GenesisBeaconState gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
+//
 // Spec pseudocode definition:
-// def get_genesis_beacon_state(genesis_validator_deposits: List[Deposit],
+//  def get_genesis_beacon_state(genesis_validator_deposits: List[Deposit],
 //                             genesis_time: int,
 //                             genesis_eth1_data: Eth1Data) -> BeaconState:
 //    """

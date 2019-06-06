@@ -179,6 +179,7 @@ func ProcessBlock(
 
 // ProcessEpoch describes the per epoch operations that are performed on the
 // beacon state. It focuses on the validator registry, adjusting balances, and finalizing slots.
+//
 // Spec pseudocode definition:
 //
 //  def process_epoch(state: BeaconState) -> None:
