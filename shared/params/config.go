@@ -93,8 +93,8 @@ type BeaconChainConfig struct {
 	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
 	TestnetContractEndpoint   string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
 	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
-	GenesisForkVersion []byte `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
-	EmptySignature [96]byte // EmptySignature is used to represent a zeroed out BLS Signature.
+	GenesisForkVersion        []byte        `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
+	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 }
 
 // DepositContractConfig contains the deposits for
@@ -124,11 +124,11 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DepositContractTreeDepth: 32,
 
 	// Gwei value constants.
-	MinDepositAmount:           1 * 1e9,
-	MaxDepositAmount:           32 * 1e9,
-	MaxEffectiveBalance:        32 * 1e9,
-	EjectionBalance:            16 * 1e9,
-	EffectiveBalanceIncrement:  1 * 1e9,
+	MinDepositAmount:          1 * 1e9,
+	MaxDepositAmount:          32 * 1e9,
+	MaxEffectiveBalance:       32 * 1e9,
+	EjectionBalance:           16 * 1e9,
+	EffectiveBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
 	FarFutureEpoch:          1<<64 - 1,
@@ -155,11 +155,11 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestSlashedExitLength:      8192,
 
 	// Reward and penalty quotients constants.
-	BaseRewardQuotient:                 32,
-	ProposerRewardQuotient:             8,
-	WhistleBlowingRewardQuotient:       512,
-	InactivityPenaltyQuotient:          1 << 25,
-	MinSlashingPenaltyQuotient:         32,
+	BaseRewardQuotient:           32,
+	ProposerRewardQuotient:       8,
+	WhistleBlowingRewardQuotient: 512,
+	InactivityPenaltyQuotient:    1 << 25,
+	MinSlashingPenaltyQuotient:   32,
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
@@ -191,8 +191,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
 	RPCSyncCheck:              1,
 	GoerliBlockTime:           14, // 14 seconds on average for a goerli block to be created.
-	GenesisForkVersion: []byte{0, 0, 0, 0},
-	EmptySignature:     [96]byte{},
+	GenesisForkVersion:        []byte{0, 0, 0, 0},
+	EmptySignature:            [96]byte{},
 
 	// Testnet misc values.
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
