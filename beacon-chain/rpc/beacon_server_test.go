@@ -1141,6 +1141,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	var mockSig [96]byte
 	var mockCreds [32]byte
+	numOfDeposits := 1000
 	deposits := []*pbp2p.Deposit{
 		{
 			Index: 0,
@@ -1150,22 +1151,14 @@ func Benchmark_Eth1Data(b *testing.B) {
 				WithdrawalCredentials: mockCreds[:],
 			},
 		},
-		{
-			Index: 1,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("b"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
-		},
 	}
 
-	for i, dp := range deposits {
+	for i := 0; i < numOfDeposits; i++ {
 		var root [32]byte
-		copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)})
-		db.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), root)
+		copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i % 15)})
+		db.InsertDeposit(ctx, deposits[0], big.NewInt(int64(i)), root)
 	}
-	numOfVotes := 10000
+	numOfVotes := 65000
 	var root [32]byte
 	copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', 1})
 	for i := 0; i < numOfVotes; i++ {
