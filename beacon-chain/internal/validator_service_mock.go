@@ -65,6 +65,21 @@ func (mr *MockValidatorServiceServerMockRecorder) DomainData(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainData", reflect.TypeOf((*MockValidatorServiceServer)(nil).DomainData), arg0, arg1)
 }
 
+// ExitedValidators mocks base method
+func (m *MockValidatorServiceServer) ExitedValidators(arg0 context.Context, arg1 *v1.ExitedValidatorsRequest) (*v1.ExitedValidatorsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExitedValidators", arg0, arg1)
+	ret0, _ := ret[0].(*v1.ExitedValidatorsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExitedValidators indicates an expected call of ExitedValidators
+func (mr *MockValidatorServiceServerMockRecorder) ExitedValidators(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExitedValidators", reflect.TypeOf((*MockValidatorServiceServer)(nil).ExitedValidators), arg0, arg1)
+}
+
 // ValidatorIndex mocks base method
 func (m *MockValidatorServiceServer) ValidatorIndex(arg0 context.Context, arg1 *v1.ValidatorIndexRequest) (*v1.ValidatorIndexResponse, error) {
 	m.ctrl.T.Helper()
