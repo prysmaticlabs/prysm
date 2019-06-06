@@ -119,26 +119,6 @@ func (mr *MockBeaconServiceClientMockRecorder) Eth1Data(arg0, arg1 interface{}, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eth1Data", reflect.TypeOf((*MockBeaconServiceClient)(nil).Eth1Data), varargs...)
 }
 
-// LatestAttestation mocks base method
-func (m *MockBeaconServiceClient) LatestAttestation(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (v10.BeaconService_LatestAttestationClient, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "LatestAttestation", varargs...)
-	ret0, _ := ret[0].(v10.BeaconService_LatestAttestationClient)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LatestAttestation indicates an expected call of LatestAttestation
-func (mr *MockBeaconServiceClientMockRecorder) LatestAttestation(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LatestAttestation", reflect.TypeOf((*MockBeaconServiceClient)(nil).LatestAttestation), varargs...)
-}
-
 // PendingDeposits mocks base method
 func (m *MockBeaconServiceClient) PendingDeposits(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v10.PendingDepositsResponse, error) {
 	m.ctrl.T.Helper()
