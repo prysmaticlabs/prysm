@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -29,10 +30,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())))
-	truncatedPk := pk
-	if len(pk) > 12 {
-		truncatedPk = pk[:12]
-	}
+	truncatedPk := bytesutil.Trunc([]byte(pk))
+
 	log.WithFields(logrus.Fields{"validator": truncatedPk}).Info("Performing a beacon block proposal...")
 
 	// 1. Fetch data from Beacon Chain node.
