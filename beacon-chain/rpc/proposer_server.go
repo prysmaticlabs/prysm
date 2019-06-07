@@ -2,8 +2,11 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math/big"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -14,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,25 +30,6 @@ type ProposerServer struct {
 	powChainService    powChainService
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
-}
-
-// ProposerIndex sends a response to the client which returns the proposer index for a given slot. Validators
-// are shuffled and assigned slots to attest/propose to. This method will look for the validator that is assigned
-// to propose a beacon block at the given slot.
-func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerIndexRequest) (*pb.ProposerIndexResponse, error) {
-	beaconState, err := ps.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get beacon state: %v", err)
-	}
-	beaconState.Slot = req.SlotNumber
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		return nil, fmt.Errorf("could not get index of previous proposer: %v", err)
-	}
-
-	return &pb.ProposerIndexResponse{
-		Index: proposerIndex,
-	}, nil
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
@@ -140,6 +125,17 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	}, nil
 }
 
+// Eth1Data is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an
+// associated deposit root found in the Ethereum 1.0 deposit contract. When consensus is formed,
+// state.latest_eth1_data is updated, and validator deposits up to this root can be processed.
+// The deposit root can be calculated by calling the get_deposit_root() function of
+// the deposit contract using the post-state of the block hash.
+//
+// TODO(#2307): Refactor for v0.6.
+func (ps *ProposerServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
+	return nil, nil
+}
+
 // ComputeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) (*pb.StateRootResponse, error) {
@@ -171,4 +167,80 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 	return &pb.StateRootResponse{
 		StateRoot: beaconStateHash[:],
 	}, nil
+}
+
+// PendingDeposits returns a list of pending deposits that are ready for
+// inclusion in the next beacon block.
+func (ps *ProposerServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
+	bNum := ps.powChainService.LatestBlockHeight()
+	if bNum == nil {
+		return nil, errors.New("latest PoW block number is unknown")
+	}
+	// Only request deposits that have passed the ETH1 follow distance window.
+	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	allDeps := ps.beaconDB.AllDeposits(ctx, bNum)
+	if len(allDeps) == 0 {
+		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
+	}
+
+	// Need to fetch if the deposits up to the state's latest eth 1 data matches
+	// the number of all deposits in this RPC call. If not, then we return nil.
+	beaconState, err := ps.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockRoot)
+	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, h)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
+	}
+	// If the state's latest eth1 data's block hash has a height of 100, we fetch all the deposits up to height 100.
+	// If this doesn't match the number of deposits stored in the cache, the generated trie will not be the same and
+	// root will fail to verify. This can happen in a scenario where we perhaps have a deposit from height 101,
+	// so we want to avoid any possible mismatches in these lengths.
+	upToLatestEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
+	if len(upToLatestEth1DataDeposits) != len(allDeps) {
+		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
+	}
+	depositData := [][]byte{}
+	for _, dep := range upToLatestEth1DataDeposits {
+		depHash, err := hashutil.DepositHash(dep.Data)
+		if err != nil {
+			return nil, fmt.Errorf("coulf not hash deposit data %v", err)
+		}
+		depositData = append(depositData, depHash[:])
+	}
+
+	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
+	}
+
+	allPendingDeps := ps.beaconDB.PendingDeposits(ctx, bNum)
+
+	// Deposits need to be received in order of merkle index root, so this has to make sure
+	// deposits are sorted from lowest to highest.
+	var pendingDeps []*pbp2p.Deposit
+	for _, dep := range allPendingDeps {
+		if dep.Index >= beaconState.DepositIndex {
+			pendingDeps = append(pendingDeps, dep)
+		}
+	}
+
+	for i := range pendingDeps {
+		// Don't construct merkle proof if the number of deposits is more than max allowed in block.
+		if uint64(i) == params.BeaconConfig().MaxDeposits {
+			break
+		}
+		pendingDeps[i], err = constructMerkleProof(depositTrie, pendingDeps[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Limit the return of pending deposits to not be more than max deposits allowed in block.
+	var pendingDeposits []*pbp2p.Deposit
+	for i := 0; i < len(pendingDeps) && i < int(params.BeaconConfig().MaxDeposits); i++ {
+		pendingDeposits = append(pendingDeposits, pendingDeps[i])
+	}
+	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
 }
