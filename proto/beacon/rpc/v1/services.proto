@@ -21,6 +21,7 @@ service ProposerService {
   rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
   rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
   rpc PendingAttestations(PendingAttestationsRequest) returns (PendingAttestationsResponse);
+  rpc RequestBlock(BlockRequest) returns (ethereum.beacon.p2p.v1.BeaconBlock);
   rpc ProposeBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (ProposeResponse);
   rpc ComputeStateRoot(ethereum.beacon.p2p.v1.BeaconBlock) returns (StateRootResponse);
 }
@@ -33,6 +34,11 @@ service ValidatorService {
   rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
   rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
   rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
+}
+
+message BlockRequest {
+  uint64 slot = 1;
+  bytes randao_reveal = 2;
 }
 
 message ValidatorPerformanceRequest {
