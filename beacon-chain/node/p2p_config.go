@@ -1,11 +1,13 @@
 package node
 
 import (
+	"strings"
+
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/p2p/adapter"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric"
 	"github.com/urfave/cli"
 )
@@ -22,19 +24,43 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_STATE_HASH_ANNOUNCE:          &pb.BeaconStateHashAnnounce{},
 	pb.Topic_BEACON_STATE_REQUEST:                &pb.BeaconStateRequest{},
 	pb.Topic_BEACON_STATE_RESPONSE:               &pb.BeaconStateResponse{},
+	pb.Topic_ATTESTATION_ANNOUNCE:                &pb.AttestationAnnounce{},
+	pb.Topic_ATTESTATION_REQUEST:                 &pb.AttestationRequest{},
+	pb.Topic_ATTESTATION_RESPONSE:                &pb.AttestationResponse{},
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
+	contractAddress := ctx.GlobalString(utils.DepositContractFlag.Name)
+	if contractAddress == "" {
+		var err error
+		contractAddress, err = fetchDepositContract()
+		if err != nil {
+			return nil, err
+		}
+	}
+	staticPeers := []string{}
+	for _, entry := range ctx.GlobalStringSlice(cmd.StaticPeers.Name) {
+		peers := strings.Split(entry, ",")
+		staticPeers = append(staticPeers, peers...)
+	}
+
 	s, err := p2p.NewServer(&p2p.ServerConfig{
-		BootstrapNodeAddr: ctx.GlobalString(cmd.BootstrapNode.Name),
-		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
-		Port:              ctx.GlobalInt(cmd.P2PPort.Name),
+		NoDiscovery:            ctx.GlobalBool(cmd.NoDiscovery.Name),
+		StaticPeers:            staticPeers,
+		BootstrapNodeAddr:      ctx.GlobalString(cmd.BootstrapNode.Name),
+		RelayNodeAddr:          ctx.GlobalString(cmd.RelayNode.Name),
+		HostAddress:            ctx.GlobalString(cmd.P2PHost.Name),
+		Port:                   ctx.GlobalInt(cmd.P2PPort.Name),
+		MaxPeers:               ctx.GlobalInt(cmd.P2PMaxPeers.Name),
+		PrvKey:                 ctx.GlobalString(cmd.P2PPrivKey.Name),
+		DepositContractAddress: contractAddress,
+		WhitelistCIDR:          ctx.GlobalString(cmd.P2PWhitelist.Name),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	adapters := []p2p.Adapter{adapter.TracingAdapter}
+	adapters := []p2p.Adapter{}
 	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
 		adapters = append(adapters, metric.New())
 	}

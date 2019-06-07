@@ -33,3 +33,11 @@ func TestHashBeaconBlock_doesntMutate(t *testing.T) {
 		t.Error("Protos are not equal!")
 	}
 }
+
+func TestHashBeaconBlock_nil(t *testing.T) {
+	var blk *pb.BeaconBlock
+	_, err := hashutil.HashBeaconBlock(blk)
+	if err != hashutil.ErrNilProto {
+		t.Fatalf("Error from hashing nil block is not the correct type, instead it is: %v", err)
+	}
+}

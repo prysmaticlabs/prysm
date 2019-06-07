@@ -3,6 +3,7 @@ package p2p
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -15,20 +16,17 @@ func TestLifecycle(t *testing.T) {
 	}
 
 	s.Start()
-	msg := hook.Entries[0].Message
 	want := "Starting service"
-	if msg != want {
-		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
-	}
+	testutil.AssertLogsContain(t, hook, want)
 
 	s.Stop()
-	msg = hook.LastEntry().Message
+	msg := hook.LastEntry().Message
 	want = "Stopping service"
 	if msg != want {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
 
-	// The context should have been cancelled.
+	// The context should have been canceled.
 	if s.ctx.Err() == nil {
 		t.Error("Context was not cancelled")
 	}

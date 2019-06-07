@@ -19,3 +19,6 @@ profile.out
 node_modules
 yarn-error.log
 .vscode/
+
+# Ignore password file
+password.txt 

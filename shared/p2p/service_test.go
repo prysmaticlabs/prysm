@@ -17,6 +17,7 @@ import (
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -31,23 +32,21 @@ var _ = shared.Service(&Server{})
 var _ = Broadcaster(&Server{})
 var _ = Sender(&Server{})
 
+const bar = "bar"
+const testTopic = "test_topic"
+
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-func TestStartDialRelayNode_InvalidMultiaddress(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	s, err := NewServer(&ServerConfig{
+func TestNewServer_InvalidMultiaddress(t *testing.T) {
+	_, err := NewServer(&ServerConfig{
 		RelayNodeAddr: "bad",
 	})
 
-	if err != nil {
-		t.Fatalf("Unable to create server: %v", err)
+	if err.Error() != "invalid multiaddr, must begin with /" {
+		t.Fatal("expected invalid multiaddr err")
 	}
-
-	s.Start()
-	logContains(t, hook, "Could not dial relay node: invalid multiaddr, must begin with /", logrus.ErrorLevel)
 }
 
 func TestP2P_PortTaken(t *testing.T) {
@@ -76,14 +75,14 @@ func TestBroadcast_OK(t *testing.T) {
 	}
 
 	msg := &shardpb.CollationBodyRequest{}
-	s.Broadcast(msg)
+	s.Broadcast(context.Background(), msg)
 
 	// TODO(543): test that topic was published
 }
 
 func TestEmit_OK(t *testing.T) {
 	s, _ := NewServer(&ServerConfig{})
-	p := &testpb.TestMessage{Foo: "bar"}
+	p := &testpb.TestMessage{Foo: bar}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -175,7 +174,7 @@ func TestSubscribeToTopic_directMessaging_OK(t *testing.T) {
 	}
 	w := ggio.NewDelimitedWriter(stream)
 	defer w.Close()
-	w.WriteMsg(pbMsg)
+	w.WriteMsg(createEnvelope(t, pbMsg))
 
 	// Wait for our message assertion to complete.
 	select {
@@ -239,11 +238,7 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *pubsub.Pub
 		done <- true
 	}()
 
-	b, err := proto.Marshal(pbMsg)
-	if err != nil {
-		t.Errorf("Failed to marshal service %v", err)
-	}
-	if err = gsub.Publish(topic.String(), b); err != nil {
+	if err := gsub.Publish(topic.String(), createEnvelopeBytes(t, pbMsg)); err != nil {
 		t.Errorf("Failed to publish message: %v", err)
 	}
 
@@ -288,11 +283,7 @@ func TestRegisterTopic_InvalidProtobufs(t *testing.T) {
 		t.Errorf("Failed to publish message: %v", err)
 	}
 	pbMsg := &shardpb.CollationBodyRequest{ShardId: 5}
-	b, err := proto.Marshal(pbMsg)
-	if err != nil {
-		t.Errorf("Failed to marshal service %v", err)
-	}
-	if err = gsub.Publish(topic.String(), b); err != nil {
+	if err = gsub.Publish(topic.String(), createEnvelopeBytes(t, pbMsg)); err != nil {
 		t.Errorf("Failed to publish message: %v", err)
 	}
 
@@ -309,8 +300,8 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-	topic := "test_topic"
-	testMessage := &testpb.TestMessage{Foo: "bar"}
+	topic := testTopic
+	testMessage := &testpb.TestMessage{Foo: bar}
 
 	s.RegisterTopic(topic, testMessage)
 
@@ -323,8 +314,8 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 		defer close(wait)
 		msg := <-ch
 		tmsg := msg.Data.(*testpb.TestMessage)
-		if tmsg.Foo != "bar" {
-			t.Errorf("Expected test message Foo: \"bar\". Got: %v", tmsg)
+		if tmsg.Foo != bar {
+			t.Errorf("Expected test message foo:\"bar\". Got: %v", tmsg)
 		}
 	}()
 
@@ -345,8 +336,8 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-	topic := "test_topic"
-	testMessage := &testpb.TestMessage{Foo: "bar"}
+	topic := testTopic
+	testMessage := &testpb.TestMessage{Foo: bar}
 
 	i := 0
 	var testAdapter Adapter = func(next Handler) Handler {
@@ -375,7 +366,7 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 		defer close(wait)
 		msg := <-ch
 		tmsg := msg.Data.(*testpb.TestMessage)
-		if tmsg.Foo != "bar" {
+		if tmsg.Foo != bar {
 			t.Errorf("Expected test message Foo: \"bar\". Got: %v", tmsg)
 		}
 	}()
@@ -402,8 +393,8 @@ func TestRegisterTopic_HandlesPanic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-	topic := "test_topic"
-	testMessage := &testpb.TestMessage{Foo: "bar"}
+	topic := testTopic
+	testMessage := &testpb.TestMessage{Foo: bar}
 
 	var panicAdapter Adapter = func(next Handler) Handler {
 		return func(msg Message) {
@@ -425,14 +416,14 @@ func TestRegisterTopic_HandlesPanic(t *testing.T) {
 }
 
 func TestStatus_MinimumPeers(t *testing.T) {
-	minPeers := 5
+	minPeers := 3
 
 	ctx := context.Background()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 	s := Server{host: h}
 
 	err := s.Status()
-	if err == nil || err.Error() != "less than 5 peers" {
+	if err == nil || err.Error() != "less than 3 peers" {
 		t.Errorf("p2p server did not return expected status, instead returned %v", err)
 	}
 
@@ -452,6 +443,8 @@ func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Me
 	ctx := context.Background()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
+	setHandshakeHandler(h, "")
+
 	gsub, err := pubsub.NewFloodSub(ctx, h)
 	if err != nil {
 		return err
@@ -465,12 +458,31 @@ func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Me
 	// Short timeout to allow libp2p to handle peer connection.
 	time.Sleep(time.Millisecond * 100)
 
-	b, err := proto.Marshal(msg)
+	return gsub.Publish(topic, createEnvelopeBytes(t, msg))
+}
+
+func createEnvelope(t *testing.T, msg proto.Message) *pb.Envelope {
+	payload, err := proto.Marshal(msg)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 
-	return gsub.Publish(topic, b)
+	// span context test data from
+	// https://github.com/census-instrumentation/opencensus-go/blob/3b8e2721f2c3c01fa1bf4a2e455874e7b8319cd7/trace/propagation/propagation_test.go#L69
+	envelope := &pb.Envelope{
+		SpanContext: []byte{0, 0, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 1, 97, 98, 99, 100, 101, 102, 103, 104, 2, 1},
+		Payload:     payload,
+	}
+
+	return envelope
+}
+
+func createEnvelopeBytes(t *testing.T, msg proto.Message) []byte {
+	b, err := proto.Marshal(createEnvelope(t, msg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }
 
 func logContains(t *testing.T, hook *logTest.Hook, message string, level logrus.Level) {

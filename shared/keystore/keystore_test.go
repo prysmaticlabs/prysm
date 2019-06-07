@@ -43,6 +43,50 @@ func TestStoreAndGetKey(t *testing.T) {
 		t.Errorf("unable to remove temporary files %v", err)
 	}
 }
+
+func TestStoreAndGetKeys(t *testing.T) {
+	tmpdir := testutil.TempDir()
+	filePrefix := "/keystore"
+	ks := &Store{
+		keysDirPath: tmpdir,
+		scryptN:     LightScryptN,
+		scryptP:     LightScryptP,
+	}
+
+	key, err := NewKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("key generation failed %v", err)
+	}
+
+	if err := ks.StoreKey(tmpdir+filePrefix+"/test-1", key, "password"); err != nil {
+		t.Fatalf("unable to store key %v", err)
+	}
+	key2, err := NewKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("key generation failed %v", err)
+	}
+	if err := ks.StoreKey(tmpdir+filePrefix+"/test-2", key2, "password"); err != nil {
+		t.Fatalf("unable to store key %v", err)
+	}
+	newkeys, err := ks.GetKeys(tmpdir+filePrefix, "test", "password")
+	if err != nil {
+		t.Fatalf("unable to get key %v", err)
+	}
+	for _, s := range newkeys {
+		if !bytes.Equal(s.SecretKey.Marshal(), key.SecretKey.Marshal()) && !bytes.Equal(s.SecretKey.Marshal(), key2.SecretKey.Marshal()) {
+			t.Fatalf("retrieved secret keys are not equal %v ", s.SecretKey.Marshal())
+		}
+
+	}
+
+	if err := os.RemoveAll(tmpdir + filePrefix + "-2"); err != nil {
+		t.Errorf("unable to remove temporary files %v", err)
+	}
+	if err := os.RemoveAll(tmpdir + filePrefix + "-1"); err != nil {
+		t.Errorf("unable to remove temporary files %v", err)
+	}
+}
+
 func TestEncryptDecryptKey(t *testing.T) {
 	newID := uuid.NewRandom()
 	b := []byte("hi")

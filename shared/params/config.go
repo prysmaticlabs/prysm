@@ -4,6 +4,7 @@ package params
 
 import (
 	"math/big"
+	"time"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -22,6 +23,8 @@ type BeaconChainConfig struct {
 	ValidatorPrivkeyFileName     string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName    string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	BLSPubkeyLength              int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
+	DefaultBufferSize            int    // DefaultBufferSize for channels across the Prysm repository.
+	HashCacheSize                int64  // HashCacheSize defines the size of object hashes that are cached.
 
 	// BLS domain values.
 	DomainDeposit     uint64 // DomainDeposit defines the BLS signature domain for deposit verification.
@@ -66,6 +69,7 @@ type BeaconChainConfig struct {
 	WhistlerBlowerRewardQuotient       uint64 // WhistlerBlowerRewardQuotient is used to calculate whistler blower reward.
 	AttestationInclusionRewardQuotient uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
 	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
+	GweiPerEth                         uint64 // GweiPerEth is the amount of gwei corresponding to 1 eth.
 
 	// Max operations per block constants.
 	MaxVoluntaryExits    uint64 // MaxVoluntaryExits determines the maximum number of validator exits in a block.
@@ -75,20 +79,23 @@ type BeaconChainConfig struct {
 	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
 
 	// Prysm constants.
-	DepositsForChainStart uint64 // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	RandBytes             uint64 // RandBytes is the number of bytes used as entropy to shuffle validators.
-	SyncPollingInterval   int64  // SyncPollingInterval queries network nodes for sync status.
-	BatchBlockLimit       uint64 // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
-	SyncEpochLimit        uint64 // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
-	MaxNumLog2Validators  uint64 // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
-	LogBlockDelay         int64  // Number of blocks to wait from the current head before processing logs from the deposit contract.
+	DepositsForChainStart   uint64        // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
+	RandBytes               uint64        // RandBytes is the number of bytes used as entropy to shuffle validators.
+	SyncPollingInterval     int64         // SyncPollingInterval queries network nodes for sync status.
+	BatchBlockLimit         uint64        // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
+	SyncEpochLimit          uint64        // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
+	MaxNumLog2Validators    uint64        // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
+	LogBlockDelay           int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
+	RPCSyncCheck            time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
+	TestnetContractEndpoint string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
+	GoerliBlockTime         uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
 }
 
 // DepositContractConfig contains the deposits for
 type DepositContractConfig struct {
 	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
-	MaxDepositAmount      *big.Int // // MaxDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
+	MaxDepositAmount      *big.Int // MaxDepositAmount defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -112,6 +119,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ValidatorPrivkeyFileName:     "/validatorprivatekey",
 	WithdrawalPrivkeyFileName:    "/shardwithdrawalkey",
 	BLSPubkeyLength:              96,
+	DefaultBufferSize:            10000,
+	HashCacheSize:                100000,
 
 	// BLS domain values.
 	DomainDeposit:     0,
@@ -154,6 +163,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WhistlerBlowerRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
 	InactivityPenaltyQuotient:          1 << 24,
+	GweiPerEth:                         1000000000,
 
 	// Max operations per block constants.
 	MaxVoluntaryExits:    16,
@@ -165,11 +175,14 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Prysm constants.
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
-	SyncPollingInterval:   6 * 1, // Query nodes over the network every slot for sync status.
-	BatchBlockLimit:       50,
-	SyncEpochLimit:        4,
+	BatchBlockLimit:       64 * 4, // Process blocks in batches of 4 epochs of blocks (threshold before casper penalties).
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
+	RPCSyncCheck:          1,
+	GoerliBlockTime:       14, // 14 seconds on average for a goerli block to be created.
+
+	// Testnet misc values.
+	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultShardConfig = &ShardChainConfig{
@@ -200,13 +213,17 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.TargetCommitteeSize = 1
 	demoConfig.DepositsForChainStart = 8
 	demoConfig.SlotsPerEpoch = 8
-	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
+	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / demoConfig.SlotsPerEpoch
 	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxDepositAmount = 3200000
-	demoConfig.EjectionBalance = 1600000
+	demoConfig.MaxDepositAmount = 3.2 * 1e9
+	demoConfig.EjectionBalance = 3.175 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.EpochsPerEth1VotingPeriod = 1
+	demoConfig.LatestRandaoMixesLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestActiveIndexRootsLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestSlashedExitLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestBlockRootsLength = 5 * demoConfig.SlotsPerEpoch
 
 	return &demoConfig
 }

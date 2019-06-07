@@ -3,6 +3,7 @@ syntax = "proto3";
 package ethereum.beacon.p2p.v1;
 
 import "proto/beacon/p2p/v1/types.proto";
+import "google/protobuf/timestamp.proto";
 
 enum Topic {
   UNKNOWN = 0;
@@ -22,6 +23,12 @@ enum Topic {
   ATTESTATION_RESPONSE = 14;
 }
 
+message Envelope {
+  bytes span_context = 1;
+  bytes payload = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
 message BeaconBlockAnnounce {
   bytes hash = 1;
   uint64 slot_number = 2;
@@ -31,7 +38,7 @@ message BeaconBlockRequest {
   bytes hash = 1;
 }
 
-message BeaconBlockRequestBySlotNumber{
+message BeaconBlockRequestBySlotNumber {
   uint64 slot_number = 1;
 }
 
@@ -41,10 +48,12 @@ message BeaconBlockResponse {
 }
 
 message BatchedBeaconBlockRequest {
-  uint64 start_slot = 1;
-  uint64 end_slot =2;
+  uint64 start_slot = 1 [deprecated=true];
+  uint64 end_slot = 2 [deprecated=true];
+  bytes finalized_root = 3;
+  bytes canonical_root = 4;
 }
- 
+
 message BatchedBeaconBlockResponse {
   repeated BeaconBlock batched_blocks = 1;
 }
@@ -52,9 +61,11 @@ message BatchedBeaconBlockResponse {
 message ChainHeadRequest {}
 
 message ChainHeadResponse {
-  bytes hash = 1;
-  uint64 slot = 2;
-  bytes finalized_state_root_hash32s =3;
+  uint64 canonical_slot = 1;
+  bytes canonical_state_root_hash32 = 2;
+  bytes finalized_state_root_hash32s = 3;
+  bytes canonical_block_root = 4;
+  bytes finalized_block_root = 5;
 }
 
 message BeaconStateHashAnnounce {
@@ -66,7 +77,7 @@ message BeaconStateRequest {
 }
 
 message BeaconStateResponse {
-  BeaconState beacon_state = 1;
+  BeaconState finalized_state = 1;
 }
 
 message AttestationAnnounce {
@@ -82,10 +93,10 @@ message AttestationResponse {
   Attestation attestation = 2;
 }
 
-message UnseenAttestationsRequest {}
-
-message UnseenAttestationResponse {
-  repeated Attestation attestations = 1;
+message FinalizedStateAnnounce {
+  bytes block_root = 1;
+  bytes state_root = 2;
+  uint64 slot = 3;
 }
 
 message ProposerSlashingAnnounce {
@@ -138,4 +149,8 @@ message ExitRequest {
 message ExitResponse {
   bytes hash = 1;
   VoluntaryExit voluntary_exit = 2;
+}
+
+message Handshake {
+  string deposit_contract_address = 1;
 }

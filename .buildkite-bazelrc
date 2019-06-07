@@ -1,9 +1,21 @@
-build:remote --remote_max_connections=200
-build:remote --disk_cache=
-build:remote --remote_http_cache=https://storage.googleapis.com/prysmatic-bazel-cache
-build:remote --google_default_credentials
-build:remote --remote_timeout=10
-build:remote --experimental_guard_against_concurrent_changes
+# The following flags enable the remote cache so action results can be shared
+# across machines, developers, and workspaces.
+# 
+# This config is loaded from https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/latest.bazelrc
+build:remote-cache --remote_cache=remotebuildexecution.googleapis.com
+build:remote-cache --tls_enabled=true
+build:remote-cache --remote_timeout=3600
+build:remote-cache --auth_enabled=true
+build:remote-cache --spawn_strategy=standalone
+build:remote-cache --strategy=Javac=standalone
+build:remote-cache --strategy=Closure=standalone
+build:remote-cache --strategy=Genrule=standalone
+
+# Prysm specific remote-cache properties.
+build:remote-cache --disk_cache=
+build:remote-cache --jobs=50
+build:remote-cache --host_platform_remote_properties_override='properties:{name:\"cache-silo-key\" value:\"prysm\"}' 
+build:remote-cache --remote_instance_name=projects/prysmaticlabs/instances/default_instance
 
 build --experimental_strict_action_env
 build --disk_cache=/tmp/bazelbuilds

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -77,6 +79,7 @@ type Web3Service struct {
 	chainStartFeed          *event.Feed
 	reader                  Reader
 	logger                  bind.ContractFilterer
+	httpLogger              bind.ContractFilterer
 	blockFetcher            POWBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
@@ -87,11 +90,11 @@ type Web3Service struct {
 	depositTrie             *trieutil.MerkleTrie
 	chainStartDeposits      [][]byte
 	chainStarted            bool
+	chainStartETH1Data      *pb.Eth1Data
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
-	chainStartDelay         uint64
 	lastRequestedBlock      *big.Int
 }
 
@@ -102,10 +105,10 @@ type Web3ServiceConfig struct {
 	Client          Client
 	Reader          Reader
 	Logger          bind.ContractFilterer
+	HTTPLogger      bind.ContractFilterer
 	BlockFetcher    POWBlockFetcher
 	ContractBackend bind.ContractBackend
 	BeaconDB        *db.BeaconDB
-	ChainStartDelay uint64
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -126,6 +129,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	ctx, cancel := context.WithCancel(ctx)
 	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{{}}, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("could not setup deposit trie: %v", err)
 	}
 	return &Web3Service{
@@ -142,13 +146,14 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		depositTrie:             depositTrie,
 		reader:                  config.Reader,
 		logger:                  config.Logger,
+		httpLogger:              config.HTTPLogger,
 		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      [][]byte{},
 		beaconDB:                config.BeaconDB,
 		lastReceivedMerkleIndex: -1,
-		chainStartDelay:         config.ChainStartDelay,
 		lastRequestedBlock:      big.NewInt(0),
+		chainStartETH1Data:      &pb.Eth1Data{},
 	}, nil
 }
 
@@ -182,6 +187,11 @@ func (w *Web3Service) ChainStartFeed() *event.Feed {
 // by the deposit contract and cached in the powchain service.
 func (w *Web3Service) ChainStartDeposits() [][]byte {
 	return w.chainStartDeposits
+}
+
+// ChainStartETH1Data returns the eth1 data at chainstart.
+func (w *Web3Service) ChainStartETH1Data() *pb.Eth1Data {
+	return w.chainStartETH1Data
 }
 
 // Status is service health checks. Return nil or error.
@@ -249,7 +259,7 @@ func (w *Web3Service) processSubscribedHeaders(header *gethTypes.Header) {
 	blockNumberGauge.Set(float64(header.Number.Int64()))
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
-	w.blockTime = time.Unix(header.Time.Int64(), 0)
+	w.blockTime = time.Unix(int64(header.Time), 0)
 	log.WithFields(logrus.Fields{
 		"blockNumber": w.blockHeight,
 		"blockHash":   w.blockHash.Hex(),
@@ -268,6 +278,8 @@ func safelyHandlePanic() {
 		log.WithFields(logrus.Fields{
 			"r": r,
 		}).Error("Panicked when handling data from ETH 1.0 Chain! Recovering...")
+
+		debug.PrintStack()
 	}
 }
 
@@ -311,13 +323,10 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
 
-	// Only process logs if the chain start delay flag is not enabled.
-	if w.chainStartDelay == 0 {
-		if err := w.processPastLogs(); err != nil {
-			log.Errorf("Unable to process past logs %v", err)
-			w.runError = err
-			return
-		}
+	if err := w.processPastLogs(); err != nil {
+		log.Errorf("Unable to process past logs %v", err)
+		w.runError = err
+		return
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -332,10 +341,12 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
 			return
 		case w.runError = <-headSub.Err():
-			log.Debug("Unsubscribed to head events, exiting goroutine")
+			log.Debugf("Unsubscribed to head events, exiting goroutine: %v", w.runError)
 			return
-		case header := <-w.headerChan:
-			w.processSubscribedHeaders(header)
+		case header, ok := <-w.headerChan:
+			if ok {
+				w.processSubscribedHeaders(header)
+			}
 		case <-ticker.C:
 			w.handleDelayTicker()
 		}

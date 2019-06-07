@@ -15,14 +15,17 @@ import (
 
 // The fields below define the suffix of keys in the db.
 var (
-	attestationBucket     = []byte("attestation-bucket")
-	blockOperationsBucket = []byte("block-operations-bucket")
-	blockBucket           = []byte("block-bucket")
-	mainChainBucket       = []byte("main-chain-bucket")
-	chainInfoBucket       = []byte("chain-info")
-	validatorBucket       = []byte("validator")
+	attestationBucket       = []byte("attestation-bucket")
+	attestationTargetBucket = []byte("attestation-target-bucket")
+	blockOperationsBucket   = []byte("block-operations-bucket")
+	blockBucket             = []byte("block-bucket")
+	mainChainBucket         = []byte("main-chain-bucket")
+	histStateBucket         = []byte("historical-state-bucket")
+	chainInfoBucket         = []byte("chain-info")
+	validatorBucket         = []byte("validator")
 
 	mainChainHeightKey      = []byte("chain-height")
+	canonicalHeadKey        = []byte("canonical-head")
 	stateLookupKey          = []byte("state")
 	finalizedStateLookupKey = []byte("finalized-state")
 	justifiedStateLookupKey = []byte("justified-state")
@@ -30,9 +33,12 @@ var (
 	justifiedBlockLookupKey = []byte("justified-block")
 
 	// DB internal use
-	cleanupHistoryBucket    = []byte("cleanup-history-bucket")
-	cleanedFinalizedSlotKey = []byte("cleaned-finalized-slot")
+	cleanupHistoryBucket = []byte("cleanup-history-bucket")
 )
+
+func encodeSlotNumberRoot(number uint64, root [32]byte) []byte {
+	return append(bytesutil.Bytes8(number), root[:]...)
+}
 
 // encodeSlotNumber encodes a slot number as little-endian uint32.
 func encodeSlotNumber(number uint64) []byte {

@@ -4,15 +4,12 @@
 package blocks
 
 import (
-	"bytes"
-	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"go.opencensus.io/trace"
 )
 
 var clock utils.Clock = &utils.RealClock{}
@@ -73,33 +70,11 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 //  Let previous_block_root be the tree_hash_root of the previous beacon block processed in the chain.
 //	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root.
 //	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0 append merkle_root(state.latest_block_roots) to state.batched_block_roots.
-func ProcessBlockRoots(ctx context.Context, state *pb.BeaconState, parentRoot [32]byte) *pb.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlot.ProcessBlockRoots")
-	defer span.End()
+func ProcessBlockRoots(state *pb.BeaconState, parentRoot [32]byte) *pb.BeaconState {
 	state.LatestBlockRootHash32S[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = parentRoot[:]
 	if state.Slot%params.BeaconConfig().LatestBlockRootsLength == 0 {
 		merkleRoot := hashutil.MerkleRoot(state.LatestBlockRootHash32S)
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
 	}
 	return state
-}
-
-// BlockChildren obtains the blocks in a list of observed blocks which have the current
-// beacon block's hash as their parent root hash.
-//
-// Spec pseudocode definition:
-//	Let get_children(store: Store, block: BeaconBlock) ->
-//		List[BeaconBlock] returns the child blocks of the given block.
-func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
-	var children []*pb.BeaconBlock
-	root, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
-	}
-	for _, observed := range observedBlocks {
-		if bytes.Equal(observed.ParentRootHash32, root[:]) {
-			children = append(children, observed)
-		}
-	}
-	return children, nil
 }

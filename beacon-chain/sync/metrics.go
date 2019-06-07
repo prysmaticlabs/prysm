@@ -12,10 +12,6 @@ var (
 		Name: "regsync_batched_block_req",
 		Help: "The number of received batch block requests",
 	})
-	blockReqSlot = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "regsync_block_req_by_slot",
-		Help: "The number of received block requests by slot",
-	})
 	blockReqHash = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "regsync_block_req_by_hash",
 		Help: "The number of received block requests by hash",
@@ -23,6 +19,10 @@ var (
 	recBlock = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "regsync_received_blocks",
 		Help: "The number of received blocks",
+	})
+	forkedBlock = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "regsync_received_forked_blocks",
+		Help: "The number of received forked blocks",
 	})
 	recBlockAnnounce = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "regsync_received_block_announce",
@@ -55,10 +55,6 @@ var (
 	attestationReq = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "regsync_attestation_req",
 		Help: "The number of received attestation requests",
-	})
-	unseenAttestationReq = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "regsync_unseen_attestation_req",
-		Help: "The number of received unseen attestation requests",
 	})
 	recAttestation = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "regsync_received_attestation",

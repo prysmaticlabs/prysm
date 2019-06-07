@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
@@ -8,6 +8,9 @@ go_library(
         "main.go",
         "usage.go",
     ],
+    data = [
+        "//proto/beacon/rpc/v1:swagger",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
@@ -15,7 +18,10 @@ go_library(
         "//beacon-chain/utils:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
+        "//shared/featureconfig:go_default_library",
+        "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
+        "@com_github_joonix_log//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
         "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
@@ -31,6 +37,7 @@ go_image(
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain",
+    race = "off",
     static = "off",  # Static enabled binary seems to cause issues with DNS lookup with cgo.
     tags = ["manual"],
     visibility = ["//visibility:private"],
@@ -39,12 +46,14 @@ go_image(
         "//beacon-chain/utils:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
+        "//shared/featureconfig:go_default_library",
+        "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
+        "@com_github_joonix_log//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
         "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
     ],
-    race = "off",
 )
 
 container_push(
@@ -62,4 +71,12 @@ go_binary(
     name = "beacon-chain",
     embed = [":go_default_library"],
     visibility = ["//beacon-chain:__subpackages__"],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "small",
+    srcs = ["usage_test.go"],
+    embed = [":go_default_library"],
+    deps = ["@com_github_urfave_cli//:go_default_library"],
 )

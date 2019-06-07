@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/urfave/cli"
 )
 
@@ -43,16 +44,20 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "cmd",
 		Flags: []cli.Flag{
+			cmd.NoDiscovery,
 			cmd.BootstrapNode,
 			cmd.RelayNode,
 			cmd.P2PPort,
 			cmd.DataDirFlag,
 			cmd.VerbosityFlag,
 			cmd.EnableTracingFlag,
+			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
+			cmd.MaxGoroutines,
+			cmd.ClearDB,
 		},
 	},
 	{
@@ -69,16 +74,37 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "utils",
 		Flags: []cli.Flag{
-			utils.DemoConfigFlag,
+			utils.NoCustomConfigFlag,
 			utils.DepositContractFlag,
 			utils.Web3ProviderFlag,
 			utils.RPCPort,
 			utils.CertFlag,
 			utils.KeyFlag,
-			utils.GenesisJSON,
 			utils.EnableDBCleanup,
-			utils.ChainStartDelay,
+			utils.GRPCGatewayPort,
+			utils.HTTPWeb3ProviderFlag,
 		},
+	},
+	{
+		Name: "p2p",
+		Flags: []cli.Flag{
+			cmd.P2PHost,
+			cmd.P2PMaxPeers,
+			cmd.P2PPrivKey,
+			cmd.P2PWhitelist,
+			cmd.StaticPeers,
+		},
+	},
+	{
+		Name: "log",
+		Flags: []cli.Flag{
+			cmd.LogFormat,
+			cmd.LogFileName,
+		},
+	},
+	{
+		Name:  "features",
+		Flags: featureconfig.BeaconChainFlags,
 	},
 }
 

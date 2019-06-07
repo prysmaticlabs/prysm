@@ -4,8 +4,15 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCrosslinks: true,
+	})
+}
 
 func TestSimulatedBackendStop_ShutsDown(t *testing.T) {
 
@@ -40,7 +47,7 @@ func TestGenerateBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, backend.state.Slot+1)
 		}
 		if backend.inMemoryBlocks[len(backend.inMemoryBlocks)-1].Slot != backend.state.Slot {
-			t.Errorf("In memory Blocks do not have the same last slot as the state, expected %d but got %d",
+			t.Errorf("In memory Blocks do not have the same last slot as the state, expected %d but got %v",
 				backend.state.Slot, backend.inMemoryBlocks[len(backend.inMemoryBlocks)-1])
 		}
 	}

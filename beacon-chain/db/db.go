@@ -20,15 +20,29 @@ var log = logrus.WithField("prefix", "beacondb")
 // For example, instead of defining get, put, remove
 // This defines methods such as getBlock, saveBlocksAndAttestations, etc.
 type BeaconDB struct {
-	stateLock    sync.RWMutex
-	currentState *pb.BeaconState
-	db           *bolt.DB
-	DatabasePath string
+	// state objects and caches
+	stateLock         sync.RWMutex
+	serializedState   []byte
+	stateHash         [32]byte
+	validatorRegistry []*pb.Validator
+	validatorBalances []uint64
+	db                *bolt.DB
+	DatabasePath      string
+
+	// Beacon block info in memory.
+	highestBlockSlot uint64
+	// We keep a map of hashes of blocks which failed processing for blacklisting.
+	badBlockHashes map[[32]byte]bool
+	badBlocksLock  sync.RWMutex
+	blocks         map[[32]byte]*pb.BeaconBlock
+	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
-	pendingDeposits []*depositContainer
-	deposits        []*depositContainer
-	depositsLock    sync.RWMutex
+	pendingDeposits       []*depositContainer
+	deposits              []*depositContainer
+	depositsLock          sync.RWMutex
+	chainstartPubkeys     map[string]bool
+	chainstartPubkeysLock sync.RWMutex
 }
 
 // Close closes the underlying boltdb database.
@@ -71,11 +85,11 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	}
 
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
+	db.blocks = make(map[[32]byte]*pb.BeaconBlock)
 
 	if err := db.update(func(tx *bolt.Tx) error {
-		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket,
-			chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
-
+		return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,
+			histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
 	}); err != nil {
 		return nil, err
 	}

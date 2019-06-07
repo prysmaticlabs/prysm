@@ -30,6 +30,7 @@ import (
 	"io"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -78,6 +79,37 @@ func (ks Store) GetKey(filename, password string) (*Key, error) {
 		return nil, err
 	}
 	return DecryptKey(keyjson, password)
+}
+
+// GetKeys from directory using the prefix to filter relevant files
+// and a decryption password.
+func (ks Store) GetKeys(directory, fileprefix, password string) (map[string]*Key, error) {
+	// Load the key from the keystore and decrypt its contents
+	// #nosec G304
+	files, err := ioutil.ReadDir(directory)
+	if err != nil {
+		return nil, err
+	}
+	keys := make(map[string]*Key)
+	for _, f := range files {
+		n := f.Name()
+		filePath := filepath.Join(directory, n)
+		filePath = filepath.Clean(filePath)
+		cp := strings.Contains(n, strings.TrimPrefix(fileprefix, "/"))
+		if f.Mode().IsRegular() && cp {
+			// #nosec G304
+			keyjson, err := ioutil.ReadFile(filePath)
+			if err != nil {
+				return nil, err
+			}
+			key, err := DecryptKey(keyjson, password)
+			if err != nil {
+				return nil, err
+			}
+			keys[hex.EncodeToString(key.PublicKey.Marshal())] = key
+		}
+	}
+	return keys, nil
 }
 
 // StoreKey in filepath and encrypt it with a password.

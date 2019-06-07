@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/urfave/cli"
 )
@@ -46,6 +47,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.VerbosityFlag,
 			cmd.DataDirFlag,
 			cmd.EnableTracingFlag,
+			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
 			cmd.BootstrapNode,
@@ -66,11 +68,16 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "types",
 		Flags: []cli.Flag{
-			types.DemoConfigFlag,
+			types.NoCustomConfigFlag,
 			types.BeaconRPCProviderFlag,
 			types.KeystorePathFlag,
 			types.PasswordFlag,
+			types.DisablePenaltyRewardLogFlag,
 		},
+	},
+	{
+		Name:  "features",
+		Flags: featureconfig.ValidatorFlags,
 	},
 }
 

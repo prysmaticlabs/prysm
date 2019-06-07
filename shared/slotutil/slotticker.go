@@ -40,21 +40,6 @@ func GetSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 	return ticker
 }
 
-// CurrentSlot accepts the genesis time and returns the current time's slot.
-func CurrentSlot(
-	genesisTime time.Time,
-	secondsPerSlot uint64,
-	since func(time.Time) time.Duration) uint64 {
-
-	sinceGenesis := since(genesisTime)
-	if sinceGenesis < 0 {
-		return params.BeaconConfig().GenesisSlot
-	}
-
-	durationInSeconds := time.Duration(secondsPerSlot) * time.Second
-	return uint64(sinceGenesis/durationInSeconds) + params.BeaconConfig().GenesisSlot
-}
-
 func (s *SlotTicker) start(
 	genesisTime time.Time,
 	secondsPerSlot uint64,

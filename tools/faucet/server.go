@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -21,7 +22,9 @@ import (
 
 const minScore = 0.8
 
-var fundingAmount = big.NewInt(0.5 * params.Ether)
+var fundingAmount = big.NewInt(3.5 * params.Ether)
+var funded = make(map[string]bool)
+var fundingLock sync.Mutex
 
 type faucetServer struct {
 	r      recaptcha.Recaptcha
@@ -92,6 +95,14 @@ func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRe
 	if err := s.verifyRecaptcha(ctx, req); err != nil {
 		return &faucetpb.FundingResponse{Error: fmt.Sprintf("Recaptcha failure: %v", err)}, nil
 	}
+
+	fundingLock.Lock()
+	if funded[req.WalletAddress] {
+		fundingLock.Unlock()
+		return &faucetpb.FundingResponse{Error: "funded too recently"}, nil
+	}
+	funded[req.WalletAddress] = true
+	fundingLock.Unlock()
 
 	txHash, err := s.fundAndWait(common.HexToAddress(req.WalletAddress))
 	if err != nil {

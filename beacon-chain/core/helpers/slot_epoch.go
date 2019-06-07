@@ -56,11 +56,6 @@ func StartSlot(epoch uint64) uint64 {
 	return epoch * params.BeaconConfig().SlotsPerEpoch
 }
 
-// AttestationCurrentEpoch returns the current epoch referenced by the attestation.
-func AttestationCurrentEpoch(att *pb.AttestationData) uint64 {
-	return SlotToEpoch(att.Slot)
-}
-
 // IsEpochStart returns true if the given slot number is an epoch starting slot
 // number.
 func IsEpochStart(slot uint64) bool {

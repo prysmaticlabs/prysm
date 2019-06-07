@@ -29,10 +29,11 @@ spec:
   issuerRef:
     name: letsencrypt-prod
   commonName: "*.prylabs.net"
+  dnsNames: 
+    - "prylabs.net"
   acme:
     config:
     - dns01:
         provider: cloud-dns
       domains:
-      - "*.prylabs.net"
       - "prylabs.net"

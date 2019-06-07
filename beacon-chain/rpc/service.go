@@ -9,12 +9,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -31,16 +36,17 @@ func init() {
 }
 
 type chainService interface {
-	CanonicalBlockFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pbp2p.BeaconBlock) (*pbp2p.BeaconState, error)
-	ApplyForkChoiceRule(ctx context.Context, block *pbp2p.BeaconBlock, computedState *pbp2p.BeaconState) error
+	blockchain.BlockReceiver
+	blockchain.ForkChoice
+	blockchain.TargetsFetcher
 }
 
 type operationService interface {
-	IncomingExitFeed() *event.Feed
+	PendingAttestations(ctx context.Context) ([]*pbp2p.Attestation, error)
+	IsAttCanonical(ctx context.Context, att *pbp2p.Attestation) (bool, error)
+	HandleAttestations(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
-	PendingAttestations() ([]*pbp2p.Attestation, error)
 }
 
 type powChainService interface {
@@ -49,43 +55,47 @@ type powChainService interface {
 	LatestBlockHeight() *big.Int
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
+	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
 	DepositRoot() [32]byte
 	DepositTrie() *trieutil.MerkleTrie
 	ChainStartDeposits() [][]byte
 }
 
+type syncService interface {
+	Status() error
+}
+
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	beaconDB              *db.BeaconDB
-	chainService          chainService
-	powChainService       powChainService
-	operationService      operationService
-	port                  string
-	chainStartDelayFlag   uint64
-	listener              net.Listener
-	withCert              string
-	withKey               string
-	grpcServer            *grpc.Server
-	canonicalBlockChan    chan *pbp2p.BeaconBlock
-	canonicalStateChan    chan *pbp2p.BeaconState
-	incomingAttestation   chan *pbp2p.Attestation
-	slotAlignmentDuration time.Duration
-	credentialError       error
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	beaconDB            *db.BeaconDB
+	chainService        chainService
+	powChainService     powChainService
+	operationService    operationService
+	syncService         syncService
+	port                string
+	listener            net.Listener
+	withCert            string
+	withKey             string
+	grpcServer          *grpc.Server
+	canonicalStateChan  chan *pbp2p.BeaconState
+	incomingAttestation chan *pbp2p.Attestation
+	credentialError     error
+	p2p                 p2p.Broadcaster
 }
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port                string
-	CertFlag            string
-	KeyFlag             string
-	ChainStartDelayFlag uint64
-	SubscriptionBuf     int
-	BeaconDB            *db.BeaconDB
-	ChainService        chainService
-	POWChainService     powChainService
-	OperationService    operationService
+	Port             string
+	CertFlag         string
+	KeyFlag          string
+	BeaconDB         *db.BeaconDB
+	ChainService     chainService
+	POWChainService  powChainService
+	OperationService operationService
+	SyncService      syncService
+	Broadcaster      p2p.Broadcaster
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -93,20 +103,19 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                   ctx,
-		cancel:                cancel,
-		beaconDB:              cfg.BeaconDB,
-		chainService:          cfg.ChainService,
-		powChainService:       cfg.POWChainService,
-		operationService:      cfg.OperationService,
-		port:                  cfg.Port,
-		withCert:              cfg.CertFlag,
-		withKey:               cfg.KeyFlag,
-		chainStartDelayFlag:   cfg.ChainStartDelayFlag,
-		slotAlignmentDuration: time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
-		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
-		canonicalStateChan:    make(chan *pbp2p.BeaconState, cfg.SubscriptionBuf),
-		incomingAttestation:   make(chan *pbp2p.Attestation, cfg.SubscriptionBuf),
+		ctx:                 ctx,
+		cancel:              cancel,
+		beaconDB:            cfg.BeaconDB,
+		p2p:                 cfg.Broadcaster,
+		chainService:        cfg.ChainService,
+		powChainService:     cfg.POWChainService,
+		operationService:    cfg.OperationService,
+		syncService:         cfg.SyncService,
+		port:                cfg.Port,
+		withCert:            cfg.CertFlag,
+		withKey:             cfg.KeyFlag,
+		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation: make(chan *pbp2p.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
 }
 
@@ -118,15 +127,17 @@ func (s *Service) Start() {
 		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
 	}
 	s.listener = lis
-	log.Infof("RPC server listening on port :%s", s.port)
+	log.WithField("port", s.port).Info("Listening on port")
 
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
 			recovery.StreamServerInterceptor(),
+			grpc_prometheus.StreamServerInterceptor,
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(),
+			grpc_prometheus.UnaryServerInterceptor,
 		)),
 	}
 	// TODO(#791): Utilize a certificate for secure connections
@@ -148,10 +159,10 @@ func (s *Service) Start() {
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
 		chainService:        s.chainService,
+		targetsFetcher:      s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
-		chainStartDelayFlag: s.chainStartDelayFlag,
 		chainStartChan:      make(chan time.Time, 1),
 	}
 	proposerServer := &ProposerServer{
@@ -164,12 +175,15 @@ func (s *Service) Start() {
 	attesterServer := &AttesterServer{
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
+		p2p:              s.p2p,
+		cache:            cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
+		powChainService:    s.powChainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
@@ -180,6 +194,9 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
+		for s.syncService.Status() != nil {
+			time.Sleep(time.Second * params.BeaconConfig().RPCSyncCheck)
+		}
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
 				log.Errorf("Could not serve gRPC: %v", err)

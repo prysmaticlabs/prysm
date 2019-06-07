@@ -7,7 +7,7 @@ enum Topic {
   COLLATION_BODY_REQUEST = 1;
   COLLATION_BODY_RESPONSE = 2;
   TRANSACTIONS = 3;
-} 
+}
 
 message CollationBodyRequest {
   uint64 shard_id = 1;

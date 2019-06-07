@@ -86,9 +86,9 @@ func generateSimulatedBlock(
 		root := newTrie.Root()
 		block.Eth1Data.DepositRootHash32 = root[:]
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
-			DepositData:         data,
-			MerkleBranchHash32S: proof,
-			MerkleTreeIndex:     simObjects.simDeposit.MerkleIndex,
+			DepositData:        data,
+			MerkleProofHash32S: proof,
+			MerkleTreeIndex:    simObjects.simDeposit.MerkleIndex,
 		})
 	}
 	if simObjects.simProposerSlashing != nil {

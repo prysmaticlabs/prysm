@@ -1,12 +1,14 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,27 +43,39 @@ func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error) {
+func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Message) error {
+	return nil
+}
+
+func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *pb.Attestation) (bool, error) {
+	return true, nil
+}
+
+func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
 	}
 	return []*pb.Attestation{
 		{
-			AggregationBitfield: []byte("A"),
+			AggregationBitfield: []byte{0xC0},
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				Shard:                   0,
 			},
 		},
 		{
-			AggregationBitfield: []byte("B"),
+			AggregationBitfield: []byte{0xC1},
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 		{
-			AggregationBitfield: []byte("C"),
+			AggregationBitfield: []byte{0xC2},
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				Slot:                    params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 			},
 		},
 	}, nil
@@ -72,6 +86,8 @@ type mockChainService struct {
 	stateFeed            *event.Feed
 	attestationFeed      *event.Feed
 	stateInitializedFeed *event.Feed
+	canonicalBlocks      map[uint64][]byte
+	targets              map[uint64]*pb.AttestationTarget
 }
 
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
@@ -90,6 +106,22 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (m *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
+
+}
+
+func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
+	return nil
+}
+
+func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
+	return bytes.Equal(m.canonicalBlocks[slot], hash)
+}
+
+func (m *mockChainService) AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
+	return m.targets, nil
+}
+
 func newMockChainService() *mockChainService {
 	return &mockChainService{
 		blockFeed:            new(event.Feed),
@@ -99,18 +131,26 @@ func newMockChainService() *mockChainService {
 	}
 }
 
+type mockSyncService struct {
+}
+
+func (ms *mockSyncService) Status() error {
+	return nil
+}
+
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:     "7348",
-		CertFlag: "alice.crt",
-		KeyFlag:  "alice.key",
+		Port:        "7348",
+		CertFlag:    "alice.crt",
+		KeyFlag:     "alice.key",
+		SyncService: &mockSyncService{},
 	})
 
 	rpcService.Start()
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
+	testutil.AssertLogsContain(t, hook, "Listening on port")
 
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
@@ -128,11 +168,12 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewLocal(fl.Logger)
 
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port: "ralph merkle!!!",
+		Port:        "ralph merkle!!!",
+		SyncService: &mockSyncService{},
 	})
 
-	if _, ok := log.(*TestLogger).testMap["error"]; ok {
-		t.Fatal("Error in Start() occurred before expected")
+	if val, ok := log.(*TestLogger).testMap["error"]; ok {
+		t.Fatalf("Error in Start() occurred before expected: %v", val)
 	}
 
 	rpcService.Start()
@@ -157,13 +198,14 @@ func TestStatus_CredentialError(t *testing.T) {
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port: "7777",
+		Port:        "7777",
+		SyncService: &mockSyncService{},
 	})
 
 	rpcService.Start()
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
+	testutil.AssertLogsContain(t, hook, fmt.Sprint("Listening on port"))
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
 
 	rpcService.Stop()

@@ -9,9 +9,16 @@ import (
 
 	"github.com/go-yaml/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	log "github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCrosslinks: false,
+	})
+}
 
 func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
 	const forkChoiceTestsFolderName = "fork-choice-tests"

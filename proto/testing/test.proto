@@ -5,35 +5,31 @@ package ethereum.testing;
 import "google/protobuf/timestamp.proto";
 
 message TestMessage {
-    string foo = 1;
+  string foo = 1;
 }
 
 // Used in shared/p2p/feed_example_test.go
 message Puzzle {
-    string challenge = 1;
-    string answer = 2;
+  string challenge = 1;
+  string answer = 2;
 }
 
-// Person and address book example from 
+// Person and address book example from
 // https://github.com/protocolbuffers/protobuf/blob/master/examples/addressbook.proto
 message Person {
   string name = 1;
   int32 id = 2;
   string email = 3;
-
   enum PhoneType {
     MOBILE = 0;
     HOME = 1;
     WORK = 2;
   }
-
   message PhoneNumber {
     string number = 1;
     PhoneType type = 2;
   }
-
   repeated PhoneNumber phones = 4;
-
   google.protobuf.Timestamp last_updated = 5;
 }
 

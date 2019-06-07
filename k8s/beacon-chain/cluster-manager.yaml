@@ -51,19 +51,22 @@ spec:
       serviceAccountName: cluster-pk-manager
       containers:
       - name: server
-        image: gcr.io/prysmaticlabs/prysm/cluster-pk-manager/server:latest 
+        image: gcr.io/prysmaticlabs/prysm/cluster-pk-manager/server:latest
         args: 
         - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
         - --private-key=$(PRIVATE_KEY)
         - --rpc=ws://public-rpc-nodes.pow.svc.cluster.local:8546
         - --port=8000
         - --metrics-port=9090
-        - --deposit-amount=3200000000000000
+        - --deposit-amount=3200000000000000000
         - --db-path=/data
         - --verbose
+        - --beaconRPC=beacon-chain.beacon-chain.svc.cluster.local:4000
         ports:
         - containerPort: 8000
           name: grpc-service
+        - containerPort: 8080
+          name: allocations
         - containerPort: 9090
           name: prometheus
         volumeMounts:

@@ -97,23 +97,6 @@ func TestEpochStartSlot_OK(t *testing.T) {
 	}
 }
 
-func TestAttestationCurrentEpoch_OK(t *testing.T) {
-	tests := []struct {
-		slot  uint64
-		epoch uint64
-	}{
-		{slot: 0 * params.BeaconConfig().SlotsPerEpoch, epoch: 0},
-		{slot: 1 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
-		{slot: 10 * params.BeaconConfig().SlotsPerEpoch, epoch: 10},
-	}
-	for _, tt := range tests {
-		attData := &pb.AttestationData{Slot: tt.slot}
-		if tt.epoch != AttestationCurrentEpoch(attData) {
-			t.Errorf("AttestationEpoch(%d) = %d, wanted: %d", attData.Slot, AttestationCurrentEpoch(attData), tt.epoch)
-		}
-	}
-}
-
 func TestIsEpochStart(t *testing.T) {
 	epochLength := params.BeaconConfig().SlotsPerEpoch
 

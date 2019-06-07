@@ -4,9 +4,30 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
-
 	"github.com/steakknife/hamming"
 )
+
+// SetBitfield takes an index and returns bitfield with the index flipped.
+func SetBitfield(index int, committeeLength int) ([]byte, error) {
+	if index >= committeeLength {
+		return nil, fmt.Errorf("invalid index, as index %d is more than"+
+			" or equal to committee length %d", index, committeeLength)
+	}
+	chunkLocation := index / 8
+	indexLocation := mathutil.PowerOf2(uint64(7 - (index % 8)))
+	var bitfield []byte
+
+	for i := 0; i < chunkLocation; i++ {
+		bitfield = append(bitfield, byte(0))
+	}
+	bitfield = append(bitfield, byte(indexLocation))
+
+	for len(bitfield) < mathutil.CeilDiv8(committeeLength) {
+		bitfield = append(bitfield, byte(0))
+	}
+
+	return bitfield, nil
+}
 
 // CheckBit checks if a bit in a bit field (small endian) is one.
 func CheckBit(bitfield []byte, index int) (bool, error) {
@@ -36,20 +57,6 @@ func BitSetCount(b []byte) int {
 // BitLength returns the length of the bitfield in bytes.
 func BitLength(b int) int {
 	return (b + 7) / 8
-}
-
-// SetBitfield takes an index and returns bitfield with the index flipped.
-func SetBitfield(index int) []byte {
-	chunkLocation := index / 8
-	indexLocation := mathutil.PowerOf2(uint64(7 - (index % 8)))
-	var bitfield []byte
-
-	for i := 0; i < chunkLocation; i++ {
-		bitfield = append(bitfield, byte(0))
-	}
-	bitfield = append(bitfield, byte(indexLocation))
-
-	return bitfield
 }
 
 // FillBitfield returns a bitfield of length `count`, all set to true.

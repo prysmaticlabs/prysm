@@ -7,23 +7,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
+var endpoint = "ws://127.0.0.1"
+
 func TestLatestMainchainInfo_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+
+	beaconDB, err := db.SetupDB()
+	if err != nil {
+		t.Fatalf("unable to set up simulated db instance: %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		HTTPLogger:      &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -39,7 +49,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 	header := &gethTypes.Header{
 		Number: big.NewInt(42),
-		Time:   big.NewInt(308534400),
+		Time:   308534400,
 	}
 
 	web3Service.headerChan <- header
@@ -54,8 +64,8 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
 	}
 
-	if web3Service.blockTime != time.Unix(header.Time.Int64(), 0) {
-		t.Errorf("block time not set, expected %v, got %v", time.Unix(header.Time.Int64(), 0), web3Service.blockTime)
+	if web3Service.blockTime != time.Unix(int64(header.Time), 0) {
+		t.Errorf("block time not set, expected %v, got %v", time.Unix(int64(header.Time), 0), web3Service.blockTime)
 	}
 
 	blockInfoExistsInCache, info, err := web3Service.blockCache.BlockInfoByHash(web3Service.blockHash)
@@ -75,7 +85,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 }
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: &goodFetcher{},
@@ -114,7 +123,6 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 }
 
 func TestBlockExists_ValidHash(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: &goodFetcher{},
@@ -154,7 +162,6 @@ func TestBlockExists_ValidHash(t *testing.T) {
 }
 
 func TestBlockExists_InvalidHash(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: &goodFetcher{},
@@ -170,7 +177,6 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 }
 
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: nil, // nil blockFetcher would panic if cached value not used

@@ -29,7 +29,7 @@ func (db *BeaconDB) VerifyContractAddress(ctx context.Context, addr common.Addre
 		}
 
 		if !bytes.Equal(expectedAddress, addr.Bytes()) {
-			return fmt.Errorf("invalid deposit contract address, expected %#x", expectedAddress)
+			return fmt.Errorf("invalid deposit contract address, expected %#x - try running with --clear-db", expectedAddress)
 		}
 
 		return nil

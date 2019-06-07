@@ -53,7 +53,7 @@ func TestIsValidBlock_NoParent(t *testing.T) {
 
 	db.hasBlock = false
 
-	if err := IsValidBlock(ctx, beaconState, block, true,
+	if err := IsValidBlock(ctx, beaconState, block,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatal("block is valid despite not having a parent")
 	}
@@ -82,7 +82,7 @@ func TestIsValidBlock_InvalidSlot(t *testing.T) {
 		DepositRootHash32: []byte{2},
 		BlockHash32:       []byte{3},
 	}
-	if err := IsValidBlock(ctx, beaconState, block, true,
+	if err := IsValidBlock(ctx, beaconState, block,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid slot %d", block.Slot)
 	}
@@ -112,7 +112,7 @@ func TestIsValidBlock_InvalidPoWReference(t *testing.T) {
 		BlockHash32:       []byte{3},
 	}
 
-	if err := IsValidBlock(ctx, beaconState, block, true,
+	if err := IsValidBlock(ctx, beaconState, block,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid pow reference block")
 	}
@@ -142,7 +142,7 @@ func TestIsValidBlock_InvalidGenesis(t *testing.T) {
 
 	invalidTime := time.Now().AddDate(1, 2, 3)
 
-	if err := IsValidBlock(ctx, beaconState, block, true,
+	if err := IsValidBlock(ctx, beaconState, block,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid genesis time %v", invalidTime)
 	}
@@ -171,7 +171,7 @@ func TestIsValidBlock_GoodBlock(t *testing.T) {
 		Slot: params.BeaconConfig().GenesisSlot + 4,
 	}
 
-	if err := IsValidBlock(ctx, beaconState, block, true,
+	if err := IsValidBlock(ctx, beaconState, block,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err != nil {
 		t.Fatal(err)
 	}

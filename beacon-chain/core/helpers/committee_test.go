@@ -6,8 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var size = 1<<(params.BeaconConfig().RandBytes*8) - 1
@@ -290,7 +293,7 @@ func TestCrosslinkCommitteesAtSlot_ShuffleFailed(t *testing.T) {
 	}
 }
 
-func TestAttestationParticipants_OK(t *testing.T) {
+func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -320,21 +323,21 @@ func TestAttestationParticipants_OK(t *testing.T) {
 			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
 			shard:           2,
 			bitfield:        []byte{0xC0},
-			wanted:          []uint64{11, 121},
+			wanted:          []uint64{11, 14},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           1,
 			bitfield:        []byte{0x80},
-			wanted:          []uint64{4},
+			wanted:          []uint64{5},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           10,
 			bitfield:        []byte{0xC0},
-			wanted:          []uint64{14, 30},
+			wanted:          []uint64{55, 105},
 		},
 	}
 
@@ -438,29 +441,29 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       params.BeaconConfig().GenesisSlot + 146,
-			committee:  []uint64{105, 0},
-			shard:      18,
-			isProposer: false,
-		},
-		{
-			index:      105,
-			slot:       params.BeaconConfig().GenesisSlot + 146,
-			committee:  []uint64{105, 0},
-			shard:      18,
+			slot:       params.BeaconConfig().GenesisSlot + 160,
+			committee:  []uint64{0, 50},
+			shard:      32,
 			isProposer: true,
 		},
 		{
-			index:      64,
-			slot:       params.BeaconConfig().GenesisSlot + 139,
-			committee:  []uint64{64, 52},
-			shard:      11,
+			index:      105,
+			slot:       params.BeaconConfig().GenesisSlot + 130,
+			committee:  []uint64{11, 105},
+			shard:      2,
 			isProposer: false,
+		},
+		{
+			index:      64,
+			slot:       params.BeaconConfig().GenesisSlot + 161,
+			committee:  []uint64{110, 64},
+			shard:      33,
+			isProposer: true,
 		},
 		{
 			index:      11,
 			slot:       params.BeaconConfig().GenesisSlot + 130,
-			committee:  []uint64{11, 121},
+			committee:  []uint64{11, 105},
 			shard:      2,
 			isProposer: true,
 		},
@@ -473,20 +476,20 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 		}
 		if shard != tt.shard {
-			t.Errorf("wanted shard %d, got shard %d",
-				tt.shard, shard)
+			t.Errorf("wanted shard %d, got shard %d for validator index %d",
+				tt.shard, shard, tt.index)
 		}
 		if slot != tt.slot {
-			t.Errorf("wanted slot %d, got slot %d",
-				tt.slot, slot)
+			t.Errorf("wanted slot %d, got slot %d for validator index %d",
+				tt.slot, slot, tt.index)
 		}
 		if isProposer != tt.isProposer {
-			t.Errorf("wanted isProposer %v, got isProposer %v",
-				tt.isProposer, isProposer)
+			t.Errorf("wanted isProposer %v, got isProposer %v for validator index %d",
+				tt.isProposer, isProposer, tt.index)
 		}
 		if !reflect.DeepEqual(committee, tt.committee) {
-			t.Errorf("wanted committee %v, got committee %v",
-				tt.committee, committee)
+			t.Errorf("wanted committee %v, got committee %v for validator index %d",
+				tt.committee, committee, tt.index)
 		}
 	}
 }
@@ -496,11 +499,289 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 	}
 	index := uint64(10000)
-	want := fmt.Sprintf(
-		"could not get assignment validator %d",
-		index,
-	)
-	if _, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
+	_, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false)
+	statusErr, ok := status.FromError(err)
+	if !ok {
+		t.Fatal(err)
 	}
+	if statusErr.Code() != codes.NotFound {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestAttestationParticipants_CommitteeCacheHit(t *testing.T) {
+	slotOffset := uint64(1111)
+	csInSlot := &cache.CommitteesInSlot{
+		Slot: params.BeaconConfig().GenesisSlot + slotOffset,
+		Committees: []*cache.CommitteeInfo{
+			{Shard: 123, Committee: []uint64{55, 105}},
+			{Shard: 234, Committee: []uint64{11, 14}},
+		}}
+
+	if err := committeeCache.AddCommittees(csInSlot); err != nil {
+		t.Fatal(err)
+	}
+
+	attestationData := &pb.AttestationData{
+		Shard: 234,
+		Slot:  params.BeaconConfig().GenesisSlot + uint64(slotOffset),
+	}
+	result, err := AttestationParticipants(&pb.BeaconState{}, attestationData, []byte{0xC0})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := []uint64{11, 14}
+	if !reflect.DeepEqual(wanted, result) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wanted,
+			result,
+		)
+	}
+}
+
+func TestAttestationParticipants_CommitteeCacheMissSaved(t *testing.T) {
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	slotOffset := uint64(10)
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + slotOffset,
+		ValidatorRegistry: validators,
+	}
+
+	attestationData := &pb.AttestationData{
+		Shard: 10,
+		Slot:  params.BeaconConfig().GenesisSlot + slotOffset,
+	}
+
+	result, err := AttestationParticipants(state, attestationData, []byte{0xC0})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := []uint64{55, 105}
+	if !reflect.DeepEqual(wanted, result) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wanted,
+			result,
+		)
+	}
+
+	// Verify the committee for offset slot was cached.
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(params.BeaconConfig().GenesisSlot + slotOffset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(wanted, fetchedCommittees.Committees[0].Committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wanted,
+			fetchedCommittees.Committees[0].Committee,
+		)
+	}
+}
+
+func TestCommitteeAssignment_CommitteeCacheHit(t *testing.T) {
+	slotOffset := uint64(1111)
+	csInSlot := &cache.CommitteesInSlot{
+		Slot: params.BeaconConfig().GenesisSlot + slotOffset,
+		Committees: []*cache.CommitteeInfo{
+			{Shard: 123, Committee: []uint64{55, 105}},
+			{Shard: 234, Committee: []uint64{11, 14}},
+		}}
+
+	if err := committeeCache.AddCommittees(csInSlot); err != nil {
+		t.Fatal(err)
+	}
+
+	committee, shard, _, isProposer, err :=
+		CommitteeAssignment(&pb.BeaconState{Slot: csInSlot.Slot}, csInSlot.Slot, 105, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := []uint64{55, 105}
+	if !reflect.DeepEqual(wanted, committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wanted,
+			committee,
+		)
+	}
+	if shard != csInSlot.Committees[0].Shard {
+		t.Errorf(
+			"Result shard was an expected value. Wanted %d, got %d",
+			csInSlot.Committees[0].Shard,
+			shard,
+		)
+	}
+	if !isProposer {
+		t.Error("Wanted proposer true")
+	}
+}
+
+func TestCommitteeAssignment_CommitteeCacheMissSaved(t *testing.T) {
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	slotOffset := uint64(10)
+	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + slotOffset,
+		ValidatorRegistry: validators,
+	}
+
+	committee, shard, _, isProposer, err :=
+		CommitteeAssignment(state, params.BeaconConfig().GenesisSlot+slotOffset, 105, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantedCommittee := []uint64{55, 105}
+	if !reflect.DeepEqual(wantedCommittee, committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wantedCommittee,
+			committee,
+		)
+	}
+
+	wantedShard := uint64(10)
+	if shard != wantedShard {
+		t.Errorf(
+			"Result shard was an expected value. Wanted %d, got %d",
+			wantedShard,
+			shard,
+		)
+	}
+	if isProposer {
+		t.Error("Wanted proposer false")
+	}
+
+	// Verify the committee for offset slot was cached.
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(params.BeaconConfig().GenesisSlot + slotOffset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(wantedCommittee, fetchedCommittees.Committees[0].Committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wantedCommittee,
+			fetchedCommittees.Committees[0].Committee,
+		)
+	}
+}
+
+func TestVerifyAttestationBitfield_OK(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}
+
+	tests := []struct {
+		attestation         *pb.Attestation
+		stateSlot           uint64
+		errorExists         bool
+		verificationFailure bool
+	}{
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xC0},
+				Data: &pb.AttestationData{
+					Shard: 5,
+					Slot:  params.BeaconConfig().GenesisSlot + 5,
+				},
+			},
+			stateSlot: params.BeaconConfig().GenesisSlot + 5,
+		},
+		{
+
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0x80},
+				Data: &pb.AttestationData{
+					Shard: 10,
+					Slot:  params.BeaconConfig().GenesisSlot + 10,
+				},
+			},
+			stateSlot: params.BeaconConfig().GenesisSlot + 10,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xC0},
+				Data: &pb.AttestationData{
+					Shard: 20,
+					Slot:  params.BeaconConfig().GenesisSlot + 20,
+				},
+			},
+			stateSlot: params.BeaconConfig().GenesisSlot + 20,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xFF, 0xC0},
+				Data: &pb.AttestationData{
+					Shard: 5,
+					Slot:  params.BeaconConfig().GenesisSlot + 5,
+				},
+			},
+			stateSlot:   params.BeaconConfig().GenesisSlot + 5,
+			errorExists: true,
+		},
+		{
+			attestation: &pb.Attestation{
+				AggregationBitfield: []byte{0xFF},
+				Data: &pb.AttestationData{
+					Shard: 20,
+					Slot:  params.BeaconConfig().GenesisSlot + 20,
+				},
+			},
+			stateSlot:           params.BeaconConfig().GenesisSlot + 20,
+			verificationFailure: true,
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+		verified, err := VerifyAttestationBitfield(state, tt.attestation)
+		if tt.errorExists {
+			if err == nil {
+				t.Error("error is nil, when verification is supposed to fail")
+			}
+			continue
+		}
+		if tt.verificationFailure {
+			if verified {
+				t.Error("verification succeeded when it was supposed to fail")
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("Failed to verify bitfield: %v", err)
+			continue
+		}
+		if !verified {
+			t.Error("Bitfield isnt verified")
+		}
+	}
+
 }

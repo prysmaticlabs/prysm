@@ -1,16 +1,19 @@
 package attestation
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -20,136 +23,116 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
+var _ = TargetHandler(&Service{})
+
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{Pubkey: []byte{'A'}}},
-	}); err != nil {
-		t.Fatalf("could not save state: %v", err)
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+		})
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		ValidatorRegistry: validators,
+	}
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x80},
 		Data: &pb.AttestationData{
-			Slot: 5,
+			Slot:  params.BeaconConfig().GenesisSlot + 1,
+			Shard: 1,
 		},
 	}
 
-	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48([]byte{'A'})
-	if service.Store[pubkey].Data.Slot !=
+	pubkey := bytesutil.ToBytes48([]byte{byte(3)})
+	if service.store.m[pubkey].Data.Slot !=
 		attestation.Data.Slot {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.Store[pubkey].Data.Slot)
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
 
-	attestation.Data.Slot = 100
-	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
+	beaconState = &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 36,
+		ValidatorRegistry: validators,
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	attestation.Data.Slot = params.BeaconConfig().GenesisSlot + 36
+	attestation.Data.Shard = 36
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	if service.Store[pubkey].Data.Slot !=
+	if service.store.m[pubkey].Data.Slot !=
 		attestation.Data.Slot {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.Store[pubkey].Data.Slot)
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
 }
 
 func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
-	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{Pubkey: []byte{'A'}}},
-	}); err != nil {
-		t.Fatalf("could not save state: %v", err)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+		})
+	}
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		ValidatorRegistry: validators,
+	}
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
 	}
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x80},
-		Data:                &pb.AttestationData{},
+		Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot + 1,
+			Shard: 1,
+		},
 	}
 
-	exitRoutine := make(chan bool)
-	go func() {
-		service.attestationPool()
-		<-exitRoutine
-	}()
-	service.incomingChan <- attestation
-
-	service.cancel()
-	exitRoutine <- true
-
-	testutil.AssertLogsContain(t, hook, "Updated attestation pool for attestation")
-}
-
-func TestLatestAttestation_ReturnsLatestAttestation(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	pubKey := []byte{'A'}
-	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
-	}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-
-	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-	pubKey48 := bytesutil.ToBytes48(pubKey)
-	attestation := &pb.Attestation{AggregationBitfield: []byte{'B'}}
-	service.Store[pubKey48] = attestation
-
-	latestAttestation, err := service.LatestAttestation(ctx, 0)
-	if err != nil {
-		t.Fatalf("Could not get latest attestation: %v", err)
-	}
-	if !reflect.DeepEqual(attestation, latestAttestation) {
-		t.Errorf("Wanted: %v, got: %v", attestation, latestAttestation)
-	}
-}
-
-func TestLatestAttestation_InvalidIndex(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{},
-	}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-
-	index := uint64(0)
-	want := fmt.Sprintf("invalid validator index %d", index)
-	if _, err := service.LatestAttestation(ctx, index); !strings.Contains(err.Error(), want) {
-		t.Errorf("Wanted error to contain %s, received %v", want, err)
-	}
-}
-
-func TestLatestAttestation_NoAttestation(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{}},
-	}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-
-	index := 0
-	want := fmt.Sprintf("validator index %d does not have an attestation", index)
-	if _, err := service.LatestAttestation(ctx, uint64(index)); !strings.Contains(err.Error(), want) {
-		t.Errorf("Wanted error to contain %s, received %v", want, err)
+	if err := service.handleAttestation(context.Background(), attestation); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -158,16 +141,21 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	if err := beaconDB.SaveState(&pb.BeaconState{
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{}},
+		LatestBlock:       &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+	headState, err := beaconDB.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	index := uint64(100)
-	want := fmt.Sprintf("could not get attestation: invalid validator index %d", index)
-	if _, err := service.LatestAttestationTarget(ctx, index); !strings.Contains(err.Error(), want) {
+	want := fmt.Sprintf("invalid validator index %d", index)
+	if _, err := service.LatestAttestationTarget(headState, index); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
 	}
 }
@@ -178,8 +166,9 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := beaconDB.SaveState(&pb.BeaconState{
+	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
+		LatestBlock:       &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -192,6 +181,13 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
 	}
+	if err := beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+		Slot:       block.Slot,
+		BlockRoot:  blockRoot[:],
+		ParentRoot: []byte{},
+	}); err != nil {
+		log.Fatalf("could not save att target: %v", err)
+	}
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
@@ -200,13 +196,311 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 			BeaconBlockRootHash32: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
-	service.Store[pubKey48] = attestation
+	service.store.m[pubKey48] = attestation
 
-	latestAttestedBlock, err := service.LatestAttestationTarget(ctx, 0)
+	headState, err := beaconDB.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	latestAttestedTarget, err := service.LatestAttestationTarget(headState, 0)
 	if err != nil {
 		t.Fatalf("Could not get latest attestation: %v", err)
 	}
-	if !reflect.DeepEqual(block, latestAttestedBlock) {
-		t.Errorf("Wanted: %v, got: %v", block, latestAttestedBlock)
+
+	if !bytes.Equal(blockRoot[:], latestAttestedTarget.BlockRoot) {
+		t.Errorf("Wanted: %v, got: %v", blockRoot[:], latestAttestedTarget.BlockRoot)
+	}
+}
+
+func TestUpdateLatestAttestation_CacheEnabledAndMiss(t *testing.T) {
+
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+		})
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		ValidatorRegistry: validators,
+	}
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+
+	attestation := &pb.Attestation{
+		AggregationBitfield: []byte{0x80},
+		Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot + 1,
+			Shard: 1,
+		},
+	}
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	pubkey := bytesutil.ToBytes48([]byte{byte(3)})
+	if service.store.m[pubkey].Data.Slot !=
+		attestation.Data.Slot {
+		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	}
+
+	attestation.Data.Slot = params.BeaconConfig().GenesisSlot + 36
+	attestation.Data.Shard = 36
+
+	beaconState = &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 36,
+		ValidatorRegistry: validators,
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	if service.store.m[pubkey].Data.Slot !=
+		attestation.Data.Slot {
+		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	}
+
+	// Verify the committee for attestation's data slot was cached.
+	fetchedCommittees, err := committeeCache.CommitteesInfoBySlot(attestation.Data.Slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedCommittee := []uint64{38}
+	if !reflect.DeepEqual(wantedCommittee, fetchedCommittees.Committees[0].Committee) {
+		t.Errorf(
+			"Result indices was an unexpected value. Wanted %d, got %d",
+			wantedCommittee,
+			fetchedCommittees.Committees[0].Committee,
+		)
+	}
+}
+
+func TestUpdateLatestAttestation_CacheEnabledAndHit(t *testing.T) {
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+		})
+	}
+
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 2,
+		ValidatorRegistry: validators,
+	}
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 2,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+
+	slot := params.BeaconConfig().GenesisSlot + 2
+	shard := uint64(3)
+	index := uint64(4)
+	attestation := &pb.Attestation{
+		AggregationBitfield: []byte{0x80},
+		Data: &pb.AttestationData{
+			Slot:  slot,
+			Shard: shard,
+		},
+	}
+
+	csInSlot := &cache.CommitteesInSlot{
+		Slot: slot,
+		Committees: []*cache.CommitteeInfo{
+			{Shard: shard, Committee: []uint64{index, 999}},
+		}}
+
+	if err := committeeCache.AddCommittees(csInSlot); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+	pubkey := bytesutil.ToBytes48([]byte{byte(index)})
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
+	}
+
+	if service.store.m[pubkey].Data.Slot !=
+		attestation.Data.Slot {
+		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
+	}
+}
+
+func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	hook := logTest.NewGlobal()
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+		})
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		ValidatorRegistry: validators,
+	}
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+	attestation := &pb.Attestation{
+		AggregationBitfield: []byte{0xC0},
+		Data: &pb.AttestationData{
+			Slot:  params.BeaconConfig().GenesisSlot + 1,
+			Shard: 1,
+		},
+	}
+
+	wanted := "bitfield points to an invalid index in the committee"
+
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
+		t.Error(err)
+	}
+
+	testutil.AssertLogsContain(t, hook, wanted)
+}
+
+func TestBatchUpdate_FromSync(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+		})
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		ValidatorRegistry: validators,
+	}
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+	service.poolLimit = 9
+	for i := 0; i < 10; i++ {
+		attestation := &pb.Attestation{
+			AggregationBitfield: []byte{0x80},
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + 1,
+				Shard: 1,
+			},
+		}
+		if err := service.handleAttestation(ctx, attestation); err != nil {
+			t.Fatalf("could not update latest attestation: %v", err)
+		}
+	}
+	if len(service.pooledAttestations) != 0 {
+		t.Errorf("pooled attestations were not cleared out, still %d attestations in pool", len(service.pooledAttestations))
+	}
+}
+
+func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 10,
+		})
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot + 1,
+		ValidatorRegistry: validators,
+	}
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 1,
+	}
+	if err := beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlock = block
+	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
+	attestations := make([]*pb.Attestation, 0)
+	for i := 0; i < 10; i++ {
+		attestations = append(attestations, &pb.Attestation{
+			AggregationBitfield: []byte{0x80},
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + 1,
+				Shard: 1,
+			},
+		})
+	}
+
+	if err := service.BatchUpdateLatestAttestation(ctx, attestations); err != nil {
+		t.Fatalf("could not update latest attestation: %v", err)
 	}
 }

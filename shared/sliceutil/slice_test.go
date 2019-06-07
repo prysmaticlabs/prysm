@@ -5,93 +5,6 @@ import (
 	"testing"
 )
 
-func TestIntersection(t *testing.T) {
-	testCases := []struct {
-		setA []uint64
-		setB []uint64
-		out  []uint64
-	}{
-		{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
-		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
-		{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
-		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
-		{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
-		{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
-		{[]uint64{}, []uint64{}, []uint64{}},
-		{[]uint64{1}, []uint64{1}, []uint64{1}},
-	}
-	for _, tt := range testCases {
-		result := Intersection(tt.setA, tt.setB)
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
-		}
-	}
-}
-
-func TestUnion(t *testing.T) {
-	testCases := []struct {
-		setA []uint64
-		setB []uint64
-		out  []uint64
-	}{
-		{[]uint64{2, 3, 5}, []uint64{4, 6}, []uint64{2, 3, 5, 4, 6}},
-		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{2, 3, 5}},
-		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
-		{[]uint64{2, 3, 5}, []uint64{}, []uint64{2, 3, 5}},
-		{[]uint64{}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
-		{[]uint64{}, []uint64{}, []uint64{}},
-		{[]uint64{1}, []uint64{1}, []uint64{1}},
-	}
-	for _, tt := range testCases {
-		result := Union(tt.setA, tt.setB)
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
-		}
-	}
-}
-
-func TestNot(t *testing.T) {
-	testCases := []struct {
-		setA []uint64
-		setB []uint64
-		out  []uint64
-	}{
-		{[]uint64{4, 6}, []uint64{2, 3, 5, 4, 6}, []uint64{2, 3, 5}},
-		{[]uint64{3, 5}, []uint64{2, 3, 5}, []uint64{2}},
-		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{}},
-		{[]uint64{2}, []uint64{2, 3, 5}, []uint64{3, 5}},
-		{[]uint64{}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
-		{[]uint64{}, []uint64{}, []uint64{}},
-		{[]uint64{1}, []uint64{1}, []uint64{}},
-	}
-	for _, tt := range testCases {
-		result := Not(tt.setA, tt.setB)
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
-		}
-	}
-}
-
-func TestIsIn(t *testing.T) {
-	testCases := []struct {
-		a      uint64
-		b      []uint64
-		result bool
-	}{
-		{0, []uint64{}, false},
-		{0, []uint64{0}, true},
-		{4, []uint64{2, 3, 5, 4, 6}, true},
-		{100, []uint64{2, 3, 5, 4, 6}, false},
-	}
-	for _, tt := range testCases {
-		result := IsIn(tt.a, tt.b)
-		if result != tt.result {
-			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
-				tt.a, tt.b, result, tt.result)
-		}
-	}
-}
-
 func TestIntersectionUint64(t *testing.T) {
 	testCases := []struct {
 		setA []uint64
@@ -114,31 +27,6 @@ func TestIntersectionUint64(t *testing.T) {
 		}
 
 	}
-}
-
-func TestIntersectionint64(t *testing.T) {
-	testCases := []struct {
-		setA []int64
-		setB []int64
-		out  []int64
-	}{
-		{[]int64{2, 3, 5}, []int64{3}, []int64{3}},
-		{[]int64{2, 3, 5}, []int64{3, 5}, []int64{3, 5}},
-		{[]int64{2, 3, 5}, []int64{5, 3, 2}, []int64{5, 3, 2}},
-		{[]int64{2, 3, 5}, []int64{2, 3, 5}, []int64{2, 3, 5}},
-		{[]int64{2, 3, 5}, []int64{}, []int64{}},
-		{[]int64{}, []int64{2, 3, 5}, []int64{}},
-		{[]int64{}, []int64{}, []int64{}},
-		{[]int64{1}, []int64{1}, []int64{1}},
-	}
-	for _, tt := range testCases {
-		result := Intersectionint64(tt.setA, tt.setB)
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
-		}
-
-	}
-
 }
 
 func TestIntersectionInt64(t *testing.T) {
@@ -189,30 +77,6 @@ func TestUnionUint64(t *testing.T) {
 	}
 }
 
-func TestUnionint64(t *testing.T) {
-	testCases := []struct {
-		setA []int64
-		setB []int64
-		out  []int64
-	}{
-		{[]int64{2, 3, 5}, []int64{4, 6}, []int64{2, 3, 5, 4, 6}},
-		{[]int64{2, 3, 5}, []int64{3, 5}, []int64{2, 3, 5}},
-		{[]int64{2, 3, 5}, []int64{2, 3, 5}, []int64{2, 3, 5}},
-		{[]int64{2, 3, 5}, []int64{}, []int64{2, 3, 5}},
-		{[]int64{}, []int64{2, 3, 5}, []int64{2, 3, 5}},
-		{[]int64{}, []int64{}, []int64{}},
-		{[]int64{1}, []int64{1}, []int64{1}},
-	}
-	for _, tt := range testCases {
-		result := Unionint64(tt.setA, tt.setB)
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
-		}
-
-	}
-
-}
-
 func TestUnionInt64(t *testing.T) {
 	testCases := []struct {
 		setA []int64
@@ -234,6 +98,7 @@ func TestUnionInt64(t *testing.T) {
 		}
 
 	}
+
 }
 
 func TestNotUint64(t *testing.T) {
@@ -280,28 +145,6 @@ func TestNotInt64(t *testing.T) {
 	}
 }
 
-func TestNotint64(t *testing.T) {
-	testCases := []struct {
-		setA []int64
-		setB []int64
-		out  []int64
-	}{
-		{[]int64{4, 6}, []int64{2, 3, 5, 4, 6}, []int64{2, 3, 5}},
-		{[]int64{3, 5}, []int64{2, 3, 5}, []int64{2}},
-		{[]int64{2, 3, 5}, []int64{2, 3, 5}, []int64{}},
-		{[]int64{2}, []int64{2, 3, 5}, []int64{3, 5}},
-		{[]int64{}, []int64{2, 3, 5}, []int64{2, 3, 5}},
-		{[]int64{}, []int64{}, []int64{}},
-		{[]int64{1}, []int64{1}, []int64{}},
-	}
-	for _, tt := range testCases {
-		result := Notint64(tt.setA, tt.setB)
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
-		}
-	}
-}
-
 func TestIsInUint64(t *testing.T) {
 	testCases := []struct {
 		a      uint64
@@ -315,26 +158,6 @@ func TestIsInUint64(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		result := IsInUint64(tt.a, tt.b)
-		if result != tt.result {
-			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
-				tt.a, tt.b, result, tt.result)
-		}
-	}
-}
-
-func TestIsInint64(t *testing.T) {
-	testCases := []struct {
-		a      int64
-		b      []int64
-		result bool
-	}{
-		{0, []int64{}, false},
-		{0, []int64{0}, true},
-		{4, []int64{2, 3, 5, 4, 6}, true},
-		{100, []int64{2, 3, 5, 4, 6}, false},
-	}
-	for _, tt := range testCases {
-		result := IsInint64(tt.a, tt.b)
 		if result != tt.result {
 			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
 				tt.a, tt.b, result, tt.result)

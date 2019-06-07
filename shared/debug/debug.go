@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	_ "net/http/pprof" // required to serve pprof http endpoints.
 	"os"
 	"os/user"
 	"path/filepath"
@@ -354,7 +355,7 @@ func Setup(ctx *cli.Context) error {
 
 func startPProf(address string) {
 	http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
-	log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))
+	log.WithField("addr", fmt.Sprintf("http://%s/debug/pprof", address)).Info("Starting pprof server")
 	go func() {
 		if err := http.ListenAndServe(address, nil); err != nil {
 			log.Error("Failure in running pprof server", "err", err)

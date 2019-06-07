@@ -1294,9 +1294,9 @@ solium-plugin-security@0.1.1:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/solium-plugin-security/-/solium-plugin-security-0.1.1.tgz#2a87bcf8f8c3abf7d198e292e4ac080284e3f3f6"
 
-solium@1.2.3:
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/solium/-/solium-1.2.3.tgz#88167ea6c8f7d1b68b59d3a6a78d563ca455ecdd"
+solium@1.2.4:
+  version "1.2.4"
+  resolved "https://registry.yarnpkg.com/solium/-/solium-1.2.4.tgz#7908806e5e6c596ddb18b7aa64757752428ce238"
   dependencies:
     ajv "^5.2.2"
     chokidar "^1.6.0"

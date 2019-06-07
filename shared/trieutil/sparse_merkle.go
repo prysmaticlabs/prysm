@@ -3,6 +3,7 @@ package trieutil
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -86,8 +87,11 @@ func (m *MerkleTrie) Items() [][]byte {
 // index in the Merkle trie up to the root of the trie.
 func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][]byte, error) {
 	lastLevel := m.branches[len(m.branches)-1]
-	if merkleIndex < 0 || merkleIndex >= len(lastLevel) || bytes.Equal(lastLevel[merkleIndex], []byte{}) {
-		return nil, errors.New("merkle index out of range in trie")
+	if merkleIndex < 0 || merkleIndex >= len(lastLevel) {
+		return nil, fmt.Errorf("merkle index out of range in trie, max range: %d, received: %d", len(lastLevel), merkleIndex)
+	}
+	if bytes.Equal(lastLevel[merkleIndex], []byte{}) {
+		return nil, fmt.Errorf("merkle index out of range in trie, key is empty at index: %d", merkleIndex)
 	}
 	branchIndices := BranchIndices(merkleIndex, len(m.branches))
 	// We create a list of proof indices, which do not include the root so the length

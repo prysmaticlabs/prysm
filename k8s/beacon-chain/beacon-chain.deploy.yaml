@@ -6,18 +6,25 @@ metadata:
 spec:
   replicas: 3
   serviceName: beacon-chain
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       component: beacon-chain
       universe: beacon-chain
+      app: beacon-chain
   template:
     metadata:
       labels:
         component: beacon-chain
         universe: beacon-chain
+        app: beacon-chain
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9090'
+        # Disable sidecar proxy for p2p.
+        traffic.sidecar.istio.io/excludeInboundPorts: '5000'
+        traffic.sidecar.istio.io/includeInboundPorts: '*'
+        traffic.sidecar.istio.io/includeOutboundIPRanges: ''
     spec:
       priorityClassName: production-priority
       affinity:
@@ -38,23 +45,28 @@ spec:
         - name: beacon-chain
           image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
           args: 
-            - --web3provider=ws://public-rpc-nodes.pow.svc.cluster.local:8546
+            - --web3provider=wss://goerli.infura.io/ws/v3/be3fb7ed377c418087602876a40affa1
+            - --http-web3provider=https://goerli.infura.io/v3/be3fb7ed377c418087602876a40affa1
             #- --verbosity=debug
             - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
             - --rpc-port=4000
             - --monitoring-port=9090
-            - --bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw
+            - --bootstrap-node=/dns4/bootnode/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw
             - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK
             - --p2p-port=5000
-            - --demo-config
-            - --enable-tracing
-            - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
+            - --p2p-whitelist=10.0.0.0/8 # Allow only cluster internal connections. External peers reach these nodes from the relay.
+            #- --enable-tracing
+            - --tracing-process-name=$(POD_NAME)
+            - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces
             - --trace-sample-fraction=1.0
             - --datadir=/data
+            - --p2p-max-peers=50
+            - --pprof
+            #- --log-format=fluentd
           resources:
             requests:
-              memory: "100Mi"
-              cpu: "50m"
+              memory: "500Mi"
+              cpu: "250m"
           volumeMounts:
           - mountPath: /data
             name: beacondb
@@ -71,6 +83,23 @@ spec:
                 configMapKeyRef:
                   name: beacon-config
                   key: DEPOSIT_CONTRACT_ADDRESS
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          readinessProbe:
+            initialDelaySeconds: 60
+            httpGet:
+              path: /healthz
+              port: 9090
+          livenessProbe:
+            initialDelaySeconds: 60
+            failureThreshold: 30 # Fails consistently for 5 minutes
+            periodSeconds: 10
+            httpGet:
+              path: /healthz
+              port: 9090
+
   volumeClaimTemplates:
   - metadata:
       name: beacondb

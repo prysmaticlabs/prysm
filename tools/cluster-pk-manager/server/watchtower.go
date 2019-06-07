@@ -40,7 +40,6 @@ func (wt *watchtower) WatchPods() {
 
 // Query k8s pods for existence.
 func (wt *watchtower) queryPodsAndUpdateDB() error {
-	//	log.Debug("Checking pods")
 	ctx := context.Background()
 	podNames, err := wt.db.AllocatedPodNames(ctx)
 	if err != nil {

@@ -6,25 +6,32 @@ package validators
 
 import (
 	"bytes"
-	"context"
 	"fmt"
+	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"go.opencensus.io/trace"
+	"github.com/sirupsen/logrus"
 )
 
-var (
-	// ActivatedValidators is a mapping that tracks epoch to activated validators indexes.
-	// Where key is epoch, value is a list of activated validator indexes.
-	ActivatedValidators = make(map[uint64][]uint64)
-	// ExitedValidators is a mapping that tracks epoch to exited validators indexes.
-	// Where key is epoch, value is a list of exited validator indexes.
-	ExitedValidators = make(map[uint64][]uint64)
-)
+var log = logrus.WithField("prefix", "validator")
+
+type validatorStore struct {
+	sync.RWMutex
+	// activatedValidators is a mapping that tracks validator activation epoch to validators index.
+	activatedValidators map[uint64][]uint64
+	// exitedValidators is a mapping that tracks validator exit epoch to validators index.
+	exitedValidators map[uint64][]uint64
+}
+
+var vStore = validatorStore{
+	activatedValidators: make(map[uint64][]uint64),
+	exitedValidators:    make(map[uint64][]uint64),
+}
 
 // ValidatorIndices returns all the validator indices from the input attestations
 // and state.
@@ -34,13 +41,9 @@ var (
 //   index sets given by [get_attestation_participants(state, a.data, a.aggregation_bitfield)
 //   for a in attestations]
 func ValidatorIndices(
-	ctx context.Context,
 	state *pb.BeaconState,
 	attestations []*pb.PendingAttestation,
 ) ([]uint64, error) {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ValidatorIndices")
-	defer span.End()
 
 	var attesterIndicesIntersection []uint64
 	for _, attestation := range attestations {
@@ -52,7 +55,7 @@ func ValidatorIndices(
 			return nil, err
 		}
 
-		attesterIndicesIntersection = sliceutil.Union(attesterIndicesIntersection, attesterIndices)
+		attesterIndicesIntersection = sliceutil.UnionUint64(attesterIndicesIntersection, attesterIndices)
 	}
 
 	return attesterIndicesIntersection, nil
@@ -85,7 +88,7 @@ func AttestingValidatorIndices(
 			if err != nil {
 				return nil, fmt.Errorf("could not get attester indices: %v", err)
 			}
-			validatorIndicesCommittees = sliceutil.Union(validatorIndicesCommittees, validatorIndicesCommittee)
+			validatorIndicesCommittees = sliceutil.UnionUint64(validatorIndicesCommittees, validatorIndicesCommittee)
 		}
 	}
 	return validatorIndicesCommittees, nil
@@ -114,12 +117,13 @@ func ProcessDeposit(
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
 		newValidator := &pb.Validator{
-			Pubkey:          pubkey,
-			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
-			StatusFlags:     0,
+			Pubkey:                      pubkey,
+			ActivationEpoch:             params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
+			StatusFlags:                 0,
+			WithdrawalCredentialsHash32: withdrawalCredentials,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
@@ -128,14 +132,21 @@ func ProcessDeposit(
 			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
 			withdrawalCredentials,
 		) {
-			return nil, fmt.Errorf(
+			return state, fmt.Errorf(
 				"expected withdrawal credentials to match, received %#x == %#x",
 				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
 				withdrawalCredentials,
 			)
 		}
-		state.ValidatorBalances[existingValidatorIdx] += amount
+		newBalance := state.ValidatorBalances[existingValidatorIdx] + amount
+		state.ValidatorBalances[existingValidatorIdx] = newBalance
+
+		if !featureconfig.FeatureConfig().EnableExcessDeposits && newBalance > params.BeaconConfig().MaxDepositAmount {
+			state.ValidatorBalances[existingValidatorIdx] = params.BeaconConfig().MaxDepositAmount
+		}
 	}
+	state.DepositIndex++
+
 	return state, nil
 }
 
@@ -160,6 +171,12 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 	}
 
 	state.ValidatorRegistry[idx] = validator
+
+	log.WithFields(logrus.Fields{
+		"index":           idx,
+		"activationEpoch": validator.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+	}).Info("Validator activated")
+
 	return state, nil
 }
 
@@ -195,11 +212,10 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	validator := state.ValidatorRegistry[idx]
 
-	exitEpoch := entryExitEffectEpoch(helpers.CurrentEpoch(state))
-	if validator.ExitEpoch <= exitEpoch {
+	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state
 	}
-	validator.ExitEpoch = exitEpoch
+	validator.ExitEpoch = entryExitEffectEpoch(helpers.CurrentEpoch(state))
 	return state
 }
 
@@ -292,11 +308,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //            exit_validator(state, index)
 //
 //    state.validator_registry_update_epoch = current_epoch
-func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.UpdateRegistry")
-	defer span.End()
-
+func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	updatedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
@@ -309,11 +321,21 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 
 	var balChurn uint64
 	var err error
+	vStore.Lock()
+	defer vStore.Unlock()
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
-			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
+			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount &&
+			!helpers.IsActiveValidator(validator, currentEpoch) {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
+			log.WithFields(logrus.Fields{
+				"index":               idx,
+				"currentBalanceChurn": balChurn,
+				"maxBalanceChurn":     maxBalChurn,
+				"currentEpoch":        currentEpoch - params.BeaconConfig().GenesisEpoch,
+			}).Info("Attempting to activate validator")
+
 			if balChurn > maxBalChurn {
 				break
 			}
@@ -321,7 +343,8 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator %d: %v", idx, err)
 			}
-			ActivatedValidators[updatedEpoch] = append(ActivatedValidators[updatedEpoch], uint64(idx))
+			vStore.activatedValidators[updatedEpoch] =
+				append(vStore.activatedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 
@@ -335,7 +358,8 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 				break
 			}
 			state = ExitValidator(state, uint64(idx))
-			ExitedValidators[updatedEpoch] = append(ExitedValidators[updatedEpoch], uint64(idx))
+			vStore.exitedValidators[updatedEpoch] =
+				append(vStore.exitedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 	state.ValidatorRegistryUpdateEpoch = currentEpoch
@@ -384,10 +408,7 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 //        withdrawn_so_far += 1
 //        if withdrawn_so_far >= MAX_EXIT_DEQUEUES_PER_EPOCH:
 //            break
-func ProcessPenaltiesAndExits(ctx context.Context, state *pb.BeaconState) *pb.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessPenaltiesAndExits")
-	defer span.End()
-
+func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, currentEpoch)
@@ -430,6 +451,73 @@ func ProcessPenaltiesAndExits(ctx context.Context, state *pb.BeaconState) *pb.Be
 	return state
 }
 
+// InitializeValidatorStore sets the current active validators from the current
+// state.
+func InitializeValidatorStore(bState *pb.BeaconState) {
+	vStore.Lock()
+	defer vStore.Unlock()
+
+	currentEpoch := helpers.CurrentEpoch(bState)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(
+		bState.ValidatorRegistry, currentEpoch)
+	vStore.activatedValidators[currentEpoch] = activeValidatorIndices
+}
+
+// InsertActivatedIndices locks the validator store, inserts the activated validator
+// indices corresponding to their activation epochs.
+func InsertActivatedIndices(epoch uint64, indices []uint64) {
+	vStore.Lock()
+	defer vStore.Unlock()
+	vStore.activatedValidators[epoch] = append(vStore.activatedValidators[epoch], indices...)
+}
+
+// InsertExitedVal locks the validator store, inserts the exited validator
+// indices, then unlocks the store again. This method may be used by
+// external services in testing to remove the validator store.
+func InsertExitedVal(epoch uint64, validators []uint64) {
+	vStore.Lock()
+	defer vStore.Unlock()
+	vStore.exitedValidators[epoch] = validators
+}
+
+// ActivatedValFromEpoch locks the validator store, retrieves the activated validator
+// indices of a given epoch, then unlocks the store again.
+func ActivatedValFromEpoch(epoch uint64) []uint64 {
+	vStore.RLock()
+	defer vStore.RUnlock()
+	if _, exists := vStore.activatedValidators[epoch]; !exists {
+		return nil
+	}
+	return vStore.activatedValidators[epoch]
+}
+
+// ExitedValFromEpoch locks the validator store, retrieves the exited validator
+// indices of a given epoch, then unlocks the store again.
+func ExitedValFromEpoch(epoch uint64) []uint64 {
+	vStore.RLock()
+	defer vStore.RUnlock()
+	if _, exists := vStore.exitedValidators[epoch]; !exists {
+		return nil
+	}
+	return vStore.exitedValidators[epoch]
+}
+
+// DeleteActivatedVal locks the validator store, delete the activated validator
+// indices of a given epoch, then unlocks the store again.
+func DeleteActivatedVal(epoch uint64) {
+	vStore.Lock()
+	defer vStore.Unlock()
+	delete(vStore.activatedValidators, epoch)
+}
+
+// DeleteExitedVal locks the validator store, delete the exited validator
+// indices of a given epoch, then unlocks the store again.
+func DeleteExitedVal(epoch uint64) {
+	vStore.Lock()
+	defer vStore.Unlock()
+	delete(vStore.exitedValidators, epoch)
+}
+
 // allValidatorsIndices returns all validator indices from 0 to
 // the last validator.
 func allValidatorsIndices(state *pb.BeaconState) []uint64 {
@@ -448,7 +536,7 @@ func allValidatorsIndices(state *pb.BeaconState) []uint64 {
 //        MAX_DEPOSIT_AMOUNT,
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
-	maxBalanceChurn := totalBalance / 2 * params.BeaconConfig().MaxBalanceChurnQuotient
+	maxBalanceChurn := totalBalance / (2 * params.BeaconConfig().MaxBalanceChurnQuotient)
 	if maxBalanceChurn > params.BeaconConfig().MaxDepositAmount {
 		return maxBalanceChurn
 	}

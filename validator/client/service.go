@@ -19,46 +19,62 @@ var log = logrus.WithField("prefix", "validator")
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	ctx       context.Context
-	cancel    context.CancelFunc
-	validator Validator
-	conn      *grpc.ClientConn
-	endpoint  string
-	withCert  string
-	key       *keystore.Key
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	validator            Validator
+	conn                 *grpc.ClientConn
+	endpoint             string
+	withCert             string
+	key                  *keystore.Key
+	keys                 map[string]*keystore.Key
+	logValidatorBalances bool
 }
 
 // Config for the validator service.
 type Config struct {
-	Endpoint     string
-	CertFlag     string
-	KeystorePath string
-	Password     string
+	Endpoint             string
+	CertFlag             string
+	KeystorePath         string
+	Password             string
+	LogValidatorBalances bool
 }
 
 // NewValidatorService creates a new validator service for the service
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	validatorKeyFile := cfg.KeystorePath + params.BeaconConfig().ValidatorPrivkeyFileName
+	validatorFolder := cfg.KeystorePath
+	validatorPrefix := params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(cfg.KeystorePath)
-	key, err := ks.GetKey(validatorKeyFile, cfg.Password)
+	keys, err := ks.GetKeys(validatorFolder, validatorPrefix, cfg.Password)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("could not get private key: %v", err)
 	}
+	var key *keystore.Key
+	for _, v := range keys {
+		key = v
+		break
+	}
 	return &ValidatorService{
-		ctx:      ctx,
-		cancel:   cancel,
-		endpoint: cfg.Endpoint,
-		withCert: cfg.CertFlag,
-		key:      key,
+		ctx:                  ctx,
+		cancel:               cancel,
+		endpoint:             cfg.Endpoint,
+		withCert:             cfg.CertFlag,
+		keys:                 keys,
+		key:                  key,
+		logValidatorBalances: cfg.LogValidatorBalances,
 	}, nil
 }
 
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	log.WithField("publicKey", fmt.Sprintf("%#x", v.key.PublicKey.Marshal())).Info("Initializing new validator service")
+	pubkeys := make([][]byte, 0)
+	for i := range v.keys {
+		log.WithField("publicKey", fmt.Sprintf("%#x", v.keys[i].PublicKey.Marshal())).Info("Initializing new validator service")
+		pubkeys = append(pubkeys, v.keys[i].PublicKey.Marshal())
+	}
 
 	var dialOpt grpc.DialOption
 	if v.withCert != "" {
@@ -80,11 +96,13 @@ func (v *ValidatorService) Start() {
 	log.Info("Successfully started gRPC connection")
 	v.conn = conn
 	v.validator = &validator{
-		beaconClient:    pb.NewBeaconServiceClient(v.conn),
-		validatorClient: pb.NewValidatorServiceClient(v.conn),
-		attesterClient:  pb.NewAttesterServiceClient(v.conn),
-		proposerClient:  pb.NewProposerServiceClient(v.conn),
-		key:             v.key,
+		beaconClient:         pb.NewBeaconServiceClient(v.conn),
+		validatorClient:      pb.NewValidatorServiceClient(v.conn),
+		attesterClient:       pb.NewAttesterServiceClient(v.conn),
+		proposerClient:       pb.NewProposerServiceClient(v.conn),
+		keys:                 v.keys,
+		pubkeys:              pubkeys,
+		logValidatorBalances: v.logValidatorBalances,
 	}
 	go run(v.ctx, v.validator)
 }
