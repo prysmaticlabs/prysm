@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -22,52 +22,45 @@ import (
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
-	if slot == params.BeaconConfig().GenesisSlot {
+func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
+	if slot == 0 {
 		log.Info("Assigned to genesis slot, skipping proposal")
 		return
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[idx].PublicKey.Marshal())))
-	truncatedPk := idx
-	if len(idx) > 12 {
-		truncatedPk = idx[:12]
-	}
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())))
+	truncatedPk := bytesutil.Trunc([]byte(pk))
+
 	log.WithFields(logrus.Fields{"validator": truncatedPk}).Info("Performing a beacon block proposal...")
+
 	// 1. Fetch data from Beacon Chain node.
-	// Get current head beacon block.
-	headBlock, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
+	// Get current head beacon block has parent.
+	parent, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch CanonicalHead")
 		return
 	}
-	parentTreeRoot, err := hashutil.HashBeaconBlock(headBlock)
+	parentTreeRoot, err := hashutil.HashBeaconBlock(parent)
 	if err != nil {
 		log.WithError(err).Error("Failed to hash parent block")
 		return
 	}
 
 	// Get validator ETH1 deposits which have not been included in the beacon chain.
-	pDepResp, err := v.beaconClient.PendingDeposits(ctx, &ptypes.Empty{})
+	pDepResp, err := v.proposerClient.PendingDeposits(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to get pendings deposits")
 		return
 	}
 
 	// Get ETH1 data.
-	eth1DataResp, err := v.beaconClient.Eth1Data(ctx, &ptypes.Empty{})
+	eth1DataResp, err := v.proposerClient.Eth1Data(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to get ETH1 data")
 		return
 	}
 
-	// Retrieve the current fork data from the beacon node.
-	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
-	if err != nil {
-		log.WithError(err).Error("Failed to get fork data from beacon node's state")
-		return
-	}
 	// Then, we generate a RandaoReveal by signing the block's slot information using
 	// the validator's private key.
 	// epoch_signature = bls_sign(
@@ -79,11 +72,18 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	//	   domain_type=DOMAIN_RANDAO,
 	//   )
 	// )
+
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	// Retrieve the current fork data from the beacon node.
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch})
+	if err != nil {
+		log.WithError(err).Error("Failed to get domain data from beacon node's state")
+		return
+	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
-	epochSignature := v.keys[idx].SecretKey.Sign(buf, domain)
+
+	epochSignature := v.keys[pk].SecretKey.Sign(buf, domain.SignatureDomain)
 
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
@@ -139,7 +139,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 		trace.Int64Attribute("numAttestations", int64(len(block.Body.Attestations))),
 	)
 	log.WithFields(logrus.Fields{
-		"slot":            block.Slot - params.BeaconConfig().GenesisSlot,
+		"slot":            block.Slot,
 		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRootHash32),
 		"numAttestations": len(block.Body.Attestations),
 		"numDeposits":     len(block.Body.Deposits),

@@ -22,16 +22,14 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx string) {
+func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 	span.AddAttributes(
-		trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[idx].PublicKey.Marshal())),
+		trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())),
 	)
-	truncatedPk := idx
-	if len(idx) > 12 {
-		truncatedPk = idx[:12]
-	}
+	truncatedPk := bytesutil.Trunc([]byte(pk))
+
 	log.WithField("validator", truncatedPk).Info("Performing a beacon block attestation...")
 	v.waitToSlotMidpoint(ctx, slot)
 
@@ -44,7 +42,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx stri
 	}
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
-	pubKey := v.keys[idx].PublicKey.Marshal()
+	pubKey := v.keys[pk].PublicKey.Marshal()
 	var assignment *pb.CommitteeAssignmentResponse_CommitteeAssignment
 	if v.assignments == nil {
 		log.Errorf("No assignments for validators")

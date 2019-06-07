@@ -6,11 +6,10 @@ package internal
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	metadata "google.golang.org/grpc/metadata"
+	reflect "reflect"
 )
 
 // MockValidatorServiceServer is a mock of ValidatorServiceServer interface
@@ -49,6 +48,36 @@ func (m *MockValidatorServiceServer) CommitteeAssignment(arg0 context.Context, a
 func (mr *MockValidatorServiceServerMockRecorder) CommitteeAssignment(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitteeAssignment", reflect.TypeOf((*MockValidatorServiceServer)(nil).CommitteeAssignment), arg0, arg1)
+}
+
+// DomainData mocks base method
+func (m *MockValidatorServiceServer) DomainData(arg0 context.Context, arg1 *v1.DomainRequest) (*v1.DomainResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DomainData", arg0, arg1)
+	ret0, _ := ret[0].(*v1.DomainResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DomainData indicates an expected call of DomainData
+func (mr *MockValidatorServiceServerMockRecorder) DomainData(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainData", reflect.TypeOf((*MockValidatorServiceServer)(nil).DomainData), arg0, arg1)
+}
+
+// ExitedValidators mocks base method
+func (m *MockValidatorServiceServer) ExitedValidators(arg0 context.Context, arg1 *v1.ExitedValidatorsRequest) (*v1.ExitedValidatorsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExitedValidators", arg0, arg1)
+	ret0, _ := ret[0].(*v1.ExitedValidatorsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExitedValidators indicates an expected call of ExitedValidators
+func (mr *MockValidatorServiceServerMockRecorder) ExitedValidators(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExitedValidators", reflect.TypeOf((*MockValidatorServiceServer)(nil).ExitedValidators), arg0, arg1)
 }
 
 // ValidatorIndex mocks base method

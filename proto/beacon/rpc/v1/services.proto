@@ -8,14 +8,8 @@ import "proto/beacon/p2p/v1/types.proto";
 
 service BeaconService {
   rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
-  // CanonicalHead can be called on demand to fetch the current, head block of a beacon node.
   rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.BeaconBlock);
-  // LatestAttestation streams the latest aggregated attestation to connected validator clients.
-  rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.Attestation);
-  rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
-  rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
-  rpc ForkData(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.Fork);
-  rpc RecentBlockRoots(BlockRootsRequest) returns (BlockRootsRespond);
+  rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse);
 }
 
 service AttesterService {
@@ -24,18 +18,21 @@ service AttesterService {
 }
 
 service ProposerService {
-  rpc ProposerIndex(ProposerIndexRequest) returns (ProposerIndexResponse);
+  rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
+  rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
   rpc PendingAttestations(PendingAttestationsRequest) returns (PendingAttestationsResponse);
   rpc ProposeBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (ProposeResponse);
   rpc ComputeStateRoot(ethereum.beacon.p2p.v1.BeaconBlock) returns (StateRootResponse);
 }
 
 service ValidatorService {
+  rpc DomainData(DomainRequest) returns (DomainResponse);
   rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse);
   rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
   rpc CommitteeAssignment(CommitteeAssignmentsRequest) returns (CommitteeAssignmentResponse);
   rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
   rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
+  rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
 }
 
 message ValidatorPerformanceRequest {
@@ -47,7 +44,7 @@ message ValidatorPerformanceResponse {
   uint64 balance = 1;
   uint64 total_validators = 2;
   uint64 total_active_validators = 3;
-  float average_validator_balance = 4;
+  float average_active_validator_balance = 4;
 }
 
 message ValidatorActivationRequest {
@@ -62,6 +59,14 @@ message ValidatorActivationResponse {
     ValidatorStatusResponse status = 2;
   }
   repeated Status statuses = 2;
+}
+
+message ExitedValidatorsRequest {
+  repeated bytes public_keys = 1;
+}
+
+message ExitedValidatorsResponse {
+  repeated bytes public_keys = 1;
 }
 
 message AttestationDataRequest {
@@ -92,25 +97,8 @@ message ChainStartResponse {
   uint64 genesis_time = 2;
 }
 
-message ProposeRequest {
-  bytes parent_hash = 1;
-  uint64 slot_number = 2;
-  bytes randao_reveal = 3;
-  bytes attestation_bitmask = 4;
-  repeated uint64 attestation_aggregate_sig = 5;
-  google.protobuf.Timestamp timestamp = 6;
-}
-
 message ProposeResponse {
   bytes block_root_hash32 = 1;
-}
-
-message ProposerIndexRequest {
-  uint64 slot_number = 1;
-}
-
-message ProposerIndexResponse {
-  uint64 index = 1;
 }
 
 message StateRootResponse {
@@ -168,17 +156,22 @@ message Eth1DataResponse {
   ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
 }
 
-message BlockRootsRequest {
-  uint64 count = 1;
+message DomainRequest {
+  uint64 epoch = 1;
 }
 
-message BlockRoot {
-  uint64 slot = 1;
-  bytes root = 2;
+message DomainResponse {
+  uint64 signature_domain = 1;
 }
 
-message BlockRootsRespond {
-  repeated BlockRoot block_roots = 1;
+message BlockTreeResponse {
+  repeated TreeNode tree = 1;
+  message TreeNode {
+    ethereum.beacon.p2p.v1.BeaconBlock block = 1;
+    bytes block_root = 2;
+    uint64 participated_votes = 3;
+    uint64 total_votes = 4;
+  }
 }
 
 enum ValidatorStatus {
