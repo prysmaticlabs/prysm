@@ -32,8 +32,8 @@ type ProposerServer struct {
 	canonicalStateChan chan *pbp2p.BeaconState
 }
 
-// RequestBlock is called by a proposer during its assigned slot to create a block in an attempt
-// to get it processed by the beacon node as the canonical head.
+// RequestBlock is called by a proposer during its assigned slot to request a block to sign
+// by passing in the slot and the signed randao reveal of the slot.
 func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*pbp2p.BeaconBlock, error) {
 
 	// Retrieve the parent block as the current head of the canonical chain

@@ -63,7 +63,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		return
 	}
 
-	// Sign the requested block
+	// Sign the requested block.
 	// TODO(1366): BLS sign block
 	b.Signature = nil
 
