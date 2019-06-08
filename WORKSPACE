@@ -1123,3 +1123,9 @@ go_repository(
     commit = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",  # v1.0.0
     importpath = "github.com/ghodss/yaml",
 )
+
+go_repository(
+    name = "org_uber_go_automaxprocs",
+    commit = "823363ffcd16c8f3ebaa3a067550d97c70f52194",
+    importpath = "go.uber.org/automaxprocs",
+)
