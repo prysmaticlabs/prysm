@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -32,6 +32,69 @@ type ProposerServer struct {
 	canonicalStateChan chan *pbp2p.BeaconState
 }
 
+// RequestBlock is called by a proposer during its assigned slot to create a block in an attempt
+// to get it processed by the beacon node as the canonical head.
+func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*pbp2p.BeaconBlock, error) {
+
+	// Retrieve the parent block as the current head of the canonical chain
+	parent, err := ps.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not get canonical head block: %v", err)
+	}
+	parentRoot, err := ssz.SigningRoot(parent)
+	if err != nil {
+		return nil, fmt.Errorf("could not get parent block root: %v", err)
+	}
+
+	// Construct block body
+	// Pack ETH1 deposits which have not been included in the beacon chain
+	eth1Data, err := ps.eth1Data(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get ETH1 data: %v", err)
+	}
+
+	// Pack ETH1 deposits which have not been included in the beacon chain.
+	deposits, err := ps.deposits(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get eth1 deposits: %v", err)
+	}
+
+	// Pack aggregated attestations which have not been included in the beacon chain.
+	attestations, err := ps.attestations(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get pending attestations: %v", err)
+	}
+
+	// Use zero hash as stub for state root to compute later.
+	stateRoot := params.BeaconConfig().ZeroHash[:]
+
+	blk := &pbp2p.BeaconBlock{
+		Slot:       req.Slot,
+		ParentRoot: parentRoot[:],
+		StateRoot:  stateRoot,
+		Body: &pbp2p.BeaconBlockBody{
+			Eth1Data:     eth1Data,
+			Deposits:     deposits,
+			Attestations: attestations,
+			// Todo: Implement rest of the retrievals for beacon block operations
+			ProposerSlashings: nil,
+			AttesterSlashings: nil,
+			VoluntaryExits:    nil,
+		},
+	}
+
+	if !featureconfig.FeatureConfig().EnableComputeStateRoot {
+		// Compute state root with the newly constructed block.
+		stateRoot, err = ps.computeStateRoot(ctx, blk)
+		if err != nil {
+			return nil, fmt.Errorf("could not get compute state root: %v", err)
+		}
+		blk.StateRoot = stateRoot
+	}
+
+	return blk, nil
+}
+
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
@@ -41,34 +104,38 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debugf(
 		"Block proposal received via RPC")
+
 	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
+
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
+
 	}
 	ps.chainService.UpdateCanonicalRoots(blk, h)
 	log.WithFields(logrus.Fields{
 		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
 		"headSlot": blk.Slot,
 	}).Info("Chain head block and state updated")
+
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
-// PendingAttestations retrieves attestations kept in the beacon node's operations pool which have
+// attestations retrieves aggregated attestations kept in the beacon node's operations pool which have
 // not yet been included into the beacon chain. Proposers include these pending attestations in their
 // proposed blocks when performing their responsibility. If desired, callers can choose to filter pending
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
-func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.PendingAttestationsRequest) (*pb.PendingAttestationsResponse, error) {
+func (ps *ProposerServer) attestations(ctx context.Context) ([]*pbp2p.Attestation, error) {
 	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 	atts, err := ps.operationService.PendingAttestations(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
+		return nil, fmt.Errorf("could not retrieve pending attest ations from operations service: %v", err)
 	}
 	beaconState.Slot++
 
@@ -120,9 +187,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 		validAtts = append(validAtts, att)
 	}
 
-	return &pb.PendingAttestationsResponse{
-		PendingAttestations: validAtts,
-	}, nil
+	return validAtts, nil
 }
 
 // Eth1Data is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an
@@ -132,46 +197,42 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 // the deposit contract using the post-state of the block hash.
 //
 // TODO(#2307): Refactor for v0.6.
-func (ps *ProposerServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
+func (ps *ProposerServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 	return nil, nil
 }
 
-// ComputeStateRoot computes the state root after a block has been processed through a state transition and
+// computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
-func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) (*pb.StateRootResponse, error) {
-	if !featureconfig.FeatureConfig().EnableComputeStateRoot {
-		log.Debug("Compute state root disabled, returning no-op result")
-		return &pb.StateRootResponse{StateRoot: []byte("no-op")}, nil
-	}
+func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.BeaconBlock) ([]byte, error) {
 
 	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	beaconState, err = state.ExecuteStateTransition(
+	s, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
-		req,
+		block,
 		state.DefaultConfig(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition %v", err)
+		return nil, fmt.Errorf("could not execute state transition for state root %v", err)
 	}
 
-	beaconStateHash, err := hashutil.HashProto(beaconState)
+	root, err := hashutil.HashProto(s)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon state: %v", err)
 	}
-	log.WithField("beaconStateHash", fmt.Sprintf("%#x", beaconStateHash)).Debugf("Computed state hash")
-	return &pb.StateRootResponse{
-		StateRoot: beaconStateHash[:],
-	}, nil
+
+	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state hash")
+
+	return root[:], nil
 }
 
-// PendingDeposits returns a list of pending deposits that are ready for
+// deposits returns a list of pending deposits that are ready for
 // inclusion in the next beacon block.
-func (ps *ProposerServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
+func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error) {
 	bNum := ps.powChainService.LatestBlockHeight()
 	if bNum == nil {
 		return nil, errors.New("latest PoW block number is unknown")
@@ -180,7 +241,7 @@ func (ps *ProposerServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) 
 	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
 	allDeps := ps.beaconDB.AllDeposits(ctx, bNum)
 	if len(allDeps) == 0 {
-		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
+		return nil, nil
 	}
 
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
@@ -200,7 +261,7 @@ func (ps *ProposerServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) 
 	// so we want to avoid any possible mismatches in these lengths.
 	upToLatestEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
 	if len(upToLatestEth1DataDeposits) != len(allDeps) {
-		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
+		return nil, nil
 	}
 	depositData := [][]byte{}
 	for _, dep := range upToLatestEth1DataDeposits {
@@ -242,5 +303,5 @@ func (ps *ProposerServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) 
 	for i := 0; i < len(pendingDeps) && i < int(params.BeaconConfig().MaxDeposits); i++ {
 		pendingDeposits = append(pendingDeposits, pendingDeps[i])
 	}
-	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
+	return pendingDeposits, nil
 }
