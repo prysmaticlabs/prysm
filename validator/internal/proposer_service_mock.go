@@ -6,7 +6,6 @@ package internal
 
 import (
 	context "context"
-	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	v10 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -35,86 +34,6 @@ func NewMockProposerServiceClient(ctrl *gomock.Controller) *MockProposerServiceC
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockProposerServiceClient) EXPECT() *MockProposerServiceClientMockRecorder {
 	return m.recorder
-}
-
-// ComputeStateRoot mocks base method
-func (m *MockProposerServiceClient) ComputeStateRoot(arg0 context.Context, arg1 *v1.BeaconBlock, arg2 ...grpc.CallOption) (*v10.StateRootResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ComputeStateRoot", varargs...)
-	ret0, _ := ret[0].(*v10.StateRootResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ComputeStateRoot indicates an expected call of ComputeStateRoot
-func (mr *MockProposerServiceClientMockRecorder) ComputeStateRoot(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeStateRoot", reflect.TypeOf((*MockProposerServiceClient)(nil).ComputeStateRoot), varargs...)
-}
-
-// Eth1Data mocks base method
-func (m *MockProposerServiceClient) Eth1Data(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v10.Eth1DataResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Eth1Data", varargs...)
-	ret0, _ := ret[0].(*v10.Eth1DataResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Eth1Data indicates an expected call of Eth1Data
-func (mr *MockProposerServiceClientMockRecorder) Eth1Data(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eth1Data", reflect.TypeOf((*MockProposerServiceClient)(nil).Eth1Data), varargs...)
-}
-
-// PendingAttestations mocks base method
-func (m *MockProposerServiceClient) PendingAttestations(arg0 context.Context, arg1 *v10.PendingAttestationsRequest, arg2 ...grpc.CallOption) (*v10.PendingAttestationsResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "PendingAttestations", varargs...)
-	ret0, _ := ret[0].(*v10.PendingAttestationsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PendingAttestations indicates an expected call of PendingAttestations
-func (mr *MockProposerServiceClientMockRecorder) PendingAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingAttestations", reflect.TypeOf((*MockProposerServiceClient)(nil).PendingAttestations), varargs...)
-}
-
-// PendingDeposits mocks base method
-func (m *MockProposerServiceClient) PendingDeposits(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v10.PendingDepositsResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "PendingDeposits", varargs...)
-	ret0, _ := ret[0].(*v10.PendingDepositsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PendingDeposits indicates an expected call of PendingDeposits
-func (mr *MockProposerServiceClientMockRecorder) PendingDeposits(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingDeposits", reflect.TypeOf((*MockProposerServiceClient)(nil).PendingDeposits), varargs...)
 }
 
 // ProposeBlock mocks base method

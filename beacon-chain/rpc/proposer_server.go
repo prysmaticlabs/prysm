@@ -98,11 +98,11 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
-	h, err := hashutil.HashBeaconBlock(blk)
+	root, err := hashutil.HashBeaconBlock(blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debugf(
+	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 
 	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
@@ -114,13 +114,13 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 
 	}
-	ps.chainService.UpdateCanonicalRoots(blk, h)
+	ps.chainService.UpdateCanonicalRoots(blk, root)
 	log.WithFields(logrus.Fields{
-		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
+		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"headSlot": blk.Slot,
 	}).Info("Chain head block and state updated")
 
-	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
+	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
 }
 
 // attestations retrieves aggregated attestations kept in the beacon node's operations pool which have

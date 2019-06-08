@@ -100,7 +100,7 @@ message ChainStartResponse {
 }
 
 message ProposeResponse {
-  bytes block_root_hash32 = 1;
+  bytes block_root = 1;
 }
 
 message StateRootResponse {
