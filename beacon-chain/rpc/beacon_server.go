@@ -136,7 +136,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 
 // TODO(#2307): Refactor for v0.6.
 // nolint
-func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
+func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pbp2p.Eth1Data, error) {
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
 	if err != nil {
@@ -167,11 +167,9 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
 	depositRoot := depositTrie.Root()
-	return &pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{
+	return &pbp2p.Eth1Data{
 			DepositRoot: depositRoot[:],
 			BlockRoot:   blockHash[:],
-		},
 	}, nil
 }
 
