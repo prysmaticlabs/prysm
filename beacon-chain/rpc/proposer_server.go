@@ -76,7 +76,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 			Eth1Data:     eth1Data,
 			Deposits:     deposits,
 			Attestations: attestations,
-			// Todo: Implement rest of the retrievals for beacon block operations
+			// TODO(2766): Implement rest of the retrievals for beacon block operations
 			ProposerSlashings: nil,
 			AttesterSlashings: nil,
 			VoluntaryExits:    nil,
