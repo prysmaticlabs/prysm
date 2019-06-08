@@ -27,7 +27,7 @@ type CrosslinkCommittee struct {
 }
 
 type shufflingInput struct {
-	seed               []byte
+	seed               [32]byte
 	shufflingEpoch     uint64
 	slot               uint64
 	startShard         uint64
@@ -472,7 +472,7 @@ func prevEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	committeesPerEpoch := PrevEpochCommitteeCount(state)
 	return crosslinkCommittees(
 		state, &shufflingInput{
-			seed:               state.PreviousShufflingSeedHash32,
+			seed:               *state.PreviousShufflingSeedHash32,
 			shufflingEpoch:     state.PreviousShufflingEpoch,
 			slot:               slot,
 			startShard:         state.PreviousShufflingStartShard,
@@ -501,7 +501,7 @@ func currEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	committeesPerEpoch := CurrentEpochCommitteeCount(state)
 	return crosslinkCommittees(
 		state, &shufflingInput{
-			seed:               state.CurrentShufflingSeedHash32,
+			seed:               *state.CurrentShufflingSeedHash32,
 			shufflingEpoch:     state.CurrentShufflingEpoch,
 			slot:               slot,
 			startShard:         state.CurrentShufflingStartShard,
@@ -569,14 +569,14 @@ func nextEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64, registryChang
 		shufflingStartShard = state.CurrentShufflingStartShard
 	} else {
 		committeesPerEpoch = CurrentEpochCommitteeCount(state)
-		seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
+		seed = *state.CurrentShufflingSeedHash32
 		shufflingEpoch = state.CurrentShufflingEpoch
 		shufflingStartShard = state.CurrentShufflingStartShard
 	}
 
 	return crosslinkCommittees(
 		state, &shufflingInput{
-			seed:               seed[:],
+			seed:               seed,
 			shufflingEpoch:     shufflingEpoch,
 			slot:               slot,
 			startShard:         shufflingStartShard,
@@ -620,7 +620,7 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 	requestedEpoch := SlotToEpoch(input.slot)
 
 	shuffledIndices, err := Shuffling(
-		bytesutil.ToBytes32(input.seed),
+		input.seed,
 		state.ValidatorRegistry,
 		requestedEpoch)
 	if err != nil {

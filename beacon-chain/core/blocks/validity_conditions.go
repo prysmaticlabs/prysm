@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -35,13 +34,13 @@ func IsValidBlock(
 
 	// Pre-Processing Condition 1:
 	// Check that the parent Block has been processed and saved.
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := *block.ParentRootHash32
 	parentBlock := HasBlock(parentRoot)
 	if !parentBlock {
 		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", parentRoot)
 	}
 
-	h := common.BytesToHash(state.LatestEth1Data.BlockHash32)
+	h := common.BytesToHash(state.LatestEth1Data.BlockHash32[:])
 	powBlock, err := GetPOWBlock(ctx, h)
 	if err != nil {
 		return fmt.Errorf("unable to retrieve POW chain reference block: %v", err)

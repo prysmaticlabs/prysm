@@ -10,7 +10,8 @@ import (
 )
 
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
-func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
+func (w *Web3Service) BlockExists(ctx context.Context, hash [32]byte) (bool,
+	*big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
 	defer span.End()
 

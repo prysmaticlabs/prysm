@@ -5,9 +5,11 @@ package blocks
 
 import (
 	"fmt"
+	"unsafe"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -15,16 +17,21 @@ import (
 var clock utils.Clock = &utils.RealClock{}
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
-func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
+func NewGenesisBlock(stateRoot [32]byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
 		Slot:             params.BeaconConfig().GenesisSlot,
-		ParentRootHash32: params.BeaconConfig().ZeroHash[:],
-		StateRootHash32:  stateRoot,
+		ParentRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
+		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
 		RandaoReveal:     params.BeaconConfig().ZeroHash[:],
-		Signature:        params.BeaconConfig().EmptySignature[:],
+		Signature: gotypes.NewBytes96(params.BeaconConfig().
+			EmptySignature[:]),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: params.BeaconConfig().ZeroHash[:],
-			BlockHash32:       params.BeaconConfig().ZeroHash[:],
+			DepositRootHash32: gotypes.NewBytes32(
+				params.BeaconConfig().ZeroHash[:],
+			),
+			BlockHash32: gotypes.NewBytes32(
+				params.BeaconConfig().ZeroHash[:],
+			),
 		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
@@ -47,18 +54,19 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 //		assert state.slot <= slot + LATEST_BLOCK_ROOTS_LENGTH
 //		assert slot < state.slot
 //		return state.latest_block_roots[slot % LATEST_BLOCK_ROOTS_LENGTH]
-func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
+func BlockRoot(state *pb.BeaconState, slot uint64) ([32]byte, error) {
 	earliestSlot := state.Slot - params.BeaconConfig().LatestBlockRootsLength
 
 	if slot < earliestSlot || slot >= state.Slot {
 		if earliestSlot < params.BeaconConfig().GenesisSlot {
 			earliestSlot = params.BeaconConfig().GenesisSlot
 		}
-		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
-			slot-params.BeaconConfig().GenesisSlot,
-			earliestSlot-params.BeaconConfig().GenesisSlot,
-			state.Slot-params.BeaconConfig().GenesisSlot,
-		)
+		return [32]byte{},
+			fmt.Errorf("slot %d is not within expected range of %d to %d",
+				slot-params.BeaconConfig().GenesisSlot,
+				earliestSlot-params.BeaconConfig().GenesisSlot,
+				state.Slot-params.BeaconConfig().GenesisSlot,
+			)
 	}
 
 	return state.LatestBlockRootHash32S[slot%params.BeaconConfig().LatestBlockRootsLength], nil
@@ -71,9 +79,11 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 //	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root.
 //	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0 append merkle_root(state.latest_block_roots) to state.batched_block_roots.
 func ProcessBlockRoots(state *pb.BeaconState, parentRoot [32]byte) *pb.BeaconState {
-	state.LatestBlockRootHash32S[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = parentRoot[:]
+	state.LatestBlockRootHash32S[(state.Slot-1)%params.BeaconConfig().
+		LatestBlockRootsLength] = *gotypes.NewBytes32(parentRoot[:])
 	if state.Slot%params.BeaconConfig().LatestBlockRootsLength == 0 {
-		merkleRoot := hashutil.MerkleRoot(state.LatestBlockRootHash32S)
+		// Use unsafe.Pointer hack to cast []gotypes.Bytes32 to [][32]byte.
+		merkleRoot := hashutil.MerkleRoot(*(*[][32]byte)(unsafe.Pointer(&state.LatestBlockRootHash32S)))
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
 	}
 	return state

@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -151,7 +152,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
-	genBlock := b.NewGenesisBlock(stateRoot[:])
+	genBlock := b.NewGenesisBlock(stateRoot)
 	genBlockRoot, err := hashutil.HashBeaconBlock(genBlock)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon block: %v", err)
@@ -165,7 +166,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	}
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       genBlock.Slot,
-		BlockRoot:  genBlockRoot[:],
+		BlockRoot:  gotypes.NewBytes32(genBlockRoot[:]),
 		ParentRoot: genBlock.ParentRootHash32,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to save attestation target: %v", err)

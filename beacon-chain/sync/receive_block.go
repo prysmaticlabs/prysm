@@ -149,13 +149,13 @@ func (rs *RegularSync) validateAndProcessBlock(
 	}
 
 	// We check if we have the block's parents saved locally.
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-	hasParent := rs.db.HasBlock(parentRoot)
+	parentRoot := block.ParentRootHash32
+	hasParent := rs.db.HasBlock(*parentRoot)
 	span.AddAttributes(trace.BoolAttribute("hasParent", hasParent))
 
 	if !hasParent {
 		// If we do not have the parent, we insert it into a pending block's map.
-		rs.insertPendingBlock(ctx, parentRoot, blockMsg)
+		rs.insertPendingBlock(ctx, *parentRoot, blockMsg)
 		// We update the last observed slot to the received canonical block's slot.
 		if block.Slot > rs.highestObservedSlot {
 			rs.highestObservedSlot = block.Slot
@@ -186,7 +186,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	if headRoot != bytesutil.ToBytes32(block.ParentRootHash32) {
+	if !block.ParentRootHash32.Equal(headRoot[:]) {
 		// Save historical state from forked block.
 		forkedBlock.Inc()
 		log.WithFields(logrus.Fields{

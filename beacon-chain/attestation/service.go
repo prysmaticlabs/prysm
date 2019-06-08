@@ -122,7 +122,7 @@ func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uin
 	if attestation == nil {
 		return nil, nil
 	}
-	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+	targetRoot := *attestation.Data.BeaconBlockRootHash32
 	if !a.beaconDB.HasBlock(targetRoot) {
 		return nil, nil
 	}
@@ -339,7 +339,7 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 				},
 			).Debug("Attestation store updated")
 
-			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+			blockRoot := *attestation.Data.BeaconBlockRootHash32
 			votedBlock, err := a.beaconDB.Block(blockRoot)
 			if err != nil {
 				return err

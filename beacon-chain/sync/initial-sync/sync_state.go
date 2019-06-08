@@ -6,7 +6,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -48,7 +48,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       finalizedState.LatestBlock.Slot,
-		BlockRoot:  finalizedBlockRoot[:],
+		BlockRoot:  gotypes.NewBytes32(finalizedBlockRoot[:]),
 		ParentRoot: finalizedState.LatestBlock.ParentRootHash32,
 	}); err != nil {
 		log.Errorf("Could not to save attestation target: %v", err)
@@ -65,7 +65,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
+	exists, _, err := s.powchain.BlockExists(ctx, *finalizedState.LatestEth1Data.BlockHash32)
 	if err != nil {
 		log.Errorf("Unable to get powchain block %v", err)
 	}

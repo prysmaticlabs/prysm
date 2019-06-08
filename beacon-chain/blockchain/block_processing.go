@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -11,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -58,7 +57,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := *block.ParentRootHash32
 	parent, err := c.beaconDB.Block(parentRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get parent block: %v", err)
@@ -122,7 +121,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 			return nil, fmt.Errorf("could not hash beacon state: %v", err)
 		}
 		beaconState.LatestBlock = block
-		if !bytes.Equal(block.StateRootHash32, stateRoot[:]) {
+		if !block.StateRootHash32.Equal(stateRoot[:]) {
 			return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRootHash32)
 		}
 	}
@@ -219,7 +218,7 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.Beac
 	}
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
+		BlockRoot:  gotypes.NewBytes32(blockRoot[:]),
 		ParentRoot: block.ParentRootHash32,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)

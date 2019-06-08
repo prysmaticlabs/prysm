@@ -147,8 +147,9 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			}
 
 			log.WithError(err).WithFields(logrus.Fields{
-				"slot":     att.Data.Slot - params.BeaconConfig().GenesisSlot,
-				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Info(
+				"slot": att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.
+					BeaconBlockRootHash32[:]))}).Info(
 				"Deleting failed pending attestation from DB")
 			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
@@ -163,8 +164,9 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 			}
 
 			log.WithFields(logrus.Fields{
-				"slot":     att.Data.Slot - params.BeaconConfig().GenesisSlot,
-				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))}).Info(
+				"slot": att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.
+					BeaconBlockRootHash32[:]))}).Info(
 				"Deleting failed pending attestation from DB")
 			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, fmt.Errorf("could not delete failed attestation: %v", err)
@@ -205,7 +207,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	parentHash := bytesutil.ToBytes32(req.ParentRootHash32)
+	parentHash := req.ParentRootHash32
 	// Check for skipped slots.
 	for beaconState.Slot < req.Slot-1 {
 		if ctx.Err() != nil {
@@ -216,7 +218,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 			ctx,
 			beaconState,
 			nil,
-			parentHash,
+			*parentHash,
 			state.DefaultConfig(),
 		)
 		if err != nil {
@@ -227,7 +229,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		ctx,
 		beaconState,
 		req,
-		parentHash,
+		*parentHash,
 		state.DefaultConfig(),
 	)
 	if err != nil {

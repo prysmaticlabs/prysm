@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -125,14 +126,16 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	currentHeight := bs.powChainService.LatestBlockHeight()
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 
-	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
+	stateLatestEth1Hash := beaconState.LatestEth1Data.BlockHash32
 	// If latest ETH1 block hash is empty, send a default response
-	if stateLatestEth1Hash == [32]byte{} {
+	empty := [32]byte{}
+	if stateLatestEth1Hash.Equal(empty[:]) {
 		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
 	}
 	// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
 	// in the canonical, eth1.0 chain.
-	_, stateLatestEth1Height, err := bs.powChainService.BlockExists(ctx, stateLatestEth1Hash)
+	_, stateLatestEth1Height, err := bs.powChainService.BlockExists(ctx,
+		*stateLatestEth1Hash)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block with hash exists in Eth1 chain: %#x: %v", stateLatestEth1Hash, err)
 	}
@@ -143,9 +146,9 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
+		eth1Hash := vote.Eth1Data.BlockHash32
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
-		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
+		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, *eth1Hash)
 		if err != nil {
 			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
 				Debug("Could not verify block with hash in ETH1 chain")
@@ -229,8 +232,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
-	_, latestEth1DataHeight, err := bs.powChainService.BlockExists(ctx, h)
+	_, latestEth1DataHeight, err := bs.powChainService.BlockExists(ctx, *beaconState.LatestEth1Data.BlockHash32)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
 	}
@@ -436,8 +438,8 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	depositRoot := depositTrie.Root()
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
-			DepositRootHash32: depositRoot[:],
-			BlockHash32:       blockHash[:],
+			DepositRootHash32: gotypes.NewBytes32(depositRoot[:]),
+			BlockHash32:       gotypes.NewBytes32(blockHash[:]),
 		},
 	}, nil
 }

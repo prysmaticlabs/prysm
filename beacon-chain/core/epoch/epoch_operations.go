@@ -143,16 +143,17 @@ func winningRoot(
 	state *pb.BeaconState,
 	shard uint64,
 	currentEpochAttestations []*pb.PendingAttestation,
-	prevEpochAttestations []*pb.PendingAttestation) ([]byte, error) {
+	prevEpochAttestations []*pb.PendingAttestation) ([32]byte, error) {
 
 	var winnerBalance uint64
-	var winnerRoot []byte
-	var candidateRoots [][]byte
+	var winnerRoot [32]byte
+	var candidateRoots [][32]byte
 	attestations := append(currentEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard {
-			candidateRoots = append(candidateRoots, attestation.Data.CrosslinkDataRootHash32)
+			candidateRoots = append(candidateRoots,
+				*attestation.Data.CrosslinkDataRootHash32)
 		}
 	}
 
@@ -164,7 +165,9 @@ func winningRoot(
 			currentEpochAttestations,
 			prevEpochAttestations)
 		if err != nil {
-			return nil, fmt.Errorf("could not get attesting validator indices: %v", err)
+			return [32]byte{}, fmt.Errorf(
+				"could not get attesting validator indices"+
+					": %v", err)
 		}
 
 		var rootBalance uint64
@@ -173,7 +176,8 @@ func winningRoot(
 		}
 
 		if rootBalance > winnerBalance ||
-			(rootBalance == winnerBalance && b.LowerThan(candidateRoot, winnerRoot)) {
+			(rootBalance == winnerBalance && b.LowerThan(candidateRoot[:],
+				winnerRoot[:])) {
 			winnerBalance = rootBalance
 			winnerRoot = candidateRoot
 		}

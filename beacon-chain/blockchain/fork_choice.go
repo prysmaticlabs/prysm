@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -334,8 +335,8 @@ func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock,
 
 	filteredChildren := []*pb.BeaconBlock{}
 	for _, kid := range children {
-		parentRoot := bytesutil.ToBytes32(kid.ParentRootHash32)
-		if blockRoot == parentRoot {
+		parentRoot := kid.ParentRootHash32
+		if parentRoot.Equal(blockRoot[:]) {
 			filteredChildren = append(filteredChildren, kid)
 		}
 	}
@@ -349,10 +350,10 @@ func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.Bea
 		return false, nil
 	}
 	for newHead.Slot > currentHead.Slot {
-		if bytesutil.ToBytes32(newHead.ParentRootHash32) == currentHeadRoot {
+		if newHead.ParentRootHash32.Equal(currentHeadRoot[:]) {
 			return true, nil
 		}
-		newHead, err = c.beaconDB.Block(bytesutil.ToBytes32(newHead.ParentRootHash32))
+		newHead, err = c.beaconDB.Block(*newHead.ParentRootHash32)
 		if err != nil {
 			return false, err
 		}
@@ -443,7 +444,7 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 	if targetBlock.Slot < slot {
 		return nil, nil
 	}
-	parentRoot := bytesutil.ToBytes32(targetBlock.ParentRoot)
+	parentRoot := *targetBlock.ParentRoot
 	parent, err := beaconDB.Block(parentRoot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block: %v", err)
@@ -453,7 +454,7 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 	}
 	newTarget := &pb.AttestationTarget{
 		Slot:       parent.Slot,
-		BlockRoot:  parentRoot[:],
+		BlockRoot:  &parentRoot,
 		ParentRoot: parent.ParentRootHash32,
 	}
 	return BlockAncestor(newTarget, slot, beaconDB)
@@ -463,12 +464,13 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 // if it's not there it looks up the block tree get it and cache it.
 func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.BeaconDB) ([]byte, error) {
 	// check if the ancestor block of from a given block height was cached.
-	cachedAncestorInfo, err := blkAncestorCache.AncestorBySlot(target.BlockRoot, height)
+	cachedAncestorInfo, err := blkAncestorCache.AncestorBySlot(
+		target.BlockRoot[:], height)
 	if err != nil {
 		return nil, nil
 	}
 	if cachedAncestorInfo != nil {
-		return cachedAncestorInfo.Target.BlockRoot, nil
+		return cachedAncestorInfo.Target.BlockRoot[:], nil
 	}
 
 	ancestorRoot, err := BlockAncestor(target, height, beaconDB)
@@ -484,12 +486,12 @@ func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.Be
 	}
 	ancestorTarget := &pb.AttestationTarget{
 		Slot:       ancestor.Slot,
-		BlockRoot:  ancestorRoot,
+		BlockRoot:  gotypes.NewBytes32(ancestorRoot),
 		ParentRoot: ancestor.ParentRootHash32,
 	}
 	if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
 		Height: height,
-		Hash:   target.BlockRoot,
+		Hash:   *target.BlockRoot,
 		Target: ancestorTarget,
 	}); err != nil {
 		return nil, err

@@ -5,12 +5,12 @@
 package validators
 
 import (
-	"bytes"
 	"fmt"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -73,7 +73,7 @@ func ValidatorIndices(
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
 	shard uint64,
-	crosslinkDataRoot []byte,
+	crosslinkDataRoot [32]byte,
 	thisEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
 
@@ -82,7 +82,8 @@ func AttestingValidatorIndices(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard &&
-			bytes.Equal(attestation.Data.CrosslinkDataRootHash32, crosslinkDataRoot) {
+			attestation.Data.CrosslinkDataRootHash32.Equal(
+				crosslinkDataRoot[:]) {
 
 			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
 			if err != nil {
@@ -123,15 +124,13 @@ func ProcessDeposit(
 			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
 			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
 			StatusFlags:                 0,
-			WithdrawalCredentialsHash32: withdrawalCredentials,
+			WithdrawalCredentialsHash32: gotypes.NewBytes32(withdrawalCredentials),
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
 	} else {
-		if !bytes.Equal(
-			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
-			withdrawalCredentials,
-		) {
+		if !state.ValidatorRegistry[existingValidatorIdx].
+			WithdrawalCredentialsHash32.Equal(withdrawalCredentials) {
 			return state, fmt.Errorf(
 				"expected withdrawal credentials to match, received %#x == %#x",
 				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,

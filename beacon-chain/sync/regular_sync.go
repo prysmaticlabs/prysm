@@ -397,7 +397,8 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRootHash32)),
+		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(attestation.
+			Data.BeaconBlockRootHash32[:])),
 		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 	}).Debug("Received an attestation")
 
@@ -607,11 +608,11 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 
 	bList := []*pb.BeaconBlock{b}
 	parentRoot := b.ParentRootHash32
-	for !bytes.Equal(parentRoot, finalizedRoot) {
+	for !parentRoot.Equal(finalizedRoot) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		b, err = rs.db.Block(bytesutil.ToBytes32(parentRoot))
+		b, err = rs.db.Block(*parentRoot)
 		if err != nil {
 			return nil, err
 		}

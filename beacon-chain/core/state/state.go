@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -30,10 +31,10 @@ func GenesisBeaconState(
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
 
-	zeroHash := params.BeaconConfig().ZeroHash[:]
+	zeroHash := *gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:])
 
 	latestActiveIndexRoots := make(
-		[][]byte,
+		[]gotypes.Bytes32,
 		params.BeaconConfig().LatestActiveIndexRootsLength,
 	)
 	for i := 0; i < len(latestActiveIndexRoots); i++ {
@@ -44,11 +45,12 @@ func GenesisBeaconState(
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.Crosslink{
 			Epoch:                   params.BeaconConfig().GenesisEpoch,
-			CrosslinkDataRootHash32: zeroHash,
+			CrosslinkDataRootHash32: &zeroHash,
 		}
 	}
 
-	latestBlockRoots := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
+	latestBlockRoots := make([]gotypes.Bytes32, params.BeaconConfig().
+		LatestBlockRootsLength)
 	for i := 0; i < len(latestBlockRoots); i++ {
 		latestBlockRoots[i] = zeroHash
 	}
@@ -97,17 +99,17 @@ func GenesisBeaconState(
 		CurrentShufflingStartShard:  params.BeaconConfig().GenesisStartShard,
 		PreviousShufflingEpoch:      params.BeaconConfig().GenesisEpoch,
 		CurrentShufflingEpoch:       params.BeaconConfig().GenesisEpoch,
-		PreviousShufflingSeedHash32: zeroHash,
-		CurrentShufflingSeedHash32:  zeroHash,
+		PreviousShufflingSeedHash32: &zeroHash,
+		CurrentShufflingSeedHash32:  &zeroHash,
 
 		// Finality.
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
-		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
+		PreviousJustifiedRoot:  gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
-		JustifiedRoot:          params.BeaconConfig().ZeroHash[:],
+		JustifiedRoot:          gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 		JustificationBitfield:  0,
 		FinalizedEpoch:         params.BeaconConfig().GenesisEpoch,
-		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
+		FinalizedRoot:          gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,
@@ -115,7 +117,7 @@ func GenesisBeaconState(
 		LatestIndexRootHash32S:  latestActiveIndexRoots,
 		LatestSlashedBalances:   latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},
-		BatchedBlockRootHash32S: [][]byte{},
+		BatchedBlockRootHash32S: []gotypes.Bytes32{},
 
 		// Eth1 data.
 		LatestEth1Data: eth1Data,
@@ -142,7 +144,7 @@ func GenesisBeaconState(
 			depositInput.Pubkey,
 			value,
 			depositInput.ProofOfPossession,
-			depositInput.WithdrawalCredentialsHash32,
+			depositInput.WithdrawalCredentialsHash32[:],
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
@@ -166,12 +168,13 @@ func GenesisBeaconState(
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().LatestActiveIndexRootsLength; i++ {
-		state.LatestIndexRootHash32S[i] = genesisActiveIndexRoot[:]
+		state.LatestIndexRootHash32S[i] = *gotypes.NewBytes32(
+			genesisActiveIndexRoot[:])
 	}
 	seed, err := helpers.GenerateSeed(state, params.BeaconConfig().GenesisEpoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate initial seed: %v", err)
 	}
-	state.CurrentShufflingSeedHash32 = seed[:]
+	state.CurrentShufflingSeedHash32 = gotypes.NewBytes32(seed[:])
 	return state, nil
 }

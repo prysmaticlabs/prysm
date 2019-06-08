@@ -42,7 +42,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	// #nosec G104
 	stateEnc, _ := proto.Marshal(beaconState)
 	stateHash := hashutil.Hash(stateEnc)
-	genesisBlock := b.NewGenesisBlock(stateHash[:])
+	genesisBlock := b.NewGenesisBlock(stateHash)
 	// #nosec G104
 	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104

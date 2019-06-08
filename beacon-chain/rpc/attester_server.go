@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -41,13 +42,14 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 
 	// Update attestation target for RPC server to run necessary fork choice.
 	// We need to retrieve the head block to get its parent root.
-	head, err := as.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRootHash32))
+	head, err := as.beaconDB.Block(*att.Data.BeaconBlockRootHash32)
 	if err != nil {
 		return nil, err
 	}
 	// If the head block is nil, we can't save the attestation target.
 	if head == nil {
-		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRootHash32))
+		return nil, fmt.Errorf("could not find head %#x in db",
+			bytesutil.Trunc(att.Data.BeaconBlockRootHash32[:]))
 	}
 	attTarget := &pbp2p.AttestationTarget{
 		Slot:       att.Data.Slot,
@@ -132,10 +134,10 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
 	// If the epoch boundary slot is the same as state current slot,
 	// we set epoch boundary root to an empty root.
-	epochBoundaryRoot := make([]byte, 32)
+	var epochBoundaryRoot [32]byte
 	epochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(headState.Slot))
 	if epochStartSlot == headState.Slot {
-		epochBoundaryRoot = headRoot[:]
+		epochBoundaryRoot = headRoot
 	} else {
 		epochBoundaryRoot, err = blocks.BlockRoot(headState, epochStartSlot)
 		if err != nil {
@@ -153,16 +155,16 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 
 	// If an attester has to attest for genesis block.
 	if headState.Slot == params.BeaconConfig().GenesisSlot {
-		epochBoundaryRoot = params.BeaconConfig().ZeroHash[:]
-		justifiedBlockRoot = params.BeaconConfig().ZeroHash[:]
+		epochBoundaryRoot = *gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:])
+		justifiedBlockRoot = gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:])
 	}
 
 	res = &pb.AttestationDataResponse{
 		HeadSlot:                 headState.Slot,
 		BeaconBlockRootHash32:    headRoot[:],
-		EpochBoundaryRootHash32:  epochBoundaryRoot,
+		EpochBoundaryRootHash32:  epochBoundaryRoot[:],
 		JustifiedEpoch:           headState.JustifiedEpoch,
-		JustifiedBlockRootHash32: justifiedBlockRoot,
+		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink:          headState.LatestCrosslinks[req.Shard],
 	}
 	if err := as.cache.Put(ctx, req, res); err != nil {

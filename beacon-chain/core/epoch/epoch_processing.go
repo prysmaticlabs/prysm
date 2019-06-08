@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -181,7 +182,7 @@ func ProcessJustificationAndFinalization(
 		if err != nil {
 			return state, err
 		}
-		state.JustifiedRoot = newJustifedRoot
+		state.JustifiedRoot = gotypes.NewBytes32(newJustifedRoot[:])
 	}
 	if newFinalizedEpoch != state.FinalizedEpoch {
 		state.FinalizedEpoch = newFinalizedEpoch
@@ -189,7 +190,7 @@ func ProcessJustificationAndFinalization(
 		if err != nil {
 			return state, err
 		}
-		state.FinalizedRoot = newFinalizedRoot
+		state.FinalizedRoot = gotypes.NewBytes32(newFinalizedRoot[:])
 	}
 	return state, nil
 }
@@ -239,7 +240,7 @@ func ProcessCrosslinks(
 				}
 				state.LatestCrosslinks[shard] = &pb.Crosslink{
 					Epoch:                   currentEpoch,
-					CrosslinkDataRootHash32: winningRoot,
+					CrosslinkDataRootHash32: gotypes.NewBytes32(winningRoot[:]),
 				}
 			}
 		}
@@ -370,7 +371,7 @@ func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error
 	}
 	indexRoot := hashutil.Hash(indicesBytes)
 	state.LatestIndexRootHash32S[nextEpoch%params.BeaconConfig().LatestActiveIndexRootsLength] =
-		indexRoot[:]
+		*gotypes.NewBytes32(indexRoot[:])
 	return state, nil
 }
 

@@ -11,16 +11,16 @@ package hashutil
 //		for i in range(len(values)-1, 0, -1):
 //			o[i] = hash(o[i*2] + o[i*2+1])
 //		return o[1]
-func MerkleRoot(values [][]byte) []byte {
+func MerkleRoot(values [][32]byte) [32]byte {
 	length := len(values)
 
-	newSet := make([][]byte, length, length*2)
+	newSet := make([][32]byte, length, length*2)
 	newSet = append(newSet, values...)
 
 	for i := length - 1; i >= 0; i-- {
-		concatenatedNodes := append(newSet[i*2], newSet[i*2+1]...)
+		concatenatedNodes := append(newSet[i*2][:], newSet[i*2+1][:]...)
 		hash := Hash(concatenatedNodes)
-		newSet[i] = hash[:]
+		newSet[i] = hash
 	}
 	return newSet[1]
 }

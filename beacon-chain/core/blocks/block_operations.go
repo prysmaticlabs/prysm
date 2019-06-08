@@ -210,7 +210,7 @@ func verifyProposerSlashing(
 	if shard1 != shard2 {
 		return fmt.Errorf("slashing proposal data shards do not match: %d, %d", shard1, shard2)
 	}
-	if !bytes.Equal(root1, root2) {
+	if !root1.Equal(root2[:]) {
 		return fmt.Errorf("slashing proposal data block roots do not match: %#x, %#x", root1, root2)
 	}
 	if verifySignatures {
@@ -463,7 +463,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			)
 		}
 
-		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.JustifiedRoot) {
+		if !att.Data.JustifiedBlockRootHash32.Equal(beaconState.JustifiedRoot[:]) {
 			return fmt.Errorf(
 				"expected attestation.JustifiedRoot == state.JustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
@@ -478,7 +478,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 				beaconState.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
-		if !bytes.Equal(att.Data.JustifiedBlockRootHash32, beaconState.PreviousJustifiedRoot) {
+		if !att.Data.JustifiedBlockRootHash32.Equal(beaconState.PreviousJustifiedRoot[:]) {
 			return fmt.Errorf(
 				"expected attestation.JustifiedRoot == state.PreviousJustifiedRoot, received %#x == %#x",
 				att.Data.JustifiedBlockRootHash32,
@@ -509,7 +509,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.Data.CrosslinkDataRootHash32, params.BeaconConfig().ZeroHash[:]) {
+	if !att.Data.CrosslinkDataRootHash32.Equal(params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
 			"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
 			params.BeaconConfig().ZeroHash[:],
@@ -596,7 +596,7 @@ func ProcessValidatorDeposits(
 			depositInput.Pubkey,
 			binary.LittleEndian.Uint64(depositValue),
 			depositInput.ProofOfPossession,
-			depositInput.WithdrawalCredentialsHash32,
+			depositInput.WithdrawalCredentialsHash32[:],
 		)
 		if err != nil {
 			beaconState = processInvalidDeposit(beaconState)
@@ -620,7 +620,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := beaconState.LatestEth1Data.DepositRootHash32
 	if ok := trieutil.VerifyMerkleProof(
-		receiptRoot,
+		receiptRoot[:],
 		deposit.DepositData,
 		int(deposit.MerkleTreeIndex),
 		deposit.MerkleProofHash32S,

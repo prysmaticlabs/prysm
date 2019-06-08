@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -130,8 +131,8 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	}
 
 	w.chainStartETH1Data = &pb.Eth1Data{
-		BlockHash32:       depositLog.BlockHash[:],
-		DepositRootHash32: chainStartDepositRoot[:],
+		BlockHash32:       gotypes.NewBytes32(depositLog.BlockHash[:]),
+		DepositRootHash32: gotypes.NewBytes32(chainStartDepositRoot[:]),
 	}
 
 	timestamp := binary.LittleEndian.Uint64(timestampData)

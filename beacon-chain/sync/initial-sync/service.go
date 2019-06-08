@@ -19,11 +19,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -72,7 +72,7 @@ type p2pAPI interface {
 }
 
 type powChainService interface {
-	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+	BlockExists(ctx context.Context, hash [32]byte) (bool, *big.Int, error)
 }
 
 type chainService interface {
@@ -154,7 +154,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	if s.nodeIsSynced {
 		return nil
 	}
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := *block.ParentRootHash32
 	parent, err := s.db.Block(parentRoot)
 	if err != nil {
 		return err
@@ -175,7 +175,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 	}
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       block.Slot,
-		BlockRoot:  root[:],
+		BlockRoot:  gotypes.NewBytes32(root[:]),
 		ParentRoot: block.ParentRootHash32,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)

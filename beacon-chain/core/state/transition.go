@@ -4,7 +4,6 @@
 package state
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -258,7 +257,8 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			}
 
 			attestationData := attestation.Data
-			sameRoot := bytes.Equal(attestationData.EpochBoundaryRootHash32, boundaryBlockRoot)
+			sameRoot := attestationData.EpochBoundaryRootHash32.Equal(
+				boundaryBlockRoot[:])
 			if sameRoot {
 				currentEpochBoundaryAttestations = append(currentEpochBoundaryAttestations, attestation)
 				currentBoundaryAttesterIndices = sliceutil.UnionUint64(currentBoundaryAttesterIndices, attesterIndices)
@@ -276,7 +276,8 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			if err != nil {
 				return nil, err
 			}
-			if bytes.Equal(attestation.Data.EpochBoundaryRootHash32, prevBoundaryBlockRoot) {
+			if attestation.Data.EpochBoundaryRootHash32.Equal(
+				prevBoundaryBlockRoot[:]) {
 				prevEpochBoundaryAttestations = append(prevEpochBoundaryAttestations, attestation)
 				prevEpochBoundaryAttesterIndices = sliceutil.UnionUint64(prevEpochBoundaryAttesterIndices, attesterIndices)
 			}
@@ -288,7 +289,8 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, block *pb.BeaconBl
 			}
 
 			attestationData := attestation.Data
-			if bytes.Equal(attestationData.BeaconBlockRootHash32, canonicalBlockRoot) {
+			if attestationData.BeaconBlockRootHash32.Equal(
+				canonicalBlockRoot[:]) {
 				prevEpochHeadAttestations = append(prevEpochHeadAttestations, attestation)
 				prevEpochHeadAttesterIndices = sliceutil.UnionUint64(prevEpochHeadAttesterIndices, attesterIndices)
 			}

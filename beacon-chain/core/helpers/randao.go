@@ -32,7 +32,7 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return hashutil.Hash(append(randaoMix, indexRoot...)), nil
+	return hashutil.Hash(append(randaoMix, indexRoot[:]...)), nil
 }
 
 // ActiveIndexRoot returns the index root of a given epoch.
@@ -45,14 +45,16 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 //    """
 //    assert get_current_epoch(state) - LATEST_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY < epoch <= get_current_epoch(state) + ACTIVATION_EXIT_DELAY
 //    return state.latest_index_roots[epoch % LATEST_INDEX_ROOTS_LENGTH]
-func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
+func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 	var earliestEpoch uint64
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch > params.BeaconConfig().LatestActiveIndexRootsLength+params.BeaconConfig().ActivationExitDelay {
 		earliestEpoch = currentEpoch - (params.BeaconConfig().LatestActiveIndexRootsLength + params.BeaconConfig().ActivationExitDelay)
 	}
 	if earliestEpoch > wantedEpoch || wantedEpoch > currentEpoch {
-		return nil, fmt.Errorf("input indexRoot epoch %d out of bounds: %d <= epoch < %d",
+		return [32]byte{}, fmt.Errorf(
+			"input indexRoot epoch %d out of bounds: %d"+
+				" <= epoch < %d",
 			wantedEpoch, earliestEpoch, currentEpoch)
 	}
 	return state.LatestIndexRootHash32S[wantedEpoch%params.BeaconConfig().LatestActiveIndexRootsLength], nil
