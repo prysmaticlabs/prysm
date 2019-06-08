@@ -18,12 +18,8 @@ service AttesterService {
 }
 
 service ProposerService {
-  rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
-  rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
-  rpc PendingAttestations(PendingAttestationsRequest) returns (PendingAttestationsResponse);
   rpc RequestBlock(BlockRequest) returns (ethereum.beacon.p2p.v1.BeaconBlock);
   rpc ProposeBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (ProposeResponse);
-  rpc ComputeStateRoot(ethereum.beacon.p2p.v1.BeaconBlock) returns (StateRootResponse);
 }
 
 service ValidatorService {
