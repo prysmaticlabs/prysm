@@ -59,6 +59,9 @@ type Querier struct {
 	chainStarted              bool
 	atGenesis                 bool
 	bestPeer                  peer.ID
+	chainHeadResponses        map[peer.ID]*pb.ChainHeadResponse
+	canonicalBlockRoot        []byte
+	finalizedBlockRoot        []byte
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -71,16 +74,18 @@ func NewQuerierService(ctx context.Context,
 	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
 
 	return &Querier{
-		ctx:             ctx,
-		cancel:          cancel,
-		p2p:             cfg.P2P,
-		db:              cfg.BeaconDB,
-		chainService:    cfg.ChainService,
-		responseBuf:     responseBuf,
-		currentHeadSlot: cfg.CurrentHeadSlot,
-		chainStarted:    false,
-		powchain:        cfg.PowChain,
-		chainStartBuf:   make(chan time.Time, 1),
+		ctx:                ctx,
+		cancel:             cancel,
+		p2p:                cfg.P2P,
+		db:                 cfg.BeaconDB,
+		chainService:       cfg.ChainService,
+		responseBuf:        responseBuf,
+		currentHeadSlot:    cfg.CurrentHeadSlot,
+		chainStarted:       false,
+		atGenesis:          true,
+		powchain:           cfg.PowChain,
+		chainStartBuf:      make(chan time.Time, 1),
+		chainHeadResponses: make(map[peer.ID]*pb.ChainHeadResponse),
 	}
 }
 
@@ -181,16 +186,19 @@ func (q *Querier) run() {
 				hasReceivedResponse = true
 			}
 			response := msg.Data.(*pb.ChainHeadResponse)
-			queryLog.WithFields(logrus.Fields{
-				"peerID":      msg.Peer.Pretty(),
-				"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
-			}).Info("Received chain head from peer")
+			if _, ok := q.chainHeadResponses[msg.Peer]; !ok {
+				queryLog.WithFields(logrus.Fields{
+					"peerID":      msg.Peer.Pretty(),
+					"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
+				}).Info("Received chain head from peer")
+				q.chainHeadResponses[msg.Peer] = response
+			}
 			if response.CanonicalSlot > q.currentHeadSlot {
-				q.currentHeadSlot = response.CanonicalSlot
-				q.bestPeer = msg.Peer
 				q.currentHeadSlot = response.CanonicalSlot
 				q.currentStateRoot = response.CanonicalStateRootHash32
 				q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
+				q.canonicalBlockRoot = response.CanonicalBlockRoot
+				q.finalizedBlockRoot = response.FinalizedBlockRoot
 			}
 		}
 	}

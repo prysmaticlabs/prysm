@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
@@ -55,6 +56,7 @@ type BeaconNode struct {
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if err := tracing.Setup(
 		"beacon-chain", // service name
+		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
 		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
 		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
 		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
@@ -106,6 +108,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerRPCService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerGRPCGateway(ctx); err != nil {
 		return nil, err
 	}
 
@@ -193,7 +199,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	return b.services.RegisterService(beaconp2p)
 }
 
-func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
+func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Web3Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -210,6 +216,7 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
+	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
 
 	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		BeaconDB:       b.db,
@@ -217,6 +224,7 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 		OpsPoolService: opsService,
 		AttsService:    attsService,
 		P2p:            p2pService,
+		MaxRoutines:    maxRoutines,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
@@ -338,6 +346,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
 	var operationService *operations.Service
 	if err := b.services.FetchService(&operationService); err != nil {
 		return err
@@ -361,6 +374,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		CertFlag:         cert,
 		KeyFlag:          key,
 		BeaconDB:         b.db,
+		Broadcaster:      p2pService,
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,
@@ -387,4 +401,14 @@ func (b *BeaconNode) registerAttestationService() error {
 		})
 
 	return b.services.RegisterService(attsService)
+}
+
+func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
+	gatewayPort := ctx.GlobalInt(utils.GRPCGatewayPort.Name)
+	if gatewayPort > 0 {
+		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(utils.RPCPort.Name))
+		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
+		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
+	}
+	return nil
 }

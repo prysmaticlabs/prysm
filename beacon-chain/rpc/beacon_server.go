@@ -9,9 +9,12 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -98,6 +101,63 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	if err != nil {
 		return nil, err
 	}
+	dataVotes := []*pbp2p.Eth1DataVote{}
+	bestVote := &pbp2p.Eth1DataVote{}
+	bestVoteHeight := big.NewInt(0)
+	for _, vote := range beaconState.Eth1DataVotes {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
+		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
+		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
+		if err != nil {
+			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
+				Debug("Could not verify block with hash in ETH1 chain")
+			continue
+		}
+		nextLayer, err := bs.beaconDB.BlocksBySlot(ctx, i)
+		if err != nil {
+			return nil, err
+		}
+		fullBlockTree = append(fullBlockTree, nextLayer...)
+	}
+	tree := []*pb.BlockTreeResponse_TreeNode{}
+	for _, kid := range fullBlockTree {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		participatedVotes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
+		if err != nil {
+			return nil, err
+		}
+		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Limit the return of pending deposits to not be more than max deposits allowed in block.
+	var pendingDeposits []*pbp2p.Deposit
+	for i := 0; i < len(pendingDeps) && i < int(params.BeaconConfig().MaxDeposits); i++ {
+		pendingDeposits = append(pendingDeposits, pendingDeps[i])
+	}
+	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
+}
+
+// BlockTree returns the current tree of saved blocks and their votes starting from the justified state.
+func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.BlockTreeResponse, error) {
+	justifiedState, err := bs.beaconDB.JustifiedState()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
+	}
+	attestationTargets, err := bs.targetsFetcher.AttestationTargets(justifiedState)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+	}
+	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
+	if err != nil {
+		return nil, err
+	}
 	highestSlot := bs.beaconDB.HighestBlockSlot()
 	fullBlockTree := []*pbp2p.BeaconBlock{}
 	for i := justifiedBlock.Slot + 1; i < highestSlot; i++ {
@@ -123,11 +183,90 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		if err != nil {
 			return nil, err
 		}
+		hState, err := bs.beaconDB.HistoricalStateFromSlot(ctx, kid.Slot, blockRoot)
+		if err != nil {
+			return nil, err
+		}
+		activeValidatorIndices := helpers.ActiveValidatorIndices(hState.ValidatorRegistry, helpers.CurrentEpoch(hState))
+		totalVotes := epoch.TotalBalance(hState, activeValidatorIndices)
 		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
 			BlockRoot:         blockRoot[:],
 			Block:             kid,
 			ParticipatedVotes: uint64(participatedVotes),
+			TotalVotes:        uint64(totalVotes),
 		})
+	}
+	return &pb.BlockTreeResponse{
+		Tree: tree,
+	}, nil
+}
+
+// BlockTreeBySlots returns the current tree of saved blocks and their votes starting from the justified state.
+func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockSlotRequest) (*pb.BlockTreeResponse, error) {
+	justifiedState, err := bs.beaconDB.JustifiedState()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
+	}
+	attestationTargets, err := bs.targetsFetcher.AttestationTargets(justifiedState)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+	}
+	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
+	if err != nil {
+		return nil, err
+	}
+	if req == nil {
+		return nil, errors.New("argument 'TreeBlockSlotRequest' cannot be nil")
+	}
+	if !(req.SlotFrom <= req.SlotTo) {
+		return nil, fmt.Errorf("upper limit (%d) of slot range cannot be lower than the lower limit (%d)", req.SlotTo, req.SlotFrom)
+	}
+	highestSlot := bs.beaconDB.HighestBlockSlot()
+	fullBlockTree := []*pbp2p.BeaconBlock{}
+	for i := justifiedBlock.Slot + 1; i < highestSlot; i++ {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if i >= req.SlotFrom && i <= req.SlotTo {
+			nextLayer, err := bs.beaconDB.BlocksBySlot(ctx, i)
+			if err != nil {
+				return nil, err
+			}
+			if nextLayer != nil {
+				fullBlockTree = append(fullBlockTree, nextLayer...)
+			}
+		}
+		if i > req.SlotTo {
+			break
+		}
+	}
+	tree := []*pb.BlockTreeResponse_TreeNode{}
+	for _, kid := range fullBlockTree {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		participatedVotes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
+		if err != nil {
+			return nil, err
+		}
+		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		if err != nil {
+			return nil, err
+		}
+		hState, err := bs.beaconDB.HistoricalStateFromSlot(ctx, kid.Slot, blockRoot)
+		if err != nil {
+			return nil, err
+		}
+		if kid.Slot >= req.SlotFrom && kid.Slot <= req.SlotTo {
+			activeValidatorIndices := helpers.ActiveValidatorIndices(hState.ValidatorRegistry, helpers.CurrentEpoch(hState))
+			totalVotes := epoch.TotalBalance(hState, activeValidatorIndices)
+			tree = append(tree, &pb.BlockTreeResponse_TreeNode{
+				BlockRoot:         blockRoot[:],
+				Block:             kid,
+				ParticipatedVotes: uint64(participatedVotes),
+				TotalVotes:        uint64(totalVotes),
+			})
+		}
 	}
 	return &pb.BlockTreeResponse{
 		Tree: tree,
@@ -168,8 +307,8 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	}
 	depositRoot := depositTrie.Root()
 	return &pbp2p.Eth1Data{
-			DepositRoot: depositRoot[:],
-			BlockRoot:   blockHash[:],
+		DepositRoot: depositRoot[:],
+		BlockRoot:   blockHash[:],
 	}, nil
 }
 

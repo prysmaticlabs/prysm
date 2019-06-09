@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sort"
+	"runtime"
 	"sync"
 	"time"
 
@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -51,6 +50,7 @@ type ChainService struct {
 	canonicalBlocks      map[uint64][]byte
 	canonicalBlocksLock  sync.RWMutex
 	receiveBlockLock     sync.Mutex
+	maxRoutines          int64
 }
 
 // Config options for the service.
@@ -62,6 +62,7 @@ type Config struct {
 	OpsPoolService operations.OperationFeeds
 	DevMode        bool
 	P2p            p2p.Broadcaster
+	MaxRoutines    int64
 }
 
 // NewChainService instantiates a new service instance that will
@@ -80,6 +81,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
 		canonicalBlocks:      make(map[uint64][]byte),
+		maxRoutines:          cfg.MaxRoutines,
 	}, nil
 }
 
@@ -194,6 +196,9 @@ func (c *ChainService) Stop() error {
 // Status always returns nil.
 // TODO(1202): Add service health checks.
 func (c *ChainService) Status() error {
+	if runtime.NumGoroutine() > int(c.maxRoutines) {
+		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
+	}
 	return nil
 }
 
@@ -224,6 +229,13 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 	return root, nil
 }
 
+// UpdateCanonicalRoots sets a new head into the canonical block roots map.
+func (c *ChainService) UpdateCanonicalRoots(newHead *pb.BeaconBlock, newHeadRoot [32]byte) {
+	c.canonicalBlocksLock.Lock()
+	defer c.canonicalBlocksLock.Unlock()
+	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]
+}
+
 // IsCanonical returns true if the input block hash of the corresponding slot
 // is part of the canonical chain. False otherwise.
 func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
@@ -233,42 +245,4 @@ func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
 		return bytes.Equal(canonicalHash, hash)
 	}
 	return false
-}
-
-// RecentCanonicalRoots returns the latest block slot and root of the canonical block chain,
-// the block slots and roots are sorted and in descending order. Input count determines
-// the number of block slots and roots to return.
-func (c *ChainService) RecentCanonicalRoots(count uint64) []*pbrpc.BlockRoot {
-	c.canonicalBlocksLock.RLock()
-	defer c.canonicalBlocksLock.RUnlock()
-	var slots []int
-	for s := range c.canonicalBlocks {
-		slots = append(slots, int(s))
-	}
-
-	// Return the all the canonical blocks if the input count is greater than
-	// the depth of the block tree.
-	totalRoots := uint64(len(slots))
-	if count > totalRoots {
-		count = totalRoots
-	}
-
-	sort.Sort(sort.Reverse(sort.IntSlice(slots)))
-	blockRoots := make([]*pbrpc.BlockRoot, count)
-	for i := 0; i < int(count); i++ {
-		slot := uint64(slots[i])
-		blockRoots[i] = &pbrpc.BlockRoot{
-			Slot: slot,
-			Root: c.canonicalBlocks[slot],
-		}
-	}
-	return blockRoots
-}
-
-// InsertsCanonical inserts a canonical block hash to its corresponding slot.
-// This is used for testing purpose.
-func (c *ChainService) InsertsCanonical(slot uint64, hash []byte) {
-	c.canonicalBlocksLock.Lock()
-	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[slot] = hash
 }

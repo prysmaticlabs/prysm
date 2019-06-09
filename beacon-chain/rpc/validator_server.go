@@ -261,6 +261,9 @@ func (vs *ValidatorServer) ExitedValidators(
 	if err != nil {
 		return nil, err
 	}
+	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
+	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
+}
 
 	exitedKeys := make([][]byte, 0)
 	for _, status := range statuses {

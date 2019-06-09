@@ -18,7 +18,7 @@ spec:
     - "*.prylabs.net"
     - "prylabs.net"
     tls:
-      httpsRedirect: false
+      httpsRedirect: true
   - port:
       number: 443
       name: https

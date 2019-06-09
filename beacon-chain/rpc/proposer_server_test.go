@@ -704,6 +704,20 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 			hashesByHeight: make(map[int][]byte),
 		},
 	}
+
+	validators := make([]*pbp2p.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pbp2p.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	crosslinks := make([]*pbp2p.Crosslink, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := range crosslinks {
+		crosslinks[i] = &pbp2p.Crosslink{
+			Epoch:                   params.BeaconConfig().GenesisEpoch + 1,
+			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+		}
+	}
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockRoot: []byte{'a'},

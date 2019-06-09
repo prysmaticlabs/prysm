@@ -34,6 +34,8 @@ type BeaconDB struct {
 	// We keep a map of hashes of blocks which failed processing for blacklisting.
 	badBlockHashes map[[32]byte]bool
 	badBlocksLock  sync.RWMutex
+	blocks         map[[32]byte]*pb.BeaconBlock
+	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
 	pendingDeposits       []*depositContainer
@@ -83,6 +85,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	}
 
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
+	db.blocks = make(map[[32]byte]*pb.BeaconBlock)
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,

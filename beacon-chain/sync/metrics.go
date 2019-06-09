@@ -12,10 +12,6 @@ var (
 		Name: "regsync_batched_block_req",
 		Help: "The number of received batch block requests",
 	})
-	blockReqSlot = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "regsync_block_req_by_slot",
-		Help: "The number of received block requests by slot",
-	})
 	blockReqHash = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "regsync_block_req_by_hash",
 		Help: "The number of received block requests by hash",
