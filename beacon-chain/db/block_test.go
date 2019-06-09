@@ -139,7 +139,7 @@ func TestDeleteBlock_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
+	block := &pb.BeaconBlock{Slot: 0}
 	h, _ := hashutil.HashBeaconBlock(block)
 
 	err := db.SaveBlock(block)
@@ -170,7 +170,7 @@ func TestDeleteBlockInCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
+	block := &pb.BeaconBlock{Slot: 0}
 	h, _ := hashutil.HashBeaconBlock(block)
 
 	err := db.SaveBlock(block)
@@ -299,7 +299,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to record the new head of the main chain: %v", err)
 	}
 
-	b2Prime, err := db.CanonicalBlockBySlot(ctx, params.BeaconConfig().GenesisSlot+1)
+	b2Prime, err := db.CanonicalBlockBySlot(ctx, 1)
 	if err != nil {
 		t.Fatalf("failed to retrieve slot 1: %v", err)
 	}
@@ -507,7 +507,7 @@ func TestClearBlockCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
+	block := &pb.BeaconBlock{Slot: 0}
 
 	err := db.SaveBlock(block)
 	if err != nil {

@@ -14,7 +14,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -60,7 +59,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		// until we can get a block.
 		lastAvailBlkSlot := lastJustifiedSlot
 		for newJustifiedBlock == nil {
-			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
+			log.WithField("slot", lastAvailBlkSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
 			newJustifiedBlock, err = c.beaconDB.CanonicalBlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
@@ -102,7 +101,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		// until we can get a block.
 		lastAvailBlkSlot := lastFinalizedSlot
 		for newFinalizedBlock == nil {
-			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
+			log.WithField("slot", lastAvailBlkSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
 			newFinalizedBlock, err = c.beaconDB.CanonicalBlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
@@ -185,9 +184,9 @@ func (c *ChainService) ApplyForkChoiceRule(
 	newState := postState
 	if !isDescendant && !proto.Equal(currentHead, newHead) {
 		log.WithFields(logrus.Fields{
-			"currentSlot": currentHead.Slot - params.BeaconConfig().GenesisSlot,
+			"currentSlot": currentHead.Slot,
 			"currentRoot": fmt.Sprintf("%#x", bytesutil.Trunc(currentHeadRoot[:])),
-			"newSlot":     newHead.Slot - params.BeaconConfig().GenesisSlot,
+			"newSlot":     newHead.Slot,
 			"newRoot":     fmt.Sprintf("%#x", bytesutil.Trunc(newHeadRoot[:])),
 		}).Warn("Reorg happened")
 		// Only regenerate head state if there was a reorg.
@@ -204,7 +203,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 
 	if proto.Equal(currentHead, newHead) {
 		log.WithFields(logrus.Fields{
-			"currentSlot": currentHead.Slot - params.BeaconConfig().GenesisSlot,
+			"currentSlot": currentHead.Slot,
 			"currentRoot": fmt.Sprintf("%#x", bytesutil.Trunc(currentHeadRoot[:])),
 		}).Warn("Head did not change after fork choice, current head has the most votes")
 	}
@@ -226,8 +225,8 @@ func (c *ChainService) ApplyForkChoiceRule(
 	}
 	log.WithFields(logrus.Fields{
 		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
-		"headSlot":  newHead.Slot - params.BeaconConfig().GenesisSlot,
-		"stateSlot": newState.Slot - params.BeaconConfig().GenesisSlot,
+		"headSlot":  newHead.Slot,
+		"stateSlot": newState.Slot,
 	}).Info("Chain head block and state updated")
 
 	return nil

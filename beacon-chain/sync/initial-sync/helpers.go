@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/terencechain/prysm-phase2/shared/bytesutil"
 	"runtime/debug"
 
 	"github.com/gogo/protobuf/proto"
@@ -33,7 +34,7 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 }
 
 func (s *InitialSync) doesParentExist(block *pb.BeaconBlock) bool {
-	parentHash := bytesutil.ToBytes32(block.ParentBlockRoot)
+	parentHash := bytesutil.ToBytes32(block.ParentRoot)
 	return s.db.HasBlock(parentHash)
 }
 

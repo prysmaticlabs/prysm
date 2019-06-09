@@ -49,7 +49,6 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +79,6 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -119,7 +117,6 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +143,6 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{}},
-		LatestBlock:       &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -171,7 +167,6 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
-		LatestBlock:       &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -243,7 +238,6 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +290,6 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -347,7 +340,6 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlock = block
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatal(err)
 	}

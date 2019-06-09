@@ -89,8 +89,8 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	if chainHead.Slot != justifiedState.Slot+5 {
 		t.Errorf(
 			"Expected chain head with slot %d, received %d",
-			justifiedState.Slot+5-params.BeaconConfig().GenesisSlot,
-			chainHead.Slot-params.BeaconConfig().GenesisSlot,
+			justifiedState.Slot+5,
+			chainHead.Slot,
 		)
 	}
 
