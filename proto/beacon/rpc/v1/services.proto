@@ -18,11 +18,8 @@ service AttesterService {
 }
 
 service ProposerService {
-  rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
-  rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
-  rpc PendingAttestations(PendingAttestationsRequest) returns (PendingAttestationsResponse);
+  rpc RequestBlock(BlockRequest) returns (ethereum.beacon.p2p.v1.BeaconBlock);
   rpc ProposeBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (ProposeResponse);
-  rpc ComputeStateRoot(ethereum.beacon.p2p.v1.BeaconBlock) returns (StateRootResponse);
 }
 
 service ValidatorService {
@@ -33,6 +30,11 @@ service ValidatorService {
   rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
   rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
   rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
+}
+
+message BlockRequest {
+  uint64 slot = 1;
+  bytes randao_reveal = 2;
 }
 
 message ValidatorPerformanceRequest {
@@ -83,36 +85,23 @@ message AttestationDataResponse {
   uint64 head_slot = 6;
 }
 
-message PendingAttestationsRequest {
-  bool filter_ready_for_inclusion = 1;
-  uint64 proposal_block_slot = 2;
-}
-
-message PendingAttestationsResponse {
-  repeated ethereum.beacon.p2p.v1.Attestation pending_attestations = 1;
-}
-
 message ChainStartResponse {
   bool started = 1;
   uint64 genesis_time = 2;
 }
 
 message ProposeResponse {
-  bytes block_root_hash32 = 1;
-}
-
-message StateRootResponse {
-  bytes state_root = 1;
+  bytes block_root = 1;
 }
 
 message AttestResponse {
   bytes attestation_hash = 1;
 }
 
-enum ValidatorRole {
-  UNKNOWN = 0;
-  ATTESTER = 1;
-  PROPOSER = 2;
+ enum ValidatorRole {
+     UNKNOWN = 0;
+     ATTESTER = 1;
+     PROPOSER = 2;
 }
 
 message ValidatorIndexRequest {
@@ -126,10 +115,6 @@ message ValidatorIndexResponse {
 message CommitteeAssignmentsRequest {
   uint64 epoch_start = 1;
   repeated bytes public_keys = 2;
-}
-
-message PendingDepositsResponse {
-  repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
 }
 
 message CommitteeAssignmentResponse {
@@ -150,10 +135,6 @@ message ValidatorStatusResponse {
   uint64 deposit_inclusion_slot = 3;
   uint64 activation_epoch = 4;
   uint64 position_in_activation_queue = 5;
-}
-
-message Eth1DataResponse {
-  ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
 }
 
 message DomainRequest {
