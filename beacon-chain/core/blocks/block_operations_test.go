@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -77,7 +77,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
 	validators[5896].Slashed = false
 
-	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -135,7 +135,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -237,7 +237,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -294,7 +294,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 
 	validators[5593].Slashed = false
 
-	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
+	latestBlockSignedRoot, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}

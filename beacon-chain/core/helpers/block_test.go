@@ -49,12 +49,12 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		s.Slot = tt.stateSlot + params.BeaconConfig().GenesisSlot
-		wantedSlot := tt.slot + params.BeaconConfig().GenesisSlot
+		s.Slot = tt.stateSlot
+		wantedSlot := tt.slot
 		result, err := BlockRootAtSlot(s, wantedSlot)
 		if err != nil {
 			t.Fatalf("failed to get block root at slot %d: %v",
-				wantedSlot-params.BeaconConfig().GenesisSlot, err)
+				wantedSlot, err)
 		}
 		if !bytes.Equal(result, tt.expectedRoot) {
 			t.Errorf(
@@ -82,16 +82,16 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			slot:      params.BeaconConfig().GenesisSlot + 1000,
-			stateSlot: params.BeaconConfig().GenesisSlot + 500,
+			slot:      1000,
+			stateSlot: 500,
 			expectedErr: fmt.Sprintf("slot %d is not within range %d to %d",
 				1000,
 				0,
 				500),
 		},
 		{
-			slot:        params.BeaconConfig().GenesisSlot + 129,
-			stateSlot:   params.BeaconConfig().GenesisSlot + 400,
+			slot:        129,
+			stateSlot:   400,
 			expectedErr: "slot 129 is not within range 272 to 399",
 		},
 	}

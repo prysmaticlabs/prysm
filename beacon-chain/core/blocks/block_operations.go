@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -103,7 +103,7 @@ func ProcessBlockHeader(
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
 	}
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	parentRoot, err := ssz.TreeHash(beaconState.LatestBlockHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 	}
 	if enableLogging {
 		log.WithFields(logrus.Fields{
-			"epoch":         helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
+			"epoch":         helpers.CurrentEpoch(beaconState),
 			"proposerIndex": proposerIdx,
 		}).Info("Verifying randao")
 	}

@@ -26,13 +26,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	if params.BeaconConfig().GenesisSlot != 1<<63 {
-		t.Error("GenesisSlot should be 2^63 for these tests to pass")
-	}
-	genesisEpochNumber := params.BeaconConfig().GenesisEpoch
+	genesisEpochNumber := uint64(0)
 
-	if params.BeaconConfig().GenesisForkVersion != 0 {
-		t.Error("GenesisSlot( should be 0 for these tests to pass")
+	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, []byte{0, 0, 0, 0}) {
+		t.Error("GenesisSlot( should be {0,0,0,0} for these tests to pass")
 	}
 	genesisForkVersion := params.BeaconConfig().GenesisForkVersion
 
@@ -92,7 +89,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Misc fields checks.
-	if newState.Slot != params.BeaconConfig().GenesisSlot {
+	if newState.Slot != 0 {
 		t.Error("Slot was not correctly initialized")
 	}
 	if newState.GenesisTime != genesisTime {
@@ -111,7 +108,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
 	if len(newState.Balances) != depositsForChainStart {
-		t.Error("ValidatorBalances was not correctly initialized")
+		t.Error("Balances was not correctly initialized")
 	}
 
 	// Randomness and committees fields checks.

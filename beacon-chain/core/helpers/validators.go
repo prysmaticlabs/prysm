@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -193,8 +191,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		return 0, fmt.Errorf("could not get first committee: %v", err)
 	}
 	if len(firstCommittee) == 0 {
-		return 0, fmt.Errorf("empty first committee at slot %d",
-			state.Slot-params.BeaconConfig().GenesisSlot)
+		return 0, fmt.Errorf("empty first committee at slot %d", state.Slot)
 	}
 
 	// Use the generated seed to select proposer from the first committee
