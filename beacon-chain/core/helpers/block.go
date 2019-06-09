@@ -24,13 +24,10 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 		earliestSlot = state.Slot - params.BeaconConfig().SlotsPerHistoricalRoot
 	}
 	if slot < earliestSlot || slot >= state.Slot {
-		if earliestSlot < params.BeaconConfig().GenesisSlot {
-			earliestSlot = params.BeaconConfig().GenesisSlot
-		}
 		return []byte{}, fmt.Errorf("slot %d is not within range %d to %d",
-			slot-params.BeaconConfig().GenesisSlot,
-			earliestSlot-params.BeaconConfig().GenesisSlot,
-			state.Slot-params.BeaconConfig().GenesisSlot,
+			slot,
+			earliestSlot,
+			state.Slot,
 		)
 	}
 	return state.LatestBlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot], nil
