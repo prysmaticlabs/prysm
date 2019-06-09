@@ -465,7 +465,7 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.BeaconDB) ([]byte, error) {
 	// check if the ancestor block of from a given block height was cached.
 	cachedAncestorInfo, err := blkAncestorCache.AncestorBySlot(
-		target.BlockRoot[:], height)
+		*target.BlockRoot, height)
 	if err != nil {
 		return nil, nil
 	}

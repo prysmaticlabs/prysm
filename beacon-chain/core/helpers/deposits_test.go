@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -19,7 +20,7 @@ func init() {
 func TestEncodeDecodeDepositInput_Ok(t *testing.T) {
 	input := &pb.DepositInput{
 		Pubkey:                      []byte("key"),
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 		ProofOfPossession:           []byte("pop"),
 	}
 	depositTime := time.Now().Unix()
@@ -60,7 +61,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
 				ProofOfPossession:           []byte("pop"),
-				WithdrawalCredentialsHash32: []byte("withdraw"),
+				WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 			},
 			amount:    8749343850,
 			timestamp: 458739850,
@@ -69,7 +70,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
 				ProofOfPossession:           []byte("pop"),
-				WithdrawalCredentialsHash32: []byte("withdraw"),
+				WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 			},
 			amount:    657660,
 			timestamp: 67750,
@@ -78,7 +79,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
 				ProofOfPossession:           []byte("pop"),
-				WithdrawalCredentialsHash32: []byte("withdraw"),
+				WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 			},
 			amount:    5445540,
 			timestamp: 34340,
@@ -86,7 +87,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
 				ProofOfPossession:           []byte("pop"),
-				WithdrawalCredentialsHash32: []byte("withdraw"),
+				WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 			},
 			amount:    4545,
 			timestamp: 4343,
@@ -94,7 +95,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
 				ProofOfPossession:           []byte("pop"),
-				WithdrawalCredentialsHash32: []byte("withdraw"),
+				WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 			},
 			amount:    76706966,
 			timestamp: 34394393,

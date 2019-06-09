@@ -329,7 +329,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		activeValidatorIndices := helpers.ActiveValidatorIndices(hState.ValidatorRegistry, helpers.CurrentEpoch(hState))
 		totalVotes := epoch.TotalBalance(hState, activeValidatorIndices)
 		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
-			BlockRoot:         blockRoot[:],
+			BlockRoot:         gotypes.NewBytes32(blockRoot[:]),
 			Block:             kid,
 			ParticipatedVotes: uint64(participatedVotes),
 			TotalVotes:        uint64(totalVotes),
@@ -400,7 +400,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 			activeValidatorIndices := helpers.ActiveValidatorIndices(hState.ValidatorRegistry, helpers.CurrentEpoch(hState))
 			totalVotes := epoch.TotalBalance(hState, activeValidatorIndices)
 			tree = append(tree, &pb.BlockTreeResponse_TreeNode{
-				BlockRoot:         blockRoot[:],
+				BlockRoot:         gotypes.NewBytes32(blockRoot[:]),
 				Block:             kid,
 				ParticipatedVotes: uint64(participatedVotes),
 				TotalVotes:        uint64(totalVotes),

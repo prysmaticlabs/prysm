@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
@@ -91,10 +92,10 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot,
-		RandaoReveal: randaoReveal,
+		RandaoReveal: gotypes.NewBytes96(randaoReveal),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRootHash32: gotypes.NewBytes32([]byte{2}),
+			BlockHash32:       gotypes.NewBytes32([]byte{3}),
 		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -118,12 +119,12 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 			ProposalData_1: &pb.ProposalSignedData{
 				Slot:            1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 			ProposalData_2: &pb.ProposalSignedData{
 				Slot:            1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 		},
 	}
@@ -134,10 +135,10 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot,
-		RandaoReveal: randaoReveal,
+		RandaoReveal: gotypes.NewBytes96(randaoReveal),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRootHash32: gotypes.NewBytes32([]byte{2}),
+			BlockHash32:       gotypes.NewBytes32([]byte{3}),
 		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -163,12 +164,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			ProposalData_1: &pb.ProposalSignedData{
 				Slot:            1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 			ProposalData_2: &pb.ProposalSignedData{
 				Slot:            1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 		},
 	}
@@ -202,10 +203,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot,
-		RandaoReveal: randaoReveal,
+		RandaoReveal: gotypes.NewBytes96(randaoReveal),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRootHash32: gotypes.NewBytes32([]byte{2}),
+			BlockHash32:       gotypes.NewBytes32([]byte{3}),
 		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
@@ -232,12 +233,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			ProposalData_1: &pb.ProposalSignedData{
 				Slot:            params.BeaconConfig().GenesisSlot + 1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 			ProposalData_2: &pb.ProposalSignedData{
 				Slot:            params.BeaconConfig().GenesisSlot + 1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 		},
 	}
@@ -263,14 +264,14 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 		},
 	}
-	var blockRoots [][]byte
+	var blockRoots []gotypes.Bytes32
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 	beaconState.LatestBlockRootHash32S = blockRoots
 	beaconState.LatestCrosslinks = []*pb.Crosslink{
 		{
-			CrosslinkDataRootHash32: []byte{1},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
@@ -279,9 +280,10 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
-			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+			JustifiedBlockRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
+			LatestCrosslink: &pb.Crosslink{
+				CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{1})},
+			CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -294,10 +296,10 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot + 10,
-		RandaoReveal: randaoReveal,
+		RandaoReveal: gotypes.NewBytes96(randaoReveal),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRootHash32: gotypes.NewBytes32([]byte{2}),
+			BlockHash32:       gotypes.NewBytes32([]byte{3}),
 		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
@@ -325,12 +327,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			ProposalData_1: &pb.ProposalSignedData{
 				Slot:            1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 			ProposalData_2: &pb.ProposalSignedData{
 				Slot:            1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 		},
 	}
@@ -356,14 +358,14 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			},
 		},
 	}
-	var blockRoots [][]byte
+	var blockRoots []gotypes.Bytes32
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 	beaconState.LatestBlockRootHash32S = blockRoots
 	beaconState.LatestCrosslinks = []*pb.Crosslink{
 		{
-			CrosslinkDataRootHash32: []byte{1},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
@@ -372,9 +374,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
-			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+			JustifiedBlockRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
+			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{1})},
+			CrosslinkDataRootHash32:  gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -389,10 +391,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot + 10,
-		RandaoReveal: randaoReveal,
+		RandaoReveal: gotypes.NewBytes96(randaoReveal),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRootHash32: gotypes.NewBytes32([]byte{2}),
+			BlockHash32:       gotypes.NewBytes32([]byte{3}),
 		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
@@ -426,20 +428,20 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 				Slot:                     i + params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
 				Shard:                    1,
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
-				JustifiedBlockRootHash32: []byte{0},
+				JustifiedBlockRootHash32: gotypes.NewBytes32([]byte{0}),
 			},
 			InclusionSlot: i + params.BeaconConfig().SlotsPerEpoch + 1 + params.BeaconConfig().GenesisSlot,
 		})
 	}
 
-	var blockRoots [][]byte
+	var blockRoots []gotypes.Bytes32
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 
-	var randaoHashes [][]byte
+	var randaoHashes []gotypes.Bytes32
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		randaoHashes = append(randaoHashes, []byte{byte(i)})
+		randaoHashes = append(randaoHashes, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 
 	crosslinkRecord := make([]*pb.Crosslink, 64)
@@ -451,7 +453,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       crosslinkRecord,
 		LatestRandaoMixes:      randaoHashes,
-		LatestIndexRootHash32S: make([][]byte,
+		LatestIndexRootHash32S: make([]gotypes.Bytes32,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,
 			params.BeaconConfig().LatestSlashedExitLength),
@@ -486,20 +488,20 @@ func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
 				Slot:                     i + params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
 				Shard:                    1,
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
-				JustifiedBlockRootHash32: []byte{0},
+				JustifiedBlockRootHash32: gotypes.NewBytes32([]byte{0}),
 			},
 			InclusionSlot: i + params.BeaconConfig().SlotsPerEpoch + 1 + params.BeaconConfig().GenesisSlot,
 		})
 	}
 
-	var blockRoots [][]byte
+	var blockRoots []gotypes.Bytes32
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 
-	var randaoHashes [][]byte
+	var randaoHashes []gotypes.Bytes32
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		randaoHashes = append(randaoHashes, []byte{byte(i)})
+		randaoHashes = append(randaoHashes, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 
 	crosslinkRecord := make([]*pb.Crosslink, 64)
@@ -511,7 +513,7 @@ func TestProcessEpoch_PreventsRegistryUpdateOnNilBlock(t *testing.T) {
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       crosslinkRecord,
 		LatestRandaoMixes:      randaoHashes,
-		LatestIndexRootHash32S: make([][]byte,
+		LatestIndexRootHash32S: make([]gotypes.Bytes32,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,
 			params.BeaconConfig().LatestSlashedExitLength),
@@ -555,21 +557,21 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 				Slot:                     i + params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
 				Shard:                    1,
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
-				JustifiedBlockRootHash32: []byte{0},
+				JustifiedBlockRootHash32: gotypes.NewBytes32([]byte{0}),
 			},
 			AggregationBitfield: []byte{},
 			InclusionSlot:       i + params.BeaconConfig().SlotsPerEpoch + 1 + params.BeaconConfig().GenesisSlot,
 		})
 	}
 
-	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+	var blockRoots []gotypes.Bytes32
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 
-	var randaoHashes [][]byte
+	var randaoHashes []gotypes.Bytes32
 	for i := uint64(0); i < 5*params.BeaconConfig().SlotsPerEpoch; i++ {
-		randaoHashes = append(randaoHashes, []byte{byte(i)})
+		randaoHashes = append(randaoHashes, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 
 	crosslinkRecord := make([]*pb.Crosslink, 64)
@@ -582,7 +584,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       crosslinkRecord,
 		LatestRandaoMixes:      randaoHashes,
-		LatestIndexRootHash32S: make([][]byte,
+		LatestIndexRootHash32S: make([]gotypes.Bytes32,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,
 			params.BeaconConfig().LatestSlashedExitLength),
@@ -613,9 +615,11 @@ func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 }
 
 func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
-	latestBlockRoots := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
+	latestBlockRoots := make([]gotypes.Bytes32, params.BeaconConfig().
+		LatestBlockRootsLength)
 	for i := 0; i < len(latestBlockRoots); i++ {
-		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
+		latestBlockRoots[i] = *gotypes.NewBytes32(params.BeaconConfig().
+			ZeroHash[:])
 	}
 
 	var attestations []*pb.PendingAttestation
@@ -624,7 +628,7 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 			Data: &pb.AttestationData{
 				Slot:                     params.BeaconConfig().GenesisSlot + 1,
 				Shard:                    1,
-				JustifiedBlockRootHash32: make([]byte, 32),
+				JustifiedBlockRootHash32: gotypes.NewBytes32([]byte{}),
 			},
 			AggregationBitfield: []byte{0xff},
 		})
@@ -644,9 +648,10 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 
 func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 	newState := &pb.BeaconState{
-		LatestIndexRootHash32S: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().SlotsPerEpoch),
+		LatestIndexRootHash32S: make([]gotypes.Bytes32, params.BeaconConfig().
+			LatestActiveIndexRootsLength),
+		LatestSlashedBalances: make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestRandaoMixes:     make([]gotypes.Bytes32, params.BeaconConfig().SlotsPerEpoch),
 	}
 	config := state.DefaultConfig()
 	config.Logging = true

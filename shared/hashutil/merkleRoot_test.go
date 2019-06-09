@@ -1,12 +1,11 @@
 package hashutil
 
 import (
-	"bytes"
 	"testing"
 )
 
 func TestMerkleRoot(t *testing.T) {
-	valueSet := [][]byte{
+	valueSet := [][32]byte{
 		{'a'},
 		{'b'},
 		{'c'},
@@ -22,7 +21,7 @@ func TestMerkleRoot(t *testing.T) {
 	rightNode := Hash(append(hashedV3[:], hashedV4[:]...))
 	expectedRoot := Hash(append(leftNode[:], rightNode[:]...))
 
-	if !bytes.Equal(expectedRoot[:], MerkleRoot(valueSet)) {
+	if expectedRoot != MerkleRoot(valueSet) {
 		t.Errorf("Expected Merkle root and computed merkle root are not equal %#x , %#x", expectedRoot, MerkleRoot(valueSet))
 	}
 

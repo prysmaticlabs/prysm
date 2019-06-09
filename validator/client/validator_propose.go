@@ -10,6 +10,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -98,8 +99,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	// 2. Construct block.
 	block := &pbp2p.BeaconBlock{
 		Slot:             slot,
-		ParentRootHash32: parentTreeRoot[:],
-		RandaoReveal:     epochSignature.Marshal(),
+		ParentRootHash32: gotypes.NewBytes32(parentTreeRoot[:]),
+		RandaoReveal:     gotypes.NewBytes96(epochSignature.Marshal()),
 		Eth1Data:         eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations:      attResp.PendingAttestations,
@@ -119,7 +120,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 		}).WithError(err).Error("Not proposing! Unable to compute state root")
 		return
 	}
-	block.StateRootHash32 = resp.GetStateRoot()
+	block.StateRootHash32 = resp.StateRoot
 
 	// 4. Sign the complete block.
 	// TODO(1366): BLS sign block

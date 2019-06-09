@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
@@ -72,7 +73,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		RandaoReveal: epochSignature.Marshal(),
+		RandaoReveal: gotypes.NewBytes96(epochSignature.Marshal()),
 	}
 
 	want := "block randao reveal signature did not verify"
@@ -105,7 +106,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
-		RandaoReveal: epochSignature.Marshal(),
+		RandaoReveal: gotypes.NewBytes96(epochSignature.Marshal()),
 	}
 
 	newState, err := blocks.ProcessBlockRandao(
@@ -121,7 +122,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	mix := newState.LatestRandaoMixes[currentEpoch%params.BeaconConfig().LatestRandaoMixesLength]
 
-	if bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(mix[:], params.BeaconConfig().ZeroHash[:]) {
 		t.Errorf(
 			"Expected empty signature to be overwritten by randao reveal, received %v",
 			params.BeaconConfig().EmptySignature,
@@ -134,8 +135,8 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{1},
-					BlockHash32:       []byte{2},
+					DepositRootHash32: gotypes.NewBytes32([]byte{1}),
+					BlockHash32:       gotypes.NewBytes32([]byte{2}),
 				},
 				VoteCount: 5,
 			},
@@ -143,8 +144,8 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1},
-			BlockHash32:       []byte{2},
+			DepositRootHash32: gotypes.NewBytes32([]byte{1}),
+			BlockHash32:       gotypes.NewBytes32([]byte{2}),
 		},
 	}
 	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
@@ -159,8 +160,8 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{0},
-					BlockHash32:       []byte{1},
+					DepositRootHash32: gotypes.NewBytes32([]byte{0}),
+					BlockHash32:       gotypes.NewBytes32([]byte{1}),
 				},
 				VoteCount: 5,
 			},
@@ -169,8 +170,8 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{2},
-			BlockHash32:       []byte{3},
+			DepositRootHash32: gotypes.NewBytes32([]byte{2}),
+			BlockHash32:       gotypes.NewBytes32([]byte{3}),
 		},
 	}
 
@@ -185,10 +186,11 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 			newETH1DataVotes[1].VoteCount,
 		)
 	}
-	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRootHash32, []byte{2}) {
+	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRootHash32[:],
+		[]byte{2}) {
 		t.Errorf(
 			"expected new ETH1 data votes to have a new element with deposit root = %#x, received deposit root = %#x",
-			[]byte{1},
+			gotypes.NewBytes32([]byte{1}),
 			newETH1DataVotes[1].Eth1Data.DepositRootHash32,
 		)
 	}
@@ -305,12 +307,12 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 			ProposalData_1: &pb.ProposalSignedData{
 				Slot:            1,
 				Shard:           0,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 			ProposalData_2: &pb.ProposalSignedData{
 				Slot:            1,
 				Shard:           0,
-				BlockRootHash32: []byte{1, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{1, 1, 0}),
 			},
 		},
 	}
@@ -326,7 +328,7 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 	}
 	want := fmt.Sprintf(
 		"slashing proposal data block roots do not match: %#x, %#x",
-		[]byte{0, 1, 0}, []byte{1, 1, 0},
+		gotypes.NewBytes32([]byte{0, 1, 0}), gotypes.NewBytes32([]byte{1, 1, 0}),
 	)
 
 	if _, err := blocks.ProcessProposerSlashings(
@@ -361,12 +363,12 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			ProposalData_1: &pb.ProposalSignedData{
 				Slot:            params.BeaconConfig().GenesisSlot + 1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 			ProposalData_2: &pb.ProposalSignedData{
 				Slot:            params.BeaconConfig().GenesisSlot + 1,
 				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
+				BlockRootHash32: gotypes.NewBytes32([]byte{0, 1, 0}),
 			},
 		},
 	}
@@ -839,9 +841,9 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 }
 
 func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
-	var blockRoots [][]byte
+	var blockRoots []gotypes.Bytes32
 	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 
 	// If attestation.latest_cross_link_root != state.latest_crosslinks[shard].shard_block_root
@@ -850,14 +852,14 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	// the attestation should be invalid.
 	stateLatestCrosslinks := []*pb.Crosslink{
 		{
-			CrosslinkDataRootHash32: []byte{1},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + 70,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
-		PreviousJustifiedRoot:  blockRoots[0],
+		PreviousJustifiedRoot:  &blockRoots[0],
 		LatestCrosslinks:       stateLatestCrosslinks,
 	}
 	attestations := []*pb.Attestation{
@@ -865,9 +867,9 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 			Data: &pb.AttestationData{
 				Shard:                    0,
 				Slot:                     params.BeaconConfig().GenesisSlot + 20,
-				JustifiedBlockRootHash32: blockRoots[0],
-				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{2}},
-				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+				JustifiedBlockRootHash32: &blockRoots[0],
+				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{2})},
+				CrosslinkDataRootHash32:  gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
@@ -892,13 +894,13 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.T) {
-	var blockRoots [][]byte
+	var blockRoots []gotypes.Bytes32
 	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 	stateLatestCrosslinks := []*pb.Crosslink{
 		{
-			CrosslinkDataRootHash32: []byte{1},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	state := &pb.BeaconState{
@@ -906,17 +908,18 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
-		PreviousJustifiedRoot:  blockRoots[0],
+		PreviousJustifiedRoot:  &blockRoots[0],
 	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
 				Shard:                    0,
 				Slot:                     params.BeaconConfig().GenesisSlot + 20,
-				JustifiedBlockRootHash32: blockRoots[0],
-				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-				CrosslinkDataRootHash32:  []byte{1},
-				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+				JustifiedBlockRootHash32: &blockRoots[0],
+				LatestCrosslink: &pb.
+					Crosslink{CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{1})},
+				CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{1}),
+				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
 			},
 		},
 	}
@@ -927,8 +930,8 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	}
 	want := fmt.Sprintf(
 		"expected attestation.data.CrosslinkDataRootHash == %#x, received %#x instead",
-		params.BeaconConfig().ZeroHash[:],
-		[]byte{1},
+		gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
+		gotypes.NewBytes32([]byte{1}),
 	)
 	if _, err := blocks.ProcessBlockAttestations(
 
@@ -941,13 +944,13 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 }
 
 func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
-	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+	var blockRoots []gotypes.Bytes32
+	for i := uint64(0); i < 2*params.BeaconConfig().LatestBlockRootsLength; i++ {
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 	stateLatestCrosslinks := []*pb.Crosslink{
 		{
-			CrosslinkDataRootHash32: []byte{1},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	state := &pb.BeaconState{
@@ -955,19 +958,21 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
-		PreviousJustifiedRoot:  blockRoots[0],
+		PreviousJustifiedRoot:  &blockRoots[0],
 	}
 	att1 := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot + 20,
-			JustifiedBlockRootHash32: blockRoots[0],
-			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
-			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+			JustifiedBlockRootHash32: &blockRoots[0],
+			LatestCrosslink: &pb.
+				Crosslink{CrosslinkDataRootHash32: gotypes.NewBytes32(
+				[]byte{1})},
+			CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
+			JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
 		},
 		AggregationBitfield: []byte{1},
-		CustodyBitfield:     []byte{1},
+		CustodyBitfield:     []byte{2},
 	}
 	attestations := []*pb.Attestation{att1}
 	block := &pb.BeaconBlock{
@@ -1098,8 +1103,8 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{0},
-			BlockHash32:       []byte{1},
+			DepositRootHash32: gotypes.NewBytes32([]byte{0}),
+			BlockHash32:       gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	want := "merkle branch of deposit root did not verify"
@@ -1119,7 +1124,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// currently exists in the validator registry.
 	depositInput := &pb.DepositInput{
 		Pubkey:                      []byte{1},
-		WithdrawalCredentialsHash32: []byte{1, 2, 3},
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1, 2, 3}),
 		ProofOfPossession:           []byte{},
 	}
 	wBuf := new(bytes.Buffer)
@@ -1175,7 +1180,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{4, 5, 6},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{4, 5, 6}),
 		},
 	}
 	balances := []uint64{0}
@@ -1184,8 +1189,8 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		ValidatorRegistry: registry,
 		ValidatorBalances: balances,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: root[:],
-			BlockHash32:       root[:],
+			DepositRootHash32: gotypes.NewBytes32(root[:]),
+			BlockHash32:       gotypes.NewBytes32(root[:]),
 		},
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),
@@ -1202,7 +1207,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	depositInput := &pb.DepositInput{
 		Pubkey:                      []byte{1},
-		WithdrawalCredentialsHash32: []byte{1, 2, 3},
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1, 2, 3}),
 		ProofOfPossession:           []byte{},
 	}
 	wBuf := new(bytes.Buffer)
@@ -1248,7 +1253,7 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1, 2, 3}),
 		},
 	}
 	balances := []uint64{0}
@@ -1271,7 +1276,7 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	depositInput := &pb.DepositInput{
 		Pubkey:                      []byte{1},
-		WithdrawalCredentialsHash32: []byte{1, 2, 3},
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1, 2, 3}),
 		ProofOfPossession:           []byte{},
 	}
 	wBuf := new(bytes.Buffer)
@@ -1327,7 +1332,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1, 2, 3}),
 		},
 	}
 	balances := []uint64{0}
@@ -1336,8 +1341,8 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		ValidatorRegistry: registry,
 		ValidatorBalances: balances,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: root[:],
-			BlockHash32:       root[:],
+			DepositRootHash32: gotypes.NewBytes32(root[:]),
+			BlockHash32:       gotypes.NewBytes32(root[:]),
 		},
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),
@@ -1399,7 +1404,7 @@ func TestProcessValidatorDeposits_InvalidSSZ_DepositIndexIncremented(t *testing.
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1, 2, 3}),
 		},
 	}
 	balances := []uint64{0}
@@ -1432,7 +1437,7 @@ func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented
 	hook := logTest.NewGlobal()
 	depositInput := &pb.DepositInput{
 		Pubkey:                      []byte{1},
-		WithdrawalCredentialsHash32: []byte{3, 2, 1},
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{3, 2, 1}),
 		ProofOfPossession:           []byte{},
 	}
 	wBuf := new(bytes.Buffer)
@@ -1488,7 +1493,7 @@ func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1},
-			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1, 2, 3}),
 		},
 	}
 	balances := []uint64{0}
@@ -1498,8 +1503,8 @@ func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented
 		ValidatorBalances: balances,
 		DepositIndex:      0,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: root[:],
-			BlockHash32:       root[:],
+			DepositRootHash32: gotypes.NewBytes32(root[:]),
+			BlockHash32:       gotypes.NewBytes32(root[:]),
 		},
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),

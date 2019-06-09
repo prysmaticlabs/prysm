@@ -24,11 +24,11 @@ func GenesisBeaconState(
 	eth1Data *pb.Eth1Data,
 ) (*pb.BeaconState, error) {
 	latestRandaoMixes := make(
-		[][]byte,
+		[]gotypes.Bytes32,
 		params.BeaconConfig().LatestRandaoMixesLength,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
-		latestRandaoMixes[i] = make([]byte, 32)
+		latestRandaoMixes[i] = *gotypes.NewBytes32([]byte{})
 	}
 
 	zeroHash := *gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:])

@@ -22,7 +22,7 @@ func NewGenesisBlock(stateRoot [32]byte) *pb.BeaconBlock {
 		Slot:             params.BeaconConfig().GenesisSlot,
 		ParentRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
-		RandaoReveal:     params.BeaconConfig().ZeroHash[:],
+		RandaoReveal:     gotypes.NewBytes96(params.BeaconConfig().ZeroHash[:]),
 		Signature: gotypes.NewBytes96(params.BeaconConfig().
 			EmptySignature[:]),
 		Eth1Data: &pb.Eth1Data{

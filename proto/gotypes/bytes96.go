@@ -1,5 +1,7 @@
 package gotypes
 
+import "bytes"
+
 type Bytes96 [96]byte
 
 func NewBytes96(data []byte) *Bytes96 {
@@ -31,4 +33,13 @@ func (b *Bytes96) Unmarshal(data []byte) error {
 	copy(b[:], data)
 
 	return nil
+}
+
+// TODO: test equality!
+func (b Bytes96) Equal(data []byte) bool {
+	return bytes.Equal(b[:], data)
+}
+
+func (this Bytes96) Compare(that Bytes96) int {
+	return bytes.Compare(this[:], that[:])
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -143,9 +144,9 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 	attestations := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{
 			Slot:                     params.BeaconConfig().GenesisSlot,
-			JustifiedBlockRootHash32: []byte{},
+			JustifiedBlockRootHash32: gotypes.NewBytes32([]byte{}),
 			Shard:                    0,
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+			CrosslinkDataRootHash32:  gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 		},
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       params.BeaconConfig().GenesisSlot + 5,
@@ -168,10 +169,10 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 			ValidatorRegistry:     validators,
 			ValidatorBalances:     validatorBalances,
 			LatestAttestations:    attestations,
-			PreviousJustifiedRoot: []byte{},
+			PreviousJustifiedRoot: gotypes.NewBytes32([]byte{}),
 			LatestCrosslinks: []*pb.Crosslink{
 				{
-					CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+					CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 					Epoch:                   params.BeaconConfig().GenesisEpoch,
 				},
 			},
@@ -500,7 +501,7 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 		{Data: &pb.AttestationData{
 			Slot:                    params.BeaconConfig().GenesisSlot,
 			LatestCrosslink:         &pb.Crosslink{},
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}
+			CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:])}}}
 	pendingAtts := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			AggregationBitfield: participationBitfield,

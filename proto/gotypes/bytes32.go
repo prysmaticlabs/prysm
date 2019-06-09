@@ -39,3 +39,7 @@ func (b *Bytes32) Unmarshal(data []byte) error {
 func (b Bytes32) Equal(data []byte) bool {
 	return bytes.Equal(b[:], data)
 }
+
+func (this Bytes32) Compare(that Bytes96) int {
+	return bytes.Compare(this[:], that[:])
+}

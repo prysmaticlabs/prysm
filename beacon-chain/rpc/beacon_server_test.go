@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -44,7 +45,8 @@ func (f *faultyPOWChainService) LatestBlockHeight() *big.Int {
 	return big.NewInt(0)
 }
 
-func (f *faultyPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
+func (f *faultyPOWChainService) BlockExists(_ context.Context, hash [32]byte) (bool,
+	*big.Int, error) {
 	if f.hashesByHeight == nil {
 		return false, big.NewInt(1), errors.New("failed")
 	}
@@ -75,7 +77,7 @@ func (f *faultyPOWChainService) ChainStartDeposits() [][]byte {
 type mockPOWChainService struct {
 	chainStartFeed    *event.Feed
 	latestBlockNumber *big.Int
-	hashesByHeight    map[int][]byte
+	hashesByHeight    map[int]*gotypes.Bytes32
 	blockTimeByHeight map[int]uint64
 }
 
@@ -97,8 +99,7 @@ func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (
 	// Reverse the map of heights by hash.
 	heightsByHash := make(map[[32]byte]int)
 	for k, v := range m.hashesByHeight {
-		h := bytesutil.ToBytes32(v)
-		heightsByHash[h] = k
+		heightsByHash[*v] = k
 	}
 	val, ok := heightsByHash[hash]
 	if !ok {
@@ -317,7 +318,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("0x0"),
+			BlockHash32: gotypes.NewBytes32([]byte("0x0")),
 		},
 		DepositIndex: 2,
 	}
@@ -397,7 +398,7 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("0x0"),
+			BlockHash32: gotypes.NewBytes32([]byte("0x0")),
 		},
 		DepositIndex: 10,
 	}
@@ -475,7 +476,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("0x0"),
+			BlockHash32: gotypes.NewBytes32([]byte("0x0")),
 		},
 		DepositIndex: 2,
 	}
@@ -543,7 +544,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte{'a'},
+			BlockHash32: gotypes.NewBytes32([]byte{'a'}),
 		},
 		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
 	}
@@ -579,8 +580,8 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	depositRoot := depositTrie.Root()
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32:       []byte("hash0"),
-			DepositRootHash32: depositRoot[:],
+			BlockHash32:       gotypes.NewBytes32([]byte("hash0")),
+			DepositRootHash32: gotypes.NewBytes32(depositRoot[:]),
 		},
 		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
 	}
@@ -606,7 +607,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	}
 	// If the data vote objects are empty, the deposit root should be the one corresponding
 	// to the deposit contract in the powchain service, fetched using powChainService.DepositRoot()
-	if !bytes.Equal(result.Eth1Data.DepositRootHash32, depositRoot[:]) {
+	if !bytes.Equal(result.Eth1Data.DepositRootHash32[:], depositRoot[:]) {
 		t.Errorf(
 			"Expected deposit roots to match, received %#x == %#x",
 			result.Eth1Data.DepositRootHash32,
@@ -624,15 +625,15 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		{
 			VoteCount: 1,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32:       []byte("block0"),
-				DepositRootHash32: []byte("deposit0"),
+				BlockHash32:       gotypes.NewBytes32([]byte("block0")),
+				DepositRootHash32: gotypes.NewBytes32([]byte("deposit0")),
 			},
 		},
 		{
 			VoteCount: 2,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32:       []byte("block1"),
-				DepositRootHash32: []byte("deposit1"),
+				BlockHash32:       gotypes.NewBytes32([]byte("block1")),
+				DepositRootHash32: gotypes.NewBytes32([]byte("deposit1")),
 			},
 		},
 		// We include the case in which the vote counts might match and in that
@@ -641,22 +642,22 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		{
 			VoteCount: 3,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32:       []byte("block2"),
-				DepositRootHash32: []byte("deposit2"),
+				BlockHash32:       gotypes.NewBytes32([]byte("block2")),
+				DepositRootHash32: gotypes.NewBytes32([]byte("deposit2")),
 			},
 		},
 		{
 			VoteCount: 3,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32:       []byte("block4"),
-				DepositRootHash32: []byte("deposit3"),
+				BlockHash32:       gotypes.NewBytes32([]byte("block4")),
+				DepositRootHash32: gotypes.NewBytes32([]byte("deposit3")),
 			},
 		},
 	}
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: eth1DataVotes,
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("stub"),
+			BlockHash32: gotypes.NewBytes32([]byte("stub")),
 		},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -667,7 +668,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		beaconDB: db,
 		powChainService: &mockPOWChainService{
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
-			hashesByHeight: map[int][]byte{
+			hashesByHeight: map[int]*gotypes.Bytes32{
 				0: beaconState.LatestEth1Data.BlockHash32,
 				1: beaconState.Eth1DataVotes[0].Eth1Data.BlockHash32,
 				2: beaconState.Eth1DataVotes[1].Eth1Data.BlockHash32,

@@ -8,12 +8,13 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
-	stateHash := []byte{0}
+	stateHash := [32]byte{0}
 	b1 := NewGenesisBlock(stateHash)
 
 	if b1.ParentRootHash32 == nil {
@@ -24,16 +25,16 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 		t.Errorf("genesis block should have 0 attestations")
 	}
 
-	if !bytes.Equal(b1.RandaoReveal, params.BeaconConfig().ZeroHash[:]) {
+	if !bytes.Equal(b1.RandaoReveal[:], params.BeaconConfig().ZeroHash[:]) {
 		t.Error("genesis block missing RandaoReveal field")
 	}
 
-	if !bytes.Equal(b1.StateRootHash32, stateHash) {
+	if !bytes.Equal(b1.StateRootHash32[:], stateHash[:]) {
 		t.Error("genesis block StateRootHash32 isn't initialized correctly")
 	}
 	expectedEth1 := &pb.Eth1Data{
-		DepositRootHash32: params.BeaconConfig().ZeroHash[:],
-		BlockHash32:       params.BeaconConfig().ZeroHash[:],
+		DepositRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
+		BlockHash32:       gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 	}
 	if !proto.Equal(b1.Eth1Data, expectedEth1) {
 		t.Error("genesis block Eth1Data isn't initialized correctly")
@@ -44,10 +45,10 @@ func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("slotsPerEpoch should be 64 for these tests to pass")
 	}
-	var blockRoots [][]byte
+	var blockRoots []gotypes.Bytes32
 
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 	state := &pb.BeaconState{
 		LatestBlockRootHash32S: blockRoots,
@@ -89,7 +90,7 @@ func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 		if err != nil {
 			t.Errorf("failed to get block root at slot %d: %v", wantedSlot, err)
 		}
-		if !bytes.Equal(result, tt.expectedRoot) {
+		if !bytes.Equal(result[:], tt.expectedRoot) {
 			t.Errorf(
 				"result block root was an unexpected value. Wanted %d, got %d",
 				tt.expectedRoot,
@@ -104,10 +105,10 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		t.Errorf("slotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	var blockRoots [][]byte
+	var blockRoots []gotypes.Bytes32
 
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, *gotypes.NewBytes32([]byte{byte(i)}))
 	}
 	state := &pb.BeaconState{
 		LatestBlockRootHash32S: blockRoots,
@@ -144,13 +145,14 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 	state := &pb.BeaconState{}
 
-	state.LatestBlockRootHash32S = make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
+	state.LatestBlockRootHash32S = make([]gotypes.Bytes32,
+		params.BeaconConfig().LatestBlockRootsLength)
 	state.Slot = params.BeaconConfig().LatestBlockRootsLength + 1
 
 	testRoot := [32]byte{'a'}
 
 	newState := ProcessBlockRoots(state, testRoot)
-	if !bytes.Equal(newState.LatestBlockRootHash32S[0], testRoot[:]) {
+	if !bytes.Equal(newState.LatestBlockRootHash32S[0][:], testRoot[:]) {
 		t.Fatalf("Latest Block root hash not saved."+
 			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRootHash32S[0])
 	}
@@ -158,13 +160,14 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 	newState.Slot = newState.Slot - 1
 
 	newState = ProcessBlockRoots(newState, testRoot)
-	expectedHashes := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
-	expectedHashes[0] = testRoot[:]
-	expectedHashes[params.BeaconConfig().LatestBlockRootsLength-1] = testRoot[:]
+	expectedHashes := make([][32]byte, params.BeaconConfig().
+		LatestBlockRootsLength)
+	expectedHashes[0] = testRoot
+	expectedHashes[params.BeaconConfig().LatestBlockRootsLength-1] = testRoot
 
 	expectedRoot := hashutil.MerkleRoot(expectedHashes)
 
-	if !bytes.Equal(newState.BatchedBlockRootHash32S[0], expectedRoot[:]) {
+	if !bytes.Equal(newState.BatchedBlockRootHash32S[0][:], expectedRoot[:]) {
 		t.Errorf("saved merkle root is not equal to expected merkle root"+
 			"\n expected %#x but got %#x", expectedRoot, newState.BatchedBlockRootHash32S[0])
 	}

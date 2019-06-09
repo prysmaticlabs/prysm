@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -32,7 +33,7 @@ func TestAttestHead_OK(t *testing.T) {
 	}
 	head := &pbp2p.BeaconBlock{
 		Slot:             999,
-		ParentRootHash32: []byte{'a'},
+		ParentRootHash32: gotypes.NewBytes32([]byte{'a'}),
 	}
 	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
 		t.Fatal(err)
@@ -45,8 +46,8 @@ func TestAttestHead_OK(t *testing.T) {
 		Data: &pbp2p.AttestationData{
 			Slot:                    999,
 			Shard:                   1,
-			CrosslinkDataRootHash32: []byte{'a'},
-			BeaconBlockRootHash32:   root[:],
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{'a'}),
+			BeaconBlockRootHash32:   gotypes.NewBytes32(root[:]),
 		},
 	}
 	if _, err := attesterServer.AttestHead(context.Background(), req); err != nil {
@@ -82,19 +83,22 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   3*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
-		JustifiedEpoch:         2 + params.BeaconConfig().GenesisEpoch,
-		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		Slot:           3*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
+		JustifiedEpoch: 2 + params.BeaconConfig().GenesisEpoch,
+		LatestBlockRootHash32S: make([]gotypes.Bytes32, params.BeaconConfig().
+			LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
-				CrosslinkDataRootHash32: []byte("A"),
+				CrosslinkDataRootHash32: gotypes.NewBytes32([]byte("A")),
 			},
 		},
-		JustifiedRoot: justifiedBlockRoot[:],
+		JustifiedRoot: gotypes.NewBytes32(justifiedBlockRoot[:]),
 	}
-	beaconState.LatestBlockRootHash32S[1] = blockRoot[:]
-	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
-	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
+	beaconState.LatestBlockRootHash32S[1] = *gotypes.NewBytes32(blockRoot[:])
+	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().
+		SlotsPerEpoch] = *gotypes.NewBytes32(epochBoundaryRoot[:])
+	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().
+		SlotsPerEpoch] = *gotypes.NewBytes32(justifiedBlockRoot[:])
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 		p2p:      &mockBroadcaster{},
@@ -127,11 +131,11 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 	}
 	expectedInfo := &pb.AttestationDataResponse{
 		HeadSlot:                 beaconState.Slot,
-		BeaconBlockRootHash32:    blockRoot[:],
+		BeaconBlockRootHash32:    gotypes.NewBytes32(blockRoot[:]),
 		JustifiedEpoch:           2 + params.BeaconConfig().GenesisEpoch,
-		JustifiedBlockRootHash32: justifiedBlockRoot[:],
+		JustifiedBlockRootHash32: gotypes.NewBytes32(justifiedBlockRoot[:]),
 		LatestCrosslink: &pbp2p.Crosslink{
-			CrosslinkDataRootHash32: []byte("A"),
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte("A")),
 		},
 	}
 
@@ -179,19 +183,22 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   10000 + params.BeaconConfig().GenesisSlot,
-		JustifiedEpoch:         helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot),
-		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		Slot:           10000 + params.BeaconConfig().GenesisSlot,
+		JustifiedEpoch: helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot),
+		LatestBlockRootHash32S: make([]gotypes.Bytes32, params.BeaconConfig().
+			LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
-				CrosslinkDataRootHash32: []byte("A"),
+				CrosslinkDataRootHash32: gotypes.NewBytes32([]byte("A")),
 			},
 		},
-		JustifiedRoot: justifiedBlockRoot[:],
+		JustifiedRoot: gotypes.NewBytes32(justifiedBlockRoot[:]),
 	}
-	beaconState.LatestBlockRootHash32S[1] = blockRoot[:]
-	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
-	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
+	beaconState.LatestBlockRootHash32S[1] = *gotypes.NewBytes32(blockRoot[:])
+	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().
+		SlotsPerEpoch] = *gotypes.NewBytes32(epochBoundaryRoot[:])
+	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().
+		SlotsPerEpoch] = *gotypes.NewBytes32(justifiedBlockRoot[:])
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 		p2p:      &mockBroadcaster{},
@@ -224,11 +231,11 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	expectedInfo := &pb.AttestationDataResponse{
 		HeadSlot:                 10000 + params.BeaconConfig().GenesisSlot,
-		BeaconBlockRootHash32:    blockRoot[:],
+		BeaconBlockRootHash32:    gotypes.NewBytes32(blockRoot[:]),
 		JustifiedEpoch:           helpers.SlotToEpoch(1500 + params.BeaconConfig().GenesisSlot),
-		JustifiedBlockRootHash32: justifiedBlockRoot[:],
+		JustifiedBlockRootHash32: gotypes.NewBytes32(justifiedBlockRoot[:]),
 		LatestCrosslink: &pbp2p.Crosslink{
-			CrosslinkDataRootHash32: []byte("A"),
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte("A")),
 		},
 	}
 

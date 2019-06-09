@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -105,7 +106,7 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		Data: &pb.AttestationData{
 			Slot:                    params.BeaconConfig().GenesisSlot + 3,
 			Shard:                   6,
-			CrosslinkDataRootHash32: []byte{'B'},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{'B'}),
 		},
 		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
 	}
@@ -113,7 +114,7 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 	indices, err := AttestingValidatorIndices(
 		state,
 		6,
-		[]byte{'B'},
+		[32]byte{'B'},
 		nil,
 		[]*pb.PendingAttestation{prevAttestation})
 	if err != nil {
@@ -143,7 +144,7 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 		Data: &pb.AttestationData{
 			Slot:                    0,
 			Shard:                   1,
-			CrosslinkDataRootHash32: []byte{'B'},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{'B'}),
 		},
 		AggregationBitfield: []byte{'A'}, // 01000001 = 1,7
 	}
@@ -151,7 +152,7 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 	_, err := AttestingValidatorIndices(
 		state,
 		1,
-		[]byte{'B'},
+		[32]byte{'B'},
 		[]*pb.PendingAttestation{attestation},
 		nil)
 
@@ -186,7 +187,7 @@ func TestProcessDeposit_BadWithdrawalCredentials(t *testing.T) {
 		},
 		{
 			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{0},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{0}),
 		},
 	}
 	beaconState := &pb.BeaconState{
@@ -217,7 +218,7 @@ func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 		},
 		{
 			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	balances := []uint64{0, 0}
@@ -253,7 +254,7 @@ func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
 		},
 		{
 			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	balances := []uint64{0, 50}
@@ -286,11 +287,11 @@ func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{2}),
 		},
 		{
 			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	balances := []uint64{1000, 1000}
@@ -326,11 +327,11 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{2}),
 		},
 		{
 			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	balances := []uint64{0, 1000}
@@ -367,11 +368,11 @@ func TestProcessDepositFlag_NotEnabled(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{2}),
 		},
 		{
 			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	balances := []uint64{0, 32e9}
@@ -409,11 +410,11 @@ func TestProcessDepositFlag_Enabled(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1, 2, 3},
-			WithdrawalCredentialsHash32: []byte{2},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{2}),
 		},
 		{
 			Pubkey:                      []byte{4, 5, 6},
-			WithdrawalCredentialsHash32: []byte{1},
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{1}),
 		},
 	}
 	balances := []uint64{0, 32e9}

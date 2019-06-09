@@ -5,6 +5,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -20,7 +21,7 @@ func TestHashBeaconBlock_doesntMutate(t *testing.T) {
 				},
 			},
 		},
-		Signature: []byte{'S', 'I', 'G'},
+		Signature: gotypes.NewBytes96([]byte{'S', 'I', 'G'}),
 	}
 	b := proto.Clone(a).(*pb.BeaconBlock)
 

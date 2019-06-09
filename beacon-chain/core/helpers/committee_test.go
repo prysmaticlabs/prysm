@@ -8,6 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -218,8 +219,8 @@ func TestCrosslinkCommitteesAtSlot_RegistryChange(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry:      validators,
 		Slot:                   params.BeaconConfig().GenesisSlot,
-		LatestIndexRootHash32S: [][]byte{{'A'}, {'B'}},
-		LatestRandaoMixes:      [][]byte{{'C'}, {'D'}},
+		LatestIndexRootHash32S: []gotypes.Bytes32{{'A'}, {'B'}},
+		LatestRandaoMixes:      []gotypes.Bytes32{{'C'}, {'D'}},
 	}
 
 	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+100, true)
@@ -246,8 +247,8 @@ func TestCrosslinkCommitteesAtSlot_EpochSinceLastUpdatePow2(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry:            validators,
 		Slot:                         params.BeaconConfig().GenesisSlot + 128,
-		LatestIndexRootHash32S:       [][]byte{{'A'}, {'B'}, {'C'}},
-		LatestRandaoMixes:            [][]byte{{'D'}, {'E'}, {'F'}},
+		LatestIndexRootHash32S:       []gotypes.Bytes32{{'A'}, {'B'}, {'C'}},
+		LatestRandaoMixes:            []gotypes.Bytes32{{'D'}, {'E'}, {'F'}},
 		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 	}
 

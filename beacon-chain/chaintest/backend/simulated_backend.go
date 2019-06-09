@@ -284,7 +284,7 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	if err != nil {
 		return fmt.Errorf("could not tree hash state: %v", err)
 	}
-	genesisBlock := b.NewGenesisBlock(stateRoot[:])
+	genesisBlock := b.NewGenesisBlock(stateRoot)
 	genesisBlockRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		return fmt.Errorf("could not tree hash genesis block: %v", err)

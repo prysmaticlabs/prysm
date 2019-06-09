@@ -64,11 +64,11 @@ func NewBlockAncestorCache() *AncestorBlockCache {
 
 // AncestorBySlot fetches block's ancestor by height. Returns true with a
 // reference to the ancestor block, if exists. Otherwise returns false, nil.
-func (a *AncestorBlockCache) AncestorBySlot(blockHash []byte, height uint64) (*AncestorInfo, error) {
+func (a *AncestorBlockCache) AncestorBySlot(blockHash [32]byte, height uint64) (*AncestorInfo, error) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 
-	obj, exists, err := a.ancestorBlockCache.GetByKey(string(blockHash) + strconv.Itoa(int(height)))
+	obj, exists, err := a.ancestorBlockCache.GetByKey(string(blockHash[:]) + strconv.Itoa(int(height)))
 	if err != nil {
 		return nil, err
 	}

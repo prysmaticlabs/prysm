@@ -8,6 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -41,12 +42,12 @@ func generateSimulatedBlock(
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:             beaconState.Slot + 1,
-		RandaoReveal:     epochSignature.Marshal(),
-		ParentRootHash32: prevBlockRoot[:],
-		StateRootHash32:  stateRoot[:],
+		RandaoReveal:     gotypes.NewBytes96(epochSignature.Marshal()),
+		ParentRootHash32: gotypes.NewBytes32(prevBlockRoot[:]),
+		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1},
-			BlockHash32:       []byte{2},
+			DepositRootHash32: gotypes.NewBytes32([]byte{1}),
+			BlockHash32:       gotypes.NewBytes32([]byte{2}),
 		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
@@ -59,7 +60,7 @@ func generateSimulatedBlock(
 	if simObjects.simDeposit != nil {
 		depositInput := &pb.DepositInput{
 			Pubkey:                      []byte(simObjects.simDeposit.Pubkey),
-			WithdrawalCredentialsHash32: make([]byte, 32),
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{}),
 			ProofOfPossession:           make([]byte, 96),
 		}
 
@@ -84,7 +85,7 @@ func generateSimulatedBlock(
 		}
 
 		root := newTrie.Root()
-		block.Eth1Data.DepositRootHash32 = root[:]
+		block.Eth1Data.DepositRootHash32 = gotypes.NewBytes32(root[:])
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			DepositData:        data,
 			MerkleProofHash32S: proof,
@@ -95,14 +96,16 @@ func generateSimulatedBlock(
 		block.Body.ProposerSlashings = append(block.Body.ProposerSlashings, &pb.ProposerSlashing{
 			ProposerIndex: simObjects.simProposerSlashing.ProposerIndex,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            simObjects.simProposerSlashing.Proposal1Slot,
-				Shard:           simObjects.simProposerSlashing.Proposal1Shard,
-				BlockRootHash32: []byte(simObjects.simProposerSlashing.Proposal1Root),
+				Slot:  simObjects.simProposerSlashing.Proposal1Slot,
+				Shard: simObjects.simProposerSlashing.Proposal1Shard,
+				BlockRootHash32: gotypes.NewBytes32([]byte(simObjects.
+					simProposerSlashing.Proposal1Root)),
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            simObjects.simProposerSlashing.Proposal2Slot,
-				Shard:           simObjects.simProposerSlashing.Proposal2Shard,
-				BlockRootHash32: []byte(simObjects.simProposerSlashing.Proposal2Root),
+				Slot:  simObjects.simProposerSlashing.Proposal2Slot,
+				Shard: simObjects.simProposerSlashing.Proposal2Shard,
+				BlockRootHash32: gotypes.NewBytes32([]byte(simObjects.
+					simProposerSlashing.Proposal2Root)),
 			},
 		})
 	}
@@ -152,7 +155,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 		}
 		depositInput := &pb.DepositInput{
 			Pubkey:                      priv.PublicKey().Marshal(),
-			WithdrawalCredentialsHash32: make([]byte, 32),
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{}),
 			ProofOfPossession:           make([]byte, 96),
 		}
 		depositData, err := helpers.EncodeDepositData(

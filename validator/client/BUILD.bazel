@@ -15,6 +15,7 @@ go_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
+        "//proto/gotypes:go_default_library",
         "//shared/bitutil:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/forkutil:go_default_library",
@@ -50,6 +51,7 @@ go_test(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
+        "//proto/gotypes:go_default_library",
         "//shared:go_default_library",
         "//shared/bitutil:go_default_library",
         "//shared/featureconfig:go_default_library",

@@ -11,7 +11,7 @@ message BeaconState {
   uint64 validator_registry_update_epoch = 2;
   repeated uint64 validator_balances = 3; // Balance in Gwei
   // Randomness and committees [1001-2000]
-  repeated bytes latest_randao_mixes = 1004;
+  repeated bytes latest_randao_mixes = 1004 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes32"];
   uint64 previous_shuffling_start_shard = 1005;
   uint64 current_shuffling_start_shard = 1006;
   uint64 previous_shuffling_epoch = 1007;
@@ -32,7 +32,7 @@ message BeaconState {
   repeated bytes batched_block_root_hash32s = 3004 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes32"];
   repeated uint64 latest_slashed_balances = 3005;
   repeated PendingAttestation latest_attestations = 3006;
-  repeated bytes latest_index_root_hash32s = 3007 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes32"];;
+  repeated bytes latest_index_root_hash32s = 3007 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes32"];
   BeaconBlock latest_block = 3008;
   // Ethereum 1.0 chain data [4001-5000]
   Eth1Data latest_eth1_data = 4001;
@@ -119,7 +119,7 @@ message BeaconBlock {
   uint64 slot = 1;
   bytes parent_root_hash32 = 2 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes32"];
   bytes state_root_hash32 = 3 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes32"];
-  bytes randao_reveal = 4;
+  bytes randao_reveal = 4 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes96"];
   Eth1Data eth1_data = 5;
   bytes signature = 6 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes96"];
   // Block Body
@@ -165,7 +165,7 @@ message ProposerSlashing {
   ProposalSignedData proposal_data_1 = 2;
   bytes proposal_signature_1 = 3 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes96"];
   ProposalSignedData proposal_data_2 = 4;
-  bytes proposal_signature_2 = 5;
+  bytes proposal_signature_2 = 5 [(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/proto/gotypes.Bytes96"];
 }
 
 message AttesterSlashing {

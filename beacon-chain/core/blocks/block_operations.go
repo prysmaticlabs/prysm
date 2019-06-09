@@ -98,7 +98,7 @@ func ProcessBlockRandao(
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
-	blockRandaoReveal := hashutil.Hash(block.RandaoReveal)
+	blockRandaoReveal := hashutil.Hash(block.RandaoReveal[:])
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
@@ -118,7 +118,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
-	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
+	sig, err := bls.SignatureFromBytes(block.RandaoReveal[:])
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}

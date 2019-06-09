@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -40,8 +41,9 @@ func TestWinningRoot_AccurateRoot(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot,
-				CrosslinkDataRootHash32: []byte{byte(i + 100)},
+				Slot: params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{byte(
+					i + 100)}),
 			},
 			AggregationBitfield: participationBitfield,
 		}
@@ -58,7 +60,7 @@ func TestWinningRoot_AccurateRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not execute winningRoot: %v", err)
 	}
-	if !bytes.Equal(winnerRoot, []byte{100}) {
+	if !bytes.Equal(winnerRoot[:], []byte{100}) {
 		t.Errorf("Incorrect winner root, wanted:[100], got: %v", winnerRoot)
 	}
 }
@@ -69,7 +71,7 @@ func TestWinningRoot_EmptyParticipantBitfield(t *testing.T) {
 	attestations := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{
 			Slot:                    params.BeaconConfig().GenesisSlot,
-			CrosslinkDataRootHash32: []byte{},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{}),
 		},
 			AggregationBitfield: []byte{},
 		},
@@ -90,8 +92,9 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot,
-				CrosslinkDataRootHash32: []byte{byte(i + 100)},
+				Slot: params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{byte(
+					i + 100)}),
 			},
 			AggregationBitfield: []byte{0xC0},
 		}
@@ -121,7 +124,7 @@ func TestAttestingValidators_EmptyWinningRoot(t *testing.T) {
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
 			Slot:                    params.BeaconConfig().GenesisSlot,
-			CrosslinkDataRootHash32: []byte{},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{}),
 		},
 		AggregationBitfield: []byte{},
 	}
@@ -143,8 +146,9 @@ func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot,
-				CrosslinkDataRootHash32: []byte{byte(i + 100)},
+				Slot: params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{byte(
+					i + 100)}),
 			},
 			// All validators attested to the above roots.
 			AggregationBitfield: []byte{0xC0},
@@ -174,7 +178,7 @@ func TestTotalAttestingBalance_EmptyWinningRoot(t *testing.T) {
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
 			Slot:                    params.BeaconConfig().GenesisSlot,
-			CrosslinkDataRootHash32: []byte{},
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{}),
 		},
 		AggregationBitfield: []byte{},
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -101,7 +102,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 		log.Errorf("unable to marshal the beacon state: %v", err)
 		return
 	}
-	genBlock := b.NewGenesisBlock(stateRoot[:])
+	genBlock := b.NewGenesisBlock(stateRoot)
 	if err := beaconDB.SaveBlock(genBlock); err != nil {
 		t.Fatalf("could not save genesis block to disk: %v", err)
 	}
@@ -180,7 +181,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		}
 		block := &pb.BeaconBlock{
 			Slot:             params.BeaconConfig().GenesisSlot + uint64(i),
-			ParentRootHash32: parentHash,
+			ParentRootHash32: gotypes.NewBytes32(parentHash),
 		}
 
 		chainHead := &pb.ChainHeadResponse{}

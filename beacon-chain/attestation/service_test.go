@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -183,8 +184,8 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	}
 	if err := beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
-		ParentRoot: []byte{},
+		BlockRoot:  gotypes.NewBytes32(blockRoot[:]),
+		ParentRoot: gotypes.NewBytes32([]byte{}),
 	}); err != nil {
 		log.Fatalf("could not save att target: %v", err)
 	}
@@ -193,7 +194,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
-			BeaconBlockRootHash32: blockRoot[:],
+			BeaconBlockRootHash32: gotypes.NewBytes32(blockRoot[:]),
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	service.store.m[pubKey48] = attestation
@@ -208,7 +209,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 		t.Fatalf("Could not get latest attestation: %v", err)
 	}
 
-	if !bytes.Equal(blockRoot[:], latestAttestedTarget.BlockRoot) {
+	if !bytes.Equal(blockRoot[:], latestAttestedTarget.BlockRoot[:]) {
 		t.Errorf("Wanted: %v, got: %v", blockRoot[:], latestAttestedTarget.BlockRoot)
 	}
 }

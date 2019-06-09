@@ -11,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -119,23 +120,23 @@ func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'A'},
-					BlockHash32:       []byte{'B'},
+					DepositRootHash32: gotypes.NewBytes32([]byte{'A'}),
+					BlockHash32:       gotypes.NewBytes32([]byte{'B'}),
 				},
 				VoteCount: 0,
 			},
 			// DepositRootHash32 ['B'] gets to process with sufficient vote count.
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'C'},
-					BlockHash32:       []byte{'D'},
+					DepositRootHash32: gotypes.NewBytes32([]byte{'C'}),
+					BlockHash32:       gotypes.NewBytes32([]byte{'D'}),
 				},
 				VoteCount: requiredVoteCount/2 + 1,
 			},
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'E'},
-					BlockHash32:       []byte{'F'},
+					DepositRootHash32: gotypes.NewBytes32([]byte{'E'}),
+					BlockHash32:       gotypes.NewBytes32([]byte{'F'}),
 				},
 				VoteCount: requiredVoteCount / 2,
 			},
@@ -143,7 +144,7 @@ func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
 	}
 
 	newState := ProcessEth1Data(state)
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'C'}) {
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32[:], []byte{'C'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
 			[]byte{'C'}, newState.LatestEth1Data.DepositRootHash32)
 	}
@@ -152,14 +153,14 @@ func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
 	state.Eth1DataVotes = append(state.Eth1DataVotes,
 		&pb.Eth1DataVote{
 			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte{'G'},
-				BlockHash32:       []byte{'H'},
+				DepositRootHash32: gotypes.NewBytes32([]byte{'G'}),
+				BlockHash32:       gotypes.NewBytes32([]byte{'H'}),
 			},
 			VoteCount: requiredVoteCount,
 		},
 	)
 	newState = ProcessEth1Data(state)
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'G'}) {
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32[:], []byte{'G'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
 			[]byte{'G'}, newState.LatestEth1Data.DepositRootHash32)
 	}
@@ -175,28 +176,28 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 4,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{'A'},
-			BlockHash32:       []byte{'B'},
+			DepositRootHash32: gotypes.NewBytes32([]byte{'A'}),
+			BlockHash32:       gotypes.NewBytes32([]byte{'B'}),
 		},
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'C'},
-					BlockHash32:       []byte{'D'},
+					DepositRootHash32: gotypes.NewBytes32([]byte{'C'}),
+					BlockHash32:       gotypes.NewBytes32([]byte{'D'}),
 				},
 				VoteCount: requiredVoteCount/2 + 1,
 			},
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'E'},
-					BlockHash32:       []byte{'F'},
+					DepositRootHash32: gotypes.NewBytes32([]byte{'E'}),
+					BlockHash32:       gotypes.NewBytes32([]byte{'F'}),
 				},
 				VoteCount: requiredVoteCount / 2,
 			},
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'G'},
-					BlockHash32:       []byte{'H'},
+					DepositRootHash32: gotypes.NewBytes32([]byte{'G'}),
+					BlockHash32:       gotypes.NewBytes32([]byte{'H'}),
 				},
 				VoteCount: requiredVoteCount,
 			},
@@ -205,7 +206,7 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 
 	// Adding a new receipt root ['D'] which should be the new processed receipt root.
 	newState := ProcessEth1Data(state)
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'A'}) {
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32[:], []byte{'A'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
 			[]byte{'A'}, newState.LatestEth1Data.DepositRootHash32)
 	}
@@ -216,10 +217,11 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	var latestBlockRoots [][]byte
+	var latestBlockRoots []gotypes.Bytes32
 
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
-		latestBlockRoots = append(latestBlockRoots, []byte("a"))
+		latestBlockRoots = append(latestBlockRoots,
+			*gotypes.NewBytes32([]byte("a")))
 	}
 
 	state := &pb.BeaconState{
@@ -289,7 +291,7 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
 				Slot:                    state.Slot,
-				CrosslinkDataRootHash32: []byte{'A'},
+				CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{'A'}),
 			},
 			// All validators attested to the above roots.
 			AggregationBitfield: participationBitfield,
@@ -311,8 +313,8 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 			newState.LatestCrosslinks[0].Epoch, +params.BeaconConfig().GenesisSlot)
 	}
 	// Verify crosslink for shard 0 was root hashed for []byte{'A'}.
-	if !bytes.Equal(newState.LatestCrosslinks[0].CrosslinkDataRootHash32,
-		attestations[0].Data.CrosslinkDataRootHash32) {
+	if !bytes.Equal(newState.LatestCrosslinks[0].CrosslinkDataRootHash32[:],
+		attestations[0].Data.CrosslinkDataRootHash32[:]) {
 		t.Errorf("Shard 0's root hash is %#x, wanted: %#x",
 			newState.LatestCrosslinks[0].CrosslinkDataRootHash32,
 			attestations[0].Data.CrosslinkDataRootHash32)
@@ -409,7 +411,7 @@ func TestProcessPrevSlotShard_CorrectPrevEpochData(t *testing.T) {
 	state := &pb.BeaconState{
 		CurrentShufflingEpoch:      1,
 		CurrentShufflingStartShard: 2,
-		CurrentShufflingSeedHash32: []byte{'A'},
+		CurrentShufflingSeedHash32: gotypes.NewBytes32([]byte{'A'}),
 	}
 
 	newState := ProcessPrevSlotShardSeed(
@@ -423,7 +425,8 @@ func TestProcessPrevSlotShard_CorrectPrevEpochData(t *testing.T) {
 		t.Errorf("Incorrect prev epoch start shard: Wanted: %d, got: %d",
 			newState.PreviousShufflingStartShard, state.CurrentShufflingStartShard)
 	}
-	if !bytes.Equal(newState.PreviousShufflingSeedHash32, state.CurrentShufflingSeedHash32) {
+	if !bytes.Equal(newState.PreviousShufflingSeedHash32[:],
+		state.CurrentShufflingSeedHash32[:]) {
 		t.Errorf("Incorrect prev epoch seed mix hash: Wanted: %v, got: %v",
 			state.CurrentShufflingSeedHash32, newState.PreviousShufflingSeedHash32)
 	}
@@ -432,8 +435,8 @@ func TestProcessPrevSlotShard_CorrectPrevEpochData(t *testing.T) {
 func TestProcessPartialValidatorRegistry_CorrectShufflingEpoch(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,
-		LatestRandaoMixes:      [][]byte{{'A'}, {'B'}, {'C'}},
-		LatestIndexRootHash32S: [][]byte{{'D'}, {'E'}, {'F'}},
+		LatestRandaoMixes:      []gotypes.Bytes32{{'A'}, {'B'}, {'C'}},
+		LatestIndexRootHash32S: []gotypes.Bytes32{{'D'}, {'E'}, {'F'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
 	newState, err := ProcessPartialValidatorRegistry(copiedState)
@@ -528,30 +531,30 @@ func TestUpdateLatestSlashedBalances_UpdatesBalances(t *testing.T) {
 func TestUpdateLatestRandaoMixes_UpdatesRandao(t *testing.T) {
 	tests := []struct {
 		epoch uint64
-		seed  []byte
+		seed  gotypes.Bytes32
 	}{
 		{
 			epoch: 0,
-			seed:  []byte{'A'},
+			seed:  *gotypes.NewBytes32([]byte{'A'}),
 		},
 		{
 			epoch: 1,
-			seed:  []byte{'B'},
+			seed:  *gotypes.NewBytes32([]byte{'B'}),
 		},
 		{
 			epoch: 100,
-			seed:  []byte{'C'},
+			seed:  *gotypes.NewBytes32([]byte{'C'}),
 		}, {
 			epoch: params.BeaconConfig().LatestRandaoMixesLength * 100,
-			seed:  []byte{'D'},
+			seed:  *gotypes.NewBytes32([]byte{'D'}),
 		}, {
 			epoch: params.BeaconConfig().LatestRandaoMixesLength * 1000,
-			seed:  []byte{'E'},
+			seed:  *gotypes.NewBytes32([]byte{'E'}),
 		},
 	}
 	for _, tt := range tests {
 		epoch := tt.epoch % params.BeaconConfig().LatestRandaoMixesLength
-		latestSlashedRandaoMixes := make([][]byte,
+		latestSlashedRandaoMixes := make([]gotypes.Bytes32,
 			params.BeaconConfig().LatestRandaoMixesLength)
 		latestSlashedRandaoMixes[epoch] = tt.seed
 		state := &pb.BeaconState{
@@ -561,7 +564,7 @@ func TestUpdateLatestRandaoMixes_UpdatesRandao(t *testing.T) {
 		if err != nil {
 			t.Fatalf("could not update latest randao mixes: %v", err)
 		}
-		if !bytes.Equal(newState.LatestRandaoMixes[epoch+1], tt.seed) {
+		if !bytes.Equal(newState.LatestRandaoMixes[epoch+1][:], tt.seed[:]) {
 			t.Errorf(
 				"LatestRandaoMixes didn't update for epoch %d,"+
 					"wanted: %v, got: %v", epoch+1, tt.seed,
@@ -573,7 +576,7 @@ func TestUpdateLatestRandaoMixes_UpdatesRandao(t *testing.T) {
 
 func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 	epoch := uint64(1234)
-	latestActiveIndexRoots := make([][]byte,
+	latestActiveIndexRoots := make([]gotypes.Bytes32,
 		params.BeaconConfig().LatestActiveIndexRootsLength)
 	state := &pb.BeaconState{
 		Slot:                   epoch * params.BeaconConfig().SlotsPerEpoch,
@@ -591,7 +594,8 @@ func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	indexRoot := hashutil.Hash(indicesBytes)
-	if !bytes.Equal(newState.LatestIndexRootHash32S[nextEpoch], indexRoot[:]) {
+	if !bytes.Equal(newState.LatestIndexRootHash32S[nextEpoch][:],
+		indexRoot[:]) {
 		t.Errorf(
 			"LatestIndexRootHash32S didn't update for epoch %d,"+
 				"wanted: %v, got: %v", nextEpoch, indexRoot,

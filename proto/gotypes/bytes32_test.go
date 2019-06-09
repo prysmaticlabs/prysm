@@ -3,7 +3,6 @@ package gotypes_test
 import (
 	"bytes"
 	"testing"
-	"unsafe"
 
 	"github.com/prysmaticlabs/prysm/proto/gotypes"
 )
@@ -35,20 +34,5 @@ func TestBytes32(t *testing.T) {
 	}
 	if !bytes.Equal(input, output) {
 		t.Errorf("Input != output bytes. Input=%v. Output=%v", input, output)
-	}
-}
-
-func BenchmarkBytes32(b *testing.B) {
-	bar := []gotypes.Bytes32{
-		*gotypes.NewBytes32([]byte("A")),
-	}
-
-	for i := 0; i < b.N; i++ {
-
-		var baz [][32]byte
-
-		baz = *(*[][32]byte)(unsafe.Pointer(&state.LatestBlockRootHash32S))
-
-		_ = baz
 	}
 }

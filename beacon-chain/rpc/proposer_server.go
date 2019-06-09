@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -199,7 +200,8 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) (*pb.StateRootResponse, error) {
 	if !featureconfig.FeatureConfig().EnableComputeStateRoot {
 		log.Debug("Compute state root disabled, returning no-op result")
-		return &pb.StateRootResponse{StateRoot: []byte("no-op")}, nil
+		return &pb.StateRootResponse{StateRoot: gotypes.NewBytes32([]byte(
+			"no-op"))}, nil
 	}
 
 	beaconState, err := ps.beaconDB.HeadState(ctx)
@@ -242,6 +244,6 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 	}
 	log.WithField("beaconStateHash", fmt.Sprintf("%#x", beaconStateHash)).Debugf("Computed state hash")
 	return &pb.StateRootResponse{
-		StateRoot: beaconStateHash[:],
+		StateRoot: gotypes.NewBytes32(beaconStateHash[:]),
 	}, nil
 }

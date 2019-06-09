@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -206,15 +207,15 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 	slotNum := params.BeaconConfig().GenesisSlot + 3
 	b1 := &pb.BeaconBlock{
 		Slot:         slotNum,
-		RandaoReveal: []byte("A"),
+		RandaoReveal: gotypes.NewBytes96([]byte("A")),
 	}
 	b2 := &pb.BeaconBlock{
 		Slot:         slotNum,
-		RandaoReveal: []byte("B"),
+		RandaoReveal: gotypes.NewBytes96([]byte("B")),
 	}
 	b3 := &pb.BeaconBlock{
 		Slot:         slotNum,
-		RandaoReveal: []byte("C"),
+		RandaoReveal: gotypes.NewBytes96([]byte("C")),
 	}
 	if err := db.SaveBlock(b1); err != nil {
 		t.Fatal(err)
@@ -282,7 +283,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 
 	block2 := &pb.BeaconBlock{
 		Slot:             params.BeaconConfig().GenesisSlot + 1,
-		ParentRootHash32: bHash[:],
+		ParentRootHash32: gotypes.NewBytes32(bHash[:]),
 	}
 	b2Hash, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {

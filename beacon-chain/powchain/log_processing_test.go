@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -55,7 +56,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	data := &pb.DepositInput{
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -118,7 +119,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	data := &pb.DepositInput{
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -192,7 +193,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	data := &pb.DepositInput{
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -273,7 +274,7 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	data := &pb.DepositInput{
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -362,7 +363,7 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 		data := &pb.DepositInput{
 			Pubkey:                      stub[:],
 			ProofOfPossession:           stub[:],
-			WithdrawalCredentialsHash32: []byte("withdraw"),
+			WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 		}
 
 		serializedData := new(bytes.Buffer)
@@ -442,7 +443,7 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 	data := &pb.DepositInput{
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -510,7 +511,7 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	data := &pb.DepositInput{
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+		WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte("withdraw")),
 	}
 
 	serializedData := new(bytes.Buffer)

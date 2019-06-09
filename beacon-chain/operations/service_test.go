@@ -10,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -127,8 +128,9 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				Slot: params.BeaconConfig().GenesisSlot + uint64(i),
+
+				CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -140,7 +142,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		LatestBlock: &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot},
 		LatestCrosslinks: []*pb.Crosslink{{
 			Epoch:                   params.BeaconConfig().GenesisEpoch,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:])}}}); err != nil {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
@@ -165,7 +167,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 		origAttestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -178,7 +180,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 		Slot: params.BeaconConfig().GenesisSlot + 200,
 		LatestCrosslinks: []*pb.Crosslink{{
 			Epoch:                   params.BeaconConfig().GenesisEpoch + 2,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:])}}}); err != nil {
 		t.Fatal(err)
 	}
 	attestations, err := service.PendingAttestations(context.Background())
@@ -209,7 +211,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -220,7 +222,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		Slot: params.BeaconConfig().GenesisSlot + 15,
 		LatestCrosslinks: []*pb.Crosslink{{
 			Epoch:                   params.BeaconConfig().GenesisEpoch,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:])}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -288,7 +290,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
 				Slot:                    params.BeaconConfig().GenesisSlot + uint64(i),
-				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
+				CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:]),
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -300,7 +302,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		Slot: params.BeaconConfig().GenesisSlot + 15,
 		LatestCrosslinks: []*pb.Crosslink{{
 			Epoch:                   params.BeaconConfig().GenesisEpoch,
-			CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			CrosslinkDataRootHash32: gotypes.NewBytes32(params.BeaconConfig().ZeroHash[:])}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -332,7 +334,8 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
-	cb1 := &pb.BeaconBlock{Slot: 999, ParentRootHash32: []byte{'A'}}
+	cb1 := &pb.BeaconBlock{Slot: 999, ParentRootHash32: gotypes.NewBytes32(
+		[]byte{'A'})}
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +346,8 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1 := &pb.Attestation{Data: &pb.AttestationData{BeaconBlockRootHash32: r1[:]}}
+	att1 := &pb.Attestation{Data: &pb.
+		AttestationData{BeaconBlockRootHash32: gotypes.NewBytes32(r1[:])}}
 	canonical, err := s.IsAttCanonical(context.Background(), att1)
 	if err != nil {
 		t.Fatal(err)
@@ -352,7 +356,8 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 		t.Error("Attestation should be canonical")
 	}
 
-	cb2 := &pb.BeaconBlock{Slot: 999, ParentRootHash32: []byte{'B'}}
+	cb2 := &pb.BeaconBlock{Slot: 999, ParentRootHash32: gotypes.NewBytes32(
+		[]byte{'B'})}
 	if err := s.beaconDB.SaveBlock(cb2); err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +386,8 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 		t.Error("Attestation shouldn't be canonical")
 	}
 
-	cb1 := &pb.BeaconBlock{Slot: 999, ParentRootHash32: []byte{'A'}}
+	cb1 := &pb.BeaconBlock{Slot: 999, ParentRootHash32: gotypes.NewBytes32(
+		[]byte{'A'})}
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +395,8 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1 := &pb.Attestation{Data: &pb.AttestationData{BeaconBlockRootHash32: r1[:]}}
+	att1 := &pb.Attestation{Data: &pb.
+		AttestationData{BeaconBlockRootHash32: gotypes.NewBytes32(r1[:])}}
 	canonical, err = s.IsAttCanonical(context.Background(), att1)
 	if err != nil {
 		t.Fatal(err)

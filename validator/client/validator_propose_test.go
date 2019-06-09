@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -128,7 +129,7 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
 	).Return(&pb.StateRootResponse{
-		StateRoot: []byte{'F'},
+		StateRoot: gotypes.NewBytes32([]byte{'F'}),
 	}, nil /*err*/)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
@@ -189,7 +190,8 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+		Eth1Data: &pbp2p.Eth1Data{
+			BlockHash32: gotypes.NewBytes32([]byte{'B', 'L', 'O', 'C', 'K'})},
 	}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
@@ -210,7 +212,7 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
 	).Return(&pb.StateRootResponse{
-		StateRoot: []byte{'F'},
+		StateRoot: gotypes.NewBytes32([]byte{'F'}),
 	}, nil /*err*/)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
@@ -223,7 +225,8 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if !bytes.Equal(broadcastedBlock.Eth1Data.BlockHash32, []byte{'B', 'L', 'O', 'C', 'K'}) {
+	if !bytes.Equal(broadcastedBlock.Eth1Data.BlockHash32[:], []byte{'B', 'L',
+		'O', 'C', 'K'}) {
 		t.Errorf("Unexpected ETH1 data: %v", broadcastedBlock.Eth1Data)
 	}
 }
@@ -246,7 +249,8 @@ func TestProposeBlock_PendingAttestations_UsesCurrentSlot(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+		Eth1Data: &pbp2p.Eth1Data{
+			BlockHash32: gotypes.NewBytes32([]byte{'B', 'L', 'O', 'C', 'K'})},
 	}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
@@ -271,7 +275,7 @@ func TestProposeBlock_PendingAttestations_UsesCurrentSlot(t *testing.T) {
 		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
 	).Return(&pb.StateRootResponse{
-		StateRoot: []byte{'F'},
+		StateRoot: gotypes.NewBytes32([]byte{'F'}),
 	}, nil /*err*/)
 
 	m.proposerClient.EXPECT().ProposeBlock(
@@ -308,7 +312,8 @@ func TestProposeBlock_PendingAttestationsFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+		Eth1Data: &pbp2p.Eth1Data{
+			BlockHash32: gotypes.NewBytes32([]byte{'B', 'L', 'O', 'C', 'K'})},
 	}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
@@ -413,7 +418,7 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 		broadcastedBlock = blk
 	}).Return(&pb.ProposeResponse{}, nil /*error*/)
 
-	computedStateRoot := []byte{'T', 'E', 'S', 'T'}
+	computedStateRoot := gotypes.NewBytes32([]byte{'T', 'E', 'S', 'T'})
 	m.proposerClient.EXPECT().ComputeStateRoot(
 		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
@@ -426,7 +431,7 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 55, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if !bytes.Equal(broadcastedBlock.StateRootHash32, computedStateRoot) {
+	if !broadcastedBlock.StateRootHash32.Equal(computedStateRoot[:]) {
 		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRootHash32)
 	}
 }
@@ -468,7 +473,7 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
 	).Return(&pb.StateRootResponse{
-		StateRoot: []byte{'F'},
+		StateRoot: gotypes.NewBytes32([]byte{'F'}),
 	}, nil /*err*/)
 
 	m.proposerClient.EXPECT().ProposeBlock(

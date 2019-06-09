@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -25,8 +26,9 @@ import (
 // See: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositInput, error) {
 	di := &pb.DepositInput{
-		Pubkey:                      depositKey.PublicKey.Marshal(),
-		WithdrawalCredentialsHash32: withdrawalCredentialsHash(withdrawalKey),
+		Pubkey: depositKey.PublicKey.Marshal(),
+		WithdrawalCredentialsHash32: gotypes.NewBytes32(
+			withdrawalCredentialsHash(withdrawalKey)),
 	}
 
 	buf := new(bytes.Buffer)

@@ -6,14 +6,16 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 )
 
 func TestHeightHeightFn_OK(t *testing.T) {
 	height := uint64(999)
-	hash := []byte{'A'}
+	hash := gotypes.NewBytes32([]byte{'A'})
 	aInfo := &AncestorInfo{
 		Height: height,
-		Hash:   hash,
+		Hash:   *hash,
 		Target: &pb.AttestationTarget{
 			Slot:      height,
 			BlockRoot: hash,
@@ -25,7 +27,8 @@ func TestHeightHeightFn_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	strHeightKey := string(aInfo.Target.BlockRoot) + strconv.Itoa(int(aInfo.Target.Slot))
+	strHeightKey := string(aInfo.Target.BlockRoot[:]) + strconv.Itoa(int(aInfo.
+		Target.Slot))
 	if key != strHeightKey {
 		t.Errorf("Incorrect hash key: %s, expected %s", key, strHeightKey)
 	}
@@ -42,17 +45,17 @@ func TestAncestorCache_AncestorInfoByHeight(t *testing.T) {
 	cache := NewBlockAncestorCache()
 
 	height := uint64(123)
-	hash := []byte{'B'}
+	hash := gotypes.NewBytes32([]byte{'B'})
 	aInfo := &AncestorInfo{
 		Height: height,
-		Hash:   hash,
+		Hash:   *hash,
 		Target: &pb.AttestationTarget{
 			Slot:      height,
 			BlockRoot: hash,
 		},
 	}
 
-	fetchedInfo, err := cache.AncestorBySlot(hash, height)
+	fetchedInfo, err := cache.AncestorBySlot(*hash, height)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +66,7 @@ func TestAncestorCache_AncestorInfoByHeight(t *testing.T) {
 	if err := cache.AddBlockAncestor(aInfo); err != nil {
 		t.Fatal(err)
 	}
-	fetchedInfo, err = cache.AncestorBySlot(hash, height)
+	fetchedInfo, err = cache.AncestorBySlot(*hash, height)
 	if err != nil {
 		t.Fatal(err)
 	}

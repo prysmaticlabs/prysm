@@ -63,7 +63,7 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{
 		Hash: h[:],
 	})
-	return &pb.AttestResponse{AttestationHash: h[:]}, nil
+	return &pb.AttestResponse{AttestationHash: gotypes.NewBytes32(h[:])}, nil
 }
 
 // AttestationDataAtSlot fetches the necessary information from the current canonical head
@@ -161,10 +161,10 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 
 	res = &pb.AttestationDataResponse{
 		HeadSlot:                 headState.Slot,
-		BeaconBlockRootHash32:    headRoot[:],
-		EpochBoundaryRootHash32:  epochBoundaryRoot[:],
+		BeaconBlockRootHash32:    gotypes.NewBytes32(headRoot[:]),
+		EpochBoundaryRootHash32:  gotypes.NewBytes32(epochBoundaryRoot[:]),
 		JustifiedEpoch:           headState.JustifiedEpoch,
-		JustifiedBlockRootHash32: justifiedBlockRoot[:],
+		JustifiedBlockRootHash32: gotypes.NewBytes32(justifiedBlockRoot[:]),
 		LatestCrosslink:          headState.LatestCrosslinks[req.Shard],
 	}
 	if err := as.cache.Put(ctx, req, res); err != nil {

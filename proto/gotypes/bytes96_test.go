@@ -4,8 +4,16 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/prysmaticlabs/prysm/proto/gotypes"
 )
+
+//var _ = proto.Merger(gotypes.Bytes96{})
+var _ = proto.Marshaler(gotypes.Bytes96{})
+
+//var _ = proto.Unmarshaler(gotypes.Bytes96{})
+var _ = proto.Sizer(gotypes.Bytes96{})
 
 func TestBytes96(t *testing.T) {
 	input := make([]byte, 96)

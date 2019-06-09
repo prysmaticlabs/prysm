@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -77,11 +78,8 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
 	).Return(&pb.AttestationDataResponse{
-		BeaconBlockRootHash32:    []byte{},
-		EpochBoundaryRootHash32:  []byte{},
-		JustifiedBlockRootHash32: []byte{},
-		LatestCrosslink:          &pbp2p.Crosslink{},
-		JustifiedEpoch:           0,
+		LatestCrosslink: &pbp2p.Crosslink{},
+		JustifiedEpoch:  0,
 	}, nil)
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
@@ -116,11 +114,12 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
 	).Return(&pb.AttestationDataResponse{
 		HeadSlot:                 30,
-		BeaconBlockRootHash32:    []byte("A"),
-		EpochBoundaryRootHash32:  []byte("B"),
-		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
-		JustifiedEpoch:           3,
+		BeaconBlockRootHash32:    gotypes.NewBytes32([]byte("A")),
+		EpochBoundaryRootHash32:  gotypes.NewBytes32([]byte("B")),
+		JustifiedBlockRootHash32: gotypes.NewBytes32([]byte("C")),
+		LatestCrosslink: &pbp2p.Crosslink{
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{'D'})},
+		JustifiedEpoch: 3,
 	}, nil)
 
 	var generatedAttestation *pbp2p.Attestation
@@ -138,12 +137,14 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		Data: &pbp2p.AttestationData{
 			Slot:                     30,
 			Shard:                    5,
-			BeaconBlockRootHash32:    []byte("A"),
-			EpochBoundaryRootHash32:  []byte("B"),
-			JustifiedBlockRootHash32: []byte("C"),
-			LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
-			JustifiedEpoch:           3,
+			BeaconBlockRootHash32:    gotypes.NewBytes32([]byte("A")),
+			EpochBoundaryRootHash32:  gotypes.NewBytes32([]byte("B")),
+			JustifiedBlockRootHash32: gotypes.NewBytes32([]byte("C")),
+			LatestCrosslink: &pbp2p.Crosslink{
+				CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{'D'})},
+			CrosslinkDataRootHash32: gotypes.NewBytes32(
+				params.BeaconConfig().ZeroHash[:]),
+			JustifiedEpoch: 3,
 		},
 		CustodyBitfield:    make([]byte, (len(committee)+7)/8),
 		AggregateSignature: []byte("signed"),
@@ -213,11 +214,12 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
 	).Return(&pb.AttestationDataResponse{
-		BeaconBlockRootHash32:    []byte("A"),
-		EpochBoundaryRootHash32:  []byte("B"),
-		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
-		JustifiedEpoch:           3,
+		BeaconBlockRootHash32:    gotypes.NewBytes32([]byte("A")),
+		EpochBoundaryRootHash32:  gotypes.NewBytes32([]byte("B")),
+		JustifiedBlockRootHash32: gotypes.NewBytes32([]byte("C")),
+		LatestCrosslink: &pbp2p.Crosslink{
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{'D'})},
+		JustifiedEpoch: 3,
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
@@ -262,11 +264,12 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
 	).Return(&pb.AttestationDataResponse{
 		HeadSlot:                 30,
-		BeaconBlockRootHash32:    []byte("A"),
-		EpochBoundaryRootHash32:  []byte("B"),
-		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
-		JustifiedEpoch:           3,
+		BeaconBlockRootHash32:    gotypes.NewBytes32([]byte("A")),
+		EpochBoundaryRootHash32:  gotypes.NewBytes32([]byte("B")),
+		JustifiedBlockRootHash32: gotypes.NewBytes32([]byte("C")),
+		LatestCrosslink: &pbp2p.Crosslink{
+			CrosslinkDataRootHash32: gotypes.NewBytes32([]byte{'D'})},
+		JustifiedEpoch: 3,
 	}, nil)
 
 	var generatedAttestation *pbp2p.Attestation

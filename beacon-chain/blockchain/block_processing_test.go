@@ -15,6 +15,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -28,7 +29,7 @@ import (
 var _ = BlockProcessor(&ChainService{})
 
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := block.ParentRootHash32
 	parent, err := chainService.beaconDB.Block(parentRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +50,7 @@ func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *Chain
 	if err != nil {
 		t.Fatalf("could not tree hash state: %v", err)
 	}
-	block.StateRootHash32 = stateRoot[:]
+	block.StateRootHash32 = gotypes.NewBytes32(stateRoot[:])
 	t.Logf("state root after block: %#x", stateRoot)
 }
 
@@ -82,10 +83,10 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 
 	block := &pb.BeaconBlock{
 		Slot:             2,
-		ParentRootHash32: parentRoot[:],
+		ParentRootHash32: gotypes.NewBytes32(parentRoot[:]),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRootHash32: gotypes.NewBytes32([]byte("a")),
+			BlockHash32:       gotypes.NewBytes32([]byte("b")),
 		},
 	}
 
@@ -106,8 +107,8 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRootHash32: gotypes.NewBytes32([]byte{}),
+		BlockHash32:       gotypes.NewBytes32([]byte{}),
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -139,12 +140,12 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 	block := &pb.BeaconBlock{
 		Slot:             beaconState.Slot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     randaoReveal,
+		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
+		ParentRootHash32: gotypes.NewBytes32(parentHash[:]),
+		RandaoReveal:     gotypes.NewBytes96(randaoReveal),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRootHash32: gotypes.NewBytes32([]byte("a")),
+			BlockHash32:       gotypes.NewBytes32([]byte("b")),
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: nil,
@@ -178,8 +179,8 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRootHash32: gotypes.NewBytes32([]byte{}),
+		BlockHash32:       gotypes.NewBytes32([]byte{}),
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -201,12 +202,12 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
 	block := &pb.BeaconBlock{
 		Slot:             beaconState.Slot + 4,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     []byte{},
+		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
+		ParentRootHash32: gotypes.NewBytes32(parentHash[:]),
+		RandaoReveal:     gotypes.NewBytes32([]byte{}),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRootHash32: gotypes.NewBytes32([]byte("a")),
+			BlockHash32:       gotypes.NewBytes32([]byte("b")),
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: nil,
@@ -233,8 +234,8 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, _ := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRootHash32: gotypes.NewBytes32([]byte{}),
+		BlockHash32:       gotypes.NewBytes32([]byte{}),
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -257,12 +258,12 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 
 	block := &pb.BeaconBlock{
 		Slot:             beaconState.Slot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     []byte{},
+		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
+		ParentRootHash32: gotypes.NewBytes32(parentHash[:]),
+		RandaoReveal:     gotypes.NewBytes32([]byte{}),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRootHash32: gotypes.NewBytes32([]byte("a")),
+			BlockHash32:       gotypes.NewBytes32([]byte("b")),
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{
@@ -316,8 +317,8 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRootHash32: gotypes.NewBytes32([]byte{}),
+		BlockHash32:       gotypes.NewBytes32([]byte{}),
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -336,8 +337,8 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	beaconState.Slot++
 	goodStateBlock := &pb.BeaconBlock{
 		Slot:             beaconState.Slot,
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
+		ParentRootHash32: gotypes.NewBytes32(parentHash[:]),
+		RandaoReveal:     gotypes.NewBytes96(createRandaoReveal(t, beaconState, privKeys)),
 		Body:             &pb.BeaconBlockBody{},
 	}
 	beaconState.Slot--
@@ -361,8 +362,8 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	ctx := context.Background()
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRootHash32: gotypes.NewBytes32([]byte{}),
+		BlockHash32:       gotypes.NewBytes32([]byte{}),
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -379,11 +380,13 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 
 	beaconState.Slot++
 	invalidStateBlock := &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		StateRootHash32:  []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Slot: beaconState.Slot,
+		StateRootHash32: gotypes.NewBytes32([]byte{'b', 'a', 'd', ' ', 'h',
+			'a', 's', 'h'}),
+		ParentRootHash32: gotypes.NewBytes32(parentHash[:]),
+		RandaoReveal: gotypes.NewBytes96(createRandaoReveal(t, beaconState,
+			privKeys)),
+		Body: &pb.BeaconBlockBody{},
 	}
 	beaconState.Slot--
 
@@ -408,8 +411,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRootHash32: gotypes.NewBytes32([]byte{}),
+		BlockHash32:       gotypes.NewBytes32([]byte{}),
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -455,19 +458,19 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		pendingDeposits[i].MerkleProofHash32S = proof
 	}
 	depositRoot := depositTrie.Root()
-	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
+	beaconState.LatestEth1Data.DepositRootHash32 = gotypes.NewBytes32(depositRoot[:])
 	if err := db.SaveHistoricalState(context.Background(), beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 
 	block := &pb.BeaconBlock{
 		Slot:             currentSlot + 1,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     randaoReveal,
+		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
+		ParentRootHash32: gotypes.NewBytes32(parentHash[:]),
+		RandaoReveal:     gotypes.NewBytes96(randaoReveal),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRootHash32: gotypes.NewBytes32([]byte("a")),
+			BlockHash32:       gotypes.NewBytes32([]byte("b")),
 		},
 		Body: &pb.BeaconBlockBody{
 			Deposits: pendingDeposits,
@@ -571,8 +574,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
+		DepositRootHash32: gotypes.NewBytes32([]byte{}),
+		BlockHash32:       gotypes.NewBytes32([]byte{}),
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -597,9 +600,9 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	for _, slot := range blockSlots {
 		block := &pb.BeaconBlock{
 			Slot:             genesisSlot + slot,
-			StateRootHash32:  stateRoot[:],
-			ParentRootHash32: parentHash[:],
-			RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
+			StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
+			ParentRootHash32: gotypes.NewBytes32(parentHash[:]),
+			RandaoReveal:     gotypes.NewBytes96(createRandaoReveal(t, beaconState, privKeys)),
 			Body:             &pb.BeaconBlockBody{},
 		}
 		initBlockStateRoot(t, block, chainService)
@@ -646,9 +649,9 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	// Then we receive the block `f` from slot 6
 	blockF := &pb.BeaconBlock{
 		Slot:             genesisSlot + 6,
-		ParentRootHash32: parentHash[:],
-		StateRootHash32:  stateRoot[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
+		ParentRootHash32: gotypes.NewBytes32(parentHash[:]),
+		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
+		RandaoReveal:     gotypes.NewBytes96(createRandaoReveal(t, beaconState, privKeys)),
 		Body:             &pb.BeaconBlockBody{},
 	}
 	rootF, _ := hashutil.HashBeaconBlock(blockF)
@@ -679,8 +682,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	// Then we apply block `g` from slot 7
 	blockG := &pb.BeaconBlock{
 		Slot:             genesisSlot + 7,
-		ParentRootHash32: parentHash[:],
-		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: gotypes.NewBytes32(parentHash[:]),
+		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
 		RandaoReveal:     createRandaoReveal(t, computedState, privKeys),
 		Body:             &pb.BeaconBlockBody{},
 	}
@@ -725,7 +728,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	genesis := b.NewGenesisBlock([]byte{})
+	genesis := b.NewGenesisBlock([32]byte{})
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("cannot save block: %v", err)
 	}
@@ -735,8 +738,8 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	}
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: []byte{2},
-		BlockHash32:       []byte{3},
+		DepositRootHash32: gotypes.NewBytes32([]byte{2}),
+		BlockHash32:       gotypes.NewBytes32([]byte{3}),
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot
 
@@ -746,12 +749,12 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block2 := &pb.BeaconBlock{
 		Slot:             currentSlot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentRoot[:],
-		RandaoReveal:     randaoReveal,
+		StateRootHash32:  gotypes.NewBytes32(stateRoot[:]),
+		ParentRootHash32: gotypes.NewBytes32(parentRoot[:]),
+		RandaoReveal:     gotypes.NewBytes96(randaoReveal),
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+			DepositRootHash32: gotypes.NewBytes32([]byte("a")),
+			BlockHash32:       gotypes.NewBytes32([]byte("b")),
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
@@ -759,7 +762,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					Slot:                     attestationSlot,
-					JustifiedBlockRootHash32: parentRoot[:],
+					JustifiedBlockRootHash32: gotypes.NewBytes32(parentRoot[:]),
 				},
 			}},
 		},

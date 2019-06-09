@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "bytes32.go",
+        "bytes4.go",
         "bytes96.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/gotypes",
@@ -17,4 +18,5 @@ go_test(
         "bytes96_test.go",
     ],
     embed = [":go_default_library"],
+    deps = ["@com_github_gogo_protobuf//proto:go_default_library"],
 )

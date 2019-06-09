@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/gotypes"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -65,7 +66,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	genesisTime := uint64(99999)
-	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
+	processedPowReceiptRoot := gotypes.NewBytes32([]byte{'A', 'B', 'C'})
 	maxDeposit := params.BeaconConfig().MaxDepositAmount
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
@@ -73,7 +74,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 			&pb.DepositInput{
 				Pubkey:                      []byte(strconv.Itoa(i)),
 				ProofOfPossession:           []byte{'B'},
-				WithdrawalCredentialsHash32: []byte{'C'},
+				WithdrawalCredentialsHash32: gotypes.NewBytes32([]byte{'C'}),
 			},
 			maxDeposit,
 			time.Now().Unix(),
@@ -93,7 +94,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		genesisTime,
 		&pb.Eth1Data{
 			DepositRootHash32: processedPowReceiptRoot,
-			BlockHash32:       []byte{},
+			BlockHash32:       gotypes.NewBytes32([]byte{}),
 		})
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
@@ -165,7 +166,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
-	if !bytes.Equal(newState.LatestIndexRootHash32S[0], genesisActiveIndexRoot[:]) {
+	if !bytes.Equal(newState.LatestIndexRootHash32S[0][:],
+		genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
 			newState.LatestIndexRootHash32S[0],
@@ -175,12 +177,13 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate initial seed: %v", err)
 	}
-	if !bytes.Equal(seed[:], newState.CurrentShufflingSeedHash32) {
+	if !bytes.Equal(seed[:], newState.CurrentShufflingSeedHash32[:]) {
 		t.Errorf("Expected current epoch seed to be %#x, received %#x", seed[:], newState.CurrentShufflingSeedHash32)
 	}
 
 	// deposit root checks.
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, processedPowReceiptRoot) {
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32[:],
+		processedPowReceiptRoot[:]) {
 		t.Error("LatestEth1Data DepositRootHash32 was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.Eth1DataVotes, []*pb.Eth1DataVote{}) {
@@ -217,7 +220,7 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	}
 
 	for _, h := range s.LatestBlockRootHash32S {
-		if !bytes.Equal(h, params.BeaconConfig().ZeroHash[:]) {
+		if !bytes.Equal(h[:], params.BeaconConfig().ZeroHash[:]) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}
 	}

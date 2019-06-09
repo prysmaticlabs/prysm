@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -165,15 +164,15 @@ func blocksSinceFinalized(ctx context.Context, db *db.BeaconDB, block *pb.Beacon
 	defer span.End()
 	blockAncestors := make([]*pb.BeaconBlock, 0)
 	blockAncestors = append(blockAncestors, block)
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := block.ParentRootHash32
 	// looking up ancestors, until the finalized block.
-	for parentRoot != finalizedBlockRoot {
-		retblock, err := db.Block(parentRoot)
+	for !parentRoot.Equal(finalizedBlockRoot[:]) {
+		retblock, err := db.Block(*parentRoot)
 		if err != nil {
 			return nil, err
 		}
 		blockAncestors = append(blockAncestors, retblock)
-		parentRoot = bytesutil.ToBytes32(retblock.ParentRootHash32)
+		parentRoot = retblock.ParentRootHash32
 	}
 	return blockAncestors, nil
 }
