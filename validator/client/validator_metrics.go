@@ -24,13 +24,14 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return nil
 	}
 
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	if epoch == params.BeaconConfig().GenesisEpoch {
-		v.prevBalance = params.BeaconConfig().MaxDepositAmount
+	if (len(v.prevBalance) == 0) {
+		for i := 0; i < len(v.pubkeys); i++ {
+			v.prevBalance = append(v.prevBalance, params.BeaconConfig().MaxDepositAmount);
+		}
 	}
 	var totalPrevBalance uint64
 	reported := false
-	for _, pkey := range v.pubkeys {
+	for i, pkey := range v.pubkeys {
 		req := &pb.ValidatorPerformanceRequest{
 			Slot:      slot,
 			PublicKey: pkey,
@@ -61,8 +62,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
 
-		if v.prevBalance > 0 {
-			prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
+		if v.prevBalance[i] > 0 {
+			prevBalance := float64(v.prevBalance[i]) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
 				"prevBalance":   prevBalance,
@@ -71,10 +72,14 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
 				"pubKey":        tpk,
 			}).Info("Net gains/losses in eth")
+			// Remove the line below this comment if you want the prevBalance to be the
+			// initial balance so that the log actually shows the NET gains/losses since
+			// the accounts started staking. Otherwise it will show gains/losses since the
+			// previous block.
+			v.prevBalance[i] = resp.Balance
 		}
 		totalPrevBalance += resp.Balance
 	}
 
-	v.prevBalance = totalPrevBalance
 	return nil
 }

@@ -28,7 +28,7 @@ type validator struct {
 	attesterClient       pb.AttesterServiceClient
 	keys                 map[string]*keystore.Key
 	pubkeys              [][]byte
-	prevBalance          uint64
+	prevBalance          []uint64
 	logValidatorBalances bool
 }
 
