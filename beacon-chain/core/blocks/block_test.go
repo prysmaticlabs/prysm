@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 func TestGenesisBlock_InitializedCorrectly(t *testing.T) {

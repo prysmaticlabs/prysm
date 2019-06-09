@@ -363,4 +363,3 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 	}
 	return VerifyBitfield(att.AggregationBitfield, len(committee))
 }
-

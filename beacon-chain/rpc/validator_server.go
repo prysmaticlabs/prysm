@@ -213,10 +213,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, err
 	}
-<<<<<<< HEAD
-=======
 
->>>>>>> 855bf7cec... Update Deposit Contract (#2648)
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
@@ -271,9 +268,6 @@ func (vs *ValidatorServer) ExitedValidators(
 	if err != nil {
 		return nil, err
 	}
-	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
-	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
-}
 
 	exitedKeys := make([][]byte, 0)
 	for _, status := range statuses {

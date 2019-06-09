@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -15,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -818,16 +818,4 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		s.ValidatorRegistry[2].Slashed = false
 		s.Balances[3] += 2 * params.BeaconConfig().MinDepositAmount
 	}
-}
-
-func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
-	newState := &pb.BeaconState{
-		LatestIndexRootHash32S: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().SlotsPerEpoch),
-	}
-	config := state.DefaultConfig()
-	config.Logging = true
-
-	state.ProcessEpoch(context.Background(), newState, &pb.BeaconBlock{}, config)
 }
