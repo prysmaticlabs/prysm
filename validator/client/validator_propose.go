@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"

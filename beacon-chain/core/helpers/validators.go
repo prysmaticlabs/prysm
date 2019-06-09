@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"

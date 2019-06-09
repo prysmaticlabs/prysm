@@ -9,7 +9,7 @@ import (
 	joonix "github.com/joonix/log"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"github.com/x-cray/logrus-prefixed-formatter"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
