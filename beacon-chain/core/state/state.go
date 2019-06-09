@@ -57,7 +57,7 @@ func GenesisBeaconState(
 	for i, d := range genesisValidatorDeposits {
 		depositInput, err := helpers.DecodeDepositInput(d.DepositData)
 		if err != nil {
-			return nil, fmt.Errorf("could decode deposit input %v", err)
+			return nil, fmt.Errorf("could not decode deposit input %v", err)
 		}
 
 		validator := &pb.Validator{

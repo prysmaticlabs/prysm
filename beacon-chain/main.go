@@ -7,6 +7,10 @@ import (
 	"runtime"
 
 	joonix "github.com/joonix/log"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+	"github.com/x-cray/logrus-prefixed-formatter"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -14,25 +18,49 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-func startNode(ctx *cli.Context) error {
-	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
-	level, err := logrus.ParseLevel(verbosity)
-	if err != nil {
-		return err
-	}
-	logrus.SetLevel(level)
+var appFlags = []cli.Flag{
+	utils.NoCustomConfigFlag,
+	utils.DepositContractFlag,
+	utils.Web3ProviderFlag,
+	utils.HTTPWeb3ProviderFlag,
+	utils.RPCPort,
+	utils.CertFlag,
+	utils.KeyFlag,
+	utils.EnableDBCleanup,
+	utils.GRPCGatewayPort,
+	cmd.BootstrapNode,
+	cmd.NoDiscovery,
+	cmd.StaticPeers,
+	cmd.RelayNode,
+	cmd.P2PPort,
+	cmd.P2PHost,
+	cmd.P2PMaxPeers,
+	cmd.P2PPrivKey,
+	cmd.P2PWhitelist,
+	cmd.DataDirFlag,
+	cmd.VerbosityFlag,
+	cmd.EnableTracingFlag,
+	cmd.TracingProcessNameFlag,
+	cmd.TracingEndpointFlag,
+	cmd.TraceSampleFractionFlag,
+	cmd.MonitoringPortFlag,
+	cmd.DisableMonitoringFlag,
+	cmd.ClearDB,
+	cmd.LogFormat,
+	cmd.MaxGoroutines,
+	debug.PProfFlag,
+	debug.PProfAddrFlag,
+	debug.PProfPortFlag,
+	debug.MemProfileRateFlag,
+	debug.CPUProfileFlag,
+	debug.TraceFlag,
+	cmd.LogFileName,
+}
 
-	beacon, err := node.NewBeaconNode(ctx)
-	if err != nil {
-		return err
-	}
-	beacon.Start()
-	return nil
+func init() {
+	appFlags = append(appFlags, featureconfig.BeaconChainFlags...)
 }
 
 func main() {
@@ -43,45 +71,7 @@ func main() {
 	app.Action = startNode
 	app.Version = version.GetVersion()
 
-	app.Flags = []cli.Flag{
-		utils.NoCustomConfigFlag,
-		utils.DepositContractFlag,
-		utils.Web3ProviderFlag,
-		utils.HTTPWeb3ProviderFlag,
-		utils.RPCPort,
-		utils.CertFlag,
-		utils.KeyFlag,
-		utils.EnableDBCleanup,
-		cmd.BootstrapNode,
-		cmd.NoDiscovery,
-		cmd.StaticPeers,
-		cmd.RelayNode,
-		cmd.P2PPort,
-		cmd.P2PHost,
-		cmd.P2PMaxPeers,
-		cmd.P2PPrivKey,
-		cmd.P2PWhitelist,
-		cmd.DataDirFlag,
-		cmd.VerbosityFlag,
-		cmd.EnableTracingFlag,
-		cmd.TracingProcessNameFlag,
-		cmd.TracingEndpointFlag,
-		cmd.TraceSampleFractionFlag,
-		cmd.MonitoringPortFlag,
-		cmd.DisableMonitoringFlag,
-		cmd.ClearDB,
-		cmd.LogFormat,
-		cmd.MaxGoroutines,
-		debug.PProfFlag,
-		debug.PProfAddrFlag,
-		debug.PProfPortFlag,
-		debug.MemProfileRateFlag,
-		debug.CPUProfileFlag,
-		debug.TraceFlag,
-		cmd.LogFileName,
-	}
-
-	app.Flags = append(app.Flags, featureconfig.BeaconChainFlags...)
+	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
 		format := ctx.GlobalString(cmd.LogFormat.Name)
@@ -120,4 +110,20 @@ func main() {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
+}
+
+func startNode(ctx *cli.Context) error {
+	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
+	level, err := logrus.ParseLevel(verbosity)
+	if err != nil {
+		return err
+	}
+	logrus.SetLevel(level)
+
+	beacon, err := node.NewBeaconNode(ctx)
+	if err != nil {
+		return err
+	}
+	beacon.Start()
+	return nil
 }
