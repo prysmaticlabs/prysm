@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -133,7 +132,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		},
 	}
 
-	_, _ = proposerServer.ComputeStateRoot(context.Background(), req)
+	_, _ = proposerServer.computeStateRoot(context.Background(), req)
 }
 
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
@@ -204,13 +203,11 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
-	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
-		ProposalBlockSlot: blk.Slot + 1,
-	})
+	atts, err := proposerServer.attestations(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}
-	if len(res.PendingAttestations) == 0 {
+	if len(atts) == 0 {
 		t.Error("Expected pending attestations list to be non-empty")
 	}
 }
@@ -329,20 +326,15 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
-	res, err := proposerServer.PendingAttestations(
-		context.Background(),
-		&pb.PendingAttestationsRequest{
-			ProposalBlockSlot: currentSlot,
-		},
-	)
+	atts, err := proposerServer.attestations(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}
-	if len(res.PendingAttestations) != expectedNumberOfAttestations {
+	if len(atts) != expectedNumberOfAttestations {
 		t.Errorf(
 			"Expected pending attestations list length %d, but was %d",
 			expectedNumberOfAttestations,
-			len(res.PendingAttestations),
+			len(atts),
 		)
 	}
 
@@ -363,7 +355,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 			Crosslink:   &pbp2p.Crosslink{Epoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 	}
-	if !reflect.DeepEqual(res.PendingAttestations, expectedAtts) {
+	if !reflect.DeepEqual(atts, expectedAtts) {
 		t.Error("Did not receive expected attestations")
 	}
 }
@@ -374,7 +366,7 @@ func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
 	}
 	ps := ProposerServer{powChainService: p}
 
-	_, err := ps.PendingDeposits(context.Background(), nil)
+	_, err := ps.deposits(context.Background())
 	if err.Error() != "latest PoW block number is unknown" {
 		t.Errorf("Received unexpected error: %v", err)
 	}
@@ -456,24 +448,24 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		chainService:    newMockChainService(),
 	}
 
-	result, err := bs.PendingDeposits(ctx, nil)
+	deposits, err := bs.deposits(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.PendingDeposits) != 0 {
-		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(result.PendingDeposits))
+	if len(deposits) != 0 {
+		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(deposits))
 	}
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	allResp, err := bs.PendingDeposits(ctx, nil)
+	deposits, err = bs.deposits(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(allResp.PendingDeposits) != len(recentDeposits) {
+	if len(deposits) != len(recentDeposits) {
 		t.Errorf(
 			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(allResp.PendingDeposits),
+			len(deposits),
 			len(recentDeposits),
 		)
 	}
@@ -517,7 +509,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := proposerServer.Eth1Data(context.Background(), nil)
+		_, err := proposerServer.eth1Data(context.Background())
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -595,23 +587,23 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	allResp, err := bs.PendingDeposits(ctx, nil)
+	deposits, err := bs.deposits(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	expectedDeposits := 6
-	if len(allResp.PendingDeposits) != expectedDeposits {
+	if len(deposits) != expectedDeposits {
 		t.Errorf(
 			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(allResp.PendingDeposits),
+			len(deposits),
 			expectedDeposits,
 		)
 	}
-	if allResp.PendingDeposits[0].Index != beaconState.DepositIndex {
+	if deposits[0].Index != beaconState.DepositIndex {
 		t.Errorf(
 			"Received unexpected merkle index: %d, wanted: %d",
-			allResp.PendingDeposits[0].Index,
+			deposits[0].Index,
 			beaconState.DepositIndex,
 		)
 	}
@@ -687,14 +679,14 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	allResp, err := bs.PendingDeposits(ctx, nil)
+	deposits, err := bs.deposits(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(allResp.PendingDeposits) != int(params.BeaconConfig().MaxDeposits) {
+	if len(deposits) != int(params.BeaconConfig().MaxDeposits) {
 		t.Errorf(
 			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(allResp.PendingDeposits),
+			len(deposits),
 			int(params.BeaconConfig().MaxDeposits),
 		)
 	}
@@ -722,7 +714,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
-	if _, err := proposerServer.Eth1Data(context.Background(), nil); !strings.Contains(err.Error(), want) {
+	if _, err := proposerServer.eth1Data(context.Background()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error %v, received %v", want, err)
 	}
 }
@@ -780,16 +772,16 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	if err := proposerServer.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	result, err := proposerServer.Eth1Data(context.Background(), nil)
+	eth1data, err := proposerServer.eth1Data(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	// If the data vote objects are empty, the deposit root should be the one corresponding
 	// to the deposit contract in the powchain service, fetched using powChainService.DepositRoot()
-	if !bytes.Equal(result.Eth1Data.DepositRoot, depositRoot[:]) {
+	if !bytes.Equal(eth1data.DepositRoot, depositRoot[:]) {
 		t.Errorf(
 			"Expected deposit roots to match, received %#x == %#x",
-			result.Eth1Data.DepositRoot,
+			eth1data.DepositRoot,
 			depositRoot,
 		)
 	}
@@ -827,23 +819,23 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 			},
 		},
 	}
-	result, err := proposerServer.Eth1Data(context.Background(), nil)
+	eth1data, err := proposerServer.eth1Data(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Vote at index 2 should have won the best vote selection mechanism as it had the highest block number
 	// despite being tied at vote count with the vote at index 3.
-	if !bytes.Equal(result.Eth1Data.BlockRoot, beaconState.Eth1DataVotes[2].BlockRoot) {
+	if !bytes.Equal(eth1data.BlockRoot, beaconState.Eth1DataVotes[2].BlockRoot) {
 		t.Errorf(
 			"Expected block hashes to match, received %#x == %#x",
-			result.Eth1Data.BlockRoot,
+			eth1data.BlockRoot,
 			beaconState.Eth1DataVotes[2].BlockRoot,
 		)
 	}
-	if !bytes.Equal(result.Eth1Data.DepositRoot, beaconState.Eth1DataVotes[2].DepositRoot) {
+	if !bytes.Equal(eth1data.DepositRoot, beaconState.Eth1DataVotes[2].DepositRoot) {
 		t.Errorf(
 			"Expected deposit roots to match, received %#x == %#x",
-			result.Eth1Data.DepositRoot,
+			eth1data.DepositRoot,
 			beaconState.Eth1DataVotes[2].DepositRoot,
 		)
 	}
