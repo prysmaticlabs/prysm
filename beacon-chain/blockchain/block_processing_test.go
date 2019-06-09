@@ -955,7 +955,7 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Epoch: params.BeaconConfig().SlotsPerEpoch,
+			StartEpoch: params.BeaconConfig().SlotsPerEpoch,
 		}
 	}
 	s := &pb.BeaconState{

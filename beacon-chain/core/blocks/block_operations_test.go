@@ -1178,7 +1178,6 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 				SourceRoot:  []byte("tron-sucks"),
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
-					Epoch: 1,
 				},
 			},
 		},
@@ -1196,18 +1195,14 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			Shard: 0,
-			Epoch: 0,
+			Shard:      0,
+			StartEpoch: 0,
 		},
 	}
 	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	want := fmt.Sprintf(
-		"expected crosslink epoch %d, received %d",
-		0,
-		attestations[0].Data.Crosslink.Epoch,
-	)
+	want := "mismatched parent crosslink root"
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
 		block,
@@ -1216,7 +1211,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.Crosslink.Epoch = 0
+	block.Body.Attestations[0].Data.Crosslink.StartEpoch = 0
 	want = "mismatched parent crosslink root"
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
@@ -1252,8 +1247,8 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 				SourceEpoch: 0,
 				SourceRoot:  []byte("tron-sucks"),
 				Crosslink: &pb.Crosslink{
-					Shard: 0,
-					Epoch: 0,
+					Shard:      0,
+					StartEpoch: 0,
 				},
 			},
 			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
@@ -1281,8 +1276,8 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			Shard: 0,
-			Epoch: 0,
+			Shard:      0,
+			StartEpoch: 0,
 		},
 	}
 	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")

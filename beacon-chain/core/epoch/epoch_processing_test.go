@@ -397,11 +397,11 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 		Slot:                      gs + e + 2,
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 		LatestBlockRoots:          make([][]byte, 128),
-		CurrentCrosslinks:         []*pb.Crosslink{{Epoch: ge}},
+		CurrentCrosslinks:         []*pb.Crosslink{{StartEpoch: ge}},
 	}
 
 	gCrosslink := &pb.Crosslink{
-		Epoch:      0,
+		StartEpoch: 0,
 		DataRoot:   params.BeaconConfig().ZeroHash[:],
 		ParentRoot: params.BeaconConfig().ZeroHash[:],
 	}
@@ -459,9 +459,9 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Epoch:    ge,
-			Shard:    1,
-			DataRoot: []byte{'B'},
+			StartEpoch: ge,
+			Shard:      1,
+			DataRoot:   []byte{'B'},
 		}
 	}
 	state := &pb.BeaconState{
@@ -480,7 +480,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	if len(indices) != 0 {
 		t.Errorf("gensis crosslink indices is not 0, got: %d", len(indices))
 	}
-	want := &pb.Crosslink{Epoch: ge, Shard: 1, DataRoot: []byte{'B'}}
+	want := &pb.Crosslink{StartEpoch: ge, Shard: 1, DataRoot: []byte{'B'}}
 	if !reflect.DeepEqual(winner, want) {
 		t.Errorf("Did not get wanted crosslink, got: %v", winner)
 	}
@@ -507,8 +507,8 @@ func TestProcessCrosslinks_NoUpdate(t *testing.T) {
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
-			Epoch:    0,
-			DataRoot: []byte{'A'},
+			StartEpoch: 0,
+			DataRoot:   []byte{'A'},
 		})
 	}
 	state := &pb.BeaconState{
@@ -526,7 +526,7 @@ func TestProcessCrosslinks_NoUpdate(t *testing.T) {
 	}
 
 	wanted := &pb.Crosslink{
-		Epoch:      0,
+		StartEpoch: 0,
 		DataRoot:   params.BeaconConfig().ZeroHash[:],
 		ParentRoot: params.BeaconConfig().ZeroHash[:],
 	}
@@ -558,8 +558,8 @@ func TestProcessCrosslinks_SuccessfulUpdate(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Epoch:    ge,
-			DataRoot: []byte{'B'},
+			StartEpoch: ge,
+			DataRoot:   []byte{'B'},
 		}
 	}
 	var atts []*pb.PendingAttestation

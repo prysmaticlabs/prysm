@@ -642,7 +642,6 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	}
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
-			Epoch:      0,
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
 			ParentRoot: params.BeaconConfig().ZeroHash[:],
 		}, nil, nil

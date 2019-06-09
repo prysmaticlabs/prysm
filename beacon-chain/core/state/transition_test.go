@@ -282,8 +282,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			SourceEpoch: 0,
 			SourceRoot:  []byte("tron-sucks"),
 			Crosslink: &pb.Crosslink{
-				Shard: 0,
-				Epoch: 0,
+				Shard:      0,
+				StartEpoch: 0,
 			},
 		},
 		AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
@@ -311,8 +311,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			Shard: 0,
-			Epoch: 0,
+			Shard:      0,
+			StartEpoch: 0,
 		},
 	}
 	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
@@ -400,8 +400,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			SourceEpoch: 0,
 			SourceRoot:  []byte("tron-sucks"),
 			Crosslink: &pb.Crosslink{
-				Shard: 0,
-				Epoch: helpers.SlotToEpoch(beaconState.Slot),
+				Shard:    0,
+				EndEpoch: 64,
 			},
 		},
 		AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
@@ -430,8 +430,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			Shard: 0,
-			Epoch: helpers.SlotToEpoch(beaconState.Slot),
+			Shard:      0,
+			StartEpoch: helpers.SlotToEpoch(beaconState.Slot),
 		},
 	}
 	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
@@ -510,8 +510,8 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
-			Epoch:    0,
-			DataRoot: []byte{'A'},
+			StartEpoch: 0,
+			DataRoot:   []byte{'A'},
 		})
 	}
 	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
@@ -580,8 +580,8 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
-			Epoch:    0,
-			DataRoot: []byte{'A'},
+			StartEpoch: 0,
+			DataRoot:   []byte{'A'},
 		})
 	}
 
@@ -644,8 +644,8 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
-			Epoch:    0,
-			DataRoot: []byte{'A'},
+			StartEpoch: 0,
+			DataRoot:   []byte{'A'},
 		})
 	}
 
