@@ -13,8 +13,8 @@ service BeaconService {
 }
 
 service AttesterService {
-  rpc RequestAttestation(AttestationRequest) returns (ethereum.beacon.p2p.v1.IndexedAttestation);
-  rpc SubmitAttestation(ethereum.beacon.p2p.v1.IndexedAttestation) returns (AttestResponse);
+  rpc RequestAttestation(AttestationRequest) returns (ethereum.beacon.p2p.v1.AttestationData);
+  rpc SubmitAttestation(ethereum.beacon.p2p.v1.Attestation) returns (AttestResponse);
 }
 
 service ProposerService {

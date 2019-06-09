@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -27,9 +27,9 @@ type AttesterServer struct {
 	cache            *cache.AttestationCache
 }
 
-// AttestHead is a function called by an attester in a sharding validator to vote
+// SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
-func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation) (*pb.AttestResponse, error) {
+func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *pbp2p.Attestation) (*pb.AttestResponse, error) {
 	h, err := hashutil.HashProto(att)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash attestation: %v", err)
@@ -70,12 +70,13 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{
 		Hash: h[:],
 	})
-	return &pb.AttestResponse{AttestationHash: h[:]}, nil
+
+	return &pb.AttestResponse{Root: h[:]}, nil
 }
 
 // RequestAttestation requests that the beacon node produce an IndexedAttestation,
 // with a blank signature field, which the validator will then sign.
-func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.AttestationRequest) (*pbp2p.IndexedAttestation, error) {
+func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.AttestationRequest) (*pbp2p.AttestationData, error) {
 	res, err := as.cache.Get(ctx, req)
 	if err != nil {
 		return nil, err
@@ -149,20 +150,18 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return nil, fmt.Errorf("could not tree hash crosslink for shard %d: %v",
 			req.Shard, err)
 	}
-	res = &pbp2p.IndexedAttestation{
-		Data: &pbp2p.AttestationData{
-			BeaconBlockRoot: headBlockRoot[:],
-			SourceEpoch: headState.CurrentJustifiedEpoch,
-			SourceRoot: headState.CurrentJustifiedRoot,
-			TargetEpoch: targetEpoch,
-			TargetRoot: targetRoot,
-			Crosslink: &pbp2p.Crosslink{
-				Shard: req.Shard,
-				StartEpoch: startEpoch,
-				EndEpoch: endEpoch,
-				ParentRoot: crosslinkRoot[:],
-				DataRoot: params.BeaconConfig().ZeroHash[:],
-			},
+	res = &pbp2p.AttestationData{
+		BeaconBlockRoot: headBlockRoot[:],
+		SourceEpoch:     headState.CurrentJustifiedEpoch,
+		SourceRoot:      headState.CurrentJustifiedRoot,
+		TargetEpoch:     targetEpoch,
+		TargetRoot:      targetRoot,
+		Crosslink: &pbp2p.Crosslink{
+			Shard:      req.Shard,
+			StartEpoch: startEpoch,
+			EndEpoch:   endEpoch,
+			ParentRoot: crosslinkRoot[:],
+			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		},
 	}
 

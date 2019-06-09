@@ -58,7 +58,7 @@ func NewAttestationCache() *AttestationCache {
 
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
-func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationRequest) (*pbp2p.IndexedAttestation, error) {
+func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationRequest) (*pbp2p.AttestationData, error) {
 	if req == nil {
 		return nil, errors.New("nil attestation data request")
 	}
@@ -134,7 +134,7 @@ func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationRequest) error {
 }
 
 // Put the response in the cache.
-func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationRequest, res *pbp2p.IndexedAttestation) error {
+func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationRequest, res *pbp2p.AttestationData) error {
 	data := &attestationReqResWrapper{
 		req,
 		res,
@@ -165,5 +165,5 @@ func reqToKey(req *pb.AttestationRequest) (string, error) {
 
 type attestationReqResWrapper struct {
 	req *pb.AttestationRequest
-	res *pbp2p.IndexedAttestation
+	res *pbp2p.AttestationData
 }
