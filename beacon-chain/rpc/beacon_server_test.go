@@ -672,6 +672,11 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	for i := 0; i < len(justifiedState.Balances); i++ {
 		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
 	}
+	var validators []*pbp2p.Validator
+	for i := 0; i < 11; i++ {
+		validators = append(validators, &pbp2p.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxDepositAmount})
+	}
+	justifiedState.ValidatorRegistry = validators
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
 	}
@@ -682,7 +687,6 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
-	validators := []*pbp2p.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
 	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
 	b1 := &pbp2p.BeaconBlock{
 		Slot:       3,
