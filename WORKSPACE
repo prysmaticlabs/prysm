@@ -21,9 +21,9 @@ http_archive(
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "cff7e0efb05799f2a9015aafd922a5049f7af953beb0050dc1d78e0dbeec2c9f",
-    strip_prefix = "bazel-tools-f04c7c0ec6851ea378f90c74c855bcb87d9793b5",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/f04c7c0ec6851ea378f90c74c855bcb87d9793b5.tar.gz"],
+    sha256 = "6b438f4d8c698f69ed4473cba12da3c3a7febf90ce8e3c383533d5a64d8c8f19",
+    strip_prefix = "bazel-tools-6fbc36c639a8f376182bb0057dd557eb2440d4ed",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/6fbc36c639a8f376182bb0057dd557eb2440d4ed.tar.gz"],
 )
 
 http_archive(
@@ -663,7 +663,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "721295fe20d585ce7e948146f82188429d14da33",  # v0.5.0
+    commit = "aac82e61c0c8fe133c297b4b59316b9f481e1f0a",  # v0.6.0
     importpath = "google.golang.org/api",
 )
 
@@ -711,7 +711,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "35bfdb8c16e3737d7f866fb650f22260bf3e65b8",  # v0.0.1
+    commit = "fc7f7514de80507d58d5359759cb9e5fb48b35d4",  # v0.0.2
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -932,7 +932,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_cobra",
-    commit = "67fc4837d267bc9bfd6e47f77783fcc3dffc68de",  # v0.0.4
+    commit = "f2b07da1e2c38d5f12845a4f607e2e1018cbb1f5",  # v0.0.5
     importpath = "github.com/spf13/cobra",
 )
 
@@ -970,7 +970,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "775730d6e48254a2430366162cf6298e5368833c",  # v0.39.0
+    commit = "457ea5c15ccf3b87db582c450e80101989da35f7",  # v0.40.0
     importpath = "cloud.google.com/go",
 )
 
