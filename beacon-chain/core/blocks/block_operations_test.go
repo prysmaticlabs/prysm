@@ -1071,7 +1071,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1134,7 +1134,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.PreviousJustifiedRoot = []byte("tron-sucks")
+	beaconState.PreviousJustifiedRoot = []byte("hello-world")
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1175,7 +1175,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 			Data: &pb.AttestationData{
 				TargetEpoch: 0,
 				SourceEpoch: 0,
-				SourceRoot:  []byte("tron-sucks"),
+				SourceRoot:  []byte("hello-world"),
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -1199,7 +1199,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := "mismatched parent crosslink root"
@@ -1245,7 +1245,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 			Data: &pb.AttestationData{
 				TargetEpoch: 0,
 				SourceEpoch: 0,
-				SourceRoot:  []byte("tron-sucks"),
+				SourceRoot:  []byte("hello-world"),
 				Crosslink: &pb.Crosslink{
 					Shard:      0,
 					StartEpoch: 0,
@@ -1280,7 +1280,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])

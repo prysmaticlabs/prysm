@@ -280,7 +280,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		Data: &pb.AttestationData{
 			TargetEpoch: 0,
 			SourceEpoch: 0,
-			SourceRoot:  []byte("tron-sucks"),
+			SourceRoot:  []byte("hello-world"),
 			Crosslink: &pb.Crosslink{
 				Shard:      0,
 				StartEpoch: 0,
@@ -315,7 +315,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
@@ -398,7 +398,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Data: &pb.AttestationData{
 			TargetEpoch: helpers.SlotToEpoch(beaconState.Slot),
 			SourceEpoch: 0,
-			SourceRoot:  []byte("tron-sucks"),
+			SourceRoot:  []byte("hello-world"),
 			Crosslink: &pb.Crosslink{
 				Shard:    0,
 				EndEpoch: 64,
@@ -434,7 +434,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			StartEpoch: helpers.SlotToEpoch(beaconState.Slot),
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
@@ -657,7 +657,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		Balances:               validatorBalances,
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		CurrentJustifiedRoot:   []byte("tron-sucks"),
+		CurrentJustifiedRoot:   []byte("hello-world"),
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
@@ -772,7 +772,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				SourceRoot: []byte("tron-sucks"),
+				SourceRoot: []byte("hello-world"),
 				Crosslink: &pb.Crosslink{
 					Shard:      uint64(i),
 					ParentRoot: encoded[:],
