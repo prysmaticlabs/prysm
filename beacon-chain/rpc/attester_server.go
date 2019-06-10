@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -132,7 +131,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	if epochStartSlot == headState.Slot {
 		epochBoundaryRoot = headRoot[:]
 	} else {
-		epochBoundaryRoot, err = blocks.BlockRoot(headState, epochStartSlot)
+		epochBoundaryRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch boundary block for slot %d: %v",
 				epochStartSlot, err)
