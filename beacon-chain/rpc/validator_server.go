@@ -3,7 +3,6 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -135,25 +134,36 @@ func (vs *ValidatorServer) ValidatorPerformance(
 func (vs *ValidatorServer) CommitteeAssignment(
 	ctx context.Context,
 	req *pb.CommitteeAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {
-	beaconState, err := vs.beaconDB.HeadState(ctx)
+
+	s, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
+	validatorIndexMap := stateutils.ValidatorIndexMap(s)
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
-	activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
-	for _, pk := range activeKeys {
+
+	for _, pk := range req.PublicKeys {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-
-		a, err := vs.assignment(pk, beaconState, req.EpochStart)
-		if err != nil {
-			return nil, err
+		pk32 := bytesutil.ToBytes32(pk)
+		idx, ok := validatorIndexMap[pk32]
+		assignment := &pb.CommitteeAssignmentResponse_CommitteeAssignment{
+			PublicKey: pk,
+			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
 		}
-		assignments = append(assignments, a)
+
+		v := s.ValidatorRegistry[idx]
+		if ok && helpers.IsActiveValidator(v, helpers.CurrentEpoch(s)) {
+			assignment, err = vs.assignment(pk, s, req.EpochStart)
+			if err != nil {
+				return nil, err
+			}
+		}
+		assignments = append(assignments, assignment)
 	}
-	assignments = vs.addNonActivePublicKeysAssignmentStatus(beaconState, req.PublicKeys, assignments)
+
 	return &pb.CommitteeAssignmentResponse{
 		Assignment: assignments,
 	}, nil
@@ -408,51 +418,6 @@ func (vs *ValidatorServer) lookupValidatorStatus(validatorIdx uint64, beaconStat
 	}
 
 	return status
-}
-
-// filterActivePublicKeys takes a list of validator public keys and returns
-// the list of active public keys from the given state.
-func (vs *ValidatorServer) filterActivePublicKeys(beaconState *pbp2p.BeaconState, pubkeys [][]byte) [][]byte {
-	// Generate a map for O(1) lookup of existence of pub keys in request.
-	pkMap := make(map[string]bool)
-	for _, pk := range pubkeys {
-		pkMap[hex.EncodeToString(pk)] = true
-	}
-
-	var activeKeys [][]byte
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot)
-	for _, v := range beaconState.ValidatorRegistry {
-		if pkMap[hex.EncodeToString(v.Pubkey)] && helpers.IsActiveValidator(v, currentEpoch) {
-			activeKeys = append(activeKeys, v.Pubkey)
-		}
-	}
-
-	return activeKeys
-}
-
-func (vs *ValidatorServer) addNonActivePublicKeysAssignmentStatus(
-	beaconState *pbp2p.BeaconState,
-	pubkeys [][]byte,
-	assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment,
-) []*pb.CommitteeAssignmentResponse_CommitteeAssignment {
-	// Generate a map for O(1) lookup of existence of pub keys in request.
-	validatorMap := stateutils.ValidatorIndexMap(beaconState)
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	for _, pk := range pubkeys {
-		hexPk := bytesutil.ToBytes32(pk)
-		if valIdx, ok := validatorMap[hexPk]; !ok || !helpers.IsActiveValidator(beaconState.ValidatorRegistry[validatorMap[hexPk]], currentEpoch) {
-			status := vs.lookupValidatorStatus(uint64(valIdx), beaconState) //nolint:gosec
-			if !ok {
-				status = pb.ValidatorStatus_UNKNOWN_STATUS
-			}
-			a := &pb.CommitteeAssignmentResponse_CommitteeAssignment{
-				PublicKey: pk,
-				Status:    status,
-			}
-			assignments = append(assignments, a)
-		}
-	}
-	return assignments
 }
 
 func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uint64,

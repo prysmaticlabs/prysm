@@ -1,10 +1,8 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -906,90 +904,5 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if response[2].Status.Status != pb.ValidatorStatus_ACTIVE {
 		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
-	}
-}
-
-func TestFilterActivePublicKeys(t *testing.T) {
-	currentEpoch := uint64(15)
-	beaconState := &pbp2p.BeaconState{
-		Slot: helpers.StartSlot(currentEpoch),
-		ValidatorRegistry: []*pbp2p.Validator{
-			// Active validiators in our request
-			{
-				Pubkey:          []byte("pk1"),
-				ActivationEpoch: currentEpoch - 1,
-				ExitEpoch:       math.MaxUint64,
-			},
-			// Inactive validators in our request
-			{
-				Pubkey:          []byte("pk2"),
-				ActivationEpoch: currentEpoch - 2,
-				ExitEpoch:       currentEpoch - 1,
-			},
-			// Other active validators in the registry
-			{
-				Pubkey:          []byte("pk3"),
-				ActivationEpoch: 0,
-				ExitEpoch:       math.MaxUint64,
-			},
-		},
-	}
-
-	vs := &ValidatorServer{}
-
-	activeKeys := vs.filterActivePublicKeys(
-		beaconState,
-		[][]byte{
-			[]byte("pk1"),
-			[]byte("pk2"),
-		},
-	)
-
-	if len(activeKeys) != 1 || !bytes.Equal(activeKeys[0], []byte("pk1")) {
-		t.Error("Wrong active keys returned")
-	}
-}
-
-func TestAddNonActivePublicKeysAssignmentStatus(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	currentEpoch := uint64(15)
-	beaconState := &pbp2p.BeaconState{
-		Slot: helpers.StartSlot(currentEpoch),
-		ValidatorRegistry: []*pbp2p.Validator{
-			// Active validiators in our request
-			{
-				Pubkey:          []byte("pk1"),
-				ActivationEpoch: currentEpoch - 1,
-				ExitEpoch:       math.MaxUint64,
-			},
-			// Inactive validators in our request
-			{
-				Pubkey:          []byte("pk2"),
-				ActivationEpoch: currentEpoch - 2,
-				ExitEpoch:       currentEpoch - 1,
-			},
-			// Other active validators in the registry
-			{
-				Pubkey:          []byte("pk3"),
-				ActivationEpoch: 0,
-				ExitEpoch:       math.MaxUint64,
-			},
-		},
-	}
-	if err := db.SaveState(context.Background(), beaconState); err != nil {
-		t.Fatal(err)
-	}
-	vs := &ValidatorServer{
-		beaconDB: db,
-	}
-	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
-	assignments = vs.addNonActivePublicKeysAssignmentStatus(beaconState,
-		[][]byte{
-			[]byte("pk1"),
-			[]byte("pk4"),
-		}, assignments)
-	if len(assignments) != 1 || assignments[0].Status != pb.ValidatorStatus_UNKNOWN_STATUS || !bytes.Equal(assignments[0].PublicKey, []byte("pk4")) {
-		t.Errorf("Unknown public key status wasn't returned: %v", assignments)
 	}
 }
