@@ -2,28 +2,27 @@ package rpc
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"math/big"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-	"crypto/rand"
-	"os"
-	"path"
 
 	"github.com/gogo/protobuf/proto"
-
 	"github.com/golang/mock/gomock"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -956,7 +955,7 @@ func BenchmarkAssignment(b *testing.B) {
 
 	// Set up request for 100 public keys at a time
 	pubKeys := make([][]byte, 100)
-	for i := 0; i < len(pubKeys); i ++ {
+	for i := 0; i < len(pubKeys); i++ {
 		buf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		copy(buf, []byte(strconv.Itoa(i)))
 		pubKeys[i] = buf
@@ -968,7 +967,7 @@ func BenchmarkAssignment(b *testing.B) {
 	}
 
 	// Precache the shuffled indices
-	for i := uint64(0); i < validatorCount / params.BeaconConfig().TargetCommitteeSize; i++ {
+	for i := uint64(0); i < validatorCount/params.BeaconConfig().TargetCommitteeSize; i++ {
 		if _, err := helpers.CrosslinkCommitteeAtEpoch(state, 0, i); err != nil {
 			b.Fatal(err)
 		}
