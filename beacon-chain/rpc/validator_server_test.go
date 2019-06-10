@@ -954,14 +954,24 @@ func BenchmarkAssignment(b *testing.B) {
 		beaconDB: db,
 	}
 
-	pubKeyBuf0 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	copy(pubKeyBuf0[:], []byte(strconv.Itoa(0)))
-	pubKeyBuf1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	copy(pubKeyBuf1[:], []byte(strconv.Itoa(1)))
+	// Set up request for 100 public keys at a time
+	pubKeys := make([][]byte, 100)
+	for i := 0; i < len(pubKeys); i ++ {
+		buf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		copy(buf, []byte(strconv.Itoa(i)))
+		pubKeys[i] = buf
+	}
 
 	req := &pb.AssignmentRequest{
-		PublicKeys: [][]byte{pubKeyBuf0, pubKeyBuf1},
+		PublicKeys: pubKeys,
 		EpochStart: 0,
+	}
+
+	// Precache the shuffled indices
+	for i := uint64(0); i < validatorCount / params.BeaconConfig().TargetCommitteeSize; i++ {
+		if _, err := helpers.CrosslinkCommitteeAtEpoch(state, 0, i); err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	b.ResetTimer()
