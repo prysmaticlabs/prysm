@@ -131,17 +131,14 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	2.) The shard to which the committee is assigned.
 //	3.) The slot at which the committee is assigned.
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
-func (vs *ValidatorServer) CommitteeAssignment(
-	ctx context.Context,
-	req *pb.CommitteeAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {
-
+func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
 	s, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
 	validatorIndexMap := stateutils.ValidatorIndexMap(s)
-	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
+	var assignments []*pb.AssignmentResponse_Assignment
 
 	for _, pk := range req.PublicKeys {
 		if ctx.Err() != nil {
@@ -149,7 +146,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		}
 		pk32 := bytesutil.ToBytes32(pk)
 		idx, ok := validatorIndexMap[pk32]
-		assignment := &pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		assignment := &pb.AssignmentResponse_Assignment{
 			PublicKey: pk,
 			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
 		}
@@ -164,7 +161,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		assignments = append(assignments, assignment)
 	}
 
-	return &pb.CommitteeAssignmentResponse{
+	return &pb.AssignmentResponse{
 		Assignment: assignments,
 	}, nil
 }
@@ -173,7 +170,7 @@ func (vs *ValidatorServer) assignment(
 	pubkey []byte,
 	beaconState *pbp2p.BeaconState,
 	epochStart uint64,
-) (*pb.CommitteeAssignmentResponse_CommitteeAssignment, error) {
+) (*pb.AssignmentResponse_Assignment, error) {
 
 	if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf(
@@ -194,7 +191,7 @@ func (vs *ValidatorServer) assignment(
 		return nil, err
 	}
 	status := vs.lookupValidatorStatus(idx, beaconState)
-	return &pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	return &pb.AssignmentResponse_Assignment{
 		Committee:  committee,
 		Shard:      shard,
 		Slot:       slot,
