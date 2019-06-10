@@ -305,21 +305,9 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_agl_ed25519",
-    commit = "5312a61534124124185d41f09206b9fef1d88403",
-    importpath = "github.com/agl/ed25519",
-)
-
-go_repository(
     name = "com_github_minio_blake2b_simd",
     commit = "3f5f724cb5b182a5c278d6d3d55b40e7f8c2efb4",
     importpath = "github.com/minio/blake2b-simd",
-)
-
-go_repository(
-    name = "com_github_gxed_hashland",
-    commit = "a72cc0875a1e95edd309d3134bc7c11bf2d7360b",
-    importpath = "github.com/gxed/hashland",
 )
 
 go_repository(
@@ -350,12 +338,6 @@ go_repository(
     name = "com_github_mr_tron_base58",
     commit = "89529c6904fcd077434931b4eac8b4b2f0991baf",  # v1.1.0
     importpath = "github.com/mr-tron/base58",
-)
-
-go_repository(
-    name = "com_github_whyrusleeping_go_smux_yamux",
-    commit = "7402600b69ab8af34116420d9b9cd4e1b8968901",  # v2.0.9
-    importpath = "github.com/whyrusleeping/go-smux-yamux",
 )
 
 go_repository(
@@ -408,12 +390,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_fd_go_nat",
-    commit = "d6a8fd67f078b7cc7a16d623ee52e859b2daccd5",  # v1.0.0
-    importpath = "github.com/fd/go-nat",
-)
-
-go_repository(
     name = "com_github_whyrusleeping_go_logging",
     commit = "0457bb6b88fc1973573aaf6b5145d8d3ae972390",
     importpath = "github.com/whyrusleeping/go-logging",
@@ -426,12 +402,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_libp2p_go_stream_muxer",
-    commit = "414c06b8941c3d0b140f7b08e559bb2aa5cf43fe",  # v0.1.0
-    importpath = "github.com/libp2p/go-stream-muxer",
-)
-
-go_repository(
     name = "com_github_libp2p_go_libp2p_transport_upgrader",
     commit = "07ed92ccf9aba3a2e4b2fddc4c17ced060524922",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
@@ -441,12 +411,6 @@ go_repository(
     name = "com_github_libp2p_go_testutil",
     commit = "9a5d4c55819de9fd3e07181003d1e722621f6b84",  # v0.1.0
     importpath = "github.com/libp2p/go-testutil",
-)
-
-go_repository(
-    name = "com_github_whyrusleeping_go_smux_multistream",
-    commit = "90c0868b4933b5cb1bbcf68a3ca11c6767ccc048",  # v2.0.2
-    importpath = "github.com/whyrusleeping/go-smux-multistream",
 )
 
 go_repository(
@@ -471,12 +435,6 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_interface_pnet",
     commit = "1357b4bb4b863afcc688f7820c88564ad79818be",  # v0.1.0
     importpath = "github.com/libp2p/go-libp2p-interface-pnet",
-)
-
-go_repository(
-    name = "com_github_libp2p_go_conn_security",
-    commit = "5f8143019e00897f3f6776723f2ca9230904458b",  # v0.1.0
-    importpath = "github.com/libp2p/go-conn-security",
 )
 
 go_repository(
@@ -522,12 +480,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_satori_go_uuid",
-    commit = "fe3bd84a0754cc4deb35c1398cd0ebd23f1d8a41",  # v1.2.0
-    importpath = "github.com/satori/go.uuid",
-)
-
-go_repository(
     name = "com_github_sirupsen_logrus",
     commit = "e1e72e9de974bd926e5c56f83753fba2df402ce5",  # v1.3.0
     importpath = "github.com/sirupsen/logrus",
@@ -537,12 +489,6 @@ go_repository(
     name = "org_golang_x_sys",
     commit = "a34e9553db1e492c9a76e60db2296ae7e5fbb772",
     importpath = "golang.org/x/sys",
-)
-
-go_repository(
-    name = "com_github_whyrusleeping_yamux",
-    commit = "5364a42fe4b5efa5967c11c8f9b0f049cac0c4a9",  # v1.1.5
-    importpath = "github.com/whyrusleeping/yamux",
 )
 
 go_repository(
@@ -594,12 +540,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_libp2p_go_sockaddr",
-    commit = "864d6651a43fce610e83b4c32dc80f5f85b6d28b",  # v0.0.1
-    importpath = "github.com/libp2p/go-sockaddr",
-)
-
-go_repository(
     name = "com_github_whyrusleeping_go_notifier",
     commit = "097c5d47330ff6a823f67e3515faa13566a62c6f",
     importpath = "github.com/whyrusleeping/go-notifier",
@@ -609,24 +549,6 @@ go_repository(
     name = "com_github_gorilla_websocket",
     commit = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d",  # v1.4.0
     importpath = "github.com/gorilla/websocket",
-)
-
-go_repository(
-    name = "com_github_whyrusleeping_go_smux_multiplex",
-    commit = "69b7a74ecfb84be57bdcf4b264a7042d80569287",  # v3.0.16
-    importpath = "github.com/whyrusleeping/go-smux-multiplex",
-)
-
-go_repository(
-    name = "com_github_gxed_eventfd",
-    commit = "80a92cca79a8041496ccc9dd773fcb52a57ec6f9",
-    importpath = "github.com/gxed/eventfd",
-)
-
-go_repository(
-    name = "com_github_gxed_goendian",
-    commit = "0f5c6873267e5abf306ffcdfcfa4bf77517ef4a7",
-    importpath = "github.com/gxed/GoEndian",
 )
 
 go_repository(
@@ -713,12 +635,6 @@ go_repository(
     name = "com_github_prometheus_procfs",
     commit = "fc7f7514de80507d58d5359759cb9e5fb48b35d4",  # v0.0.2
     importpath = "github.com/prometheus/procfs",
-)
-
-go_repository(
-    name = "com_github_prometheus_prometheus",
-    commit = "ed970a17fe1585310bd79093b788602df9fc73c3",  # v2.7.2
-    importpath = "github.com/prometheus/prometheus",
 )
 
 go_repository(
@@ -818,12 +734,6 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_kbucket",
     commit = "3752ea0128fd84b4fef0a66739b8ca95c8a471b6",  # v0.2.0
     importpath = "github.com/libp2p/go-libp2p-kbucket",
-)
-
-go_repository(
-    name = "com_github_jbenet_go_context",
-    commit = "d14ea06fba99483203c19d92cfcd13ebe73135f4",
-    importpath = "github.com/jbenet/go-context",
 )
 
 go_repository(
@@ -1005,12 +915,6 @@ go_repository(
 )
 
 go_repository(
-    name = "in_gopkg_urfave_cli_v1",
-    commit = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",  # v1.20.0
-    importpath = "gopkg.in/urfave/cli.v1",
-)
-
-go_repository(
     name = "com_github_rjeczalik_notify",
     commit = "69d839f37b13a8cb7a78366f7633a4071cb43be7",  # v0.9.2
     importpath = "github.com/rjeczalik/notify",
@@ -1065,12 +969,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_allegro_bigcache",
-    commit = "84a0ff3f153cbd7e280a19029a864bb04b504e62",  # v1.2.0
-    importpath = "github.com/allegro/bigcache",
-)
-
-go_repository(
     name = "org_golang_x_xerrors",
     commit = "a5947ffaace3e882f334c1750858b4a6a7e52422",
     importpath = "golang.org/x/xerrors",
@@ -1122,4 +1020,59 @@ go_repository(
     name = "com_github_ghodss_yaml",
     commit = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",  # v1.0.0
     importpath = "github.com/ghodss/yaml",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_core",
+    build_file_proto_mode = "disable_global",
+    commit = "8f222f4b5a872d9af86f74f2ec0982c7356adce6",
+    importpath = "github.com/libp2p/go-libp2p-core",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_testing",
+    commit = "6d4ca71943f35271918e28f9a9950002e17b4f16",
+    importpath = "github.com/libp2p/go-libp2p-testing",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_yamux",
+    commit = "a61e80cb5770aa0d9b1bafe94da1278f58baa2c5",
+    importpath = "github.com/libp2p/go-libp2p-yamux",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_mplex",
+    commit = "811729f15f0af13fe3f0d9e410c22f6a4bc5c686",
+    importpath = "github.com/libp2p/go-libp2p-mplex",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_stream_muxer_multistream",
+    commit = "2439b02deee2de8bb1fe24473d3d8333008a714a",
+    importpath = "github.com/libp2p/go-stream-muxer-multistream",
+)
+
+go_repository(
+    name = "com_github_multiformats_go_multiaddr_fmt",
+    commit = "7d8102a98552c80f8a5ccb9c01e670fac17fd6df",
+    importpath = "github.com/multiformats/go-multiaddr-fmt",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_yamux",
+    commit = "663972181d409e7263040f0b668462f87c85e1bd",
+    importpath = "github.com/libp2p/go-yamux",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_nat",
+    commit = "02f8b1ee4b2619d4070113f21249f9194e7be6bd",
+    importpath = "github.com/libp2p/go-nat",
+)
+
+go_repository(
+    name = "com_github_koron_go_ssdp",
+    commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
+    importpath = "github.com/koron/go-ssdp",
 )
