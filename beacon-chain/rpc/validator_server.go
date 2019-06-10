@@ -101,28 +101,22 @@ func (vs *ValidatorServer) ValidatorPerformance(
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 
-	activeCount, err := helpers.ActiveValidatorCount(head, helpers.SlotToEpoch(req.Slot))
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve active validator count: %v", err)
-	}
-
-	totalActiveBalance, err := helpers.TotalActiveBalance(head)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve active balance: %v", err)
-	}
-
+	activeIndices := helpers.ActiveValidatorIndices(head, helpers.SlotToEpoch(req.Slot))
 	validatorBalances, err := vs.beaconDB.Balances(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve validator balances %v", err)
 	}
-
-	avgBalance := float32(totalActiveBalance / activeCount)
+	totalActiveBalance := float32(0)
+	for _, idx := range activeIndices {
+		totalActiveBalance += float32(validatorBalances[idx])
+	}
+	avgBalance := totalActiveBalance / float32(len(activeIndices))
 	balance := validatorBalances[index]
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                       balance,
 		AverageActiveValidatorBalance: avgBalance,
 		TotalValidators:               uint64(len(validatorRegistry)),
-		TotalActiveValidators:         uint64(activeCount),
+		TotalActiveValidators:         uint64(len(activeIndices)),
 	}, nil
 }
 
@@ -213,7 +207,6 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, err
 	}
-
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
@@ -465,7 +458,7 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().GoerliBlockTime) * time.Second
 	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
 
-	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().SlotsPerEth1VotingPeriod / params.BeaconConfig().SlotsPerEpoch)
+	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().EpochsPerEth1VotingPeriod)
 	votingPeriodSeconds := time.Duration(votingPeriodSlots*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclusion := eth1UnixTime.Add(votingPeriodSeconds)
 
@@ -487,16 +480,4 @@ func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 		pubkeys[bytesutil.ToBytes96(dep.Data.Pubkey)] = true
 	}
 	return pubkeys
-}
-
-// DomainData fetches the current domain version information from the beacon state.
-func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
-	state, err := vs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
-	}
-	dv := helpers.DomainVersion(state, request.Epoch, params.BeaconConfig().DomainRandao)
-	return &pb.DomainResponse{
-		SignatureDomain: dv,
-	}, nil
 }
