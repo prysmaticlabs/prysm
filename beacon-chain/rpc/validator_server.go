@@ -144,19 +144,24 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		pk32 := bytesutil.ToBytes32(pk)
-		idx, ok := validatorIndexMap[pk32]
+		idx, ok := validatorIndexMap[bytesutil.ToBytes32(pk)]
+		// Default assignment for every validator
 		assignment := &pb.AssignmentResponse_Assignment{
 			PublicKey: pk,
 			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
 		}
 
 		v := s.ValidatorRegistry[idx]
+		// Update validator assignment when it is active
 		if ok && helpers.IsActiveValidator(v, helpers.CurrentEpoch(s)) {
 			assignment, err = vs.assignment(pk, s, req.EpochStart)
 			if err != nil {
 				return nil, err
 			}
+		} else if ok {
+			// Update inactive validator's status
+			status := vs.lookupValidatorStatus(uint64(idx), s)
+			assignment.Status = status
 		}
 		assignments = append(assignments, assignment)
 	}
