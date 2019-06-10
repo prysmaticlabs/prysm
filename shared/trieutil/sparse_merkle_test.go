@@ -50,13 +50,13 @@ func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
 
 func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	items := [][]byte{
-		[]byte("short"),
-		[]byte("eos"),
-		[]byte("long"),
-		[]byte("eth"),
-		[]byte("4ever"),
-		[]byte("eth2"),
-		[]byte("moon"),
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
 	}
 	m, err := GenerateTrieFromItems(items, 32)
 	if err != nil {
@@ -84,13 +84,13 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
 	items := [][]byte{
-		[]byte("short"),
-		[]byte("eos"),
-		[]byte("long"),
-		[]byte("eth"),
-		[]byte("4ever"),
-		[]byte("eth2"),
-		[]byte("moon"),
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
 	}
 	for i := 0; i < b.N; i++ {
 		if _, err := GenerateTrieFromItems(items, 32); err != nil {
@@ -101,13 +101,13 @@ func BenchmarkGenerateTrieFromItems(b *testing.B) {
 
 func BenchmarkVerifyMerkleBranch(b *testing.B) {
 	items := [][]byte{
-		[]byte("short"),
-		[]byte("eos"),
-		[]byte("long"),
-		[]byte("eth"),
-		[]byte("4ever"),
-		[]byte("eth2"),
-		[]byte("moon"),
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
 	}
 	m, err := GenerateTrieFromItems(items, 32)
 	if err != nil {
