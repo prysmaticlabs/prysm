@@ -446,3 +446,423 @@ func TestBlockTree_OK(t *testing.T) {
 		}
 	}
 }
+
+func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+	// We want to ensure that if our block tree looks as follows, the RPC response
+	// returns the correct information.
+	//                   /->[A, Slot 3, 3 Votes]->[B, Slot 4, 3 Votes]
+	// [Justified Block]->[C, Slot 3, 2 Votes]
+	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
+	justifiedState := &pbp2p.BeaconState{
+		Slot:     0,
+		Balances: make([]uint64, 11),
+	}
+	for i := 0; i < len(justifiedState.Balances); i++ {
+		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	if err := db.SaveJustifiedState(justifiedState); err != nil {
+		t.Fatal(err)
+	}
+	justifiedBlock := &pbp2p.BeaconBlock{
+		Slot: 0,
+	}
+	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
+		t.Fatal(err)
+	}
+	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
+	validators := []*pbp2p.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
+	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
+	b1 := &pbp2p.BeaconBlock{
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
+	}
+	b1Root, _ := hashutil.HashBeaconBlock(b1)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              3,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b1Root); err != nil {
+		t.Fatal(err)
+	}
+	b2 := &pbp2p.BeaconBlock{
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
+	}
+	b2Root, _ := hashutil.HashBeaconBlock(b2)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              3,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b2Root); err != nil {
+		t.Fatal(err)
+	}
+	b3 := &pbp2p.BeaconBlock{
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
+	}
+	b3Root, _ := hashutil.HashBeaconBlock(b3)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              3,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b3Root); err != nil {
+		t.Fatal(err)
+	}
+	b4 := &pbp2p.BeaconBlock{
+		Slot:       4,
+		ParentRoot: b1Root[:],
+	}
+	b4Root, _ := hashutil.HashBeaconBlock(b4)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              4,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b4Root); err != nil {
+		t.Fatal(err)
+	}
+	b5 := &pbp2p.BeaconBlock{
+		Slot:       5,
+		ParentRoot: b3Root[:],
+	}
+	b5Root, _ := hashutil.HashBeaconBlock(b5)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              5,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b5Root); err != nil {
+		t.Fatal(err)
+	}
+	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
+	// We give block A 3 votes.
+	attestationTargets[0] = &pbp2p.AttestationTarget{
+		Slot:       b1.Slot,
+		ParentRoot: b1.ParentRoot,
+		BlockRoot:  b1Root[:],
+	}
+	attestationTargets[1] = &pbp2p.AttestationTarget{
+		Slot:       b1.Slot,
+		ParentRoot: b1.ParentRoot,
+		BlockRoot:  b1Root[:],
+	}
+	attestationTargets[2] = &pbp2p.AttestationTarget{
+		Slot:       b1.Slot,
+		ParentRoot: b1.ParentRoot,
+		BlockRoot:  b1Root[:],
+	}
+
+	// We give block C 2 votes.
+	attestationTargets[3] = &pbp2p.AttestationTarget{
+		Slot:       b2.Slot,
+		ParentRoot: b2.ParentRoot,
+		BlockRoot:  b2Root[:],
+	}
+	attestationTargets[4] = &pbp2p.AttestationTarget{
+		Slot:       b2.Slot,
+		ParentRoot: b2.ParentRoot,
+		BlockRoot:  b2Root[:],
+	}
+
+	// We give block D 2 votes.
+	attestationTargets[5] = &pbp2p.AttestationTarget{
+		Slot:       b3.Slot,
+		ParentRoot: b3.ParentRoot,
+		BlockRoot:  b3Root[:],
+	}
+	attestationTargets[6] = &pbp2p.AttestationTarget{
+		Slot:       b3.Slot,
+		ParentRoot: b3.ParentRoot,
+		BlockRoot:  b3Root[:],
+	}
+
+	// We give block B 3 votes.
+	attestationTargets[7] = &pbp2p.AttestationTarget{
+		Slot:       b4.Slot,
+		ParentRoot: b4.ParentRoot,
+		BlockRoot:  b4Root[:],
+	}
+	attestationTargets[8] = &pbp2p.AttestationTarget{
+		Slot:       b4.Slot,
+		ParentRoot: b4.ParentRoot,
+		BlockRoot:  b4Root[:],
+	}
+	attestationTargets[9] = &pbp2p.AttestationTarget{
+		Slot:       b4.Slot,
+		ParentRoot: b4.ParentRoot,
+		BlockRoot:  b4Root[:],
+	}
+
+	// We give block E 1 vote.
+	attestationTargets[10] = &pbp2p.AttestationTarget{
+		Slot:       b5.Slot,
+		ParentRoot: b5.ParentRoot,
+		BlockRoot:  b5Root[:],
+	}
+
+	tree := []*pb.BlockTreeResponse_TreeNode{
+		{
+			Block:             b1,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+		{
+			Block:             b2,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+		{
+			Block:             b3,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+		{
+			Block:             b4,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+		{
+			Block:             b5,
+			ParticipatedVotes: 1 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	for _, node := range tree {
+		if err := db.SaveBlock(node.Block); err != nil {
+			t.Fatal(err)
+		}
+	}
+	headState := &pbp2p.BeaconState{
+		Slot: b4.Slot,
+	}
+	if err := db.UpdateChainHead(ctx, b4, headState); err != nil {
+		t.Fatal(err)
+	}
+	bs := &BeaconServer{
+		beaconDB:       db,
+		targetsFetcher: &mockChainService{targets: attestationTargets},
+	}
+	if _, err := bs.BlockTreeBySlots(ctx, nil); err == nil {
+		// There should be a "argument 'TreeBlockSlotRequest' cannot be nil" error
+		t.Fatal(err)
+	}
+	slotRange := &pb.TreeBlockSlotRequest{
+		SlotFrom: 4,
+		SlotTo:   3,
+	}
+	if _, err := bs.BlockTreeBySlots(ctx, slotRange); err == nil {
+		// There should be a 'Upper limit of slot range cannot be lower than the lower limit' error.
+		t.Fatal(err)
+	}
+}
+func TestBlockTreeBySlots_OK(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+	// We want to ensure that if our block tree looks as follows, the RPC response
+	// returns the correct information.
+	//                   /->[A, Slot 3, 3 Votes]->[B, Slot 4, 3 Votes]
+	// [Justified Block]->[C, Slot 3, 2 Votes]
+	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
+	justifiedState := &pbp2p.BeaconState{
+		Slot:     0,
+		Balances: make([]uint64, 11),
+	}
+	for i := 0; i < len(justifiedState.Balances); i++ {
+		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+	if err := db.SaveJustifiedState(justifiedState); err != nil {
+		t.Fatal(err)
+	}
+	justifiedBlock := &pbp2p.BeaconBlock{
+		Slot: 0,
+	}
+	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
+		t.Fatal(err)
+	}
+	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
+	validators := []*pbp2p.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
+	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
+	b1 := &pbp2p.BeaconBlock{
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
+	}
+	b1Root, _ := hashutil.HashBeaconBlock(b1)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              3,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b1Root); err != nil {
+		t.Fatal(err)
+	}
+	b2 := &pbp2p.BeaconBlock{
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
+	}
+	b2Root, _ := hashutil.HashBeaconBlock(b2)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              3,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b2Root); err != nil {
+		t.Fatal(err)
+	}
+	b3 := &pbp2p.BeaconBlock{
+		Slot:       3,
+		ParentRoot: justifiedRoot[:],
+	}
+	b3Root, _ := hashutil.HashBeaconBlock(b3)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              3,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b3Root); err != nil {
+		t.Fatal(err)
+	}
+	b4 := &pbp2p.BeaconBlock{
+		Slot:       4,
+		ParentRoot: b1Root[:],
+	}
+	b4Root, _ := hashutil.HashBeaconBlock(b4)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              4,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b4Root); err != nil {
+		t.Fatal(err)
+	}
+	b5 := &pbp2p.BeaconBlock{
+		Slot:       5,
+		ParentRoot: b3Root[:],
+	}
+	b5Root, _ := hashutil.HashBeaconBlock(b5)
+	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
+		Slot:              5,
+		ValidatorRegistry: validators,
+		Balances:          balances,
+	}, b5Root); err != nil {
+		t.Fatal(err)
+	}
+	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
+	// We give block A 3 votes.
+	attestationTargets[0] = &pbp2p.AttestationTarget{
+		Slot:       b1.Slot,
+		ParentRoot: b1.ParentRoot,
+		BlockRoot:  b1Root[:],
+	}
+	attestationTargets[1] = &pbp2p.AttestationTarget{
+		Slot:       b1.Slot,
+		ParentRoot: b1.ParentRoot,
+		BlockRoot:  b1Root[:],
+	}
+	attestationTargets[2] = &pbp2p.AttestationTarget{
+		Slot:       b1.Slot,
+		ParentRoot: b1.ParentRoot,
+		BlockRoot:  b1Root[:],
+	}
+
+	// We give block C 2 votes.
+	attestationTargets[3] = &pbp2p.AttestationTarget{
+		Slot:       b2.Slot,
+		ParentRoot: b2.ParentRoot,
+		BlockRoot:  b2Root[:],
+	}
+	attestationTargets[4] = &pbp2p.AttestationTarget{
+		Slot:       b2.Slot,
+		ParentRoot: b2.ParentRoot,
+		BlockRoot:  b2Root[:],
+	}
+
+	// We give block D 2 votes.
+	attestationTargets[5] = &pbp2p.AttestationTarget{
+		Slot:       b3.Slot,
+		ParentRoot: b3.ParentRoot,
+		BlockRoot:  b3Root[:],
+	}
+	attestationTargets[6] = &pbp2p.AttestationTarget{
+		Slot:       b3.Slot,
+		ParentRoot: b3.ParentRoot,
+		BlockRoot:  b3Root[:],
+	}
+
+	// We give block B 3 votes.
+	attestationTargets[7] = &pbp2p.AttestationTarget{
+		Slot:       b4.Slot,
+		ParentRoot: b4.ParentRoot,
+		BlockRoot:  b4Root[:],
+	}
+	attestationTargets[8] = &pbp2p.AttestationTarget{
+		Slot:       b4.Slot,
+		ParentRoot: b4.ParentRoot,
+		BlockRoot:  b4Root[:],
+	}
+	attestationTargets[9] = &pbp2p.AttestationTarget{
+		Slot:       b4.Slot,
+		ParentRoot: b4.ParentRoot,
+		BlockRoot:  b4Root[:],
+	}
+
+	// We give block E 1 vote.
+	attestationTargets[10] = &pbp2p.AttestationTarget{
+		Slot:       b5.Slot,
+		ParentRoot: b5.ParentRoot,
+		BlockRoot:  b5Root[:],
+	}
+
+	tree := []*pb.BlockTreeResponse_TreeNode{
+		{
+			Block:             b1,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+		{
+			Block:             b2,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+		{
+			Block:             b3,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+		{
+			Block:             b4,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+		{
+			Block:             b5,
+			ParticipatedVotes: 1 * params.BeaconConfig().MaxDepositAmount,
+			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+		},
+	}
+	for _, node := range tree {
+		if err := db.SaveBlock(node.Block); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	headState := &pbp2p.BeaconState{
+		Slot: b4.Slot,
+	}
+	if err := db.UpdateChainHead(ctx, b4, headState); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconServer{
+		beaconDB:       db,
+		targetsFetcher: &mockChainService{targets: attestationTargets},
+	}
+	slotRange := &pb.TreeBlockSlotRequest{
+		SlotFrom: 3,
+		SlotTo:   4,
+	}
+	resp, err := bs.BlockTreeBySlots(ctx, slotRange)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Tree) != 2 {
+		t.Logf("Incorrect number of nodes in tree, expected: %d, actual: %d", 2, len(resp.Tree))
+	}
+}
