@@ -136,8 +136,8 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	finalizedSlot := helpers.StartSlot(beaconState.FinalizedEpoch) - params.BeaconConfig().GenesisSlot
-	slot := block.Slot - params.BeaconConfig().GenesisSlot
+	finalizedSlot := helpers.StartSlot(beaconState.FinalizedEpoch)
+	slot := block.Slot
 	span.AddAttributes(
 		trace.Int64Attribute("block.Slot", int64(slot)),
 		trace.Int64Attribute("finalized slot", int64(finalizedSlot)),

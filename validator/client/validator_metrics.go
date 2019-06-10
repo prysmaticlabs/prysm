@@ -25,7 +25,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	}
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	if epoch == params.BeaconConfig().GenesisEpoch {
+	if epoch == 0 {
 		v.prevBalance = params.BeaconConfig().MaxDepositAmount
 	}
 	var totalPrevBalance uint64
@@ -45,8 +45,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		tpk := hex.EncodeToString(pkey)[:12]
 		if !reported {
 			log.WithFields(logrus.Fields{
-				"slot":  slot - params.BeaconConfig().GenesisSlot,
-				"epoch": (slot / params.BeaconConfig().SlotsPerEpoch) - params.BeaconConfig().GenesisEpoch,
+				"slot":  slot,
+				"epoch": slot / params.BeaconConfig().SlotsPerEpoch,
 			}).Info("Start of a new epoch!")
 			log.WithFields(logrus.Fields{
 				"totalValidators":     resp.TotalValidators,
