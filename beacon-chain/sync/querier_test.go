@@ -12,7 +12,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -158,7 +157,7 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 
 	expMsg := fmt.Sprintf(
 		"Latest chain head is at slot: %d and state root: %#x",
-		response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
+		response.CanonicalSlot, response.CanonicalStateRootHash32,
 	)
 
 	<-exitRoutine
