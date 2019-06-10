@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/terencechain/prysm-phase2/shared/bytesutil"
 	"runtime/debug"
+
+	"github.com/terencechain/prysm-phase2/shared/bytesutil"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
