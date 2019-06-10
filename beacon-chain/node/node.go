@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
@@ -107,6 +108,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerRPCService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerGRPCGateway(ctx); err != nil {
 		return nil, err
 	}
 
@@ -396,4 +401,14 @@ func (b *BeaconNode) registerAttestationService() error {
 		})
 
 	return b.services.RegisterService(attsService)
+}
+
+func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
+	gatewayPort := ctx.GlobalInt(utils.GRPCGatewayPort.Name)
+	if gatewayPort > 0 {
+		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(utils.RPCPort.Name))
+		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
+		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
+	}
+	return nil
 }

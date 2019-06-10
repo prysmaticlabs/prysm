@@ -32,6 +32,11 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 	return nil
 }
 
+func (s *InitialSync) doesParentExist(block *pb.BeaconBlock) bool {
+	parentHash := bytesutil.ToBytes32(block.ParentRoot)
+	return s.db.HasBlock(parentHash)
+}
+
 // safelyHandleMessage will recover and log any panic that occurs from the
 // function argument.
 func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
