@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -27,25 +28,6 @@ func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		CacheTreeHash: false,
 	})
-}
-
-func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
-	privKeys := make([]*bls.SecretKey, numDeposits)
-	deposits := make([]*pb.Deposit, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositData := &pb.DepositData{
-			Pubkey: priv.PublicKey().Marshal(),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pb.Deposit{Data: depositData}
-		privKeys[i] = priv
-	}
-	return deposits, privKeys
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
@@ -336,8 +318,8 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,25 +353,21 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 }
 
 func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
-	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+
+	epoch := helpers.CurrentEpoch(beaconState)
+	epochSignature, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
-	epoch := uint64(0)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			RandaoReveal: epochSignature.Marshal(),
+			RandaoReveal: epochSignature,
 		},
 	}
 
@@ -973,8 +951,8 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _ := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1019,8 +997,8 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _ := setupInitialDeposits(t, 200)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1060,8 +1038,8 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _ := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1071,7 +1049,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("lorem-ipsum")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1123,8 +1101,8 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _ := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1134,7 +1112,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.PreviousJustifiedRoot = []byte("tron-sucks")
+	beaconState.PreviousJustifiedRoot = []byte("lorem-ipsum")
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1175,7 +1153,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 			Data: &pb.AttestationData{
 				TargetEpoch: 0,
 				SourceEpoch: 0,
-				SourceRoot:  []byte("tron-sucks"),
+				SourceRoot:  []byte("lorem-ipsum"),
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 					Epoch: 1,
@@ -1188,8 +1166,8 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _ := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1200,7 +1178,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 			Epoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("lorem-ipsum")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1250,7 +1228,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 			Data: &pb.AttestationData{
 				TargetEpoch: 0,
 				SourceEpoch: 0,
-				SourceRoot:  []byte("tron-sucks"),
+				SourceRoot:  []byte("lorem-ipsum"),
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 					Epoch: 0,
@@ -1285,7 +1263,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 			Epoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("lorem-ipsum")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])

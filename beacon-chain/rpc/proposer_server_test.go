@@ -2,8 +2,8 @@ package rpc
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"reflect"
-	"strconv"
 	"testing"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -34,17 +34,8 @@ func TestProposeBlock_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(deposits); i++ {
-		depositData := &pbp2p.DepositData{
-			Pubkey: []byte(strconv.Itoa(i)),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-		deposits[i] = &pbp2p.Deposit{
-			Data: depositData,
-		}
-	}
-
+	numDeposits := params.BeaconConfig().DepositsForChainStart
+	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
@@ -83,21 +74,9 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(deposits); i++ {
-		depositData := &pbp2p.DepositData{
-			Pubkey: []byte(strconv.Itoa(i)),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-		deposits[i] = &pbp2p.Deposit{
-			Data: depositData,
-		}
-		deposits[i] = &pbp2p.Deposit{
-			Data: depositData,
-		}
-	}
-
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
+	eth1Data := testutil.GenerateEth1Data(t, deposits)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}

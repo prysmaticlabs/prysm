@@ -2,16 +2,13 @@ package sync
 
 import (
 	"context"
-	"crypto/rand"
 	"testing"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func NotSyncQuerierConfig() *QuerierConfig {
@@ -44,32 +41,12 @@ func initializeTestSyncService(ctx context.Context, cfg *Config, synced bool) *S
 	return services
 }
 
-func setupInitialDeposits(t *testing.T) ([]*pb.Deposit, []*bls.SecretKey) {
-	numOfDeposits := 10
-	privKeys := make([]*bls.SecretKey, numOfDeposits)
-	deposits := make([]*pb.Deposit, numOfDeposits)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositData := &pb.DepositData{
-			Pubkey: priv.PublicKey().Marshal(),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pb.Deposit{Data: depositData}
-		privKeys[i] = priv
-	}
-	return deposits, privKeys
-}
-
 func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 	db := internal.SetupDB(t)
 
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 

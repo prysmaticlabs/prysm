@@ -3,16 +3,15 @@ package db
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func init() {
@@ -21,33 +20,14 @@ func init() {
 	})
 }
 
-func setupInitialDeposits(t testing.TB, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
-	privKeys := make([]*bls.SecretKey, numDeposits)
-	deposits := make([]*pb.Deposit, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositData := &pb.DepositData{
-			Pubkey: priv.PublicKey().Marshal(),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pb.Deposit{Data: depositData}
-		privKeys[i] = priv
-	}
-	return deposits, privKeys
-}
-
 func TestInitializeState_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 10)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
@@ -89,8 +69,8 @@ func TestFinalizeState_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 20)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 20)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -119,8 +99,8 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(b, 10)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(b, 10)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}
 

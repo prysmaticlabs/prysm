@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -24,40 +24,6 @@ func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		EnableCrosslinks: true,
 	})
-}
-
-func setupInitialDeposits(t *testing.T, numDeposits uint64) ([]*pb.Deposit, []*bls.SecretKey) {
-	privKeys := make([]*bls.SecretKey, numDeposits)
-	deposits := make([]*pb.Deposit, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositData := &pb.DepositData{
-			Pubkey: priv.PublicKey().Marshal(),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pb.Deposit{Data: depositData}
-		privKeys[i] = priv
-	}
-	return deposits, privKeys
-}
-
-func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
-	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	epoch := uint64(0)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
-	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
-	return epochSignature.Marshal()
 }
 
 func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
@@ -75,9 +41,8 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +50,13 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings+1; i++ {
 		slashings = append(slashings, &pb.ProposerSlashing{})
 	}
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -104,8 +75,8 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
-	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +97,13 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings+1; i++ {
 		attesterSlashings = append(attesterSlashings, &pb.AttesterSlashing{})
 	}
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -146,8 +123,8 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +171,13 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxAttestations+1; i++ {
 		blockAttestations = append(blockAttestations, &pb.Attestation{})
 	}
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -217,16 +200,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
-	for i := 0; i < len(deposits); i++ {
-		depositData := &pb.DepositData{
-			Pubkey: []byte(strconv.Itoa(i)),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pb.Deposit{Data: depositData}
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,7 +255,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		Data: &pb.AttestationData{
 			TargetEpoch: 0,
 			SourceEpoch: 0,
-			SourceRoot:  []byte("tron-sucks"),
+			SourceRoot:  []byte("lorem-ipsum"),
 			Crosslink: &pb.Crosslink{
 				Shard: 0,
 				Epoch: 0,
@@ -315,7 +290,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			Epoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("lorem-ipsum")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
@@ -331,16 +306,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
-	for i := 0; i < len(deposits); i++ {
-		depositData := &pb.DepositData{
-			Pubkey: []byte(strconv.Itoa(i)),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pb.Deposit{Data: depositData}
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -398,7 +365,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Data: &pb.AttestationData{
 			TargetEpoch: helpers.SlotToEpoch(beaconState.Slot),
 			SourceEpoch: 0,
-			SourceRoot:  []byte("tron-sucks"),
+			SourceRoot:  []byte("lorem-ipsum"),
 			Crosslink: &pb.Crosslink{
 				Shard: 0,
 				Epoch: helpers.SlotToEpoch(beaconState.Slot),
@@ -434,7 +401,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Epoch: helpers.SlotToEpoch(beaconState.Slot),
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("lorem-ipsum")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
@@ -657,7 +624,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		Balances:               validatorBalances,
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		CurrentJustifiedRoot:   []byte("tron-sucks"),
+		CurrentJustifiedRoot:   []byte("lorem-ipsum"),
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
@@ -772,7 +739,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &pb.Attestation{
 			Data: &pb.AttestationData{
-				SourceRoot: []byte("tron-sucks"),
+				SourceRoot: []byte("lorem-ipsum"),
 				Crosslink: &pb.Crosslink{
 					Shard:      uint64(i),
 					ParentRoot: encoded[:],

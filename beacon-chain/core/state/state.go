@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -76,22 +75,8 @@ func GenesisBeaconState(
 		latestBlockRoots[i] = zeroHash
 	}
 
-	validatorRegistry := make([]*pb.Validator, len(genesisValidatorDeposits))
-	for i, d := range genesisValidatorDeposits {
-
-		validator := &pb.Validator{
-			Pubkey:                d.Data.Pubkey,
-			WithdrawalCredentials: d.Data.WithdrawalCredentials,
-			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			Slashed:               false,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
-		}
-
-		validatorRegistry[i] = validator
-	}
-
-	latestBalances := make([]uint64, len(genesisValidatorDeposits))
+	validatorRegistry := []*pb.Validator{}
+	latestBalances := []uint64{}
 	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 
 	state := &pb.BeaconState{
@@ -138,15 +123,15 @@ func GenesisBeaconState(
 
 	// Process initial deposits.
 	var err error
-	validatorMap := stateutils.ValidatorIndexMap(state)
+	validatorMap := make(map[[32]byte]int)
 	for _, deposit := range genesisValidatorDeposits {
+		eth1DataExists := eth1Data != nil
 		state, err = v.ProcessDeposit(
 			state,
+			deposit,
 			validatorMap,
-			deposit.Data.Pubkey,
-			deposit.Data.Amount,
-			deposit.Data.Signature,
-			deposit.Data.WithdrawalCredentials,
+			false,
+			eth1DataExists,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
