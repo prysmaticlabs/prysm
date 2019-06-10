@@ -52,6 +52,21 @@ func (mr *MockBeaconServiceServerMockRecorder) BlockTree(arg0, arg1 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockTree", reflect.TypeOf((*MockBeaconServiceServer)(nil).BlockTree), arg0, arg1)
 }
 
+// BlockTreeBySlots mocks base method
+func (m *MockBeaconServiceServer) BlockTreeBySlots(arg0 context.Context, arg1 *v10.TreeBlockSlotRequest) (*v10.BlockTreeResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BlockTreeBySlots", arg0, arg1)
+	ret0, _ := ret[0].(*v10.BlockTreeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BlockTreeBySlots indicates an expected call of BlockTreeBySlots
+func (mr *MockBeaconServiceServerMockRecorder) BlockTreeBySlots(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockTreeBySlots", reflect.TypeOf((*MockBeaconServiceServer)(nil).BlockTreeBySlots), arg0, arg1)
+}
+
 // CanonicalHead mocks base method
 func (m *MockBeaconServiceServer) CanonicalHead(arg0 context.Context, arg1 *types.Empty) (*v1.BeaconBlock, error) {
 	m.ctrl.T.Helper()

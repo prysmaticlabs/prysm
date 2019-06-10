@@ -31,7 +31,7 @@ func CurrentEpoch(state *pb.BeaconState) uint64 {
 }
 
 // PrevEpoch returns the previous epoch number calculated from
-// the slot number stored in beacon state. It also checks for
+// the slot number stored in beacon state. It alswo checks for
 // underflow condition.
 //
 // Spec pseudocode definition:
