@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -135,16 +135,7 @@ func generateSimulatedBlock(
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
-	bodyRoot, err := ssz.HashTreeRoot(block.Body)
-	if err != nil {
-		return nil, [32]byte{}, err
-	}
-	header := &pb.BeaconBlockHeader{
-		Slot:       block.Slot,
-		ParentRoot: block.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-	}
-	blockRoot, err := ssz.SigningRoot(header)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
