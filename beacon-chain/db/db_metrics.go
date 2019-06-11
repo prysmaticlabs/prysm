@@ -113,7 +113,414 @@ func registerDBMetrics(db *bolt.DB) {
 	}, func() float64 {
 		return float64(db.Stats().TxStats.WriteTime)
 	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
 
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_attestation_bucket_number_of_keys",
+		Help: "number of keys/value pairs in the attestation bucket",
+	}, func() float64 {
+		var keys float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			keys = float64(tx.Bucket(attestationBucket).Stats().KeyN)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return keys
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_attestation_bucket_depth",
+		Help: "number of levels in B+tree in the attestation bucket",
+	}, func() float64 {
+		var depth float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			depth = float64(tx.Bucket(attestationBucket).Stats().Depth)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return depth
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_attestation_bucket_total_leaf_size",
+		Help: "bytes actually used for leaf data in attestation bucket",
+	}, func() float64 {
+		var leafInUse float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			leafInUse = float64(tx.Bucket(attestationBucket).Stats().LeafInuse)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return leafInUse
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_attestation_target_bucket_number_of_keys",
+		Help: "number of keys/value pairs in the attestation target bucket",
+	}, func() float64 {
+		var keys float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			keys = float64(tx.Bucket(attestationTargetBucket).Stats().KeyN)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return keys
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_attestation_target_bucket_depth",
+		Help: "number of levels in B+tree in the attestation target bucket",
+	}, func() float64 {
+		var depth float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			depth = float64(tx.Bucket(attestationTargetBucket).Stats().Depth)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return depth
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_attestation_target_bucket_total_leaf_size",
+		Help: "bytes actually used for leaf data in attestation target bucket",
+	}, func() float64 {
+		var leafInUse float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			leafInUse = float64(tx.Bucket(attestationTargetBucket).Stats().LeafInuse)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return leafInUse
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_block_bucket_number_of_keys",
+		Help: "number of keys/value pairs in the block bucket",
+	}, func() float64 {
+		var keys float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			keys = float64(tx.Bucket(blockBucket).Stats().KeyN)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return keys
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_block_bucket_depth",
+		Help: "number of levels in B+tree in the block bucket",
+	}, func() float64 {
+		var depth float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			depth = float64(tx.Bucket(blockBucket).Stats().Depth)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return depth
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_block_bucket_total_leaf_size",
+		Help: "bytes actually used for leaf data in block bucket",
+	}, func() float64 {
+		var leafInUse float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			leafInUse = float64(tx.Bucket(blockBucket).Stats().LeafInuse)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return leafInUse
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_mainchain_bucket_number_of_keys",
+		Help: "number of keys/value pairs in the mainchain bucket",
+	}, func() float64 {
+		var keys float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			keys = float64(tx.Bucket(mainChainBucket).Stats().KeyN)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return keys
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_mainchain_bucket_depth",
+		Help: "number of levels in B+tree in the mainchain bucket",
+	}, func() float64 {
+		var depth float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			depth = float64(tx.Bucket(mainChainBucket).Stats().Depth)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return depth
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_mainchain_bucket_total_leaf_size",
+		Help: "bytes actually used for leaf data in mainchain bucket",
+	}, func() float64 {
+		var leafInUse float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			leafInUse = float64(tx.Bucket(mainChainBucket).Stats().LeafInuse)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return leafInUse
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_historical_state_bucket_number_of_keys",
+		Help: "number of keys/value pairs in the historical state bucket",
+	}, func() float64 {
+		var keys float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			keys = float64(tx.Bucket(histStateBucket).Stats().KeyN)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return keys
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_historical_state_bucket_depth",
+		Help: "number of levels in B+tree in the historical state bucket",
+	}, func() float64 {
+		var depth float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			depth = float64(tx.Bucket(histStateBucket).Stats().Depth)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return depth
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_historical_state_bucket_total_leaf_size",
+		Help: "bytes actually used for leaf data in historical state bucket",
+	}, func() float64 {
+		var leafInUse float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			leafInUse = float64(tx.Bucket(histStateBucket).Stats().LeafInuse)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return leafInUse
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_chainInfo_bucket_number_of_keys",
+		Help: "number of keys/value pairs in the chainInfo bucket",
+	}, func() float64 {
+		var keys float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			keys = float64(tx.Bucket(chainInfoBucket).Stats().KeyN)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return keys
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_chainInfo_bucket_depth",
+		Help: "number of levels in B+tree in the chainInfo bucket",
+	}, func() float64 {
+		var depth float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			depth = float64(tx.Bucket(chainInfoBucket).Stats().Depth)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return depth
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_chainInfo_bucket_total_leaf_size",
+		Help: "bytes actually used for leaf data in chainInfo bucket",
+	}, func() float64 {
+		var leafInUse float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			leafInUse = float64(tx.Bucket(chainInfoBucket).Stats().LeafInuse)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return leafInUse
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_block_operations_bucket_number_of_keys",
+		Help: "number of keys/value pairs in the block operations bucket",
+	}, func() float64 {
+		var keys float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			keys = float64(tx.Bucket(blockOperationsBucket).Stats().KeyN)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return keys
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_block_operations_bucket_depth",
+		Help: "number of levels in B+tree in the block operations bucket",
+	}, func() float64 {
+		var depth float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			depth = float64(tx.Bucket(blockOperationsBucket).Stats().Depth)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return depth
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_block_operations_bucket_total_leaf_size",
+		Help: "bytes actually used for leaf data in block operations bucket",
+	}, func() float64 {
+		var leafInUse float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			leafInUse = float64(tx.Bucket(blockOperationsBucket).Stats().LeafInuse)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return leafInUse
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_validator_bucket_number_of_keys",
+		Help: "number of keys/value pairs in the validator bucket",
+	}, func() float64 {
+		var keys float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			keys = float64(tx.Bucket(validatorBucket).Stats().KeyN)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return keys
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_validator_bucket_depth",
+		Help: "number of levels in B+tree in the validator bucket",
+	}, func() float64 {
+		var depth float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			depth = float64(tx.Bucket(validatorBucket).Stats().Depth)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return depth
+	}))
+	if err != nil {
+		log.Errorf("Could not register metric: %v", err)
+	}
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchain_db_validator_bucket_total_leaf_size",
+		Help: "bytes actually used for leaf data in validator bucket",
+	}, func() float64 {
+		var leafInUse float64
+		if err := db.View(func(tx *bolt.Tx) error {
+			leafInUse = float64(tx.Bucket(validatorBucket).Stats().LeafInuse)
+			return nil
+		}); err != nil {
+			return 0
+		}
+		return leafInUse
+	}))
 	if err != nil {
 		log.Errorf("Could not register metric: %v", err)
 	}
