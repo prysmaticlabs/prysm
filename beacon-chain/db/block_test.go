@@ -2,10 +2,11 @@ package db
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -205,20 +206,20 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 
 	slotNum := uint64(3)
 	b1 := &pb.BeaconBlock{
-		Slot: slotNum,
+		Slot:       slotNum,
 		ParentRoot: []byte("A"),
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte("A"),
 		},
 	}
 	b2 := &pb.BeaconBlock{
-		Slot: slotNum,
+		Slot:       slotNum,
 		ParentRoot: []byte("B"),
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte("B"),
 		}}
 	b3 := &pb.BeaconBlock{
-		Slot: slotNum,
+		Slot:       slotNum,
 		ParentRoot: []byte("C"),
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte("C"),

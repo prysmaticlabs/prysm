@@ -14,11 +14,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"math/big"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/ethereum/go-ethereum/common"
 	peer "github.com/libp2p/go-libp2p-peer"

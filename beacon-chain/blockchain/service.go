@@ -7,10 +7,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"

@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"math/big"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"

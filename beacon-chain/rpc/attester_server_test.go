@@ -2,9 +2,10 @@ package rpc
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"sync"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"

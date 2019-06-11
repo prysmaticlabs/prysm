@@ -687,7 +687,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
+	justifiedRoot, _ := blockutil.BlockSigningRoot(justifiedBlock)
 	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
 	b1 := &pbp2p.BeaconBlock{
 		Slot:       3,

@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"sort"
+
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	peer "github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

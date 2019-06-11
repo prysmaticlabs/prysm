@@ -6,10 +6,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"

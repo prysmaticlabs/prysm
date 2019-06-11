@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"

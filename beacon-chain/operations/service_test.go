@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"reflect"
 	"sort"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
