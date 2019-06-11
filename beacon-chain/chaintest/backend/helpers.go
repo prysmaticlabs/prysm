@@ -4,10 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/go-ssz"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,6 +38,8 @@ func generateSimulatedBlock(
 	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+
+	// We determine the latest signing root.
 	block := &pb.BeaconBlock{
 		Slot:       beaconState.Slot + 1,
 		ParentRoot: prevBlockRoot[:],
@@ -133,9 +135,18 @@ func generateSimulatedBlock(
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("could not tree hash new block: %v", err)
+		return nil, [32]byte{}, err
+	}
+	header := &pb.BeaconBlockHeader{
+		Slot:       block.Slot,
+		ParentRoot: block.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	blockRoot, err := ssz.SigningRoot(header)
+	if err != nil {
+		return nil, [32]byte{}, err
 	}
 	return block, blockRoot, nil
 }

@@ -9,7 +9,7 @@ import (
 // given a beacon block. This is used as the parent root of subsequent blocks, for verifying
 // headers, and also looking up blocks by this root in the DB.
 func BlockSigningRoot(bb *pb.BeaconBlock) ([32]byte, error) {
-	bodyRoot, err := ssz.TreeHash(bb)
+	bodyRoot, err := ssz.HashTreeRoot(bb.Body)
 	if err != nil {
 		return [32]byte{}, err
 	}

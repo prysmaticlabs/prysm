@@ -121,7 +121,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	}
 	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	genesis := b.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesis.Body)
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,7 +198,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	}
 	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	genesis := b.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesis.Body)
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	}
 	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	genesis := b.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesis.Body)
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +356,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	genesis := b.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesis.Body)
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -417,7 +417,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	genesis := b.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesis.Body)
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -481,7 +481,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	genesis := b.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesis.Body)
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -516,7 +516,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
-		h, err := ssz.TreeHash(pd.Data)
+		h, err := ssz.HashTreeRoot(pd.Data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -662,7 +662,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	genesis := b.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesis.Body)
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -814,7 +814,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}
 	genesis := b.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesis.Body)
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1008,44 +1008,33 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	e := params.BeaconConfig().FarFutureEpoch
-	a := params.BeaconConfig().MaxDepositAmount
-
-	// Set up state and block to process epoch to get a new finalized block
-	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*3+1)
-	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = []byte{byte(i)}
+	deposits, _ := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRoot: []byte{},
+		BlockRoot:   []byte{},
 	}
-	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = params.BeaconConfig().ZeroHash[:]
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
-	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
-		crosslinks[i] = &pb.Crosslink{
-			Epoch: params.BeaconConfig().SlotsPerEpoch,
-		}
+	genesis := b.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
+	if err != nil {
+		t.Fatal(err)
 	}
-	s := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch*3 - 1,
-		PreviousJustifiedEpoch: 0,
-		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  1,
-		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  3,
-		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
-		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
-		LatestBlockRoots:       blockRoots,
-		LatestStateRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		LatestBlockHeader:      &pb.BeaconBlockHeader{},
-		LatestRandaoMixes:      randaoMixes,
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		CurrentCrosslinks:      crosslinks,
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
 	}
 
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b := &pb.BeaconBlock{
-		Slot: s.Slot + 1,
+		ParentRoot: parentRoot[:],
+		Slot: beaconState.Slot + 1,
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
@@ -1059,7 +1048,7 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 
 	// Set up cache to make sure they are cleared after a new finalized block
-	if _, err := helpers.ActiveValidatorIndices(s, helpers.CurrentEpoch(s)); err != nil {
+	if _, err := helpers.ActiveValidatorIndices(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
 		t.Fatal(err)
 	}
 	if len(helpers.ActiveIndicesKeys()) == 0 {
@@ -1067,7 +1056,7 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 	}
 
 	// Advance state get a a new finalized block
-	if _, err := chainService.AdvanceState(context.Background(), s, b); err != nil {
+	if _, err := chainService.AdvanceState(context.Background(), beaconState, b); err != nil {
 		t.Fatal(err)
 	}
 

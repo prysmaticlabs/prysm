@@ -91,7 +91,7 @@ func ExecuteStateTransition(
 func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
 	defer span.End()
-	prevStateRoot, err := ssz.TreeHash(state)
+	prevStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash prev state root: %v", err)
 	}
@@ -102,7 +102,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
-	prevBlockRoot, err := ssz.TreeHash(state.LatestBlockHeader)
+	prevBlockRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
 	}

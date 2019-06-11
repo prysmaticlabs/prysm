@@ -84,7 +84,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		t.Fatal(err)
 	}
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +342,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		exits = append(exits, &pb.VoluntaryExit{})
 	}
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -380,7 +380,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,7 +407,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Fatal(err)
 	}
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.TreeHash(genesisBlock)
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -514,7 +514,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -791,7 +791,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 			Amount: params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	leaf, err := ssz.TreeHash(deposit.Data)
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -840,7 +840,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	s.ValidatorRegistry[3].WithdrawalCredentials = buf
 
 	// Set up attestations obj for block.
-	encoded, err := ssz.TreeHash(s.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(s.CurrentCrosslinks[0])
 	if err != nil {
 		b.Fatal(err)
 	}
