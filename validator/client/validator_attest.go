@@ -43,7 +43,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
 	pubKey := v.keys[pk].PublicKey.Marshal()
-	var assignment *pb.CommitteeAssignmentResponse_CommitteeAssignment
+	var assignment *pb.AssignmentResponse_Assignment
 	if v.assignments == nil {
 		log.Errorf("No assignments for validators")
 		return

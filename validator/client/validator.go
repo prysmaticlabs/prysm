@@ -21,7 +21,7 @@ import (
 type validator struct {
 	genesisTime          uint64
 	ticker               *slotutil.SlotTicker
-	assignments          *pb.CommitteeAssignmentResponse
+	assignments          *pb.AssignmentResponse
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
 	beaconClient         pb.BeaconServiceClient
@@ -193,7 +193,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
-	req := &pb.CommitteeAssignmentsRequest{
+	req := &pb.AssignmentRequest{
 		EpochStart: slot,
 		PublicKeys: v.pubkeys,
 	}

@@ -389,8 +389,8 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 	v := validator{
 		keys:            keyMap,
 		validatorClient: client,
-		assignments: &pb.CommitteeAssignmentResponse{
-			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		assignments: &pb.AssignmentResponse{
+			Assignment: []*pb.AssignmentResponse_Assignment{
 				{
 					Committee: []uint64{},
 					Slot:      10,
@@ -417,8 +417,8 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	v := validator{
 		keys:            keyMap,
 		validatorClient: client,
-		assignments: &pb.CommitteeAssignmentResponse{
-			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		assignments: &pb.AssignmentResponse{
+			Assignment: []*pb.AssignmentResponse_Assignment{
 				{
 					Shard: 1,
 				},
@@ -447,8 +447,8 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	resp := &pb.CommitteeAssignmentResponse{
-		Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	resp := &pb.AssignmentResponse{
+		Assignment: []*pb.AssignmentResponse_Assignment{
 			{
 				Slot:       params.BeaconConfig().SlotsPerEpoch,
 				Shard:      100,
@@ -485,8 +485,8 @@ func TestUpdateAssignments_OK(t *testing.T) {
 func TestRolesAt_OK(t *testing.T) {
 
 	v := validator{
-		assignments: &pb.CommitteeAssignmentResponse{
-			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		assignments: &pb.AssignmentResponse{
+			Assignment: []*pb.AssignmentResponse_Assignment{
 				{
 					Shard:      1,
 					Slot:       1,

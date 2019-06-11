@@ -20,7 +20,7 @@ import (
 func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
-	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{}}
+	validator.assignments = &pb.AssignmentResponse{Assignment: []*pb.AssignmentResponse_Assignment{}}
 	defer finish()
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -36,7 +36,7 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.AssignmentResponse{Assignment: []*pb.AssignmentResponse_Assignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
@@ -60,7 +60,7 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.AssignmentResponse{Assignment: []*pb.AssignmentResponse_Assignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
@@ -98,7 +98,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.AssignmentResponse{Assignment: []*pb.AssignmentResponse_Assignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
@@ -162,7 +162,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
+		gomock.AssignableToTypeOf(&pb.AssignmentRequest{}),
 		gomock.Any(),
 	).Times(0)
 
@@ -198,7 +198,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.AssignmentResponse{Assignment: []*pb.AssignmentResponse_Assignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
@@ -241,7 +241,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(2)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignments = &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	validator.assignments = &pb.AssignmentResponse{Assignment: []*pb.AssignmentResponse_Assignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
