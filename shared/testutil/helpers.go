@@ -18,7 +18,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 	privKeys := make([]*bls.SecretKey, numDeposits)
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
-		pubkey := []byte(strconv.Itoa(i))
+		pubkey := []byte{}
 		if generateKeys {
 			priv, err := bls.RandKey(rand.Reader)
 			if err != nil {
@@ -26,6 +26,10 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			}
 			privKeys[i] = priv
 			pubkey = priv.PublicKey().Marshal()
+		} else {
+			privKeys = []*bls.SecretKey{}
+			pubkey = make([]byte, params.BeaconConfig().BLSPubkeyLength)
+			copy(pubkey[:], []byte(strconv.FormatUint(uint64(i), 10)))
 		}
 
 		depositData := &pb.DepositData{
