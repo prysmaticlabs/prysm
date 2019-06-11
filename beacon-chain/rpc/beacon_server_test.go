@@ -832,14 +832,6 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	var mockCreds [32]byte
 	deposits := []*pbp2p.Deposit{
 		{
-			Index: 0,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("a"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
-		},
-		{
 			Index: 1,
 			Data: &pbp2p.DepositData{
 				Pubkey:                []byte("b"),
@@ -847,11 +839,19 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 				WithdrawalCredentials: mockCreds[:],
 			},
 		},
+		{
+			Index: 0,
+			Data: &pbp2p.DepositData{
+				Pubkey:                []byte("a"),
+				Signature:             mockSig[:],
+				WithdrawalCredentials: mockCreds[:],
+			},
+		},
 	}
 
-	for i, dp := range deposits {
+	for _, dp := range deposits {
 		var root [32]byte
-		copy(root[:], eth1DataVotes[i].DepositRoot)
+		copy(root[:], eth1DataVotes[dp.Index].DepositRoot)
 		db.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), root)
 	}
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
@@ -861,12 +861,18 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
 			hashesByHeight: map[int][]byte{
 				0: beaconState.LatestEth1Data.BlockRoot,
-				1: beaconState.Eth1DataVotes[0].BlockRoot,
-				2: beaconState.Eth1DataVotes[1].BlockRoot,
-				3: beaconState.Eth1DataVotes[3].BlockRoot,
+				// adding some not relevant blocks heights to test that search works
+				1: []byte{1},
+				2: beaconState.Eth1DataVotes[0].BlockRoot,
+				3: []byte{3},
+				4: beaconState.Eth1DataVotes[1].BlockRoot,
+				5: []byte{5},
+				6: beaconState.Eth1DataVotes[3].BlockRoot,
+				7: []byte{7},
 				// We will give the hash at index 2 in the beacon state's latest eth1 votes
 				// priority in being selected as the best vote by giving it the highest block number.
-				4: beaconState.Eth1DataVotes[2].BlockRoot,
+				8: beaconState.Eth1DataVotes[2].BlockRoot,
+				9: []byte{9},
 			},
 		},
 	}

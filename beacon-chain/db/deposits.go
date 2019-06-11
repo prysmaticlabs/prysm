@@ -36,7 +36,9 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.deposits = append(db.deposits, &DepositContainer{deposit: d, Block: blockNum, DepositRoot: depositRoot})
+	// keep the slice sorted on insertion in order to avoid costly sorting on retrival.
+	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Block.Cmp(blockNum) >= 0 })
+	db.deposits = append(db.deposits[:heightIdx], append([]*DepositContainer{&DepositContainer{deposit: d, Block: blockNum, DepositRoot: depositRoot}}, db.deposits[heightIdx:]...)...)
 	historicalDepositsCount.Inc()
 }
 
@@ -76,11 +78,6 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 			deposits = append(deposits, ctnr.deposit)
 		}
 	}
-	// Sort the deposits by Merkle index.
-	sort.SliceStable(deposits, func(i, j int) bool {
-		return deposits[i].Index < deposits[j].Index
-	})
-
 	return deposits
 }
 
@@ -98,11 +95,6 @@ func (db *BeaconDB) DepositsContainersTillBlock(ctx context.Context, beforeBlk *
 			deposits = append(deposits, ctnr)
 		}
 	}
-	// Sort the deposits by Merkle index in an ascending order.
-	sort.SliceStable(deposits, func(i, j int) bool {
-		return deposits[i].deposit.Index < deposits[j].deposit.Index
-	})
-
 	return deposits
 }
 
