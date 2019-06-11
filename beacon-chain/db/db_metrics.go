@@ -111,7 +111,7 @@ func registerDBMetrics(db *bolt.DB) {
 		Name: "beaconchain_db_time_spent_writing_to_db",
 		Help: "total time spent writing to disk in the db",
 	}, func() float64 {
-		return float64(db.Stats().TxStats.WriteTime)
+		return db.Stats().TxStats.WriteTime.Seconds()
 	}))
 	if err != nil {
 		log.Errorf("Could not register metric: %v", err)
