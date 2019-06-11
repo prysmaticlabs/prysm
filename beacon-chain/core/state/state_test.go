@@ -3,9 +3,10 @@ package state_test
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
