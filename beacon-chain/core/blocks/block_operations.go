@@ -477,36 +477,37 @@ func ProcessBlockAttestations(
 //
 // Spec pseudocode definition:
 //  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
-//     """
-//     Process ``Attestation`` operation.
-//     """
-//     attestation_slot = get_attestation_slot(state, attestation)
-//     assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
+//    """
+//    Process ``Attestation`` operation.
+//    """
+//    data = attestation.data
+//    attestation_slot = get_attestation_data_slot(state, data)
+//    assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
 //
-//     # Check target epoch, source epoch, source root, and source crosslink
-//     data = attestation.data
-//     assert (data.target_epoch, data.source_epoch, data.source_root, data.previous_crosslink_root) in {
-//         (get_current_epoch(state), state.current_justified_epoch, state.current_justified_root, hash_tree_root(state.current_crosslinks[data.shard])),
-//         (get_previous_epoch(state), state.previous_justified_epoch, state.previous_justified_root, hash_tree_root(state.previous_crosslinks[data.shard])),
-//     }
+//    pending_attestation = PendingAttestation(
+//        data=data,
+//        aggregation_bitfield=attestation.aggregation_bitfield,
+//        inclusion_delay=state.slot - attestation_slot,
+//        proposer_index=get_beacon_proposer_index(state),
+//    )
 //
-//     # Check crosslink data root
-//     assert data.crosslink_data_root == ZERO_HASH  # [to be removed in phase 1]
+//    assert data.target_epoch in (get_previous_epoch(state), get_current_epoch(state))
+//    if data.target_epoch == get_current_epoch(state):
+//        ffg_data = (state.current_justified_epoch, state.current_justified_root, get_current_epoch(state))
+//        parent_crosslink = state.current_crosslinks[data.crosslink.shard]
+//        state.current_epoch_attestations.append(pending_attestation)
+//    else:
+//        ffg_data = (state.previous_justified_epoch, state.previous_justified_root, get_previous_epoch(state))
+//        parent_crosslink = state.previous_crosslinks[data.crosslink.shard]
+//        state.previous_epoch_attestations.append(pending_attestation)
 //
-//     # Check signature and bitfields
-//     assert verify_indexed_attestation(state, convert_to_indexed(state, attestation))
-//
-//     # Cache pending attestation
-//     pending_attestation = PendingAttestation(
-//         data=data,
-//         aggregation_bitfield=attestation.aggregation_bitfield,
-//         inclusion_delay=state.slot - attestation_slot,
-//         proposer_index=get_beacon_proposer_index(state),
-//     )
-//     if data.target_epoch == get_current_epoch(state):
-//         state.current_epoch_attestations.append(pending_attestation)
-//     else:
-//         state.previous_epoch_attestations.append(pending_attestation)
+//    # Check FFG data, crosslink data, and signature
+//    assert ffg_data == (data.source_epoch, data.source_root, data.target_epoch)
+//    assert data.crosslink.start_epoch == parent_crosslink.end_epoch
+//    assert data.crosslink.end_epoch == min(data.target_epoch, parent_crosslink.end_epoch + MAX_EPOCHS_PER_CROSSLINK)
+//    assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
+//    assert data.crosslink.data_root == ZERO_HASH  # [to be removed in phase 1]
+//    validate_indexed_attestation(state, convert_to_indexed(state, attestation))
 func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) (*pb.BeaconState, error) {
 	data := att.Data
 	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
@@ -578,12 +579,17 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	if data.TargetEpoch != ffgTargetEpoch {
 		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.TargetEpoch)
 	}
-	minCrosslinkEpoch := parentCrosslink.Epoch + params.BeaconConfig().MaxCrosslinkEpochs
-	if data.TargetEpoch < minCrosslinkEpoch {
-		minCrosslinkEpoch = data.TargetEpoch
+	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxCrosslinkEpochs
+	if data.TargetEpoch < endEpoch {
+		endEpoch = data.TargetEpoch
 	}
-	if data.Crosslink.Epoch != minCrosslinkEpoch {
-		return nil, fmt.Errorf("expected crosslink epoch %d, received %d", minCrosslinkEpoch, data.Crosslink.Epoch)
+	if data.Crosslink.StartEpoch != parentCrosslink.EndEpoch {
+		return nil, fmt.Errorf("expected crosslink start epoch %d, received %d",
+			parentCrosslink.EndEpoch, data.Crosslink.StartEpoch)
+	}
+	if data.Crosslink.EndEpoch != endEpoch {
+		return nil, fmt.Errorf("expected crosslink end epoch %d, received %d",
+			endEpoch, data.Crosslink.EndEpoch)
 	}
 	crosslinkParentRoot, err := ssz.HashTreeRoot(parentCrosslink)
 	if err != nil {
