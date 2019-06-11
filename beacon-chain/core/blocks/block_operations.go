@@ -384,59 +384,6 @@ func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.Attestation
 	return isDoubleVote || isSurroundVote
 }
 
-// ValidateIndexedAttestation verifies an attestation's custody and bls bit information.
-//
-// Spec pseudocode definition:
-//  def validate_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> None:
-//    """
-//    Verify validity of ``indexed_attestation``.
-//    """
-//    bit_0_indices = indexed_attestation.custody_bit_0_indices
-//    bit_1_indices = indexed_attestation.custody_bit_1_indices
-//
-//    # Verify no index has custody bit equal to 1 [to be removed in phase 1]
-//    assert len(bit_1_indices) == 0
-//    # Verify max number of indices
-//    assert len(bit_0_indices) + len(bit_1_indices) <= MAX_INDICES_PER_ATTESTATION
-//    # Verify index sets are disjoint
-//    assert len(set(bit_0_indices).intersection(bit_1_indices)) == 0
-//    # Verify indices are sorted
-//    assert bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)
-//    # Verify aggregate signature
-//    assert bls_verify_multiple(
-//        pubkeys=[
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in bit_0_indices]),
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in bit_1_indices]),
-//        ],
-//        message_hashes=[
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
-//        ],
-//        signature=indexed_attestation.signature,
-//        domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target_epoch),
-func ValidateIndexedAttestation(attestation *pb.IndexedAttestation, verifySignatures bool) error {
-	bit0Indices := attestation.CustodyBit_0Indices
-	bit1Indices := attestation.CustodyBit_1Indices
-	if len(bit1Indices) != 0 {
-		return fmt.Errorf("expected no bit 1 indices, received %d", len(bit1Indices))
-	}
-	intersection := sliceutil.IntersectionUint64(bit0Indices, bit1Indices)
-	if len(intersection) != 0 {
-		return fmt.Errorf("expected disjoint bit indices, received %d bits in common", intersection)
-	}
-	if uint64(len(bit0Indices)+len(bit1Indices)) > params.BeaconConfig().MaxIndicesPerAttestation {
-		return fmt.Errorf("exceeded max number of bit indices: %d", len(bit0Indices)+len(bit1Indices))
-	}
-	if !sliceutil.IsUint64Sorted(bit0Indices) || !sliceutil.IsUint64Sorted(bit1Indices) {
-		return errors.New("bit indices not sorted")
-	}
-	if verifySignatures {
-		// TODO(#258): Implement BLS verify of attestation bit information.
-		return nil
-	}
-	return nil
-}
-
 func slashableAttesterIndices(slashing *pb.AttesterSlashing) []uint64 {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_1
