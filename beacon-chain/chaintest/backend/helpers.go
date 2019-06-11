@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"

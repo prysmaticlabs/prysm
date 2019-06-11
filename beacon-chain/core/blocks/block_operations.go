@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -672,12 +671,6 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 //    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
 //        return False
 //
-//    if custody_bit_0_indices != sorted(custody_bit_0_indices):
-//        return False
-//
-//    if custody_bit_1_indices != sorted(custody_bit_1_indices):
-//        return False
-//
 //    return bls_verify_multiple(
 //        pubkeys=[
 //            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
@@ -704,16 +697,9 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
 		return fmt.Errorf("over max number of allowed indices per attestation: %v", totalIndicesLength)
 	}
-
 	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
 	if len(custodyBitIntersection) != 0 {
 		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
-	}
-
-	if !sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
-		return custodyBit0Indices[i] < custodyBit0Indices[j]
-	}) {
-		return errors.New("expected indices to be sorted")
 	}
 
 	if verifySignatures {

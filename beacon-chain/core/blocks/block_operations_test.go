@@ -237,7 +237,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	parentRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -254,7 +254,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
-		ParentRoot: lbhsr[:],
+		ParentRoot: parentRoot[:],
 		Signature:  blockSig.Marshal(),
 	}
 
@@ -294,7 +294,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 
 	validators[5593].Slashed = false
 
-	latestBlockSignedRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -807,42 +807,6 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 
 	block.Body.AttesterSlashings = slashings
 	want = fmt.Sprint("over max number of allowed indices")
-
-	if _, err := blocks.ProcessAttesterSlashings(
-		beaconState,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-
-	slashings = []*pb.AttesterSlashing{
-		{
-			Attestation_1: &pb.IndexedAttestation{
-				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
-					Crosslink: &pb.Crosslink{
-						Shard: 4,
-					},
-				},
-				CustodyBit_0Indices: []uint64{3, 2, 1},
-			},
-			Attestation_2: &pb.IndexedAttestation{
-				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
-					Crosslink: &pb.Crosslink{
-						Shard: 4,
-					},
-				},
-				CustodyBit_0Indices: []uint64{3, 2, 1},
-			},
-		},
-	}
-
-	block.Body.AttesterSlashings = slashings
-	want = fmt.Sprint("expected indices to be sorted")
 
 	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
@@ -1395,21 +1359,6 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 
 	want := "over max number of allowed indices"
-	if err := blocks.VerifyIndexedAttestation(
-		indexedAtt1,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected verification to fail return false, received: %v", err)
-	}
-}
-
-func TestValidateIndexedAttestation_NotSorted(t *testing.T) {
-	indexedAtt1 := &pb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{3, 1, 10, 4, 2},
-		CustodyBit_1Indices: []uint64{},
-	}
-
-	want := "expected indices to be sorted"
 	if err := blocks.VerifyIndexedAttestation(
 		indexedAtt1,
 		false,

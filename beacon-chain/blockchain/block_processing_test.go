@@ -1017,6 +1017,8 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.LatestBlockRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -1034,7 +1036,7 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 	}
 	b := &pb.BeaconBlock{
 		ParentRoot: parentRoot[:],
-		Slot: beaconState.Slot + 1,
+		Slot:       beaconState.Slot + 1,
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
