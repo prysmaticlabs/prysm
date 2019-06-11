@@ -931,9 +931,8 @@ func ProcessTransfers(
 		}
 		if transferSet[h] {
 			return nil, fmt.Errorf("duplicate transfer: %v", transfer)
-		} else {
-			transferSet[h] = true
 		}
+		transferSet[h] = true
 	}
 	for idx, transfer := range transfers {
 		if err := verifyTransfer(beaconState, transfer, verifySignatures); err != nil {
