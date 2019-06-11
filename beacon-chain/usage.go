@@ -57,6 +57,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.MaxGoroutines,
+			cmd.ClearDB,
 		},
 	},
 	{
@@ -80,6 +81,25 @@ var appHelpFlagGroups = []flagGroup{
 			utils.CertFlag,
 			utils.KeyFlag,
 			utils.EnableDBCleanup,
+			utils.GRPCGatewayPort,
+			utils.HTTPWeb3ProviderFlag,
+		},
+	},
+	{
+		Name: "p2p",
+		Flags: []cli.Flag{
+			cmd.P2PHost,
+			cmd.P2PMaxPeers,
+			cmd.P2PPrivKey,
+			cmd.P2PWhitelist,
+			cmd.StaticPeers,
+		},
+	},
+	{
+		Name: "log",
+		Flags: []cli.Flag{
+			cmd.LogFormat,
+			cmd.LogFileName,
 		},
 	},
 	{

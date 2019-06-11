@@ -128,7 +128,7 @@ func DelayedActivationExitEpoch(epoch uint64) uint64 {
 // enter and exit validator pool for an epoch.
 //
 // Spec pseudocode definition:
-// def get_churn_limit(state: BeaconState) -> int:
+//   def get_churn_limit(state: BeaconState) -> int:
 //    return max(
 //        MIN_PER_EPOCH_CHURN_LIMIT,
 //        len(get_active_validator_indices(state, get_current_epoch(state))) // CHURN_LIMIT_QUOTIENT
@@ -191,8 +191,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		return 0, fmt.Errorf("could not get first committee: %v", err)
 	}
 	if len(firstCommittee) == 0 {
-		return 0, fmt.Errorf("empty first committee at slot %d",
-			state.Slot)
+		return 0, fmt.Errorf("empty first committee at slot %d", state.Slot)
 	}
 
 	// Use the generated seed to select proposer from the first committee
@@ -217,6 +216,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 
 // DomainVersion returns the domain version for BLS private key to sign and verify.
 //
+// Spec pseudocode definition:
 //  def get_domain(state: BeaconState,
 //               domain_type: int,
 //               message_epoch: int=None) -> int:

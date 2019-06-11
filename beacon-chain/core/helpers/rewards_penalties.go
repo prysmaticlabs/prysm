@@ -75,7 +75,7 @@ func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
 // IncreaseBalance increases validator with the given 'index' balance by 'delta' in Gwei.
 //
 // Spec pseudocode definition:
-// def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
+//  def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
 //    """
 //    Increase validator balance by ``delta``.
 //    """
@@ -87,7 +87,8 @@ func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.Beacon
 
 // DecreaseBalance decreases validator with the given 'index' balance by 'delta' in Gwei.
 //
-// def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
+// Spec pseudocode definition:
+//  def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
 //    """
 //    Decrease validator balance by ``delta`` with underflow protection.
 //    """

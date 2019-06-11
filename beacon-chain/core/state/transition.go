@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -15,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -102,7 +102,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
-	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
+	prevBlockRoot, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
 	}
@@ -179,6 +179,7 @@ func ProcessBlock(
 
 // ProcessEpoch describes the per epoch operations that are performed on the
 // beacon state. It focuses on the validator registry, adjusting balances, and finalizing slots.
+//
 // Spec pseudocode definition:
 //
 //  def process_epoch(state: BeaconState) -> None:

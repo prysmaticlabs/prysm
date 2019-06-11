@@ -487,3 +487,15 @@ func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 	}
 	return pubkeys
 }
+
+// DomainData fetches the current domain version information from the beacon state.
+func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
+	state, err := vs.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
+	dv := helpers.DomainVersion(state, request.Epoch, params.BeaconConfig().DomainRandao)
+	return &pb.DomainResponse{
+		SignatureDomain: dv,
+	}, nil
+}
