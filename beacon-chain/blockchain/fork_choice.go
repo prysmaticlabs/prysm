@@ -366,7 +366,11 @@ func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.Bea
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
 func (c *ChainService) AttestationTargets(state *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
-	indices := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
+	indices, err := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
+	if err != nil {
+		return nil, err
+	}
+
 	attestationTargets := make(map[uint64]*pb.AttestationTarget)
 	for i, index := range indices {
 		target, err := c.attsService.LatestAttestationTarget(state, index)
@@ -416,9 +420,6 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		}
 
 		if bytes.Equal(blockRoot[:], ancestorRoot) {
-			if int(validatorIndex) >= len(state.ValidatorRegistry) {
-				return 0, fmt.Errorf("validator index exceeds length of registry, index: %d , registry: %d", validatorIndex, len(state.ValidatorRegistry))
-			}
 			balances += int(state.ValidatorRegistry[validatorIndex].EffectiveBalance)
 		}
 	}

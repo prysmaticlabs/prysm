@@ -32,6 +32,8 @@ var _ = ForkChoice(&ChainService{})
 var endpoint = "ws://127.0.0.1"
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	deposits, _ := setupInitialDeposits(t, 5)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
@@ -116,6 +118,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
@@ -223,6 +226,8 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 }
 
 func TestAttestationTargets_RetrieveWorks(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -1255,6 +1260,8 @@ func setupBeaconChainBenchmark(b *testing.B, beaconDB *db.BeaconDB) *ChainServic
 }
 
 func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -1333,6 +1340,8 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 }
 
 func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -1417,6 +1426,8 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 }
 
 func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -1546,7 +1557,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	}
 	gState := &pb.BeaconState{
 		Slot:                   genesisSlot,
-		LatestBlockRoots:       make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestBlockRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestRandaoMixes:      latestRandaoMixes,
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),

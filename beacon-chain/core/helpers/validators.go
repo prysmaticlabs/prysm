@@ -3,11 +3,15 @@ package helpers
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+var activeIndicesCache = cache.NewActiveIndicesCache()
+var activeCountCache = cache.NewActiveCountCache()
 
 // IsActiveValidator returns the boolean value on whether the validator
 // is active or not.
@@ -44,20 +48,67 @@ func IsSlashableValidator(validator *pb.Validator, epoch uint64) bool {
 // ActiveValidatorIndices filters out active validators based on validator status
 // and returns their indices in a list.
 //
+// WARNING: This method allocates a new copy of the validator index set and is
+// considered to be very memory expensive. Avoid using this unless you really
+// need the active validator indices for some specific reason.
+//
 // Spec pseudocode definition:
 //  def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> List[ValidatorIndex]:
 //    """
 //    Get active validator indices at ``epoch``.
 //    """
 //    return [i for i, v in enumerate(state.validator_registry) if is_active_validator(v, epoch)]
-func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) []uint64 {
-	indices := make([]uint64, 0, len(state.ValidatorRegistry))
+func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
+	indices, err := activeIndicesCache.ActiveIndicesInEpoch(epoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve active indices from cache: %v", err)
+	}
+	if indices != nil {
+		return indices, nil
+	}
+
 	for i, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
 	}
-	return indices
+
+	if err := activeIndicesCache.AddActiveIndicesList(&cache.ActiveIndicesByEpoch{
+		Epoch:         epoch,
+		ActiveIndices: indices,
+	}); err != nil {
+		return nil, fmt.Errorf("could not save active indices for cache: %v", err)
+	}
+
+	return indices, nil
+}
+
+// ActiveValidatorCount returns the number of active validators in the state
+// at the given epoch.
+func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	count, err := activeCountCache.ActiveCountInEpoch(epoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve active count from cache: %v", err)
+	}
+	if count != params.BeaconConfig().FarFutureEpoch {
+		return count, nil
+	}
+
+	count = 0
+	for _, v := range state.ValidatorRegistry {
+		if IsActiveValidator(v, epoch) {
+			count++
+		}
+	}
+
+	if err := activeCountCache.AddActiveCount(&cache.ActiveCountByEpoch{
+		Epoch:       epoch,
+		ActiveCount: count,
+	}); err != nil {
+		return 0, fmt.Errorf("could not save active count for cache: %v", err)
+	}
+
+	return count, nil
 }
 
 // DelayedActivationExitEpoch takes in epoch number and returns when
@@ -77,17 +128,20 @@ func DelayedActivationExitEpoch(epoch uint64) uint64 {
 // enter and exit validator pool for an epoch.
 //
 // Spec pseudocode definition:
-// def get_churn_limit(state: BeaconState) -> int:
+//   def get_churn_limit(state: BeaconState) -> int:
 //    return max(
 //        MIN_PER_EPOCH_CHURN_LIMIT,
 //        len(get_active_validator_indices(state, get_current_epoch(state))) // CHURN_LIMIT_QUOTIENT
 //    )
-func ChurnLimit(state *pb.BeaconState) uint64 {
-	validatorCount := uint64(len(ActiveValidatorIndices(state, CurrentEpoch(state))))
-	if validatorCount/params.BeaconConfig().ChurnLimitQuotient > params.BeaconConfig().MinPerEpochChurnLimit {
-		return validatorCount / params.BeaconConfig().ChurnLimitQuotient
+func ChurnLimit(state *pb.BeaconState) (uint64, error) {
+	validatorCount, err := ActiveValidatorCount(state, CurrentEpoch(state))
+	if err != nil {
+		return 0, fmt.Errorf("could not get validator count: %v", err)
 	}
-	return params.BeaconConfig().MinPerEpochChurnLimit
+	if validatorCount/params.BeaconConfig().ChurnLimitQuotient > params.BeaconConfig().MinPerEpochChurnLimit {
+		return validatorCount / params.BeaconConfig().ChurnLimitQuotient, nil
+	}
+	return params.BeaconConfig().MinPerEpochChurnLimit, nil
 }
 
 // BeaconProposerIndex returns proposer index of a current slot.
@@ -115,7 +169,11 @@ func ChurnLimit(state *pb.BeaconState) uint64 {
 func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	// Calculate the offset for slot and shard
 	e := CurrentEpoch(state)
-	committesPerSlot := EpochCommitteeCount(state, e) / params.BeaconConfig().SlotsPerEpoch
+	committeeCount, err := EpochCommitteeCount(state, e)
+	if err != nil {
+		return 0, err
+	}
+	committesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
 	offSet := committesPerSlot * (state.Slot % params.BeaconConfig().SlotsPerEpoch)
 
 	// Calculate which shards get assigned given the epoch start shard
@@ -133,13 +191,15 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		return 0, fmt.Errorf("could not get first committee: %v", err)
 	}
 	if len(firstCommittee) == 0 {
-		return 0, fmt.Errorf("empty first committee at slot %d",
-			state.Slot)
+		return 0, fmt.Errorf("empty first committee at slot %d", state.Slot)
 	}
 
 	// Use the generated seed to select proposer from the first committee
 	maxRandomByte := uint64(1<<8 - 1)
-	seed := GenerateSeed(state, e)
+	seed, err := GenerateSeed(state, e)
+	if err != nil {
+		return 0, fmt.Errorf("could not generate seed: %v", err)
+	}
 
 	// Looping through the committee to select proposer that has enough
 	// effective balance.
@@ -156,6 +216,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 
 // DomainVersion returns the domain version for BLS private key to sign and verify.
 //
+// Spec pseudocode definition:
 //  def get_domain(state: BeaconState,
 //               domain_type: int,
 //               message_epoch: int=None) -> int:

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -19,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -77,7 +77,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
 	validators[5896].Slashed = false
 
-	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -135,7 +135,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -237,7 +237,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -266,6 +266,8 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 }
 
 func TestProcessBlockHeader_OK(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Fatalf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -292,7 +294,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 
 	validators[5593].Slashed = false
 
-	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
+	latestBlockSignedRoot, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -303,7 +305,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Fatalf("Failed to generate private key got: %v", err)
 	}
 	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[5297].Pubkey = priv.PublicKey().Marshal()
+	validators[5593].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -332,6 +334,8 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 }
 
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -422,8 +426,12 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 			},
 		},
 	}
+	var err error
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEth1VotingPeriod; i++ {
-		beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
+		beaconState, err = blocks.ProcessEth1DataInBlock(beaconState, block)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	newETH1DataVotes := beaconState.Eth1DataVotes
@@ -588,7 +596,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	helpers.RestartShuffledValidatorCache()
+	helpers.ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 100)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -992,6 +1000,10 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
+	helpers.ClearActiveIndicesCache()
+	helpers.ClearActiveCountCache()
+	helpers.ClearStartShardCache()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1030,6 +1042,8 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1091,6 +1105,8 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1152,6 +1168,8 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1225,6 +1243,8 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 }
 
 func TestProcessBlockAttestations_OK(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -1285,7 +1305,11 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
-	helpers.RestartShuffledValidatorCache()
+	helpers.ClearActiveIndicesCache()
+	helpers.ClearActiveCountCache()
+	helpers.ClearStartShardCache()
+	helpers.ClearShuffledValidatorCache()
+
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -1313,19 +1337,19 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x01},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{71, 127},
+			wantedCustodyBit1Indices: []uint64{127, 71},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x02},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{71, 127},
+			wantedCustodyBit1Indices: []uint64{127, 71},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{71, 127},
+			wantedCustodyBit1Indices: []uint64{127, 71},
 		},
 	}
 
@@ -1340,6 +1364,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		helpers.ClearAllCaches()
+
 		attestation.AggregationBitfield = tt.aggregationBitfield
 		attestation.CustodyBitfield = tt.custodyBitfield
 		wanted := &pb.IndexedAttestation{
@@ -1901,7 +1927,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 }
 
 func TestProcessBeaconTransfers_OK(t *testing.T) {
-	helpers.RestartShuffledValidatorCache()
+	helpers.ClearShuffledValidatorCache()
 	testConfig := params.BeaconConfig()
 	testConfig.MaxTransfers = 1
 	params.OverrideBeaconConfig(testConfig)
