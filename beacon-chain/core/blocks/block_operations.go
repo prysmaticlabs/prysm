@@ -136,28 +136,6 @@ func ProcessBlockHeader(
 	return beaconState, nil
 }
 
-// ProcessEth1DataInBlock is an operation performed on each
-// beacon block to ensure the ETH1 data votes are processed
-// into the beacon state.
-//
-// Official spec definition of ProcessEth1Data
-//   state.eth1_data_votes.append(body.eth1_data)
-//   if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
-//     state.latest_eth1_data = body.eth1_data
-func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
-	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, block.Body.Eth1Data)
-	numVotes := uint64(0)
-	for _, vote := range beaconState.Eth1DataVotes {
-		if proto.Equal(vote, block.Body.Eth1Data) {
-			numVotes++
-		}
-	}
-	if numVotes*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
-		beaconState.LatestEth1Data = block.Body.Eth1Data
-	}
-	return beaconState
-}
-
 // ProcessRandao checks the block proposer's
 // randao commitment and generates a new randao mix to update
 // in the beacon state's latest randao mixes slice.

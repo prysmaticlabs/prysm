@@ -1,8 +1,8 @@
 package blockutil
 
 import (
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // BlockSigningRoot uses Simple Serialize (SSZ) to determine the block header signing root
