@@ -3,68 +3,104 @@ package db
 import (
 	"github.com/boltdb/bolt"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/common/log"
 )
 
-var (
-	dbPageSize = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "page_size",
+// register's the databases metrics
+func registerDBMetrics(db *bolt.DB) {
+	errChan := make(chan error, 10)
+
+	err := prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_page_size",
 		Help: "Current page size of the whole db",
-	})
+	}, func() float64 {
+		return float64(db.Info().PageSize)
+	}))
+	errChan <- err
 
-	numberOfTx = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "number_of_tx",
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_number_of_tx",
 		Help: "The total number of started bolt read transactions",
-	})
-	numberOfOpenTx = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "number_of_open_tx",
-		Help: "The number of open bolt read transactions",
-	})
-	allocationInFreePages = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "allocations_in_free_pages",
-		Help: "total bytes allocated in free pages",
-	})
-	numberOfFreePages = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "number_of_free_pages",
-		Help: "total number of free pages on the freelist",
-	})
-	pendingPages = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "pending_pages_in_freelist",
-		Help: "total number of pending pages on the freelist",
-	})
-	sizeOfFreeList = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "size_of_FreeList",
-		Help: "total bytes used by the freelist",
-	})
-	numOfPageAllocs = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "num_of_page_allocations",
-		Help: "number of page allocations",
-	})
-	bytesAllocated = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "bytes_allocated_in_pages",
-		Help: "total bytes allocated in pages",
-	})
-	numOfWrites = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "num_of_db_writes",
-		Help: "number of writes performed in the db",
-	})
-	totalWriteTime = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "time_spent_writing_to_db",
-		Help: "total time spent writing to disk in the db",
-	})
-)
+	}, func() float64 {
+		return float64(db.Stats().TxN)
+	}))
+	errChan <- err
 
-// publishes internal metrics from boltdb to prometheus.
-func publishMetrics(db *bolt.DB) {
-	dbPageSize.Set(float64(db.Info().PageSize))
-	numberOfTx.Set(float64(db.Stats().TxN))
-	numberOfOpenTx.Set(float64(db.Stats().OpenTxN))
-	allocationInFreePages.Set(float64(db.Stats().FreeAlloc))
-	numberOfFreePages.Set(float64(db.Stats().FreePageN))
-	pendingPages.Set(float64(db.Stats().PendingPageN))
-	sizeOfFreeList.Set(float64(db.Stats().FreelistInuse))
-	numOfPageAllocs.Set(float64(db.Stats().TxStats.PageCount))
-	bytesAllocated.Set(float64(db.Stats().TxStats.PageAlloc))
-	numOfWrites.Set(float64(db.Stats().TxStats.Write))
-	totalWriteTime.Set(float64(db.Stats().TxStats.WriteTime))
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_number_of_open_tx",
+		Help: "The number of open bolt read transactions",
+	}, func() float64 {
+		return float64(db.Stats().OpenTxN)
+	}))
+	errChan <- err
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_allocations_in_free_pages",
+		Help: "total bytes allocated in free pages",
+	}, func() float64 {
+		return float64(db.Stats().FreeAlloc)
+	}))
+	errChan <- err
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_number_of_free_pages",
+		Help: "total number of free pages on the freelist",
+	}, func() float64 {
+		return float64(db.Stats().FreePageN)
+	}))
+	errChan <- err
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_pending_pages_in_freelist",
+		Help: "total number of pending pages on the freelist",
+	}, func() float64 {
+		return float64(db.Stats().PendingPageN)
+	}))
+	errChan <- err
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_size_of_FreeList",
+		Help: "total bytes used by the freelist",
+	}, func() float64 {
+		return float64(db.Stats().FreelistInuse)
+	}))
+	errChan <- err
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_num_of_page_allocations",
+		Help: "number of page allocations",
+	}, func() float64 {
+		return float64(db.Stats().TxStats.PageCount)
+	}))
+	errChan <- err
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_bytes_allocated_in_pages",
+		Help: "total bytes allocated in pages",
+	}, func() float64 {
+		return float64(db.Stats().TxStats.PageAlloc)
+	}))
+	errChan <- err
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_num_of_db_writes",
+		Help: "number of writes performed in the db",
+	}, func() float64 {
+		return float64(db.Stats().TxStats.Write)
+	}))
+	errChan <- err
+
+	err = prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "beaconchainDB_time_spent_writing_to_db",
+		Help: "total time spent writing to disk in the db",
+	}, func() float64 {
+		return float64(db.Stats().TxStats.WriteTime)
+	}))
+	errChan <- err
+
+	for err := range errChan {
+		if err != nil {
+			log.Errorf("Could not register metric: %v", err)
+		}
+	}
 }

@@ -305,8 +305,6 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 		return err
 	}
 
-	publishMetrics(db.db)
-
 	return db.update(func(tx *bolt.Tx) error {
 		blockBucket := tx.Bucket(blockBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
