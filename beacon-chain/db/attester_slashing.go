@@ -10,27 +10,27 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SaveExit puts the exit request into the beacon chain db.
-func (db *BeaconDB) SaveExit(ctx context.Context, exit *pb.VoluntaryExit) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveExit")
+// SaveAttesterSlashing puts a attester slashing request into the beacon chain db.
+func (db *BeaconDB) SaveAttesterSlashing(ctx context.Context, slashing *pb.AttesterSlashing) error {
+	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveAttesterSlashing")
 	defer span.End()
 
-	hash, err := hashutil.HashProto(exit)
+	hash, err := hashutil.HashProto(slashing)
 	if err != nil {
 		return err
 	}
-	encodedExit, err := proto.Marshal(exit)
+	encodedAttesterSlashing, err := proto.Marshal(slashing)
 	if err != nil {
 		return err
 	}
 	return db.update(func(tx *bolt.Tx) error {
 		a := tx.Bucket(blockOperationsBucket)
-		return a.Put(hash[:], encodedExit)
+		return a.Put(hash[:], encodedAttesterSlashing)
 	})
 }
 
-// HasExit checks if the exit request exists.
-func (db *BeaconDB) HasExit(hash [32]byte) bool {
+// HasAttesterSlashing checks if a attester slashing request exists.
+func (db *BeaconDB) HasAttesterSlashing(hash [32]byte) bool {
 	exists := false
 	if err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(blockOperationsBucket)
