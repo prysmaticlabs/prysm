@@ -8,7 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -44,9 +43,9 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
 
-	parentRoot, err := ssz.TreeHash(parent)
+	parentRoot, err := blockutil.BlockSigningRoot(parent)
 	if err != nil {
-		return nil, fmt.Errorf("could not get parent block root: %v", err)
+		return nil, fmt.Errorf("could not get parent block signing root: %v", err)
 	}
 
 	// Construct block body

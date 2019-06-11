@@ -9,9 +9,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"

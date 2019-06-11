@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -1002,68 +1001,5 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	// Verify the skipped validators are included in the next epoch
 	if !reflect.DeepEqual(v.ActivatedValFromEpoch(epoch+2), []uint64{3, 4}) {
 		t.Error("Did not get wanted validator from activation queue")
-	}
-}
-
-func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	deposits, _ := setupInitialDeposits(t, 100)
-	eth1Data := &pb.Eth1Data{
-		DepositRoot: []byte{},
-		BlockRoot:   []byte{},
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
-	if err != nil {
-		t.Fatalf("Can't generate genesis state: %v", err)
-	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	beaconState.LatestBlockRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	genesis := b.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
-		Slot:       genesis.Slot,
-		ParentRoot: genesis.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-	}
-
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	b := &pb.BeaconBlock{
-		ParentRoot: parentRoot[:],
-		Slot:       beaconState.Slot + 1,
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
-				DepositRoot: []byte("a"),
-				BlockRoot:   []byte("b"),
-			},
-			RandaoReveal: []byte{},
-			Attestations: nil,
-		},
-	}
-
-	chainService := setupBeaconChain(t, db, nil)
-
-	// Set up cache to make sure they are cleared after a new finalized block
-	if _, err := helpers.ActiveValidatorIndices(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
-		t.Fatal(err)
-	}
-	if len(helpers.ActiveIndicesKeys()) == 0 {
-		t.Error("Cache is empty")
-	}
-
-	// Advance state get a a new finalized block
-	if _, err := chainService.AdvanceState(context.Background(), beaconState, b); err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify the cache is cleared
-	if len(helpers.ActiveIndicesKeys()) != 0 {
-		t.Errorf("Finalized epoch did not clear the cache, got %d", len(helpers.ActiveIndicesKeys()))
 	}
 }
