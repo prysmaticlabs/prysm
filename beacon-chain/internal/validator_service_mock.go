@@ -6,11 +6,10 @@ package internal
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	metadata "google.golang.org/grpc/metadata"
+	reflect "reflect"
 )
 
 // MockValidatorServiceServer is a mock of ValidatorServiceServer interface

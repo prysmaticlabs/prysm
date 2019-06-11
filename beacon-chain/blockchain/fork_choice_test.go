@@ -1504,7 +1504,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	genesisSlot := uint64(0)
 	var crosslinks []*pb.Crosslink
 	for i := 0; i < int(params.BeaconConfig().ShardCount); i++ {
-		crosslinks = append(crosslinks, &pb.Crosslink{Epoch: 0})
+		crosslinks = append(crosslinks, &pb.Crosslink{StartEpoch: 0})
 	}
 	latestRandaoMixes := make(
 		[][]byte,
