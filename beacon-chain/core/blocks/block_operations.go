@@ -579,7 +579,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	if data.TargetEpoch != ffgTargetEpoch {
 		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.TargetEpoch)
 	}
-	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxCrosslinkEpochs
+	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
 	if data.TargetEpoch < endEpoch {
 		endEpoch = data.TargetEpoch
 	}
