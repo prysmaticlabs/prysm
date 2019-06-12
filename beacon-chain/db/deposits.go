@@ -84,7 +84,7 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 // DepositsContainersTillBlock returns the deposit containers sorted by block height where
 // block height lower then beforeBlk.
 func (db *BeaconDB) DepositsContainersTillBlock(ctx context.Context, beforeBlk *big.Int) []*DepositContainer {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDepositsWithTrieRoots")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositsContainersTillBlock")
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
