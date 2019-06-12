@@ -29,6 +29,8 @@ var log = logrus.WithField("prefix", "operation")
 type OperationFeeds interface {
 	IncomingAttFeed() *event.Feed
 	IncomingExitFeed() *event.Feed
+	IncomingAttesterSlashingFeed() *event.Feed
+	IncomingProposerSlashingFeed() *event.Feed
 	IncomingProcessedBlockFeed() *event.Feed
 }
 

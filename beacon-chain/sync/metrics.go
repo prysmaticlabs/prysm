@@ -72,6 +72,22 @@ var (
 		Name: "regsync_sent_exits",
 		Help: "The number of sent exits",
 	})
+	recAttesterSlashing = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "regsync_received_attester_slashing",
+		Help: "The number of received attester_slashing",
+	})
+	sentAttesterSlashing = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "regsync_sent_attester_slashing",
+		Help: "The number of sent attester_slashing",
+	})
+	recProposerSlashing = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "regsync_received_proposer_slashing",
+		Help: "The number of received proposer_slashing",
+	})
+	sentProposerSlashing = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "regsync_sent_proposer_slashing",
+		Help: "The number of sent proposer_slashing",
+	})
 	chainHeadReq = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "regsync_chain_head_req",
 		Help: "The number of sent attestation requests",

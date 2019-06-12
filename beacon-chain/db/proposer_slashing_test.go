@@ -14,8 +14,8 @@ func TestBeaconDB_HasProposerSlashing(t *testing.T) {
 
 	d := &pb.ProposerSlashing{
 		ProposerIndex: 100,
-		Header_2: &pb.BeaconBlockHeader{},
-		Header_1: &pb.BeaconBlockHeader{},
+		Header_2:      &pb.BeaconBlockHeader{},
+		Header_1:      &pb.BeaconBlockHeader{},
 	}
 	hash, err := hashutil.HashProto(d)
 	if err != nil {

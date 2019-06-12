@@ -84,6 +84,8 @@ type RegularSync struct {
 	attestationReqByHashBuf      chan p2p.Message
 	announceAttestationBuf       chan p2p.Message
 	exitBuf                      chan p2p.Message
+	attesterSlashingBuf          chan p2p.Message
+	proposerSlashingBuf          chan p2p.Message
 	canonicalBuf                 chan *pb.BeaconBlockAnnounce
 	highestObservedSlot          uint64
 	blocksAwaitingProcessing     map[[32]byte]p2p.Message
@@ -104,6 +106,7 @@ type RegularSyncConfig struct {
 	AttestationReqHashBufSize   int
 	AttestationsAnnounceBufSize int
 	ExitBufferSize              int
+	SlashingBuffSize            int
 	ChainHeadReqBufferSize      int
 	CanonicalBufferSize         int
 	ChainService                chainService
@@ -126,6 +129,7 @@ func DefaultRegularSyncConfig() *RegularSyncConfig {
 		AttestationReqHashBufSize:   params.BeaconConfig().DefaultBufferSize,
 		AttestationsAnnounceBufSize: params.BeaconConfig().DefaultBufferSize,
 		ExitBufferSize:              params.BeaconConfig().DefaultBufferSize,
+		SlashingBuffSize:            params.BeaconConfig().DefaultBufferSize,
 		CanonicalBufferSize:         params.BeaconConfig().DefaultBufferSize,
 	}
 }
@@ -151,6 +155,8 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		attestationReqByHashBuf:  make(chan p2p.Message, cfg.AttestationReqHashBufSize),
 		announceAttestationBuf:   make(chan p2p.Message, cfg.AttestationsAnnounceBufSize),
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
+		attesterSlashingBuf:      make(chan p2p.Message, cfg.SlashingBuffSize),
+		proposerSlashingBuf:      make(chan p2p.Message, cfg.SlashingBuffSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
 		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
@@ -224,6 +230,10 @@ func (rs *RegularSync) run() {
 			go safelyHandleMessage(rs.handleAttestationAnnouncement, msg)
 		case msg := <-rs.exitBuf:
 			go safelyHandleMessage(rs.receiveExitRequest, msg)
+		case msg := <-rs.attesterSlashingBuf:
+			go safelyHandleMessage(rs.receiveAttesterSlashingRequest, msg)
+		case msg := <-rs.proposerSlashingBuf:
+			go safelyHandleMessage(rs.receiveProposerSlashingRequest, msg)
 		case msg := <-rs.blockBuf:
 			go safelyHandleMessage(rs.receiveBlock, msg)
 		case msg := <-rs.blockRequestByHash:
@@ -412,12 +422,6 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	head, err := rs.db.ChainHead()
-	if err != nil {
-		return err
-	}
-	highestSlot := head.Slot
-
 	headState, err := rs.db.HeadState(rs.ctx)
 	if err != nil {
 		return err
@@ -428,17 +432,17 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 
 	span.AddAttributes(
-		trace.Int64Attribute("attestation.Data.Slot", int64(slot)),
-		trace.Int64Attribute("finalized state slot", int64(highestSlot-params.BeaconConfig().SlotsPerEpoch)),
+		trace.Int64Attribute("attestationDataSlot", int64(slot)),
+		trace.Int64Attribute("lastEpochSlot", int64(headState.Slot-params.BeaconConfig().SlotsPerEpoch)),
 	)
-	oneEpochAgo := uint64(0)
-	if highestSlot > params.BeaconConfig().SlotsPerEpoch {
-		oneEpochAgo = highestSlot - params.BeaconConfig().SlotsPerEpoch
+	lastEpochSlot := uint64(0)
+	if headState.Slot > params.BeaconConfig().SlotsPerEpoch {
+		lastEpochSlot = headState.Slot - params.BeaconConfig().SlotsPerEpoch
 	}
-	if slot < oneEpochAgo {
+	if slot < lastEpochSlot {
 		log.WithFields(logrus.Fields{
-			"receivedSlot": slot,
-			"epochSlot":    oneEpochAgo},
+			"receivedSlot":  slot,
+			"lastEpochSlot": lastEpochSlot},
 		).Debug("Skipping received attestation with slot smaller than one epoch ago")
 		return nil
 	}
@@ -478,6 +482,62 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) error {
 		Debug("Forwarding validator exit request to subscribed services")
 	rs.operationsService.IncomingExitFeed().Send(exit)
 	sentExit.Inc()
+	return nil
+}
+
+// receiveAttesterSlashingRequest accepts an broadcasted exit from the p2p layer,
+// discard the exit if we have gotten before, send it to operation
+// service if we have not.
+func (rs *RegularSync) receiveAttesterSlashingRequest(msg p2p.Message) error {
+	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveAttesterSlashingRequest")
+	defer span.End()
+	recAttesterSlashing.Inc()
+	attesterSlashing := msg.Data.(*pb.AttesterSlashing)
+	h, err := hashutil.HashProto(attesterSlashing)
+	if err != nil {
+		log.Errorf("Could not hash incoming attester slashing request: %v", err)
+		return err
+	}
+
+	hasAttesterSlashing := rs.db.HasAttesterSlashing(h)
+	span.AddAttributes(trace.BoolAttribute("hasAttesterSlashing", hasAttesterSlashing))
+	if hasAttesterSlashing {
+		log.WithField("slashingRoot", fmt.Sprintf("%#x", h)).
+			Debug("Received, skipping attester slashing request")
+		return nil
+	}
+	log.WithField("attesterSlashingReqHash", fmt.Sprintf("%#x", h)).
+		Debug("Forwarding validator attester slashing request to subscribed services")
+	rs.operationsService.IncomingAttesterSlashingFeed().Send(attesterSlashing)
+	sentAttesterSlashing.Inc()
+	return nil
+}
+
+// receiveProposerSlashingRequest accepts an broadcasted exit from the p2p layer,
+// discard the exit if we have gotten before, send it to operation
+// service if we have not.
+func (rs *RegularSync) receiveProposerSlashingRequest(msg p2p.Message) error {
+	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveProposerSlashingRequest")
+	defer span.End()
+	recProposerSlashing.Inc()
+	proposerSlashing := msg.Data.(*pb.ProposerSlashing)
+	h, err := hashutil.HashProto(proposerSlashing)
+	if err != nil {
+		log.Errorf("Could not hash incoming proposer slashing request: %v", err)
+		return err
+	}
+
+	hasProposerSlashing := rs.db.HasProposerSlashing(h)
+	span.AddAttributes(trace.BoolAttribute("hasProposerSlashing", hasProposerSlashing))
+	if hasProposerSlashing {
+		log.WithField("slashingRoot", fmt.Sprintf("%#x", h)).
+			Debug("Received, skipping proposer slashing request")
+		return nil
+	}
+	log.WithField("proposerSlashingReqHash", fmt.Sprintf("%#x", h)).
+		Debug("Forwarding validator proposer slashing request to subscribed services")
+	rs.operationsService.IncomingProposerSlashingFeed().Send(proposerSlashing)
+	sentProposerSlashing.Inc()
 	return nil
 }
 

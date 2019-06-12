@@ -42,17 +42,14 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 	return new(event.Feed).Subscribe(channel)
 }
 
-func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {
-}
+func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {}
 
 func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
 	mp.sentMsg = msg
 	return nil
 }
 
-func (mp *mockP2P) Reputation(_ peer.ID, val int) {
-
-}
+func (mp *mockP2P) Reputation(_ peer.ID, val int) {}
 
 type mockChainService struct {
 	sFeed *event.Feed
@@ -117,6 +114,14 @@ func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 }
 
 func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockOperationService) IncomingAttesterSlashingFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockOperationService) IncomingProposerSlashingFeed() *event.Feed {
 	return new(event.Feed)
 }
 
@@ -491,6 +496,64 @@ func TestReceiveExitReq_OK(t *testing.T) {
 		t.Error(err)
 	}
 	testutil.AssertLogsContain(t, hook, "Forwarding validator exit request to subscribed services")
+}
+
+func TestReceiveAttesterSlashing_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	cfg := &RegularSyncConfig{
+		OperationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+		ChainService:     &mockChainService{},
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	request1 := &pb.AttesterSlashing{
+		Attestation_1: &pb.IndexedAttestation{Signature: []byte{'A'}},
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: "",
+	}
+	if err := ss.receiveAttesterSlashingRequest(msg1); err != nil {
+		t.Error(err)
+	}
+	testutil.AssertLogsContain(t, hook, "Forwarding validator attester slashing request to subscribed services")
+}
+
+func TestReceiveProposerSlashing_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	cfg := &RegularSyncConfig{
+		OperationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+		ChainService:     &mockChainService{},
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	request1 := &pb.ProposerSlashing{
+		ProposerIndex: 100,
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: "",
+	}
+	if err := ss.receiveProposerSlashingRequest(msg1); err != nil {
+		t.Error(err)
+	}
+	testutil.AssertLogsContain(t, hook, "Forwarding validator proposer slashing request to subscribed services")
 }
 
 func TestHandleAttReq_HashNotFound(t *testing.T) {

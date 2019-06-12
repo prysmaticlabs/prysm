@@ -1,13 +1,13 @@
 package db
 
 import (
-"context"
+	"context"
 
-"github.com/boltdb/bolt"
-"github.com/gogo/protobuf/proto"
-pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-"github.com/prysmaticlabs/prysm/shared/hashutil"
-"go.opencensus.io/trace"
+	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"go.opencensus.io/trace"
 )
 
 // SaveProposerSlashing puts a proposer slashing request into the beacon chain db.
