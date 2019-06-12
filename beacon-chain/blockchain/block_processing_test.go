@@ -944,7 +944,7 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 	a := params.BeaconConfig().MaxDepositAmount
 
 	// Set up state and block to process epoch to get a new finalized block
-	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*3+1)
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*4+1)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
@@ -959,13 +959,17 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 		}
 	}
 	s := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch*3 - 1,
-		PreviousJustifiedEpoch: 0,
+		Slot:                   params.BeaconConfig().SlotsPerEpoch*4 - 1,
+		PreviousJustifiedEpoch: 1,
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  1,
+		CurrentJustifiedEpoch:  2,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
 		JustificationBitfield:  3,
-		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		ValidatorRegistry: []*pb.Validator{
+			{ExitEpoch: e, EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
+			{ExitEpoch: e, EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
+			{ExitEpoch: e, EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
+			{ExitEpoch: e, EffectiveBalance: params.BeaconConfig().MaxDepositAmount}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		LatestBlockRoots:       blockRoots,
 		LatestStateRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
