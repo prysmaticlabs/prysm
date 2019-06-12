@@ -1048,7 +1048,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("lorem-ipsum")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1111,7 +1111,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.PreviousJustifiedRoot = []byte("lorem-ipsum")
+	beaconState.PreviousJustifiedRoot = []byte("hello-world")
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1152,10 +1152,9 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 			Data: &pb.AttestationData{
 				TargetEpoch: 0,
 				SourceEpoch: 0,
-				SourceRoot:  []byte("lorem-ipsum"),
+				SourceRoot:  []byte("hello-world"),
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
-					Epoch: 1,
 				},
 			},
 		},
@@ -1173,18 +1172,14 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			Shard: 0,
-			Epoch: 0,
+			Shard:      0,
+			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("lorem-ipsum")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	want := fmt.Sprintf(
-		"expected crosslink epoch %d, received %d",
-		0,
-		attestations[0].Data.Crosslink.Epoch,
-	)
+	want := "mismatched parent crosslink root"
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
 		block,
@@ -1193,7 +1188,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.Crosslink.Epoch = 0
+	block.Body.Attestations[0].Data.Crosslink.StartEpoch = 0
 	want = "mismatched parent crosslink root"
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
@@ -1227,10 +1222,10 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 			Data: &pb.AttestationData{
 				TargetEpoch: 0,
 				SourceEpoch: 0,
-				SourceRoot:  []byte("lorem-ipsum"),
+				SourceRoot:  []byte("hello-world"),
 				Crosslink: &pb.Crosslink{
-					Shard: 0,
-					Epoch: 0,
+					Shard:      0,
+					StartEpoch: 0,
 				},
 			},
 			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
@@ -1251,11 +1246,11 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			Shard: 0,
-			Epoch: 0,
+			Shard:      0,
+			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("lorem-ipsum")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])

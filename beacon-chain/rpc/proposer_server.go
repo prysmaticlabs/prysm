@@ -42,7 +42,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
 
-	parentRoot, err := ssz.SigningRoot(parent)
+	parentRoot, err := ssz.TreeHash(parent)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block root: %v", err)
 	}

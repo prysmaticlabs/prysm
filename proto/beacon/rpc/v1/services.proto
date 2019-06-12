@@ -52,8 +52,8 @@ service BeaconService {
 }
 
 service AttesterService {
-  rpc AttestHead(ethereum.beacon.p2p.v1.Attestation) returns (AttestResponse);
-  rpc AttestationDataAtSlot(AttestationDataRequest) returns (AttestationDataResponse);
+  rpc RequestAttestation(AttestationRequest) returns (ethereum.beacon.p2p.v1.AttestationData);
+  rpc SubmitAttestation(ethereum.beacon.p2p.v1.Attestation) returns (AttestResponse);
 }
 
 service ProposerService {
@@ -74,6 +74,21 @@ service ValidatorService {
 message BlockRequest {
   uint64 slot = 1;
   bytes randao_reveal = 2;
+}
+
+message ProposeResponse {
+  bytes block_root = 1;
+}
+
+message AttestationRequest {
+  bytes public_key = 1;
+  bytes poc_bit = 2;
+  uint64 slot = 3;
+  uint64 shard = 4;
+}
+
+message AttestResponse {
+  bytes root = 1;
 }
 
 message ValidatorPerformanceRequest {
@@ -110,31 +125,9 @@ message ExitedValidatorsResponse {
   repeated bytes public_keys = 1;
 }
 
-message AttestationDataRequest {
-  uint64 shard = 1;
-  uint64 slot = 2;
-}
-
-message AttestationDataResponse {
-  bytes beacon_block_root_hash32 = 1;
-  bytes epoch_boundary_root_hash32 = 2;
-  uint64 justified_epoch = 3;
-  bytes justified_block_root_hash32 = 4;
-  ethereum.beacon.p2p.v1.Crosslink latest_crosslink = 5;
-  uint64 head_slot = 6;
-}
-
 message ChainStartResponse {
   bool started = 1;
   uint64 genesis_time = 2;
-}
-
-message ProposeResponse {
-  bytes block_root = 1;
-}
-
-message AttestResponse {
-  bytes attestation_hash = 1;
 }
 
  enum ValidatorRole {

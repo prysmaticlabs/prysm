@@ -124,14 +124,11 @@ message ShardReassignmentRecord {
 }
 
 message Crosslink {
-  //Shard number
   uint64 shard = 1;
-  // Epoch number
-  uint64 epoch = 2;
-  // Parent root
-  bytes parent_root = 3;
-  // Data root
-  bytes data_root = 4;
+  uint64 start_epoch = 2;
+  uint64 end_epoch = 3;
+  bytes parent_root = 4;
+  bytes data_root = 5;
 }
 
 message BeaconBlockHeader {

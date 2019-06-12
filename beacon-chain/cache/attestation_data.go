@@ -10,6 +10,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -57,7 +58,7 @@ func NewAttestationCache() *AttestationCache {
 
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
-func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationDataRequest) (*pb.AttestationDataResponse, error) {
+func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationRequest) (*pbp2p.AttestationData, error) {
 	if req == nil {
 		return nil, errors.New("nil attestation data request")
 	}
@@ -105,7 +106,7 @@ func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationDataReque
 
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
-func (c *AttestationCache) MarkInProgress(req *pb.AttestationDataRequest) error {
+func (c *AttestationCache) MarkInProgress(req *pb.AttestationRequest) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	s, e := reqToKey(req)
@@ -121,7 +122,7 @@ func (c *AttestationCache) MarkInProgress(req *pb.AttestationDataRequest) error 
 
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
-func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationDataRequest) error {
+func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationRequest) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	s, e := reqToKey(req)
@@ -133,7 +134,7 @@ func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationDataRequest) err
 }
 
 // Put the response in the cache.
-func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationDataRequest, res *pb.AttestationDataResponse) error {
+func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationRequest, res *pbp2p.AttestationData) error {
 	data := &attestationReqResWrapper{
 		req,
 		res,
@@ -158,11 +159,11 @@ func wrapperToKey(i interface{}) (string, error) {
 	return reqToKey(w.req)
 }
 
-func reqToKey(req *pb.AttestationDataRequest) (string, error) {
+func reqToKey(req *pb.AttestationRequest) (string, error) {
 	return fmt.Sprintf("%d-%d", req.Shard, req.Slot), nil
 }
 
 type attestationReqResWrapper struct {
-	req *pb.AttestationDataRequest
-	res *pb.AttestationDataResponse
+	req *pb.AttestationRequest
+	res *pbp2p.AttestationData
 }
