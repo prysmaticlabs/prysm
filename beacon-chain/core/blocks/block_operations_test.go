@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -19,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -77,7 +77,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
 	validators[5896].Slashed = false
 
-	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -135,7 +135,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -237,7 +237,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	lbhsr, err := ssz.SigningRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -294,7 +294,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 
 	validators[5593].Slashed = false
 
-	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
+	latestBlockSignedRoot, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1071,7 +1071,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1134,7 +1134,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.PreviousJustifiedRoot = []byte("tron-sucks")
+	beaconState.PreviousJustifiedRoot = []byte("hello-world")
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1175,10 +1175,9 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 			Data: &pb.AttestationData{
 				TargetEpoch: 0,
 				SourceEpoch: 0,
-				SourceRoot:  []byte("tron-sucks"),
+				SourceRoot:  []byte("hello-world"),
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
-					Epoch: 1,
 				},
 			},
 		},
@@ -1196,18 +1195,14 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			Shard: 0,
-			Epoch: 0,
+			Shard:      0,
+			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	want := fmt.Sprintf(
-		"expected crosslink epoch %d, received %d",
-		0,
-		attestations[0].Data.Crosslink.Epoch,
-	)
+	want := "mismatched parent crosslink root"
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
 		block,
@@ -1216,7 +1211,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.Crosslink.Epoch = 0
+	block.Body.Attestations[0].Data.Crosslink.StartEpoch = 0
 	want = "mismatched parent crosslink root"
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
@@ -1250,10 +1245,10 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 			Data: &pb.AttestationData{
 				TargetEpoch: 0,
 				SourceEpoch: 0,
-				SourceRoot:  []byte("tron-sucks"),
+				SourceRoot:  []byte("hello-world"),
 				Crosslink: &pb.Crosslink{
-					Shard: 0,
-					Epoch: 0,
+					Shard:      0,
+					StartEpoch: 0,
 				},
 			},
 			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
@@ -1281,11 +1276,11 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
-			Shard: 0,
-			Epoch: 0,
+			Shard:      0,
+			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("tron-sucks")
+	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])

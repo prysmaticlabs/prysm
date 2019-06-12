@@ -15,7 +15,7 @@ var currentEpochSeed = cache.NewSeedCache()
 // GenerateSeed generates the randao seed of a given epoch.
 //
 // Spec pseudocode definition:
-// def generate_seed(state: BeaconState,
+//  def generate_seed(state: BeaconState,
 //     epoch: Epoch) -> Bytes32:
 //     """
 //     Generate a seed for the given ``epoch``.

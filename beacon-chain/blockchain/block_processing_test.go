@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -955,7 +955,7 @@ func TestNewFinalizedBlock_CanClearCaches(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Epoch: params.BeaconConfig().SlotsPerEpoch,
+			StartEpoch: params.BeaconConfig().SlotsPerEpoch,
 		}
 	}
 	s := &pb.BeaconState{

@@ -50,6 +50,21 @@ func (mr *MockValidatorServiceServerMockRecorder) CommitteeAssignment(arg0, arg1
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitteeAssignment", reflect.TypeOf((*MockValidatorServiceServer)(nil).CommitteeAssignment), arg0, arg1)
 }
 
+// DomainData mocks base method
+func (m *MockValidatorServiceServer) DomainData(arg0 context.Context, arg1 *v1.DomainRequest) (*v1.DomainResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DomainData", arg0, arg1)
+	ret0, _ := ret[0].(*v1.DomainResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DomainData indicates an expected call of DomainData
+func (mr *MockValidatorServiceServerMockRecorder) DomainData(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainData", reflect.TypeOf((*MockValidatorServiceServer)(nil).DomainData), arg0, arg1)
+}
+
 // ExitedValidators mocks base method
 func (m *MockValidatorServiceServer) ExitedValidators(arg0 context.Context, arg1 *v1.ExitedValidatorsRequest) (*v1.ExitedValidatorsResponse, error) {
 	m.ctrl.T.Helper()

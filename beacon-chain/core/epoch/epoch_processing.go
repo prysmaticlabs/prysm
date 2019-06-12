@@ -11,13 +11,13 @@ import (
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // MatchedAttestations is an object that contains the correctly
@@ -642,7 +642,6 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	}
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
-			Epoch:      0,
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
 			ParentRoot: params.BeaconConfig().ZeroHash[:],
 		}, nil, nil
