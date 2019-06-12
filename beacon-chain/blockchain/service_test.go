@@ -58,6 +58,14 @@ func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return nil
 }
 
+func (ms *mockOperationService) IncomingAttesterSlashingFeed() *event.Feed {
+	return nil
+}
+
+func (ms *mockOperationService) IncomingProposerSlashingFeed() *event.Feed {
+	return nil
+}
+
 type mockClient struct{}
 
 func (m *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
