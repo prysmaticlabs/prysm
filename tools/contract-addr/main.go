@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -21,10 +22,8 @@ func main() {
 	}
 
 	fmt.Println("Starting on port 8080")
+	log.Fatal(http.ListenAndServe(":8080", &handler{}))
 
-	if err := http.ListenAndServe(":8080", &handler{}); err != nil {
-		panic("Failed to run server: " + err.Error())
-	}
 }
 
 type handler struct{}
