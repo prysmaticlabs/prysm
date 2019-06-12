@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	maxProcsMetric = promauto.NewGaugeFunc(prometheus.GaugeOpts{
+	_ = promauto.NewGaugeFunc(prometheus.GaugeOpts{
 		Name: "go_maxprocs",
 		Help: "The result of runtime.GOMAXPROCS(0)",
 	}, func() float64 {

@@ -7,28 +7,28 @@ import (
 	"fmt"
 	"io"
 
-	gobls "github.com/phoreproject/bls"
+	g1 "github.com/phoreproject/bls/g1pubs"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // Signature used in the BLS signature scheme.
 type Signature struct {
-	val *gobls.Signature
+	val *g1.Signature
 }
 
 // SecretKey used in the BLS signature scheme.
 type SecretKey struct {
-	val *gobls.SecretKey
+	val *g1.SecretKey
 }
 
 // PublicKey used in the BLS signature scheme.
 type PublicKey struct {
-	val *gobls.PublicKey
+	val *g1.PublicKey
 }
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
 func RandKey(r io.Reader) (*SecretKey, error) {
-	k, err := gobls.RandKey(r)
+	k, err := g1.RandKey(r)
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize secret key: %v", err)
 	}
@@ -41,13 +41,13 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 		return nil, fmt.Errorf("expected byte slice of length 32, received: %d", len(priv))
 	}
 	k := bytesutil.ToBytes32(priv)
-	return &SecretKey{val: gobls.DeserializeSecretKey(k)}, nil
+	return &SecretKey{val: g1.DeserializeSecretKey(k)}, nil
 }
 
 // PublicKeyFromBytes creates a BLS public key from a byte slice.
 func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
-	b := bytesutil.ToBytes96(pub)
-	k, err := gobls.DeserializePublicKey(b)
+	b := bytesutil.ToBytes48(pub)
+	k, err := g1.DeserializePublicKey(b)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal bytes into public key: %v", err)
 	}
@@ -56,8 +56,8 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 
 // SignatureFromBytes creates a BLS signature from a byte slice.
 func SignatureFromBytes(sig []byte) (*Signature, error) {
-	b := bytesutil.ToBytes48(sig)
-	s, err := gobls.DeserializeSignature(b)
+	b := bytesutil.ToBytes96(sig)
+	s, err := g1.DeserializeSignature(b)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal bytes into signature: %v", err)
 	}
@@ -66,12 +66,12 @@ func SignatureFromBytes(sig []byte) (*Signature, error) {
 
 // PublicKey obtains the public key corresponding to the BLS secret key.
 func (s *SecretKey) PublicKey() *PublicKey {
-	return &PublicKey{val: gobls.PrivToPub(s.val)}
+	return &PublicKey{val: g1.PrivToPub(s.val)}
 }
 
 // Sign a message using a secret key - in a beacon/validator client,
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
-	sig := gobls.Sign(msg, s.val, domain)
+	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, domain)
 	return &Signature{val: sig}
 }
 
@@ -96,18 +96,18 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 
 // Verify a bls signature given a public key, a message, and a domain.
 func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
-	return gobls.Verify(msg, pub.val, s.val, domain)
+	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, domain)
 }
 
 // VerifyAggregate verifies each public key against a message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
-	var keys []*gobls.PublicKey
+	var keys []*g1.PublicKey
 	for _, v := range pubKeys {
 		keys = append(keys, v.val)
 	}
-	return s.val.VerifyAggregateCommon(keys, msg, domain)
+	return s.val.VerifyAggregateCommonWithDomain(keys, bytesutil.ToBytes32(msg), domain)
 }
 
 // Marshal a signature into a byte slice.
@@ -118,9 +118,9 @@ func (s *Signature) Marshal() []byte {
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []*Signature) *Signature {
-	var ss []*gobls.Signature
+	var ss []*g1.Signature
 	for _, v := range sigs {
 		ss = append(ss, v.val)
 	}
-	return &Signature{val: gobls.AggregateSignatures(ss)}
+	return &Signature{val: g1.AggregateSignatures(ss)}
 }

@@ -28,6 +28,6 @@ func TestLifecycle(t *testing.T) {
 
 	// The context should have been canceled.
 	if s.ctx.Err() == nil {
-		t.Error("Context was not cancelled")
+		t.Error("Context was not canceled")
 	}
 }
