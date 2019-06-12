@@ -159,19 +159,19 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 //    # Process finalizations
 //    bitfield = state.justification_bitfield
 //    # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
-//    if (bitfield >> 1) % 8 == 0b111 and old_previous_justified_epoch == current_epoch - 3:
+//    if (bitfield >> 1) % 8 == 0b111 and old_previous_justified_epoch - 3 == current_epoch:
 //        state.finalized_epoch = old_previous_justified_epoch
 //        state.finalized_root = get_block_root(state, state.finalized_epoch)
 //    # The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
-//    if (bitfield >> 1) % 4 == 0b11 and old_previous_justified_epoch == current_epoch - 2:
+//    if (bitfield >> 1) % 4 == 0b11 and old_previous_justified_epoch - 2 == current_epoch:
 //        state.finalized_epoch = old_previous_justified_epoch
 //        state.finalized_root = get_block_root(state, state.finalized_epoch)
 //    # The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
-//    if (bitfield >> 0) % 8 == 0b111 and old_current_justified_epoch == current_epoch - 2:
+//    if (bitfield >> 0) % 8 == 0b111 and old_current_justified_epoch - 2 == current_epoch:
 //        state.finalized_epoch = old_current_justified_epoch
 //        state.finalized_root = get_block_root(state, state.finalized_epoch)
 //    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
-//    if (bitfield >> 0) % 4 == 0b11 and old_current_justified_epoch == current_epoch - 1:
+//    if (bitfield >> 0) % 4 == 0b11 and old_current_justified_epoch - 1 == current_epoch:
 //        state.finalized_epoch = old_current_justified_epoch
 //        state.finalized_root = get_block_root(state, state.finalized_epoch)
 func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (
@@ -220,25 +220,25 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	bitfield := state.JustificationBitfield
 	// When the 2nd, 3rd and 4th most recent epochs are all justified,
 	// 2nd epoch can finalize the 4th epoch as a source.
-	if oldPrevJustifiedEpoch == currentEpoch-3 && (bitfield>>1)%8 == 7 {
+	if oldPrevJustifiedEpoch+3 == currentEpoch && (bitfield>>1)%8 == 7 {
 		state.FinalizedEpoch = oldPrevJustifiedEpoch
 		state.FinalizedRoot = oldPrevJustifiedRoot
 	}
 	// when 2nd and 3rd most recent epochs are all justified,
 	// 2nd epoch can finalize 3rd as a source.
-	if oldPrevJustifiedEpoch == currentEpoch-2 && (bitfield>>1)%4 == 3 {
+	if oldPrevJustifiedEpoch+2 == currentEpoch && (bitfield>>1)%4 == 3 {
 		state.FinalizedEpoch = oldPrevJustifiedEpoch
 		state.FinalizedRoot = oldPrevJustifiedRoot
 	}
 	// when 1st, 2nd and 3rd most recent epochs are all justified,
 	// 1st epoch can finalize 3rd as a source.
-	if oldCurrJustifiedEpoch == currentEpoch-2 && (bitfield>>0)%8 == 7 {
+	if oldCurrJustifiedEpoch+2 == currentEpoch && (bitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = oldCurrJustifiedEpoch
 		state.FinalizedRoot = oldCurrJustifiedRoot
 	}
 	// when 1st, 2nd most recent epochs are all justified,
 	// 1st epoch can finalize 2nd as a source.
-	if oldCurrJustifiedEpoch == currentEpoch-1 && (bitfield>>0)%4 == 3 {
+	if oldCurrJustifiedEpoch+1 == currentEpoch && (bitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = oldCurrJustifiedEpoch
 		state.FinalizedRoot = oldCurrJustifiedRoot
 	}
@@ -410,10 +410,9 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 //
 //  def process_slashings(state: BeaconState) -> None:
 //    current_epoch = get_current_epoch(state)
-//    active_validator_indices = get_active_validator_indices(state, current_epoch)
-//    total_balance = get_total_balance(state, active_validator_indices)
+//    total_balance = get_total_active_balance(state)
 //
-//    # Compute `total_penalties`
+//    # Compute slashed balances in the current epoch
 //    total_at_start = state.latest_slashed_balances[(current_epoch + 1) % LATEST_SLASHED_EXIT_LENGTH]
 //    total_at_end = state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
 //    total_penalties = total_at_end - total_at_start
@@ -432,7 +431,7 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("could not get total active balance: %v", err)
 	}
 
-	// Compute the total penalties.
+	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().LatestSlashedExitLength
 	totalAtStart := state.LatestSlashedBalances[(currentEpoch+1)%exitLength]
 	totalAtEnd := state.LatestSlashedBalances[currentEpoch%exitLength]
@@ -686,15 +685,18 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 //
 // Spec pseudocode definition:
 //  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
-//    if adjusted_quotient == 0:
-//        return 0
-//    return state.validator_registry[index].effective_balance // adjusted_quotient // BASE_REWARDS_PER_EPOCH
-func baseReward(state *pb.BeaconState, index uint64, adjustedQuotient uint64) (uint64, error) {
-	if adjustedQuotient == 0 {
-		return 0, nil
+//      total_balance = get_total_active_balance(state)
+//	    effective_balance = state.validator_registry[index].effective_balance
+//	    return effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH
+func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
+	totalBalance, err := helpers.TotalActiveBalance(state)
+	if err != nil {
+		return 0, fmt.Errorf("could not calculate active balance: %v", err)
 	}
-	baseReward := state.ValidatorRegistry[index].EffectiveBalance / adjustedQuotient
-	return baseReward / params.BeaconConfig().BaseRewardsPerEpoch, nil
+	effectiveBalance := state.ValidatorRegistry[index].EffectiveBalance
+	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
+		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
+	return baseReward, nil
 }
 
 // attestationDelta calculates the rewards and penalties of individual
@@ -753,8 +755,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get total active balance: %v", err)
 	}
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance /
-		params.BeaconConfig().BaseRewardQuotient)
+
 	rewards := make([]uint64, len(state.ValidatorRegistry))
 	penalties := make([]uint64, len(state.ValidatorRegistry))
 
@@ -806,7 +807,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 		// Update rewards and penalties to each eligible validator index.
 		for _, index := range eligible {
-			base, err := baseReward(state, index, adjustedQuotient)
+			base, err := baseReward(state, index)
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 			}
@@ -835,7 +836,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	}
 
 	for i, a := range attestersVotedSoruce {
-		base, err := baseReward(state, i, adjustedQuotient)
+		base, err := baseReward(state, i)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 		}
@@ -857,7 +858,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			attestedTarget[index] = true
 		}
 		for _, index := range eligible {
-			base, err := baseReward(state, index, adjustedQuotient)
+			base, err := baseReward(state, index)
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 			}
@@ -897,13 +898,6 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 //                penalties[index] += base_reward
 //    return rewards, penalties
 func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
-	totalBalance, err := helpers.TotalActiveBalance(state)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not get total active balance: %v", err)
-	}
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance /
-		params.BeaconConfig().BaseRewardQuotient)
-
 	rewards := make([]uint64, len(state.ValidatorRegistry))
 	penalties := make([]uint64, len(state.ValidatorRegistry))
 	epoch := helpers.PrevEpoch(state)
@@ -940,7 +934,7 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			return nil, nil, fmt.Errorf("could not get total attested balance: %v", err)
 		}
 		for _, index := range committee {
-			base, err := baseReward(state, index, adjustedQuotient)
+			base, err := baseReward(state, index)
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 			}
