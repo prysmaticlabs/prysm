@@ -44,8 +44,8 @@ func TestNewServer_InvalidMultiaddress(t *testing.T) {
 		RelayNodeAddr: "bad",
 	})
 
-	if err.Error() != "invalid multiaddr, must begin with /" {
-		t.Fatal("expected invalid multiaddr err")
+	if !strings.Contains(err.Error(), "failed to parse multiaddr") {
+		t.Fatalf("expected invalid multiaddr err, got %v", err.Error())
 	}
 }
 
