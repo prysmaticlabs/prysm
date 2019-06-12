@@ -220,25 +220,25 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	bitfield := state.JustificationBitfield
 	// When the 2nd, 3rd and 4th most recent epochs are all justified,
 	// 2nd epoch can finalize the 4th epoch as a source.
-	if oldPrevJustifiedEpoch + 3 == currentEpoch && (bitfield>>1)%8 == 7 {
+	if oldPrevJustifiedEpoch+3 == currentEpoch && (bitfield>>1)%8 == 7 {
 		state.FinalizedEpoch = oldPrevJustifiedEpoch
 		state.FinalizedRoot = oldPrevJustifiedRoot
 	}
 	// when 2nd and 3rd most recent epochs are all justified,
 	// 2nd epoch can finalize 3rd as a source.
-	if oldPrevJustifiedEpoch + 2 == currentEpoch && (bitfield>>1)%4 == 3 {
+	if oldPrevJustifiedEpoch+2 == currentEpoch && (bitfield>>1)%4 == 3 {
 		state.FinalizedEpoch = oldPrevJustifiedEpoch
 		state.FinalizedRoot = oldPrevJustifiedRoot
 	}
 	// when 1st, 2nd and 3rd most recent epochs are all justified,
 	// 1st epoch can finalize 3rd as a source.
-	if oldCurrJustifiedEpoch + 2 == currentEpoch && (bitfield>>0)%8 == 7 {
+	if oldCurrJustifiedEpoch+2 == currentEpoch && (bitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = oldCurrJustifiedEpoch
 		state.FinalizedRoot = oldCurrJustifiedRoot
 	}
 	// when 1st, 2nd most recent epochs are all justified,
 	// 1st epoch can finalize 2nd as a source.
-	if oldCurrJustifiedEpoch + 1 == currentEpoch && (bitfield>>0)%4 == 3 {
+	if oldCurrJustifiedEpoch+1 == currentEpoch && (bitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = oldCurrJustifiedEpoch
 		state.FinalizedRoot = oldCurrJustifiedRoot
 	}
@@ -694,7 +694,8 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 		return 0, fmt.Errorf("could not calculate active balance: %v", err)
 	}
 	effectiveBalance := state.ValidatorRegistry[index].EffectiveBalance
-	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
+	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
+		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
 	return baseReward, nil
 }
 

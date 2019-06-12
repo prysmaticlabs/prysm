@@ -603,11 +603,10 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 		b uint64
 		c uint64
 	}{
-		{0, 0, 0},
-		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 35778},
-		{30 * 1e9, 30 * 1e9, 195963},
-		{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount, 202390},
-		{40 * 1e9, params.BeaconConfig().MaxDepositAmount, 202390},
+		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 202390},
+		{30 * 1e9, 30 * 1e9, 1108513},
+		{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount, 1144869},
+		{40 * 1e9, params.BeaconConfig().MaxDepositAmount, 1144869},
 	}
 	for _, tt := range tests {
 		helpers.ClearAllCaches()
@@ -941,7 +940,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	attestedIndices := []uint64{79, 127, 232, 473, 569, 754, 774}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
-		want := uint64(4472)
+		want := uint64(25298)
 		if rewards[i] != want {
 			t.Errorf("Wanted reward balance %d, got %d", want, rewards[i])
 		}
@@ -1239,12 +1238,12 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := uint64(32000035776)
+	wanted := uint64(32000202360)
 	if state.Balances[0] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[0])
 	}
-	wanted = uint64(31999982112)
+	wanted = uint64(31999898808)
 	if state.Balances[1] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[1])
