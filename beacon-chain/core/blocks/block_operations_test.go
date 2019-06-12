@@ -77,7 +77,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
 	validators[5896].Slashed = false
 
-	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
+	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -135,7 +135,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
+	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -237,7 +237,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	lbhsr, err := ssz.TreeHash(state.LatestBlockHeader)
+	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -294,7 +294,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 
 	validators[5593].Slashed = false
 
-	latestBlockSignedRoot, err := ssz.TreeHash(state.LatestBlockHeader)
+	latestBlockSignedRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -314,7 +314,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		ParentRoot: latestBlockSignedRoot[:],
 		Signature:  blockSig.Marshal(),
 	}
-	bodyRoot, err := ssz.TreeHash(block.Body)
+	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
 	}
@@ -1220,7 +1220,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
-	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1283,7 +1283,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1476,7 +1476,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 	}
-	leaf, err := ssz.TreeHash(deposit.Data)
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1520,7 +1520,7 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 	}
-	leaf, err := ssz.TreeHash(deposit.Data)
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1579,7 +1579,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 			Amount: params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	leaf, err := ssz.TreeHash(deposit.Data)
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		t.Fatal(err)
 	}

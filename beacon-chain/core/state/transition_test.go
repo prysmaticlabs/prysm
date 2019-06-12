@@ -318,7 +318,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -437,7 +437,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -714,7 +714,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 			Amount: params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	leaf, err := ssz.TreeHash(deposit.Data)
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -763,7 +763,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	s.ValidatorRegistry[3].WithdrawalCredentials = buf
 
 	// Set up attestations obj for block.
-	encoded, err := ssz.TreeHash(s.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(s.CurrentCrosslinks[0])
 	if err != nil {
 		b.Fatal(err)
 	}

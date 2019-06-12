@@ -175,7 +175,7 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	db.stateHash = stateHash
 
 	if beaconState.LatestBlockHeader != nil {
-		blockRoot, err := ssz.TreeHash(beaconState.LatestBlockHeader)
+		blockRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader)
 		if err != nil {
 			return err
 		}

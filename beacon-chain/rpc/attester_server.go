@@ -145,7 +145,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	if endEpoch > targetEpoch {
 		endEpoch = targetEpoch
 	}
-	crosslinkRoot, err := ssz.TreeHash(headState.CurrentCrosslinks[req.Shard])
+	crosslinkRoot, err := ssz.HashTreeRoot(headState.CurrentCrosslinks[req.Shard])
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash crosslink for shard %d: %v",
 			req.Shard, err)

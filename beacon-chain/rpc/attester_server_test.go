@@ -153,7 +153,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 
-	crosslinkRoot, err := ssz.TreeHash(beaconState.CurrentCrosslinks[req.Shard])
+	crosslinkRoot, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[req.Shard])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +263,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 
-	crosslinkRoot, err := ssz.TreeHash(beaconState.CurrentCrosslinks[req.Shard])
+	crosslinkRoot, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[req.Shard])
 	if err != nil {
 		t.Fatal(err)
 	}

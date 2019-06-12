@@ -469,7 +469,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
-		h, err := ssz.TreeHash(pd.Data)
+		h, err := ssz.HashTreeRoot(pd.Data)
 		if err != nil {
 			t.Fatal(err)
 		}

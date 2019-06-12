@@ -531,7 +531,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get active indices: %v", err)
 	}
-	idxRoot, err := ssz.TreeHash(activeIndices)
+	idxRoot, err := ssz.HashTreeRoot(activeIndices)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash active indices: %v", err)
 	}

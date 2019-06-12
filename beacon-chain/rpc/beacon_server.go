@@ -11,14 +11,15 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -101,13 +102,50 @@ func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*
 func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.BlockTreeResponse, error) {
 	justifiedState, err := bs.beaconDB.JustifiedState()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
 	}
-	dv := helpers.DomainVersion(state, request.Epoch, params.BeaconConfig().DomainRandao)
-	return &pb.DomainResponse{
-		SignatureDomain: dv,
+	attestationTargets, err := bs.targetsFetcher.AttestationTargets(justifiedState)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+	}
+	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
+	if err != nil {
+		return nil, err
+	}
+	highestSlot := bs.beaconDB.HighestBlockSlot()
+	fullBlockTree := []*pbp2p.BeaconBlock{}
+	for i := justifiedBlock.Slot + 1; i < highestSlot; i++ {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		nextLayer, err := bs.beaconDB.BlocksBySlot(ctx, i)
+		if err != nil {
+			return nil, err
+		}
+		fullBlockTree = append(fullBlockTree, nextLayer...)
+	}
+	tree := []*pb.BlockTreeResponse_TreeNode{}
+	for _, kid := range fullBlockTree {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		participatedVotes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
+		if err != nil {
+			return nil, err
+		}
+		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		if err != nil {
+			return nil, err
+		}
+		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
+			BlockRoot:         blockRoot[:],
+			Block:             kid,
+			ParticipatedVotes: uint64(participatedVotes),
+		})
+	}
+	return &pb.BlockTreeResponse{
+		Tree: tree,
 	}, nil
-
 }
 
 // Eth1Data is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an
@@ -115,7 +153,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 // state.latest_eth1_data is updated, and validator deposits up to this root can be processed.
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
-func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
+func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Eth1Data, error) {
 	beaconState, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
@@ -178,7 +216,8 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 			if err != nil {
 				return nil, fmt.Errorf("could not get encoded hash of eth1data object: %v", err)
 			}
-			v, ok := voteCountMap[string(he)]
+			v, ok := voteCountMap[string(he[:])]
+
 			if !ok {
 				v = voteHierarchy{votes: 1, height: blockHeight, eth1Data: vote}
 				voteCountMap[string(vote.DepositRoot)] = v
@@ -207,66 +246,9 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	}
 	v, ok := voteCountMap[bestVoteHash]
 	if ok {
-		return &pb.Eth1DataResponse{Eth1Data: v.eth1Data}, nil
+		return v.eth1Data, nil
 	}
 	return nil, nil
-}
-
-// PendingDeposits returns a list of pending deposits that are ready for
-// inclusion in the next beacon block.
-func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
-	bNum := bs.powChainService.LatestBlockHeight()
-	if bNum == nil {
-		return nil, errors.New("latest PoW block number is unknown")
-	}
-	// Only request deposits that have passed the ETH1 follow distance window.
-	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-	allDeps := bs.beaconDB.AllDeposits(ctx, bNum)
-	if len(allDeps) == 0 {
-		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
-	}
-	attestationTargets, err := bs.targetsFetcher.AttestationTargets(justifiedState)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
-	}
-	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
-	if err != nil {
-		return nil, err
-	}
-	highestSlot := bs.beaconDB.HighestBlockSlot()
-	fullBlockTree := []*pbp2p.BeaconBlock{}
-	for i := justifiedBlock.Slot + 1; i < highestSlot; i++ {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		nextLayer, err := bs.beaconDB.BlocksBySlot(ctx, i)
-		if err != nil {
-			return nil, err
-		}
-		fullBlockTree = append(fullBlockTree, nextLayer...)
-	}
-	tree := []*pb.BlockTreeResponse_TreeNode{}
-	for _, kid := range fullBlockTree {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		participatedVotes, err := blockchain.VoteCount(kid, justifiedState, attestationTargets, bs.beaconDB)
-		if err != nil {
-			return nil, err
-		}
-		blockRoot, err := hashutil.HashBeaconBlock(kid)
-		if err != nil {
-			return nil, err
-		}
-		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
-			BlockRoot:         blockRoot[:],
-			Block:             kid,
-			ParticipatedVotes: uint64(participatedVotes),
-		})
-	}
-	return &pb.BlockTreeResponse{
-		Tree: tree,
-	}, nil
 }
 
 // BlockTreeBySlots returns the current tree of saved blocks and their votes starting from the justified state.
@@ -363,11 +345,9 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	}
 	depositRootAtHeight := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
 
-	return &pb.Eth1DataResponse{
-		Eth1Data: &pbp2p.Eth1Data{
-			DepositRoot: depositRootAtHeight[:],
-			BlockRoot:   blockHash[:],
-		},
+	return &pbp2p.Eth1Data{
+		DepositRoot: depositRootAtHeight[:],
+		BlockRoot:   blockHash[:],
 	}, nil
 }
 
