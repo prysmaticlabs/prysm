@@ -618,7 +618,7 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 			Balances: []uint64{tt.a},
 		}
 		totalBalance, _ := helpers.TotalActiveBalance(state)
-		adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
+		adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardFactor)
 		c, err := baseReward(state, 0, adjustedQuotient)
 		if err != nil {
 			t.Fatal(err)
@@ -869,7 +869,7 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 	totalBalance, _ := helpers.TotalActiveBalance(state)
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardFactor)
 	for i := uint64(0); i < validatorCount; i++ {
 		// Since no one attested, all the validators should gain 0 reward
 		if rewards[i] != 0 {
@@ -1040,7 +1040,7 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 	totalBalance, _ := helpers.TotalActiveBalance(state)
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardFactor)
 	for i := uint64(0); i < validatorCount; i++ {
 		// Since no one attested, all the validators should gain 0 reward
 		if rewards[i] != 0 {
@@ -1096,7 +1096,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
+	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardFactor)
 	for _, i := range attestedIndices {
 		base, _ := baseReward(state, i, adjustedQuotient)
 		// Base rewards for getting source right

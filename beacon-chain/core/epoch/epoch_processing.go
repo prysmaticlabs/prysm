@@ -410,10 +410,9 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 //
 //  def process_slashings(state: BeaconState) -> None:
 //    current_epoch = get_current_epoch(state)
-//    active_validator_indices = get_active_validator_indices(state, current_epoch)
-//    total_balance = get_total_balance(state, active_validator_indices)
+//    total_balance = get_total_active_balance(state)
 //
-//    # Compute `total_penalties`
+//    # Compute slashed balances in the current epoch
 //    total_at_start = state.latest_slashed_balances[(current_epoch + 1) % LATEST_SLASHED_EXIT_LENGTH]
 //    total_at_end = state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
 //    total_penalties = total_at_end - total_at_start
@@ -432,7 +431,7 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("could not get total active balance: %v", err)
 	}
 
-	// Compute the total penalties.
+	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().LatestSlashedExitLength
 	totalAtStart := state.LatestSlashedBalances[(currentEpoch+1)%exitLength]
 	totalAtEnd := state.LatestSlashedBalances[currentEpoch%exitLength]
@@ -754,7 +753,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		return nil, nil, fmt.Errorf("could not get total active balance: %v", err)
 	}
 	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance /
-		params.BeaconConfig().BaseRewardQuotient)
+		params.BeaconConfig().BaseRewardFactor)
 	rewards := make([]uint64, len(state.ValidatorRegistry))
 	penalties := make([]uint64, len(state.ValidatorRegistry))
 
@@ -902,7 +901,7 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		return nil, nil, fmt.Errorf("could not get total active balance: %v", err)
 	}
 	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance /
-		params.BeaconConfig().BaseRewardQuotient)
+		params.BeaconConfig().BaseRewardFactor)
 
 	rewards := make([]uint64, len(state.ValidatorRegistry))
 	penalties := make([]uint64, len(state.ValidatorRegistry))
