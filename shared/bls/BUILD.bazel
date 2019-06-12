@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//shared/bytesutil:go_default_library",
-        "@com_github_phoreproject_bls//:go_default_library",
+        "@com_github_phoreproject_bls//g1pubs:go_default_library",
     ],
 )
 
