@@ -106,7 +106,7 @@ func TestListenForStateInitialization_ContextCancelled(t *testing.T) {
 	<-exitRoutine
 
 	if sq.ctx.Done() == nil {
-		t.Error("Despite context being cancelled, the done channel is nil")
+		t.Error("Despite context being canceled, the done channel is nil")
 	}
 }
 
