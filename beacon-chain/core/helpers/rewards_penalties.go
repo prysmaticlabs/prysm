@@ -17,9 +17,9 @@ var totalActiveBalanceCache = cache.NewActiveBalanceCache()
 // Spec pseudocode definition:
 //   def get_total_balance(state: BeaconState, indices: List[ValidatorIndex]) -> Gwei:
 //    """
-//    Return the combined effective balance of an array of ``validators``.
+//    Return the combined effective balance of the ``indices``. (1 Gwei minimum to avoid divisions by zero.)
 //    """
-//    return sum([state.validator_registry[index].effective_balance for index in indices])
+//    return max(sum([state.validator_registry[index].effective_balance for index in indices]), 1)
 func TotalBalance(state *pb.BeaconState, indices []uint64) (uint64, error) {
 	epoch := CurrentEpoch(state)
 	total, err := totalBalanceCache.TotalBalanceInEpoch(epoch)
@@ -40,6 +40,11 @@ func TotalBalance(state *pb.BeaconState, indices []uint64) (uint64, error) {
 		TotalBalance: total,
 	}); err != nil {
 		return 0, fmt.Errorf("could not save total balance for cache: %v", err)
+	}
+
+	// Return 1 Gwei minimum to avoid divisions by zero
+	if total == 0 {
+		return 1, nil
 	}
 	return total, nil
 }

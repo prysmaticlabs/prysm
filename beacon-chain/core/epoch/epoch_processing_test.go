@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -397,11 +396,11 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 		Slot:                      gs + e + 2,
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 		LatestBlockRoots:          make([][]byte, 128),
-		CurrentCrosslinks:         []*pb.Crosslink{{Epoch: ge}},
+		CurrentCrosslinks:         []*pb.Crosslink{{StartEpoch: ge}},
 	}
 
 	gCrosslink := &pb.Crosslink{
-		Epoch:      0,
+		StartEpoch: 0,
 		DataRoot:   params.BeaconConfig().ZeroHash[:],
 		ParentRoot: params.BeaconConfig().ZeroHash[:],
 	}
@@ -459,9 +458,9 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Epoch:    ge,
-			Shard:    1,
-			DataRoot: []byte{'B'},
+			StartEpoch: ge,
+			Shard:      1,
+			DataRoot:   []byte{'B'},
 		}
 	}
 	state := &pb.BeaconState{
@@ -480,7 +479,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	if len(indices) != 0 {
 		t.Errorf("gensis crosslink indices is not 0, got: %d", len(indices))
 	}
-	want := &pb.Crosslink{Epoch: ge, Shard: 1, DataRoot: []byte{'B'}}
+	want := &pb.Crosslink{StartEpoch: ge, Shard: 1, DataRoot: []byte{'B'}}
 	if !reflect.DeepEqual(winner, want) {
 		t.Errorf("Did not get wanted crosslink, got: %v", winner)
 	}
@@ -507,8 +506,8 @@ func TestProcessCrosslinks_NoUpdate(t *testing.T) {
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
-			Epoch:    0,
-			DataRoot: []byte{'A'},
+			StartEpoch: 0,
+			DataRoot:   []byte{'A'},
 		})
 	}
 	state := &pb.BeaconState{
@@ -526,7 +525,7 @@ func TestProcessCrosslinks_NoUpdate(t *testing.T) {
 	}
 
 	wanted := &pb.Crosslink{
-		Epoch:      0,
+		StartEpoch: 0,
 		DataRoot:   params.BeaconConfig().ZeroHash[:],
 		ParentRoot: params.BeaconConfig().ZeroHash[:],
 	}
@@ -558,8 +557,8 @@ func TestProcessCrosslinks_SuccessfulUpdate(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Epoch:    ge,
-			DataRoot: []byte{'B'},
+			StartEpoch: ge,
+			DataRoot:   []byte{'B'},
 		}
 	}
 	var atts []*pb.PendingAttestation
@@ -604,11 +603,10 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 		b uint64
 		c uint64
 	}{
-		{0, 0, 0},
-		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 35778},
-		{30 * 1e9, 30 * 1e9, 195963},
-		{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount, 202390},
-		{40 * 1e9, params.BeaconConfig().MaxDepositAmount, 202390},
+		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 202390},
+		{30 * 1e9, 30 * 1e9, 1108513},
+		{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount, 1144869},
+		{40 * 1e9, params.BeaconConfig().MaxDepositAmount, 1144869},
 	}
 	for _, tt := range tests {
 		helpers.ClearAllCaches()
@@ -617,9 +615,7 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
 			Balances: []uint64{tt.a},
 		}
-		totalBalance, _ := helpers.TotalActiveBalance(state)
-		adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
-		c, err := baseReward(state, 0, adjustedQuotient)
+		c, err := baseReward(state, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -868,15 +864,13 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	totalBalance, _ := helpers.TotalActiveBalance(state)
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
 	for i := uint64(0); i < validatorCount; i++ {
 		// Since no one attested, all the validators should gain 0 reward
 		if rewards[i] != 0 {
 			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
 		}
 		// Since no one attested, all the validators should get penalized the same
-		base, err := baseReward(state, i, adjustedQuotient)
+		base, err := baseReward(state, i)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -946,7 +940,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	attestedIndices := []uint64{79, 127, 232, 473, 569, 754, 774}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
-		want := uint64(4472)
+		want := uint64(25298)
 		if rewards[i] != want {
 			t.Errorf("Wanted reward balance %d, got %d", want, rewards[i])
 		}
@@ -1039,8 +1033,6 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	totalBalance, _ := helpers.TotalActiveBalance(state)
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
 	for i := uint64(0); i < validatorCount; i++ {
 		// Since no one attested, all the validators should gain 0 reward
 		if rewards[i] != 0 {
@@ -1048,7 +1040,7 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		}
 		// Since no one attested, all the validators should get penalized the same
 		// it's 3 times the penalized amount because source, target and head.
-		base, _ := baseReward(state, i, adjustedQuotient)
+		base, _ := baseReward(state, i)
 		wanted := 3 * base
 		if penalties[i] != wanted {
 			t.Errorf("Wanted penalty balance %d, got %d",
@@ -1096,9 +1088,8 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	adjustedQuotient := mathutil.IntegerSquareRoot(totalBalance / params.BeaconConfig().BaseRewardQuotient)
 	for _, i := range attestedIndices {
-		base, _ := baseReward(state, i, adjustedQuotient)
+		base, _ := baseReward(state, i)
 		// Base rewards for getting source right
 		wanted := 3 * (base * attestedBalance / totalBalance)
 		// Base rewards for proposer and attesters working together getting attestation
@@ -1247,12 +1238,12 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := uint64(32000035776)
+	wanted := uint64(32000202360)
 	if state.Balances[0] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[0])
 	}
-	wanted = uint64(31999982112)
+	wanted = uint64(31999898808)
 	if state.Balances[1] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[1])

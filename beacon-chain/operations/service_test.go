@@ -143,8 +143,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 64,
 		CurrentCrosslinks: []*pb.Crosslink{{
-			Epoch:    0,
-			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			StartEpoch: 0,
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
@@ -188,8 +188,8 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 200,
 		CurrentCrosslinks: []*pb.Crosslink{{
-			Epoch:    2,
-			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			StartEpoch: 2,
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 	attestations, err := service.PendingAttestations(context.Background())
@@ -232,8 +232,8 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
 		CurrentCrosslinks: []*pb.Crosslink{{
-			Epoch:    0,
-			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			StartEpoch: 0,
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -277,8 +277,8 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
 		CurrentCrosslinks: []*pb.Crosslink{{
-			Epoch:    0,
-			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			StartEpoch: 0,
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 

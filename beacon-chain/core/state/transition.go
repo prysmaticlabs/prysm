@@ -58,21 +58,9 @@ func ExecuteStateTransition(
 	var err error
 
 	// Execute per slot transition.
-	if state.Slot >= block.Slot {
-		return nil, fmt.Errorf("expected state.slot %d < block.slot %d", state.Slot, block.Slot)
-	}
-	for state.Slot < block.Slot {
-		state, err = ProcessSlot(ctx, state)
-		if err != nil {
-			return nil, fmt.Errorf("could not process slot: %v", err)
-		}
-		if e.CanProcessEpoch(state) {
-			state, err = ProcessEpoch(ctx, state)
-			if err != nil {
-				return nil, fmt.Errorf("could not process epoch: %v", err)
-			}
-		}
-		state.Slot++
+	state, err = ProcessSlots(ctx, state, block.Slot)
+	if err != nil {
+		return nil, fmt.Errorf("could not process slot: %v", err)
 	}
 
 	// Execute per block transition.
@@ -82,7 +70,9 @@ func ExecuteStateTransition(
 			return nil, fmt.Errorf("could not process block: %v", err)
 		}
 	}
+
 	// TODO(#2307): Validate state root.
+
 	return state, nil
 }
 
@@ -108,6 +98,38 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	}
 	// Cache the block root.
 	state.LatestBlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot[:]
+	return state, nil
+}
+
+// ProcessSlots process through skip skips and apply epoch transition when it's needed
+//
+// Spec pseudocode definition:
+//  def process_slots(state: BeaconState, slot: Slot) -> None:
+//    assert state.slot <= slot
+//    while state.slot < slot:
+//        process_slot(state)
+//        # Process epoch on the first slot of the next epoch
+//        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+//            process_epoch(state)
+//        state.slot += 1
+//    ]
+func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
+	if state.Slot > slot {
+		return nil, fmt.Errorf("expected state.slot %d < block.slot %d", state.Slot, slot)
+	}
+	for state.Slot < slot {
+		state, err := ProcessSlot(ctx, state)
+		if err != nil {
+			return nil, fmt.Errorf("could not process slot: %v", err)
+		}
+		if e.CanProcessEpoch(state) {
+			state, err = ProcessEpoch(ctx, state)
+			if err != nil {
+				return nil, fmt.Errorf("could not process epoch: %v", err)
+			}
+		}
+		state.Slot++
+	}
 	return state, nil
 }
 

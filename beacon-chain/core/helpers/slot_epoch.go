@@ -41,13 +41,13 @@ func CurrentEpoch(state *pb.BeaconState) uint64 {
 //    Return the current epoch if it's genesis epoch.
 //    """
 //    current_epoch = get_current_epoch(state)
-//    return (current_epoch - 1) if current_epoch > GENESIS_EPOCH else current_epoch
+//    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else current_epoch - 1
 func PrevEpoch(state *pb.BeaconState) uint64 {
 	currentEpoch := CurrentEpoch(state)
-	if currentEpoch > 0 {
-		return currentEpoch - 1
+	if currentEpoch == 0 {
+		return 0
 	}
-	return 0
+	return currentEpoch - 1
 }
 
 // NextEpoch returns the next epoch number calculated form
