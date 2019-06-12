@@ -5,7 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// register's the databases metrics
+// Registers the boltDB data metrics.
 func registerDBMetrics(db *bolt.DB) {
 	metricFuncs := []prometheus.Collector{
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
