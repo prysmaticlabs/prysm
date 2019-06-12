@@ -109,7 +109,7 @@ func (s *Service) IncomingAttesterSlashingFeed() *event.Feed {
 	return s.incomingExitFeed
 }
 
-// IncomingExitFeed returns a feed that any service can send incoming p2p proposer slashing object into.
+// IncomingProposerSlashingFeed returns a feed that any service can send incoming p2p proposer slashing object into.
 // The beacon block operation pool service will subscribe to this feed in order to relay incoming slashing object.
 func (s *Service) IncomingProposerSlashingFeed() *event.Feed {
 	return s.incomingExitFeed
