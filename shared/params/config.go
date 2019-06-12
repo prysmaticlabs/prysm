@@ -44,7 +44,7 @@ type BeaconChainConfig struct {
 	SlotsPerHistoricalRoot       uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawalDelay  uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawalEpochs is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod    uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
-	MaxCrosslinkEpochs           uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxCrosslinkEpochs defines the max epoch from current a crosslink can be formed at.
+	MaxEpochsPerCrosslink        uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxEpochsPerCrosslink defines the max epoch from current a crosslink can be formed at.
 	MinEpochsToInactivityPenalty uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 
@@ -54,7 +54,7 @@ type BeaconChainConfig struct {
 	LatestSlashedExitLength      uint64 `yaml:"LATEST_SLASHED_EXIT_LENGTH"`       // LatestSlashedExitLength is used to track penalized exit balances per time interval.
 
 	// Reward and penalty quotients constants.
-	BaseRewardQuotient           uint64 `yaml:"BASE_REWARD_QUOTIENT"`           // BaseRewardQuotient is used to calculate validator per-slot interest rate.
+	BaseRewardFactor             uint64 `yaml:"BASE_REWARD_FACTOR"`             // BaseRewardFactor is used to calculate validator per-slot interest rate.
 	WhistleBlowingRewardQuotient uint64 `yaml:"WHISTLEBLOWING_REWARD_QUOTIENT"` // WhistleBlowingRewardQuotient is used to calculate whistler blower reward.
 	ProposerRewardQuotient       uint64 `yaml:"PROPOSER_REWARD_QUOTIENT"`       // ProposerRewardQuotient is used to calculate the reward for proposers.
 	InactivityPenaltyQuotient    uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT"`    // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
@@ -145,7 +145,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SlotsPerHistoricalRoot:       8192,
 	MinValidatorWithdrawalDelay:  256,
 	PersistentCommitteePeriod:    2048,
-	MaxCrosslinkEpochs:           64,
+	MaxEpochsPerCrosslink:        64,
 	MinEpochsToInactivityPenalty: 4,
 	Eth1FollowDistance:           1024,
 
@@ -155,7 +155,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestSlashedExitLength:      8192,
 
 	// Reward and penalty quotients constants.
-	BaseRewardQuotient:           32,
+	BaseRewardFactor:             32,
 	ProposerRewardQuotient:       8,
 	WhistleBlowingRewardQuotient: 512,
 	InactivityPenaltyQuotient:    1 << 25,

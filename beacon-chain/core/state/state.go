@@ -18,7 +18,7 @@ import (
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
 //
 // Spec pseudocode definition:
-//  def get_genesis_beacon_state(genesis_validator_deposits: List[Deposit],
+//  def get_genesis_beacon_state(deposits: List[Deposit],
 //                             genesis_time: int,
 //                             genesis_eth1_data: Eth1Data) -> BeaconState:
 //    """
@@ -41,25 +41,15 @@ import (
 //        state.latest_active_index_roots[index] = genesis_active_index_root
 //
 //    return state
-func GenesisBeaconState(
-	genesisValidatorDeposits []*pb.Deposit,
-	genesisTime uint64,
-	eth1Data *pb.Eth1Data,
-) (*pb.BeaconState, error) {
-	latestRandaoMixes := make(
-		[][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength,
-	)
+func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
+	latestRandaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 
-	latestActiveIndexRoots := make(
-		[][]byte,
-		params.BeaconConfig().LatestActiveIndexRootsLength,
-	)
+	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(latestActiveIndexRoots); i++ {
 		latestActiveIndexRoots[i] = zeroHash
 	}
@@ -76,8 +66,6 @@ func GenesisBeaconState(
 		latestBlockRoots[i] = zeroHash
 	}
 
-	validatorRegistry := []*pb.Validator{}
-	latestBalances := []uint64{}
 	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 
 	state := &pb.BeaconState{
@@ -92,8 +80,8 @@ func GenesisBeaconState(
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry: validatorRegistry,
-		Balances:          latestBalances,
+		ValidatorRegistry: []*pb.Validator{},
+		Balances:          []uint64{},
 
 		// Randomness and committees.
 		LatestRandaoMixes: latestRandaoMixes,
@@ -125,7 +113,7 @@ func GenesisBeaconState(
 	// Process initial deposits.
 	var err error
 	validatorMap := make(map[[32]byte]int)
-	for _, deposit := range genesisValidatorDeposits {
+	for _, deposit := range deposits {
 		eth1DataExists := eth1Data != nil
 		state, err = v.ProcessDeposit(
 			state,
