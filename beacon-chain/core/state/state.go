@@ -15,6 +15,78 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// BeaconState gets called to return a beacon state where all the fields are set to genesis values.
+func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *pb.Eth1Data) *pb.BeaconState {
+	latestRandaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
+	for i := 0; i < len(latestRandaoMixes); i++ {
+		latestRandaoMixes[i] = make([]byte, 32)
+	}
+
+	zeroHash := params.BeaconConfig().ZeroHash[:]
+
+	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
+	for i := 0; i < len(latestActiveIndexRoots); i++ {
+		latestActiveIndexRoots[i] = zeroHash
+	}
+
+	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := 0; i < len(crosslinks); i++ {
+		crosslinks[i] = &pb.Crosslink{
+			Shard: uint64(i),
+		}
+	}
+
+	latestBlockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := 0; i < len(latestBlockRoots); i++ {
+		latestBlockRoots[i] = zeroHash
+	}
+
+
+	state := &pb.BeaconState{
+		// Misc fields.
+		Slot:        0,
+		GenesisTime: genesisTime,
+
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
+
+		// Validator registry fields.
+		ValidatorRegistry: nil,
+		Balances:          nil,
+
+		// Randomness and committees.
+		LatestRandaoMixes: latestRandaoMixes,
+
+		// Finality.
+		PreviousJustifiedEpoch: 0,
+		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
+		CurrentJustifiedEpoch:  0,
+		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		JustificationBitfield:  0,
+		FinalizedEpoch:         0,
+		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
+
+		// Recent state.
+		CurrentCrosslinks:         crosslinks,
+		PreviousCrosslinks:        crosslinks,
+		LatestActiveIndexRoots:    latestActiveIndexRoots,
+		LatestBlockRoots:          latestBlockRoots,
+		LatestSlashedBalances:     nil,
+		CurrentEpochAttestations:  []*pb.PendingAttestation{},
+		PreviousEpochAttestations: []*pb.PendingAttestation{},
+		LatestBlockHeader: blkHeader,
+
+		// Eth1 data.
+		LatestEth1Data: eth1Data,
+		Eth1DataVotes:  []*pb.Eth1Data{},
+		DepositIndex:   0,
+	}
+	return state
+}
+
 // GenesisBeaconState gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
 //

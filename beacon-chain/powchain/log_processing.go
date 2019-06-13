@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"math/big"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -154,6 +156,32 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 }
 
+// isGenesisTrigger gets called whenever there's a deposit event,
+// it checks whether there's enough effective balance to trigger genesis.
+// Spec pseudocode definition:
+//   def is_genesis_trigger(deposits: List[Deposit], timestamp: uint64) -> bool:
+//    # Process deposits
+//    state = BeaconState()
+//    for deposit in deposits:
+//        process_deposit(state, deposit)
+//
+//    # Count active validators at genesis
+//    active_validator_count = 0
+//    for validator in state.validator_registry:
+//        if validator.effective_balance == MAX_EFFECTIVE_BALANCE:
+//            active_validator_count += 1
+//
+//    # Check effective balance to trigger genesis
+//    GENESIS_ACTIVE_VALIDATOR_COUNT = 2**16
+//    return active_validator_count == GENESIS_ACTIVE_VALIDATOR_COUNT
+func (w *Web3Service) isGenesisTrigger(deposits []*pb.Deposit, timestamp uint64) {
+	s := state.BeaconState(nil, 0, nil)
+	validatorMap := make(map[[32]byte]int)
+	for _, d := range deposits {
+		if err := blocks.ProcessD
+	}
+
+}
 // ProcessChainStartLog processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
