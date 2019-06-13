@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	_ "go.uber.org/automaxprocs"
 	"google.golang.org/grpc"
 )
 

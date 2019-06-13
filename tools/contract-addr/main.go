@@ -11,6 +11,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	_ "go.uber.org/automaxprocs"
 )
 
 var address = flag.String("address-path", "", "The file path to the plain text file with the contract address")
