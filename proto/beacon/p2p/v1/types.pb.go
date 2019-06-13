@@ -5,10 +5,11 @@ package ethereum_beacon_p2p_v1
 
 import (
 	fmt "fmt"
-	proto "github.com/gogo/protobuf/proto"
-	_ "github.com/prysmaticlabs/prysm/proto/common"
 	io "io"
 	math "math"
+
+	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/prysmaticlabs/prysm/proto/common"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
