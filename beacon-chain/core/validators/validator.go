@@ -30,37 +30,6 @@ var VStore = validatorStore{
 	exitedValidators:    make(map[uint64][]uint64),
 }
 
-// ActivateValidator takes in validator index and updates
-// validator's activation slot.
-//
-// Spec pseudocode definition:
-//  def activate_validator(state: BeaconState, index: ValidatorIndex, is_genesis: bool) -> None:
-//    """
-//    Activate the validator of the given ``index``.
-//    Note that this function mutates ``state``.
-//    """
-//    validator = state.validator_registry[index]
-//
-//    validator.activation_epoch = GENESIS_EPOCH if is_genesis else get_entry_exit_effect_epoch(get_current_epoch(state))
-func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.BeaconState, error) {
-	validator := state.ValidatorRegistry[idx]
-	if genesis {
-		validator.ActivationEligibilityEpoch = 0
-		validator.ActivationEpoch = 0
-	} else {
-		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
-	}
-
-	state.ValidatorRegistry[idx] = validator
-
-	log.WithFields(logrus.Fields{
-		"index":           idx,
-		"activationEpoch": validator.ActivationEpoch,
-	}).Info("Validator activated")
-
-	return state, nil
-}
-
 // InitiateValidatorExit takes in validator index and updates
 // validator with correct voluntary exit parameters.
 //
