@@ -3,7 +3,6 @@ package blockchain
 import (
 	"context"
 	"crypto/rand"
-	"encoding/binary"
 	"reflect"
 	"testing"
 	"time"
@@ -33,7 +32,7 @@ var endpoint = "ws://127.0.0.1"
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _ := setupInitialDeposits(t, 5)
+	deposits, _ := testutil.SetupInitialDeposits(t, 5, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
@@ -99,8 +98,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			t.Fatal(err)
 		}
 		unixTime := uint64(time.Now().Unix())
-		deposits, _ := setupInitialDeposits(t, 100)
-		if err := beaconDb.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
+		deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+		if err := beaconDb.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 
@@ -1276,21 +1275,14 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 
 	// New justified slot in state is at slot 64.
 	offset := uint64(64)
-	proposerIdx, err := helpers.BeaconProposerIndex(gState)
-	if err != nil {
-		t.Fatal(err)
-	}
 	gState.CurrentJustifiedEpoch = 1
 	gState.Slot = genesisSlot + offset
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, gState.CurrentJustifiedEpoch)
-	domain := helpers.DomainVersion(gState, gState.CurrentJustifiedEpoch, params.BeaconConfig().DomainRandao)
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.CurrentJustifiedEpoch, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
 		Body: &pb.BeaconBlockBody{
-			RandaoReveal: epochSignature.Marshal(),
+			RandaoReveal: epochSignature,
 		}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -1354,10 +1346,6 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 
 	// New Finalized slot in state is at slot 64.
 	offset := uint64(64)
-	proposerIdx, err := helpers.BeaconProposerIndex(gState)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Also saved justified block to slot 0 to test finalized case only.
 	if err := chainSvc.beaconDB.SaveJustifiedBlock(
@@ -1367,15 +1355,12 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 
 	gState.FinalizedEpoch = 1
 	gState.Slot = genesisSlot + offset
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, gState.FinalizedEpoch)
-	domain := helpers.DomainVersion(gState, gState.FinalizedEpoch, params.BeaconConfig().DomainRandao)
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.FinalizedEpoch, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
 		Body: &pb.BeaconBlockBody{
-			RandaoReveal: epochSignature.Marshal(),
+			RandaoReveal: epochSignature,
 		}}
 
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
@@ -1443,21 +1428,17 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	// New justified slot in state is at slot 64, but it's a skip slot...
 	offset := uint64(64)
 	lastAvailableSlot := uint64(60)
-	proposerIdx, err := helpers.BeaconProposerIndex(gState)
+	gState.CurrentJustifiedEpoch = 1
+	gState.Slot = genesisSlot + offset
+	epochSignature, err := helpers.CreateRandaoReveal(gState, 0, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
-	gState.CurrentJustifiedEpoch = 1
-	gState.Slot = genesisSlot + offset
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, 0)
-	domain := helpers.DomainVersion(gState, 0, params.BeaconConfig().DomainRandao)
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + lastAvailableSlot,
 		ParentRoot: gBlockRoot[:],
 		Body: &pb.BeaconBlockBody{
-			RandaoReveal: epochSignature.Marshal(),
+			RandaoReveal: epochSignature,
 		}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
