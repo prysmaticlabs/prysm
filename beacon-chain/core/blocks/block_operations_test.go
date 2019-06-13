@@ -1239,8 +1239,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 		},
 	}
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
-	eth1Data := testutil.GenerateEth1Data(t, deposits)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
