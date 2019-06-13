@@ -699,7 +699,7 @@ func ProcessValidatorDeposits(
 // into the registry as a new validator or balance change.
 //
 // Spec pseudocode definition:
-// def process_deposit(state: BeaconState, deposit: Deposit) -> None:
+//   def process_deposit(state: BeaconState, deposit: Deposit) -> None:
 //     """
 //     Process an Eth1 deposit, registering a validator or increasing its balance.
 //     """
