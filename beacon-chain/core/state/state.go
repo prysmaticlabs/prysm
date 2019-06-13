@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -115,7 +116,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	validatorMap := make(map[[32]byte]int)
 	for _, deposit := range deposits {
 		eth1DataExists := eth1Data != nil
-		state, err = v.ProcessDeposit(
+		state, err = b.ProcessDeposit(
 			state,
 			deposit,
 			validatorMap,

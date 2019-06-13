@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -1601,6 +1602,135 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 			deposit.Data.Amount,
 			newState.Balances[0],
 		)
+	}
+}
+
+func TestProcessDeposit_RepeatedDeposit(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			Pubkey: []byte{1, 2, 3},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{0, 50}
+	beaconState := &pb.BeaconState{
+		Balances:          balances,
+		ValidatorRegistry: registry,
+	}
+
+	deposit := &pb.Deposit{
+		Proof: [][]byte{},
+		Data: &pb.DepositData{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+			Amount:                uint64(1000),
+		},
+	}
+
+	newState, err := blocks.ProcessDeposit(
+		beaconState,
+		deposit,
+		stateutils.ValidatorIndexMap(beaconState),
+		false,
+		false,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if newState.Balances[1] != 1050 {
+		t.Errorf("Expected balance at index 1 to be 1050, received %d", newState.Balances[1])
+	}
+}
+
+func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{1000, 1000}
+	beaconState := &pb.BeaconState{
+		Balances:          balances,
+		ValidatorRegistry: registry,
+	}
+
+	deposit := &pb.Deposit{
+		Proof: [][]byte{},
+		Data: &pb.DepositData{
+			Pubkey:                []byte{7, 8, 9},
+			WithdrawalCredentials: []byte{1},
+			Amount:                uint64(2000),
+		},
+	}
+
+	newState, err := blocks.ProcessDeposit(
+		beaconState,
+		deposit,
+		stateutils.ValidatorIndexMap(beaconState),
+		false,
+		false,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if len(newState.Balances) != 3 {
+		t.Errorf("Expected validator balances list to increase by 1, received len %d", len(newState.Balances))
+	}
+	if newState.Balances[2] != 2000 {
+		t.Errorf("Expected new validator have balance of %d, received %d", 2000, newState.Balances[2])
+	}
+}
+
+func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{0, 1000}
+	beaconState := &pb.BeaconState{
+		Slot:              params.BeaconConfig().SlotsPerEpoch,
+		Balances:          balances,
+		ValidatorRegistry: registry,
+	}
+
+	deposit := &pb.Deposit{
+		Proof: [][]byte{},
+		Data: &pb.DepositData{
+			Pubkey:                []byte{7, 8, 9},
+			WithdrawalCredentials: []byte{1},
+			Amount:                uint64(2000),
+		},
+	}
+
+	newState, err := blocks.ProcessDeposit(
+		beaconState,
+		deposit,
+		stateutils.ValidatorIndexMap(beaconState),
+		false,
+		false,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if len(newState.Balances) != 3 {
+		t.Errorf("Expected validator balances list to be 3, received len %d", len(newState.Balances))
+	}
+	if newState.Balances[len(newState.Balances)-1] != 2000 {
+		t.Errorf("Expected validator at last index to have balance of %d, received %d", 2000, newState.Balances[0])
 	}
 }
 

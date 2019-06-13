@@ -14,9 +14,11 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -685,12 +687,129 @@ func ProcessValidatorDeposits(
 
 	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for _, deposit := range deposits {
-		beaconState, err = v.ProcessDeposit(beaconState, deposit, valIndexMap, verifySignatures, true)
+		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap, verifySignatures, true)
 		if err != nil {
 			return nil, fmt.Errorf("could not process deposit index %d: %v", deposit.Index, err)
 		}
 	}
 	return beaconState, nil
+}
+
+// ProcessDeposit takes in a deposit object and inserts it
+// into the registry as a new validator or balance change.
+//
+// Spec pseudocode definition:
+// def process_deposit(state: BeaconState, deposit: Deposit) -> None:
+//     """
+//     Process an Eth1 deposit, registering a validator or increasing its balance.
+//     """
+//     # Verify the Merkle branch
+//     assert verify_merkle_branch(
+//         leaf=hash_tree_root(deposit.data),
+//         proof=deposit.proof,
+//         depth=DEPOSIT_CONTRACT_TREE_DEPTH,
+//         index=deposit.index,
+//         root=state.latest_eth1_data.deposit_root,
+//     )
+//
+//     # Deposits must be processed in order
+//     assert deposit.index == state.deposit_index
+//     state.deposit_index += 1
+//
+//     pubkey = deposit.data.pubkey
+//     amount = deposit.data.amount
+//     validator_pubkeys = [v.pubkey for v in state.validator_registry]
+//     if pubkey not in validator_pubkeys:
+//         # Verify the deposit signature (proof of possession).
+//         # Invalid signatures are allowed by the deposit contract, and hence included on-chain, but must not be processed.
+//         if not bls_verify(pubkey, signing_root(deposit.data), deposit.data.signature, get_domain(state, DOMAIN_DEPOSIT)):
+//             return
+//
+//         # Add validator and balance entries
+//         state.validator_registry.append(Validator(
+//             pubkey=pubkey,
+//             withdrawal_credentials=deposit.data.withdrawal_credentials,
+//             activation_eligibility_epoch=FAR_FUTURE_EPOCH,
+//             activation_epoch=FAR_FUTURE_EPOCH,
+//             exit_epoch=FAR_FUTURE_EPOCH,
+//             withdrawable_epoch=FAR_FUTURE_EPOCH,
+//             effective_balance=min(amount - amount % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
+//         ))
+//         state.balances.append(amount)
+//     else:
+//         # Increase balance by deposit amount
+//         index = validator_pubkeys.index(pubkey)
+//         increase_balance(state, index, amount)
+func ProcessDeposit(
+	beaconState *pb.BeaconState,
+	deposit *pb.Deposit,
+	valIndexMap map[[32]byte]int,
+	verifySignatures bool,
+	verifyTree bool,
+) (*pb.BeaconState, error) {
+	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
+		return nil, fmt.Errorf("could not verify deposit #%d: %v", deposit.Index, err)
+	}
+	beaconState.DepositIndex++
+	pubKey := deposit.Data.Pubkey
+	amount := deposit.Data.Amount
+	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
+	if !ok {
+		if verifySignatures {
+			// TODO(#2307): Use BLS verification of proof of possession.
+		}
+		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
+		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
+			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		}
+		beaconState.ValidatorRegistry = append(beaconState.ValidatorRegistry, &pb.Validator{
+			Pubkey:                     pubKey,
+			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:           effectiveBalance,
+		})
+		beaconState.Balances = append(beaconState.Balances, amount)
+	} else {
+		beaconState = helpers.IncreaseBalance(beaconState, uint64(index), amount)
+	}
+
+	return beaconState, nil
+}
+
+func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree bool) error {
+	if verifyTree {
+		// Verify Merkle proof of deposit and deposit trie root.
+		receiptRoot := beaconState.LatestEth1Data.DepositRoot
+		leaf, err := ssz.TreeHash(deposit.Data)
+		if err != nil {
+			return fmt.Errorf("could not tree hash deposit data: %v", err)
+		}
+		if ok := trieutil.VerifyMerkleProof(
+			receiptRoot,
+			leaf[:],
+			int(deposit.Index),
+			deposit.Proof,
+		); !ok {
+			return fmt.Errorf(
+				"deposit merkle branch of deposit root did not verify for root: %#x",
+				receiptRoot,
+			)
+		}
+	}
+
+	// Deposits must be processed in order
+	if deposit.Index != beaconState.DepositIndex {
+		return fmt.Errorf(
+			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
+			beaconState.DepositIndex,
+			deposit.Index,
+		)
+	}
+
+	return nil
 }
 
 // ProcessValidatorExits is one of the operations performed
