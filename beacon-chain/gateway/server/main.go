@@ -6,32 +6,10 @@ import (
 	"fmt"
 	"net/http"
 
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/sirupsen/logrus"
 )
-
-// Endpoint describes a gRPC endpoint
-type Endpoint struct {
-	Network, Addr string
-}
-
-// Options is a set of options to be passed to Run
-type Options struct {
-	// Addr is the address to listen
-	Addr string
-
-	// GRPCServer defines an endpoint of a gRPC service
-	GRPCServer Endpoint
-
-	// SwaggerDir is a path to a directory from which the server
-	// serves swagger specs.
-	SwaggerDir string
-
-	// Mux is a list of options to be passed to the grpc-gateway multiplexer
-	Mux []gwruntime.ServeMuxOption
-}
 
 var (
 	beaconRPC = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
