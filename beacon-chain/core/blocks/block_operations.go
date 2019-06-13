@@ -666,7 +666,7 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 // beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
 // into the beacon chain.
 //
-// Official spec definition for processing validator deposits:
+// Spec pseudocode definition:
 //   Verify that len(block.body.deposits) <= MAX_DEPOSITS.
 //   For each deposit in block.body.deposits:
 //     process_deposit(state, deposit)
