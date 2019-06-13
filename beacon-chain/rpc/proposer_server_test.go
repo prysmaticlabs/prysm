@@ -5,7 +5,6 @@ import (
 	"context"
 	"math/big"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -38,17 +38,8 @@ func TestProposeBlock_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(deposits); i++ {
-		depositData := &pbp2p.DepositData{
-			Pubkey: []byte(strconv.Itoa(i)),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-		deposits[i] = &pbp2p.Deposit{
-			Data: depositData,
-		}
-	}
-
+	numDeposits := params.BeaconConfig().DepositsForChainStart
+	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
@@ -87,20 +78,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(deposits); i++ {
-		depositData := &pbp2p.DepositData{
-			Pubkey: []byte(strconv.Itoa(i)),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-		deposits[i] = &pbp2p.Deposit{
-			Data: depositData,
-		}
-		deposits[i] = &pbp2p.Deposit{
-			Data: depositData,
-		}
-	}
-
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)

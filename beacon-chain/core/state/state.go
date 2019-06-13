@@ -4,11 +4,12 @@
 package state
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -67,22 +68,11 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		latestBlockRoots[i] = zeroHash
 	}
 
-	validatorRegistry := make([]*pb.Validator, len(deposits))
-	for i, d := range deposits {
-		validator := &pb.Validator{
-			Pubkey:                d.Data.Pubkey,
-			WithdrawalCredentials: d.Data.WithdrawalCredentials,
-			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			Slashed:               false,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
-		}
-
-		validatorRegistry[i] = validator
-	}
-
-	latestBalances := make([]uint64, len(deposits))
 	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
+
+	if eth1Data == nil {
+		eth1Data = &pb.Eth1Data{}
+	}
 
 	state := &pb.BeaconState{
 		// Misc fields.
@@ -96,8 +86,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry: validatorRegistry,
-		Balances:          latestBalances,
+		ValidatorRegistry: []*pb.Validator{},
+		Balances:          []uint64{},
 
 		// Randomness and committees.
 		LatestRandaoMixes: latestRandaoMixes,
@@ -128,15 +118,15 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 
 	// Process initial deposits.
 	var err error
-	validatorMap := stateutils.ValidatorIndexMap(state)
+	validatorMap := make(map[[32]byte]int)
 	for _, deposit := range deposits {
-		state, err = v.ProcessDeposit(
+		eth1DataExists := !bytes.Equal(eth1Data.DepositRoot, []byte{})
+		state, err = b.ProcessDeposit(
 			state,
+			deposit,
 			validatorMap,
-			deposit.Data.Pubkey,
-			deposit.Data.Amount,
-			deposit.Data.Signature,
-			deposit.Data.WithdrawalCredentials,
+			false,
+			eth1DataExists,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
