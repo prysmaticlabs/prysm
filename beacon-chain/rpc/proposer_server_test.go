@@ -79,8 +79,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
-	eth1Data := testutil.GenerateEth1Data(t, deposits)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
