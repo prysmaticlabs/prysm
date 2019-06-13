@@ -240,8 +240,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	eth1Data := testutil.GenerateEth1Data(t, deposits)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -322,8 +321,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	eth1Data := testutil.GenerateEth1Data(t, deposits)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}

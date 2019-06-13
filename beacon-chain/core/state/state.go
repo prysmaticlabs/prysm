@@ -4,6 +4,7 @@
 package state
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -69,6 +70,10 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 
 	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 
+	if eth1Data == nil {
+		eth1Data = &pb.Eth1Data{}
+	}
+
 	state := &pb.BeaconState{
 		// Misc fields.
 		Slot:        0,
@@ -115,7 +120,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	var err error
 	validatorMap := make(map[[32]byte]int)
 	for _, deposit := range deposits {
-		eth1DataExists := eth1Data != nil
+		eth1DataExists := !bytes.Equal(eth1Data.DepositRoot, []byte{})
 		state, err = b.ProcessDeposit(
 			state,
 			deposit,
