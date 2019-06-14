@@ -14,6 +14,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -292,6 +293,9 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		},
 	}
 
+	cfg := params.BeaconConfig()
+	cfg.GenesisActiveValidatorCount = 8
+	params.OverrideBeaconConfig(cfg)
 	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
@@ -314,7 +318,6 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		)
 	}
 
-	<-genesisTimeChan
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
@@ -401,7 +404,6 @@ func TestProcessETH2GenesisLog_8UniquePubkeys(t *testing.T) {
 		)
 	}
 
-	<-genesisTimeChan
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")

@@ -67,6 +67,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 			return err
 		}
 		if triggered {
+			log.Info("Minimum number of validators reached for beacon-chain to start")
 			w.chainStarted = true
 		}
 		return nil
@@ -187,14 +188,14 @@ func (w *Web3Service) isGenesisTrigger(deposits []*pb.Deposit) (bool, error) {
 		}
 	}
 
-	activeValidator := uint64(0)
+	activeValidators := uint64(0)
 	for _, v := range s.ValidatorRegistry {
 		if v.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance {
-			activeValidator++
+			activeValidators++
 		}
 	}
 
-	return activeValidator == params.BeaconConfig().GenesisActiveValidatorCount, err
+	return activeValidators == params.BeaconConfig().GenesisActiveValidatorCount, err
 }
 
 // processChainStart processes the last final steps before chain start.
@@ -222,7 +223,7 @@ func (w *Web3Service) processChainStart(genesisTime uint64) {
 
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": genesisTime,
-	}).Info("Minimum number of validators reached for beacon-chain to start")
+	}).Info("Sending chainstart signal to blockchain service")
 	w.chainStartFeed.Send(genesisTime)
 }
 
