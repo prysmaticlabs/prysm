@@ -62,7 +62,7 @@ func TestStop_CancelsContext(t *testing.T) {
 
 	select {
 	case <-time.After(1 * time.Second):
-		t.Error("ctx not cancelled within 1s")
+		t.Error("ctx not canceled within 1s")
 	case <-vs.ctx.Done():
 	}
 }

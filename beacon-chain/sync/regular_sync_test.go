@@ -11,6 +11,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -412,6 +413,8 @@ func TestReceiveAttestation_OK(t *testing.T) {
 }
 
 func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}

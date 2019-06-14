@@ -47,8 +47,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	shardCount := int(params.BeaconConfig().ShardCount)
 
-	if params.BeaconConfig().LatestBlockRootsLength != 8192 {
-		t.Error("LatestBlockRootsLength should be 8192 for these tests to pass")
+	if params.BeaconConfig().SlotsPerHistoricalRoot != 8192 {
+		t.Error("SlotsPerHistoricalRoot should be 8192 for these tests to pass")
 	}
 
 	if params.BeaconConfig().DepositsForChainStart != 16384 {
@@ -147,7 +147,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("PreviousEpochAttestations was not correctly initialized")
 	}
 
-	activeValidators := helpers.ActiveValidatorIndices(newState, 0)
+	activeValidators, _ := helpers.ActiveValidatorIndices(newState, 0)
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)
@@ -194,7 +194,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	s, _ := state.GenesisBeaconState(nil, 0, nil)
-	want, got := len(s.LatestBlockRoots), int(params.BeaconConfig().LatestBlockRootsLength)
+	want, got := len(s.LatestBlockRoots), int(params.BeaconConfig().SlotsPerHistoricalRoot)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}

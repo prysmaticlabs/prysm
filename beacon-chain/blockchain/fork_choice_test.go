@@ -31,6 +31,8 @@ var _ = ForkChoice(&ChainService{})
 var endpoint = "ws://127.0.0.1"
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	deposits, _ := setupInitialDeposits(t, 5)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
@@ -115,6 +117,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
@@ -220,6 +223,8 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 }
 
 func TestAttestationTargets_RetrieveWorks(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -1238,6 +1243,8 @@ func setupBeaconChainBenchmark(b *testing.B, beaconDB *db.BeaconDB) *ChainServic
 }
 
 func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -1316,6 +1323,8 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 }
 
 func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -1400,6 +1409,8 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 }
 
 func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -1493,7 +1504,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	genesisSlot := uint64(0)
 	var crosslinks []*pb.Crosslink
 	for i := 0; i < int(params.BeaconConfig().ShardCount); i++ {
-		crosslinks = append(crosslinks, &pb.Crosslink{Epoch: 0})
+		crosslinks = append(crosslinks, &pb.Crosslink{StartEpoch: 0})
 	}
 	latestRandaoMixes := make(
 		[][]byte,
@@ -1529,7 +1540,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	}
 	gState := &pb.BeaconState{
 		Slot:                   genesisSlot,
-		LatestBlockRoots:       make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestBlockRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestRandaoMixes:      latestRandaoMixes,
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
@@ -1614,10 +1625,14 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 }
 
 func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
-	t.Skip()
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1632,7 +1647,21 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 	}
 	pHeadHash2, _ := hashutil.HashBeaconBlock(potentialHead2)
 
-	beaconState := &pb.BeaconState{Balances: []uint64{1e9, 1e9}}
+	// We store these potential heads in the DB.
+	if err := beaconDB.SaveBlock(potentialHead); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState := &pb.BeaconState{
+		Balances: []uint64{1e9, 1e9},
+		ValidatorRegistry: []*pb.Validator{
+			{EffectiveBalance: 1e9},
+			{EffectiveBalance: 1e9},
+		},
+	}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -1661,7 +1690,7 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	count, err := VoteCount(genesisBlock, beaconState, voteTargets, nil)
+	count, err := VoteCount(genesisBlock, beaconState, voteTargets, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not fetch vote balances: %v", err)
 	}

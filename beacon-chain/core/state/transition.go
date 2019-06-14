@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -15,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -58,21 +58,9 @@ func ExecuteStateTransition(
 	var err error
 
 	// Execute per slot transition.
-	if state.Slot >= block.Slot {
-		return nil, fmt.Errorf("expected state.slot %d < block.slot %d", state.Slot, block.Slot)
-	}
-	for state.Slot < block.Slot {
-		state, err = ProcessSlot(ctx, state)
-		if err != nil {
-			return nil, fmt.Errorf("could not process slot: %v", err)
-		}
-		if e.CanProcessEpoch(state) {
-			state, err = ProcessEpoch(ctx, state)
-			if err != nil {
-				return nil, fmt.Errorf("could not process epoch: %v", err)
-			}
-		}
-		state.Slot++
+	state, err = ProcessSlots(ctx, state, block.Slot)
+	if err != nil {
+		return nil, fmt.Errorf("could not process slot: %v", err)
 	}
 
 	// Execute per block transition.
@@ -82,7 +70,9 @@ func ExecuteStateTransition(
 			return nil, fmt.Errorf("could not process block: %v", err)
 		}
 	}
+
 	// TODO(#2307): Validate state root.
+
 	return state, nil
 }
 
@@ -102,12 +92,44 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
-	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
+	prevBlockRoot, err := ssz.TreeHash(state.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
 	}
 	// Cache the block root.
 	state.LatestBlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot[:]
+	return state, nil
+}
+
+// ProcessSlots process through skip skips and apply epoch transition when it's needed
+//
+// Spec pseudocode definition:
+//  def process_slots(state: BeaconState, slot: Slot) -> None:
+//    assert state.slot <= slot
+//    while state.slot < slot:
+//        process_slot(state)
+//        # Process epoch on the first slot of the next epoch
+//        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+//            process_epoch(state)
+//        state.slot += 1
+//    ]
+func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
+	if state.Slot > slot {
+		return nil, fmt.Errorf("expected state.slot %d < block.slot %d", state.Slot, slot)
+	}
+	for state.Slot < slot {
+		state, err := ProcessSlot(ctx, state)
+		if err != nil {
+			return nil, fmt.Errorf("could not process slot: %v", err)
+		}
+		if e.CanProcessEpoch(state) {
+			state, err = ProcessEpoch(ctx, state)
+			if err != nil {
+				return nil, fmt.Errorf("could not process epoch: %v", err)
+			}
+		}
+		state.Slot++
+	}
 	return state, nil
 }
 
@@ -134,7 +156,10 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not verify and process randao: %v", err)
 	}
 	// Process ETH1 data.
-	state = b.ProcessEth1DataInBlock(state, block)
+	state, err = b.ProcessEth1DataInBlock(state, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not process eth1 data: %v", err)
+	}
 	state, err = b.ProcessAttesterSlashings(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
@@ -176,6 +201,7 @@ func ProcessBlock(
 
 // ProcessEpoch describes the per epoch operations that are performed on the
 // beacon state. It focuses on the validator registry, adjusting balances, and finalizing slots.
+//
 // Spec pseudocode definition:
 //
 //  def process_epoch(state: BeaconState) -> None:
@@ -213,7 +239,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, fmt.Errorf("could not process justification: %v", err)
 	}
 
-	state, err = e.ProcessCrosslink(state)
+	state, err = e.ProcessCrosslinks(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not process crosslink: %v", err)
 	}
@@ -223,9 +249,15 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, fmt.Errorf("could not process rewards and penalties: %v", err)
 	}
 
-	state = e.ProcessRegistryUpdates(state)
+	state, err = e.ProcessRegistryUpdates(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process registry updates: %v", err)
+	}
 
-	state = e.ProcessSlashings(state)
+	state, err = e.ProcessSlashings(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not process slashings: %v", err)
+	}
 
 	state, err = e.ProcessFinalUpdates(state)
 	if err != nil {

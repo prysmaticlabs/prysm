@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -118,6 +119,8 @@ func TestIncomingAttestation_OK(t *testing.T) {
 }
 
 func TestRetrieveAttestations_OK(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -140,8 +143,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 64,
 		CurrentCrosslinks: []*pb.Crosslink{{
-			Epoch:    0,
-			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			StartEpoch: 0,
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
@@ -159,6 +162,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 }
 
 func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -183,8 +188,8 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 200,
 		CurrentCrosslinks: []*pb.Crosslink{{
-			Epoch:    2,
-			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			StartEpoch: 2,
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 	attestations, err := service.PendingAttestations(context.Background())
@@ -227,8 +232,8 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
 		CurrentCrosslinks: []*pb.Crosslink{{
-			Epoch:    0,
-			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			StartEpoch: 0,
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -272,8 +277,8 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
 		CurrentCrosslinks: []*pb.Crosslink{{
-			Epoch:    0,
-			DataRoot: params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			StartEpoch: 0,
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
 

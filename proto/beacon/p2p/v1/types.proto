@@ -124,14 +124,11 @@ message ShardReassignmentRecord {
 }
 
 message Crosslink {
-  //Shard number
   uint64 shard = 1;
-  // Epoch number
-  uint64 epoch = 2;
-  // Parent root
-  bytes parent_root = 3;
-  // Data root
-  bytes data_root = 4;
+  uint64 start_epoch = 2;
+  uint64 end_epoch = 3;
+  bytes parent_root = 4;
+  bytes data_root = 5;
 }
 
 message BeaconBlockHeader {
@@ -153,12 +150,13 @@ message BeaconBlock {
 message BeaconBlockBody {
   bytes randao_reveal = 1; // bytes96
   Eth1Data eth1_data = 2;
-  repeated Attestation attestations = 3;
-  repeated ProposerSlashing proposer_slashings  = 4;
-  repeated AttesterSlashing attester_slashings = 5;
-  repeated Deposit deposits = 6;
-  repeated VoluntaryExit voluntary_exits = 7;
-  repeated Transfer transfers = 8;
+  bytes graffiti = 3; // bytes32
+  repeated Attestation attestations = 4;
+  repeated ProposerSlashing proposer_slashings  = 5;
+  repeated AttesterSlashing attester_slashings = 6;
+  repeated Deposit deposits = 7;
+  repeated VoluntaryExit voluntary_exits = 8;
+  repeated Transfer transfers = 9;
 }
 
 message ProposalSignedData {

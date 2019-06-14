@@ -143,7 +143,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 			}).Info("Not yet included in state...")
 			continue
 		}
-		if status.Status.ActivationEpoch == (params.BeaconConfig().FarFutureEpoch) {
+		if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 			log.WithFields(logrus.Fields{
 				"publicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
 				"status":                    status.Status.Status.String(),

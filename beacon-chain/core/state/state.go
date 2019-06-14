@@ -17,8 +17,9 @@ import (
 
 // GenesisBeaconState gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
+//
 // Spec pseudocode definition:
-// def get_genesis_beacon_state(genesis_validator_deposits: List[Deposit],
+//  def get_genesis_beacon_state(deposits: List[Deposit],
 //                             genesis_time: int,
 //                             genesis_eth1_data: Eth1Data) -> BeaconState:
 //    """
@@ -41,25 +42,15 @@ import (
 //        state.latest_active_index_roots[index] = genesis_active_index_root
 //
 //    return state
-func GenesisBeaconState(
-	genesisValidatorDeposits []*pb.Deposit,
-	genesisTime uint64,
-	eth1Data *pb.Eth1Data,
-) (*pb.BeaconState, error) {
-	latestRandaoMixes := make(
-		[][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength,
-	)
+func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
+	latestRandaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 
-	latestActiveIndexRoots := make(
-		[][]byte,
-		params.BeaconConfig().LatestActiveIndexRootsLength,
-	)
+	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(latestActiveIndexRoots); i++ {
 		latestActiveIndexRoots[i] = zeroHash
 	}
@@ -71,14 +62,13 @@ func GenesisBeaconState(
 		}
 	}
 
-	latestBlockRoots := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
+	latestBlockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(latestBlockRoots); i++ {
 		latestBlockRoots[i] = zeroHash
 	}
 
-	validatorRegistry := make([]*pb.Validator, len(genesisValidatorDeposits))
-	for i, d := range genesisValidatorDeposits {
-
+	validatorRegistry := make([]*pb.Validator, len(deposits))
+	for i, d := range deposits {
 		validator := &pb.Validator{
 			Pubkey:                d.Data.Pubkey,
 			WithdrawalCredentials: d.Data.WithdrawalCredentials,
@@ -91,7 +81,7 @@ func GenesisBeaconState(
 		validatorRegistry[i] = validator
 	}
 
-	latestBalances := make([]uint64, len(genesisValidatorDeposits))
+	latestBalances := make([]uint64, len(deposits))
 	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 
 	state := &pb.BeaconState{
@@ -139,7 +129,7 @@ func GenesisBeaconState(
 	// Process initial deposits.
 	var err error
 	validatorMap := stateutils.ValidatorIndexMap(state)
-	for _, deposit := range genesisValidatorDeposits {
+	for _, deposit := range deposits {
 		state, err = v.ProcessDeposit(
 			state,
 			validatorMap,
@@ -161,7 +151,11 @@ func GenesisBeaconState(
 			}
 		}
 	}
-	activeValidators := helpers.ActiveValidatorIndices(state, 0)
+	activeValidators, err := helpers.ActiveValidatorIndices(state, 0)
+	if err != nil {
+		return nil, fmt.Errorf("could not get active validator indices: %v", err)
+	}
+
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)

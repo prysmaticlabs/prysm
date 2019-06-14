@@ -83,10 +83,6 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Info("Disabled gossipsub, using floodsub")
 		cfg.DisableGossipSub = true
 	}
-	if ctx.GlobalBool(EnableExcessDepositsFlag.Name) {
-		log.Info("Enabled excess deposits")
-		cfg.EnableExcessDeposits = true
-	}
 	InitFeatureConfig(cfg)
 }
 

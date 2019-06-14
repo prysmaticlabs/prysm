@@ -27,6 +27,7 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 		{32 * validatorsPerEpoch, 16 * params.BeaconConfig().SlotsPerEpoch},
 	}
 	for _, test := range tests {
+		ClearAllCaches()
 		vals := make([]*pb.Validator, test.validatorCount)
 		for i := 0; i < len(vals); i++ {
 			vals[i] = &pb.Validator{
@@ -36,9 +37,13 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 		s := &pb.BeaconState{
 			ValidatorRegistry: vals,
 		}
-		if test.committeeCount != EpochCommitteeCount(s, 1) {
+		count, err := EpochCommitteeCount(s, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.committeeCount != count {
 			t.Errorf("wanted: %d, got: %d",
-				test.committeeCount, EpochCommitteeCount(s, 1))
+				test.committeeCount, count)
 		}
 	}
 }
@@ -61,9 +66,13 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 	s := &pb.BeaconState{
 		ValidatorRegistry: vals,
 	}
-	if EpochCommitteeCount(s, 1) != validatorCount/testConfig.TargetCommitteeSize {
+	count, err := EpochCommitteeCount(s, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != validatorCount/testConfig.TargetCommitteeSize {
 		t.Errorf("wanted: %d, got: %d",
-			validatorCount/testConfig.TargetCommitteeSize, EpochCommitteeCount(s, 1))
+			validatorCount/testConfig.TargetCommitteeSize, count)
 	}
 	params.OverrideBeaconConfig(productionConfig)
 }
@@ -81,6 +90,7 @@ func TestShardDelta_OK(t *testing.T) {
 		{500000, minShardDelta}, // 5 Mil, above shard delta
 	}
 	for _, test := range tests {
+		ClearAllCaches()
 		vals := make([]*pb.Validator, test.validatorCount)
 		for i := 0; i < len(vals); i++ {
 			vals[i] = &pb.Validator{
@@ -90,9 +100,13 @@ func TestShardDelta_OK(t *testing.T) {
 		s := &pb.BeaconState{
 			ValidatorRegistry: vals,
 		}
-		if test.shardCount != ShardDelta(s, 1) {
+		delta, err := ShardDelta(s, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.shardCount != delta {
 			t.Errorf("wanted: %d, got: %d",
-				test.shardCount, ShardDelta(s, 1))
+				test.shardCount, delta)
 		}
 	}
 }
@@ -117,8 +131,14 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
 	committees, err := ComputeCommittee(indices, seed, 0, 1 /* Total committee*/)
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
@@ -170,8 +190,14 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Test shuffled indices are correct for shard 3 committee
 	shard := uint64(3)
@@ -220,7 +246,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{71, 127},
+			wanted:          []uint64{127, 71},
 		},
 		{
 			attestationSlot: 2,
@@ -232,11 +258,12 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{68, 102},
+			wanted:          []uint64{102, 68},
 		},
 	}
-	//startShard := uint64(960)
+
 	for _, tt := range tests {
+		ClearAllCaches()
 		state.Slot = tt.stateSlot
 		attestationData.Crosslink = &pb.Crosslink{
 			Shard: tt.attestationSlot,
@@ -372,6 +399,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		ClearAllCaches()
 		committee, shard, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
 		if err != nil {
 			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
@@ -427,6 +455,7 @@ func TestShardDelta_Ok(t *testing.T) {
 		{32 * validatorsPerEpoch, min},
 	}
 	for _, test := range tests {
+		ClearAllCaches()
 		validators := make([]*pb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &pb.Validator{
@@ -434,9 +463,13 @@ func TestShardDelta_Ok(t *testing.T) {
 			}
 		}
 		state := &pb.BeaconState{ValidatorRegistry: validators}
-		if test.shardDelta != ShardDelta(state, 0) {
+		delta, err := ShardDelta(state, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.shardDelta != delta {
 			t.Errorf("wanted: %d, got: %d",
-				test.shardDelta, ShardDelta(state, 0))
+				test.shardDelta, delta)
 		}
 	}
 }
@@ -464,6 +497,7 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 		{32 * validatorsPerEpoch, 212},
 	}
 	for _, test := range tests {
+		ClearAllCaches()
 		validators := make([]*pb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &pb.Validator{
@@ -487,12 +521,12 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}
 
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
-	var activeRoots [][]byte
+	activeRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
-		activeRoots = append(activeRoots, []byte{'A'})
+		activeRoots[i] = []byte{'A'}
 	}
 
 	state := &pb.BeaconState{
@@ -568,6 +602,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		ClearAllCaches()
 		state.Slot = tt.stateSlot
 		verified, err := VerifyAttestationBitfield(state, tt.attestation)
 		if tt.errorExists {
@@ -593,7 +628,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 }
 
 func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 300000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -607,11 +642,17 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	shard := uint64(3)
-	_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+	_, err = ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
 	if err != nil {
 		panic(err)
 	}
@@ -626,7 +667,7 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 3000000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -640,11 +681,17 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	shard := uint64(3)
-	_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+	_, err = ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
 	if err != nil {
 		panic(err)
 	}
@@ -659,7 +706,7 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 128000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -673,8 +720,14 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	i := uint64(0)
 	shard := uint64(0)
@@ -693,7 +746,7 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 1000000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -707,8 +760,14 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	i := uint64(0)
 	shard := uint64(0)
@@ -727,7 +786,7 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
-	RestartShuffledValidatorCache()
+	ClearShuffledValidatorCache()
 	validators := make([]*pb.Validator, 4000000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -741,8 +800,14 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	}
 
 	epoch := CurrentEpoch(state)
-	indices := ActiveValidatorIndices(state, epoch)
-	seed := GenerateSeed(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
+	seed, err := GenerateSeed(state, epoch)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	i := uint64(0)
 	shard := uint64(0)

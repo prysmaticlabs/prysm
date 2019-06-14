@@ -1,6 +1,3 @@
-// Package blocks contains block processing libraries. These libraries
-// process and verify block specific messages such as PoW receipt root,
-// RANDAO, validator deposits, exits and slashing proofs.
 package blocks
 
 import (
@@ -10,6 +7,8 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -19,10 +18,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
+
+var eth1DataCache = cache.NewEth1DataVoteCache()
 
 // VerifyProposerSignature uses BLS signature verification to ensure
 // the correct proposer created an incoming beacon block during state
@@ -39,28 +39,48 @@ func VerifyProposerSignature(
 // beacon block to ensure the ETH1 data votes are processed
 // into the beacon state.
 //
-// Official spec definition of ProcessEth1Data
-//   state.eth1_data_votes.append(body.eth1_data)
-//   if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
-//     state.latest_eth1_data = body.eth1_data
-func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
+// Official spec definition:
+//   def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
+//    state.eth1_data_votes.append(body.eth1_data)
+//    if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
+//        state.latest_eth1_data = body.eth1_data
+func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, block.Body.Eth1Data)
-	numVotes := uint64(0)
-	for _, vote := range beaconState.Eth1DataVotes {
-		if proto.Equal(vote, block.Body.Eth1Data) {
-			numVotes++
-		}
+
+	voteCount, err := eth1DataCache.Eth1DataVote(block.Body.Eth1Data.DepositRoot)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
 	}
-	if numVotes*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
+
+	if voteCount == 0 {
+		for _, vote := range beaconState.Eth1DataVotes {
+			if proto.Equal(vote, block.Body.Eth1Data) {
+				voteCount++
+			}
+		}
+	} else {
+		voteCount++
+	}
+
+	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
+		DepositRoot: block.Body.Eth1Data.DepositRoot,
+		VoteCount:   voteCount,
+	}); err != nil {
+		return nil, fmt.Errorf("could not save eth1 data vote cache: %v", err)
+	}
+
+	if voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
 		beaconState.LatestEth1Data = block.Body.Eth1Data
 	}
-	return beaconState
+
+	return beaconState, nil
 }
 
 // ProcessBlockHeader validates a block by its header.
 //
-// Spec pseudocode definition
-// def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+// Spec pseudocode definition:
+//
+//  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
 //     # Verify that the slots match
 //     assert block.slot == state.slot
 //     # Verify that the parent matches
@@ -83,7 +103,7 @@ func ProcessBlockHeader(
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
 	}
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	parentRoot, err := ssz.TreeHash(beaconState.LatestBlockHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -195,22 +215,24 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 // on each processed beacon block to slash proposers based on
 // slashing conditions if any slashable events occurred.
 //
-// Official spec definition for proposer slashings:
-//   Verify that len(block.body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS.
+// Spec pseudocode definition:
+//   def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSlashing) -> None:
+//    """
+//    Process ``ProposerSlashing`` operation.
+//    """
+//    proposer = state.validator_registry[proposer_slashing.proposer_index]
+//    # Verify that the epoch is the same
+//    assert slot_to_epoch(proposer_slashing.header_1.slot) == slot_to_epoch(proposer_slashing.header_2.slot)
+//    # But the headers are different
+//    assert proposer_slashing.header_1 != proposer_slashing.header_2
+//    # Check proposer is slashable
+//    assert is_slashable_validator(proposer, get_current_epoch(state))
+//    # Signatures are valid
+//    for header in (proposer_slashing.header_1, proposer_slashing.header_2):
+//        domain = get_domain(state, DOMAIN_BEACON_PROPOSER, slot_to_epoch(header.slot))
+//        assert bls_verify(proposer.pubkey, signing_root(header), header.signature, domain)
 //
-//   For each proposer_slashing in block.body.proposer_slashings:
-//     proposer = state.validator_registry[proposer_slashing.proposer_index]
-//     # Verify that the epoch is the same
-//     assert slot_to_epoch(proposer_slashing.header_1.slot) == slot_to_epoch(proposer_slashing.header_2.slot)
-//     # But the headers are different
-//     assert proposer_slashing.header_1 != proposer_slashing.header_2
-//     # Check proposer is slashable
-//     assert is_slashable_validator(proposer, get_current_epoch(state))
-//     # Signatures are valid
-//     for header in (proposer_slashing.header_1, proposer_slashing.header_2):
-//       domain = get_domain(state, DOMAIN_BEACON_PROPOSER, slot_to_epoch(header.slot))
-//       assert bls_verify(proposer.pubkey, signing_root(header), header.signature, domain)
-//     slash_validator(state, proposer_slashing.proposer_index)
+//    slash_validator(state, proposer_slashing.proposer_index)
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -270,23 +292,25 @@ func verifyProposerSlashing(
 // on each processed beacon block to slash attesters based on
 // Casper FFG slashing conditions if any slashable events occurred.
 //
-// Official spec definition for attester slashings:
+// Spec pseudocode definition:
+//   def process_attester_slashing(state: BeaconState, attester_slashing: AttesterSlashing) -> None:
+//    """
+//    Process ``AttesterSlashing`` operation.
+//    """
+//    attestation_1 = attester_slashing.attestation_1
+//    attestation_2 = attester_slashing.attestation_2
+//    assert is_slashable_attestation_data(attestation_1.data, attestation_2.data)
+//    validate_indexed_attestation(state, attestation_1)
+//    validate_indexed_attestation(state, attestation_2)
 //
-//   Verify that len(block.body.attester_slashings) <= MAX_ATTESTER_SLASHINGS.
-//
-//   For each attester_slashing in block.body.attester_slashings:
-//     Let slashable_attestation_1 = attester_slashing.slashable_attestation_1.
-//     Let slashable_attestation_2 = attester_slashing.slashable_attestation_2.
-//     Verify that slashable_attestation_1.data != slashable_attestation_2.data.
-//     Verify that is_double_vote(slashable_attestation_1.data, slashable_attestation_2.data)
-//       or is_surround_vote(slashable_attestation_1.data, slashable_attestation_2.data).
-//     Verify that verify_slashable_attestation(state, slashable_attestation_1).
-//     Verify that verify_slashable_attestation(state, slashable_attestation_2).
-//     Let slashable_indices = [index for index in slashable_attestation_1.validator_indices if
-//       index in slashable_attestation_2.validator_indices and
-//       state.validator_registry[index].slashed_epoch > get_current_epoch(state)].
-//     Verify that len(slashable_indices) >= 1.
-//     Run slash_validator(state, index) for each index in slashable_indices.
+//    slashed_any = False
+//    attesting_indices_1 = attestation_1.custody_bit_0_indices + attestation_1.custody_bit_1_indices
+//    attesting_indices_2 = attestation_2.custody_bit_0_indices + attestation_2.custody_bit_1_indices
+//    for index in sorted(set(attesting_indices_1).intersection(attesting_indices_2)):
+//        if is_slashable_validator(state.validator_registry[index], get_current_epoch(state)):
+//            slash_validator(state, index)
+//            slashed_any = True
+//    assert slashed_any
 func ProcessAttesterSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -343,6 +367,8 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 }
 
 // isSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
+//
+// Spec pseudocode definition:
 //   return (
 //   # Double vote
 //   (data_1 != data_2 and data_1.target_epoch == data_2.target_epoch) or
@@ -359,7 +385,10 @@ func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.Attestation
 }
 
 // ValidateIndexedAttestation verifies an attestation's custody and bls bit information.
-//  """
+//
+// Spec pseudocode definition:
+//  def validate_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> None:
+//    """
 //    Verify validity of ``indexed_attestation``.
 //    """
 //    bit_0_indices = indexed_attestation.custody_bit_0_indices
@@ -419,12 +448,6 @@ func slashableAttesterIndices(slashing *pb.AttesterSlashing) []uint64 {
 // ProcessBlockAttestations applies processing operations to a block's inner attestation
 // records. This function returns a list of pending attestations which can then be
 // appended to the BeaconState's latest attestations.
-//
-// Official spec definition for block attestation processing:
-//   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
-//
-//   For each attestation in block.body.attestations:
-//     VerifyAttestation(attestation)
 func ProcessBlockAttestations(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -441,7 +464,7 @@ func ProcessBlockAttestations(
 
 	var err error
 	for idx, attestation := range atts {
-		beaconState, err = VerifyAttestation(beaconState, attestation, verifySignatures)
+		beaconState, err = ProcessAttestation(beaconState, attestation, verifySignatures)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
@@ -450,35 +473,42 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
-// VerifyAttestation verifies an input attestation can pass through processing using the given beacon state.
-//   data = attestation.data
-//   attestation_slot = get_attestation_data_slot(state, data)
-//   assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
+// ProcessAttestation verifies an input attestation can pass through processing using the given beacon state.
 //
-//   pending_attestation = PendingAttestation(
-//     data=data,
-//     aggregation_bitfield=attestation.aggregation_bitfield,
-//     inclusion_delay=state.slot - attestation_slot,
-//     proposer_index=get_beacon_proposer_index(state),
-//   )
+// Spec pseudocode definition:
+//  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
+//    """
+//    Process ``Attestation`` operation.
+//    """
+//    data = attestation.data
+//    attestation_slot = get_attestation_data_slot(state, data)
+//    assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
 //
-//   assert data.target_epoch in (get_previous_epoch(state), get_current_epoch(state))
-//   if data.target_epoch == get_current_epoch(state):
-//     ffg_data = (state.current_justified_epoch, state.current_justified_root, get_current_epoch(state))
-//     parent_crosslink = state.current_crosslinks[data.crosslink.shard]
-//     state.current_epoch_attestations.append(pending_attestation)
-//   else:
-//     ffg_data = (state.previous_justified_epoch, state.previous_justified_root, get_previous_epoch(state))
-//     parent_crosslink = state.previous_crosslinks[data.crosslink.shard]
-//     state.previous_epoch_attestations.append(pending_attestation)
+//    pending_attestation = PendingAttestation(
+//        data=data,
+//        aggregation_bitfield=attestation.aggregation_bitfield,
+//        inclusion_delay=state.slot - attestation_slot,
+//        proposer_index=get_beacon_proposer_index(state),
+//    )
 //
-//   # Check FFG data, crosslink data, and signature
-//   assert ffg_data == (data.source_epoch, data.source_root, data.target_epoch)
-//   assert data.crosslink.epoch == min(data.target_epoch, parent_crosslink.epoch + MAX_EPOCHS_PER_CROSSLINK)
-//   assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
-//   assert data.crosslink.data_root == ZERO_HASH  # [to be removed in phase 1]
-//   validate_indexed_attestation(state, convert_to_indexed(state, attestation))
-func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) (*pb.BeaconState, error) {
+//    assert data.target_epoch in (get_previous_epoch(state), get_current_epoch(state))
+//    if data.target_epoch == get_current_epoch(state):
+//        ffg_data = (state.current_justified_epoch, state.current_justified_root, get_current_epoch(state))
+//        parent_crosslink = state.current_crosslinks[data.crosslink.shard]
+//        state.current_epoch_attestations.append(pending_attestation)
+//    else:
+//        ffg_data = (state.previous_justified_epoch, state.previous_justified_root, get_previous_epoch(state))
+//        parent_crosslink = state.previous_crosslinks[data.crosslink.shard]
+//        state.previous_epoch_attestations.append(pending_attestation)
+//
+//    # Check FFG data, crosslink data, and signature
+//    assert ffg_data == (data.source_epoch, data.source_root, data.target_epoch)
+//    assert data.crosslink.start_epoch == parent_crosslink.end_epoch
+//    assert data.crosslink.end_epoch == min(data.target_epoch, parent_crosslink.end_epoch + MAX_EPOCHS_PER_CROSSLINK)
+//    assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
+//    assert data.crosslink.data_root == ZERO_HASH  # [to be removed in phase 1]
+//    validate_indexed_attestation(state, convert_to_indexed(state, attestation))
+func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) (*pb.BeaconState, error) {
 	data := att.Data
 	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
 	if err != nil {
@@ -549,12 +579,17 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	if data.TargetEpoch != ffgTargetEpoch {
 		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.TargetEpoch)
 	}
-	minCrosslinkEpoch := parentCrosslink.Epoch + params.BeaconConfig().MaxCrosslinkEpochs
-	if data.TargetEpoch < minCrosslinkEpoch {
-		minCrosslinkEpoch = data.TargetEpoch
+	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
+	if data.TargetEpoch < endEpoch {
+		endEpoch = data.TargetEpoch
 	}
-	if data.Crosslink.Epoch != minCrosslinkEpoch {
-		return nil, fmt.Errorf("expected crosslink epoch %d, received %d", minCrosslinkEpoch, data.Crosslink.Epoch)
+	if data.Crosslink.StartEpoch != parentCrosslink.EndEpoch {
+		return nil, fmt.Errorf("expected crosslink start epoch %d, received %d",
+			parentCrosslink.EndEpoch, data.Crosslink.StartEpoch)
+	}
+	if data.Crosslink.EndEpoch != endEpoch {
+		return nil, fmt.Errorf("expected crosslink end epoch %d, received %d",
+			endEpoch, data.Crosslink.EndEpoch)
 	}
 	crosslinkParentRoot, err := ssz.TreeHash(parentCrosslink)
 	if err != nil {
@@ -567,6 +602,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			data.Crosslink.ParentRoot,
 		)
 	}
+	// To be removed in Phase 1
 	if !bytes.Equal(data.Crosslink.DataRoot, params.BeaconConfig().ZeroHash[:]) {
 		return nil, fmt.Errorf("expected data root %#x == ZERO_HASH", data.Crosslink.DataRoot)
 	}
@@ -630,50 +666,57 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 // beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
 // into the beacon chain.
 //
-// Official spec definition for processing validator deposits:
-//   Verify that len(block.body.deposits) <= MAX_DEPOSITS.
-//   For each deposit in block.body.deposits:
-//	   # Verify the Merkle branch
-//     assert verify_merkle_branch(
-//       leaf=hash_tree_root(deposit.data),
-//       proof=deposit.proof,
-//       depth=DEPOSIT_CONTRACT_TREE_DEPTH,
-//       index=deposit.index,
-//       root=state.latest_eth1_data.deposit_root,
-//     )
+// Spec pseudocode definition:
+//   def process_deposit(state: BeaconState, deposit: Deposit) -> None:
+//    """
+//    Process an Eth1 deposit, registering a validator or increasing its balance.
+//    """
+//    # Verify the Merkle branch
+//    assert verify_merkle_branch(
+//        leaf=hash_tree_root(deposit.data),
+//        proof=deposit.proof,
+//        depth=DEPOSIT_CONTRACT_TREE_DEPTH,
+//        index=state.deposit_index,
+//        root=state.latest_eth1_data.deposit_root,
+//    )
 //
-//     # Deposits must be processed in order
-//     assert deposit.index == state.deposit_index
-//     state.deposit_index += 1
-//     pubkey = deposit.data.pubkey
-//     amount = deposit.data.amount
-//     validator_pubkeys = [v.pubkey for v in state.validator_registry]
-//     if pubkey not in validator_pubkeys:
-//       # Verify the deposit signature (proof of possession)
-//       if not bls_verify(
-//         pubkey, signing_root(deposit.data), deposit.data.signature, get_domain(state, DOMAIN_DEPOSIT)
-//       ):
-//         return
-//       # Add validator and balance entries
-//       state.validator_registry.append(Validator(
-//         pubkey=pubkey,
-//         withdrawal_credentials=deposit.data.withdrawal_credentials,
-//         activation_eligibility_epoch=FAR_FUTURE_EPOCH,
-//         activation_epoch=FAR_FUTURE_EPOCH,
-//         exit_epoch=FAR_FUTURE_EPOCH,
-//         withdrawable_epoch=FAR_FUTURE_EPOCH,
-//         effective_balance=min(amount - amount % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
-//       ))
-//       state.balances.append(amount)
-//     else:
-//       # Increase balance by deposit amount
-//       index = validator_pubkeys.index(pubkey)
-//       increase_balance(state, index, amount)
+//    # Deposits must be processed in order
+//    state.deposit_index += 1
+//
+//    pubkey = deposit.data.pubkey
+//    amount = deposit.data.amount
+//    validator_pubkeys = [v.pubkey for v in state.validator_registry]
+//    if pubkey not in validator_pubkeys:
+//        # Verify the deposit signature (proof of possession).
+//        # Invalid signatures are allowed by the deposit contract,
+//        # and hence included on-chain, but must not be processed.
+//        # Note: deposits are valid across forks, hence the deposit domain is retrieved directly from `bls_domain`
+//        if not bls_verify(
+//            pubkey, signing_root(deposit.data), deposit.data.signature, bls_domain(DOMAIN_DEPOSIT)
+//        ):
+//            return
+//
+//        # Add validator and balance entries
+//        state.validator_registry.append(Validator(
+//            pubkey=pubkey,
+//            withdrawal_credentials=deposit.data.withdrawal_credentials,
+//            activation_eligibility_epoch=FAR_FUTURE_EPOCH,
+//            activation_epoch=FAR_FUTURE_EPOCH,
+//            exit_epoch=FAR_FUTURE_EPOCH,
+//            withdrawable_epoch=FAR_FUTURE_EPOCH,
+//            effective_balance=min(amount - amount % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
+//        ))
+//        state.balances.append(amount)
+//    else:
+//        # Increase balance by deposit amount
+//        index = validator_pubkeys.index(pubkey)
+//        increase_balance(state, index, amount)
 func ProcessValidatorDeposits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
+	var err error
 	deposits := block.Body.Deposits
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
 		return nil, fmt.Errorf(
@@ -682,7 +725,8 @@ func ProcessValidatorDeposits(
 			params.BeaconConfig().MaxDeposits,
 		)
 	}
-	var err error
+
+	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
@@ -690,7 +734,6 @@ func ProcessValidatorDeposits(
 		beaconState.DepositIndex++
 		pubKey := deposit.Data.Pubkey
 		amount := deposit.Data.Amount
-		valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 		index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 		if !ok {
 			if verifySignatures {
@@ -752,31 +795,31 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 // on each processed beacon block to determine which validators
 // should exit the state's validator registry.
 //
-// Official spec definition for processing exits:
-//
-//   Verify that len(block.body.voluntary_exits) <= MAX_VOLUNTARY_EXITS.
-//
-//   For each exit in block.body.voluntary_exits:
-//     validator = state.validator_registry[exit.validator_index]
-//     # Verify the validator is active
-//     assert is_active_validator(validator, get_current_epoch(state))
-//     # Verify the validator has not yet exited
-//     assert validator.exit_epoch == FAR_FUTURE_EPOCH
-//     # Exits must specify an epoch when they become valid; they are not valid before then
-//     assert get_current_epoch(state) >= exit.epoch
-//     # Verify the validator has been active long enough
-//     assert get_current_epoch(state) >= validator.activation_epoch + PERSISTENT_COMMITTEE_PERIOD
-//     # Verify signature
-//     domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
-//     assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-//     # Initiate exit
-//     initiate_validator_exit(state, exit.validator_index)
+// Spec pseudocode definition:
+//   def process_voluntary_exit(state: BeaconState, exit: VoluntaryExit) -> None:
+//    """
+//    Process ``VoluntaryExit`` operation.
+//    """
+//    validator = state.validator_registry[exit.validator_index]
+//    # Verify the validator is active
+//    assert is_active_validator(validator, get_current_epoch(state))
+//    # Verify the validator has not yet exited
+//    assert validator.exit_epoch == FAR_FUTURE_EPOCH
+//    # Exits must specify an epoch when they become valid; they are not valid before then
+//    assert get_current_epoch(state) >= exit.epoch
+//    # Verify the validator has been active long enough
+//    assert get_current_epoch(state) >= validator.activation_epoch + PERSISTENT_COMMITTEE_PERIOD
+//    # Verify signature
+//    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
+//    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
+//    # Initiate exit
+//    initiate_validator_exit(state, exit.validator_index)
 func ProcessValidatorExits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-
+	var err error
 	exits := block.Body.VoluntaryExits
 	if uint64(len(exits)) > params.BeaconConfig().MaxVoluntaryExits {
 		return nil, fmt.Errorf(
@@ -790,7 +833,10 @@ func ProcessValidatorExits(
 		if err := verifyExit(beaconState, exit, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
-		beaconState = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
+		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return beaconState, nil
 }
@@ -830,30 +876,35 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 // ProcessTransfers is one of the operations performed
 // on each processed beacon block to determine transfers between beacon chain balances.
 //
-// Official spec definition for processing transfers:
-//
-//   Verify that len(block.body.transfers) <= MAX_TRANSFERS.
-//
-//   for each transfer in block.body.transfers:
-//     assert state.balances[transfer.sender] >= max(transfer.amount, transfer.fee)
-//     assert state.slot == transfer.slot
-//     assert (
-//       state.validator_registry[transfer.sender].activation_eligibility_epoch == FAR_FUTURE_EPOCH or
-//       get_current_epoch(state) >= state.validator_registry[transfer.sender].withdrawable_epoch or
-//       transfer.amount + transfer.fee + MAX_EFFECTIVE_BALANCE <= state.balances[transfer.sender]
-//     )
-//     assert (
-//       state.validator_registry[transfer.sender].withdrawal_credentials ==
-//       int_to_bytes(BLS_WITHDRAWAL_PREFIX, length=1) + hash(transfer.pubkey)[1:]
-//     )
-//     assert bls_verify(
-//       transfer.pubkey, signing_root(transfer), transfer.signature, get_domain(state, DOMAIN_TRANSFER)
-//     )
-//     decrease_balance(state, transfer.sender, transfer.amount + transfer.fee)
-//     increase_balance(state, transfer.recipient, transfer.amount)
-//     increase_balance(state, get_beacon_proposer_index(state), transfer.fee)
-//     assert not (0 < state.balances[transfer.sender] < MIN_DEPOSIT_AMOUNT)
-//     assert not (0 < state.balances[transfer.recipient] < MIN_DEPOSIT_AMOUNT)
+// Spec pseudocode definition:
+//   def process_transfer(state: BeaconState, transfer: Transfer) -> None:
+//    """
+//    Process ``Transfer`` operation.
+//    """
+//    # Verify the amount and fee are not individually too big (for anti-overflow purposes)
+//    assert state.balances[transfer.sender] >= max(transfer.amount, transfer.fee)
+//    # A transfer is valid in only one slot
+//    assert state.slot == transfer.slot
+//    # Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE
+//    assert (
+//        state.validator_registry[transfer.sender].activation_eligibility_epoch == FAR_FUTURE_EPOCH or
+//        get_current_epoch(state) >= state.validator_registry[transfer.sender].withdrawable_epoch or
+//        transfer.amount + transfer.fee + MAX_EFFECTIVE_BALANCE <= state.balances[transfer.sender]
+//    )
+//    # Verify that the pubkey is valid
+//    assert (
+//        state.validator_registry[transfer.sender].withdrawal_credentials ==
+//        int_to_bytes(BLS_WITHDRAWAL_PREFIX, length=1) + hash(transfer.pubkey)[1:]
+//    )
+//    # Verify that the signature is valid
+//    assert bls_verify(transfer.pubkey, signing_root(transfer), transfer.signature, get_domain(state, DOMAIN_TRANSFER))
+//    # Process the transfer
+//    decrease_balance(state, transfer.sender, transfer.amount + transfer.fee)
+//    increase_balance(state, transfer.recipient, transfer.amount)
+//    increase_balance(state, get_beacon_proposer_index(state), transfer.fee)
+//    # Verify balances are not dust
+//    assert not (0 < state.balances[transfer.sender] < MIN_DEPOSIT_AMOUNT)
+//    assert not (0 < state.balances[transfer.recipient] < MIN_DEPOSIT_AMOUNT)
 func ProcessTransfers(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -939,4 +990,9 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 		// TODO(#258): Integrate BLS signature verification for transfers.
 	}
 	return nil
+}
+
+// ClearEth1DataVoteCache clears the eth1 data vote count cache.
+func ClearEth1DataVoteCache() {
+	eth1DataCache = cache.NewEth1DataVoteCache()
 }
