@@ -102,7 +102,7 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	if ok := VerifyMerkleProof(root[:], items[3], 3, proof); !ok {
 		t.Error("Merkle proof did not verify")
 	}
-	if ok := VerifyMerkleProof(root[:], []byte("btc"), 3, proof); ok {
+	if ok := VerifyMerkleProof(root[:], []byte("buzz"), 3, proof); ok {
 		t.Error("Item not in tree should fail to verify")
 	}
 }

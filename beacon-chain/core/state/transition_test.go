@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -24,40 +24,6 @@ func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		EnableCrosslinks: true,
 	})
-}
-
-func setupInitialDeposits(t *testing.T, numDeposits uint64) ([]*pb.Deposit, []*bls.SecretKey) {
-	privKeys := make([]*bls.SecretKey, numDeposits)
-	deposits := make([]*pb.Deposit, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositData := &pb.DepositData{
-			Pubkey: priv.PublicKey().Marshal(),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pb.Deposit{Data: depositData}
-		privKeys[i] = priv
-	}
-	return deposits, privKeys
-}
-
-func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
-	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	epoch := uint64(0)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
-	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
-	return epochSignature.Marshal()
 }
 
 func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
@@ -75,9 +41,8 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +50,13 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings+1; i++ {
 		slashings = append(slashings, &pb.ProposerSlashing{})
 	}
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -104,8 +75,8 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
-	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +97,13 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings+1; i++ {
 		attesterSlashings = append(attesterSlashings, &pb.AttesterSlashing{})
 	}
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -146,8 +123,8 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +171,13 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxAttestations+1; i++ {
 		blockAttestations = append(blockAttestations, &pb.Attestation{})
 	}
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -217,16 +200,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
-	for i := 0; i < len(deposits); i++ {
-		depositData := &pb.DepositData{
-			Pubkey: []byte(strconv.Itoa(i)),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pb.Deposit{Data: depositData}
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -331,16 +306,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart/8)
-	for i := 0; i < len(deposits); i++ {
-		depositData := &pb.DepositData{
-			Pubkey: []byte(strconv.Itoa(i)),
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pb.Deposit{Data: depositData}
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

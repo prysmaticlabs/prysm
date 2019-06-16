@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-
 	"github.com/golang/mock/gomock"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -22,23 +20,8 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
-
-func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
-	genesisTime := time.Unix(0, 0).Unix()
-	deposits := make([]*pbp2p.Deposit, validators)
-	for i := 0; i < len(deposits); i++ {
-		var pubKey [96]byte
-		copy(pubKey[:], []byte(strconv.Itoa(i)))
-		depositData := &pbp2p.DepositData{
-			Pubkey: pubKey[:],
-			Amount: params.BeaconConfig().MaxDepositAmount,
-		}
-
-		deposits[i] = &pbp2p.Deposit{Data: depositData}
-	}
-	return state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
-}
 
 func TestValidatorIndex_OK(t *testing.T) {
 	db := internal.SetupDB(t)
@@ -107,7 +90,9 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
 	ctx := context.Background()
 	defer internal.TeardownDB(t, db)
-	beaconState, err := genesisState(8)
+
+	deposits, _ := testutil.SetupInitialDeposits(t, 8, false)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +127,8 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
+	state, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -174,7 +160,9 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 	depChainStart := params.BeaconConfig().DepositsForChainStart / 16
-	state, err := genesisState(depChainStart)
+
+	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart, false)
+	state, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -184,12 +172,10 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	var wg sync.WaitGroup
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
-	for i := 0; i < numOfValidators; i++ {
-		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		copy(pubKeyBuf[:], []byte(strconv.Itoa(i)))
+	for i := 0; i < len(deposits); i++ {
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
+			errs <- db.SaveValidatorIndexBatch(deposits[index].Data.Pubkey, index)
 			wg.Done()
 		}(i)
 	}
@@ -205,12 +191,9 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 		beaconDB: db,
 	}
 
-	pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	copy(pubKeyBuf[:], []byte(strconv.FormatUint(0, 10)))
-
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
-		PublicKeys: [][]byte{pubKeyBuf},
+		PublicKeys: [][]byte{deposits[0].Data.Pubkey},
 		EpochStart: 0,
 	}
 	res, err := vs.CommitteeAssignment(context.Background(), req)
@@ -228,10 +211,8 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	// Test the last validator in registry.
 	lastValidatorIndex := depChainStart - 1
-	pubKeyBuf = make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	copy(pubKeyBuf[:], []byte(strconv.FormatUint(lastValidatorIndex, 10)))
 	req = &pb.CommitteeAssignmentsRequest{
-		PublicKeys: [][]byte{pubKeyBuf},
+		PublicKeys: [][]byte{deposits[lastValidatorIndex].Data.Pubkey},
 		EpochStart: 0,
 	}
 	res, err = vs.CommitteeAssignment(context.Background(), req)
@@ -258,7 +239,8 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 	depChainStart := params.BeaconConfig().DepositsForChainStart / 16
-	state, err := genesisState(depChainStart)
+	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart, false)
+	state, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -269,11 +251,9 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {
-		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		copy(pubKeyBuf[:], []byte(strconv.Itoa(i)))
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
+			errs <- db.SaveValidatorIndexBatch(deposits[index].Data.Pubkey, index)
 			wg.Done()
 		}(i)
 	}
@@ -289,14 +269,12 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 		beaconDB: db,
 	}
 
-	pubKeyBuf0 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	copy(pubKeyBuf0[:], []byte(strconv.Itoa(0)))
-	pubKeyBuf1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	copy(pubKeyBuf1[:], []byte(strconv.Itoa(1)))
+	pubkey0 := deposits[0].Data.Pubkey
+	pubkey1 := deposits[1].Data.Pubkey
 
 	// Test the first validator in registry.
 	req := &pb.CommitteeAssignmentsRequest{
-		PublicKeys: [][]byte{pubKeyBuf0, pubKeyBuf1},
+		PublicKeys: [][]byte{pubkey0, pubkey1},
 		EpochStart: 0,
 	}
 	res, err := vs.CommitteeAssignment(context.Background(), req)
