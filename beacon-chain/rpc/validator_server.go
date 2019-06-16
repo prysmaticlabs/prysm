@@ -142,7 +142,6 @@ func (vs *ValidatorServer) CommitteeAssignment(
 
 	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
 	activeKeys := vs.filterActivePublicKeys(beaconState, req.PublicKeys)
-	log.Info(activeKeys)
 	for _, pk := range activeKeys {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()

@@ -201,7 +201,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 
 	req := &pb.CommitteeAssignmentsRequest{
-		EpochStart: slot,
+		EpochStart: slot / params.BeaconConfig().SlotsPerEpoch,
 		PublicKeys: v.pubkeys,
 	}
 
@@ -257,6 +257,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
 	rolesAt := make(map[string]pb.ValidatorRole)
+	log.Infof("Assingments: %v", v.assignments.Assignment)
 	for _, assignment := range v.assignments.Assignment {
 		var role pb.ValidatorRole
 		if assignment == nil {
