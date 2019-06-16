@@ -84,8 +84,6 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 
-	registerDBMetrics(boltDB)
-
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
 	db.blocks = make(map[[32]byte]*pb.BeaconBlock)
 
