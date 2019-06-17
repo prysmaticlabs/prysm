@@ -1024,7 +1024,7 @@ go_repository(
 
 go_repository(
     name = "org_uber_go_automaxprocs",
-    commit = "823363ffcd16c8f3ebaa3a067550d97c70f52194",
+    commit = "946a8391268aea0a60a86403988ff3ab4b604a83",  # v1.2.0
     importpath = "go.uber.org/automaxprocs",
 )
 
