@@ -1023,6 +1023,12 @@ go_repository(
 )
 
 go_repository(
+    name = "org_uber_go_automaxprocs",
+    commit = "823363ffcd16c8f3ebaa3a067550d97c70f52194",
+    importpath = "go.uber.org/automaxprocs",
+)
+
+go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
     commit = "8f222f4b5a872d9af86f74f2ec0982c7356adce6",

@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
+	_ "go.uber.org/automaxprocs"
 )
 
 var (
@@ -74,7 +75,7 @@ func main() {
 
 	http.HandleFunc("/metrics", MetricsHTTP)
 	http.HandleFunc("/reload", ReloadHTTP)
-	panic(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", *port), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", *port), nil))
 }
 
 // Watching address wrapper
