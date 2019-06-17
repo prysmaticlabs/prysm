@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"reflect"
-	"strconv"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -61,29 +62,14 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	genesisTime := uint64(99999)
-	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
-	var deposits []*pb.Deposit
-	for i := 0; i < depositsForChainStart; i++ {
-		depositData := &pb.DepositData{
-			Pubkey:                []byte(strconv.Itoa(i)),
-			Signature:             []byte{'B'},
-			WithdrawalCredentials: []byte{'C'},
-		}
-
-		deposits = append(deposits, &pb.Deposit{
-			Proof: [][]byte{{1}, {2}, {3}},
-			Index: 0,
-			Data:  depositData,
-		})
-	}
+	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart), false)
+	eth1Data := testutil.GenerateEth1Data(t, deposits)
 
 	newState, err := state.GenesisBeaconState(
 		deposits,
 		genesisTime,
-		&pb.Eth1Data{
-			DepositRoot: processedPowReceiptRoot,
-			BlockRoot:   []byte{},
-		})
+		eth1Data,
+	)
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
 	}
@@ -168,7 +154,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		)
 	}
 	// deposit root checks.
-	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, processedPowReceiptRoot) {
+	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, eth1Data.DepositRoot) {
 		t.Error("LatestEth1Data DepositRoot was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.Eth1DataVotes, []*pb.Eth1Data{}) {

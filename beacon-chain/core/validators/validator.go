@@ -5,13 +5,11 @@
 package validators
 
 import (
-	"bytes"
 	"fmt"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -30,59 +28,6 @@ type validatorStore struct {
 var VStore = validatorStore{
 	activatedValidators: make(map[uint64][]uint64),
 	exitedValidators:    make(map[uint64][]uint64),
-}
-
-// ProcessDeposit mutates a corresponding index in the beacon state for
-// a validator depositing ETH into the beacon chain. Specifically, this function
-// adds a validator balance or tops up an existing validator's balance
-// by some deposit amount. This function returns a mutated beacon state and
-// the validator index corresponding to the validator in the processed
-// deposit.
-func ProcessDeposit(
-	state *pb.BeaconState,
-	validatorIdxMap map[[32]byte]int,
-	pubkey []byte,
-	amount uint64,
-	_ /*proofOfPossession*/ []byte,
-	withdrawalCredentials []byte,
-) (*pb.BeaconState, error) {
-	// TODO(#258): Validate proof of possession using BLS.
-	var publicKeyExists bool
-	var existingValidatorIdx int
-
-	existingValidatorIdx, publicKeyExists = validatorIdxMap[bytesutil.ToBytes32(pubkey)]
-	if !publicKeyExists {
-		// If public key does not exist in the registry, we add a new validator
-		// to the beacon state.
-		newValidator := &pb.Validator{
-			Pubkey:                pubkey,
-			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
-			Slashed:               false,
-			WithdrawalCredentials: withdrawalCredentials,
-			EffectiveBalance:      amount,
-		}
-		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
-		state.Balances = append(state.Balances, amount)
-	} else {
-		if !bytes.Equal(
-			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentials,
-			withdrawalCredentials,
-		) {
-			return state, fmt.Errorf(
-				"expected withdrawal credentials to match, received %#x == %#x",
-				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentials,
-				withdrawalCredentials,
-			)
-		}
-		newBalance := state.Balances[existingValidatorIdx] + amount
-		state.Balances[existingValidatorIdx] = newBalance
-		state.ValidatorRegistry[existingValidatorIdx].EffectiveBalance += amount
-	}
-	state.DepositIndex++
-
-	return state, nil
 }
 
 // ActivateValidator takes in validator index and updates

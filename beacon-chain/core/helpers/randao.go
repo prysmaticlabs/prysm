@@ -1,10 +1,12 @@
 package helpers
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -84,4 +86,19 @@ func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
 //    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
 	return state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength]
+}
+
+// CreateRandaoReveal generates a epoch signature using the beacon proposer priv key.
+func CreateRandaoReveal(beaconState *pb.BeaconState, epoch uint64, privKeys []*bls.SecretKey) ([]byte, error) {
+	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
+	proposerIdx, err := BeaconProposerIndex(beaconState)
+	if err != nil {
+		return []byte{}, fmt.Errorf("could not get beacon proposer index: %v", err)
+	}
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, epoch)
+	domain := DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
+	// We make the previous validator's index sign the message instead of the proposer.
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	return epochSignature.Marshal(), nil
 }
