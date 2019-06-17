@@ -390,7 +390,7 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 		keys:            keyMap,
 		validatorClient: client,
 		assignments: &pb.AssignmentResponse{
-			ValidatorAssignment: []*pb.AssignmentResponse_Assignment{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Committee: []uint64{},
 					Slot:      10,
@@ -418,7 +418,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		keys:            keyMap,
 		validatorClient: client,
 		assignments: &pb.AssignmentResponse{
-			ValidatorAssignment: []*pb.AssignmentResponse_Assignment{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Shard: 1,
 				},
@@ -448,7 +448,7 @@ func TestUpdateAssignments_OK(t *testing.T) {
 
 	slot := params.BeaconConfig().SlotsPerEpoch
 	resp := &pb.AssignmentResponse{
-		ValidatorAssignment: []*pb.AssignmentResponse_Assignment{
+		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 			{
 				Slot:       params.BeaconConfig().SlotsPerEpoch,
 				Shard:      100,
@@ -486,7 +486,7 @@ func TestRolesAt_OK(t *testing.T) {
 
 	v := validator{
 		assignments: &pb.AssignmentResponse{
-			ValidatorAssignment: []*pb.AssignmentResponse_Assignment{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Shard:      1,
 					Slot:       1,

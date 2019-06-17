@@ -138,7 +138,7 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 	}
 
 	validatorIndexMap := stateutils.ValidatorIndexMap(s)
-	var assignments []*pb.AssignmentResponse_Assignment
+	var assignments []*pb.AssignmentResponse_ValidatorAssignment
 
 	for _, pk := range req.PublicKeys {
 		if ctx.Err() != nil {
@@ -146,7 +146,7 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 		}
 		idx, ok := validatorIndexMap[bytesutil.ToBytes32(pk)]
 		// Default assignment for every validator
-		assignment := &pb.AssignmentResponse_Assignment{
+		assignment := &pb.AssignmentResponse_ValidatorAssignment{
 			PublicKey: pk,
 			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
 		}
@@ -175,7 +175,7 @@ func (vs *ValidatorServer) assignment(
 	pubkey []byte,
 	beaconState *pbp2p.BeaconState,
 	epochStart uint64,
-) (*pb.AssignmentResponse_Assignment, error) {
+) (*pb.AssignmentResponse_ValidatorAssignment, error) {
 
 	if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf(
@@ -196,7 +196,7 @@ func (vs *ValidatorServer) assignment(
 		return nil, err
 	}
 	status := vs.lookupValidatorStatus(idx, beaconState)
-	return &pb.AssignmentResponse_Assignment{
+	return &pb.AssignmentResponse_ValidatorAssignment{
 		Committee:  committee,
 		Shard:      shard,
 		Slot:       slot,

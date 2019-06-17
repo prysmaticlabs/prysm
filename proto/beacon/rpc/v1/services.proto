@@ -150,8 +150,8 @@ message AssignmentRequest {
 }
 
 message AssignmentResponse {
-  repeated Assignment validator_assignment = 1;
-  message Assignment {
+  repeated ValidatorAssignment validator_assignment = 1;
+  message ValidatorAssignment {
     repeated uint64 committee = 1;
     uint64 shard = 2;
     uint64 slot = 3;
