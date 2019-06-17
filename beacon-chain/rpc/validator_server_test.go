@@ -1,11 +1,13 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math"
 	"math/big"
+	"os"
+	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -13,9 +15,10 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -99,7 +102,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	if err := db.SaveState(context.Background(), beaconState); err != nil {
 		t.Fatal(err)
 	}
-	block := b.NewGenesisBlock([]byte{})
+	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(block); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
@@ -109,7 +112,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	req := &pb.CommitteeAssignmentsRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{{1}},
 		EpochStart: 0,
 	}
@@ -123,7 +126,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
-	genesis := b.NewGenesisBlock([]byte{})
+	genesis := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -138,7 +141,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	}
 
 	pubKey := make([]byte, 96)
-	req := &pb.CommitteeAssignmentsRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{pubKey},
 		EpochStart: 0,
 	}
@@ -155,7 +158,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	genesis := b.NewGenesisBlock([]byte{})
+	genesis := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -192,7 +195,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	// Test the first validator in registry.
-	req := &pb.CommitteeAssignmentsRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{deposits[0].Data.Pubkey},
 		EpochStart: 0,
 	}
@@ -200,18 +203,18 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Assignment[0].Shard >= params.BeaconConfig().ShardCount {
+	if res.ValidatorAssignment[0].Shard >= params.BeaconConfig().ShardCount {
 		t.Errorf("Assigned shard %d can't be higher than %d",
-			res.Assignment[0].Shard, params.BeaconConfig().ShardCount)
+			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.Assignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Assignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// Test the last validator in registry.
 	lastValidatorIndex := depChainStart - 1
-	req = &pb.CommitteeAssignmentsRequest{
+	req = &pb.AssignmentRequest{
 		PublicKeys: [][]byte{deposits[lastValidatorIndex].Data.Pubkey},
 		EpochStart: 0,
 	}
@@ -219,13 +222,13 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Assignment[0].Shard >= params.BeaconConfig().ShardCount {
+	if res.ValidatorAssignment[0].Shard >= params.BeaconConfig().ShardCount {
 		t.Errorf("Assigned shard %d can't be higher than %d",
-			res.Assignment[0].Shard, params.BeaconConfig().ShardCount)
+			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.Assignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Assignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 }
 
@@ -234,7 +237,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	genesis := b.NewGenesisBlock([]byte{})
+	genesis := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -273,7 +276,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	pubkey1 := deposits[1].Data.Pubkey
 
 	// Test the first validator in registry.
-	req := &pb.CommitteeAssignmentsRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{pubkey0, pubkey1},
 		EpochStart: 0,
 	}
@@ -282,8 +285,8 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
 
-	if len(res.Assignment) != 2 {
-		t.Fatalf("expected 2 assignments but got %d", len(res.Assignment))
+	if len(res.ValidatorAssignment) != 2 {
+		t.Fatalf("expected 2 assignments but got %d", len(res.ValidatorAssignment))
 	}
 }
 
@@ -887,87 +890,89 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	}
 }
 
-func TestFilterActivePublicKeys(t *testing.T) {
-	currentEpoch := uint64(15)
-	beaconState := &pbp2p.BeaconState{
-		Slot: helpers.StartSlot(currentEpoch),
-		ValidatorRegistry: []*pbp2p.Validator{
-			// Active validiators in our request
-			{
-				Pubkey:          []byte("pk1"),
-				ActivationEpoch: currentEpoch - 1,
-				ExitEpoch:       math.MaxUint64,
-			},
-			// Inactive validators in our request
-			{
-				Pubkey:          []byte("pk2"),
-				ActivationEpoch: currentEpoch - 2,
-				ExitEpoch:       currentEpoch - 1,
-			},
-			// Other active validators in the registry
-			{
-				Pubkey:          []byte("pk3"),
-				ActivationEpoch: 0,
-				ExitEpoch:       math.MaxUint64,
-			},
-		},
+func BenchmarkAssignment(b *testing.B) {
+	b.StopTimer()
+	randPath, _ := rand.Int(rand.Reader, big.NewInt(1000000))
+	path := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	db, _ := db.NewDB(path)
+	defer db.Close()
+	os.RemoveAll(db.DatabasePath)
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		b.Fatalf("Could not save genesis block: %v", err)
+	}
+	validatorCount := params.BeaconConfig().DepositsForChainStart * 4
+	state, err := genesisState(validatorCount)
+	if err != nil {
+		b.Fatalf("Could not setup genesis state: %v", err)
+	}
+	if err := db.UpdateChainHead(context.Background(), genesis, state); err != nil {
+		b.Fatalf("Could not save genesis state: %v", err)
+	}
+	var wg sync.WaitGroup
+	errs := make(chan error, validatorCount)
+	for i := 0; i < int(validatorCount); i++ {
+		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		copy(pubKeyBuf[:], []byte(strconv.Itoa(i)))
+		wg.Add(1)
+		go func(index int) {
+			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 
-	vs := &ValidatorServer{}
-
-	activeKeys := vs.filterActivePublicKeys(
-		beaconState,
-		[][]byte{
-			[]byte("pk1"),
-			[]byte("pk2"),
-		},
-	)
-
-	if len(activeKeys) != 1 || !bytes.Equal(activeKeys[0], []byte("pk1")) {
-		t.Error("Wrong active keys returned")
-	}
-}
-
-func TestAddNonActivePublicKeysAssignmentStatus(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	currentEpoch := uint64(15)
-	beaconState := &pbp2p.BeaconState{
-		Slot: helpers.StartSlot(currentEpoch),
-		ValidatorRegistry: []*pbp2p.Validator{
-			// Active validiators in our request
-			{
-				Pubkey:          []byte("pk1"),
-				ActivationEpoch: currentEpoch - 1,
-				ExitEpoch:       math.MaxUint64,
-			},
-			// Inactive validators in our request
-			{
-				Pubkey:          []byte("pk2"),
-				ActivationEpoch: currentEpoch - 2,
-				ExitEpoch:       currentEpoch - 1,
-			},
-			// Other active validators in the registry
-			{
-				Pubkey:          []byte("pk3"),
-				ActivationEpoch: 0,
-				ExitEpoch:       math.MaxUint64,
-			},
-		},
-	}
-	if err := db.SaveState(context.Background(), beaconState); err != nil {
-		t.Fatal(err)
-	}
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
-	var assignments []*pb.CommitteeAssignmentResponse_CommitteeAssignment
-	assignments = vs.addNonActivePublicKeysAssignmentStatus(beaconState,
-		[][]byte{
-			[]byte("pk1"),
-			[]byte("pk4"),
-		}, assignments)
-	if len(assignments) != 1 || assignments[0].Status != pb.ValidatorStatus_UNKNOWN_STATUS || !bytes.Equal(assignments[0].PublicKey, []byte("pk4")) {
-		t.Errorf("Unknown public key status wasn't returned: %v", assignments)
+
+	// Set up request for 100 public keys at a time
+	pubKeys := make([][]byte, 100)
+	for i := 0; i < len(pubKeys); i++ {
+		buf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		copy(buf, []byte(strconv.Itoa(i)))
+		pubKeys[i] = buf
 	}
+
+	req := &pb.AssignmentRequest{
+		PublicKeys: pubKeys,
+		EpochStart: 0,
+	}
+
+	// Precache the shuffled indices
+	for i := uint64(0); i < validatorCount/params.BeaconConfig().TargetCommitteeSize; i++ {
+		if _, err := helpers.CrosslinkCommitteeAtEpoch(state, 0, i); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		if _, err := vs.CommitteeAssignment(context.Background(), req); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
+	genesisTime := time.Unix(0, 0).Unix()
+	deposits := make([]*pbp2p.Deposit, validators)
+	for i := 0; i < len(deposits); i++ {
+		var pubKey [96]byte
+		copy(pubKey[:], []byte(strconv.Itoa(i)))
+		depositData := &pbp2p.DepositData{
+			Pubkey: pubKey[:],
+			Amount: params.BeaconConfig().MaxDepositAmount,
+		}
+
+		deposits[i] = &pbp2p.Deposit{Data: depositData}
+	}
+	return state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 }

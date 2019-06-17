@@ -6,11 +6,10 @@ package internal
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	metadata "google.golang.org/grpc/metadata"
+	reflect "reflect"
 )
 
 // MockValidatorServiceServer is a mock of ValidatorServiceServer interface
@@ -37,10 +36,10 @@ func (m *MockValidatorServiceServer) EXPECT() *MockValidatorServiceServerMockRec
 }
 
 // CommitteeAssignment mocks base method
-func (m *MockValidatorServiceServer) CommitteeAssignment(arg0 context.Context, arg1 *v1.CommitteeAssignmentsRequest) (*v1.CommitteeAssignmentResponse, error) {
+func (m *MockValidatorServiceServer) CommitteeAssignment(arg0 context.Context, arg1 *v1.AssignmentRequest) (*v1.AssignmentResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CommitteeAssignment", arg0, arg1)
-	ret0, _ := ret[0].(*v1.CommitteeAssignmentResponse)
+	ret0, _ := ret[0].(*v1.AssignmentResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
