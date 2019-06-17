@@ -167,7 +167,7 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 	}
 
 	return &pb.AssignmentResponse{
-		Assignment: assignments,
+		ValidatorAssignment: assignments,
 	}, nil
 }
 

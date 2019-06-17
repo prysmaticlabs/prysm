@@ -41,7 +41,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		log.Errorf("No assignments for validators")
 		return
 	}
-	for _, assign := range v.assignments.Assignment {
+	for _, assign := range v.assignments.ValidatorAssignment {
 		if bytes.Equal(pubKey, assign.PublicKey) {
 			assignment = assign
 			break

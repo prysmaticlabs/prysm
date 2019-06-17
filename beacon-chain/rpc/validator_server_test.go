@@ -203,13 +203,13 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Assignment[0].Shard >= params.BeaconConfig().ShardCount {
+	if res.ValidatorAssignment[0].Shard >= params.BeaconConfig().ShardCount {
 		t.Errorf("Assigned shard %d can't be higher than %d",
-			res.Assignment[0].Shard, params.BeaconConfig().ShardCount)
+			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.Assignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Assignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// Test the last validator in registry.
@@ -222,13 +222,13 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Assignment[0].Shard >= params.BeaconConfig().ShardCount {
+	if res.ValidatorAssignment[0].Shard >= params.BeaconConfig().ShardCount {
 		t.Errorf("Assigned shard %d can't be higher than %d",
-			res.Assignment[0].Shard, params.BeaconConfig().ShardCount)
+			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.Assignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Assignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 }
 
@@ -285,8 +285,8 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
 
-	if len(res.Assignment) != 2 {
-		t.Fatalf("expected 2 assignments but got %d", len(res.Assignment))
+	if len(res.ValidatorAssignment) != 2 {
+		t.Fatalf("expected 2 assignments but got %d", len(res.ValidatorAssignment))
 	}
 }
 
