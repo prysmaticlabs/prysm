@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["sanity_slots_minimal.yaml.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/state/spectest",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "small",
+    srcs = ["slot_processing_spec_test.go"],
+    embed = [":go_default_library"],
+    tags = [
+        "manual",
+        "spectest",
+    ],
+    deps = [
+        "//beacon-chain/core/state:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_gogo_protobuf//jsonpb:go_default_library",
+    ],
+)
