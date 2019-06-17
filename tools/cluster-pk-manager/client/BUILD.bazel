@@ -13,6 +13,7 @@ go_library(
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
 
@@ -25,7 +26,13 @@ go_binary(
 go_image(
     name = "image",
     srcs = ["main.go"],
+    goarch = "amd64",
+    goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/cluster-pk-manager/client",
+    pure = "on",
+    race = "off",
+    static = "on",
+    tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
         "//proto/cluster:go_default_library",
@@ -33,13 +40,8 @@ go_image(
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
     ],
-    pure = "on",
-    static = "on",
-    tags = ["manual"],
-    goarch = "amd64",
-    goos = "linux",
-    race = "off",
 )
 
 container_push(

@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	_ "go.uber.org/automaxprocs"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

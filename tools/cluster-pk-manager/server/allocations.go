@@ -32,6 +32,6 @@ func (s *server) serveAllocationsHTTPPage() {
 	})
 
 	srv := &http.Server{Addr: ":8080", Handler: mux}
-	go srv.ListenAndServe()
+	go log.Fatal(srv.ListenAndServe())
 	log.Info("Serving allocations page at :8080/allocations")
 }

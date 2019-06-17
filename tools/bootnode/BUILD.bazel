@@ -18,6 +18,7 @@ go_library(
         "@com_github_libp2p_go_libp2p_kad_dht//opts:go_default_library",
         "@com_github_libp2p_go_libp2p_protocol//:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
 
@@ -43,6 +44,7 @@ go_image(
         "@com_github_libp2p_go_libp2p_kad_dht//opts:go_default_library",
         "@com_github_libp2p_go_libp2p_protocol//:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
 
