@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
-
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
