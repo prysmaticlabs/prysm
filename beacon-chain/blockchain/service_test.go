@@ -2,8 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/binary"
 	"errors"
 	"io/ioutil"
 	"math/big"
@@ -16,13 +14,11 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -155,29 +151,6 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
 
 var _ = p2p.Broadcaster(&mockBroadcaster{})
 
-func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
-	privKeys := make([]*bls.SecretKey, numDeposits)
-	deposits := make([]*pb.Deposit, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		balance := params.BeaconConfig().MaxDepositAmount
-
-		depositData := &pb.DepositData{
-			Pubkey: priv.PublicKey().Marshal(),
-			Amount: balance,
-		}
-		deposits[i] = &pb.Deposit{
-			Data:  depositData,
-			Index: uint64(i),
-		}
-		privKeys[i] = priv
-	}
-	return deposits, privKeys
-}
-
 func createPreChainStartDeposit(pk []byte, index uint64) *pb.Deposit {
 	balance := params.BeaconConfig().MaxDepositAmount
 	depositData := &pb.DepositData{Pubkey: pk, Amount: balance}
@@ -186,21 +159,6 @@ func createPreChainStartDeposit(pk []byte, index uint64) *pb.Deposit {
 		Index: index,
 		Data:  depositData,
 	}
-}
-
-func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
-	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	epoch := helpers.SlotToEpoch(beaconState.Slot)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
-	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
-	return epochSignature.Marshal()
 }
 
 func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *pb.BeaconBlock) {
@@ -308,8 +266,8 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	setupGenesisBlock(t, chainService)

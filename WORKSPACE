@@ -957,7 +957,7 @@ go_repository(
 
 go_repository(
     name = "com_github_phoreproject_bls",
-    commit = "0b6cefc7f7eee050e3ac6d66d66ae8e469a4fbf1",
+    commit = "b495094dc72c7043b549f511a798391201624b14",
     importpath = "github.com/phoreproject/bls",
 )
 
@@ -1019,6 +1019,12 @@ go_repository(
     name = "com_github_ghodss_yaml",
     commit = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",  # v1.0.0
     importpath = "github.com/ghodss/yaml",
+)
+
+go_repository(
+    name = "org_uber_go_automaxprocs",
+    commit = "823363ffcd16c8f3ebaa3a067550d97c70f52194",
+    importpath = "go.uber.org/automaxprocs",
 )
 
 go_repository(

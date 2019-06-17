@@ -34,12 +34,8 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 
 	ctx := context.Background()
-	deposits, _ := setupInitialDeposits(t, 100)
-	eth1Data := &pb.Eth1Data{
-		DepositRoot: []byte{},
-		BlockRoot:   []byte{},
-	}
-	justifiedState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	justifiedState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}

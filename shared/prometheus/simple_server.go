@@ -13,8 +13,5 @@ func RunSimpleServerOrDie(addr string) {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	svr := &http.Server{Addr: addr, Handler: mux}
-
-	if err := svr.ListenAndServe(); err != nil {
-		panic(err)
-	}
+	log.Fatal(svr.ListenAndServe())
 }

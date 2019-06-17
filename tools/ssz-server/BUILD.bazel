@@ -10,6 +10,7 @@ go_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
 
@@ -22,18 +23,19 @@ go_binary(
 go_image(
     name = "image",
     srcs = ["main.go"],
-    importpath = "github.com/prysmaticlabs/prysm/tools/ssz-server",
-    visibility = ["//visibility:private"],
-    static = "on",
-    tags = ["manual"],
     goarch = "amd64",
     goos = "linux",
+    importpath = "github.com/prysmaticlabs/prysm/tools/ssz-server",
+    pure = "on",
+    race = "off",
+    static = "on",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
     ],
-    race = "off",
-    pure = "on",
 )
 
 container_push(

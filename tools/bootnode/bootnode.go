@@ -24,6 +24,7 @@ import (
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	_ "go.uber.org/automaxprocs"
 )
 
 var (

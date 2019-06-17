@@ -4,11 +4,12 @@
 package state
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -19,7 +20,7 @@ import (
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
 //
 // Spec pseudocode definition:
-//  def get_genesis_beacon_state(genesis_validator_deposits: List[Deposit],
+//  def get_genesis_beacon_state(deposits: List[Deposit],
 //                             genesis_time: int,
 //                             genesis_eth1_data: Eth1Data) -> BeaconState:
 //    """
@@ -42,25 +43,15 @@ import (
 //        state.latest_active_index_roots[index] = genesis_active_index_root
 //
 //    return state
-func GenesisBeaconState(
-	genesisValidatorDeposits []*pb.Deposit,
-	genesisTime uint64,
-	eth1Data *pb.Eth1Data,
-) (*pb.BeaconState, error) {
-	latestRandaoMixes := make(
-		[][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength,
-	)
+func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
+	latestRandaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 
-	latestActiveIndexRoots := make(
-		[][]byte,
-		params.BeaconConfig().LatestActiveIndexRootsLength,
-	)
+	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(latestActiveIndexRoots); i++ {
 		latestActiveIndexRoots[i] = zeroHash
 	}
@@ -77,23 +68,11 @@ func GenesisBeaconState(
 		latestBlockRoots[i] = zeroHash
 	}
 
-	validatorRegistry := make([]*pb.Validator, len(genesisValidatorDeposits))
-	for i, d := range genesisValidatorDeposits {
-
-		validator := &pb.Validator{
-			Pubkey:                d.Data.Pubkey,
-			WithdrawalCredentials: d.Data.WithdrawalCredentials,
-			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			Slashed:               false,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
-		}
-
-		validatorRegistry[i] = validator
-	}
-
-	latestBalances := make([]uint64, len(genesisValidatorDeposits))
 	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
+
+	if eth1Data == nil {
+		eth1Data = &pb.Eth1Data{}
+	}
 
 	state := &pb.BeaconState{
 		// Misc fields.
@@ -107,8 +86,8 @@ func GenesisBeaconState(
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry: validatorRegistry,
-		Balances:          latestBalances,
+		ValidatorRegistry: []*pb.Validator{},
+		Balances:          []uint64{},
 
 		// Randomness and committees.
 		LatestRandaoMixes: latestRandaoMixes,
@@ -139,15 +118,15 @@ func GenesisBeaconState(
 
 	// Process initial deposits.
 	var err error
-	validatorMap := stateutils.ValidatorIndexMap(state)
-	for _, deposit := range genesisValidatorDeposits {
-		state, err = v.ProcessDeposit(
+	validatorMap := make(map[[32]byte]int)
+	for _, deposit := range deposits {
+		eth1DataExists := !bytes.Equal(eth1Data.DepositRoot, []byte{})
+		state, err = b.ProcessDeposit(
 			state,
+			deposit,
 			validatorMap,
-			deposit.Data.Pubkey,
-			deposit.Data.Amount,
-			deposit.Data.Signature,
-			deposit.Data.WithdrawalCredentials,
+			false,
+			eth1DataExists,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)

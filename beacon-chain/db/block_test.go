@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func init() {
@@ -246,8 +247,8 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
+	err := db.InitializeState(context.Background(), genesisTime, deposits, nil)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -268,8 +269,8 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
+	err := db.InitializeState(context.Background(), genesisTime, deposits, nil)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -335,8 +336,8 @@ func TestChainProgress_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	err := db.InitializeState(context.Background(), genesisTime, deposits, nil)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
