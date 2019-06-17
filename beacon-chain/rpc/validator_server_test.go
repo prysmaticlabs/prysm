@@ -891,6 +891,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 }
 
 func BenchmarkAssignment(b *testing.B) {
+	b.StopTimer()
 	randPath, _ := rand.Int(rand.Reader, big.NewInt(1000000))
 	path := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
 	db, _ := db.NewDB(path)
