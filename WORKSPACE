@@ -294,7 +294,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_mafmt",
-    commit = "158fbc0fcc20b3d8a251df520466e16f66eb3651",  # v1.2.8
+    commit = "7aa7fad2ede4e7157818e3e7af5061f866a9ae23",  # v1.2.8
     importpath = "github.com/whyrusleeping/mafmt",
 )
 
@@ -1067,7 +1067,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_yamux",
-    commit = "663972181d409e7263040f0b668462f87c85e1bd",
+    commit = "663972181d409e7263040f0b668462f87c85e1bd",  # v1.2.3
     importpath = "github.com/libp2p/go-yamux",
 )
 
