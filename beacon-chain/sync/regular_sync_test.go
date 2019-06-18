@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -207,7 +208,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
+	parentRoot, err := blockutil.BlockSigningRoot(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
@@ -285,7 +286,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
+	parentRoot, err := blockutil.BlockSigningRoot(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
@@ -728,7 +729,7 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	//    /- B3
 	//	 B1  - B2 - B4
 	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
-	root1, err := hashutil.HashBeaconBlock(block1)
+	root1, err := blockutil.BlockSigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -736,7 +737,7 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block2 := &pb.BeaconBlock{Slot: 2, ParentRoot: root1[:]}
-	root2, _ := hashutil.HashBeaconBlock(block2)
+	root2, _ := blockutil.BlockSigningRoot(block2)
 	if err = ss.db.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
@@ -745,7 +746,7 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block4 := &pb.BeaconBlock{Slot: 4, ParentRoot: root2[:]}
-	root4, _ := hashutil.HashBeaconBlock(block4)
+	root4, _ := blockutil.BlockSigningRoot(block4)
 	if err = ss.db.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
@@ -766,7 +767,7 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 	// Construct the following chain:
 	//	 B1 (finalized and head)
 	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
-	root1, err := hashutil.HashBeaconBlock(block1)
+	root1, err := blockutil.BlockSigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -798,7 +799,7 @@ func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
 	ss := setupService(db)
 
 	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'B'}}
-	root1, err := hashutil.HashBeaconBlock(block1)
+	root1, err := blockutil.BlockSigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}

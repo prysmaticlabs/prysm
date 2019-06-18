@@ -56,7 +56,7 @@ func HeaderFromBlock(block *pb.BeaconBlock) (*pb.BeaconBlockHeader, error) {
 		Signature:  block.Signature,
 		StateRoot:  block.StateRoot,
 	}
-	root, err := ssz.TreeHash(block.Body)
+	root, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block body %v", err)
 	}
