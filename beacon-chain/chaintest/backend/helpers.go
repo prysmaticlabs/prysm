@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -126,9 +127,9 @@ func generateSimulatedBlock(
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("could not tree hash new block: %v", err)
+		return nil, [32]byte{}, err
 	}
 	return block, blockRoot, nil
 }

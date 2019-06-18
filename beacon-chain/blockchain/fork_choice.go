@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -67,7 +67,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 			}
 		}
 
-		newJustifiedRoot, err := hashutil.HashBeaconBlock(newJustifiedBlock)
+		newJustifiedRoot, err := blockutil.BlockSigningRoot(newJustifiedBlock)
 		if err != nil {
 			return err
 		}
@@ -109,7 +109,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 			}
 		}
 
-		newFinalizedRoot, err := hashutil.HashBeaconBlock(newFinalizedBlock)
+		newFinalizedRoot, err := blockutil.BlockSigningRoot(newFinalizedBlock)
 		if err != nil {
 			return err
 		}
@@ -159,7 +159,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
-	newHeadRoot, err := hashutil.HashBeaconBlock(newHead)
+	newHeadRoot, err := blockutil.BlockSigningRoot(newHead)
 	if err != nil {
 		return fmt.Errorf("could not hash new head block: %v", err)
 	}
@@ -171,7 +171,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve chain head: %v", err)
 	}
-	currentHeadRoot, err := hashutil.HashBeaconBlock(currentHead)
+	currentHeadRoot, err := blockutil.BlockSigningRoot(currentHead)
 	if err != nil {
 		return fmt.Errorf("could not hash current head block: %v", err)
 	}
@@ -219,7 +219,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err := c.beaconDB.UpdateChainHead(ctx, newHead, newState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
-	h, err := hashutil.HashBeaconBlock(newHead)
+	h, err := blockutil.BlockSigningRoot(newHead)
 	if err != nil {
 		return fmt.Errorf("could not hash head: %v", err)
 	}
@@ -287,11 +287,11 @@ func (c *ChainService) lmdGhost(
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
-			maxChildRoot, err := hashutil.HashBeaconBlock(maxChild)
+			maxChildRoot, err := blockutil.BlockSigningRoot(maxChild)
 			if err != nil {
 				return nil, err
 			}
-			candidateChildRoot, err := hashutil.HashBeaconBlock(children[i])
+			candidateChildRoot, err := blockutil.BlockSigningRoot(children[i])
 			if err != nil {
 				return nil, err
 			}
@@ -317,7 +317,7 @@ func (c *ChainService) lmdGhost(
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
 func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +343,7 @@ func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock,
 
 // isDescendant checks if the new head block is a descendant block of the current head.
 func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.BeaconBlock) (bool, error) {
-	currentHeadRoot, err := hashutil.HashBeaconBlock(currentHead)
+	currentHeadRoot, err := blockutil.BlockSigningRoot(currentHead)
 	if err != nil {
 		return false, nil
 	}
@@ -400,7 +400,7 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 	var ancestorRoot []byte
 	var err error
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return 0, err
 	}
