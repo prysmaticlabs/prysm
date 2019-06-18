@@ -30,7 +30,7 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 			VoluntaryExits:    []*pb.VoluntaryExit{},
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: params.BeaconConfig().ZeroHash[:],
-				BlockRoot:   params.BeaconConfig().ZeroHash[:],
+				BlockHash:   params.BeaconConfig().ZeroHash[:],
 			},
 		},
 	}

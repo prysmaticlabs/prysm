@@ -400,7 +400,7 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -1471,7 +1471,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		LatestEth1Data: &pb.Eth1Data{
 			DepositRoot: []byte{0},
-			BlockRoot:   []byte{1},
+			BlockHash:   []byte{1},
 		},
 	}
 	want := "deposit root did not verify"
@@ -1528,7 +1528,7 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 		DepositIndex:      1,
 		LatestEth1Data: &pb.Eth1Data{
 			DepositRoot: depositRoot[:],
-			BlockRoot:   []byte{1},
+			BlockHash:   []byte{1},
 		},
 	}
 
@@ -1584,7 +1584,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		Balances:          balances,
 		LatestEth1Data: &pb.Eth1Data{
 			DepositRoot: root[:],
-			BlockRoot:   root[:],
+			BlockHash:   root[:],
 		},
 	}
 	newState, err := blocks.ProcessValidatorDeposits(
