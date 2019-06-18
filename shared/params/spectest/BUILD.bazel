@@ -5,19 +5,12 @@ go_library(
     srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/params/spectest",
     visibility = ["//visibility:public"],
-    deps = [
-        "//shared/params:go_default_library",
-        "@com_github_go_yaml_yaml//:go_default_library",
-    ],
+    deps = ["//shared/params:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
     srcs = ["config_test.go"],
-    data = [
-        "mainnet.yaml",
-        "minimal.yaml",
-    ],
     embed = [":go_default_library"],
     deps = ["//shared/params:go_default_library"],
 )
