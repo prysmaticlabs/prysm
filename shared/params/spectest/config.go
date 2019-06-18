@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"gopkg.in/yaml.v2"
 )
 
 // SetConfig sets the global params for spec tests depending on the option chosen.

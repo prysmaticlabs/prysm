@@ -78,13 +78,28 @@ func ExecuteStateTransition(
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
 // It happens regardless if there's an incoming block or not.
+// Spec pseudocode definition:
+//
+//  def process_slot(state: BeaconState) -> None:
+//    # Cache state root
+//    previous_state_root = hash_tree_root(state)
+//    state.state_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_state_root
+//
+//    # Cache latest block header state root
+//    if state.latest_block_header.state_root == ZERO_HASH:
+//        state.latest_block_header.state_root = previous_state_root
+//
+//    # Cache block root
+//    previous_block_root = signing_root(state.latest_block_header)
+//    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
 func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
 	defer span.End()
-	prevStateRoot, err := ssz.TreeHash(state)
+	prevStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash prev state root: %v", err)
 	}
+
 	state.LatestStateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
 	zeroHash := params.BeaconConfig().ZeroHash
 
@@ -92,7 +107,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
-	prevBlockRoot, err := ssz.TreeHash(state.LatestBlockHeader)
+	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
 	}
