@@ -4,15 +4,31 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"reflect"
 	"testing"
 
+	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-var slotsProcessingTests SanitySlotsMinimal
+var slotsProcessingTests SanitySlotsMinimalTest
+
+func TestYaml(t *testing.T) {
+	file, err := ioutil.ReadFile("sanity_slots_minimal.yaml")
+	if err != nil {
+		t.Fatalf("Could not load file %v", err)
+	}
+
+	s := &SanitySlotsMinimalTest{}
+	if err := yaml.Unmarshal(file, s); err != nil {
+		t.Fatalf("Failed to Unmarshal: %v", err)
+	}
+	fmt.Printf("%+v", s)
+}
 
 func TestSlotProcessingYaml(t *testing.T) {
 	ctx := context.Background()
