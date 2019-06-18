@@ -1022,4 +1022,3 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		t.Error("Did not get wanted validator from activation queue")
 	}
 }
-
