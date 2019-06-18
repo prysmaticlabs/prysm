@@ -103,7 +103,7 @@ func ProcessBlockHeader(
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
 	}
-	parentRoot, err := ssz.TreeHash(beaconState.LatestBlockHeader)
+	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func ProcessBlockHeader(
 			"parent root %#x does not match the latest block header signing root in state %#x",
 			block.ParentRoot, parentRoot)
 	}
-	bodyRoot, err := ssz.TreeHash(block.Body)
+	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -591,7 +591,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 		return nil, fmt.Errorf("expected crosslink end epoch %d, received %d",
 			endEpoch, data.Crosslink.EndEpoch)
 	}
-	crosslinkParentRoot, err := ssz.TreeHash(parentCrosslink)
+	crosslinkParentRoot, err := ssz.HashTreeRoot(parentCrosslink)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash parent crosslink: %v", err)
 	}
@@ -783,7 +783,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 	if verifyTree {
 		// Verify Merkle proof of deposit and deposit trie root.
 		receiptRoot := beaconState.LatestEth1Data.DepositRoot
-		leaf, err := ssz.TreeHash(deposit.Data)
+		leaf, err := ssz.HashTreeRoot(deposit.Data)
 		if err != nil {
 			return fmt.Errorf("could not tree hash deposit data: %v", err)
 		}
