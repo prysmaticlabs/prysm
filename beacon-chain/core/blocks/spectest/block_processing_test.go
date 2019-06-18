@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -12,6 +13,8 @@ import (
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 )
 
 func TestBlockProcessingYaml(t *testing.T) {
@@ -25,6 +28,15 @@ func TestBlockProcessingYaml(t *testing.T) {
 	s := &BlockProcessing{}
 	if err := yaml.Unmarshal(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
+	}
+
+	log.Infof("Title: %v", s.Title)
+	log.Infof("Summary: %v", s.Summary)
+	log.Infof("Fork: %v", s.Forks)
+	log.Infof("Config: %v", s.Config)
+
+	if err := setConfig(s.Config); err != nil {
+		t.Fatalf("Could not set config: %v", err)
 	}
 
 	for _, testCase := range s.TestCases {
@@ -60,4 +72,18 @@ func TestBlockProcessingYaml(t *testing.T) {
 			t.Error("Failed")
 		}
 	}
+}
+
+func setConfig(config string) error {
+	configDir := "../../config/"
+	file, err := ioutil.ReadFile(configDir + config + ".yaml")
+	if err != nil {
+		return fmt.Errorf("could not find config yaml %v", err)
+	}
+	decoded := &params.BeaconChainConfig{}
+	if err := yaml.Unmarshal(file, decoded); err != nil {
+		return fmt.Errorf("could not unmarshal YAML file into config struct: %v", err)
+	}
+	params.OverrideBeaconConfig(decoded)
+	return nil
 }
