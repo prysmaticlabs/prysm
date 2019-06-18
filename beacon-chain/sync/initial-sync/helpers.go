@@ -33,6 +33,7 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 	return nil
 }
 
+//nolint:unused
 func (s *InitialSync) doesParentExist(block *pb.BeaconBlock) bool {
 	parentHash := bytesutil.ToBytes32(block.ParentRoot)
 	return s.db.HasBlock(parentHash)
