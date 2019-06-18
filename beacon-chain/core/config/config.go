@@ -1,0 +1,22 @@
+package config
+
+import (
+	"fmt"
+	"io/ioutil"
+
+	"github.com/ghodss/yaml"
+	"github.com/prysmaticlabs/prysm/shared/params"
+)
+
+func SetConfig(config string) error {
+	file, err := ioutil.ReadFile(config + ".yaml")
+	if err != nil {
+		return fmt.Errorf("could not find config yaml %v", err)
+	}
+	decoded := &params.BeaconChainConfig{}
+	if err := yaml.Unmarshal(file, decoded); err != nil {
+		return fmt.Errorf("could not unmarshal YAML file into config struct: %v", err)
+	}
+	params.OverrideBeaconConfig(decoded)
+	return nil
+}
