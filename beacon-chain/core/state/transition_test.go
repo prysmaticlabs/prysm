@@ -64,7 +64,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 			ProposerSlashings: slashings,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -112,7 +112,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 			AttesterSlashings: attesterSlashings,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -187,7 +187,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Attestations:      blockAttestations,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -279,7 +279,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			VoluntaryExits:    exits,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -391,7 +391,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			VoluntaryExits:    exits,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -757,7 +757,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: root[:],
-				BlockRoot:   root[:],
+				BlockHash:   root[:],
 			},
 			RandaoReveal:      epochSignature.Marshal(),
 			Attestations:      attestations,
