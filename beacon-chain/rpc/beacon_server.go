@@ -250,7 +250,7 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	depositRoot := depositTrie.Root()
 	return &pbp2p.Eth1Data{
 		DepositRoot: depositRoot[:],
-		BlockRoot:   blockHash[:],
+		BlockHash:   blockHash[:],
 	}, nil
 }
 
