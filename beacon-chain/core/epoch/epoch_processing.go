@@ -631,11 +631,15 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	// Filter out shard crosslinks with correct current or previous crosslink data.
 	for _, a := range shardAtts {
 		cFromState := state.CurrentCrosslinks[shard]
-		h, err := hashutil.HashProto(cFromState)
+		cFromStateRoot, err := ssz.HashTreeRoot(cFromState)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not hash crosslink from state: %v", err)
+			return nil, nil, fmt.Errorf("could not hash tree root crosslink from state: %v", err)
 		}
-		if proto.Equal(cFromState, a.Data.Crosslink) || bytes.Equal(h[:], a.Data.Crosslink.ParentRoot) {
+		cFromAttRoot, err := ssz.HashTreeRoot(a.Data.Crosslink)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not hash tree root crosslink from attestation: %v", err)
+		}
+		if bytes.Equal(cFromStateRoot[:], cFromAttRoot[:]) || bytes.Equal(cFromStateRoot[:], a.Data.Crosslink.ParentRoot) {
 			candidateCrosslinks = append(candidateCrosslinks, a.Data.Crosslink)
 		}
 	}
