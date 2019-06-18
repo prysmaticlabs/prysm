@@ -205,7 +205,7 @@ message Transfer {
   uint64 recipient = 2;
   // Amount in Gwei
   uint64 amount = 3;
-  // Fee in Gwei for block pCrosslinkroposer
+  // Fee in Gwei for block proposer
   uint64 fee = 4;
   // Inclusion slot
   uint64 slot = 5;
