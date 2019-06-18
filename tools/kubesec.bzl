@@ -20,7 +20,6 @@ k8s_encrypted_secret = rule(
         default = "//tools:kubesec",
       ),
       "template": attr.label(
-          allow_files = True, 
           allow_single_file = True, 
           mandatory = True
       ),
