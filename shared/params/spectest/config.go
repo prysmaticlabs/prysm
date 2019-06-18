@@ -2,22 +2,22 @@ package spectest
 
 import (
 	"fmt"
-	"io/ioutil"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"gopkg.in/yaml.v2"
 )
 
 // SetConfig sets the global params for spec tests depending on the option chosen.
 func SetConfig(config string) error {
-	file, err := ioutil.ReadFile(config + ".yaml")
-	if err != nil {
-		return fmt.Errorf("could not find config yaml %v", err)
+	switch config {
+	case "minimal":
+		newConfig := params.MinimalSpecConfig()
+		params.OverrideBeaconConfig(newConfig)
+		return nil
+	case "mainnet":
+		newConfig := params.MainnetConfig()
+		params.OverrideBeaconConfig(newConfig)
+		return nil
+	default:
+		return fmt.Errorf("did not receive a valid config, instead received this %s", config)
 	}
-	decoded := &params.BeaconChainConfig{}
-	if err := yaml.Unmarshal(file, decoded); err != nil {
-		return fmt.Errorf("could not unmarshal YAML file into config struct: %v", err)
-	}
-	params.OverrideBeaconConfig(decoded)
-	return nil
 }

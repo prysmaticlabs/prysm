@@ -13,8 +13,8 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -107,6 +107,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
+
 	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
@@ -160,11 +161,16 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	r, err := hashutil.HashBeaconBlock(block)
+	r, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 
+	// Process the block's header into the state.
+	state, err = b.ProcessBlockHeader(state, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not process block header: %v", err)
+	}
 	// Verify block RANDAO.
 	state, err = b.ProcessRandao(state, block.Body, config.VerifySignatures, config.Logging)
 	if err != nil {

@@ -6,8 +6,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -34,7 +34,7 @@ func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [
 		} else {
 			parent.ParentRoot = parentRoots[len(parentRoots)-1][:]
 		}
-		parentRoot, err := hashutil.HashBeaconBlock(parent)
+		parentRoot, err := blockutil.BlockSigningRoot(parent)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -104,7 +104,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	genesisBlock := &pb.BeaconBlock{
 		Slot: 0,
 	}
-	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
+	genesisRoot, err := blockutil.BlockSigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}

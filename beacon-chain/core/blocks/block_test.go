@@ -64,7 +64,7 @@ func TestHeaderFromBlock(t *testing.T) {
 		StateRoot:  dummyBlock.StateRoot,
 	}
 
-	bodyRoot, err := ssz.TreeHash(dummyBody)
+	bodyRoot, err := ssz.HashTreeRoot(dummyBody)
 	if err != nil {
 		t.Fatal(err)
 	}

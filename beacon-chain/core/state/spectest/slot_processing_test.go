@@ -28,8 +28,7 @@ func TestSlotProcessingYaml(t *testing.T) {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
-	path := "/Users/terencetsao/go/src/github.com/prysmaticlabs/prysm/shared/params/spectest/minimal"
-	if err := spectest.SetConfig(path); err != nil {
+	if err := spectest.SetConfig("minimal"); err != nil {
 		t.Fatal(err)
 	}
 
