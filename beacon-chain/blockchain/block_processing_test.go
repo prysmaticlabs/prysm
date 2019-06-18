@@ -88,7 +88,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
-				BlockRoot:   []byte("b"),
+				BlockHash:   []byte("b"),
 			},
 		},
 	}
@@ -156,7 +156,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
-				BlockRoot:   []byte("b"),
+				BlockHash:   []byte("b"),
 			},
 			RandaoReveal: randaoReveal,
 			Attestations: nil,
@@ -224,7 +224,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
-				BlockRoot:   []byte("b"),
+				BlockHash:   []byte("b"),
 			},
 			RandaoReveal: []byte{},
 			Attestations: nil,
@@ -289,7 +289,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
-				BlockRoot:   []byte("b"),
+				BlockHash:   []byte("b"),
 			},
 			RandaoReveal: []byte{},
 			Attestations: []*pb.Attestation{{
@@ -549,7 +549,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
-				BlockRoot:   []byte("b"),
+				BlockHash:   []byte("b"),
 			},
 			RandaoReveal: randaoReveal,
 			Deposits:     pendingDeposits,
@@ -861,7 +861,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{
 		DepositRoot: []byte{2},
-		BlockRoot:   []byte{3},
+		BlockHash:   []byte{3},
 	}
 	beaconState.Slot = 0
 
@@ -880,7 +880,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte("a"),
-				BlockRoot:   []byte("b"),
+				BlockHash:   []byte("b"),
 			},
 			RandaoReveal: randaoReveal,
 			Attestations: []*pb.Attestation{{
@@ -1022,3 +1022,4 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		t.Error("Did not get wanted validator from activation queue")
 	}
 }
+

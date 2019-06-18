@@ -616,7 +616,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	chainStartlog := eth2GenesisIterator.Event
 
 	expectedETH1Data := &pb.Eth1Data{
-		BlockRoot:   chainStartlog.Raw.BlockHash[:],
+		BlockHash:   chainStartlog.Raw.BlockHash[:],
 		DepositRoot: chainStartlog.DepositRoot[:],
 	}
 

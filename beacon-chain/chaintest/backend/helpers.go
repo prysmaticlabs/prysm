@@ -39,7 +39,7 @@ func generateSimulatedBlock(
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{1},
-				BlockRoot:   []byte{2},
+				BlockHash:   []byte{2},
 			},
 			RandaoReveal:      epochSignature,
 			ProposerSlashings: []*pb.ProposerSlashing{},

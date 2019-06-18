@@ -219,7 +219,7 @@ func TestProcessBlock_OK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{1, 2, 3, 4, 5},
-				BlockRoot:   []byte{6, 7, 8, 9, 10},
+				BlockHash:   []byte{6, 7, 8, 9, 10},
 			},
 		},
 	}
@@ -297,7 +297,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{1, 2, 3, 4, 5},
-				BlockRoot:   []byte{6, 7, 8, 9, 10},
+				BlockHash:   []byte{6, 7, 8, 9, 10},
 			},
 		},
 	}
@@ -326,7 +326,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{11, 12, 13, 14, 15},
-				BlockRoot:   []byte{16, 17, 18, 19, 20},
+				BlockHash:   []byte{16, 17, 18, 19, 20},
 			},
 		},
 	}

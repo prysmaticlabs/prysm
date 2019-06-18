@@ -71,7 +71,7 @@ func GenerateEth1Data(t testing.TB, deposits []*pb.Deposit) *pb.Eth1Data {
 	}
 	root := depositTrie.Root()
 	eth1Data := &pb.Eth1Data{
-		BlockRoot:   root[:],
+		BlockHash:   root[:],
 		DepositRoot: root[:],
 	}
 
