@@ -33,7 +33,7 @@ func TestSlotProcessingYaml(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var preState *pb.BeaconState
+		preState := &pb.BeaconState{}
 		var postState *pb.BeaconState
 
 		err = jsonpb.Unmarshal(bytes.NewReader(b), preState)
