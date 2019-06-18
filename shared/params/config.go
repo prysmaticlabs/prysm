@@ -218,6 +218,12 @@ func BeaconConfig() *BeaconChainConfig {
 	return beaconConfig
 }
 
+// MainnetConfig returns the default config to
+// be used in the mainnet.
+func MainnetConfig() *BeaconChainConfig {
+	return defaultBeaconConfig
+}
+
 // DemoBeaconConfig retrieves the demo beacon chain config.
 func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := *defaultBeaconConfig
@@ -238,6 +244,59 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.SlotsPerHistoricalRoot = 5 * demoConfig.SlotsPerEpoch
 
 	return &demoConfig
+}
+
+// MinimalSpecConfig retrieves the minimal config used in spec tests.
+func MinimalSpecConfig() *BeaconChainConfig {
+
+	minimalConfig := *defaultBeaconConfig
+	minimalConfig.ShardCount = 8
+	minimalConfig.TargetCommitteeSize = 4
+	minimalConfig.MaxIndicesPerAttestation = 4096
+	minimalConfig.MinPerEpochChurnLimit = 4
+	minimalConfig.ChurnLimitQuotient = 65536
+	minimalConfig.BaseRewardsPerEpoch = 5
+	minimalConfig.ShuffleRoundCount = 10
+	minimalConfig.DepositContractTreeDepth = 32
+	minimalConfig.MinDepositAmount = 1e9
+	minimalConfig.MaxEffectiveBalance = 32e9
+	minimalConfig.EjectionBalance = 16e9
+	minimalConfig.EffectiveBalanceIncrement = 1e9
+	minimalConfig.FarFutureEpoch = 1<<64 - 1
+	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
+	minimalConfig.SecondsPerSlot = 6
+	minimalConfig.MinAttestationInclusionDelay = 2
+	minimalConfig.SlotsPerEpoch = 8
+	minimalConfig.MinSeedLookahead = 1
+	minimalConfig.ActivationExitDelay = 4
+	minimalConfig.SlotsPerEth1VotingPeriod = 16
+	minimalConfig.SlotsPerHistoricalRoot = 64
+	minimalConfig.MinValidatorWithdrawalDelay = 256
+	minimalConfig.PersistentCommitteePeriod = 2048
+	minimalConfig.MaxEpochsPerCrosslink = 64
+	minimalConfig.MinEpochsToInactivityPenalty = 4
+	minimalConfig.LatestRandaoMixesLength = 64
+	minimalConfig.LatestActiveIndexRootsLength = 64
+	minimalConfig.LatestSlashedExitLength = 64
+	minimalConfig.BaseRewardFactor = 32
+	minimalConfig.WhistleBlowingRewardQuotient = 512
+	minimalConfig.ProposerRewardQuotient = 8
+	minimalConfig.InactivityPenaltyQuotient = 33554432
+	minimalConfig.MinSlashingPenaltyQuotient = 32
+	minimalConfig.MaxProposerSlashings = 16
+	minimalConfig.MaxAttesterSlashings = 1
+	minimalConfig.MaxAttestations = 128
+	minimalConfig.MaxDeposits = 16
+	minimalConfig.MaxVoluntaryExits = 16
+	minimalConfig.MaxTransfers = 0
+	minimalConfig.DomainBeaconProposer = 0
+	minimalConfig.DomainRandao = 1
+	minimalConfig.DomainAttestation = 2
+	minimalConfig.DomainDeposit = 3
+	minimalConfig.DomainVoluntaryExit = 4
+	minimalConfig.DomainTransfer = 5
+
+	return &minimalConfig
 }
 
 // ShardConfig retrieves shard chain config.
