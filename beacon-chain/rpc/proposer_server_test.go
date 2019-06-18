@@ -146,7 +146,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	encoded, err := ssz.TreeHash(beaconState.PreviousCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.PreviousCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 
 	expectedEpoch := uint64(100)
 	crosslink := &pbp2p.Crosslink{StartEpoch: 9, DataRoot: params.BeaconConfig().ZeroHash[:]}
-	encoded, err := ssz.TreeHash(crosslink)
+	encoded, err := ssz.HashTreeRoot(crosslink)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +366,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockRoot: []byte("0x0"),
+			BlockHash: []byte("0x0"),
 		},
 		DepositIndex: 2,
 	}
@@ -461,7 +461,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: []*pbp2p.Eth1Data{},
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockRoot: []byte("stub"),
+			BlockHash: []byte("stub"),
 		},
 	}
 	numOfVotes := 1000
@@ -469,7 +469,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 		blockhash := []byte{'b', 'l', 'o', 'c', 'k', byte(i)}
 		deposit := []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)}
 		beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, &pbp2p.Eth1Data{
-			BlockRoot:   blockhash,
+			BlockHash:   blockhash,
 			DepositRoot: deposit,
 		})
 		hashesByHeight[i] = blockhash
@@ -510,7 +510,7 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockRoot: []byte("0x0"),
+			BlockHash: []byte("0x0"),
 		},
 		DepositIndex: 10,
 	}
@@ -603,7 +603,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockRoot: []byte("0x0"),
+			BlockHash: []byte("0x0"),
 		},
 		DepositIndex: 2,
 	}
@@ -686,7 +686,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockRoot: []byte{'a'},
+			BlockHash: []byte{'a'},
 		},
 		Eth1DataVotes: []*pbp2p.Eth1Data{},
 	}
@@ -731,7 +731,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	depositRoot := depositTrie.Root()
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockRoot:   []byte("hash0"),
+			BlockHash:   []byte("hash0"),
 			DepositRoot: depositRoot[:],
 		},
 		Eth1DataVotes: []*pbp2p.Eth1Data{},
@@ -741,7 +741,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 		latestBlockNumber: height,
 		hashesByHeight: map[int][]byte{
 			0: []byte("hash0"),
-			1: beaconState.LatestEth1Data.BlockRoot,
+			1: beaconState.LatestEth1Data.BlockHash,
 		},
 	}
 	proposerServer := &ProposerServer{
@@ -777,7 +777,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: eth1DataVotes,
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockRoot: []byte("stub"),
+			BlockHash: []byte("stub"),
 		},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -789,13 +789,13 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		powChainService: &mockPOWChainService{
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
 			hashesByHeight: map[int][]byte{
-				0: beaconState.LatestEth1Data.BlockRoot,
-				1: beaconState.Eth1DataVotes[0].BlockRoot,
-				2: beaconState.Eth1DataVotes[1].BlockRoot,
-				3: beaconState.Eth1DataVotes[3].BlockRoot,
+				0: beaconState.LatestEth1Data.BlockHash,
+				1: beaconState.Eth1DataVotes[0].BlockHash,
+				2: beaconState.Eth1DataVotes[1].BlockHash,
+				3: beaconState.Eth1DataVotes[3].BlockHash,
 				// We will give the hash at index 2 in the beacon state's latest eth1 votes
 				// priority in being selected as the best vote by giving it the highest block number.
-				4: beaconState.Eth1DataVotes[2].BlockRoot,
+				4: beaconState.Eth1DataVotes[2].BlockHash,
 			},
 		},
 	}
@@ -805,11 +805,11 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	}
 	// Vote at index 2 should have won the best vote selection mechanism as it had the highest block number
 	// despite being tied at vote count with the vote at index 3.
-	if !bytes.Equal(eth1data.BlockRoot, beaconState.Eth1DataVotes[2].BlockRoot) {
+	if !bytes.Equal(eth1data.BlockHash, beaconState.Eth1DataVotes[2].BlockHash) {
 		t.Errorf(
 			"Expected block hashes to match, received %#x == %#x",
-			eth1data.BlockRoot,
-			beaconState.Eth1DataVotes[2].BlockRoot,
+			eth1data.BlockHash,
+			beaconState.Eth1DataVotes[2].BlockHash,
 		)
 	}
 	if !bytes.Equal(eth1data.DepositRoot, beaconState.Eth1DataVotes[2].DepositRoot) {

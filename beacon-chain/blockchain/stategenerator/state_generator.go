@@ -47,7 +47,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		return nil, fmt.Errorf("latest head in state is nil %v", err)
 	}
 
-	fRoot, err := ssz.TreeHash(fState.LatestBlockHeader)
+	fRoot, err := ssz.HashTreeRoot(fState.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get block root %v", err)
 	}

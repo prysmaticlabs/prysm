@@ -9,8 +9,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -175,7 +175,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatalf("could not save block: %v", err)
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
 	}

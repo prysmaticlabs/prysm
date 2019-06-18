@@ -50,7 +50,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 func GenerateEth1Data(t testing.TB, deposits []*pb.Deposit) *pb.Eth1Data {
 	encodedDeposits := make([][]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
-		hashedDeposit, err := ssz.TreeHash(deposits[i].Data)
+		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
 		if err != nil {
 			t.Fatalf("could not tree hash deposit data: %v", err)
 		}
@@ -71,7 +71,7 @@ func GenerateEth1Data(t testing.TB, deposits []*pb.Deposit) *pb.Eth1Data {
 	}
 	root := depositTrie.Root()
 	eth1Data := &pb.Eth1Data{
-		BlockRoot:   root[:],
+		BlockHash:   root[:],
 		DepositRoot: root[:],
 	}
 

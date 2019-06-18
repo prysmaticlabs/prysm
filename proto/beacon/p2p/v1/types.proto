@@ -227,7 +227,7 @@ message Eth1Data {
   // Total number of deposits
   uint64 deposit_count = 2;
   // Block hash
-  bytes block_root = 3;
+  bytes block_hash = 3;
 }
 
 message Eth1DataVote {
