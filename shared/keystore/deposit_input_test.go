@@ -46,12 +46,12 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	// Verify that the proof of possession is a signed copy of the input data.
 	proofOfPossessionInputPb := proto.Clone(result).(*pb.DepositData)
 	proofOfPossessionInputPb.Signature = nil
-	buf := new(bytes.Buffer)
-	if err := ssz.Encode(buf, proofOfPossessionInputPb); err != nil {
+	buf, err := ssz.Marshal(proofOfPossessionInputPb)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !sig.Verify(buf.Bytes(), k1.PublicKey, params.BeaconConfig().DomainDeposit) {
+	if !sig.Verify(buf, k1.PublicKey, params.BeaconConfig().DomainDeposit) {
 		t.Error("Invalid proof of proofOfPossession signature")
 	}
 }

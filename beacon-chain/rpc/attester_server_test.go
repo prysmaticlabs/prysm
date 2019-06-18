@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -38,7 +38,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
 		t.Fatal(err)
 	}
-	root, err := hashutil.HashBeaconBlock(head)
+	root, err := blockutil.BlockSigningRoot(head)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,17 +90,17 @@ func TestRequestAttestation_OK(t *testing.T) {
 	justifiedBlock := &pbp2p.BeaconBlock{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedRoot, err := hashutil.HashBeaconBlock(justifiedBlock)
+	justifiedRoot, err := blockutil.BlockSigningRoot(justifiedBlock)
 	if err != nil {
-		t.Fatalf("Could not hash justified block: %v", err)
+		t.Fatalf("Could not get signing root for justified block: %v", err)
 	}
-	targetRoot, err := hashutil.HashBeaconBlock(targetBlock)
+	targetRoot, err := blockutil.BlockSigningRoot(targetBlock)
 	if err != nil {
-		t.Fatalf("Could not hash target block: %v", err)
+		t.Fatalf("Could not get signing root for target block: %v", err)
 	}
 
 	beaconState := &pbp2p.BeaconState{
@@ -153,7 +153,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 
-	crosslinkRoot, err := ssz.TreeHash(beaconState.CurrentCrosslinks[req.Shard])
+	crosslinkRoot, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[req.Shard])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,15 +201,15 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	justifiedBlock := &pbp2p.BeaconBlock{
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2, // Imagine two skip block
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedBlockRoot, err := hashutil.HashBeaconBlock(justifiedBlock)
+	justifiedBlockRoot, err := blockutil.BlockSigningRoot(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
-	epochBoundaryRoot, err := hashutil.HashBeaconBlock(epochBoundaryBlock)
+	epochBoundaryRoot, err := blockutil.BlockSigningRoot(epochBoundaryBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
@@ -263,7 +263,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 
-	crosslinkRoot, err := ssz.TreeHash(beaconState.CurrentCrosslinks[req.Shard])
+	crosslinkRoot, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[req.Shard])
 	if err != nil {
 		t.Fatal(err)
 	}

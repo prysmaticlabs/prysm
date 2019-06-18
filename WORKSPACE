@@ -139,17 +139,6 @@ load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_depen
 
 buildifier_dependencies()
 
-http_archive(
-    name = "com_github_prysmaticlabs_go_ssz",
-    sha256 = "352d7e12788bbd1126bfeb3817a75f94c9d1f8697348103a2a070442efa0f608",
-    strip_prefix = "go-ssz-f4c769c5c2f666c0a2db5acaf327da6e74f2100d",
-    url = "https://github.com/prysmaticlabs/go-ssz/archive/f4c769c5c2f666c0a2db5acaf327da6e74f2100d.tar.gz",
-)
-
-load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
-
-go_ssz_dependencies()
-
 go_repository(
     name = "com_github_golang_mock",
     commit = "51421b967af1f557f93a59e0057aaf15ca02e29c",  # v1.2.0
@@ -170,6 +159,16 @@ go_repository(
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
 )
+
+go_repository(
+    name = "com_github_prysmaticlabs_go_ssz",
+    commit = "be5e1bd95e5c389a672eec5b57831441a160a0b7",
+    importpath = "github.com/prysmaticlabs/go-ssz",
+)
+
+load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
+
+go_ssz_dependencies()
 
 go_repository(
     name = "com_github_urfave_cli",
