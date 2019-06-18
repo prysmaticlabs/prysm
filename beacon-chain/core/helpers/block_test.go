@@ -16,7 +16,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	s := &pb.BeaconState{
-		LatestBlockRoots: blockRoots,
+		BlockRoots: blockRoots,
 	}
 
 	tests := []struct {
@@ -73,7 +73,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
-		LatestBlockRoots: blockRoots,
+		BlockRoots: blockRoots,
 	}
 
 	tests := []struct {

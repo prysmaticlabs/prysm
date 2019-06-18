@@ -11,13 +11,13 @@ message BeaconState {
   uint64 slot = 1003;
 
   // Validator registry [2001-3000]
-  repeated Validator validator_registry = 2001;
+  repeated Validator validators = 2001;
   // Balances in Gwei
   repeated uint64 balances = 2002;
 
   // Randomness and committees [3001-4000]
-  repeated bytes latest_randao_mixes = 3001;
-  uint64 latest_start_shard = 3002;
+  repeated bytes randao_mixes = 3001;
+  uint64 start_shard = 3002;
 
   // Finality [4001-5000]
   repeated PendingAttestation previous_epoch_attestations = 4001;
@@ -33,17 +33,17 @@ message BeaconState {
   // Recent state [5001-6000]
   repeated Crosslink current_crosslinks = 5001;
   repeated Crosslink previous_crosslinks = 5002;
-  repeated bytes latest_block_roots = 5003;
-  repeated bytes latest_state_roots = 5004;
-  repeated bytes latest_active_index_roots = 5005;
-  repeated uint64 latest_slashed_balances = 5006;
+  repeated bytes block_roots = 5003;
+  repeated bytes state_roots = 5004;
+  repeated bytes active_index_roots = 5005;
+  repeated uint64 slashed_balances = 5006;
   BeaconBlockHeader latest_block_header = 5007;
   repeated bytes historical_roots = 5008;
 
   // Ethereum 1.0 chain data [6001-7000]
-  Eth1Data latest_eth1_data = 6001;
+  Eth1Data eth1_data = 6001;
   repeated Eth1Data eth1_data_votes = 6002;
-  uint64 deposit_index = 6003;
+  uint64 eth1_deposit_index = 6003;
 }
 
 message Fork {
@@ -115,12 +115,6 @@ message Validator {
   bool slashed = 7;
   // Effective balance
   uint64 effective_balance = 8;
-}
-
-message ShardReassignmentRecord {
-  uint64 validator_index = 1;
-  uint64 shard = 2;
-  uint64 slot = 3;
 }
 
 message Crosslink {
@@ -211,7 +205,7 @@ message Transfer {
   uint64 recipient = 2;
   // Amount in Gwei
   uint64 amount = 3;
-  // Fee in Gwei for block proposer
+  // Fee in Gwei for block pCrosslinkroposer
   uint64 fee = 4;
   // Inclusion slot
   uint64 slot = 5;
@@ -239,4 +233,3 @@ message HistoricalBatch {
   repeated bytes block_roots = 1;
   repeated bytes state_roots = 2;
 }
-
