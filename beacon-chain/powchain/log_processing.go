@@ -165,7 +165,7 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	}
 
 	w.chainStartETH1Data = &pb.Eth1Data{
-		BlockRoot:   depositLog.BlockHash[:],
+		BlockHash:   depositLog.BlockHash[:],
 		DepositRoot: chainStartDepositRoot[:],
 	}
 

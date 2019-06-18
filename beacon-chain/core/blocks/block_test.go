@@ -32,7 +32,7 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 	}
 	expectedEth1 := &pb.Eth1Data{
 		DepositRoot: params.BeaconConfig().ZeroHash[:],
-		BlockRoot:   params.BeaconConfig().ZeroHash[:],
+		BlockHash:   params.BeaconConfig().ZeroHash[:],
 	}
 	if !proto.Equal(b1.Body.Eth1Data, expectedEth1) {
 		t.Error("genesis block Eth1Data isn't initialized correctly")
