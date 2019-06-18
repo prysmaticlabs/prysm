@@ -21,7 +21,7 @@ k8s_encrypted_secret = rule(
       ),
       "template": attr.label(
           allow_files = True, 
-          single_file = True, 
+          allow_single_file = True, 
           mandatory = True
       ),
       "out": attr.output(mandatory = True),
