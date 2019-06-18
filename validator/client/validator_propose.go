@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,10 +26,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())))
-	truncatedPk := bytesutil.Trunc([]byte(pk))
-
-	log.WithFields(logrus.Fields{"validator": truncatedPk}).Info("Performing a beacon block proposal...")
 
 	// Generate a randao reveal by signing the block's slot with validator's private key.
 	// epoch_signature = bls_sign(
@@ -62,10 +59,20 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		log.WithError(err).Error("Failed to request block from beacon node")
 		return
 	}
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())))
+	truncatedPk := bytesutil.Trunc([]byte(pk))
 
-	// Sign the requested block.
-	// TODO(1366): BLS sign block
-	b.Signature = nil
+	log.WithFields(logrus.Fields{"validator": truncatedPk}).Info("Performing a beacon block proposal...")
+
+	root, err := ssz.SigningRoot(b)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"validator": truncatedPk,
+		}).Error("Failed to propose block")
+		return
+	}
+	signature := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain)
+	b.Signature = signature.Marshal()
 
 	// Broadcast network the signed block via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, b)

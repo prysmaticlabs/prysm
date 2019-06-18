@@ -146,7 +146,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
-	encoded, err := ssz.TreeHash(beaconState.PreviousCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.PreviousCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 
 	expectedEpoch := uint64(100)
 	crosslink := &pbp2p.Crosslink{StartEpoch: 9, DataRoot: params.BeaconConfig().ZeroHash[:]}
-	encoded, err := ssz.TreeHash(crosslink)
+	encoded, err := ssz.HashTreeRoot(crosslink)
 	if err != nil {
 		t.Fatal(err)
 	}

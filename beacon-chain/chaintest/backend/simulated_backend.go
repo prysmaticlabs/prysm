@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -263,9 +264,6 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 		return fmt.Errorf("could not initialize simulated beacon state: %v", err)
 	}
 	sb.state.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	sb.state.LatestBlockHeader = &pb.BeaconBlockHeader{
-		StateRoot: []byte{},
-	}
 	sb.historicalDeposits = initialDeposits
 
 	// We do not expect hashing initial beacon state and genesis block to
@@ -276,14 +274,22 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 		return fmt.Errorf("could not tree hash state: %v", err)
 	}
 	genesisBlock := b.NewGenesisBlock(stateRoot[:])
-	genesisBlockRoot, err := hashutil.HashBeaconBlock(genesisBlock)
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Body)
 	if err != nil {
 		return fmt.Errorf("could not tree hash genesis block: %v", err)
 	}
-
+	sb.state.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	genesisRoot, err := ssz.SigningRoot(sb.state.LatestBlockHeader)
+	if err != nil {
+		return err
+	}
 	// We now keep track of generated blocks for each state transition in
 	// a slice.
-	sb.prevBlockRoots = [][32]byte{genesisBlockRoot}
+	sb.prevBlockRoots = [][32]byte{genesisRoot}
 	sb.inMemoryBlocks = append(sb.inMemoryBlocks, genesisBlock)
 	return nil
 }
