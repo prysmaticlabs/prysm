@@ -11,8 +11,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-var  registryUpdateTests RegistryUpdatesMinimal
-
 func TestRegistryProcessingYaml(t *testing.T) {
 	for _, testCase := range registryUpdateTests.TestCases {
 		t.Logf("Description: %s", testCase.Description)

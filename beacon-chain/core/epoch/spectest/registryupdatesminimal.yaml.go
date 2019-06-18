@@ -4,150 +4,150 @@
 package spectest
 
 type RegistryUpdatesMinimal struct {
-	Title         string   `yaml:"title"`
-	Summary       string   `yaml:"summary"`
-	ForksTimeline string   `yaml:"forks_timeline"`
-	Forks         []string `yaml:"forks"`
-	Config        string   `yaml:"config"`
-	Runner        string   `yaml:"runner"`
-	Handler       string   `yaml:"handler"`
-	TestCases     []struct {
-		Description string `yaml:"description"`
-		Pre         struct {
-			Slot        uint64 `yaml:"slot"`
-			GenesisTime uint64 `yaml:"genesis_time"`
-			Fork        struct {
-				PreviousVersion []byte `yaml:"previous_version"`
-				CurrentVersion  []byte `yaml:"current_version"`
-				Epoch           uint64 `yaml:"epoch"`
-			} `yaml:"fork"`
+	Title string `json:"title"`
+	Summary string `json:"summary"`
+	ForksTimeline string `json:"forks_timeline"`
+	Forks []string `json:"forks"`
+	Config string `json:"config"`
+	Runner string `json:"runner"`
+	Handler string `json:"handler"`
+	TestCases []struct {
+		Description string `json:"description"`
+		Pre struct {
+			Slot uint64 `json:"slot"`
+			GenesisTime uint64 `json:"genesis_time"`
+			Fork struct {
+				PreviousVersion []byte `json:"previous_version"`
+				CurrentVersion []byte `json:"current_version"`
+				Epoch uint64 `json:"epoch"`
+			} `json:"fork"`
 			ValidatorRegistry []struct {
-				Pubkey                     []byte `yaml:"pubkey",ssz:"size=48"`
-				WithdrawalCredentials      []byte `yaml:"withdrawal_credentials",ssz:"size=32"`
-				ActivationEligibilityEpoch uint64 `yaml:"activation_eligibility_epoch"`
-				ActivationEpoch            uint64 `yaml:"activation_epoch"`
-				ExitEpoch                  uint64 `yaml:"exit_epoch"`
-				WithdrawableEpoch          uint64 `yaml:"withdrawable_epoch"`
-				Slashed                    bool   `yaml:"slashed"`
-				EffectiveBalance           uint64 `yaml:"effective_balance"`
-			} `yaml:"validator_registry"`
-			Balances                  []uint64      `yaml:"balances"`
-			LatestRandaoMixes         [][]byte      `yaml:"latest_randao_mixes"`
-			LatestStartShard          uint64        `yaml:"latest_start_shard"`
-			PreviousEpochAttestations []interface{} `yaml:"previous_epoch_attestations"`
-			CurrentEpochAttestations  []interface{} `yaml:"current_epoch_attestations"`
-			PreviousJustifiedEpoch    uint64        `yaml:"previous_justified_epoch"`
-			CurrentJustifiedEpoch     uint64        `yaml:"current_justified_epoch"`
-			PreviousJustifiedRoot     []byte        `yaml:"previous_justified_root",ssz:"size=32"`
-			CurrentJustifiedRoot      []byte        `yaml:"current_justified_root",ssz:"size=32"`
-			JustificationBitfield     uint64        `yaml:"justification_bitfield"`
-			FinalizedEpoch            uint64        `yaml:"finalized_epoch"`
-			FinalizedRoot             []byte        `yaml:"finalized_root",ssz:"size=32"`
-			CurrentCrosslinks         []struct {
-				Shard      uint64 `yaml:"shard"`
-				StartEpoch uint64 `yaml:"start_epoch"`
-				EndEpoch   uint64 `yaml:"end_epoch"`
-				ParentRoot []byte `yaml:"parent_root",ssz:"size=32"`
-				DataRoot   []byte `yaml:"data_root",ssz:"size=32"`
-			} `yaml:"current_crosslinks"`
+				Pubkey []byte `json:"pubkey" ssz:"size=48"`
+				WithdrawalCredentials []byte `json:"withdrawal_credentials" ssz:"size=32"`
+				ActivationEligibilityEpoch uint64 `json:"activation_eligibility_epoch"`
+				ActivationEpoch uint64 `json:"activation_epoch"`
+				ExitEpoch uint64 `json:"exit_epoch"`
+				WithdrawableEpoch uint64 `json:"withdrawable_epoch"`
+				Slashed bool `json:"slashed"`
+				EffectiveBalance uint64 `json:"effective_balance"`
+			} `json:"validator_registry"`
+			Balances []uint64 `json:"balances"`
+			LatestRandaoMixes [][]byte `json:"latest_randao_mixes"`
+			LatestStartShard uint64 `json:"latest_start_shard"`
+			PreviousEpochAttestations []interface{} `json:"previous_epoch_attestations"`
+			CurrentEpochAttestations []interface{} `json:"current_epoch_attestations"`
+			PreviousJustifiedEpoch uint64 `json:"previous_justified_epoch"`
+			CurrentJustifiedEpoch uint64 `json:"current_justified_epoch"`
+			PreviousJustifiedRoot []byte `json:"previous_justified_root" ssz:"size=32"`
+			CurrentJustifiedRoot []byte `json:"current_justified_root" ssz:"size=32"`
+			JustificationBitfield uint64 `json:"justification_bitfield"`
+			FinalizedEpoch uint64 `json:"finalized_epoch"`
+			FinalizedRoot []byte `json:"finalized_root" ssz:"size=32"`
+			CurrentCrosslinks []struct {
+				Shard uint64 `json:"shard"`
+				StartEpoch uint64 `json:"start_epoch"`
+				EndEpoch uint64 `json:"end_epoch"`
+				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+				DataRoot []byte `json:"data_root" ssz:"size=32"`
+			} `json:"current_crosslinks"`
 			PreviousCrosslinks []struct {
-				Shard      uint64 `yaml:"shard"`
-				StartEpoch uint64 `yaml:"start_epoch"`
-				EndEpoch   uint64 `yaml:"end_epoch"`
-				ParentRoot []byte `yaml:"parent_root",ssz:"size=32"`
-				DataRoot   []byte `yaml:"data_root",ssz:"size=32"`
-			} `yaml:"previous_crosslinks"`
-			LatestBlockRoots       [][]byte `yaml:"latest_block_roots"`
-			LatestStateRoots       [][]byte `yaml:"latest_state_roots"`
-			LatestActiveIndexRoots [][]byte `yaml:"latest_active_index_roots"`
-			LatestSlashedBalances  []uint64 `yaml:"latest_slashed_balances"`
-			LatestBlockHeader      struct {
-				Slot       uint64 `yaml:"slot"`
-				ParentRoot []byte `yaml:"parent_root",ssz:"size=32"`
-				StateRoot  []byte `yaml:"state_root",ssz:"size=32"`
-				BodyRoot   []byte `yaml:"body_root",ssz:"size=32"`
-				Signature  []byte `yaml:"signature",ssz:"size=96"`
-			} `yaml:"latest_block_header"`
-			HistoricalRoots []interface{} `yaml:"historical_roots"`
-			LatestEth1Data  struct {
-				DepositRoot  []byte `yaml:"deposit_root",ssz:"size=32"`
-				DepositCount uint64 `yaml:"deposit_count"`
-				BlockHash    []byte `yaml:"block_hash",ssz:"size=32"`
-			} `yaml:"latest_eth1_data"`
+				Shard uint64 `json:"shard"`
+				StartEpoch uint64 `json:"start_epoch"`
+				EndEpoch uint64 `json:"end_epoch"`
+				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+				DataRoot []byte `json:"data_root" ssz:"size=32"`
+			} `json:"previous_crosslinks"`
+			LatestBlockRoots [][]byte `json:"latest_block_roots"`
+			LatestStateRoots [][]byte `json:"latest_state_roots"`
+			LatestActiveIndexRoots [][]byte `json:"latest_active_index_roots"`
+			LatestSlashedBalances []uint64 `json:"latest_slashed_balances"`
+			LatestBlockHeader struct {
+				Slot uint64 `json:"slot"`
+				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+				StateRoot []byte `json:"state_root" ssz:"size=32"`
+				BodyRoot []byte `json:"body_root" ssz:"size=32"`
+				Signature []byte `json:"signature" ssz:"size=96"`
+			} `json:"latest_block_header"`
+			HistoricalRoots []interface{} `json:"historical_roots"`
+			LatestEth1Data struct {
+				DepositRoot []byte `json:"deposit_root" ssz:"size=32"`
+				DepositCount uint64 `json:"deposit_count"`
+				BlockHash []byte `json:"block_hash" ssz:"size=32"`
+			} `json:"latest_eth1_data"`
 			Eth1DataVotes []struct {
-				DepositRoot  []byte `yaml:"deposit_root",ssz:"size=32"`
-				DepositCount uint64 `yaml:"deposit_count"`
-				BlockHash    []byte `yaml:"block_hash",ssz:"size=32"`
-			} `yaml:"eth1_data_votes"`
-			DepositIndex uint64 `yaml:"deposit_index"`
-		} `yaml:"pre"`
+				DepositRoot []byte `json:"deposit_root" ssz:"size=32"`
+				DepositCount uint64 `json:"deposit_count"`
+				BlockHash []byte `json:"block_hash" ssz:"size=32"`
+			} `json:"eth1_data_votes"`
+			DepositIndex uint64 `json:"deposit_index"`
+		} `json:"pre"`
 		Post struct {
-			Slot        uint64 `yaml:"slot"`
-			GenesisTime uint64 `yaml:"genesis_time"`
-			Fork        struct {
-				PreviousVersion []byte `yaml:"previous_version"`
-				CurrentVersion  []byte `yaml:"current_version"`
-				Epoch           uint64 `yaml:"epoch"`
-			} `yaml:"fork"`
+			Slot uint64 `json:"slot"`
+			GenesisTime uint64 `json:"genesis_time"`
+			Fork struct {
+				PreviousVersion []byte `json:"previous_version"`
+				CurrentVersion []byte `json:"current_version"`
+				Epoch uint64 `json:"epoch"`
+			} `json:"fork"`
 			ValidatorRegistry []struct {
-				Pubkey                     []byte `yaml:"pubkey",ssz:"size=48"`
-				WithdrawalCredentials      []byte `yaml:"withdrawal_credentials",ssz:"size=32"`
-				ActivationEligibilityEpoch uint64 `yaml:"activation_eligibility_epoch"`
-				ActivationEpoch            uint64 `yaml:"activation_epoch"`
-				ExitEpoch                  uint64 `yaml:"exit_epoch"`
-				WithdrawableEpoch          uint64 `yaml:"withdrawable_epoch"`
-				Slashed                    bool   `yaml:"slashed"`
-				EffectiveBalance           uint64 `yaml:"effective_balance"`
-			} `yaml:"validator_registry"`
-			Balances                  []uint64      `yaml:"balances"`
-			LatestRandaoMixes         [][]byte      `yaml:"latest_randao_mixes"`
-			LatestStartShard          uint64        `yaml:"latest_start_shard"`
-			PreviousEpochAttestations []interface{} `yaml:"previous_epoch_attestations"`
-			CurrentEpochAttestations  []interface{} `yaml:"current_epoch_attestations"`
-			PreviousJustifiedEpoch    uint64        `yaml:"previous_justified_epoch"`
-			CurrentJustifiedEpoch     uint64        `yaml:"current_justified_epoch"`
-			PreviousJustifiedRoot     []byte        `yaml:"previous_justified_root",ssz:"size=32"`
-			CurrentJustifiedRoot      []byte        `yaml:"current_justified_root",ssz:"size=32"`
-			JustificationBitfield     uint64        `yaml:"justification_bitfield"`
-			FinalizedEpoch            uint64        `yaml:"finalized_epoch"`
-			FinalizedRoot             []byte        `yaml:"finalized_root",ssz:"size=32"`
-			CurrentCrosslinks         []struct {
-				Shard      uint64 `yaml:"shard"`
-				StartEpoch uint64 `yaml:"start_epoch"`
-				EndEpoch   uint64 `yaml:"end_epoch"`
-				ParentRoot []byte `yaml:"parent_root",ssz:"size=32"`
-				DataRoot   []byte `yaml:"data_root",ssz:"size=32"`
-			} `yaml:"current_crosslinks"`
+				Pubkey []byte `json:"pubkey" ssz:"size=48"`
+				WithdrawalCredentials []byte `json:"withdrawal_credentials" ssz:"size=32"`
+				ActivationEligibilityEpoch uint64 `json:"activation_eligibility_epoch"`
+				ActivationEpoch uint64 `json:"activation_epoch"`
+				ExitEpoch uint64 `json:"exit_epoch"`
+				WithdrawableEpoch uint64 `json:"withdrawable_epoch"`
+				Slashed bool `json:"slashed"`
+				EffectiveBalance uint64 `json:"effective_balance"`
+			} `json:"validator_registry"`
+			Balances []uint64 `json:"balances"`
+			LatestRandaoMixes [][]byte `json:"latest_randao_mixes"`
+			LatestStartShard uint64 `json:"latest_start_shard"`
+			PreviousEpochAttestations []interface{} `json:"previous_epoch_attestations"`
+			CurrentEpochAttestations []interface{} `json:"current_epoch_attestations"`
+			PreviousJustifiedEpoch uint64 `json:"previous_justified_epoch"`
+			CurrentJustifiedEpoch uint64 `json:"current_justified_epoch"`
+			PreviousJustifiedRoot []byte `json:"previous_justified_root" ssz:"size=32"`
+			CurrentJustifiedRoot []byte `json:"current_justified_root" ssz:"size=32"`
+			JustificationBitfield uint64 `json:"justification_bitfield"`
+			FinalizedEpoch uint64 `json:"finalized_epoch"`
+			FinalizedRoot []byte `json:"finalized_root" ssz:"size=32"`
+			CurrentCrosslinks []struct {
+				Shard uint64 `json:"shard"`
+				StartEpoch uint64 `json:"start_epoch"`
+				EndEpoch uint64 `json:"end_epoch"`
+				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+				DataRoot []byte `json:"data_root" ssz:"size=32"`
+			} `json:"current_crosslinks"`
 			PreviousCrosslinks []struct {
-				Shard      uint64 `yaml:"shard"`
-				StartEpoch uint64 `yaml:"start_epoch"`
-				EndEpoch   uint64 `yaml:"end_epoch"`
-				ParentRoot []byte `yaml:"parent_root",ssz:"size=32"`
-				DataRoot   []byte `yaml:"data_root",ssz:"size=32"`
-			} `yaml:"previous_crosslinks"`
-			LatestBlockRoots       [][]byte `yaml:"latest_block_roots"`
-			LatestStateRoots       [][]byte `yaml:"latest_state_roots"`
-			LatestActiveIndexRoots [][]byte `yaml:"latest_active_index_roots"`
-			LatestSlashedBalances  []uint64 `yaml:"latest_slashed_balances"`
-			LatestBlockHeader      struct {
-				Slot       uint64 `yaml:"slot"`
-				ParentRoot []byte `yaml:"parent_root",ssz:"size=32"`
-				StateRoot  []byte `yaml:"state_root",ssz:"size=32"`
-				BodyRoot   []byte `yaml:"body_root",ssz:"size=32"`
-				Signature  []byte `yaml:"signature",ssz:"size=96"`
-			} `yaml:"latest_block_header"`
-			HistoricalRoots []interface{} `yaml:"historical_roots"`
-			LatestEth1Data  struct {
-				DepositRoot  []byte `yaml:"deposit_root",ssz:"size=32"`
-				DepositCount uint64 `yaml:"deposit_count"`
-				BlockHash    []byte `yaml:"block_hash",ssz:"size=32"`
-			} `yaml:"latest_eth1_data"`
+				Shard uint64 `json:"shard"`
+				StartEpoch uint64 `json:"start_epoch"`
+				EndEpoch uint64 `json:"end_epoch"`
+				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+				DataRoot []byte `json:"data_root" ssz:"size=32"`
+			} `json:"previous_crosslinks"`
+			LatestBlockRoots [][]byte `json:"latest_block_roots"`
+			LatestStateRoots [][]byte `json:"latest_state_roots"`
+			LatestActiveIndexRoots [][]byte `json:"latest_active_index_roots"`
+			LatestSlashedBalances []uint64 `json:"latest_slashed_balances"`
+			LatestBlockHeader struct {
+				Slot uint64 `json:"slot"`
+				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+				StateRoot []byte `json:"state_root" ssz:"size=32"`
+				BodyRoot []byte `json:"body_root" ssz:"size=32"`
+				Signature []byte `json:"signature" ssz:"size=96"`
+			} `json:"latest_block_header"`
+			HistoricalRoots []interface{} `json:"historical_roots"`
+			LatestEth1Data struct {
+				DepositRoot []byte `json:"deposit_root" ssz:"size=32"`
+				DepositCount uint64 `json:"deposit_count"`
+				BlockHash []byte `json:"block_hash" ssz:"size=32"`
+			} `json:"latest_eth1_data"`
 			Eth1DataVotes []struct {
-				DepositRoot  []byte `yaml:"deposit_root",ssz:"size=32"`
-				DepositCount uint64 `yaml:"deposit_count"`
-				BlockHash    []byte `yaml:"block_hash",ssz:"size=32"`
-			} `yaml:"eth1_data_votes"`
-			DepositIndex uint64 `yaml:"deposit_index"`
-		} `yaml:"post"`
-	} `yaml:"test_cases"`
+				DepositRoot []byte `json:"deposit_root" ssz:"size=32"`
+				DepositCount uint64 `json:"deposit_count"`
+				BlockHash []byte `json:"block_hash" ssz:"size=32"`
+			} `json:"eth1_data_votes"`
+			DepositIndex uint64 `json:"deposit_index"`
+		} `json:"post"`
+	} `json:"test_cases"`
 }
