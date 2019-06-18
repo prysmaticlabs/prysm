@@ -162,7 +162,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pbp2p.E
 	currentHeight := bs.powChainService.LatestBlockHeight()
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 
-	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockRoot)
+	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRoot)
 	// If latest ETH1 block hash is empty, send a default response
 	if stateLatestEth1Hash == [32]byte{} {
 		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
@@ -183,7 +183,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pbp2p.E
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		eth1Hash := bytesutil.ToBytes32(vote.BlockRoot)
+		eth1Hash := bytesutil.ToBytes32(vote.DepositRoot)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
 		if err != nil {
