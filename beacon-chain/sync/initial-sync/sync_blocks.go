@@ -8,8 +8,8 @@ import (
 
 	peer "github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -94,7 +94,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if block == nil {
 		return errors.New("received nil block")
 	}
-	root, err := hashutil.HashBeaconBlock(block)
+	root, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return err
 	}
