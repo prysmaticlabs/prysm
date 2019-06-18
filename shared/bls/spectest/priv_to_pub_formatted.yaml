@@ -1,0 +1,12 @@
+title: BLS private key to pubkey
+summary: BLS Convert private key to public key
+forks_timeline: mainnet
+forks: [phase0]
+config: mainnet
+runner: bls
+handler: priv_to_pub
+test_cases:
+- {input: 'Jj29eS9bG+R+2F+JOMDylYavDTrHuXfyHCeP4UYgQOM=', output: 'pJHRsOzZu5F5ifDnTw3qBCLqxKhz5eJkTzaN/7mm4g/W4Qwbd2VNBnwGGPblp/ea'}
+- {input: 'R7gZLXe/hxti6HhZ1lOSJyVySlwDGv6rxgvO9f9mUTg=', output: 'swGAP4taxKETNYH8Z23+3GDYkd1fqZAogF5epbCNNJGvddBwetqztwxqalgCF7+B'}
+- {input: 'MoOIr/DUpbfckgWr03Tn6Y882fNBjttOr9pfsWRz0hY=', output: 'tT0hpM/VYsRpzIFRTUzlprV32EA9MqOU3CZd0ZC0f6n4Kf3Xljr9+XLl53hUBR9v'}
+

@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    testonly = True,
+    srcs = [
+        "priv_to_pub_test.yaml.go",
+        "sign_message_test.yaml.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/shared/bls/spectest",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "priv_to_pub_test.go",
+        "sign_message_test.go",
+    ],
+    data = glob(["*.yaml"]),
+    embed = [":go_default_library"],
+    tags = ["spectest"],
+    deps = [
+        "//shared/bls:go_default_library",
+        "@com_github_ghodss_yaml//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+    ],
+)
