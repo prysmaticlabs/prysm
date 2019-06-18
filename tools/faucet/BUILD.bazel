@@ -5,10 +5,12 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 IMPORT_PATH = "github.com/prysmaticlabs/prysm/tools/faucet"
+
 SRCS = [
     "main.go",
     "server.go",
 ]
+
 DEPS = [
     "//proto/faucet:faucet_go_proto",
     "@org_golang_google_grpc//:go_default_library",
@@ -21,11 +23,12 @@ DEPS = [
     "@com_github_ethereum_go_ethereum//params:go_default_library",
     "@com_github_ethereum_go_ethereum//crypto:go_default_library",
     "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+    "@org_uber_go_automaxprocs//:go_default_library",
 ]
 
 go_library(
     name = "go_default_library",
-    srcs = SRCS,  
+    srcs = SRCS,
     importpath = IMPORT_PATH,
     visibility = ["//visibility:private"],
     deps = DEPS,
@@ -40,14 +43,14 @@ go_binary(
 go_image(
     name = "image",
     srcs = SRCS,
-    importpath = IMPORT_PATH,
-    deps = DEPS,
-    pure = "off", # depends on cgo for go-ethereum crypto
-    static = "off", # go-ethereum is bad about static
-    tags = ["manual"],
     goarch = "amd64",
     goos = "linux",
+    importpath = IMPORT_PATH,
+    pure = "off",  # depends on cgo for go-ethereum crypto
     race = "off",
+    static = "off",  # go-ethereum is bad about static
+    tags = ["manual"],
+    deps = DEPS,
 )
 
 container_push(

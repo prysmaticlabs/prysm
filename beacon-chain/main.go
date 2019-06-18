@@ -7,10 +7,6 @@ import (
 	"runtime"
 
 	joonix "github.com/joonix/log"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -18,6 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+	"github.com/x-cray/logrus-prefixed-formatter"
+	_ "go.uber.org/automaxprocs"
 )
 
 var appFlags = []cli.Flag{

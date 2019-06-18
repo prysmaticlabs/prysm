@@ -2,7 +2,6 @@ package backend
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -27,16 +26,11 @@ func generateSimulatedBlock(
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		return nil, [32]byte{}, err
-	}
 	epoch := helpers.SlotToEpoch(beaconState.Slot + 1)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
-	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		return nil, [32]byte{}, fmt.Errorf("could not create randao reveal: %v", err)
+	}
 	block := &pb.BeaconBlock{
 		Slot:       beaconState.Slot + 1,
 		ParentRoot: prevBlockRoot[:],
@@ -44,9 +38,9 @@ func generateSimulatedBlock(
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{1},
-				BlockRoot:   []byte{2},
+				BlockHash:   []byte{2},
 			},
-			RandaoReveal:      epochSignature.Marshal(),
+			RandaoReveal:      epochSignature,
 			ProposerSlashings: []*pb.ProposerSlashing{},
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},

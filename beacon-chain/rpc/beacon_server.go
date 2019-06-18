@@ -343,11 +343,11 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	if len(upToHeightEth1DataDeposits) == 0 {
 		return nil, errors.New("could not fetch ETH1_FOLLOW_DISTANCE deposits")
 	}
-	depositRootAtHeight := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
+	depositRoot := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
 
 	return &pbp2p.Eth1Data{
-		DepositRoot: depositRootAtHeight[:],
-		BlockRoot:   blockHash[:],
+		DepositRoot: depositRoot[:],
+		BlockHash:   blockHash[:],
 	}, nil
 }
 

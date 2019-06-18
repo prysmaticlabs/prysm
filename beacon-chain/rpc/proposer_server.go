@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/prysmaticlabs/go-ssz"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -251,7 +251,7 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockRoot)
+	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash)
 	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, h)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)

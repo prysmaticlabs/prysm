@@ -184,8 +184,8 @@ func TestProcessBlock_OK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -218,7 +218,7 @@ func TestProcessBlock_OK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{1, 2, 3, 4, 5},
-				BlockRoot:   []byte{6, 7, 8, 9, 10},
+				BlockHash:   []byte{6, 7, 8, 9, 10},
 			},
 		},
 	}
@@ -262,8 +262,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -296,7 +296,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{1, 2, 3, 4, 5},
-				BlockRoot:   []byte{6, 7, 8, 9, 10},
+				BlockHash:   []byte{6, 7, 8, 9, 10},
 			},
 		},
 	}
@@ -325,7 +325,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{11, 12, 13, 14, 15},
-				BlockRoot:   []byte{16, 17, 18, 19, 20},
+				BlockHash:   []byte{16, 17, 18, 19, 20},
 			},
 		},
 	}
@@ -652,8 +652,8 @@ func TestHandleStateReq_NOState(t *testing.T) {
 	ss := setupService(db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
