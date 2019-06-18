@@ -747,7 +747,7 @@ func ProcessDeposit(
 	verifySignatures bool,
 	verifyTree bool,
 ) (*pb.BeaconState, error) {
-	if err := verifyDeposit(beaconState, deposit); err != nil {
+	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
 		return nil, fmt.Errorf("could not verify deposit #%d: %v", deposit.Index, err)
 	}
 	beaconState.DepositIndex++
@@ -779,27 +779,33 @@ func ProcessDeposit(
 	return beaconState, nil
 }
 
-func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
+func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree bool) error {
+	if verifyTree {
+		// Verify Merkle proof of deposit and deposit trie root.
+		receiptRoot := beaconState.LatestEth1Data.DepositRoot
+		leaf, err := ssz.HashTreeRoot(deposit.Data)
+		if err != nil {
+			return fmt.Errorf("could not tree hash deposit data: %v", err)
+		}
+		if ok := trieutil.VerifyMerkleProof(
+			receiptRoot,
+			leaf[:],
+			int(deposit.Index),
+			deposit.Proof,
+		); !ok {
+			return fmt.Errorf(
+				"deposit merkle branch of deposit root did not verify for root: %#x",
+				receiptRoot,
+			)
+		}
+	}
+
 	// Deposits must be processed in order
 	if deposit.Index != beaconState.DepositIndex {
 		return fmt.Errorf(
 			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
 			beaconState.DepositIndex,
 			deposit.Index,
-		)
-	}
-
-	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := beaconState.LatestEth1Data.DepositRoot
-	if ok := trieutil.VerifyMerkleProof(
-		receiptRoot,
-		deposit.Data.Signature,
-		int(deposit.Index),
-		deposit.Proof,
-	); !ok {
-		return fmt.Errorf(
-			"deposit merkle branch of deposit root did not verify for root: %#x",
-			receiptRoot,
 		)
 	}
 

@@ -4,8 +4,6 @@ import (
 	"context"
 	"math/big"
 	"reflect"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
