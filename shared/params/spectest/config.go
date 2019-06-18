@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/ghodss/yaml"
+	"github.com/go-yaml/yaml"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
