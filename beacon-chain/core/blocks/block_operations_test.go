@@ -1190,7 +1190,6 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	}
 
 	block.Body.Attestations[0].Data.Crosslink.StartEpoch = 0
-	want = "mismatched parent crosslink root"
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
 		block,
