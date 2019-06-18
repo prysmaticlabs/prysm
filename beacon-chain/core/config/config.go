@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// SetConfig sets the global params for spec tests depending on the option chosen.
 func SetConfig(config string) error {
 	file, err := ioutil.ReadFile(config + ".yaml")
 	if err != nil {
