@@ -1,4 +1,4 @@
-package spectests
+package spectest
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -43,15 +42,15 @@ func TestBlockProcessingYaml(t *testing.T) {
 		}
 
 		for _, b := range testCase.Blocks {
-			serializedObj, err := ssz.Marshal(b)
+			serializedObj, err := json.Marshal(b)
 			if err != nil {
 				t.Fatal(err)
 			}
 			protoBlock := &pb.BeaconBlock{}
-			if err := ssz.Unmarshal(serializedObj, protoBlock); err != nil {
+			if err := jsonpb.Unmarshal(bytes.NewReader(serializedObj), protoBlock); err != nil {
 				t.Fatal(err)
 			}
-			postState, err = state.ProcessBlock(ctx, preState, protoBlock, nil)
+			postState, err = state.ProcessBlock(ctx, preState, protoBlock, &state.TransitionConfig{})
 			if err != nil {
 				t.Fatal(err)
 			}
