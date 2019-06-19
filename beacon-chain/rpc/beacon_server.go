@@ -162,7 +162,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pbp2p.E
 	currentHeight := bs.powChainService.LatestBlockHeight()
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 
-	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRoot)
+	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.Eth1Data.DepositRoot)
 	// If latest ETH1 block hash is empty, send a default response
 	if stateLatestEth1Hash == [32]byte{} {
 		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
