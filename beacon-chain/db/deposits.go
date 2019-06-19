@@ -89,7 +89,7 @@ func (db *BeaconDB) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeig
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
-	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].block.Cmp(blockHeight) >= 0 })
+	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].block.Cmp(blockHeight) > 0 })
 	if heightIdx == 0 {
 		return 0, [32]byte{}
 	}
