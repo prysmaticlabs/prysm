@@ -420,7 +420,7 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		}
 
 		if bytes.Equal(blockRoot[:], ancestorRoot) {
-			balances += int(state.ValidatorRegistry[validatorIndex].EffectiveBalance)
+			balances += int(state.Validators[validatorIndex].EffectiveBalance)
 		}
 	}
 	return balances, nil

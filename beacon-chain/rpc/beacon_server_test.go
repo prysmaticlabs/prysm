@@ -236,7 +236,7 @@ func TestBlockTree_OK(t *testing.T) {
 	justifiedState := &pbp2p.BeaconState{
 		Slot:              0,
 		Balances:          make([]uint64, 11),
-		ValidatorRegistry: validators,
+		Validators: validators,
 	}
 	for i := 0; i < len(justifiedState.Balances); i++ {
 		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
@@ -261,7 +261,7 @@ func TestBlockTree_OK(t *testing.T) {
 	b1Root, _ := blockutil.BlockSigningRoot(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b1Root); err != nil {
 		t.Fatal(err)
@@ -274,7 +274,7 @@ func TestBlockTree_OK(t *testing.T) {
 	b2Root, _ := blockutil.BlockSigningRoot(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b2Root); err != nil {
 		t.Fatal(err)
@@ -287,7 +287,7 @@ func TestBlockTree_OK(t *testing.T) {
 	b3Root, _ := blockutil.BlockSigningRoot(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b3Root); err != nil {
 		t.Fatal(err)
@@ -300,7 +300,7 @@ func TestBlockTree_OK(t *testing.T) {
 	b4Root, _ := blockutil.BlockSigningRoot(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              4,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b4Root); err != nil {
 		t.Fatal(err)
@@ -313,7 +313,7 @@ func TestBlockTree_OK(t *testing.T) {
 	b5Root, _ := blockutil.BlockSigningRoot(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              5,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b5Root); err != nil {
 		t.Fatal(err)
@@ -476,7 +476,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	b1Root, _ := blockutil.BlockSigningRoot(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b1Root); err != nil {
 		t.Fatal(err)
@@ -488,7 +488,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	b2Root, _ := blockutil.BlockSigningRoot(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b2Root); err != nil {
 		t.Fatal(err)
@@ -500,7 +500,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	b3Root, _ := blockutil.BlockSigningRoot(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b3Root); err != nil {
 		t.Fatal(err)
@@ -512,7 +512,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	b4Root, _ := blockutil.BlockSigningRoot(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              4,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b4Root); err != nil {
 		t.Fatal(err)
@@ -524,7 +524,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	b5Root, _ := blockutil.BlockSigningRoot(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              5,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b5Root); err != nil {
 		t.Fatal(err)
@@ -670,7 +670,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	for i := 0; i < 11; i++ {
 		validators = append(validators, &pbp2p.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxDepositAmount})
 	}
-	justifiedState.ValidatorRegistry = validators
+	justifiedState.Validators = validators
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
 	}
@@ -689,7 +689,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	b1Root, _ := blockutil.BlockSigningRoot(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b1Root); err != nil {
 		t.Fatal(err)
@@ -701,7 +701,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	b2Root, _ := blockutil.BlockSigningRoot(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b2Root); err != nil {
 		t.Fatal(err)
@@ -713,7 +713,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	b3Root, _ := blockutil.BlockSigningRoot(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b3Root); err != nil {
 		t.Fatal(err)
@@ -725,7 +725,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	b4Root, _ := blockutil.BlockSigningRoot(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              4,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b4Root); err != nil {
 		t.Fatal(err)
@@ -737,7 +737,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	b5Root, _ := blockutil.BlockSigningRoot(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              5,
-		ValidatorRegistry: validators,
+		Validators: validators,
 		Balances:          balances,
 	}, b5Root); err != nil {
 		t.Fatal(err)

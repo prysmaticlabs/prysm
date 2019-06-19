@@ -203,7 +203,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
+	beaconState := &pb.BeaconState{Validators: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -233,7 +233,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 
 	pubKey := []byte{'A'}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{
+		Validators: []*pb.Validator{{
 			Pubkey:    pubKey,
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
 	}
@@ -502,7 +502,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Slot:              10,
 		Balances:          []uint64{params.BeaconConfig().MaxDepositAmount},
-		ValidatorRegistry: []*pb.Validator{{}},
+		Validators: []*pb.Validator{{}},
 	}
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
@@ -571,7 +571,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount},
-		ValidatorRegistry: []*pb.Validator{{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
+		Validators: []*pb.Validator{{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
 			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
 			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
 			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount}},
@@ -776,7 +776,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
-		ValidatorRegistry: []*pb.Validator{
+		Validators: []*pb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
 			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
 			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
@@ -1506,7 +1506,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	}
 	latestRandaoMixes := make(
 		[][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength,
+		params.BeaconConfig().RandaoMixesLength,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
@@ -1538,12 +1538,12 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	}
 	gState := &pb.BeaconState{
 		Slot:                   genesisSlot,
-		LatestBlockRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		LatestRandaoMixes:      latestRandaoMixes,
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		BlockRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes:      latestRandaoMixes,
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		SlashedBalances:  make([]uint64, params.BeaconConfig().SlashedExitLength),
 		CurrentCrosslinks:      crosslinks,
-		ValidatorRegistry:      validatorRegistry,
+		Validators:      validatorRegistry,
 		Balances:               validatorBalances,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -1590,7 +1590,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
+	beaconState := &pb.BeaconState{Validators: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -1655,7 +1655,7 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Balances: []uint64{1e9, 1e9},
-		ValidatorRegistry: []*pb.Validator{
+		Validators: []*pb.Validator{
 			{EffectiveBalance: 1e9},
 			{EffectiveBalance: 1e9},
 		},

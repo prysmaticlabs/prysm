@@ -70,16 +70,16 @@ func TestSlotProcessingYaml(t *testing.T) {
 		if !reflect.DeepEqual(postState.Fork, genPostState.Fork) {
 			t.Error("Post state fork miss matched")
 		}
-		if !reflect.DeepEqual(postState.ValidatorRegistry, genPostState.ValidatorRegistry) {
+		if !reflect.DeepEqual(postState.Validators, genPostState.Validators) {
 			t.Error("Post state validator registry miss matched")
 		}
 		if !reflect.DeepEqual(postState.Balances, genPostState.Balances) {
 			t.Error("Post state balances miss matched")
 		}
-		if !reflect.DeepEqual(postState.LatestRandaoMixes, genPostState.LatestRandaoMixes) {
+		if !reflect.DeepEqual(postState.RandaoMixes, genPostState.RandaoMixes) {
 			t.Error("Post state latest randao mixes miss matched")
 		}
-		if !reflect.DeepEqual(postState.LatestStartShard, genPostState.LatestStartShard) {
+		if !reflect.DeepEqual(postState.StartShard, genPostState.StartShard) {
 			t.Error("Post state latest start shard miss matched")
 		}
 		if !reflect.DeepEqual(postState.CurrentCrosslinks, genPostState.CurrentCrosslinks) {
@@ -88,16 +88,16 @@ func TestSlotProcessingYaml(t *testing.T) {
 		if !reflect.DeepEqual(postState.PreviousCrosslinks, genPostState.PreviousCrosslinks) {
 			t.Error("Post state prev crosslinks miss matched")
 		}
-		if !reflect.DeepEqual(postState.LatestBlockRoots, genPostState.LatestBlockRoots) {
+		if !reflect.DeepEqual(postState.BlockRoots, genPostState.BlockRoots) {
 			t.Error("Post state latest block roots miss matched")
 		}
-		if !reflect.DeepEqual(postState.LatestStateRoots, genPostState.LatestStateRoots) {
+		if !reflect.DeepEqual(postState.StateRoots, genPostState.StateRoots) {
 			t.Error("Post state latest state roots miss matched")
 		}
-		if !reflect.DeepEqual(postState.LatestActiveIndexRoots, genPostState.LatestActiveIndexRoots) {
+		if !reflect.DeepEqual(postState.ActiveIndexRoots, genPostState.ActiveIndexRoots) {
 			t.Error("Post state latest active indxes miss matched")
 		}
-		if !reflect.DeepEqual(postState.LatestSlashedBalances, genPostState.LatestSlashedBalances) {
+		if !reflect.DeepEqual(postState.SlashedBalances, genPostState.SlashedBalances) {
 			t.Error("Post state latest slashed balances miss matched")
 		}
 		if !reflect.DeepEqual(postState.LatestBlockHeader, genPostState.LatestBlockHeader) {
@@ -106,10 +106,10 @@ func TestSlotProcessingYaml(t *testing.T) {
 		if !reflect.DeepEqual(postState.HistoricalRoots, genPostState.HistoricalRoots) {
 			t.Error("Post state historical roots miss matched")
 		}
-		if !reflect.DeepEqual(postState.LatestEth1Data, genPostState.LatestEth1Data) {
+		if !reflect.DeepEqual(postState.Eth1Data, genPostState.Eth1Data) {
 			t.Error("Post state latest eth1 data miss matched")
 		}
-		if !reflect.DeepEqual(postState.DepositIndex, genPostState.DepositIndex) {
+		if !reflect.DeepEqual(postState.Eth1DepositIndex, genPostState.Eth1DepositIndex) {
 			t.Error("Post state deposit index miss matched")
 		}
 	}
