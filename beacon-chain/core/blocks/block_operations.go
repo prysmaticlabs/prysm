@@ -249,8 +249,8 @@ func ProcessProposerSlashings(
 	}
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
-		if slashing.ProposerIndex >= uint64(len(registry)) {
-			return nil, fmt.Errorf("invalid proposer index %d > %d", slashing.ProposerIndex, len(registry))
+		if int(slashing.ProposerIndex) >= len(registry) {
+			return nil, fmt.Errorf("proposer index out of bound %d > %d", slashing.ProposerIndex, len(registry))
 		}
 		proposer := registry[slashing.ProposerIndex]
 		if err = verifyProposerSlashing(beaconState, proposer, slashing, verifySignatures); err != nil {
@@ -838,7 +838,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 	return nil
 }
 
-// ProcessValidatorExits is one of the operations performed
+// ProcessVoluntaryExits is one of the operations performed
 // on each processed beacon block to determine which validators
 // should exit the state's validator registry.
 //
@@ -861,7 +861,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 //    # Initiate exit
 //    initiate_validator_exit(state, exit.validator_index)
-func ProcessValidatorExits(
+func ProcessVoluntaryExits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
@@ -889,6 +889,10 @@ func ProcessValidatorExits(
 }
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
+	if int(exit.ValidatorIndex) >= len(beaconState.ValidatorRegistry) {
+		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.ValidatorRegistry))
+	}
+
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	// Verify the validator is active.
@@ -912,10 +916,22 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 		)
 	}
 	if verifySignatures {
-		// TODO(#258): Integrate BLS signature verification for exits.
-		// domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
-		// assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-		return nil
+		pub, err := bls.PublicKeyFromBytes(validator.Pubkey)
+		if err != nil {
+			return fmt.Errorf("could not deserialize validator public key: %v", err)
+		}
+		domain := helpers.DomainVersion(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+		sig, err := bls.SignatureFromBytes(exit.Signature)
+		if err != nil {
+			return fmt.Errorf("could not convert bytes to signature: %v", err)
+		}
+		root, err := ssz.SigningRoot(exit)
+		if err != nil {
+			return fmt.Errorf("could not sign root for header: %v", err)
+		}
+		if !sig.Verify(root[:], pub, domain) {
+			return fmt.Errorf("voluntary exit signature did not verify")
+		}
 	}
 	return nil
 }
