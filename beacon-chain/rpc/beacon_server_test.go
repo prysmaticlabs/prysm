@@ -234,7 +234,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		},
 	}
 	beaconState := &pbp2p.BeaconState{
-		Eth1Data: &pbp2p.Eth1Data{
+		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte{'a'},
 		},
 		Eth1DataVotes: []*pbp2p.Eth1Data{},
@@ -281,7 +281,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	}
 	depositRoot := depositTrie.Root()
 	beaconState := &pbp2p.BeaconState{
-		Eth1Data: &pbp2p.Eth1Data{
+		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockHash:   []byte("hash0"),
 			DepositRoot: depositRoot[:],
 		},
@@ -397,7 +397,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: eth1DataVotes,
-		Eth1Data: &pbp2p.Eth1Data{
+		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte("stub"),
 		},
 	}
@@ -474,7 +474,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: []*pbp2p.Eth1Data{},
-		Eth1Data: &pbp2p.Eth1Data{
+		LatestEth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte("stub"),
 		},
 	}
