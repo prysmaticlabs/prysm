@@ -10,6 +10,9 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = ["proposer_slashing_test.go"],
+    data = [
+        "proposer_slashing_minimal_formatted.yaml",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
