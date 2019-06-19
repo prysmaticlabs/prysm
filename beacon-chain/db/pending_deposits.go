@@ -19,12 +19,12 @@ var (
 	})
 )
 
-// DepositContainer contains object for holding the deposit and a reference to the block in
+// depositContainer contains object for holding the deposit and a reference to the block in
 // which the deposit transaction was included in the eth1 chain.
-type DepositContainer struct {
+type depositContainer struct {
 	deposit     *pb.Deposit
-	Block       *big.Int
-	DepositRoot [32]byte
+	block       *big.Int
+	depositRoot [32]byte
 }
 
 // InsertPendingDeposit into the database. If deposit or block number are nil
@@ -41,7 +41,7 @@ func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blo
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.pendingDeposits = append(db.pendingDeposits, &DepositContainer{deposit: d, Block: blockNum, DepositRoot: depositRoot})
+	db.pendingDeposits = append(db.pendingDeposits, &depositContainer{deposit: d, block: blockNum, depositRoot: depositRoot})
 	pendingDepositsCount.Inc()
 }
 
@@ -56,7 +56,7 @@ func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*
 
 	var deposits []*pb.Deposit
 	for _, ctnr := range db.pendingDeposits {
-		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
+		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
 			deposits = append(deposits, ctnr.deposit)
 		}
 	}
@@ -108,7 +108,7 @@ func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex ui
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
 
-	var cleanDeposits []*DepositContainer
+	var cleanDeposits []*depositContainer
 	for _, dp := range db.pendingDeposits {
 		if dp.deposit.Index >= merkleTreeIndex {
 			cleanDeposits = append(cleanDeposits, dp)

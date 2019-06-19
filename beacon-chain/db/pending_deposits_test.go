@@ -32,7 +32,7 @@ func TestRemovePendingDeposit_OK(t *testing.T) {
 	db := BeaconDB{}
 	depToRemove := &pb.Deposit{Index: 1}
 	otherDep := &pb.Deposit{Index: 5}
-	db.pendingDeposits = []*DepositContainer{
+	db.pendingDeposits = []*depositContainer{
 		{deposit: depToRemove},
 		{deposit: otherDep},
 	}
@@ -45,7 +45,7 @@ func TestRemovePendingDeposit_OK(t *testing.T) {
 
 func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 	db := BeaconDB{}
-	db.pendingDeposits = []*DepositContainer{{deposit: &pb.Deposit{}}}
+	db.pendingDeposits = []*depositContainer{{deposit: &pb.Deposit{}}}
 	db.RemovePendingDeposit(context.Background(), nil /*deposit*/)
 	if len(db.pendingDeposits) != 1 {
 		t.Errorf("Deposit unexpectedly removed")
@@ -65,10 +65,10 @@ func TestPendingDeposit_RoundTrip(t *testing.T) {
 func TestPendingDeposits_OK(t *testing.T) {
 	db := BeaconDB{}
 
-	db.pendingDeposits = []*DepositContainer{
-		{Block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
-		{Block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
-		{Block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
+	db.pendingDeposits = []*depositContainer{
+		{block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
 	}
 
 	deposits := db.PendingDeposits(context.Background(), big.NewInt(4))
@@ -90,23 +90,23 @@ func TestPendingDeposits_OK(t *testing.T) {
 func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 	db := BeaconDB{}
 
-	db.pendingDeposits = []*DepositContainer{
-		{Block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
-		{Block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
-		{Block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
-		{Block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
-		{Block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
-		{Block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
+	db.pendingDeposits = []*depositContainer{
+		{block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
 	}
 
 	db.PrunePendingDeposits(context.Background(), 0)
-	expected := []*DepositContainer{
-		{Block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
-		{Block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
-		{Block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
-		{Block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
-		{Block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
-		{Block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
+	expected := []*depositContainer{
+		{block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
 	}
 
 	if !reflect.DeepEqual(db.pendingDeposits, expected) {
@@ -117,40 +117,40 @@ func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 func TestPrunePendingDeposits_OK(t *testing.T) {
 	db := BeaconDB{}
 
-	db.pendingDeposits = []*DepositContainer{
-		{Block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
-		{Block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
-		{Block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
-		{Block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
-		{Block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
-		{Block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
+	db.pendingDeposits = []*depositContainer{
+		{block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
 	}
 
 	db.PrunePendingDeposits(context.Background(), 6)
-	expected := []*DepositContainer{
-		{Block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
-		{Block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
-		{Block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
-		{Block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
+	expected := []*depositContainer{
+		{block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
 	}
 
 	if !reflect.DeepEqual(db.pendingDeposits, expected) {
 		t.Errorf("Unexpected deposits. got=%+v want=%+v", db.pendingDeposits, expected)
 	}
 
-	db.pendingDeposits = []*DepositContainer{
-		{Block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
-		{Block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
-		{Block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
-		{Block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
-		{Block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
-		{Block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
+	db.pendingDeposits = []*depositContainer{
+		{block: big.NewInt(2), deposit: &pb.Deposit{Index: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{Index: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{Index: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{Index: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
 	}
 
 	db.PrunePendingDeposits(context.Background(), 10)
-	expected = []*DepositContainer{
-		{Block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
-		{Block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
+	expected = []*depositContainer{
+		{block: big.NewInt(10), deposit: &pb.Deposit{Index: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{Index: 12}},
 	}
 
 	if !reflect.DeepEqual(db.pendingDeposits, expected) {

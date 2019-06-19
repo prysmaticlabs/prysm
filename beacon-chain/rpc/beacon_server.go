@@ -176,9 +176,9 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 	dataVotes := []*pbp2p.Eth1Data{}
 	voteCountMap := make(map[string]voteHierarchy)
 	bestVoteHeight := big.NewInt(0)
+	depositCount, depositRootAtHeight := db.BeaconDB.DepositsNumberAndRootAtHeight(ctx, currentHeight)
 	var mostVotes uint64
 	var bestVoteHash string
-	depContainers := bs.beaconDB.DepositsContainersTillBlock(ctx, nil)
 	for _, vote := range beaconState.Eth1DataVotes {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -203,12 +203,10 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 		// at the block defined by vote.eth1_data.block_hash.
 		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
 		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
-		heightIdx := sort.Search(len(depContainers), func(i int) bool { return depContainers[i].Block.Cmp(currentHeight) >= 0 })
 		if heightIdx == 0 {
 			continue
 		}
-		correctDepositCount := uint64(heightIdx) == vote.DepositCount
-		depositRootAtHeight := depContainers[heightIdx-1].DepositRoot
+		correctDepositCount := depositCount == vote.DepositCount
 		correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
 		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data && correctDepositCount && correctDepositRoot {
 			dataVotes = append(dataVotes, vote)
