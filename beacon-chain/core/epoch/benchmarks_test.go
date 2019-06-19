@@ -1,13 +1,15 @@
 package epoch_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"testing"
 	"time"
 
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
+	blocks "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -16,8 +18,10 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 var RunAmount = 1000
@@ -78,33 +82,90 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 	})
 }
 
-func BenchmarkProcessJustification(b *testing.B) {
+func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
 	currentEpoch := helpers.CurrentEpoch(beaconState16K)
 	prevEpoch := helpers.PrevEpoch(beaconState16K)
 
 	activeValidatorIndices := helpers.ActiveValidatorIndices(beaconState16K.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(beaconState16K, activeValidatorIndices)
 
-	currentEpochAttestations := e.CurrentAttestations(beaconState16K)
-	currentEpochBoundaryAttestations, err := e.CurrentEpochBoundaryAttestations(beaconState16K, currentEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
+	currentEpochAttestations := []*pb.PendingAttestation{}
+	currentEpochBoundaryAttestations := []*pb.PendingAttestation{}
+	currentBoundaryAttesterIndices := []uint64{}
+
+	prevEpochAttestations := []*pb.PendingAttestation{}
+	prevEpochBoundaryAttestations := []*pb.PendingAttestation{}
+	prevEpochAttesterIndices := []uint64{}
+	prevEpochHeadAttestations := []*pb.PendingAttestation{}
+
+	inclusionSlotByAttester := make(map[uint64]uint64)
+	inclusionDistanceByAttester := make(map[uint64]uint64)
+
+	for _, attestation := range beaconState16K.LatestAttestations {
+		// We determine the attestation participants.
+		attesterIndices, err := helpers.AttestationParticipants(
+			beaconState16K,
+			attestation.Data,
+			attestation.AggregationBitfield)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		for _, participant := range attesterIndices {
+			inclusionDistanceByAttester[participant] = beaconState16K.Slot - attestation.Data.Slot
+			inclusionSlotByAttester[participant] = attestation.InclusionSlot
+		}
+
+		// We extract the attestations from the current epoch.
+		if currentEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
+			currentEpochAttestations = append(currentEpochAttestations, attestation)
+
+			// We then extract the boundary attestations.
+			boundaryBlockRoot, err := blocks.BlockRoot(beaconState16K, helpers.StartSlot(currentEpoch))
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			attestationData := attestation.Data
+			sameRoot := bytes.Equal(attestationData.EpochBoundaryRootHash32, boundaryBlockRoot)
+			if sameRoot {
+				currentEpochBoundaryAttestations = append(currentEpochBoundaryAttestations, attestation)
+				currentBoundaryAttesterIndices = sliceutil.UnionUint64(currentBoundaryAttesterIndices, attesterIndices)
+			}
+		}
+
+		// We extract the attestations from the previous epoch.
+		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
+			prevEpochAttestations = append(prevEpochAttestations, attestation)
+			prevEpochAttesterIndices = sliceutil.UnionUint64(prevEpochAttesterIndices, attesterIndices)
+
+			// We extract the previous epoch boundary attestations.
+			prevBoundaryBlockRoot, err := blocks.BlockRoot(beaconState16K,
+				helpers.StartSlot(helpers.PrevEpoch(beaconState16K)))
+			if err != nil {
+				b.Fatal(err)
+			}
+			if bytes.Equal(attestation.Data.EpochBoundaryRootHash32, prevBoundaryBlockRoot) {
+				prevEpochBoundaryAttestations = append(prevEpochBoundaryAttestations, attestation)
+			}
+
+			// We extract the previous epoch head attestations.
+			canonicalBlockRoot, err := blocks.BlockRoot(beaconState16K, attestation.Data.Slot)
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			attestationData := attestation.Data
+			if bytes.Equal(attestationData.BeaconBlockRootHash32, canonicalBlockRoot) {
+				prevEpochHeadAttestations = append(prevEpochHeadAttestations, attestation)
+			}
+		}
 	}
 
-	currentBoundaryAttesterIndices, err := v.ValidatorIndices(beaconState16K, currentEpochBoundaryAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
+	// Calculate the attesting balances for previous and current epoch.
 	currentBoundaryAttestingBalances := e.TotalBalance(beaconState16K, currentBoundaryAttesterIndices)
-
 	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(beaconState16K.ValidatorRegistry, prevEpoch)
 	prevTotalBalance := e.TotalBalance(beaconState16K, previousActiveValidatorIndices)
-
-	prevEpochAttestations := e.PrevAttestations(beaconState16K)
-	prevEpochAttesterIndices, err := v.ValidatorIndices(beaconState16K, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
 	prevEpochAttestingBalance := e.TotalBalance(beaconState16K, prevEpochAttesterIndices)
 
 	b.Run("16K", func(b *testing.B) {
@@ -126,8 +187,23 @@ func BenchmarkProcessJustification(b *testing.B) {
 }
 
 func BenchmarkProcessCrosslinks(b *testing.B) {
-	currentEpochAttestations := e.CurrentAttestations(beaconState16K)
-	prevEpochAttestations := e.PrevAttestations(beaconState16K)
+	currentEpoch := helpers.CurrentEpoch(beaconState16K)
+	prevEpoch := helpers.PrevEpoch(beaconState16K)
+
+	currentEpochAttestations := []*pb.PendingAttestation{}
+	prevEpochAttestations := []*pb.PendingAttestation{}
+
+	for _, attestation := range beaconState16K.LatestAttestations {
+		// We extract the attestations from the current epoch.
+		if currentEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
+			currentEpochAttestations = append(currentEpochAttestations, attestation)
+		}
+
+		// We extract the attestations from the previous epoch.
+		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
+			prevEpochAttestations = append(prevEpochAttestations, attestation)
+		}
+	}
 
 	b.Run("16K", func(b *testing.B) {
 		b.N = 3
@@ -157,63 +233,94 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 
 func BenchmarkProcessRewards(b *testing.B) {
 	currentEpoch := helpers.CurrentEpoch(beaconState16K)
+	prevEpoch := helpers.PrevEpoch(beaconState16K)
 
 	activeValidatorIndices := helpers.ActiveValidatorIndices(beaconState16K.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(beaconState16K, activeValidatorIndices)
 
-	prevEpochAttestations := e.PrevAttestations(beaconState16K)
-	prevEpochAttesterIndices, err := v.ValidatorIndices(beaconState16K, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
+	prevEpochAttesterIndices := []uint64{}
+	prevEpochBoundaryAttesterIndices := []uint64{}
+	prevEpochHeadAttesterIndices := []uint64{}
+
+	inclusionSlotByAttester := make(map[uint64]uint64)
+	inclusionDistanceByAttester := make(map[uint64]uint64)
+
+	for _, attestation := range beaconState16K.LatestAttestations {
+		// We determine the attestation participants.
+		attesterIndices, err := helpers.AttestationParticipants(
+			beaconState16K,
+			attestation.Data,
+			attestation.AggregationBitfield)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		for _, participant := range attesterIndices {
+			inclusionDistanceByAttester[participant] = beaconState16K.Slot - attestation.Data.Slot
+			inclusionSlotByAttester[participant] = attestation.InclusionSlot
+		}
+
+		// We extract the attestations from the previous epoch.
+		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
+			prevEpochAttesterIndices = sliceutil.UnionUint64(prevEpochAttesterIndices, attesterIndices)
+
+			// We extract the previous epoch boundary attestations.
+			prevBoundaryBlockRoot, err := blocks.BlockRoot(beaconState16K,
+				helpers.StartSlot(helpers.PrevEpoch(beaconState16K)))
+			if err != nil {
+				b.Fatal(err)
+			}
+			if bytes.Equal(attestation.Data.EpochBoundaryRootHash32, prevBoundaryBlockRoot) {
+				prevEpochBoundaryAttesterIndices = sliceutil.UnionUint64(prevEpochBoundaryAttesterIndices, attesterIndices)
+			}
+
+			canonicalBlockRoot, err := blocks.BlockRoot(beaconState16K, attestation.Data.Slot)
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			attestationData := attestation.Data
+			if bytes.Equal(attestationData.BeaconBlockRootHash32, canonicalBlockRoot) {
+				prevEpochHeadAttesterIndices = sliceutil.UnionUint64(prevEpochHeadAttesterIndices, attesterIndices)
+			}
+		}
 	}
+
 	prevEpochAttestingBalance := e.TotalBalance(beaconState16K, prevEpochAttesterIndices)
-
-	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(beaconState16K, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(beaconState16K, prevEpochBoundaryAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(beaconState16K, prevEpochBoundaryAttesterIndices)
-
-	prevEpochHeadAttestations, err := e.PrevHeadAttestations(beaconState16K, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
-	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(beaconState16K, prevEpochHeadAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
 	prevEpochHeadAttestingBalances := e.TotalBalance(beaconState16K, prevEpochHeadAttesterIndices)
 
 	b.N = SmallRunAmount
 	b.ResetTimer()
+	var err error
 	for i := 0; i < b.N; i++ {
 		_ = bal.ExpectedFFGSource(
 			beaconState16K,
 			prevEpochAttesterIndices,
 			prevEpochAttestingBalance,
-			totalBalance)
+			totalBalance,
+		)
 
 		_ = bal.ExpectedFFGTarget(
 			beaconState16K,
 			prevEpochBoundaryAttesterIndices,
 			prevEpochBoundaryAttestingBalances,
-			totalBalance)
+			totalBalance,
+		)
 
 		_ = bal.ExpectedBeaconChainHead(
 			beaconState16K,
 			prevEpochHeadAttesterIndices,
 			prevEpochHeadAttestingBalances,
-			totalBalance)
+			totalBalance,
+		)
 
 		_, err = bal.InclusionDistance(
 			beaconState16K,
 			prevEpochAttesterIndices,
-			totalBalance)
+			totalBalance,
+			inclusionDistanceByAttester,
+		)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -222,64 +329,95 @@ func BenchmarkProcessRewards(b *testing.B) {
 
 func BenchmarkProcessLeak(b *testing.B) {
 	currentEpoch := helpers.CurrentEpoch(beaconState16K)
+	prevEpoch := helpers.PrevEpoch(beaconState16K)
 
 	activeValidatorIndices := helpers.ActiveValidatorIndices(beaconState16K.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(beaconState16K, activeValidatorIndices)
 
-	prevEpochAttestations := e.PrevAttestations(beaconState16K)
-	prevEpochAttesterIndices, err := v.ValidatorIndices(beaconState16K, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
-	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(beaconState16K, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
+	prevEpochAttesterIndices := []uint64{}
+	prevEpochBoundaryAttesterIndices := []uint64{}
+	prevEpochHeadAttesterIndices := []uint64{}
 
-	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(beaconState16K, prevEpochBoundaryAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
+	inclusionDistanceByAttester := make(map[uint64]uint64)
 
-	prevEpochHeadAttestations, err := e.PrevHeadAttestations(beaconState16K, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
-	}
-	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(beaconState16K, prevEpochHeadAttestations)
-	if err != nil {
-		b.Fatal(err)
+	for _, attestation := range beaconState16K.LatestAttestations {
+		// We determine the attestation participants.
+		attesterIndices, err := helpers.AttestationParticipants(
+			beaconState16K,
+			attestation.Data,
+			attestation.AggregationBitfield)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		for _, participant := range attesterIndices {
+			inclusionDistanceByAttester[participant] = beaconState16K.Slot - attestation.Data.Slot
+		}
+
+		// We extract the attestations from the previous epoch.
+		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
+			prevEpochAttesterIndices = sliceutil.UnionUint64(prevEpochAttesterIndices, attesterIndices)
+
+			// We extract the previous epoch boundary attestations.
+			prevBoundaryBlockRoot, err := blocks.BlockRoot(beaconState16K,
+				helpers.StartSlot(helpers.PrevEpoch(beaconState16K)))
+			if err != nil {
+				b.Fatal(err)
+			}
+			if bytes.Equal(attestation.Data.EpochBoundaryRootHash32, prevBoundaryBlockRoot) {
+				prevEpochBoundaryAttesterIndices = sliceutil.UnionUint64(prevEpochBoundaryAttesterIndices, attesterIndices)
+			}
+
+			// We extract the previous epoch head attestations.
+			canonicalBlockRoot, err := blocks.BlockRoot(beaconState16K, attestation.Data.Slot)
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			attestationData := attestation.Data
+			if bytes.Equal(attestationData.BeaconBlockRootHash32, canonicalBlockRoot) {
+				prevEpochHeadAttesterIndices = sliceutil.UnionUint64(prevEpochHeadAttesterIndices, attesterIndices)
+			}
+		}
 	}
 
 	var epochsSinceFinality uint64 = 4
 	b.N = SmallRunAmount
+	var err error
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = bal.InactivityFFGSource(
 			beaconState16K,
 			prevEpochAttesterIndices,
 			totalBalance,
-			epochsSinceFinality)
+			epochsSinceFinality,
+		)
 
 		_ = bal.InactivityFFGTarget(
 			beaconState16K,
 			prevEpochBoundaryAttesterIndices,
 			totalBalance,
-			epochsSinceFinality)
+			epochsSinceFinality,
+		)
 
 		_ = bal.InactivityChainHead(
 			beaconState16K,
 			prevEpochHeadAttesterIndices,
-			totalBalance)
+			totalBalance,
+		)
 
 		_ = bal.InactivityExitedPenalties(
 			beaconState16K,
 			totalBalance,
-			epochsSinceFinality)
+			epochsSinceFinality,
+		)
 
 		_, err = bal.InactivityInclusionDistance(
 			beaconState16K,
 			prevEpochAttesterIndices,
-			totalBalance)
+			totalBalance,
+			inclusionDistanceByAttester,
+		)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -330,21 +468,40 @@ func BenchmarkProcessEjections(b *testing.B) {
 
 func BenchmarkAttestationInclusion(b *testing.B) {
 	currentEpoch := helpers.CurrentEpoch(beaconState16K)
+	prevEpoch := helpers.PrevEpoch(beaconState16K)
+
 	activeValidatorIndices := helpers.ActiveValidatorIndices(beaconState16K.ValidatorRegistry, currentEpoch)
-
 	totalBalance := e.TotalBalance(beaconState16K, activeValidatorIndices)
-	prevEpochAttestations := e.PrevAttestations(beaconState16K)
 
-	prevEpochAttesterIndices, err := v.ValidatorIndices(beaconState16K, prevEpochAttestations)
-	if err != nil {
-		b.Fatal(err)
+	prevEpochAttesterIndices := []uint64{}
+
+	inclusionSlotByAttester := make(map[uint64]uint64)
+
+	for _, attestation := range beaconState16K.LatestAttestations {
+		// We determine the attestation participants.
+		attesterIndices, err := helpers.AttestationParticipants(
+			beaconState16K,
+			attestation.Data,
+			attestation.AggregationBitfield)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		for _, participant := range attesterIndices {
+			inclusionSlotByAttester[participant] = attestation.InclusionSlot
+		}
+
+		// We extract the attestations from the previous epoch.
+		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
+			prevEpochAttesterIndices = sliceutil.UnionUint64(prevEpochAttesterIndices, attesterIndices)
+		}
 	}
 
 	b.Run("16K", func(b *testing.B) {
 		b.N = 20
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err := bal.AttestationInclusion(beaconState16K, totalBalance, prevEpochAttesterIndices)
+			_, err := bal.AttestationInclusion(beaconState16K, totalBalance, prevEpochAttesterIndices, inclusionSlotByAttester)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -544,6 +701,10 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 	// Previous epoch attestations
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
 		attestationSlot := (prevEpoch * slotsPerEpoch) + (i % slotsPerEpoch)
+		aggregationBitfield, err := bitutil.SetBitfield(int(i)%byteLength, byteLength)
+		if err != nil {
+
+		}
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
 				Slot:                     attestationSlot,
@@ -553,7 +714,7 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 				JustifiedBlockRootHash32: []byte{0},
 			},
 			InclusionSlot:       attestationSlot + 1,
-			AggregationBitfield: bitutil.SetBitfield(int(i)%byteLength, byteLength),
+			AggregationBitfield: aggregationBitfield,
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -563,6 +724,10 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 	// Current epoch attestations
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
 		attestationSlot := (currentEpoch * slotsPerEpoch) + (i % slotsPerEpoch)
+		aggregationBitfield, err := bitutil.SetBitfield(int(i)%byteLength, byteLength)
+		if err != nil {
+			panic(err)
+		}
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
 				Slot:                     attestationSlot,
@@ -572,7 +737,7 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 				JustifiedBlockRootHash32: []byte{0},
 			},
 			InclusionSlot:       attestationSlot + 1,
-			AggregationBitfield: bitutil.SetBitfield(int(i)%byteLength, byteLength),
+			AggregationBitfield: aggregationBitfield,
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -647,17 +812,20 @@ func createGenesisState(numDeposits uint64) *pb.BeaconState {
 	setBenchmarkConfig()
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
+		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.PutUvarint(pubKeyBuf, uint64(i))
 		depositInput := &pb.DepositInput{
-			Pubkey:                      []byte(fmt.Sprintf("%d", i)),
-			WithdrawalCredentialsHash32: []byte{1, 2, 3},
+			Pubkey:                      pubKeyBuf,
+			WithdrawalCredentialsHash32: make([]byte, 32),
+			ProofOfPossession:           make([]byte, 96),
 		}
 		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		encodedData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			panic(err)
 		}
 		deposits[i] = &pb.Deposit{
-			DepositData: depositData,
+			DepositData: encodedData,
 		}
 	}
 	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})

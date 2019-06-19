@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"math"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -424,6 +425,10 @@ func createFullBlock(b *testing.B, bState *pb.BeaconState, previousDeposits []*p
 
 	attestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttestations; i++ {
+		aggregationBitfield, err := bitutil.SetBitfield(int(i), byteLength)
+		if err != nil {
+			panic(err)
+		}
 		att1 := &pb.Attestation{
 			Data: &pb.AttestationData{
 				Shard:                    0,
@@ -436,7 +441,7 @@ func createFullBlock(b *testing.B, bState *pb.BeaconState, previousDeposits []*p
 				CrosslinkDataRootHash32: params.BeaconConfig().ZeroHash[:],
 				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
 			},
-			AggregationBitfield: bitutil.SetBitfield(int(i), byteLength),
+			AggregationBitfield: aggregationBitfield,
 			CustodyBitfield:     []byte{1},
 		}
 		attestations[i] = att1
@@ -521,6 +526,7 @@ func createGenesisState(numDeposits int) (*pb.BeaconState, []*pb.Deposit) {
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
 			Pubkey:                      []byte(fmt.Sprintf("%d", i)),
+			ProofOfPossession:           []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		}
 		balance := params.BeaconConfig().MaxDepositAmount
