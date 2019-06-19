@@ -48,7 +48,10 @@ func TestShuffleYaml(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-
+		t.Logf("Title: %v", shuffleTest.Title)
+		t.Logf("Summary: %v", shuffleTest.Summary)
+		t.Logf("Fork: %v", shuffleTest.Forks)
+		t.Logf("Config: %v", shuffleTest.Config)
 		for _, testCase := range shuffleTest.TestCases {
 			if err := runShuffleTest(testCase); err != nil {
 				t.Fatalf("shuffle test failed: %v", err)

@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["shuffle_test_format.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/utils/spectest",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["shuffle_yaml_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/utils:go_default_library",
+        "//shared/params/spectest:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_go_yaml_yaml//:go_default_library",
+    ],
+)

@@ -173,30 +173,6 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	return nil
 }
 
-// RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
-// algorithm, then compare the output with the expected output from the YAML file.
-func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
-	defer db.TeardownDB(sb.beaconDB)
-	seed := common.HexToHash(testCase.Seed)
-	testIndices := make([]uint64, testCase.Count, testCase.Count)
-	for i := uint64(0); i < testCase.Count; i++ {
-		testIndices[i] = i
-	}
-	shuffledList := make([]uint64, testCase.Count)
-	for i := uint64(0); i < testCase.Count; i++ {
-		si, err := utils.ShuffledIndex(i, testCase.Count, seed)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		shuffledList[i] = si
-	}
-	if !reflect.DeepEqual(shuffledList, testCase.Shuffled) {
-		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledList)
-	}
-	return nil
-}
-
 // RunStateTransitionTest advances a beacon chain state transition an N amount of
 // slots from a genesis state, with a block being processed at every iteration
 // of the state transition function.
