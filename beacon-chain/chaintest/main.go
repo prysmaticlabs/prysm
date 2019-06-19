@@ -1,13 +1,11 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"path"
 	"path/filepath"
-	"reflect"
 	"time"
 
 	"github.com/go-yaml/yaml"
@@ -53,12 +51,6 @@ func readTestsFromYaml(yamlDir string) (tests []interface{}, configs map[string]
 					return nil, nil, fmt.Errorf("could not unmarshal YAML file into test struct: %v", err)
 				}
 				tests = append(tests, decoded)
-			case shuffleTestsFolderName:
-				decoded := &backend.ShuffleTest{}
-				if err := yaml.Unmarshal(data, decoded); err != nil {
-					return nil, nil, fmt.Errorf("could not unmarshal YAML file into test struct: %v", err)
-				}
-				tests = append(tests, decoded)
 			case stateTestsFolderName:
 				decoded := &backend.StateTest{}
 				if err := yaml.Unmarshal(data, decoded); err != nil {
@@ -91,26 +83,6 @@ func runTests(tests []interface{}, configs map[string]interface{}, sb *backend.S
 			for _, testCase := range typedTest.TestCases {
 				if err := sb.RunForkChoiceTest(testCase); err != nil {
 					return fmt.Errorf("fork choice test failed: %v", err)
-				}
-			}
-			log.Info("Test PASSED")
-		case *backend.ShuffleTest:
-			log.Infof("Title: %v", typedTest.Title)
-			log.Infof("Summary: %v", typedTest.Summary)
-			log.Infof("Fork: %v", typedTest.Forks)
-			log.Infof("Config: %v", typedTest.Config)
-			config, ok := configs[string(typedTest.Config)]
-			if !ok {
-				return errors.New("no config file found for test")
-			}
-			conf, ok := config.(*params.BeaconChainConfig)
-			if !ok {
-				return fmt.Errorf("config file is not of type *params.BeaconChainConfig found type: %v", reflect.TypeOf(config))
-			}
-			params.OverrideBeaconConfig(conf)
-			for _, testCase := range typedTest.TestCases {
-				if err := sb.RunShuffleTest(testCase); err != nil {
-					return fmt.Errorf("shuffle test failed: %v", err)
 				}
 			}
 			log.Info("Test PASSED")
