@@ -5,18 +5,12 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestAttestationMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile("attestation_minimal_formatted.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	file, err := ioutil.ReadFile(filepath)
+	file, err := ioutil.ReadFile("attestation_minimal_formatted.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}
@@ -35,6 +29,7 @@ func TestAttestationMinimal(t *testing.T) {
 			}
 
 			_ = pre
+			fmt.Printf("%v", pre)
 			t.Fail() // TODO
 		})
 	}
