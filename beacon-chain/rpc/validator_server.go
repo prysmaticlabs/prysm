@@ -95,7 +95,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, fmt.Errorf("could not get head: %v", err)
 	}
-	validatorRegistry, err := vs.beaconDB.Validators(ctx)
+	validatorRegistry, err := vs.beaconDB.ValidatorRegistry(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -151,7 +151,7 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
 		}
 
-		v := s.Validators[idx]
+		v := s.ValidatorRegistry[idx]
 		// Update validator assignment when it is active
 		if ok && helpers.IsActiveValidator(v, helpers.CurrentEpoch(s)) {
 			assignment, err = vs.assignment(pk, s, req.EpochStart)
@@ -358,7 +358,7 @@ func (vs *ValidatorServer) validatorStatus(
 	activationEpoch := params.BeaconConfig().FarFutureEpoch
 	var validatorInState *pbp2p.Validator
 	var validatorIndex uint64
-	for idx, val := range beaconState.Validators {
+	for idx, val := range beaconState.ValidatorRegistry {
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -377,8 +377,8 @@ func (vs *ValidatorServer) validatorStatus(
 	// If the validator has deposited and has been added to the state:
 	if validatorInState != nil {
 		var lastActivatedValidatorIdx uint64
-		for j := len(beaconState.Validators) - 1; j >= 0; j-- {
-			if helpers.IsActiveValidator(beaconState.Validators[j], currEpoch) {
+		for j := len(beaconState.ValidatorRegistry) - 1; j >= 0; j-- {
+			if helpers.IsActiveValidator(beaconState.ValidatorRegistry[j], currEpoch) {
 				lastActivatedValidatorIdx = uint64(j)
 				break
 			}
@@ -399,7 +399,7 @@ func (vs *ValidatorServer) validatorStatus(
 
 func (vs *ValidatorServer) lookupValidatorStatus(validatorIdx uint64, beaconState *pbp2p.BeaconState) pb.ValidatorStatus {
 	var status pb.ValidatorStatus
-	v := beaconState.Validators[validatorIdx]
+	v := beaconState.ValidatorRegistry[validatorIdx]
 	epoch := helpers.CurrentEpoch(beaconState)
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 

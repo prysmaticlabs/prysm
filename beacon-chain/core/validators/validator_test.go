@@ -48,7 +48,7 @@ func TestHasVoted_OK(t *testing.T) {
 
 func TestActivateValidatorGenesis_OK(t *testing.T) {
 	state := &pb.BeaconState{
-		Validators: []*pb.Validator{
+		ValidatorRegistry: []*pb.Validator{
 			{Pubkey: []byte{'A'}},
 		},
 	}
@@ -56,20 +56,20 @@ func TestActivateValidatorGenesis_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not execute activateValidator:%v", err)
 	}
-	if newState.Validators[0].ActivationEpoch != 0 {
+	if newState.ValidatorRegistry[0].ActivationEpoch != 0 {
 		t.Errorf("Wanted activation epoch = genesis epoch, got %d",
-			newState.Validators[0].ActivationEpoch)
+			newState.ValidatorRegistry[0].ActivationEpoch)
 	}
-	if newState.Validators[0].ActivationEligibilityEpoch != 0 {
+	if newState.ValidatorRegistry[0].ActivationEligibilityEpoch != 0 {
 		t.Errorf("Wanted activation eligibility epoch = genesis epoch, got %d",
-			newState.Validators[0].ActivationEligibilityEpoch)
+			newState.ValidatorRegistry[0].ActivationEligibilityEpoch)
 	}
 }
 
 func TestActivateValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 100, // epoch 2
-		Validators: []*pb.Validator{
+		ValidatorRegistry: []*pb.Validator{
 			{Pubkey: []byte{'A'}},
 		},
 	}
@@ -79,32 +79,32 @@ func TestActivateValidator_OK(t *testing.T) {
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	wantedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	if newState.Validators[0].ActivationEpoch != wantedEpoch {
+	if newState.ValidatorRegistry[0].ActivationEpoch != wantedEpoch {
 		t.Errorf("Wanted activation slot = %d, got %d",
 			wantedEpoch,
-			newState.Validators[0].ActivationEpoch)
+			newState.ValidatorRegistry[0].ActivationEpoch)
 	}
 }
 
 func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	exitEpoch := uint64(199)
-	state := &pb.BeaconState{Validators: []*pb.Validator{{
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{
 		ExitEpoch: exitEpoch},
 	}}
 	newState, err := InitiateValidatorExit(state, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if newState.Validators[0].ExitEpoch != exitEpoch {
+	if newState.ValidatorRegistry[0].ExitEpoch != exitEpoch {
 		t.Errorf("Already exited, wanted exit epoch %d, got %d",
-			exitEpoch, newState.Validators[0].ExitEpoch)
+			exitEpoch, newState.ValidatorRegistry[0].ExitEpoch)
 	}
 }
 
 func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 	exitedEpoch := uint64(100)
 	idx := uint64(3)
-	state := &pb.BeaconState{Validators: []*pb.Validator{
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{
 		{ExitEpoch: exitedEpoch},
 		{ExitEpoch: exitedEpoch + 1},
 		{ExitEpoch: exitedEpoch + 2},
@@ -114,16 +114,16 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if newState.Validators[idx].ExitEpoch != exitedEpoch+2 {
+	if newState.ValidatorRegistry[idx].ExitEpoch != exitedEpoch+2 {
 		t.Errorf("Exit epoch was not the highest, wanted exit epoch %d, got %d",
-			exitedEpoch+2, newState.Validators[idx].ExitEpoch)
+			exitedEpoch+2, newState.ValidatorRegistry[idx].ExitEpoch)
 	}
 }
 
 func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	exitedEpoch := uint64(100)
 	idx := uint64(4)
-	state := &pb.BeaconState{Validators: []*pb.Validator{
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
@@ -137,19 +137,19 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 
 	// Because of exit queue overflow,
 	// validator who init exited has to wait one more epoch.
-	wantedEpoch := state.Validators[0].ExitEpoch + 1
+	wantedEpoch := state.ValidatorRegistry[0].ExitEpoch + 1
 
-	if newState.Validators[idx].ExitEpoch != wantedEpoch {
+	if newState.ValidatorRegistry[idx].ExitEpoch != wantedEpoch {
 		t.Errorf("Exit epoch did not cover overflow case, wanted exit epoch %d, got %d",
-			wantedEpoch, newState.Validators[idx].ExitEpoch)
+			wantedEpoch, newState.ValidatorRegistry[idx].ExitEpoch)
 	}
 }
 
 func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:            100, // epoch 2
-		SlashedBalances: []uint64{0},
-		Validators: []*pb.Validator{
+		Slot:                  100, // epoch 2
+		LatestSlashedBalances: []uint64{0},
+		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
 		},
 	}
@@ -157,22 +157,22 @@ func TestExitValidator_OK(t *testing.T) {
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	wantedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	if newState.Validators[0].ExitEpoch != wantedEpoch {
+	if newState.ValidatorRegistry[0].ExitEpoch != wantedEpoch {
 		t.Errorf("Wanted exit slot %d, got %d",
 			wantedEpoch,
-			newState.Validators[0].ExitEpoch)
+			newState.ValidatorRegistry[0].ExitEpoch)
 	}
 }
 
 func TestExitValidator_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1000,
-		Validators: []*pb.Validator{
+		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
 	}
 	state = ExitValidator(state, 0)
-	if state.Validators[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+	if state.ValidatorRegistry[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 		t.Error("Expected exited validator to stay exited")
 	}
 }
@@ -191,8 +191,8 @@ func TestInitializeValidatoreStore(t *testing.T) {
 	}
 
 	bState := &pb.BeaconState{
-		Validators: registry,
-		Slot:       0,
+		ValidatorRegistry: registry,
+		Slot:              0,
 	}
 
 	if _, ok := VStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {

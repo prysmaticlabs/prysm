@@ -62,12 +62,12 @@ func reportStateMetrics(state *pb.BeaconState) {
 	// Validator balances
 	for i, bal := range state.Balances {
 		validatorBalancesGauge.WithLabelValues(
-			"0x" + hex.EncodeToString(state.Validators[i].Pubkey), // Validator
+			"0x" + hex.EncodeToString(state.ValidatorRegistry[i].Pubkey), // Validator
 		).Set(float64(bal))
 	}
 
 	var active float64
-	for i, v := range state.Validators {
+	for i, v := range state.ValidatorRegistry {
 		// Track individual Validator's activation epochs
 		validatorActivatedGauge.WithLabelValues(
 			strconv.Itoa(i), //Validator index
@@ -80,7 +80,7 @@ func reportStateMetrics(state *pb.BeaconState) {
 		if v.Slashed {
 			validatorSlashedGauge.WithLabelValues(
 				strconv.Itoa(i), //Validator index
-			).Set(float64(v.WithdrawableEpoch - params.BeaconConfig().SlashedExitLength))
+			).Set(float64(v.WithdrawableEpoch - params.BeaconConfig().LatestSlashedExitLength))
 		} else {
 			validatorSlashedGauge.WithLabelValues(
 				strconv.Itoa(i), //Validator index

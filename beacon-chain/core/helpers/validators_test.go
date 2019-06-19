@@ -43,10 +43,10 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		ValidatorRegistry:      validators,
+		Slot:                   0,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	tests := []struct {
@@ -95,9 +95,9 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
 	ClearAllCaches()
 	beaconState := &pb.BeaconState{
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		Slot:                   0,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	_, err := BeaconProposerIndex(beaconState)
 	expected := fmt.Sprintf("empty first committee at slot %d", 0)
@@ -135,10 +135,10 @@ func TestChurnLimit_OK(t *testing.T) {
 		}
 
 		beaconState := &pb.BeaconState{
-			Slot:             1,
-			Validators:       validators,
-			RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-			ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+			Slot:                   1,
+			ValidatorRegistry:      validators,
+			LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+			LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		}
 		resultChurn, err := ChurnLimit(beaconState)
 		if err != nil {
