@@ -160,7 +160,6 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 	// Fetch the current canonical chain height from the eth1.0 chain.
 	currentHeight := bs.powChainService.LatestBlockHeight()
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-
 	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.Eth1Data.DepositRoot)
 	// If latest ETH1 block hash is empty, send a default response
 	if stateLatestEth1Hash == [32]byte{} {
@@ -182,6 +181,13 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
+		// Let dataVotes be the set of Eth1DataVote objects vote in state.eth1_data_votes where:
+		// vote.eth1_data.block_hash is the hash of an eth1.0 block that is:
+		//   (i) part of the canonical chain
+		//   (ii) >= ETH1_FOLLOW_DISTANCE blocks behind the head
+		//   (iii) newer than state.latest_eth1_data.block_data.
+		// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
+		// at the block defined by vote.eth1_data.block_hash.
 		eth1Hash := bytesutil.ToBytes32(vote.DepositRoot)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
@@ -193,13 +199,7 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 		if !blockExists {
 			continue
 		}
-		// Let dataVotes be the set of Eth1DataVote objects vote in state.eth1_data_votes where:
-		// vote.eth1_data.block_hash is the hash of an eth1.0 block that is:
-		//   (i) part of the canonical chain
-		//   (ii) >= ETH1_FOLLOW_DISTANCE blocks behind the head
-		//   (iii) newer than state.latest_eth1_data.block_data.
-		// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
-		// at the block defined by vote.eth1_data.block_hash.
+
 		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
 		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
 		correctDepositCount := depositCount == vote.DepositCount
@@ -210,23 +210,7 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not get encoded hash of eth1data object: %v", err)
 			}
-			v, ok := voteCountMap[string(he[:])]
-
-			if !ok {
-				v = voteHierarchy{votes: 1, height: blockHeight, eth1Data: vote}
-				voteCountMap[string(vote.DepositRoot)] = v
-			} else {
-				v.votes = v.votes + 1
-				voteCountMap[string(vote.DepositRoot)] = v
-			}
-			if v.votes > mostVotes {
-				mostVotes = v.votes
-				bestVoteHash = string(vote.DepositRoot)
-				bestVoteHeight = v.height
-			} else if v.votes == mostVotes && v.height.Cmp(bestVoteHeight) == 1 {
-				bestVoteHash = string(vote.DepositRoot)
-				bestVoteHeight = v.height
-			}
+			bestVoteHash, bestVoteHeight, mostVotes, voteCountMap = bs.countVote(bestVoteHash, bestVoteHeight, blockHeight, err, he, mostVotes, vote, voteCountMap)
 		}
 	}
 	// Now we handle the following two scenarios:
@@ -238,11 +222,36 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 	if len(dataVotes) == 0 {
 		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
 	}
+	// if D is nonempty:
+	// return the best vote
 	v, ok := voteCountMap[bestVoteHash]
 	if ok {
 		return v.eth1Data, nil
 	}
 	return nil, nil
+}
+
+// let best_vote_data be the eth1_data member of D that has the highest vote count (D.count(eth1_data)),
+// breaking ties by favoring block hashes with higher associated block height.
+func (bs *BeaconServer) countVote(bestVoteHash string, bestVoteHeight *big.Int, blockHeight *big.Int, err error, he [32]byte, mostVotes uint64, vote *pbp2p.Eth1Data, voteCountMap map[string]voteHierarchy) (string, *big.Int, uint64, map[string]voteHierarchy) {
+	v, ok := voteCountMap[string(he[:])]
+
+	if !ok {
+		v = voteHierarchy{votes: 1, height: blockHeight, eth1Data: vote}
+		voteCountMap[string(vote.DepositRoot)] = v
+	} else {
+		v.votes = v.votes + 1
+		voteCountMap[string(vote.DepositRoot)] = v
+	}
+	if v.votes > mostVotes {
+		mostVotes = v.votes
+		bestVoteHash = string(vote.DepositRoot)
+		bestVoteHeight = v.height
+	} else if v.votes == mostVotes && v.height.Cmp(bestVoteHeight) == 1 {
+		bestVoteHash = string(vote.DepositRoot)
+		bestVoteHeight = v.height
+	}
+	return bestVoteHash, bestVoteHeight, mostVotes, voteCountMap
 }
 
 // BlockTreeBySlots returns the current tree of saved blocks and their votes starting from the justified state.
