@@ -38,7 +38,8 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 	defer db.depositsLock.Unlock()
 	// keep the slice sorted on insertion in order to avoid costly sorting on retrival.
 	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Block.Cmp(blockNum) >= 0 })
-	db.deposits = append(db.deposits[:heightIdx], append([]*DepositContainer{{deposit: d, Block: blockNum, DepositRoot: depositRoot}}, db.deposits[heightIdx:]...)...)
+	newDeposits := append([]*DepositContainer{{deposit: d, Block: blockNum, DepositRoot: depositRoot}}, db.deposits[heightIdx:]...)
+	db.deposits = append(db.deposits[:heightIdx], newDeposits...)
 	historicalDepositsCount.Inc()
 }
 
