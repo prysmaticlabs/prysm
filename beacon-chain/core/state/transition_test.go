@@ -501,9 +501,9 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 100}}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                     epoch * params.BeaconConfig().SlotsPerEpoch,
-		BlockRoots:         make([][]byte, 128),
-		RandaoMixes:        make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots:   make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		BlockRoots:               make([][]byte, 128),
+		RandaoMixes:              make([][]byte, params.BeaconConfig().RandaoMixesLength),
+		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		CurrentEpochAttestations: atts})
 	if !strings.Contains(err.Error(), "could not get target atts current epoch") {
 		t.Fatal("Did not receive wanted error")
@@ -518,9 +518,9 @@ func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBitfield: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:          make([][]byte, 128),
-		RandaoMixes:         make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots:    make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		BlockRoots:                make([][]byte, 128),
+		RandaoMixes:               make([][]byte, params.BeaconConfig().RandaoMixesLength),
+		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		PreviousEpochAttestations: atts})
 	if !strings.Contains(err.Error(), "could not get attesting balance prev epoch") {
 		t.Fatal("Did not receive wanted error")
@@ -533,9 +533,9 @@ func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBitfield: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:         make([][]byte, 128),
-		RandaoMixes:        make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots:   make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		BlockRoots:               make([][]byte, 128),
+		RandaoMixes:              make([][]byte, params.BeaconConfig().RandaoMixesLength),
+		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		CurrentEpochAttestations: atts})
 	if !strings.Contains(err.Error(), "could not get attesting balance current epoch") {
 		t.Fatal("Did not receive wanted error")
@@ -555,10 +555,10 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	}
 	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:         make([][]byte, 128),
-		SlashedBalances:    []uint64{0, 1e9, 0},
-		RandaoMixes:        make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots:   make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		BlockRoots:               make([][]byte, 128),
+		SlashedBalances:          []uint64{0, 1e9, 0},
+		RandaoMixes:              make([][]byte, params.BeaconConfig().RandaoMixesLength),
+		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		CurrentCrosslinks:        crosslinks,
 		CurrentEpochAttestations: atts})
 	if err != nil {
@@ -626,13 +626,13 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 
 	s := &pb.BeaconState{
 		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:         validators,
+		Validators:                validators,
 		Balances:                  balances,
-		StartShard:          512,
-		BlockRoots:          make([][]byte, 254),
-		SlashedBalances:     []uint64{0, 1e9, 0},
-		RandaoMixes:         make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots:    make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		StartShard:                512,
+		BlockRoots:                make([][]byte, 254),
+		SlashedBalances:           []uint64{0, 1e9, 0},
+		RandaoMixes:               make([][]byte, params.BeaconConfig().RandaoMixesLength),
+		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		CurrentCrosslinks:         crosslinks,
 		PreviousEpochAttestations: atts,
 	}
@@ -689,14 +689,14 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 
 	s := &pb.BeaconState{
-		Slot:                   20,
-		BlockRoots:       make([][]byte, 254),
-		RandaoMixes:      randaoMixes,
-		Validators:      validators,
-		Balances:               validatorBalances,
-		SlashedBalances:  make([]uint64, params.BeaconConfig().SlashedExitLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		CurrentJustifiedRoot:   []byte("hello-world"),
+		Slot:                 20,
+		BlockRoots:           make([][]byte, 254),
+		RandaoMixes:          randaoMixes,
+		Validators:           validators,
+		Balances:             validatorBalances,
+		SlashedBalances:      make([]uint64, params.BeaconConfig().SlashedExitLength),
+		ActiveIndexRoots:     make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		CurrentJustifiedRoot: []byte("hello-world"),
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},

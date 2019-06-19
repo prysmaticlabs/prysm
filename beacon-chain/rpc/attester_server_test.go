@@ -52,8 +52,8 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	}
 
 	state := &pbp2p.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:      validators,
+		Slot:             params.BeaconConfig().SlotsPerEpoch + 1,
+		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
@@ -106,7 +106,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot:                  3*params.BeaconConfig().SlotsPerEpoch + 1,
 		CurrentJustifiedEpoch: 2 + 0,
-		BlockRoots:      make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots:            make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		CurrentCrosslinks: []*pbp2p.Crosslink{
 			{
 				DataRoot: []byte("A"),
@@ -216,7 +216,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot:                  10000,
 		CurrentJustifiedEpoch: helpers.SlotToEpoch(1500),
-		BlockRoots:      make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots:            make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		PreviousCrosslinks: []*pbp2p.Crosslink{
 			{
 				DataRoot: []byte("A"),

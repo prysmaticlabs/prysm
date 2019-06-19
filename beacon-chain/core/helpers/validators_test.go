@@ -43,8 +43,8 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:      validators,
-		Slot:                   0,
+		Validators:       validators,
+		Slot:             0,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
@@ -95,7 +95,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
 	ClearAllCaches()
 	beaconState := &pb.BeaconState{
-		Slot:                   0,
+		Slot:             0,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
@@ -135,8 +135,8 @@ func TestChurnLimit_OK(t *testing.T) {
 		}
 
 		beaconState := &pb.BeaconState{
-			Slot:                   1,
-			Validators:      validators,
+			Slot:             1,
+			Validators:       validators,
 			RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 			ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		}
