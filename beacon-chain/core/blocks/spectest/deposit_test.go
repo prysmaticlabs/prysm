@@ -1,4 +1,4 @@
-package deposit
+package spectest
 
 import (
 	"bytes"
