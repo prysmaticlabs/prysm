@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["shuffle_test_format.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/utils/spectest",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
 )
 
 go_test(
