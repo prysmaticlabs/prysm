@@ -139,17 +139,6 @@ load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_depen
 
 buildifier_dependencies()
 
-http_archive(
-    name = "com_github_prysmaticlabs_go_ssz",
-    sha256 = "a0e2ed9be1fc4fbc85626a7bb0d43a63db2c16d3a735565df5c6bde24678b304",
-    strip_prefix = "go-ssz-993cc801b0d7a95cce0ca8f9f24f90ae87b3d9ba",
-    url = "https://github.com/prysmaticlabs/go-ssz/archive/993cc801b0d7a95cce0ca8f9f24f90ae87b3d9ba.tar.gz",
-)
-
-load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
-
-go_ssz_dependencies()
-
 go_repository(
     name = "com_github_golang_mock",
     commit = "51421b967af1f557f93a59e0057aaf15ca02e29c",  # v1.2.0
@@ -173,7 +162,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "be5e1bd95e5c389a672eec5b57831441a160a0b7",
+    commit = "993cc801b0d7a95cce0ca8f9f24f90ae87b3d9ba",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
