@@ -47,8 +47,8 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		for i := 0; i < len(state.ValidatorRegistry); i++ {
-			v := state.ValidatorRegistry[i]
+		for i := 0; i < len(state.Validators); i++ {
+			v := state.Validators[i]
 			if bytes.Equal(v.Pubkey, pubKey) {
 				if err := db.SaveValidatorIndex(pubKey, i); err != nil {
 					return 0, err
@@ -119,8 +119,8 @@ func (db *BeaconDB) HasAnyValidators(state *pb.BeaconState, pubKeys [][]byte) (b
 
 	if !exists {
 		for _, pubKey := range pubKeys {
-			for i := 0; i < len(state.ValidatorRegistry); i++ {
-				v := state.ValidatorRegistry[i]
+			for i := 0; i < len(state.Validators); i++ {
+				v := state.Validators[i]
 				if bytes.Equal(v.Pubkey, pubKey) {
 					if err := db.SaveValidatorIndex(pubKey, i); err != nil {
 						return false, err
