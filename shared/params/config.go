@@ -118,7 +118,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxExitDequeuesPerEpoch:      4,
 	ValidatorPrivkeyFileName:     "/validatorprivatekey",
 	WithdrawalPrivkeyFileName:    "/shardwithdrawalkey",
-	BLSPubkeyLength:              96,
+	BLSPubkeyLength:              48,
 	DefaultBufferSize:            10000,
 	HashCacheSize:                100000,
 
