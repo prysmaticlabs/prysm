@@ -7,7 +7,7 @@ import (
 )
 
 func TestTotalBalance_OK(t *testing.T) {
-	state := &pb.BeaconState{Validators: []*pb.Validator{
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{
 		{EffectiveBalance: 27 * 1e9}, {EffectiveBalance: 28 * 1e9},
 		{EffectiveBalance: 32 * 1e9}, {EffectiveBalance: 40 * 1e9},
 	}}
@@ -53,7 +53,7 @@ func TestIncreseBalance_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		state := &pb.BeaconState{
-			Validators: []*pb.Validator{
+			ValidatorRegistry: []*pb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
 		}
@@ -76,7 +76,7 @@ func TestDecreseBalance_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		state := &pb.BeaconState{
-			Validators: []*pb.Validator{
+			ValidatorRegistry: []*pb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
 		}

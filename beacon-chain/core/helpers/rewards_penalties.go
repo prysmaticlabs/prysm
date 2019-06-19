@@ -32,7 +32,7 @@ func TotalBalance(state *pb.BeaconState, indices []uint64) (uint64, error) {
 
 	total = 0
 	for _, idx := range indices {
-		total += state.Validators[idx].EffectiveBalance
+		total += state.ValidatorRegistry[idx].EffectiveBalance
 	}
 
 	if err := totalBalanceCache.AddTotalBalance(&cache.TotalBalanceByEpoch{
@@ -62,9 +62,9 @@ func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
 	}
 
 	total = 0
-	for i, v := range state.Validators {
+	for i, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
-			total += state.Validators[i].EffectiveBalance
+			total += state.ValidatorRegistry[i].EffectiveBalance
 		}
 	}
 

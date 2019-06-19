@@ -9,7 +9,7 @@ import (
 // a validator by their public key.
 func ValidatorIndexMap(state *pb.BeaconState) map[[32]byte]int {
 	m := make(map[[32]byte]int)
-	for idx, record := range state.Validators {
+	for idx, record := range state.ValidatorRegistry {
 		key := bytesutil.ToBytes32(record.Pubkey)
 		m[key] = idx
 	}
