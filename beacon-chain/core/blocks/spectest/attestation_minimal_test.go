@@ -1,12 +1,15 @@
 package spectest
 
 import (
-	"fmt"
 	"io/ioutil"
+	"reflect"
 	"testing"
 
 	"github.com/ghodss/yaml"
+	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
 
 func TestAttestationMinimal(t *testing.T) {
@@ -20,17 +23,53 @@ func TestAttestationMinimal(t *testing.T) {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 
-	for i, tt := range test.TestCases {
-		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
+	if err := spectest.SetConfig(test.Config); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range test.TestCases {
+		t.Run(tt.Description, func(t *testing.T) {
 			pre := &pb.BeaconState{}
 			err := convertToPb(tt.Pre, pre)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			_ = pre
-			fmt.Printf("%v", pre)
-			t.Fail() // TODO
+			att := &pb.Attestation{}
+			if err := convertToPb(tt.Attestation, att); err != nil {
+				t.Fatal(err)
+			}
+
+			block := &pb.BeaconBlock{
+				Body: &pb.BeaconBlockBody{
+					Attestations: []*pb.Attestation{
+						att,
+					},
+				},
+			}
+
+			post, err := blocks.ProcessBlockAttestations(pre, block, false /*verify sig*/)
+
+			if !reflect.ValueOf(tt.Post).IsValid() {
+				// Note: This doesn't test anything worthwhile. It essentially tests
+				// that *any* error has occurred, not any specific error.
+				if err == nil {
+					t.Fatal("did not fail when expected")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			expectedPost := &pb.BeaconState{}
+			if err := convertToPb(tt.Post, expectedPost); err != nil {
+				t.Fatal(err)
+			}
+			if !proto.Equal(post, expectedPost) {
+				t.Fatal("Post state does not match expected")
+			}
 		})
 	}
 }
