@@ -450,17 +450,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 			},
 		},
 	}
-	// for _, node := range tree {
-	// 	if err := db.SaveBlock(node.Block); err != nil {
-	// 		t.Fatal(err)
-	// 	}
-	// }
-	// headState := &pbp2p.BeaconState{
-	// 	Slot: b4.Slot,
-	// }
-	// if err := db.UpdateChainHead(ctx, b4, headState); err != nil {
-	// 	t.Fatal(err)
-	// }
+
 	if _, err := beaconServer.BlockTreeBySlots(ctx, nil); err == nil {
 		// There should be a "argument 'TreeBlockSlotRequest' cannot be nil" error
 		t.Fatal(err)

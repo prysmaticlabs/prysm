@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"sort"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -176,7 +175,7 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 	dataVotes := []*pbp2p.Eth1Data{}
 	voteCountMap := make(map[string]voteHierarchy)
 	bestVoteHeight := big.NewInt(0)
-	depositCount, depositRootAtHeight := db.BeaconDB.DepositsNumberAndRootAtHeight(ctx, currentHeight)
+	depositCount, depositRootAtHeight := bs.beaconDB.DepositsNumberAndRootAtHeight(ctx, currentHeight)
 	var mostVotes uint64
 	var bestVoteHash string
 	for _, vote := range beaconState.Eth1DataVotes {
@@ -203,9 +202,6 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 		// at the block defined by vote.eth1_data.block_hash.
 		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
 		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
-		if heightIdx == 0 {
-			continue
-		}
 		correctDepositCount := depositCount == vote.DepositCount
 		correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
 		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data && correctDepositCount && correctDepositRoot {
@@ -329,7 +325,6 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 	}, nil
 }
 
-// nolint
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pbp2p.Eth1Data, error) {
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
@@ -337,12 +332,10 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
 	// Fetch all historical deposits up to an ancestor height.
-	upToHeightEth1DataDeposits := bs.beaconDB.DepositsContainersTillBlock(ctx, ancestorHeight)
-	if len(upToHeightEth1DataDeposits) == 0 {
+	depositsTillHeight, depositRoot := bs.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
+	if depositsTillHeight == 0 {
 		return nil, errors.New("could not fetch ETH1_FOLLOW_DISTANCE deposits")
 	}
-	depositRoot := upToHeightEth1DataDeposits[len(upToHeightEth1DataDeposits)-1].DepositRoot
-
 	return &pbp2p.Eth1Data{
 		DepositRoot: depositRoot[:],
 		BlockHash:   blockHash[:],
