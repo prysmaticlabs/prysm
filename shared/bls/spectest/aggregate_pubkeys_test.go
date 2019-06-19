@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-func TestPrivToPubYaml(t *testing.T) {
-	filepath, err := bazel.Runfile("priv_to_pub_formatted.yaml")
+func TestAggregatePubkeysYaml(t *testing.T) {
+	filepath, err := bazel.Runfile("aggregate_pubkeys_formatted.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,19 +22,28 @@ func TestPrivToPubYaml(t *testing.T) {
 		t.Fatalf("Failed to read file: %v", err)
 	}
 
-	test := &PrivToPubTest{}
+	test := &AggregatePubkeysTest{}
 	if err := yaml.Unmarshal(file, test); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 
 	for i, tt := range test.TestCases {
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
-			sk, err := bls.SecretKeyFromBytes(tt.Input)
+			pk, err := bls.PublicKeyFromBytes(tt.Input[0])
 			if err != nil {
-				t.Fatalf("Cannot unmarshal input to secret key: %v", err)
+				t.Fatal(err)
 			}
-			if !bytes.Equal(tt.Output, sk.PublicKey().Marshal()) {
-				t.Fatal("Output does not marshalled public key bytes")
+			for _, pk2 := range tt.Input[1:] {
+				p, err := bls.PublicKeyFromBytes(pk2)
+				if err != nil {
+					t.Fatal(err)
+				}
+				pk.Aggregate(p)
+			}
+
+			if !bytes.Equal(tt.Output, pk.Marshal()) {
+				t.Fatal("Output does not equal marshalled aggregated public " +
+					"key bytes")
 			}
 		})
 	}
