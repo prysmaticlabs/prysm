@@ -38,10 +38,10 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:             1,
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		Slot:                   1,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -66,7 +66,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48(beaconState.Validators[10].Pubkey)
+	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[10].Pubkey)
 	if service.store.m[pubkey].Data.Crosslink.Shard !=
 		attestation.Data.Crosslink.Shard {
 		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
@@ -74,10 +74,10 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState = &pb.BeaconState{
-		Slot:             36,
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		Slot:                   36,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -108,8 +108,8 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 		})
 	}
 	beaconState := &pb.BeaconState{
-		Slot:       1,
-		Validators: validators,
+		Slot:              1,
+		ValidatorRegistry: validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -142,7 +142,7 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 	ctx := context.Background()
 
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		Validators: []*pb.Validator{{}},
+		ValidatorRegistry: []*pb.Validator{{}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		Validators: []*pb.Validator{{Pubkey: pubKey}},
+		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -227,10 +227,10 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:             1,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		Validators:       validators,
+		Slot:                   1,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		ValidatorRegistry:      validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -279,10 +279,10 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:             1,
-		Validators:       validators,
-		RandaoMixes:      latestRandaoMixes,
-		ActiveIndexRoots: latestActiveIndexRoots,
+		Slot:                   1,
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      latestRandaoMixes,
+		LatestActiveIndexRoots: latestActiveIndexRoots,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -329,10 +329,10 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:             1,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		Validators:       validators,
+		Slot:                   1,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		ValidatorRegistry:      validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
