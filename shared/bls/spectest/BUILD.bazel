@@ -27,6 +27,5 @@ go_test(
     deps = [
         "//shared/bls:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

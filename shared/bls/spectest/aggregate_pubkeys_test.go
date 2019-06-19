@@ -6,18 +6,12 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 func TestAggregatePubkeysYaml(t *testing.T) {
-	filepath, err := bazel.Runfile("aggregate_pubkeys_formatted.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	file, err := ioutil.ReadFile(filepath)
+	file, err := ioutil.ReadFile("aggregate_pubkeys_formatted.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}

@@ -8,17 +8,11 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 )
 
 func TestAggregateSignaturesYaml(t *testing.T) {
-	filepath, err := bazel.Runfile("aggregate_sigs_formatted.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	file, err := ioutil.ReadFile(filepath)
+	file, err := ioutil.ReadFile("aggregate_sigs_formatted.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}

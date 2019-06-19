@@ -6,18 +6,12 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 func TestPrivToPubYaml(t *testing.T) {
-	filepath, err := bazel.Runfile("priv_to_pub_formatted.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	file, err := ioutil.ReadFile(filepath)
+	file, err := ioutil.ReadFile("priv_to_pub_formatted.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}

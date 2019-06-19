@@ -9,17 +9,11 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 )
 
 func TestSignMessageYaml(t *testing.T) {
-	filepath, err := bazel.Runfile("sign_msg_formatted.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	file, err := ioutil.ReadFile(filepath)
+	file, err := ioutil.ReadFile("sign_msg_formatted.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}
