@@ -292,7 +292,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 		latestBlockNumber: height,
 		hashesByHeight: map[int][]byte{
 			0: []byte("hash0"),
-			1: beaconState.Eth1Data.DepositRoot,
+			1: beaconState.LatestEth1Data.DepositRoot,
 		},
 	}
 	beaconServer := &BeaconServer{
@@ -434,7 +434,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		powChainService: &mockPOWChainService{
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
 			hashesByHeight: map[int][]byte{
-				0: beaconState.Eth1Data.DepositRoot,
+				0: beaconState.LatestEth1Data.DepositRoot,
 				// adding some not relevant blocks heights to test that search works
 				1: {1},
 				2: beaconState.Eth1DataVotes[0].BlockHash,
