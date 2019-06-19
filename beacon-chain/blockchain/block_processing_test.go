@@ -917,7 +917,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
@@ -959,7 +959,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
@@ -997,7 +997,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {

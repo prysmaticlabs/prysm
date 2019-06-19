@@ -147,7 +147,7 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 
 func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                  100, // epoch 2
+		Slot:            100, // epoch 2
 		SlashedBalances: []uint64{0},
 		Validators: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
@@ -192,7 +192,7 @@ func TestInitializeValidatoreStore(t *testing.T) {
 
 	bState := &pb.BeaconState{
 		Validators: registry,
-		Slot:              0,
+		Slot:       0,
 	}
 
 	if _, ok := VStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {

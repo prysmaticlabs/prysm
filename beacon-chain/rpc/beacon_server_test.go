@@ -243,7 +243,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
-	if _, err := beaconServer.Eth1Data(context.Background(), nil); !strings.Contains(err.Error(), want) {
+	if _, err := beaconServer.eth1Data(context.Background()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error %v, received %v", want, err)
 	}
 }
@@ -303,7 +303,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	if err := beaconServer.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	result, err := beaconServer.Eth1Data(context.Background(), nil)
+	result, err := beaconServer.eth1Data(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -539,7 +539,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := beaconServer.Eth1Data(context.Background(), nil)
+		_, err := beaconServer.eth1Data(context.Background())
 		if err != nil {
 			b.Fatal(err)
 		}

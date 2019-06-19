@@ -500,8 +500,8 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pb.BeaconState{
-		Slot:              10,
-		Balances:          []uint64{params.BeaconConfig().MaxDepositAmount},
+		Slot:       10,
+		Balances:   []uint64{params.BeaconConfig().MaxDepositAmount},
 		Validators: []*pb.Validator{{}},
 	}
 
@@ -1537,14 +1537,14 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		t.Fatal(err)
 	}
 	gState := &pb.BeaconState{
-		Slot:                   genesisSlot,
-		BlockRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		RandaoMixes:      latestRandaoMixes,
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		SlashedBalances:  make([]uint64, params.BeaconConfig().SlashedExitLength),
-		CurrentCrosslinks:      crosslinks,
-		Validators:      validatorRegistry,
-		Balances:               validatorBalances,
+		Slot:              genesisSlot,
+		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes:       latestRandaoMixes,
+		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		SlashedBalances:   make([]uint64, params.BeaconConfig().SlashedExitLength),
+		CurrentCrosslinks: crosslinks,
+		Validators:        validatorRegistry,
+		Balances:          validatorBalances,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,

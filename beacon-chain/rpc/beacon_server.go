@@ -148,12 +148,12 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	}, nil
 }
 
-// Eth1Data is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an
+// eth1Data is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an
 // associated deposit root found in the Ethereum 1.0 deposit contract. When consensus is formed,
 // state.latest_eth1_data is updated, and validator deposits up to this root can be processed.
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
-func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Eth1Data, error) {
+func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 	beaconState, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)

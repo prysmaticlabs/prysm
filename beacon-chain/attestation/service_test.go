@@ -38,8 +38,8 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   1,
-		Validators:      validators,
+		Slot:             1,
+		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
@@ -74,8 +74,8 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState = &pb.BeaconState{
-		Slot:                   36,
-		Validators:      validators,
+		Slot:             36,
+		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
@@ -108,7 +108,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 		})
 	}
 	beaconState := &pb.BeaconState{
-		Slot:              1,
+		Slot:       1,
 		Validators: validators,
 	}
 	block := &pb.BeaconBlock{
@@ -227,10 +227,10 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   1,
+		Slot:             1,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		Validators:      validators,
+		Validators:       validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -279,8 +279,8 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   1,
-		Validators:      validators,
+		Slot:             1,
+		Validators:       validators,
 		RandaoMixes:      latestRandaoMixes,
 		ActiveIndexRoots: latestActiveIndexRoots,
 	}
@@ -329,10 +329,10 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   1,
+		Slot:             1,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		Validators:      validators,
+		Validators:       validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
