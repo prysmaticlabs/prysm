@@ -64,7 +64,7 @@ func TestSeedCache_SeedByEpoch(t *testing.T) {
 func TestSeed_MaxSize(t *testing.T) {
 	cache := NewSeedCache()
 
-	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength+100; i++ {
+	for i := uint64(0); i < params.BeaconConfig().RandaoMixesLength+100; i++ {
 		tInfo := &SeedByEpoch{
 			Epoch: i,
 		}

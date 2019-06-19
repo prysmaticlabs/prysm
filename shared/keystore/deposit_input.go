@@ -27,11 +27,11 @@ func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositData, error) 
 		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
 	}
 
-	b, err := ssz.Marshal(di)
+	buf, err := ssz.Marshal(di)
 	if err != nil {
 		return nil, err
 	}
-	di.Signature = depositKey.SecretKey.Sign(b, params.BeaconConfig().DomainDeposit).Marshal()
+	di.Signature = depositKey.SecretKey.Sign(buf, params.BeaconConfig().DomainDeposit).Marshal()
 
 	return di, nil
 }

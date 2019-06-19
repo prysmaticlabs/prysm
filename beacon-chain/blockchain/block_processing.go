@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -70,7 +71,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon block")
 	}
@@ -159,7 +160,7 @@ func (c *ChainService) VerifyBlockValidity(
 // peers via p2p. Blocks which have already been saved are not processed again via p2p, which is why
 // the order of operations is important in this function to prevent infinite p2p loops.
 func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.BeaconBlock) error {
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := blockutil.BlockSigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
@@ -238,7 +239,7 @@ func (c *ChainService) AdvanceState(
 			"slotsSinceGenesis", newState.Slot,
 		).Info("Block transition successfully processed")
 
-		blockRoot, err := hashutil.HashBeaconBlock(block)
+		blockRoot, err := blockutil.BlockSigningRoot(block)
 		if err != nil {
 			return nil, err
 		}
@@ -278,11 +279,11 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 	for _, idx := range activatedValidators {
 		// If for some reason the activated validator indices is not in state,
 		// we skip them and save them to process for next epoch.
-		if int(idx) >= len(state.ValidatorRegistry) {
+		if int(idx) >= len(state.Validators) {
 			idxNotInState = append(idxNotInState, idx)
 			continue
 		}
-		pubKey := state.ValidatorRegistry[idx].Pubkey
+		pubKey := state.Validators[idx].Pubkey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
 			return fmt.Errorf("could not save validator index: %v", err)
 		}
@@ -300,7 +301,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range exitedValidators {
-		pubKey := state.ValidatorRegistry[idx].Pubkey
+		pubKey := state.Validators[idx].Pubkey
 		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
 			return fmt.Errorf("could not delete validator index: %v", err)
 		}

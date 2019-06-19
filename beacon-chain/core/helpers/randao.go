@@ -36,7 +36,7 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 		return bytesutil.ToBytes32(seed), nil
 	}
 
-	lookAheadEpoch := epoch + params.BeaconConfig().LatestRandaoMixesLength -
+	lookAheadEpoch := epoch + params.BeaconConfig().RandaoMixesLength -
 		params.BeaconConfig().MinSeedLookahead
 
 	randaoMix := RandaoMix(state, lookAheadEpoch)
@@ -70,7 +70,7 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 //    """
 //    return state.latest_active_index_roots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
-	return state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength]
+	return state.ActiveIndexRoots[epoch%params.BeaconConfig().ActiveIndexRootsLength]
 }
 
 // RandaoMix returns the randao mix (xor'ed seed)
@@ -85,7 +85,7 @@ func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
 //    """
 //    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
-	return state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength]
+	return state.RandaoMixes[epoch%params.BeaconConfig().RandaoMixesLength]
 }
 
 // CreateRandaoReveal generates a epoch signature using the beacon proposer priv key.

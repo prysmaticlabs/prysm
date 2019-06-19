@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -133,7 +133,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		if err != nil {
 			return nil, err
 		}
-		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		blockRoot, err := blockutil.BlockSigningRoot(kid)
 		if err != nil {
 			return nil, err
 		}
@@ -299,7 +299,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 		if err != nil {
 			return nil, err
 		}
-		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		blockRoot, err := blockutil.BlockSigningRoot(kid)
 		if err != nil {
 			return nil, err
 		}

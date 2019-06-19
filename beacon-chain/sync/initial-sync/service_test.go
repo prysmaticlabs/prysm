@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -166,7 +167,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
-	h, err := hashutil.HashBeaconBlock(blks[0])
+	h, err := blockutil.BlockSigningRoot(blks[0])
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
@@ -192,7 +193,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Block unable to be saved %v", err)
 		}
 
-		hash, err := hashutil.HashBeaconBlock(block)
+		hash, err := blockutil.BlockSigningRoot(block)
 		if err != nil {
 			t.Fatalf("Could not hash block %v", err)
 		}
