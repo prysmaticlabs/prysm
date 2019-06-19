@@ -49,7 +49,7 @@ func whitelistSubnet(cidr string) libp2p.Option {
 	}
 
 	return func(cfg *libp2p.Config) error {
-		_, _, err := net.ParseCIDR(cidr)
+		_, ipnet, err := net.ParseCIDR(cidr)
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func whitelistSubnet(cidr string) libp2p.Option {
 		if cfg.Filters == nil {
 			cfg.Filters = filter.NewFilters()
 		}
-		// cfg.Filters.AddFilter(*ipnet, filter.ActionAccept)
+		cfg.Filters.AddFilter(*ipnet, filter.ActionAccept)
 
 		return nil
 	}
