@@ -39,14 +39,8 @@ func TestShuffleYaml(t *testing.T) {
 		if err := yaml.Unmarshal(data, shuffleTest); err != nil {
 			t.Fatalf("could not unmarshal YAML file into test struct: %v", err)
 		}
-		if shuffleTest.Config == "minimal" {
-			if err := spectest.SetConfig("minimal"); err != nil {
-				t.Fatal(err)
-			}
-		} else {
-			if err := spectest.SetConfig("mainnet"); err != nil {
-				t.Fatal(err)
-			}
+		if err := spectest.SetConfig(shuffleTest.Config); err != nil {
+			t.Fatal(err)
 		}
 		t.Logf("Title: %v", shuffleTest.Title)
 		t.Logf("Summary: %v", shuffleTest.Summary)
