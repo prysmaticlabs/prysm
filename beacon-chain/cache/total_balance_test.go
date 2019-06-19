@@ -64,7 +64,7 @@ func TestTotalBalanceCache_TotalBalanceByEpoch(t *testing.T) {
 func TestTotalBalance_MaxSize(t *testing.T) {
 	cache := NewTotalBalanceCache()
 
-	for i := uint64(0); i < params.BeaconConfig().RandaoMixesLength+100; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength+100; i++ {
 		tInfo := &TotalBalanceByEpoch{
 			Epoch: i,
 		}
