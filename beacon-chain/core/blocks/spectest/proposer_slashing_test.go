@@ -50,6 +50,8 @@ func TestRegistryProcessingYaml(t *testing.T) {
 		block := &pb.BeaconBlock{Body: &pb.BeaconBlockBody{ProposerSlashings: []*pb.ProposerSlashing{proposerSlashing}}}
 		var postState *pb.BeaconState
 		postState, err = blocks.ProcessProposerSlashings(preState, block, true)
+		// Note: This doesn't test anything worthwhile. It essentially tests
+		// that *any* error has occurred, not any specific error.
 		if len(genPostState.ValidatorRegistry) == 0 {
 			if err == nil {
 				t.Fatal("Did not fail when expected")
