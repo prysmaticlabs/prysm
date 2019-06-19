@@ -974,13 +974,6 @@ func ProcessTransfers(
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	transfers := block.Body.Transfers
-	if uint64(len(transfers)) > params.BeaconConfig().MaxTransfers {
-		return nil, fmt.Errorf(
-			"number of transfers (%d) exceeds allowed threshold of %d",
-			len(transfers),
-			params.BeaconConfig().MaxTransfers,
-		)
-	}
 	// Verify there are no duplicate transfers.
 	transferSet := make(map[[32]byte]bool)
 	for _, transfer := range transfers {
@@ -1062,7 +1055,22 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
 	}
 	if verifySignatures {
-		// TODO(#258): Integrate BLS signature verification for transfers.
+		pub, err := bls.PublicKeyFromBytes(transfer.Pubkey)
+		if err != nil {
+			return fmt.Errorf("could not deserialize validator public key: %v", err)
+		}
+		domain := helpers.DomainVersion(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainVoluntaryExit)
+		sig, err := bls.SignatureFromBytes(transfer.Signature)
+		if err != nil {
+			return fmt.Errorf("could not convert bytes to signature: %v", err)
+		}
+		root, err := ssz.SigningRoot(transfer)
+		if err != nil {
+			return fmt.Errorf("could not sign root for header: %v", err)
+		}
+		if !sig.Verify(root[:], pub, domain) {
+			return fmt.Errorf("transfer signature did not verify")
+		}
 	}
 	return nil
 }

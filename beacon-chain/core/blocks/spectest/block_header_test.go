@@ -55,7 +55,6 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 				state.DefaultConfig(),
 			)
 
-
 			if !reflect.ValueOf(tt.Post).IsValid() {
 				// Note: This doesn't test anything worthwhile. It essentially tests
 				// that *any* error has occurred, not any specific error.
@@ -81,9 +80,9 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 }
 
 func TestBlockHeaderMinimal(t *testing.T) {
-	runBlockHeaderTest(t,"block_header_minimal_formatted.yaml")
+	runBlockHeaderTest(t, "block_header_minimal_formatted.yaml")
 }
 
 func TestBlockHeaderMainnet(t *testing.T) {
-	runBlockHeaderTest(t,"block_header_mainnet_formatted.yaml")
+	runBlockHeaderTest(t, "block_header_mainnet_formatted.yaml")
 }
