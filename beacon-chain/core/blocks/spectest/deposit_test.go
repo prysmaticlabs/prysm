@@ -9,6 +9,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
@@ -52,9 +53,11 @@ func TestDepositMinimalYaml(t *testing.T) {
 		}
 
 		var postState *pb.BeaconState
-		postState, err = blocks.ProcessDeposit(preState, deposit, nil, true, true)
-		if err == nil && postState != nil {
-			t.Errorf("Deposit was processed successfully with deposit %v, when it should have failed", deposit)
+		_ = postState
+		valMap := stateutils.ValidatorIndexMap(preState)
+		postState, err = blocks.ProcessDeposit(preState, deposit, valMap, true, true)
+		if err != nil {
+			t.Errorf("Deposit was processed successfully with deposit %v, when it should have failed", err)
 		}
 	}
 }
