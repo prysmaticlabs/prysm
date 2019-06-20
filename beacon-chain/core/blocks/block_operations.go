@@ -292,7 +292,7 @@ func verifyProposerSlashing(
 		}
 		headers := append([]*pb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
 		for _, header := range headers {
-			domain := helpers.DomainVersion(beaconState, helpers.SlotToEpoch(header.Slot), params.BeaconConfig().DomainBeaconProposer)
+			domain := helpers.Domain(beaconState, helpers.SlotToEpoch(header.Slot), params.BeaconConfig().DomainBeaconProposer)
 			sig, err := bls.SignatureFromBytes(header.Signature)
 			if err != nil {
 				return fmt.Errorf("could not convert bytes to signature: %v", err)
@@ -911,7 +911,7 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 		if err != nil {
 			return fmt.Errorf("could not deserialize validator public key: %v", err)
 		}
-		domain := helpers.DomainVersion(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+		domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
 		sig, err := bls.SignatureFromBytes(exit.Signature)
 		if err != nil {
 			return fmt.Errorf("could not convert bytes to signature: %v", err)
@@ -1041,7 +1041,7 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	// Verify that the pubkey is valid.
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
 	hashed := hashutil.Hash(transfer.Pubkey)
-	buf = append(buf, hashed[:]...)
+	buf = append(buf, hashed[:][1:]...)
 	if !bytes.Equal(sender.WithdrawalCredentials, buf) {
 		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
 	}
@@ -1050,7 +1050,7 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 		if err != nil {
 			return fmt.Errorf("could not deserialize validator public key: %v", err)
 		}
-		domain := helpers.DomainVersion(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainVoluntaryExit)
+		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainVoluntaryExit)
 		sig, err := bls.SignatureFromBytes(transfer.Signature)
 		if err != nil {
 			return fmt.Errorf("could not convert bytes to signature: %v", err)
