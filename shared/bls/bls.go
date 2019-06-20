@@ -137,3 +137,18 @@ func HashG2WithDomainUncompressed(msg [32]byte, domain uint64) [192]byte {
 	projective := bls.HashG2WithDomain(msg, domain)
 	return projective.ToAffine().SerializeBytes()
 }
+
+// Domain returns the bls domain given by the domain type and the operation 4 byte fork version.
+//
+// Spec pseudocode definition:
+//  def bls_domain(domain_type: int, fork_version: bytes=b'\x00\x00\x00\x00') -> int:
+//    """
+//    Return the bls domain given by the ``domain_type`` and optional 4 byte ``fork_version`` (defaults to zero).
+//    """
+//    return bytes_to_int(int_to_bytes(domain_type, length=4) + fork_version)
+func Domain(domainType uint64, forkVersion []byte) uint64 {
+	b := []byte{}
+	b = append(b, bytesutil.Bytes4(domainType)...)
+	b = append(b, forkVersion[:4]...)
+	return bytesutil.FromBytes8(b)
+}
