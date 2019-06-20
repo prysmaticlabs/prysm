@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"reflect"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -35,14 +35,6 @@ type BeaconServer struct {
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
 	chainStartChan      chan time.Time
-}
-
-// voteHierarchy is a structure we use in order to count deposit votes and
-// break ties between similarly voted deposits
-type voteHierarchy struct {
-	votes    uint64
-	height   *big.Int
-	eth1Data *pbp2p.Eth1Data
 }
 
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain
@@ -157,11 +149,9 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	// Fetch the current canonical chain height from the eth1.0 chain.
 	currentHeight := bs.powChainService.LatestBlockHeight()
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRoot)
-	// If latest ETH1 block hash is empty, send a default response
 	if stateLatestEth1Hash == [32]byte{} {
 		return bs.defaultEth1DataResponse(ctx, currentHeight, eth1FollowDistance)
 	}
@@ -172,86 +162,55 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 		return nil, fmt.Errorf("could not verify block with hash exists in Eth1 chain: %#x: %v", stateLatestEth1Hash, err)
 	}
 	dataVotes := []*pbp2p.Eth1Data{}
-	voteCountMap := make(map[string]voteHierarchy)
+	voteCountMap := make(map[string]blocks.VoteHierarchy)
 	bestVoteHeight := big.NewInt(0)
 	depositCount, depositRootAtHeight := bs.beaconDB.DepositsNumberAndRootAtHeight(ctx, currentHeight)
 	var mostVotes uint64
 	var bestVoteHash string
 	for _, vote := range beaconState.Eth1DataVotes {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		// Let dataVotes be the set of Eth1DataVote objects vote in state.eth1_data_votes where:
-		// vote.eth1_data.block_hash is the hash of an eth1.0 block that is:
-		//   (i) part of the canonical chain
-		//   (ii) >= ETH1_FOLLOW_DISTANCE blocks behind the head
-		//   (iii) newer than state.latest_eth1_data.block_data.
-		// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
-		// at the block defined by vote.eth1_data.block_hash.
-		eth1Hash := bytesutil.ToBytes32(vote.DepositRoot)
-		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
-		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
+		validVote, blockHeight, err := bs.validateVote(ctx, currentHeight, depositCount, depositRootAtHeight, eth1FollowDistance, stateLatestEth1Height, vote)
 		if err != nil {
-			log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
-				Debug("Could not verify block with hash in ETH1 chain")
-			continue
+			return nil, err
 		}
-		if !blockExists {
-			continue
-		}
-
-		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
-		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
-		correctDepositCount := depositCount == vote.DepositCount
-		correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
-		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data && correctDepositCount && correctDepositRoot {
+		if validVote {
 			dataVotes = append(dataVotes, vote)
-			he, err := ssz.HashedEncoding(reflect.ValueOf(vote))
+			he, err := ssz.HashedEncoding(vote)
 			if err != nil {
 				return nil, fmt.Errorf("could not get encoded hash of eth1data object: %v", err)
 			}
-			bestVoteHash, bestVoteHeight, mostVotes, voteCountMap = bs.countVote(bestVoteHash, bestVoteHeight, blockHeight, err, he, mostVotes, vote, voteCountMap)
+			bestVoteHash, bestVoteHeight, mostVotes, voteCountMap = blocks.CountVote(bestVoteHash, bestVoteHeight, blockHeight, err, he, mostVotes, vote, voteCountMap)
 		}
 	}
-	// Now we handle the following two scenarios:
-	// If dataVotes is empty:
-	// Let block_hash be the block hash of the ETH1_FOLLOW_DISTANCE'th ancestor of the head of
-	// the canonical eth1.0 chain.
-	// Let deposit_root be the deposit root of the eth1.0 deposit contract in the
-	// post-state of the block referenced by block_hash.
 	if len(dataVotes) == 0 {
 		return bs.defaultEth1DataResponse(ctx, currentHeight, eth1FollowDistance)
 	}
-	// if D is nonempty:
-	// return the best vote
 	v, ok := voteCountMap[bestVoteHash]
 	if ok {
-		return v.eth1Data, nil
+		return v.Eth1Data, nil
 	}
-	return nil, nil
+	return nil, errors.New("best vote is missing")
 }
 
-// let best_vote_data be the eth1_data member of D that has the highest vote count (D.count(eth1_data)),
-// breaking ties by favoring block hashes with higher associated block height.
-func (bs *BeaconServer) countVote(bestVoteHash string, bestVoteHeight *big.Int, blockHeight *big.Int, err error, he [32]byte, mostVotes uint64, vote *pbp2p.Eth1Data, voteCountMap map[string]voteHierarchy) (string, *big.Int, uint64, map[string]voteHierarchy) {
-	v, ok := voteCountMap[string(he[:])]
-
-	if !ok {
-		v = voteHierarchy{votes: 1, height: blockHeight, eth1Data: vote}
-		voteCountMap[string(vote.DepositRoot)] = v
-	} else {
-		v.votes = v.votes + 1
-		voteCountMap[string(vote.DepositRoot)] = v
+func (bs *BeaconServer) validateVote(ctx context.Context, currentHeight *big.Int, depositCount uint64, depositRootAtHeight [32]byte, eth1FollowDistance int64, stateLatestEth1Height *big.Int, vote *pbp2p.Eth1Data) (bool, *big.Int, error) {
+	if ctx.Err() != nil {
+		return false, nil, ctx.Err()
 	}
-	if v.votes > mostVotes {
-		mostVotes = v.votes
-		bestVoteHash = string(vote.DepositRoot)
-		bestVoteHeight = v.height
-	} else if v.votes == mostVotes && v.height.Cmp(bestVoteHeight) == 1 {
-		bestVoteHash = string(vote.DepositRoot)
-		bestVoteHeight = v.height
+	eth1Hash := bytesutil.ToBytes32(vote.DepositRoot)
+	// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
+	blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
+	if err != nil {
+		log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
+			Warn("Could not verify block with hash in ETH1 chain")
+		return false, nil, nil
 	}
-	return bestVoteHash, bestVoteHeight, mostVotes, voteCountMap
+	if !blockExists {
+		return false, nil, nil
+	}
+	isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
+	isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
+	correctDepositCount := depositCount == vote.DepositCount
+	correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
+	return blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data && correctDepositCount && correctDepositRoot, blockHeight, nil
 }
 
 // BlockTreeBySlots returns the current tree of saved blocks and their votes starting from the justified state.

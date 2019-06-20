@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -33,6 +34,14 @@ func VerifyProposerSignature(
 	_ *pb.BeaconBlock,
 ) error {
 	return nil
+}
+
+// VoteHierarchy is a structure we use in order to count deposit votes and
+// break ties between similarly voted deposits
+type VoteHierarchy struct {
+	votes    uint64
+	height   *big.Int
+	Eth1Data *pb.Eth1Data
 }
 
 // ProcessEth1DataInBlock is an operation performed on each
@@ -1027,6 +1036,31 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 		// TODO(#258): Integrate BLS signature verification for transfers.
 	}
 	return nil
+}
+
+// CountVote takes a votecount map and adds the given vote to it in the relevant
+// position while updating the best vote, most votes and best vote hash.
+func CountVote(bestVoteHash string, bestVoteHeight *big.Int, blockHeight *big.Int, err error, he [32]byte, mostVotes uint64, vote *pb.Eth1Data, voteCountMap map[string]VoteHierarchy) (string, *big.Int, uint64, map[string]VoteHierarchy) {
+	v, ok := voteCountMap[string(he[:])]
+
+	if !ok {
+		v = VoteHierarchy{votes: 1, height: blockHeight, Eth1Data: vote}
+		voteCountMap[string(vote.DepositRoot)] = v
+	} else {
+		v.votes = v.votes + 1
+		voteCountMap[string(vote.DepositRoot)] = v
+	}
+	if v.votes > mostVotes {
+		mostVotes = v.votes
+		bestVoteHash = string(vote.DepositRoot)
+		bestVoteHeight = v.height
+	} else if v.votes == mostVotes &&
+		//breaking ties by favoring votes with higher block height.
+		v.height.Cmp(bestVoteHeight) == 1 {
+		bestVoteHash = string(vote.DepositRoot)
+		bestVoteHeight = v.height
+	}
+	return bestVoteHash, bestVoteHeight, mostVotes, voteCountMap
 }
 
 // ClearEth1DataVoteCache clears the eth1 data vote count cache.
