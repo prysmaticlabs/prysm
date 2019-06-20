@@ -234,5 +234,5 @@ func Domain(state *pb.BeaconState, epoch uint64, domainType uint64) uint64 {
 	} else {
 		forkVersion = state.Fork.CurrentVersion
 	}
-	return bls.BLSDomain(domainType, forkVersion)
+	return bls.Domain(domainType, forkVersion)
 }
