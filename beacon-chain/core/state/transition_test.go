@@ -781,7 +781,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	s.ValidatorRegistry[proposerIdx].Pubkey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
-	domain := helpers.DomainVersion(s, 0, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(s, 0, params.BeaconConfig().DomainRandao)
 	epochSignature := priv.Sign(buf, domain)
 
 	// Set up transfer object for block
