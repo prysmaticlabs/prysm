@@ -13,14 +13,13 @@ import (
 type VoteHierarchyMap struct {
 	BestVote       *pb.Eth1Data
 	bestVoteHeight *big.Int
-	blockHeight    *big.Int
 	mostVotes      uint64
-	VoteCountMap   map[string]VoteHierarchy
+	voteCountMap   map[string]voteHierarchy
 }
 
-// VoteHierarchy is a structure we use in order to count deposit votes and
+// voteHierarchy is a structure we use in order to count deposit votes and
 // break ties between similarly voted deposits
-type VoteHierarchy struct {
+type voteHierarchy struct {
 	votes    uint64
 	height   *big.Int
 	eth1Data *pb.Eth1Data
@@ -29,7 +28,7 @@ type VoteHierarchy struct {
 // EmptyVoteHierarchyMap creates and returns an empty VoteHierarchyMap.
 func EmptyVoteHierarchyMap() *VoteHierarchyMap {
 	vm := &VoteHierarchyMap{}
-	vm.VoteCountMap = make(map[string]VoteHierarchy)
+	vm.voteCountMap = make(map[string]voteHierarchy)
 	return vm
 }
 
@@ -40,14 +39,14 @@ func CountVote(voteMap *VoteHierarchyMap, vote *pb.Eth1Data, blockHeight *big.In
 	if err != nil {
 		return &VoteHierarchyMap{}, fmt.Errorf("could not get encoded hash of eth1data object: %v", err)
 	}
-	v, ok := voteMap.VoteCountMap[string(he[:])]
+	v, ok := voteMap.voteCountMap[string(he[:])]
 
 	if !ok {
-		v = VoteHierarchy{votes: 1, height: blockHeight, eth1Data: vote}
-		voteMap.VoteCountMap[string(he[:])] = v
+		v = voteHierarchy{votes: 1, height: blockHeight, eth1Data: vote}
+		voteMap.voteCountMap[string(he[:])] = v
 	} else {
 		v.votes = v.votes + 1
-		voteMap.VoteCountMap[string(he[:])] = v
+		voteMap.voteCountMap[string(he[:])] = v
 	}
 	if v.votes > voteMap.mostVotes {
 		voteMap.mostVotes = v.votes
