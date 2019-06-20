@@ -7,9 +7,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-
 	"github.com/ghodss/yaml"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 func TestSignMessageYaml(t *testing.T) {
@@ -29,14 +28,13 @@ func TestSignMessageYaml(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Cannot unmarshal input to secret key: %v", err)
 			}
-			b := bytes.NewBuffer(tt.Input.Domain)
-			domain, err := binary.ReadUvarint(b)
+			domain, _ := binary.Uvarint(tt.Input.Domain)
 			if err != nil {
 				t.Fatal(err)
 			}
 			sig := sk.Sign(tt.Input.Message, domain)
 			if !bytes.Equal(tt.Output, sig.Marshal()) {
-				t.Error("Signature does not match the expected output.")
+				t.Errorf("Signature does not match the expected output. Expected %#x but received %#x", tt.Output, sig.Marshal())
 			}
 		})
 	}
