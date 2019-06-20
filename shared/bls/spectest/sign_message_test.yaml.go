@@ -15,7 +15,7 @@ type SignMessageTest struct {
 		Input struct {
 			Privkey []byte `json:"privkey" ssz:"size=32"`
 			Message []byte `json:"message" ssz:"size=32"`
-			Domain  []byte `json:"domain"`
+			Domain  uint64 `json:"domain"`
 		} `json:"input"`
 		Output []byte `json:"output" ssz:"size=96"`
 	} `json:"test_cases"`
