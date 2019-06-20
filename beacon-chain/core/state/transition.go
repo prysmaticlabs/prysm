@@ -181,9 +181,17 @@ func ProcessBlock(
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
 	}
-	state, err = b.ProcessValidatorExits(state, block, config.VerifySignatures)
+	state, err = b.ProcessVoluntaryExits(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
+	}
+	transfers := block.Body.Transfers
+	if uint64(len(transfers)) > params.BeaconConfig().MaxTransfers {
+		return nil, fmt.Errorf(
+			"number of transfers (%d) exceeds allowed threshold of %d",
+			len(transfers),
+			params.BeaconConfig().MaxTransfers,
+		)
 	}
 	state, err = b.ProcessTransfers(state, block, config.VerifySignatures)
 	if err != nil {

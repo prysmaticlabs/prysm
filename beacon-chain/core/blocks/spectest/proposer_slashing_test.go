@@ -1,76 +1,75 @@
 package spectest
 
 import (
-	"bytes"
-	"encoding/json"
 	"io/ioutil"
 	"reflect"
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
 
-func TestRegistryProcessingYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("proposer_slashing_minimal_formatted.yaml")
+func runProposerSlashingTest(t *testing.T, filename string) {
+	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	s := &ProposerSlashingMinimal{}
-	if err := yaml.Unmarshal(file, s); err != nil {
+	test := &ProposerSlashingMinimal{}
+	if err := yaml.Unmarshal(file, test); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
-	if err := spectest.SetConfig(s.Config); err != nil {
+	if err := spectest.SetConfig(test.Config); err != nil {
 		t.Fatal(err)
 	}
 
-	t.Logf("Running spec test vectors for %s", s.Title)
-	for _, testCase := range s.TestCases {
-		t.Logf("Testing testcase %s", testCase.Description)
-		preState := &pb.BeaconState{}
-		b, err := json.Marshal(testCase.Pre)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = jsonpb.Unmarshal(bytes.NewReader(b), preState)
-		if err != nil {
-			t.Fatal(err)
-		}
+	for _, tt := range test.TestCases {
+		t.Run(tt.Description, func(t *testing.T) {
+			pre := &pb.BeaconState{}
+			if err := convertToPb(tt.Pre, pre); err != nil {
+				t.Fatal(err)
+			}
 
-		proposerSlashing := &pb.ProposerSlashing{}
-		b, err = json.Marshal(testCase.ProposerSlashing)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = jsonpb.Unmarshal(bytes.NewReader(b), proposerSlashing)
-		if err != nil {
-			t.Fatal(err)
-		}
+			expectedPost := &pb.BeaconState{}
+			if err = convertToPb(tt.Post, expectedPost); err != nil {
+				t.Fatal(err)
+			}
 
-		genPostState := &pb.BeaconState{}
-		b, err = json.Marshal(testCase.Post)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = jsonpb.Unmarshal(bytes.NewReader(b), genPostState)
-		if err != nil {
-			t.Fatal(err)
-		}
+			proposerSlashing := &pb.ProposerSlashing{}
+			if err = convertToPb(tt.ProposerSlashing, proposerSlashing); err != nil {
+				t.Fatal(err)
+			}
 
-		block := &pb.BeaconBlock{Body: &pb.BeaconBlockBody{ProposerSlashings: []*pb.ProposerSlashing{proposerSlashing}}}
-		var postState *pb.BeaconState
-		postState, err = blocks.ProcessProposerSlashings(preState, block, true)
-		if err != nil && postState != nil {
-			t.Error(err)
-		}
+			block := &pb.BeaconBlock{Body: &pb.BeaconBlockBody{ProposerSlashings: []*pb.ProposerSlashing{proposerSlashing}}}
 
-		if !reflect.DeepEqual(postState, genPostState) {
-			t.Errorf("test case %s mutated state differently than yaml output", testCase.Description)
-		}
+			var postState *pb.BeaconState
+			postState, err = blocks.ProcessProposerSlashings(pre, block, true)
+			// Note: This doesn't test anything worthwhile. It essentially tests
+			// that *any* error has occurred, not any specific error.
+			if len(expectedPost.ValidatorRegistry) == 0 {
+				if err == nil {
+					t.Fatal("Did not fail when expected")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(postState, expectedPost) {
+				t.Error("Post state does not match expected")
+			}
+		})
 	}
+}
+
+func TestProposerSlashingMinimal(t *testing.T) {
+	runProposerSlashingTest(t, "proposer_slashing_minimal.yaml")
+}
+
+func TestProposerSlashingMainnet(t *testing.T) {
+	runProposerSlashingTest(t, "proposer_slashing_mainnet.yaml")
 }
