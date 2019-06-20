@@ -395,12 +395,6 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 			DepositCount: 1,
 		},
 	}
-	beaconState := &pbp2p.BeaconState{
-		Eth1DataVotes: eth1DataVotes,
-		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash: []byte("stub"),
-		},
-	}
 
 	var mockSig [96]byte
 	var mockCreds [32]byte
@@ -428,7 +422,17 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		copy(root[:], eth1DataVotes[dp.Index].DepositRoot)
 		db.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), root)
 	}
-	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
+	beaconState := &pbp2p.BeaconState{
+		Eth1DataVotes: eth1DataVotes,
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash:   []byte("stub"),
+			DepositRoot: []byte("first"),
+		},
+	}
+	if err := db.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	currentHeight := params.BeaconConfig().Eth1FollowDistance + 9
 	beaconServer := &BeaconServer{
 		beaconDB: db,
 		powChainService: &mockPOWChainService{
@@ -451,17 +455,25 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		},
 	}
 
-	if _, err := beaconServer.BlockTreeBySlots(ctx, nil); err == nil {
-		// There should be a "argument 'TreeBlockSlotRequest' cannot be nil" error
+	eth1data, err := beaconServer.eth1Data(context.Background())
+	if err != nil {
 		t.Fatal(err)
 	}
-	slotRange := &pb.TreeBlockSlotRequest{
-		SlotFrom: 4,
-		SlotTo:   3,
+	// Vote at index 2 should have won the best vote selection mechanism as it had the highest block number
+	// despite being tied at vote count with the vote at index 3.
+	if !bytes.Equal(eth1data.BlockHash, beaconState.Eth1DataVotes[2].BlockHash) {
+		t.Errorf(
+			"Expected block hashes to match, received %#x == %#x",
+			eth1data.BlockHash,
+			beaconState.Eth1DataVotes[2].BlockHash,
+		)
 	}
-	if _, err := beaconServer.BlockTreeBySlots(ctx, slotRange); err == nil {
-		// There should be a 'Upper limit of slot range cannot be lower than the lower limit' error.
-		t.Fatal(err)
+	if !bytes.Equal(eth1data.DepositRoot, beaconState.Eth1DataVotes[2].DepositRoot) {
+		t.Errorf(
+			"Expected deposit roots to match, received %#x == %#x",
+			eth1data.DepositRoot,
+			beaconState.Eth1DataVotes[2].DepositRoot,
+		)
 	}
 }
 

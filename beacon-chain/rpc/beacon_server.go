@@ -9,9 +9,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -162,11 +160,8 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 		return nil, fmt.Errorf("could not verify block with hash exists in Eth1 chain: %#x: %v", stateLatestEth1Hash, err)
 	}
 	dataVotes := []*pbp2p.Eth1Data{}
-	voteCountMap := make(map[string]blocks.VoteHierarchy)
-	bestVoteHeight := big.NewInt(0)
+	votesMap := helpers.EmptyVoteHierarchyMap()
 	depositCount, depositRootAtHeight := bs.beaconDB.DepositsNumberAndRootAtHeight(ctx, currentHeight)
-	var mostVotes uint64
-	var bestVoteHash string
 	for _, vote := range beaconState.Eth1DataVotes {
 		validVote, blockHeight, err := bs.validateVote(ctx, currentHeight, depositCount, depositRootAtHeight, eth1FollowDistance, stateLatestEth1Height, vote)
 		if err != nil {
@@ -174,28 +169,24 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 		}
 		if validVote {
 			dataVotes = append(dataVotes, vote)
-			he, err := ssz.HashedEncoding(vote)
+			votesMap, err = helpers.CountVote(votesMap, vote, blockHeight)
 			if err != nil {
-				return nil, fmt.Errorf("could not get encoded hash of eth1data object: %v", err)
+				return nil, err
 			}
-			bestVoteHash, bestVoteHeight, mostVotes, voteCountMap = blocks.CountVote(bestVoteHash, bestVoteHeight, blockHeight, err, he, mostVotes, vote, voteCountMap)
 		}
 	}
 	if len(dataVotes) == 0 {
 		return bs.defaultEth1DataResponse(ctx, currentHeight, eth1FollowDistance)
 	}
-	v, ok := voteCountMap[bestVoteHash]
-	if ok {
-		return v.Eth1Data, nil
-	}
-	return nil, errors.New("best vote is missing")
+	return votesMap.BestVote, nil
+
 }
 
 func (bs *BeaconServer) validateVote(ctx context.Context, currentHeight *big.Int, depositCount uint64, depositRootAtHeight [32]byte, eth1FollowDistance int64, stateLatestEth1Height *big.Int, vote *pbp2p.Eth1Data) (bool, *big.Int, error) {
 	if ctx.Err() != nil {
 		return false, nil, ctx.Err()
 	}
-	eth1Hash := bytesutil.ToBytes32(vote.DepositRoot)
+	eth1Hash := bytesutil.ToBytes32(vote.BlockHash)
 	// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 	blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
 	if err != nil {
