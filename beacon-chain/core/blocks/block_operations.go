@@ -194,7 +194,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
-	domain := helpers.DomainVersion(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)

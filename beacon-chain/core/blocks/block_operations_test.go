@@ -64,7 +64,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
@@ -122,7 +122,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
@@ -171,7 +171,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	}
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
@@ -224,7 +224,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
@@ -281,7 +281,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("Failed to generate private key got: %v", err)
@@ -331,7 +331,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := uint64(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
