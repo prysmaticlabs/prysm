@@ -813,11 +813,10 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 		if err != nil {
 			return fmt.Errorf("could not tree hash deposit data: %v", err)
 		}
-		_ = beaconState.DepositIndex
 		if ok := trieutil.VerifyMerkleProof(
 			receiptRoot,
 			leaf[:],
-			int(deposit.Index),
+			int(beaconState.DepositIndex),
 			deposit.Proof,
 		); !ok {
 			return fmt.Errorf(
@@ -825,15 +824,6 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 				receiptRoot,
 			)
 		}
-	}
-
-	// Deposits must be processed in order
-	if deposit.Index != beaconState.DepositIndex {
-		return fmt.Errorf(
-			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
-			beaconState.DepositIndex,
-			deposit.Index,
-		)
 	}
 
 	return nil

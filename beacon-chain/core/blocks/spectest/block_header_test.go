@@ -2,10 +2,11 @@ package spectest
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"io/ioutil"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"

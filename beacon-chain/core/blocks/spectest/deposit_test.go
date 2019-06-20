@@ -1,13 +1,10 @@
 package spectest
 
 import (
-	"bytes"
-	"encoding/json"
 	"io/ioutil"
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -33,31 +30,29 @@ func TestDepositMinimalYaml(t *testing.T) {
 	for _, testCase := range s.TestCases {
 		t.Logf("Testing testcase %s", testCase.Description)
 		preState := &pb.BeaconState{}
-		b, err := json.Marshal(testCase.Pre)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = jsonpb.Unmarshal(bytes.NewReader(b), preState)
-		if err != nil {
+		if err = convertToPb(testCase.Pre, preState); err != nil {
 			t.Fatal(err)
 		}
 
 		deposit := &pb.Deposit{}
-		b, err = json.Marshal(testCase.Deposit)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = jsonpb.Unmarshal(bytes.NewReader(b), deposit)
-		if err != nil {
+		if err = convertToPb(testCase.Deposit, deposit); err != nil {
 			t.Fatal(err)
 		}
 
-		var postState *pb.BeaconState
-		_ = postState
+		testPostState := &pb.BeaconState{}
+		if err = convertToPb(testCase.Post, testPostState); err != nil {
+			t.Fatal(err)
+		}
 		valMap := stateutils.ValidatorIndexMap(preState)
-		postState, err = blocks.ProcessDeposit(preState, deposit, valMap, true, true)
-		if err != nil {
-			t.Errorf("Deposit was processed successfully with deposit %v, when it should have failed", err)
+		_, err := blocks.ProcessDeposit(preState, deposit, valMap, true, true)
+		if len(testCase.Post.ValidatorRegistry) == 0 {
+			if err == nil {
+				t.Errorf("Deposit was processed successfully with deposit %v, when it should have failed", deposit)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("Deposit was processed unsuccessfully , when it should have succeeded %v", err)
+			}
 		}
 	}
 }
@@ -81,29 +76,29 @@ func TestDepositMainnetYaml(t *testing.T) {
 	for _, testCase := range s.TestCases {
 		t.Logf("Testing testcase %s", testCase.Description)
 		preState := &pb.BeaconState{}
-		b, err := json.Marshal(testCase.Pre)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = jsonpb.Unmarshal(bytes.NewReader(b), preState)
-		if err != nil {
+		if err = convertToPb(testCase.Pre, preState); err != nil {
 			t.Fatal(err)
 		}
 
 		deposit := &pb.Deposit{}
-		b, err = json.Marshal(testCase.Deposit)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = jsonpb.Unmarshal(bytes.NewReader(b), deposit)
-		if err != nil {
+		if err = convertToPb(testCase.Deposit, deposit); err != nil {
 			t.Fatal(err)
 		}
 
-		var postState *pb.BeaconState
-		postState, err = blocks.ProcessDeposit(preState, deposit, nil, true, true)
-		if err == nil && postState != nil {
-			t.Errorf("Deposit was processed successfully with deposit %v, when it should have failed", deposit)
+		testPostState := &pb.BeaconState{}
+		if err = convertToPb(testCase.Post, testPostState); err != nil {
+			t.Fatal(err)
+		}
+		valMap := stateutils.ValidatorIndexMap(preState)
+		_, err := blocks.ProcessDeposit(preState, deposit, valMap, true, true)
+		if len(testCase.Post.ValidatorRegistry) == 0 {
+			if err == nil {
+				t.Errorf("Deposit was processed successfully with deposit %v, when it should have failed", deposit)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("Deposit was processed unsuccessfully , when it should have succeeded %v", err)
+			}
 		}
 	}
 }
