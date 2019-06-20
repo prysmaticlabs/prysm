@@ -28,14 +28,21 @@ func TestSignMessageYaml(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Cannot unmarshal input to secret key: %v", err)
 			}
-			domain, _ := binary.Uvarint(tt.Input.Domain)
+			domain, n := binary.Uvarint(tt.Input.Domain)
 			if err != nil {
 				t.Fatal(err)
 			}
+			if n == 0 { // overflow
+			t.Skipf("Domain overflows uint64. Skipping test. Domain=%#x",
+				tt.Input.Domain)
+			}
 			sig := sk.Sign(tt.Input.Message, domain)
 			if !bytes.Equal(tt.Output, sig.Marshal()) {
-				t.Errorf("Signature does not match the expected output. Expected %#x but received %#x", tt.Output, sig.Marshal())
+				t.Logf("Domain=%d", domain)
+				t.Fatalf("Signature does not match the expected output. " +
+					"Expected %#x but received %#x", tt.Output, sig.Marshal())
 			}
+			t.Logf("Success. Domain=%d", domain)
 		})
 	}
 }
