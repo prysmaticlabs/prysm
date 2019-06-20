@@ -1324,6 +1324,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 
 	want := "over max number of allowed indices"
 	if err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
 		indexedAtt1,
 		false,
 	); !strings.Contains(err.Error(), want) {

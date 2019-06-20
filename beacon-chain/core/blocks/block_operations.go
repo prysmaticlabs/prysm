@@ -329,7 +329,7 @@ func verifyProposerSlashing(
 //    attesting_indices_1 = attestation_1.custody_bit_0_indices + attestation_1.custody_bit_1_indices
 //    attesting_indices_2 = attestation_2.custody_bit_0_indices + attestation_2.custody_bit_1_indices
 //    for index in sorted(set(attesting_indices_1).intersection(attesting_indices_2)):
-//        if is_slashable_validator(state.validator_registry[index], get_current_epoch(state)):
+//        if is_slashable_validator(state.validators[index], get_current_epoch(state)):
 //            slash_validator(state, index)
 //            slashed_any = True
 //    assert slashed_any
@@ -347,7 +347,7 @@ func ProcessAttesterSlashings(
 		)
 	}
 	for idx, slashing := range body.AttesterSlashings {
-		if err := verifyAttesterSlashing(slashing, verifySignatures); err != nil {
+		if err := verifyAttesterSlashing(beaconState, slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attester slashing #%d: %v", idx, err)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
@@ -371,7 +371,7 @@ func ProcessAttesterSlashings(
 	return beaconState, nil
 }
 
-func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool) error {
+func verifyAttesterSlashing(beaconState *pb.BeaconState, slashing *pb.AttesterSlashing, verifySignatures bool) error {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
@@ -379,10 +379,10 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 	if !isSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
-	if err := VerifyIndexedAttestation(att1, verifySignatures); err != nil {
+	if err := VerifyIndexedAttestation(beaconState, att1, verifySignatures); err != nil {
 		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
-	if err := VerifyIndexedAttestation(att2, verifySignatures); err != nil {
+	if err := VerifyIndexedAttestation(beaconState, att2, verifySignatures); err != nil {
 		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
 	return nil
@@ -401,7 +401,7 @@ func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.Attestation
 	// Inner attestation data structures for the votes should not be equal,
 	// as that would mean both votes are the same and therefore no slashing
 	// should occur.
-	isDoubleVote := proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
+	isDoubleVote := !proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
 	isSurroundVote := data1.SourceEpoch < data2.SourceEpoch && data2.TargetEpoch < data1.TargetEpoch
 	return isDoubleVote || isSurroundVote
 }
@@ -579,7 +579,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	if err != nil {
 		return nil, fmt.Errorf("could not convert to indexed attestation: %v", err)
 	}
-	if err := VerifyIndexedAttestation(indexedAtt, verifySignatures); err != nil {
+	if err := VerifyIndexedAttestation(beaconState, indexedAtt, verifySignatures); err != nil {
 		return nil, fmt.Errorf("could not verify indexed attestation: %v", err)
 	}
 	return beaconState, nil
@@ -658,7 +658,7 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 //        signature=indexed_attestation.signature,
 //        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
 //    )
-func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
+func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
@@ -678,7 +678,56 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 	}
 
 	if verifySignatures {
-		// TODO(#2307): Update using BLS signature verification.
+		domain := helpers.Domain(beaconState, indexedAtt.Data.TargetEpoch, params.BeaconConfig().DomainAttestation)
+		var pubkeys []*bls.PublicKey
+		if len(custodyBit0Indices) > 0 {
+			pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[custodyBit0Indices[0]].Pubkey)
+			if err != nil {
+				return fmt.Errorf("could not deserialize validator public key: %v", err)
+			}
+			for _, i := range custodyBit0Indices[1:] {
+				pk, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[i].Pubkey)
+				if err != nil {
+					return fmt.Errorf("could not deserialize validator public key: %v", err)
+				}
+				pubkey.Aggregate(pk)
+			}
+			pubkeys = append(pubkeys, pubkey)
+		}
+		if len(custodyBit1Indices) > 0 {
+			pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[custodyBit1Indices[0]].Pubkey)
+			if err != nil {
+				return fmt.Errorf("could not deserialize validator public key: %v", err)
+			}
+			for _, i := range custodyBit1Indices[1:] {
+				pk, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[i].Pubkey)
+				if err != nil {
+					return fmt.Errorf("could not deserialize validator public key: %v", err)
+				}
+				pubkey.Aggregate(pk)
+			}
+			pubkeys = append(pubkeys, pubkey)
+		}
+
+		cus0 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: false}
+		cus1 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: true}
+		cus0Root, err := ssz.HashTreeRoot(cus0)
+		if err != nil {
+			return fmt.Errorf("could not tree hash att data and custody bit 0: %v", err)
+		}
+		cus1Root, err := ssz.HashTreeRoot(cus1)
+		if err != nil {
+			return fmt.Errorf("could not tree hash att data and custody bit 1: %v", err)
+		}
+		msgs := append(cus0Root[:], cus1Root[:]...)
+
+		sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
+		if err != nil {
+			return fmt.Errorf("could not convert bytes to signature: %v", err)
+		}
+		if !sig.VerifyAggregate(pubkeys, msgs, domain) {
+			return fmt.Errorf("attestation aggregation signature did not verify")
+		}
 	}
 	return nil
 }
