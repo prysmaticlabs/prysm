@@ -132,7 +132,7 @@ func HashG2WithDomainCompressed(msg [32]byte, domain uint64) [96]byte {
 	return bls.CompressG2(projective.ToAffine())
 }
 
-// HashG2WithDomainCompressed returns the uncompressed hash.
+// HashG2WithDomainUncompressed returns the uncompressed hash.
 func HashG2WithDomainUncompressed(msg [32]byte, domain uint64) [192]byte {
 	projective := bls.HashG2WithDomain(msg, domain)
 	return projective.ToAffine().SerializeBytes()
