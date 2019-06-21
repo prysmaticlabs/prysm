@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-// SetupInitialDeposits prepares the entered amount of deposits
+// GenerateDeposits prepares the entered amount of deposits
 // and secret keys.
-func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) ([]*pb.Deposit, []*bls.SecretKey) {
+func GenerateDeposits(t testing.TB, numDeposits uint64, generateKeys bool) ([]*pb.Deposit, []*bls.SecretKey) {
 	privKeys := make([]*bls.SecretKey, numDeposits)
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {

@@ -279,6 +279,7 @@ func verifyProposerSlashing(
 		return errors.New("expected slashing headers to differ")
 	}
 	if !helpers.IsSlashableValidator(proposer, helpers.CurrentEpoch(beaconState)) {
+		fmt.Println(proposer)
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.Pubkey)
 	}
 	if verifySignatures {
@@ -762,10 +763,7 @@ func ProcessDeposit(
 		if verifySignatures {
 			// TODO(#2307): Use BLS verification of proof of possession.
 		}
-		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
-		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
-			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-		}
+		valIndexMap[bytesutil.ToBytes32(pubKey)] = len(beaconState.ValidatorRegistry)
 		beaconState.ValidatorRegistry = append(beaconState.ValidatorRegistry, &pb.Validator{
 			Pubkey:                     pubKey,
 			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
@@ -773,7 +771,7 @@ func ProcessDeposit(
 			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance:           effectiveBalance,
+			EffectiveBalance:           amount,
 		})
 		beaconState.Balances = append(beaconState.Balances, amount)
 	} else {
@@ -875,7 +873,7 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 	}
 	// Verify the validator has not yet exited.
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
+		return fmt.Errorf("validator index %d, has already exited at epoch: %v", exit.ValidatorIndex, validator.ExitEpoch)
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {

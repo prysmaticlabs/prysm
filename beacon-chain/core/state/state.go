@@ -133,12 +133,9 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		}
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if state.ValidatorRegistry[i].EffectiveBalance >=
-			params.BeaconConfig().MaxDepositAmount {
-			state, err = v.ActivateValidator(state, uint64(i), true)
-			if err != nil {
-				return nil, fmt.Errorf("could not activate validator: %v", err)
-			}
+		state, err = v.ActivateValidator(state, uint64(i), true)
+		if err != nil {
+			return nil, fmt.Errorf("could not activate validator: %v", err)
 		}
 	}
 	activeValidators, err := helpers.ActiveValidatorIndices(state, 0)
