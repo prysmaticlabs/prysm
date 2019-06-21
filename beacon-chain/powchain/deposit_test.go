@@ -32,7 +32,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _ := testutil.GenerateDeposits(t, 1)
 
 	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
 	if err != nil {
@@ -73,7 +73,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _ := testutil.GenerateDeposits(t, 1)
 
 	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
 	if err != nil {
@@ -120,7 +120,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _ := testutil.GenerateDeposits(t, 1)
 	deposits[0].Data.PublicKey = []byte("junk")
 
 	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
@@ -164,7 +164,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _ := testutil.GenerateDeposits(t, 1)
 	var fakeSig [96]byte
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = fakeSig[:]
@@ -212,7 +212,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	}
 	testutil.ResetCache()
 
-	deposits, keys := testutil.SetupInitialDeposits(t, 1)
+	deposits, keys := testutil.GenerateDeposits(t, 1)
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion))
 	deposits[0].Data.Signature = sig.Marshal()[:]
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
@@ -298,7 +298,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	}
 	testutil.ResetCache()
 
-	deposits, keys := testutil.SetupInitialDeposits(t, 10)
+	deposits, keys := testutil.GenerateDeposits(t, 10)
 	deposits, root := testutil.GenerateDepositProof(t, deposits)
 
 	eth1Data := &ethpb.Eth1Data{

@@ -39,7 +39,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, privKeys := testutil.GenerateDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -112,7 +112,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, privKeys := testutil.GenerateDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -167,7 +167,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, privKeys := testutil.GenerateDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -318,7 +318,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, _ := testutil.GenerateDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -437,7 +437,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, privKeys := testutil.GenerateDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)

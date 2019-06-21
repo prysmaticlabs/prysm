@@ -13,7 +13,7 @@ import (
 )
 
 func TestSignBlock(t *testing.T) {
-	deposits, privKeys := SetupInitialDeposits(t, 100)
+	deposits, privKeys := GenerateDeposits(t, 100)
 	validators := make([]*ethpb.Validator, len(deposits))
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -60,7 +60,7 @@ func TestSignBlock(t *testing.T) {
 }
 
 func TestCreateRandaoReveal(t *testing.T) {
-	deposits, privKeys := SetupInitialDeposits(t, 100)
+	deposits, privKeys := GenerateDeposits(t, 100)
 	validators := make([]*ethpb.Validator, len(deposits))
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{

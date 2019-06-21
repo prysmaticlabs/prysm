@@ -23,9 +23,9 @@ var deposits []*ethpb.Deposit
 var privKeys []*bls.SecretKey
 var trie *trieutil.MerkleTrie
 
-// SetupInitialDeposits prepares the entered amount of deposits
+// GenerateDeposits prepares the entered amount of deposits
 // and secret keys.
-func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey) {
+func GenerateDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey) {
 	lock.Lock()
 	defer lock.Unlock()
 

@@ -62,7 +62,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	genesisTime := uint64(99999)
-	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart))
+	deposits, _ := testutil.GenerateDeposits(t, uint64(depositsForChainStart))
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
 	newState, err := state.GenesisBeaconState(
 		deposits,
@@ -179,7 +179,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, _ := testutil.GenerateDeposits(t, 100)
 	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
