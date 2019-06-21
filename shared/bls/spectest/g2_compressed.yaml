@@ -1,0 +1,69 @@
+title: BLS G2 Compressed msg hash
+summary: BLS G2 Compressed msg hash
+forks_timeline: mainnet
+forks: [phase0]
+config: mainnet
+runner: bls
+handler: msg_hash_compressed
+test_cases:
+- input: {message: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+    domain: 0x00}
+  output: ['pu8p5yQeGhzGD+4yjjKQwCPVWmcB21AO76t/kTkai4cm/QAkEh5kY3KB+QcTf+Jo',
+    'GHtLrKNjiOlhlLc6fVMvbuprwJh3jb/TQEWEYTtbqdqX1WAuMf2+knC4Y4dlKbJU']
+- input: {message: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+    domain: 0x01}
+  output: ['rbYs4PI77gfulzOksMmsGZCVCD8hTyhTL35WUp9r9akXqQpMnu0qnF0JIqbJw5N5',
+    'Ca3YEwZIInGty0bwTieqdJDT6a64HIFfspUMph2kbR2q/BTPyDjrFch7kIwY6fHj']
+- input: {message: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+    domain: 0x04d2}
+  output: ['sG+WSRL0AoKrFjQ7PJRuUdoKXAKL0bkaw7BxOdJUCtR7TONZNGreqpsaAOdjxRWM',
+    'El+cqGc23eHhmCNM6uA1okkb3oXNbrLpvN2djRw96hX0l5wRvt0y4WvH5TWn8YUG']
+- input: {message: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+    domain: 0xffffffff}
+  output: ['gf71T733iOCdsXCgl92iuEKIK4LLT8cH7tOR+1+RznpLjIZdcqk/VPi5QXuYUoz1',
+    'C8tqbxVWboKyN1Go7NAl9s+IqOpTbxVl0/+dvItKYcoVVep93pDnyGeTJquG0wmj']
+- input: {message: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+    domain: 0xffffffffffffffff}
+  output: ['g/dGXjUfe9Ahb8X8rU3NGk9FQQu6ME+7jKsiXFJv/6/dkPFprdXHUtc38DkkI0Oj',
+    'AKYrUpZbCh5EobLlvtXqpEgCgxdgPSus9KzXt+Jj4B4qhB51N6gnyxUCpBCdusD/']
+- input: {message: 'VlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlY=',
+    domain: 0x00}
+  output: ['on0UycRCLFrFLc00tEPWE1C+qJgIbsQL2cqb5bCMSxmZyRpAidTkxdkIWQJOY4K0',
+    'Dif83fMHwZ3ESXfImlBzkxJPGYCcRvA1sqlsk89r8CyJ77Aw2XYyoPeT6LQXueHE']
+- input: {message: 'VlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlY=',
+    domain: 0x01}
+  output: ['t8Z+qqbS1DcrPzLQJNVsv6bVhxuJzqb2AXS5UXwC5ZQcn/xmiw7H9Trkrv67EaMa',
+    'Dw0V/9GC4VilqLmXKQ5PDoGm5A80KTFvIMPJ8kS1EqUHjlQVtcqvhu9HHgtFrrJx']
+- input: {message: 'VlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlY=',
+    domain: 0x04d2}
+  output: ['lH6YmJFEh427c6V5WWcIxM63U1r/p33Ok7GT2ppGk3Tp5m956ZRPqDVFHAB25vne',
+    'C/dBjW+5hkfA7UmCQzuKCROdfRGocwFSyCT+KVez0RCgVjOoVIMaVToJOfIhlVmY']
+- input: {message: 'VlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlY=',
+    domain: 0xffffffff}
+  output: ['l4hvsB/NJ4f8/lq2ZNFz1FY8D5gyxSxoJAQnLtsJ1JMgG6gd8L2WCNp/U/To0KFy',
+    'BygU+KpE3he2lOti5Ftob4rMRKoqu/Lsx6GVcg0Dq6/3qcXnLOdsAg9IrLpJQK+R']
+- input: {message: 'VlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlY=',
+    domain: 0xffffffffffffffff}
+  output: ['j6rLL+i8Nbzck0M3x6Ki9JPIukvmO+/Krkjppn58MOHszojAv79+LNJsqtRp6/qp',
+    'DeMELporjKh7jOfY9JURN1vvddVnRogqRLuNIpZKlKTYUd8KecZ+KsVRRCejZd7P']
+- input: {message: 'q6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6s=',
+    domain: 0x00}
+  output: ['lpyMYUc1LzDJnYt2bmmaCdJgWe2V2tS4ATYE+4P1mcEa/K/+QQbU+fe1Kd/Jkoqv',
+    'Ft60Q7w1YY9OcdAA0B2f6vkar4Sc/x83nH7IKKuRalRjZz41hakdx1ihPaRQ9yIh']
+- input: {message: 'q6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6s=',
+    domain: 0x01}
+  output: ['uDU+dE3lp3CC/4FR82WqCHBSSDONEt9vBb2R65CpA0sWuwEeJ3cTDf2XJDZ05Jpx',
+    'FTLFM9Mjb+N/eGzsgN1OX5Oi43z2a85eyMqQnYXwSAhWIEd507UEIjvDfBdcr3j8']
+- input: {message: 'q6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6s=',
+    domain: 0x04d2}
+  output: ['rphdD1k+De1EttkD83wbf4+xsJemDGP9RsMD/nJ10JNX5BSWyheRZeduaJnluzt6',
+    'FPDmE3g2X68UbuGWJn3NiUlU4DpQWCFxLNNhHSHch0O11vSMqyANZLLyI/k1L1Ne']
+- input: {message: 'q6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6s=',
+    domain: 0xffffffff}
+  output: ['jA+D8t/Gvnwl2lUS5G8Ya6+M7W/Lz67qw3CZru7wG29PS9C0behzdFuT9zxVRGDx',
+    'FUOdBM/1gkXzro/CjusLd1TJPFhKth2yeOdwDQEXxvQV5s+yw34f2AGGhH7QkH8+']
+- input: {message: 'q6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6s=',
+    domain: 0xffffffffffffffff}
+  output: ['so9/wR2XZORnUWX57+04q3QDPkfksHjT2OpxbOsYB7mYkHtdS9eASmsXh2dIFKPy',
+    'D6u3FG48uP5Q4ioEGZ5GiQhLSjlMNIrIgx/aVBYcS/qefKCUZDKkvLinwUikPdQC']
+
