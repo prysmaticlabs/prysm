@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"testing"
 
-	bls2 "github.com/phoreproject/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -50,22 +49,5 @@ func TestVerifyAggregate(t *testing.T) {
 	aggSig := bls.AggregateSignatures(sigs)
 	if !aggSig.VerifyAggregate(pubkeys, msg, 0) {
 		t.Error("Signature did not verify")
-	}
-}
-
-func TestHashG2WithDomain(t *testing.T) {
-	var msg [32]byte
-	copy(msg[:], []byte{'H', 'E', 'L', 'L', 'O'})
-	domain := uint64(10)
-	compHash := bls.HashG2WithDomainCompressed(msg, domain)
-	unCompHash := bls.HashG2WithDomainUncompressed(msg, domain)
-	g2Affine, err := bls2.DecompressG2(compHash)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if unCompHash != g2Affine.SerializeBytes() {
-		t.Errorf("Uncompressed and Compressed Hash do not point to the same affine point. Expected %#x but got %#x",
-			unCompHash, g2Affine.SerializeBytes())
 	}
 }

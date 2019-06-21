@@ -3,7 +3,7 @@
 
 package spectest
 
-type G2Compressed struct {
+type G2CompressedTest struct {
 	Title         string   `json:"title"`
 	Summary       string   `json:"summary"`
 	ForksTimeline string   `json:"forks_timeline"`

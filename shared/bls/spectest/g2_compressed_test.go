@@ -7,24 +7,32 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/phoreproject/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+// Note: This actually tests the underlying library as we don't have a need for
+// HashG2Compressed in our local BLS API.
 func TestG2CompressedHash(t *testing.T) {
 	file, err := ioutil.ReadFile("g2_compressed.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}
 
-	test := &G2Compressed{}
+	test := &G2CompressedTest{}
 	if err := yaml.Unmarshal(file, test); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 
 	for i, tt := range test.TestCases {
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
-			hash := bls.HashG2WithDomainCompressed(bytesutil.ToBytes32(tt.Input.Message), tt.Input.Domain)
+
+			projective := bls.HashG2WithDomain(
+				bytesutil.ToBytes32(tt.Input.Message),
+				tt.Input.Domain,
+			)
+			hash := bls.CompressG2(projective.ToAffine())
+
 			var buf []byte
 			for _, slice := range tt.Output {
 				buf = append(buf, slice...)
