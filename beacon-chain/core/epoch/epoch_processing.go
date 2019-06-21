@@ -28,6 +28,12 @@ type MatchedAttestations struct {
 	head   []*pb.PendingAttestation
 }
 
+type crosslinkObj struct {
+	Shard      uint64 `json:"shard"`
+	StartEpoch uint64 `json:"start_epoch"`
+	EndEpoch   uint64 `json:"end_epoch"`
+	ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+	DataRoot   []byte `json:"data_root" ssz:"size=32"`}
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
 //
@@ -262,15 +268,16 @@ func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.PreviousCrosslinks = state.CurrentCrosslinks
 	epochs := []uint64{helpers.PrevEpoch(state), helpers.CurrentEpoch(state)}
 	for _, e := range epochs {
-		offset, err := helpers.EpochCommitteeCount(state, e)
+		count, err := helpers.EpochCommitteeCount(state, e)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch committee count: %v", err)
 		}
-		for i := uint64(0); i < offset; i++ {
-			shard, err := helpers.EpochStartShard(state, e)
-			if err != nil {
-				return nil, fmt.Errorf("could not get epoch start shards: %v", err)
-			}
+		shard, err := helpers.EpochStartShard(state, e)
+		if err != nil {
+			return nil, fmt.Errorf("could not get epoch start shards: %v", err)
+		}
+		for offset := uint64(0); offset < count; offset++ {
+			shard = (shard + offset) % params.BeaconConfig().ShardCount
 			committee, err := helpers.CrosslinkCommitteeAtEpoch(state, e, shard)
 			if err != nil {
 				return nil, fmt.Errorf("could not get crosslink committee: %v", err)
@@ -631,7 +638,15 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	// Filter out shard crosslinks with correct current or previous crosslink data.
 	for _, a := range shardAtts {
 		cFromState := state.CurrentCrosslinks[shard]
-		cFromStateRoot, err := ssz.HashTreeRoot(cFromState)
+
+		crosslink := crosslinkObj{
+			Shard: cFromState.Shard,
+			StartEpoch: cFromState.StartEpoch,
+			EndEpoch: cFromState.EndEpoch,
+			ParentRoot: cFromState.ParentRoot,
+			DataRoot: cFromState.DataRoot,
+		}
+		cFromStateRoot, err := ssz.HashTreeRoot(crosslink)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not hash tree root crosslink from state: %v", err)
 		}
@@ -639,11 +654,11 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not hash tree root crosslink from attestation: %v", err)
 		}
-
 		if bytes.Equal(cFromStateRoot[:], cFromAttRoot[:]) || bytes.Equal(cFromStateRoot[:], a.Data.Crosslink.ParentRoot) {
 			candidateCrosslinks = append(candidateCrosslinks, a.Data.Crosslink)
 		}
 	}
+
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
