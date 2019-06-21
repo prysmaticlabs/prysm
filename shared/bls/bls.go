@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/phoreproject/bls"
 	g1 "github.com/phoreproject/bls/g1pubs"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -123,6 +124,18 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 		ss = append(ss, v.val)
 	}
 	return &Signature{val: g1.AggregateSignatures(ss)}
+}
+
+// HashG2WithDomainCompressed returns the compressed hash.
+func HashG2WithDomainCompressed(msg [32]byte, domain uint64) [96]byte {
+	projective := bls.HashG2WithDomain(msg, domain)
+	return bls.CompressG2(projective.ToAffine())
+}
+
+// HashG2WithDomainUncompressed returns the uncompressed hash.
+func HashG2WithDomainUncompressed(msg [32]byte, domain uint64) [192]byte {
+	projective := bls.HashG2WithDomain(msg, domain)
+	return projective.ToAffine().SerializeBytes()
 }
 
 // Domain returns the bls domain given by the domain type and the operation 4 byte fork version.
