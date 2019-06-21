@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-
 // Note about yaml formatting: The domain value is written upstream as
 // hexadecimal integer. This is one case where we want to keep hexadecimal value
 // in the yaml. If a tool was run to convert hexadecimal strings to Base64, the
@@ -37,7 +36,7 @@ func TestSignMessageYaml(t *testing.T) {
 			sig := sk.Sign(tt.Input.Message, tt.Input.Domain)
 			if !bytes.Equal(tt.Output, sig.Marshal()) {
 				t.Logf("Domain=%d", tt.Input.Domain)
-				t.Fatalf("Signature does not match the expected output. " +
+				t.Fatalf("Signature does not match the expected output. "+
 					"Expected %#x but received %#x", tt.Output, sig.Marshal())
 			}
 			t.Logf("Success. Domain=%d", tt.Input.Domain)
