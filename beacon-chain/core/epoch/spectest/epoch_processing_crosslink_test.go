@@ -15,12 +15,12 @@ import (
 )
 
 func TestCrosslinksProcessingYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("crosslinks_minimal_formatted.yaml")
+	file, err := ioutil.ReadFile("crosslinks_minimal.yaml")
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	s := &CrosslinksMinimal{}
+	s := &CrosslinksTest{}
 	if err := yaml.Unmarshal(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
@@ -30,7 +30,7 @@ func TestCrosslinksProcessingYaml(t *testing.T) {
 	}
 
 	t.Logf("Running spec test vectors for %s", s.Title)
-	for i, testCase := range s.TestCases {
+	for _, testCase := range s.TestCases {
 		preState := &pb.BeaconState{}
 		t.Logf("Testing testcase %s", testCase.Description)
 		b, err := json.Marshal(testCase.Pre)

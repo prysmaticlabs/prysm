@@ -3,7 +3,7 @@
 
 package spectest
 
-type CrosslinksMinimal struct {
+type CrosslinksTest struct {
 	Title         string   `json:"title"`
 	Summary       string   `json:"summary"`
 	ForksTimeline string   `json:"forks_timeline"`
@@ -53,15 +53,33 @@ type CrosslinksMinimal struct {
 				InclusionDelay uint64 `json:"inclusion_delay"`
 				ProposerIndex  uint64 `json:"proposer_index"`
 			} `json:"previous_epoch_attestations"`
-			CurrentEpochAttestations []interface{} `json:"current_epoch_attestations"`
-			PreviousJustifiedEpoch   uint64        `json:"previous_justified_epoch"`
-			CurrentJustifiedEpoch    uint64        `json:"current_justified_epoch"`
-			PreviousJustifiedRoot    []byte        `json:"previous_justified_root" ssz:"size=32"`
-			CurrentJustifiedRoot     []byte        `json:"current_justified_root" ssz:"size=32"`
-			JustificationBitfield    uint64        `json:"justification_bitfield"`
-			FinalizedEpoch           uint64        `json:"finalized_epoch"`
-			FinalizedRoot            []byte        `json:"finalized_root" ssz:"size=32"`
-			CurrentCrosslinks        []struct {
+			CurrentEpochAttestations []struct {
+				AggregationBitfield []byte `json:"aggregation_bitfield"`
+				Data                struct {
+					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
+					SourceEpoch     uint64 `json:"source_epoch"`
+					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
+					TargetEpoch     uint64 `json:"target_epoch"`
+					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
+					Crosslink       struct {
+						Shard      uint64 `json:"shard"`
+						StartEpoch uint64 `json:"start_epoch"`
+						EndEpoch   uint64 `json:"end_epoch"`
+						ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+						DataRoot   []byte `json:"data_root" ssz:"size=32"`
+					} `json:"crosslink"`
+				} `json:"data"`
+				InclusionDelay uint64 `json:"inclusion_delay"`
+				ProposerIndex  uint64 `json:"proposer_index"`
+			} `json:"current_epoch_attestations"`
+			PreviousJustifiedEpoch uint64 `json:"previous_justified_epoch"`
+			CurrentJustifiedEpoch  uint64 `json:"current_justified_epoch"`
+			PreviousJustifiedRoot  []byte `json:"previous_justified_root" ssz:"size=32"`
+			CurrentJustifiedRoot   []byte `json:"current_justified_root" ssz:"size=32"`
+			JustificationBitfield  uint64 `json:"justification_bitfield"`
+			FinalizedEpoch         uint64 `json:"finalized_epoch"`
+			FinalizedRoot          []byte `json:"finalized_root" ssz:"size=32"`
+			CurrentCrosslinks      []struct {
 				Shard      uint64 `json:"shard"`
 				StartEpoch uint64 `json:"start_epoch"`
 				EndEpoch   uint64 `json:"end_epoch"`
@@ -139,15 +157,33 @@ type CrosslinksMinimal struct {
 				InclusionDelay uint64 `json:"inclusion_delay"`
 				ProposerIndex  uint64 `json:"proposer_index"`
 			} `json:"previous_epoch_attestations"`
-			CurrentEpochAttestations []interface{} `json:"current_epoch_attestations"`
-			PreviousJustifiedEpoch   uint64        `json:"previous_justified_epoch"`
-			CurrentJustifiedEpoch    uint64        `json:"current_justified_epoch"`
-			PreviousJustifiedRoot    []byte        `json:"previous_justified_root" ssz:"size=32"`
-			CurrentJustifiedRoot     []byte        `json:"current_justified_root" ssz:"size=32"`
-			JustificationBitfield    uint64        `json:"justification_bitfield"`
-			FinalizedEpoch           uint64        `json:"finalized_epoch"`
-			FinalizedRoot            []byte        `json:"finalized_root" ssz:"size=32"`
-			CurrentCrosslinks        []struct {
+			CurrentEpochAttestations []struct {
+				AggregationBitfield []byte `json:"aggregation_bitfield"`
+				Data                struct {
+					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
+					SourceEpoch     uint64 `json:"source_epoch"`
+					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
+					TargetEpoch     uint64 `json:"target_epoch"`
+					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
+					Crosslink       struct {
+						Shard      uint64 `json:"shard"`
+						StartEpoch uint64 `json:"start_epoch"`
+						EndEpoch   uint64 `json:"end_epoch"`
+						ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+						DataRoot   []byte `json:"data_root" ssz:"size=32"`
+					} `json:"crosslink"`
+				} `json:"data"`
+				InclusionDelay uint64 `json:"inclusion_delay"`
+				ProposerIndex  uint64 `json:"proposer_index"`
+			} `json:"current_epoch_attestations"`
+			PreviousJustifiedEpoch uint64 `json:"previous_justified_epoch"`
+			CurrentJustifiedEpoch  uint64 `json:"current_justified_epoch"`
+			PreviousJustifiedRoot  []byte `json:"previous_justified_root" ssz:"size=32"`
+			CurrentJustifiedRoot   []byte `json:"current_justified_root" ssz:"size=32"`
+			JustificationBitfield  uint64 `json:"justification_bitfield"`
+			FinalizedEpoch         uint64 `json:"finalized_epoch"`
+			FinalizedRoot          []byte `json:"finalized_root" ssz:"size=32"`
+			CurrentCrosslinks      []struct {
 				Shard      uint64 `json:"shard"`
 				StartEpoch uint64 `json:"start_epoch"`
 				EndEpoch   uint64 `json:"end_epoch"`
