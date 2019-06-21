@@ -639,6 +639,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not hash tree root crosslink from attestation: %v", err)
 		}
+
 		if bytes.Equal(cFromStateRoot[:], cFromAttRoot[:]) || bytes.Equal(cFromStateRoot[:], a.Data.Crosslink.ParentRoot) {
 			candidateCrosslinks = append(candidateCrosslinks, a.Data.Crosslink)
 		}
