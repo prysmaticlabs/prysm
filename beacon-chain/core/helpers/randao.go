@@ -97,7 +97,7 @@ func CreateRandaoReveal(beaconState *pb.BeaconState, epoch uint64, privKeys []*b
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
+	domain := Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal(), nil
