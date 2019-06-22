@@ -14,7 +14,7 @@ go_proto_library(
     name = "ethereum_testing_go_proto",
     compiler = "//:proto_compiler",
     importpath = "github.com/prysmaticlabs/prysm/proto/testing",
-    proto = ":ethereum_testing_proto",
+    proto = ":testing_proto",
     visibility = ["//visibility:public"],
 )
 
@@ -36,4 +36,11 @@ go_test(
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
+)
+
+proto_library(
+    name = "testing_proto",
+    srcs = ["test.proto"],
+    visibility = ["//visibility:public"],
+    deps = ["@com_google_protobuf//:timestamp_proto"],
 )
