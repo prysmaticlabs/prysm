@@ -1,14 +1,12 @@
 package spectest
 
 import (
-	"bytes"
-	"encoding/json"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"io/ioutil"
 	"reflect"
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
@@ -29,38 +27,27 @@ func TestRegistryProcessingYaml(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Logf("Running spec test vectors for %s", s.Title)
-	for _, testCase := range s.TestCases {
-		preState := &pb.BeaconState{}
-		t.Logf("Testing testcase %s", testCase.Description)
-		b, err := json.Marshal(testCase.Pre)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = jsonpb.Unmarshal(bytes.NewReader(b), preState)
-		if err != nil {
-			t.Fatal(err)
-		}
+	for _, tt := range s.TestCases {
+		t.Run(tt.Description, func(t *testing.T) {
+			preState := &pb.BeaconState{}
+			if err := testutil.ConvertToPb(tt.Pre, preState); err != nil {
+				t.Fatal(err)
+			}
 
-		var postState *pb.BeaconState
+			var postState *pb.BeaconState
+			postState, err = epoch.ProcessRegistryUpdates(preState)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		postState, err = epoch.ProcessRegistryUpdates(preState)
-		if err != nil {
-			t.Fatal(err)
-		}
+			expectedPostState := &pb.BeaconState{}
+			if err := testutil.ConvertToPb(tt.Post, expectedPostState); err != nil {
+				t.Fatal(err)
+			}
 
-		genPostState := &pb.BeaconState{}
-		b, err = json.Marshal(testCase.Post)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = jsonpb.Unmarshal(bytes.NewReader(b), genPostState)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if !reflect.DeepEqual(postState, genPostState) {
-			t.Error("Process registry updates mutated state differently than yaml output")
-		}
+			if !reflect.DeepEqual(postState, expectedPostState) {
+				t.Error("Did not get expected state")
+			}
+		})
 	}
 }
