@@ -81,6 +81,8 @@ func TestCrosslinksProcessingYaml(t *testing.T) {
 			t.Error("Post state latest start shard miss matched")
 		}
 		if !reflect.DeepEqual(postState.CurrentCrosslinks, genPostState.CurrentCrosslinks) {
+			//t.Log(postState.CurrentCrosslinks)
+			//t.Log(genPostState.CurrentCrosslinks)
 			t.Error("Post state current crosslinks miss matched")
 		}
 		if !reflect.DeepEqual(postState.PreviousCrosslinks, genPostState.PreviousCrosslinks) {

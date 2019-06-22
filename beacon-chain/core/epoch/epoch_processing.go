@@ -33,7 +33,9 @@ type crosslinkObj struct {
 	StartEpoch uint64 `json:"start_epoch"`
 	EndEpoch   uint64 `json:"end_epoch"`
 	ParentRoot []byte `json:"parent_root" ssz:"size=32"`
-	DataRoot   []byte `json:"data_root" ssz:"size=32"`}
+	DataRoot   []byte `json:"data_root" ssz:"size=32"`
+}
+
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
 //
@@ -131,7 +133,7 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 	if err != nil {
 		return 0, fmt.Errorf("could not get attesting indices: %v", err)
 	}
-	return helpers.TotalBalance(state, indices)
+	return helpers.TotalBalance(state, indices), nil
 }
 
 // ProcessJustificationAndFinalization processes justification and finalization during
@@ -265,7 +267,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 //            if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
 //                state.current_crosslinks[shard] = winning_crosslink
 func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.PreviousCrosslinks = state.CurrentCrosslinks
+	copy(state.PreviousCrosslinks, state.CurrentCrosslinks)
 	epochs := []uint64{helpers.PrevEpoch(state), helpers.CurrentEpoch(state)}
 	for _, e := range epochs {
 		count, err := helpers.EpochCommitteeCount(state, e)
@@ -286,14 +288,9 @@ func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not get winning crosslink: %v", err)
 			}
-			attestedBalance, err := helpers.TotalBalance(state, indices)
-			if err != nil {
-				return nil, fmt.Errorf("could not get total attested balance: %v", err)
-			}
-			totalBalance, err := helpers.TotalBalance(state, committee)
-			if err != nil {
-				return nil, fmt.Errorf("could not get total committee balance: %v", err)
-			}
+			attestedBalance := helpers.TotalBalance(state, indices)
+			totalBalance := helpers.TotalBalance(state, committee)
+
 			// In order for a crosslink to get included in state, the attesting balance needs to
 			// be greater than 2/3 of the total balance.
 			if 3*attestedBalance >= 2*totalBalance {
@@ -640,11 +637,11 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 		cFromState := state.CurrentCrosslinks[shard]
 
 		crosslink := crosslinkObj{
-			Shard: cFromState.Shard,
+			Shard:      cFromState.Shard,
 			StartEpoch: cFromState.StartEpoch,
-			EndEpoch: cFromState.EndEpoch,
+			EndEpoch:   cFromState.EndEpoch,
 			ParentRoot: cFromState.ParentRoot,
-			DataRoot: cFromState.DataRoot,
+			DataRoot:   cFromState.DataRoot,
 		}
 		cFromStateRoot, err := ssz.HashTreeRoot(crosslink)
 		if err != nil {
@@ -820,10 +817,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			}
 			attested[index] = true
 		}
-		attestedBalance, err := helpers.TotalBalance(state, indices)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get total balance: %v", err)
-		}
+		attestedBalance := helpers.TotalBalance(state, indices)
 
 		// Update rewards and penalties to each eligible validator index.
 		for _, index := range eligible {
@@ -945,14 +939,9 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		for _, index := range attestingIndices {
 			attested[index] = true
 		}
-		committeeBalance, err := helpers.TotalBalance(state, committee)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get total committee balance: %v", err)
-		}
-		attestingBalance, err := helpers.TotalBalance(state, attestingIndices)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get total attested balance: %v", err)
-		}
+		committeeBalance := helpers.TotalBalance(state, committee)
+		attestingBalance := helpers.TotalBalance(state, attestingIndices)
+
 		for _, index := range committee {
 			base, err := baseReward(state, index)
 			if err != nil {
