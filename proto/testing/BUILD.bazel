@@ -4,7 +4,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 
 proto_library(
-    name = "ethereum_testing_proto",
+    name = "testing_proto",
     srcs = ["test.proto"],
     visibility = ["//visibility:public"],
     deps = ["@com_google_protobuf//:timestamp_proto"],
@@ -14,7 +14,7 @@ go_proto_library(
     name = "ethereum_testing_go_proto",
     compiler = "//:proto_compiler",
     importpath = "github.com/prysmaticlabs/prysm/proto/testing",
-    proto = ":ethereum_testing_proto",
+    proto = ":testing_proto",
     visibility = ["//visibility:public"],
 )
 

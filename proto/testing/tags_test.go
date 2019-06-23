@@ -1,4 +1,4 @@
-package ethereum_testing
+package testing
 
 import (
 	"errors"
