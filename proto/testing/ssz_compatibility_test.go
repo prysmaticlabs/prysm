@@ -2,6 +2,7 @@ package testing
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -21,6 +22,10 @@ func TestYaml(t *testing.T) {
 	s := &SszMinimalTest{}
 	if err := yaml.Unmarshal(file, s); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	if err := spectest.SetConfig(s.Config); err != nil {
+		t.Fatal(err)
 	}
 
 	for _, testCase := range s.TestCases {

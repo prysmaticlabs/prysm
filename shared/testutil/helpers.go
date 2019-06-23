@@ -39,7 +39,6 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 		}
 		deposits[i] = &pb.Deposit{
 			Data:  depositData,
-			Index: uint64(i),
 		}
 	}
 
@@ -63,7 +62,7 @@ func GenerateEth1Data(t testing.TB, deposits []*pb.Deposit) *pb.Eth1Data {
 	}
 
 	for i := range deposits {
-		proof, err := depositTrie.MerkleProof(int(deposits[i].Index))
+		proof, err := depositTrie.MerkleProof(int(i))
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}

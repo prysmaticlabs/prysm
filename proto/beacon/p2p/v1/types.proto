@@ -61,8 +61,8 @@ message PendingAttestation {
 }
 
 message Attestation {
-  AttestationData data = 1;
-  bytes aggregation_bitfield = 2;
+  bytes aggregation_bitfield = 1;
+  AttestationData data = 2;
   bytes custody_bitfield = 3;
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
@@ -188,10 +188,8 @@ message AttesterSlashing {
 
 message Deposit {
   // Branch in the deposit tree
-  repeated bytes proof = 1 [(gogoproto.moretags) = "ssz:\"size=32,32\""];
-  // Index in the deposit tree
-  uint64 index = 2;
-  DepositData data = 3;
+  repeated bytes proof = 1;
+  DepositData data = 2;
 }
 
 message VoluntaryExit {

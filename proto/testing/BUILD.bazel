@@ -29,10 +29,14 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["ssz_compatibility_test.go"],
+    srcs = [
+        "ssz_compatibility_test.go",
+        "tags_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
