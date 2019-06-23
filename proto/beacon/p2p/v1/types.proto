@@ -125,11 +125,11 @@ message ShardReassignmentRecord {
 }
 
 message Crosslink {
-  uint64 shard = 1 [(gogoproto.jsontag) = "shard"];
-  uint64 start_epoch = 2 [(gogoproto.jsontag) = "start_epoch"];
-  uint64 end_epoch = 3 [(gogoproto.jsontag) = "end_epoch"];
-  bytes parent_root = 4 [(gogoproto.jsontag) = "parent_root", (gogoproto.moretags) = "ssz:\"32\""];
-  bytes data_root = 5 [(gogoproto.jsontag) = "data_root", (gogoproto.moretags) = "ssz:\"32\""];
+  uint64 shard = 1;
+  uint64 start_epoch = 2;
+  uint64 end_epoch = 3;
+  bytes parent_root = 4 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  bytes data_root = 5 [(gogoproto.moretags) = "ssz:\"size=32\""];
 }
 
 message BeaconBlockHeader {
