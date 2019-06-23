@@ -103,16 +103,16 @@ func TestYaml(t *testing.T) {
 			}
 		}
 		if !isEmpty(testCase.BeaconBlockHeader.Value) {
-			p := &pb.AttestationDataAndCustodyBit{}
-			if err := testutil.ConvertToPb(testCase.AttestationDataAndCustodyBit.Value, p); err != nil {
+			p := &pb.BeaconBlockHeader{}
+			if err := testutil.ConvertToPb(testCase.BeaconBlockHeader.Value, p); err != nil {
 				t.Fatal(err)
 			}
 			root, err := ssz.HashTreeRoot(p)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !bytes.Equal(root[:], testCase.AttestationDataAndCustodyBit.Root) {
-				t.Errorf("Expected attestation data and custody bit %#x, received %#x", testCase.AttestationDataAndCustodyBit.Root, root[:])
+			if !bytes.Equal(root[:], testCase.BeaconBlockHeader.Root) {
+				t.Errorf("Expected beacon block header %#x, received %#x", testCase.BeaconBlockHeader.Root, root[:])
 			}
 		}
 		if !isEmpty(testCase.BeaconState.Value) {
