@@ -24,6 +24,7 @@ go_library(
     embed = [":ethereum_testing_go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/testing",
     visibility = ["//visibility:public"],
+    testonly = True,
 )
 
 go_test(
