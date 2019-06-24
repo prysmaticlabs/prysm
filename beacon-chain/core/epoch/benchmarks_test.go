@@ -306,6 +306,27 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 	bState.FinalizedEpoch = helpers.SlotToEpoch(currentSlot) - 1
 	bState.JustificationBitfield = 4
 
+	// Block Roots
+	var blockRoots [][]byte
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	bState.LatestBlockRoots = blockRoots
+
+	// RANDAO
+	var randaoHashes [][]byte
+	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength; i++ {
+		randaoHashes = append(randaoHashes, []byte{byte(i)})
+	}
+	bState.LatestRandaoMixes = randaoHashes
+
+	// LatestSlashedBalances
+	latestSlashedBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
+	for i := 0; i < len(latestSlashedBalances); i++ {
+		latestSlashedBalances[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
+	}
+	bState.LatestSlashedBalances = latestSlashedBalances
+
 	prevEpoch := helpers.PrevEpoch(bState)
 	currentEpoch := helpers.CurrentEpoch(bState)
 
@@ -316,6 +337,11 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 	committeeSize := int(validatorCount / committeeCount)
 
 	attestationsPerEpoch := slotsPerEpoch * params.BeaconConfig().MaxAttestations
+
+	prevRoot, err := helpers.BlockRoot(bState, currentEpoch)
+	if err != nil {
+		panic(err)
+	}
 
 	var prevAttestations []*pb.PendingAttestation
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
@@ -337,17 +363,33 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 				SourceEpoch:     prevEpoch - 1,
 				TargetEpoch:     prevEpoch,
 				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
-				SourceRoot:      params.BeaconConfig().ZeroHash[:],
-				TargetRoot:      params.BeaconConfig().ZeroHash[:],
+				SourceRoot:      prevRoot,
+				TargetRoot:      prevRoot,
 			},
 			AggregationBitfield: aggregationBitfield,
 			InclusionDelay:      params.BeaconConfig().MinAttestationInclusionDelay,
 		}
+
+		slot, err := helpers.AttestationDataSlot(bState, attestation.Data)
+		if err != nil {
+			panic(err)
+		}
+		headRoot, err := helpers.BlockRootAtSlot(bState, slot)
+		if err != nil {
+			panic(err)
+		}
+
+		attestation.Data.TargetRoot = headRoot
+
 		prevAttestations = append(prevAttestations, attestation)
 	}
 	bState.PreviousEpochAttestations = prevAttestations
 
 	var currentAttestations []*pb.PendingAttestation
+	currentRoot, err := helpers.BlockRoot(bState, currentEpoch)
+	if err != nil {
+		panic(err)
+	}
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
 		aggregationBitfield, err := bitutil.SetBitfield(int(i)%committeeSize, committeeSize)
 		if err != nil {
@@ -367,36 +409,26 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 				TargetEpoch:     currentEpoch,
 				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
 				SourceRoot:      params.BeaconConfig().ZeroHash[:],
-				TargetRoot:      params.BeaconConfig().ZeroHash[:],
+				TargetRoot:      currentRoot,
 			},
 			AggregationBitfield: aggregationBitfield,
 			InclusionDelay:      params.BeaconConfig().MinAttestationInclusionDelay,
 		}
 
+		slot, err := helpers.AttestationDataSlot(bState, attestation.Data)
+		if err != nil {
+			panic(err)
+		}
+		headRoot, err := helpers.BlockRootAtSlot(bState, slot)
+		if err != nil {
+			panic(err)
+		}
+
+		attestation.Data.TargetRoot = headRoot
+
 		currentAttestations = append(currentAttestations, attestation)
 	}
 	bState.CurrentEpochAttestations = currentAttestations
-
-	// RANDAO
-	var randaoHashes [][]byte
-	for i := uint64(0); i < params.BeaconConfig().LatestRandaoMixesLength; i++ {
-		randaoHashes = append(randaoHashes, []byte{byte(i)})
-	}
-	bState.LatestRandaoMixes = randaoHashes
-
-	// RANDAO
-	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-	bState.LatestBlockRoots = blockRoots
-
-	// LatestSlashedBalances
-	latestSlashedBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
-	for i := 0; i < len(latestSlashedBalances); i++ {
-		latestSlashedBalances[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
-	}
-	bState.LatestSlashedBalances = latestSlashedBalances
 
 	// Exits and Activations
 	exitCount := uint64(40)
