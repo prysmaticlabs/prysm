@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "checkbit.go",
         "helpers.go",
+        "json_to_pb_converter.go",
         "log.go",
         "tempdir.go",
     ],
@@ -16,6 +17,8 @@ go_library(
         "//shared/bls:go_default_library",
         "//shared/params:go_default_library",
         "//shared/trieutil:go_default_library",
+        "@com_github_gogo_protobuf//jsonpb:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
