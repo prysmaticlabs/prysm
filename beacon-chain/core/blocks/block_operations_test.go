@@ -633,6 +633,25 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			newStateVals[1].ExitEpoch, validators[1].ExitEpoch)
 	}
 }
+func TestSlashableAttestationData_CanSlash(t *testing.T) {
+	att1 := &pb.AttestationData{
+		TargetEpoch: 1,
+		SourceRoot:  []byte{'A'},
+	}
+	att2 := &pb.AttestationData{
+		TargetEpoch: 1,
+		SourceRoot:  []byte{'B'},
+	}
+	if !blocks.IsSlashableAttestationData(att1, att2) {
+		t.Error("atts should have been slashable")
+	}
+	att1.TargetEpoch = 4
+	att1.SourceEpoch = 2
+	att2.SourceEpoch = 3
+	if !blocks.IsSlashableAttestationData(att1, att2) {
+		t.Error("atts should have been slashable")
+	}
+}
 
 func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
 	slashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
@@ -714,7 +733,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -762,7 +781,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -816,7 +835,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -2013,7 +2032,7 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
 	pubKey := []byte("A")
 	hashed := hashutil.Hash(pubKey)
-	buf = append(buf, hashed[:]...)
+	buf = append(buf, hashed[:][1:]...)
 	state.ValidatorRegistry[0].WithdrawalCredentials = buf
 	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
 	newState, err := blocks.ProcessTransfers(
