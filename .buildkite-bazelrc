@@ -32,5 +32,5 @@ build --test_timeout=5,60,-1,-1
 # Disabled race detection due to unstable test results under constrained environment build kite
 # build --features=race
 
-# Temporary 
+# Temporary opt-in for rules_nodejs.
 build --experimental_allow_incremental_repository_updates

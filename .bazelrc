@@ -1,1 +1,2 @@
+# Temporary opt-in for rules_nodejs
 build --experimental_allow_incremental_repository_updates
