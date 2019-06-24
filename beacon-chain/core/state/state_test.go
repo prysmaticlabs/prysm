@@ -38,10 +38,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("ZeroHash should be all 0s for these tests to pass")
 	}
 
-	if params.BeaconConfig().LatestRandaoMixesLength != 8192 {
-		t.Error("LatestRandaoMixesLength should be 8192 for these tests to pass")
+	if params.BeaconConfig().EpochsPerHistoricalVector != 65536 {
+		t.Error("EpochsPerHistoricalVector should be 65536 for these tests to pass")
 	}
-	latestRandaoMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength)
+	latestRandaoMixesLength := int(params.BeaconConfig().EpochsPerHistoricalVector)
 
 	if params.BeaconConfig().ShardCount != 1024 {
 		t.Error("ShardCount should be 1024 for these tests to pass")
@@ -57,8 +57,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	depositsForChainStart := int(params.BeaconConfig().DepositsForChainStart)
 
-	if params.BeaconConfig().LatestSlashedExitLength != 8192 {
-		t.Error("LatestSlashedExitLength should be 8192 for these tests to pass")
+	if params.BeaconConfig().EpochsPerSlashedBalancesVector != 8192 {
+		t.Error("EpochsPerSlashedBalancesVector should be 8192 for these tests to pass")
 	}
 
 	genesisTime := uint64(99999)
@@ -123,7 +123,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.PreviousCrosslinks) != shardCount {
 		t.Error("Length of PreviousCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.LatestSlashedBalances, make([]uint64, params.BeaconConfig().LatestSlashedExitLength)) {
+	if !reflect.DeepEqual(newState.LatestSlashedBalances, make([]uint64, params.BeaconConfig().EpochsPerSlashedBalancesVector)) {
 		t.Error("LatestSlashedBalances was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.CurrentEpochAttestations, []*pb.PendingAttestation{}) {

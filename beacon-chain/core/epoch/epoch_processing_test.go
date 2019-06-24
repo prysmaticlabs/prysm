@@ -86,8 +86,8 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                   0,
 		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	indices, err := unslashedAttestingIndices(state, atts)
@@ -130,8 +130,8 @@ func TestUnslashedAttestingIndices_CantGetIndicesBitfieldError(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Slot:                   0,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	const wantedErr = "could not get attester indices: wanted participants bitfield length 2, got: 1"
 	if _, err := unslashedAttestingIndices(state, atts); !strings.Contains(err.Error(), wantedErr) {
@@ -168,8 +168,8 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Slot:                   0,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ValidatorRegistry:      validators,
 		Balances:               balances,
 	}
@@ -202,8 +202,8 @@ func TestAttestingBalance_CantGetIndicesBitfieldError(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Slot:                   0,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	const wantedErr = "could not get attester indices: wanted participants bitfield length 0, got: 1"
 	if _, err := AttestingBalance(state, atts); !strings.Contains(err.Error(), wantedErr) {
@@ -245,8 +245,8 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 		CurrentEpochAttestations:  currentAtts,
 		PreviousEpochAttestations: prevAtts,
 		LatestBlockRoots:          blockRoots,
-		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	mAtts, err := MatchAttestations(state, 0)
@@ -468,8 +468,8 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		PreviousEpochAttestations: atts,
 		LatestBlockRoots:          blockRoots,
 		CurrentCrosslinks:         crosslinks,
-		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	winner, indices, err := winningCrosslink(state, 1, ge)
@@ -515,8 +515,8 @@ func TestProcessCrosslinks_NoUpdate(t *testing.T) {
 		ValidatorRegistry:      validators,
 		Balances:               balances,
 		LatestBlockRoots:       blockRoots,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks:      crosslinks,
 	}
 	newState, err := ProcessCrosslinks(state)
@@ -582,8 +582,8 @@ func TestProcessCrosslinks_SuccessfulUpdate(t *testing.T) {
 		Balances:                  balances,
 		LatestBlockRoots:          blockRoots,
 		CurrentCrosslinks:         crosslinks,
-		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	newState, err := ProcessCrosslinks(state)
 	if err != nil {
@@ -791,7 +791,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 		Slot: 0,
 		ValidatorRegistry: []*pb.Validator{
 			{Slashed: true,
-				WithdrawableEpoch: params.BeaconConfig().LatestSlashedExitLength / 2,
+				WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashedBalancesVector / 2,
 				EffectiveBalance:  params.BeaconConfig().MaxDepositAmount},
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxDepositAmount}},
 		Balances:              []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
@@ -831,7 +831,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 
 	// Verify latest active index root is correctly updated in the right position.
-	pos := (ne + params.BeaconConfig().ActivationExitDelay) % params.BeaconConfig().LatestActiveIndexRootsLength
+	pos := (ne + params.BeaconConfig().ActivationExitDelay) % params.BeaconConfig().EpochsPerHistoricalVector
 	if bytes.Equal(newS.LatestActiveIndexRoots[pos], params.BeaconConfig().ZeroHash[:]) {
 		t.Error("latest active index roots still zero hashes")
 	}
@@ -1264,14 +1264,14 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	}
 	latestActiveIndexRoots := make(
 		[][]byte,
-		params.BeaconConfig().LatestActiveIndexRootsLength,
+		params.BeaconConfig().EpochsPerHistoricalVector,
 	)
 	for i := 0; i < len(latestActiveIndexRoots); i++ {
 		latestActiveIndexRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 	latestRandaoMixes := make(
 		[][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength,
+		params.BeaconConfig().EpochsPerHistoricalVector,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
@@ -1281,9 +1281,9 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		Balances:               validatorBalances,
 		ValidatorRegistry:      validators,
 		CurrentCrosslinks:      make([]*pb.Crosslink, params.BeaconConfig().ShardCount),
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().EpochsPerSlashedBalancesVector),
 		LatestBlockRoots:       make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
 	}
 }

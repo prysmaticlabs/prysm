@@ -163,9 +163,9 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //    current_epoch = get_current_epoch(state)
 //    initiate_validator_exit(state, slashed_index)
 //    state.validator_registry[slashed_index].slashed = True
-//    state.validator_registry[slashed_index].withdrawable_epoch = current_epoch + LATEST_SLASHED_EXIT_LENGTH
+//    state.validator_registry[slashed_index].withdrawable_epoch = current_epoch + LATEST_EPOCHS_PER_SLASHED_BALANCES_VECTOR
 //    slashed_balance = state.validator_registry[slashed_index].effective_balance
-//    state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH] += slashed_balance
+//    state.latest_slashed_balances[current_epoch % LATEST_EPOCHS_PER_SLASHED_BALANCES_VECTOR] += slashed_balance
 //
 //    proposer_index = get_beacon_proposer_index(state)
 //    if whistleblower_index is None:
@@ -179,9 +179,9 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	state = ExitValidator(state, slashedIdx)
 	currentEpoch := helpers.CurrentEpoch(state)
 	state.ValidatorRegistry[slashedIdx].Slashed = true
-	state.ValidatorRegistry[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().LatestSlashedExitLength
+	state.ValidatorRegistry[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().EpochsPerSlashedBalancesVector
 	slashedBalance := state.ValidatorRegistry[slashedIdx].EffectiveBalance
-	state.LatestSlashedBalances[currentEpoch%params.BeaconConfig().LatestSlashedExitLength] += slashedBalance
+	state.LatestSlashedBalances[currentEpoch%params.BeaconConfig().EpochsPerSlashedBalancesVector] += slashedBalance
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {

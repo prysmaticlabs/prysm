@@ -413,12 +413,12 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    total_balance = get_total_active_balance(state)
 //
 //    # Compute slashed balances in the current epoch
-//    total_at_start = state.latest_slashed_balances[(current_epoch + 1) % LATEST_SLASHED_EXIT_LENGTH]
-//    total_at_end = state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
+//    total_at_start = state.latest_slashed_balances[(current_epoch + 1) % LATEST_EPOCHS_PER_SLASHED_BALANCES_VECTOR]
+//    total_at_end = state.latest_slashed_balances[current_epoch % LATEST_EPOCHS_PER_SLASHED_BALANCES_VECTOR]
 //    total_penalties = total_at_end - total_at_start
 //
 //    for index, validator in enumerate(state.validator_registry):
-//        if validator.slashed and current_epoch == validator.withdrawable_epoch - LATEST_SLASHED_EXIT_LENGTH // 2:
+//        if validator.slashed and current_epoch == validator.withdrawable_epoch - LATEST_EPOCHS_PER_SLASHED_BALANCES_VECTOR // 2:
 //            penalty = max(
 //                validator.effective_balance * min(total_penalties * 3, total_balance) // total_balance,
 //                validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT
@@ -432,7 +432,7 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 
 	// Compute slashed balances in the current epoch
-	exitLength := params.BeaconConfig().LatestSlashedExitLength
+	exitLength := params.BeaconConfig().EpochsPerSlashedBalancesVector
 	totalAtStart := state.LatestSlashedBalances[(currentEpoch+1)%exitLength]
 	totalAtEnd := state.LatestSlashedBalances[currentEpoch%exitLength]
 	totalPenalties := totalAtEnd - totalAtStart
@@ -474,16 +474,16 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    # Update start shard
 //    state.latest_start_shard = (state.latest_start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT
 //    # Set active index root
-//    index_root_position = (next_epoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH
+//    index_root_position = (next_epoch + ACTIVATION_EXIT_DELAY) % LATEST_EPOCHS_PER_HISTORICAL_VECTOR
 //    state.latest_active_index_roots[index_root_position] = hash_tree_root(
 //        get_active_validator_indices(state, next_epoch + ACTIVATION_EXIT_DELAY)
 //    )
 //    # Set total slashed balances
-//    state.latest_slashed_balances[next_epoch % LATEST_SLASHED_EXIT_LENGTH] = (
-//        state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
+//    state.latest_slashed_balances[next_epoch % LATEST_EPOCHS_PER_SLASHED_BALANCES_VECTOR] = (
+//        state.latest_slashed_balances[current_epoch % LATEST_EPOCHS_PER_SLASHED_BALANCES_VECTOR]
 //    )
 //    # Set randao mix
-//    state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] = get_randao_mix(state, current_epoch)
+//    state.latest_randao_mixes[next_epoch % LATEST_EPOCHS_PER_HISTORICAL_VECTOR] = get_randao_mix(state, current_epoch)
 //    # Set historical root accumulator
 //    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
 //        historical_batch = HistoricalBatch(
@@ -525,7 +525,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set active index root.
 	activationDelay := params.BeaconConfig().ActivationExitDelay
-	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().LatestActiveIndexRootsLength
+	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
 	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active indices: %v", err)
@@ -537,12 +537,12 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.LatestActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
 	// Set total slashed balances.
-	slashedExitLength := params.BeaconConfig().LatestSlashedExitLength
+	slashedExitLength := params.BeaconConfig().EpochsPerSlashedBalancesVector
 	state.LatestSlashedBalances[nextEpoch%slashedExitLength] =
 		state.LatestSlashedBalances[currentEpoch%slashedExitLength]
 
 	// Set RANDAO mix.
-	randaoMixLength := params.BeaconConfig().LatestRandaoMixesLength
+	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
 	mix := helpers.RandaoMix(state, currentEpoch)
 	state.LatestRandaoMixes[nextEpoch%randaoMixLength] = mix
 

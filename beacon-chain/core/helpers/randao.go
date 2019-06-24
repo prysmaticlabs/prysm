@@ -23,7 +23,7 @@ var currentEpochSeed = cache.NewSeedCache()
 //     Generate a seed for the given ``epoch``.
 //     """
 //     return hash(
-//     get_randao_mix(state, epoch + LATEST_RANDAO_MIXES_LENGTH - MIN_SEED_LOOKAHEAD) +
+//     get_randao_mix(state, epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD) +
 //     get_active_index_root(state, epoch) +
 //     int_to_bytes32(epoch)
 // )
@@ -36,7 +36,7 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 		return bytesutil.ToBytes32(seed), nil
 	}
 
-	lookAheadEpoch := epoch + params.BeaconConfig().LatestRandaoMixesLength -
+	lookAheadEpoch := epoch + params.BeaconConfig().EpochsPerHistoricalVector -
 		params.BeaconConfig().MinSeedLookahead
 
 	randaoMix := RandaoMix(state, lookAheadEpoch)
@@ -66,11 +66,11 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 //    """
 //    Return the index root at a recent ``epoch``.
 //    ``epoch`` expected to be between
-//    (current_epoch - LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY, current_epoch + ACTIVATION_EXIT_DELAY].
+//    (current_epoch - EPOCHS_PER_HISTORICAL_VECTOR + ACTIVATION_EXIT_DELAY, current_epoch + ACTIVATION_EXIT_DELAY].
 //    """
-//    return state.latest_active_index_roots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
+//    return state.latest_active_index_roots[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
 func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
-	return state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength]
+	return state.LatestActiveIndexRoots[epoch%params.BeaconConfig().EpochsPerHistoricalVector]
 }
 
 // RandaoMix returns the randao mix (xor'ed seed)
@@ -81,11 +81,11 @@ func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
 //                   epoch: Epoch) -> Bytes32:
 //    """
 //    Return the randao mix at a recent ``epoch``.
-//    ``epoch`` expected to be between (current_epoch - LATEST_RANDAO_MIXES_LENGTH, current_epoch].
+//    ``epoch`` expected to be between (current_epoch - EPOCHS_PER_HISTORICAL_VECTOR, current_epoch].
 //    """
-//    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
+//    return state.latest_randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
-	return state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength]
+	return state.LatestRandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector]
 }
 
 // CreateRandaoReveal generates a epoch signature using the beacon proposer priv key.

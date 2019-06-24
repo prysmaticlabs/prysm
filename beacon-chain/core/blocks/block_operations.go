@@ -150,7 +150,7 @@ func ProcessBlockHeader(
 //         get_domain(state, DOMAIN_RANDAO),
 //     )
 //     # Mix it in
-//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
+//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_EPOCHS_PER_HISTORICAL_VECTOR] = (
 //         xor(get_randao_mix(state, get_current_epoch(state)),
 //             hash(body.randao_reveal))
 //     )
@@ -172,7 +172,7 @@ func ProcessRandao(
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
-	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
+	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
 	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)

@@ -1506,7 +1506,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	}
 	latestRandaoMixes := make(
 		[][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength,
+		params.BeaconConfig().EpochsPerHistoricalVector,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
@@ -1540,8 +1540,8 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		Slot:                   genesisSlot,
 		LatestBlockRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestRandaoMixes:      latestRandaoMixes,
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().EpochsPerSlashedBalancesVector),
 		CurrentCrosslinks:      crosslinks,
 		ValidatorRegistry:      validatorRegistry,
 		Balances:               validatorBalances,

@@ -54,8 +54,8 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	state := &pbp2p.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + 1,
 		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	if err := db.SaveState(context.Background(), state); err != nil {
