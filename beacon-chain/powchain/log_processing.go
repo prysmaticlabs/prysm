@@ -119,7 +119,6 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	deposit := &pb.Deposit{
 		Data:  depositData,
-		Index: index,
 		Proof: proof,
 	}
 
@@ -222,7 +221,7 @@ func (w *Web3Service) processPastLogs() error {
 		return fmt.Errorf("could not get head state: %v", err)
 	}
 	if currentState != nil && currentState.DepositIndex > 0 {
-		w.beaconDB.PrunePendingDeposits(w.ctx, currentState.DepositIndex)
+		w.beaconDB.PrunePendingDeposits(w.ctx, int(currentState.DepositIndex))
 	}
 
 	return nil

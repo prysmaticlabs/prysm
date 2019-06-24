@@ -525,8 +525,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatalf("Could not generate deposit trie: %v", err)
 	}
 	for i := range pendingDeposits {
-		pendingDeposits[i].Index = 0
-		proof, err := depositTrie.MerkleProof(int(pendingDeposits[i].Index))
+		proof, err := depositTrie.MerkleProof(0)
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}

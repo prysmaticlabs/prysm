@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -21,14 +22,15 @@ var (
 
 // Container object for holding the deposit and a reference to the block in
 // which the deposit transaction was included in the proof of work chain.
-type depositContainer struct {
-	deposit *pb.Deposit
+type DepositContainer struct {
+	Deposit *pb.Deposit
 	block   *big.Int
+	Index   int
 }
 
 // InsertPendingDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int) {
+func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int, index int) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertPendingDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
@@ -40,7 +42,7 @@ func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blo
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.pendingDeposits = append(db.pendingDeposits, &depositContainer{deposit: d, block: blockNum})
+	db.pendingDeposits = append(db.pendingDeposits, &DepositContainer{Deposit: d, block: blockNum, Index: index})
 	pendingDepositsCount.Inc()
 }
 
@@ -53,17 +55,46 @@ func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
 
-	var deposits []*pb.Deposit
+	var depositCntrs []*DepositContainer
 	for _, ctnr := range db.pendingDeposits {
 		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
-			deposits = append(deposits, ctnr.deposit)
+			depositCntrs = append(depositCntrs, ctnr)
 		}
 	}
 	// Sort the deposits by Merkle index.
-	sort.SliceStable(deposits, func(i, j int) bool {
-		return deposits[i].Index < deposits[j].Index
+	sort.SliceStable(depositCntrs, func(i, j int) bool {
+		return depositCntrs[i].Index < depositCntrs[j].Index
 	})
+
+	var deposits []*pb.Deposit
+	for _, dep := range depositCntrs {
+		deposits = append(deposits, dep.Deposit)
+	}
+
 	return deposits
+}
+
+// PendingDeposits returns a list of deposits until the given block number
+// (inclusive). If no block is specified then this method returns all pending
+// deposits.
+func (db *BeaconDB) PendingContainers(ctx context.Context, beforeBlk *big.Int) []*DepositContainer {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.PendingDeposits")
+	defer span.End()
+	db.depositsLock.RLock()
+	defer db.depositsLock.RUnlock()
+
+	var depositCntrs []*DepositContainer
+	for _, ctnr := range db.pendingDeposits {
+		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
+			depositCntrs = append(depositCntrs, ctnr)
+		}
+	}
+	// Sort the deposits by Merkle index.
+	sort.SliceStable(depositCntrs, func(i, j int) bool {
+		return depositCntrs[i].Index < depositCntrs[j].Index
+	})
+
+	return depositCntrs
 }
 
 // RemovePendingDeposit from the database. The deposit is indexed by the
@@ -77,12 +108,23 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 		return
 	}
 
+	depRoot, err := hashutil.HashProto(d)
+	if err != nil {
+		log.Errorf("Could not remove deposit %v", err)
+		return
+	}
+
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
 
 	idx := -1
 	for i, ctnr := range db.pendingDeposits {
-		if ctnr.deposit.Index == d.Index {
+		hash, err := hashutil.HashProto(ctnr.Deposit)
+		if err != nil {
+			log.Errorf("Could not hash deposit %v", err)
+			continue
+		}
+		if hash == depRoot {
 			idx = i
 			break
 		}
@@ -95,7 +137,7 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 }
 
 // PrunePendingDeposits removes any deposit which is older than the given deposit merkle tree index.
-func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex uint64) {
+func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex int) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.PrunePendingDeposits")
 	defer span.End()
 
@@ -107,9 +149,9 @@ func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, merkleTreeIndex ui
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
 
-	var cleanDeposits []*depositContainer
+	var cleanDeposits []*DepositContainer
 	for _, dp := range db.pendingDeposits {
-		if dp.deposit.Index >= merkleTreeIndex {
+		if dp.Index >= merkleTreeIndex {
 			cleanDeposits = append(cleanDeposits, dp)
 		}
 	}

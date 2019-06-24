@@ -1394,7 +1394,6 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 
 	deposit.Proof = proof
-	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
@@ -1438,7 +1437,6 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	}
 
 	deposit.Proof = proof
-	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
@@ -1497,7 +1495,6 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 
 	deposit.Proof = proof
-	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
