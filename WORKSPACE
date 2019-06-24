@@ -124,8 +124,8 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "4a8384320fba401cbf21fef177aa113ed8fe35952ace98e00b796cac87ae7868",
     strip_prefix = "repo-infra-df02ded38f9506e5bbcbf21702034b4fef815f2f",
+    sha256 = "4a8384320fba401cbf21fef177aa113ed8fe35952ace98e00b796cac87ae7868",
     url = "https://github.com/kubernetes/repo-infra/archive/df02ded38f9506e5bbcbf21702034b4fef815f2f.tar.gz",
 )
 
@@ -203,7 +203,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "d69c889ad97b02883e04164c6acf77a7381634c2",  # v0.1.1
+    commit = "e69d17141ca58ba6afbf13098e90c9377938e590",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -1081,4 +1081,10 @@ go_repository(
     name = "com_github_koron_go_ssdp",
     commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
     importpath = "github.com/koron/go-ssdp",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_eventbus",
+    commit = "61257f90a2c3fda96e98609a5652fc40930084cc",
+    importpath = "github.com/libp2p/go-eventbus",
 )
