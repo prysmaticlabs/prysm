@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
 
-func TestRegistryProcessingYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("registry_updates_minimal_formatted.yaml")
+func runRegisteryProcessingTests(t *testing.T, filename string) {
+	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
@@ -50,4 +50,12 @@ func TestRegistryProcessingYaml(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRegistryProcessingMinimal(t *testing.T) {
+	runRegisteryProcessingTests(t, "yaml/registry_updates_minimal.yaml")
+}
+
+func TestRegistryProcessingMainnet(t *testing.T) {
+	runRegisteryProcessingTests(t, "yaml/registry_updates_mainnet.yaml")
 }

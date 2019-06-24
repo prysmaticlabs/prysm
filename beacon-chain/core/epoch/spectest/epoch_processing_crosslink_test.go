@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
 
-func TestCrosslinksProcessingYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("crosslinks_minimal.yaml")
+func runCrosslinkProcessingTests(t *testing.T, filename string) {
+	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
@@ -50,4 +50,12 @@ func TestCrosslinksProcessingYaml(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCrosslinksProcessingMinimal(t *testing.T) {
+	runCrosslinkProcessingTests(t, "yaml/crosslinks_minimal.yaml")
+}
+
+func TestCrosslinksProcessingMainnet(t *testing.T) {
+	runCrosslinkProcessingTests(t, "yaml/crosslinks_mainnet.yaml")
 }

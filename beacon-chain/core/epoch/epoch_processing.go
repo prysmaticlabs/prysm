@@ -266,12 +266,12 @@ func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch committee count: %v", err)
 		}
-		shard, err := helpers.EpochStartShard(state, e)
+		startShard, err := helpers.EpochStartShard(state, e)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch start shards: %v", err)
 		}
 		for offset := uint64(0); offset < count; offset++ {
-			shard = (shard + offset) % params.BeaconConfig().ShardCount
+			shard := (startShard + offset) % params.BeaconConfig().ShardCount
 			committee, err := helpers.CrosslinkCommitteeAtEpoch(state, e, shard)
 			if err != nil {
 				return nil, fmt.Errorf("could not get crosslink committee: %v", err)
