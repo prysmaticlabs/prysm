@@ -28,14 +28,6 @@ type MatchedAttestations struct {
 	head   []*pb.PendingAttestation
 }
 
-type crosslinkObj struct {
-	Shard      uint64 `json:"shard"`
-	StartEpoch uint64 `json:"start_epoch"`
-	EndEpoch   uint64 `json:"end_epoch"`
-	ParentRoot []byte `json:"parent_root" ssz:"size=32"`
-	DataRoot   []byte `json:"data_root" ssz:"size=32"`
-}
-
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
 //
@@ -636,14 +628,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	for _, a := range shardAtts {
 		cFromState := state.CurrentCrosslinks[shard]
 
-		crosslink := crosslinkObj{
-			Shard:      cFromState.Shard,
-			StartEpoch: cFromState.StartEpoch,
-			EndEpoch:   cFromState.EndEpoch,
-			ParentRoot: cFromState.ParentRoot,
-			DataRoot:   cFromState.DataRoot,
-		}
-		cFromStateRoot, err := ssz.HashTreeRoot(crosslink)
+		cFromStateRoot, err := ssz.HashTreeRoot(cFromState)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not hash tree root crosslink from state: %v", err)
 		}
