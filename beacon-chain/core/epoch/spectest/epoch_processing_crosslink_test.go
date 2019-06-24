@@ -1,15 +1,16 @@
 package spectest
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"io/ioutil"
 	"reflect"
 	"testing"
 
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func runCrosslinkProcessingTests(t *testing.T, filename string) {
@@ -57,5 +58,6 @@ func TestCrosslinksProcessingMinimal(t *testing.T) {
 }
 
 func TestCrosslinksProcessingMainnet(t *testing.T) {
+	helpers.ClearAllCaches()
 	runCrosslinkProcessingTests(t, "yaml/crosslinks_mainnet.yaml")
 }

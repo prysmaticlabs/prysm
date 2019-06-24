@@ -12,10 +12,8 @@ func TestTotalBalance_OK(t *testing.T) {
 		{EffectiveBalance: 32 * 1e9}, {EffectiveBalance: 40 * 1e9},
 	}}
 
-	balance, err := TotalBalance(state, []uint64{0, 1, 2, 3})
-	if err != nil {
-		t.Fatal(err)
-	}
+	balance := TotalBalance(state, []uint64{0, 1, 2, 3})
+
 	if balance != 127*1e9 {
 		t.Errorf("Incorrect TotalEffectiveBalance. Wanted: 127, got: %d", balance)
 	}

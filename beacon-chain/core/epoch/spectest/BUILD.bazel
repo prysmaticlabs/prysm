@@ -3,8 +3,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "crosslinksminimal.yaml.go",
-        "registryupdatesminimal.yaml.go",
+        "crosslinks_test.yaml.go",
+        "registry_updates.yaml.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/spectest",
     visibility = ["//visibility:public"],
@@ -24,9 +24,10 @@ go_test(
     ],
     deps = [
         "//beacon-chain/core/epoch:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params/spectest:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
-        "@com_github_gogo_protobuf//jsonpb:go_default_library",
     ],
 )
