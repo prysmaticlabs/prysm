@@ -74,9 +74,8 @@ func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*
 	return deposits
 }
 
-// PendingDeposits returns a list of deposits until the given block number
-// (inclusive). If no block is specified then this method returns all pending
-// deposits.
+// PendingContainers returns a list of deposit containers until the given block number
+// (inclusive).
 func (db *BeaconDB) PendingContainers(ctx context.Context, beforeBlk *big.Int) []*DepositContainer {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.PendingDeposits")
 	defer span.End()
