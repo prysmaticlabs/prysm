@@ -1,3 +1,8 @@
+workspace(
+    name = "prysm",
+    managed_directories = {"@npm": ["node_modules"]},
+)
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
@@ -28,22 +33,22 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "aed1c249d4ec8f703edddf35cbe9dfaca0b5f5ea6e4cd9e83e99f3b0d1136c3d",
-    strip_prefix = "rules_docker-0.7.0",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.7.0.tar.gz",
+    sha256 = "804e26e0c25d7801f99a1591bf733b19462310a3f34bb819104b2ddaacc8129a",
+    strip_prefix = "rules_docker-574278ce7d08722723965cde29a9cb8566c99c62",
+    url = "https://github.com/bazelbuild/rules_docker/archive/574278ce7d08722723965cde29a9cb8566c99c62.tar.gz",
 )
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "1db950bbd27fb2581866e307c0130983471d4c3cd49c46063a2503ca7b6770a4",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.29.0/rules_nodejs-0.29.0.tar.gz"],
+    sha256 = "6d4edbf28ff6720aedf5f97f9b9a7679401bf7fca9d14a0fff80f644a99992b4",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.32.2/rules_nodejs-0.32.2.tar.gz"],
 )
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "4c4fea5c7fb0768bd440e6bf0a893bdb0449f3f41707522eaa9ada3d1152402f",
-    strip_prefix = "rules_k8s-7475ba20133e4a3f585a3648db6d055e7d1c5f78",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/7475ba20133e4a3f585a3648db6d055e7d1c5f78.tar.gz",
+    sha256 = "95b0df98360dd3c0dd7b30d1aac2fd286dff65186721772ead1eafafa1f0cddb",
+    strip_prefix = "rules_k8s-cddc0353968df2500f1ab8969a53283e52425a6e",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/cddc0353968df2500f1ab8969a53283e52425a6e.tar.gz",
 )
 
 load(
@@ -122,11 +127,13 @@ proto_library(
     url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8.tar.gz",
 )
 
+# Update this to kubernetes upstream after this PR is merged.
+# https://github.com/kubernetes/repo-infra/pull/115
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "4a8384320fba401cbf21fef177aa113ed8fe35952ace98e00b796cac87ae7868",
-    strip_prefix = "repo-infra-df02ded38f9506e5bbcbf21702034b4fef815f2f",
-    url = "https://github.com/kubernetes/repo-infra/archive/df02ded38f9506e5bbcbf21702034b4fef815f2f.tar.gz",
+    strip_prefix = "repo-infra-f893d5e0dadc3f4b80e5cc7fc84bd4474f98da32",
+    sha256 = "46b8a2b9161a27b79915661915acc5126435223340cd9524bed927685542e13e",
+    url = "https://github.com/prestonvanloon/repo-infra/archive/f893d5e0dadc3f4b80e5cc7fc84bd4474f98da32.tar.gz",
 )
 
 http_archive(
@@ -203,7 +210,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "d69c889ad97b02883e04164c6acf77a7381634c2",  # v0.1.1
+    commit = "e69d17141ca58ba6afbf13098e90c9377938e590",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -252,7 +259,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peerstore",
-    commit = "4353646945045d89f77d0b362cb5e5533cbd117e",  # v0.1.0
+    commit = "c11298943ef400535dac08ec6cbeff747cbe7e99",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-peerstore",
 )
 
@@ -553,13 +560,13 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "4217c9f31f5816db02addc94e56061da77f288d8",
+    commit = "9d007e481048296f09f59bd19bb7ae584563cd95",  # v1.0.0
     importpath = "github.com/syndtr/goleveldb",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
-    commit = "faf05082a8ce97f46ab18c0455e141b28bcf0318",  # v0.1.1
+    commit = "a50d1c7d55c7bbc52879616e7e0c8cdf38747c1a",  # v0.1.3
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
 
@@ -627,7 +634,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "7d6a80ca5263a2575832c437c6f35181243c4bec",  # v0.4.1
+    commit = "31bed53e4047fd6c510e43a941f90cb31be0972a",  # v0.6.0
     importpath = "github.com/prometheus/common",
 )
 
@@ -695,7 +702,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "31765355df17ef818381169dc36180c84c119928",  # v0.1.0
+    commit = "874e3d3fa068272afc6006b29c51ec8529b1b5ea",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -1031,7 +1038,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "8f222f4b5a872d9af86f74f2ec0982c7356adce6",  # v0.0.3
+    commit = "786c4f4e0f0af96fb69223268da4d0bf123841d8",  # v0.0.6
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
@@ -1081,4 +1088,10 @@ go_repository(
     name = "com_github_koron_go_ssdp",
     commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
     importpath = "github.com/koron/go-ssdp",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_eventbus",
+    commit = "61257f90a2c3fda96e98609a5652fc40930084cc",
+    importpath = "github.com/libp2p/go-eventbus",
 )
