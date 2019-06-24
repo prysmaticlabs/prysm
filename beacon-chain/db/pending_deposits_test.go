@@ -73,8 +73,8 @@ func TestPendingDeposits_OK(t *testing.T) {
 
 	deposits := db.PendingDeposits(context.Background(), big.NewInt(4))
 	expected := []*pb.Deposit{
+		{Proof: [][]byte{[]byte("A")}},
 		{Proof: [][]byte{[]byte("B")}},
-		{Proof: [][]byte{[]byte("c")}},
 	}
 
 	if !reflect.DeepEqual(deposits, expected) {
