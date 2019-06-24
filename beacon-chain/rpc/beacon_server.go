@@ -198,10 +198,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 				return nil, err
 			}
 
-			totalVotes, err := helpers.TotalBalance(hState, activeValidatorIndices)
-			if err != nil {
-				return nil, err
-			}
+			totalVotes := helpers.TotalBalance(hState, activeValidatorIndices)
 
 			tree = append(tree, &pb.BlockTreeResponse_TreeNode{
 				BlockRoot:         blockRoot[:],

@@ -526,8 +526,7 @@ func TestProcessCrosslinks_NoUpdate(t *testing.T) {
 
 	wanted := &pb.Crosslink{
 		StartEpoch: 0,
-		DataRoot:   params.BeaconConfig().ZeroHash[:],
-		ParentRoot: params.BeaconConfig().ZeroHash[:],
+		DataRoot:   []byte{'A'},
 	}
 	// Since there has been no attestation, crosslink stayed the same.
 	if !reflect.DeepEqual(wanted, newState.CurrentCrosslinks[0]) {

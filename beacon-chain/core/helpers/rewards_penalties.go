@@ -20,33 +20,18 @@ var totalActiveBalanceCache = cache.NewActiveBalanceCache()
 //    Return the combined effective balance of the ``indices``. (1 Gwei minimum to avoid divisions by zero.)
 //    """
 //    return max(sum([state.validator_registry[index].effective_balance for index in indices]), 1)
-func TotalBalance(state *pb.BeaconState, indices []uint64) (uint64, error) {
-	epoch := CurrentEpoch(state)
-	total, err := totalBalanceCache.TotalBalanceInEpoch(epoch)
-	if err != nil {
-		return 0, fmt.Errorf("could not retrieve total balance from cache: %v", err)
-	}
-	if total != params.BeaconConfig().FarFutureEpoch {
-		return total, nil
-	}
-
-	total = 0
+func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
+	total := uint64(0)
 	for _, idx := range indices {
 		total += state.ValidatorRegistry[idx].EffectiveBalance
 	}
 
-	if err := totalBalanceCache.AddTotalBalance(&cache.TotalBalanceByEpoch{
-		Epoch:        epoch,
-		TotalBalance: total,
-	}); err != nil {
-		return 0, fmt.Errorf("could not save total balance for cache: %v", err)
-	}
-
 	// Return 1 Gwei minimum to avoid divisions by zero
 	if total == 0 {
-		return 1, nil
+		return 1
 	}
-	return total, nil
+
+	return total
 }
 
 // TotalActiveBalance returns the total amount at stake in Gwei
