@@ -1,0 +1,6 @@
+# Temporary opt-in for rules_nodejs
+build --experimental_allow_incremental_repository_updates
+
+# Workaround for rules_docker.
+# https://github.com/bazelbuild/rules_docker/issues/842
+build --host_force_python=PY2
