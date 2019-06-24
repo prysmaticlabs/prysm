@@ -122,11 +122,13 @@ proto_library(
     url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8.tar.gz",
 )
 
+# Update this to kubernetes upstream after this PR is merged.
+# https://github.com/kubernetes/repo-infra/pull/115
 http_archive(
     name = "io_kubernetes_build",
-    strip_prefix = "repo-infra-df02ded38f9506e5bbcbf21702034b4fef815f2f",
-    sha256 = "4a8384320fba401cbf21fef177aa113ed8fe35952ace98e00b796cac87ae7868",
-    url = "https://github.com/kubernetes/repo-infra/archive/df02ded38f9506e5bbcbf21702034b4fef815f2f.tar.gz",
+    strip_prefix = "repo-infra-f893d5e0dadc3f4b80e5cc7fc84bd4474f98da32",
+    sha256 = "46b8a2b9161a27b79915661915acc5126435223340cd9524bed927685542e13e",
+    url = "https://github.com/prestonvanloon/repo-infra/archive/f893d5e0dadc3f4b80e5cc7fc84bd4474f98da32.tar.gz",
 )
 
 http_archive(
