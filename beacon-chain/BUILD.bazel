@@ -79,6 +79,12 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = ["usage_test.go"],
+    data = [
+        "yaml/crosslinks_mainnet.yaml",
+        "yaml/crosslinks_minimal.yaml",
+        "yaml/registry_updates_mainnet.yaml",
+        "yaml/registry_updates_minimal.yaml",
+    ],
     embed = [":go_default_library"],
     deps = ["@com_github_urfave_cli//:go_default_library"],
 )
