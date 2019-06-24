@@ -626,17 +626,18 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	var candidateCrosslinks []*pb.Crosslink
 	// Filter out shard crosslinks with correct current or previous crosslink data.
 	for _, a := range shardAtts {
-		cFromState := state.CurrentCrosslinks[shard]
-
-		cFromStateRoot, err := ssz.HashTreeRoot(cFromState)
+		stateCrosslink := state.CurrentCrosslinks[shard]
+		stateCrosslinkRoot, err := ssz.HashTreeRoot(stateCrosslink)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not hash tree root crosslink from state: %v", err)
 		}
-		cFromAttRoot, err := ssz.HashTreeRoot(a.Data.Crosslink)
+		attCrosslinkRoot, err := ssz.HashTreeRoot(a.Data.Crosslink)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not hash tree root crosslink from attestation: %v", err)
 		}
-		if bytes.Equal(cFromStateRoot[:], cFromAttRoot[:]) || bytes.Equal(cFromStateRoot[:], a.Data.Crosslink.ParentRoot) {
+		currCrosslinkMatches := bytes.Equal(stateCrosslinkRoot[:], attCrosslinkRoot[:])
+		prevCrosslinkMatches := bytes.Equal(stateCrosslinkRoot[:], a.Data.Crosslink.ParentRoot)
+		if currCrosslinkMatches || prevCrosslinkMatches {
 			candidateCrosslinks = append(candidateCrosslinks, a.Data.Crosslink)
 		}
 	}

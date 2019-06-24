@@ -1,7 +1,6 @@
 package spectest
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -10,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func runRegisteryProcessingTests(t *testing.T, filename string) {
