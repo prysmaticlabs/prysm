@@ -10,8 +10,10 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/jsonpb"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	log "github.com/sirupsen/logrus"
 )
@@ -19,12 +21,12 @@ import (
 func TestBlockProcessingYaml(t *testing.T) {
 	ctx := context.Background()
 
-	file, err := ioutil.ReadFile("sanity_blocks_minimal_formatted.yaml")
+	file, err := ioutil.ReadFile("sanity_blocks_minimal.yaml")
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	s := &BlockProcessing{}
+	s := &BlocksMinimal{}
 	if err := yaml.Unmarshal(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
@@ -56,6 +58,10 @@ func TestBlockProcessingYaml(t *testing.T) {
 			serializedObj, err := json.Marshal(b)
 			if err != nil {
 				t.Fatal(err)
+			}
+			root, _ := ssz.SigningRoot(testCase.Pre.LatestBlockHeader)
+			if root != bytesutil.ToBytes32(b.ParentRoot) {
+				t.Fatalf("root unequal")
 			}
 			protoBlock := &pb.BeaconBlock{}
 			if err := jsonpb.Unmarshal(bytes.NewReader(serializedObj), protoBlock); err != nil {
