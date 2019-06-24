@@ -354,7 +354,7 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
 	data2 := att2.Data
-	if !isSlashableAttestationData(data1, data2) {
+	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
 	if err := VerifyIndexedAttestation(att1, verifySignatures); err != nil {
@@ -366,7 +366,7 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 	return nil
 }
 
-// isSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
+// IsSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
 //
 // Spec pseudocode definition:
 //   return (
@@ -375,11 +375,11 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 //   # Surround vote
 //   (data_1.source_epoch < data_2.source_epoch and data_2.target_epoch < data_1.target_epoch)
 //   )
-func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
+func IsSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 	// Inner attestation data structures for the votes should not be equal,
 	// as that would mean both votes are the same and therefore no slashing
 	// should occur.
-	isDoubleVote := proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
+	isDoubleVote := !proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
 	isSurroundVote := data1.SourceEpoch < data2.SourceEpoch && data2.TargetEpoch < data1.TargetEpoch
 	return isDoubleVote || isSurroundVote
 }
@@ -1019,7 +1019,7 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	// Verify that the pubkey is valid.
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
 	hashed := hashutil.Hash(transfer.Pubkey)
-	buf = append(buf, hashed[:]...)
+	buf = append(buf, hashed[:][1:]...)
 	if !bytes.Equal(sender.WithdrawalCredentials, buf) {
 		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
 	}

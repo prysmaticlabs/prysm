@@ -185,7 +185,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -274,7 +274,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -398,6 +398,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				Data: &pb.AttestationData{
 					SourceEpoch: 0,
 					TargetEpoch: 0,
+					SourceRoot:  []byte{'A'},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -408,6 +409,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				Data: &pb.AttestationData{
 					SourceEpoch: 0,
 					TargetEpoch: 0,
+					SourceRoot:  []byte{'B'},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
