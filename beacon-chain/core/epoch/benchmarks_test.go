@@ -19,36 +19,24 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-var RunAmount = 100
+var RunAmount = 50
 
-// var conditions = "MAX"
+var conditions = "MIN"
 
-var beaconState16K = createFullState(16384)
-
-// var beaconState300K = createFullState(300000)
+var genesisBeaconState16K = createFullState(16384)
 var beaconStates16K = createCleanStates16K(RunAmount)
-
-// var beaconStates300K = createCleanStates300K(RunAmount)
 
 func setBenchmarkConfig() {
 	c := params.DemoBeaconConfig()
-	// From Danny Ryan's "Minimal Config"
-	// c.SlotsPerEpoch = 8
-	// c.MinAttestationInclusionDelay = 2
-	// c.TargetCommitteeSize = 4
-	// c.GenesisEpoch = c.GenesisSlot / 8
-	// c.LatestRandaoMixesLength = 64
-	// c.LatestActiveIndexRootsLength = 64
-	// c.LatestSlashedExitLength = 64
-	// if conditions == "MAX" {
-	// 	c.MaxAttestations = 128
-	// 	c.MaxDeposits = 16
-	// 	c.MaxVoluntaryExits = 16
-	// } else if conditions == "MIN" {
-	c.MaxAttestations = 4
-	// 	c.MaxDeposits = 2
-	// 	c.MaxVoluntaryExits = 2
-	// }
+	if conditions == "MAX" {
+		c.MaxAttestations = 128
+		c.MaxDeposits = 16
+		c.MaxVoluntaryExits = 16
+	} else if conditions == "MIN" {
+		c.MaxAttestations = 4
+		// c.MaxDeposits = 2
+		// c.MaxVoluntaryExits = 2
+	}
 	params.OverrideBeaconConfig(c)
 
 	featureCfg := &featureconfig.FeatureFlagConfig{
@@ -57,24 +45,69 @@ func setBenchmarkConfig() {
 	featureconfig.InitFeatureConfig(featureCfg)
 }
 
+func BenchmarkActiveValidatorIndices(b *testing.B) {
+	currentEpoch := helpers.CurrentEpoch(genesisBeaconState16K)
+
+	var err error
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err = helpers.ActiveValidatorIndices(genesisBeaconState16K, currentEpoch)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	// b.Run("300K", func(b *testing.B) {
+	// 	b.N = RunAmount
+	// 	b.ResetTimer()
+	// 	for i := 0; i < b.N; i++ {
+	// 		_, err = helpers.ActiveValidatorIndices(beaconStates300K[i], currentEpoch)
+	// 		if err != nil {
+	// 			b.Fatal(err)
+	// 		}
+	// 	}
+	// })
+}
+
+func BenchmarkValidatorIndexMap(b *testing.B) {
+	b.Run("16K", func(b *testing.B) {
+		b.N = RunAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = stateutils.ValidatorIndexMap(genesisBeaconState16K)
+		}
+	})
+
+	// b.Run("300K", func(b *testing.B) {
+	// 	b.N = RunAmount
+	// 	b.ResetTimer()
+	// 	for i := 0; i < b.N; i++ {
+	// 		_ = stateutils.ValidatorIndexMap(beaconState300K)
+	// 	}
+	// })
+}
+
 func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
 	var err error
-	prevEpoch := helpers.PrevEpoch(beaconState16K)
-	currentEpoch := helpers.CurrentEpoch(beaconState16K)
+	prevEpoch := helpers.PrevEpoch(genesisBeaconState16K)
+	currentEpoch := helpers.CurrentEpoch(genesisBeaconState16K)
 
-	prevEpochAtts, err := e.MatchAttestations(beaconState16K, prevEpoch)
+	prevEpochAtts, err := e.MatchAttestations(genesisBeaconState16K, prevEpoch)
 	if err != nil {
 		b.Fatal(err)
 	}
-	currentEpochAtts, err := e.MatchAttestations(beaconState16K, currentEpoch)
+	currentEpochAtts, err := e.MatchAttestations(genesisBeaconState16K, currentEpoch)
 	if err != nil {
 		b.Fatal(err)
 	}
-	prevEpochAttestedBalance, err := e.AttestingBalance(beaconState16K, prevEpochAtts.Target)
+	prevEpochAttestedBalance, err := e.AttestingBalance(genesisBeaconState16K, prevEpochAtts.Target)
 	if err != nil {
 		b.Fatal(err)
 	}
-	currentEpochAttestedBalance, err := e.AttestingBalance(beaconState16K, currentEpochAtts.Target)
+	currentEpochAttestedBalance, err := e.AttestingBalance(genesisBeaconState16K, currentEpochAtts.Target)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -99,7 +132,7 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 	var err error
 
 	b.Run("16K", func(b *testing.B) {
-		b.N = 5
+		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err = epoch.ProcessCrosslinks(beaconStates16K[i])
@@ -109,14 +142,11 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 		}
 	})
 
-	// currentEpochAttestations = e.CurrentAttestations(beaconState300K)
-	// prevEpochAttestations = e.PrevAttestations(beaconState300K)
-
 	// b.Run("300K", func(b *testing.B) {
 	// 	b.N = 10
 	// 	b.ResetTimer()
 	// 	for i := 0; i < b.N; i++ {
-	// 		_, err := epoch.ProcessCrosslinks(beaconState300K, currentEpochAttestations, prevEpochAttestations)
+	// 		_, err := epoch.ProcessCrosslinks(beaconStates300K[i])
 	// 		if err != nil {
 	// 			b.Fatal(err)
 	// 		}
@@ -128,7 +158,7 @@ func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
 	var err error
 
 	b.Run("16K", func(b *testing.B) {
-		b.N = 10
+		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err = epoch.ProcessRewardsAndPenalties(beaconStates16K[i])
@@ -229,11 +259,13 @@ func BenchmarkProcessFinalUpdates(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch(b *testing.B) {
+	var beaconStates16KEpochBench = createCleanStates16K(RunAmount)
+
 	b.Run("16K", func(b *testing.B) {
-		b.N = 5
+		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err := state.ProcessEpoch(context.Background(), beaconStates16K[i])
+			_, err := state.ProcessEpoch(context.Background(), beaconStates16KEpochBench[i])
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -252,58 +284,15 @@ func BenchmarkProcessEpoch(b *testing.B) {
 	// })
 }
 
-func BenchmarkActiveValidatorIndices(b *testing.B) {
-	currentEpoch := helpers.CurrentEpoch(beaconState16K)
-
-	var err error
-	b.Run("16K", func(b *testing.B) {
-		b.N = RunAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err = helpers.ActiveValidatorIndices(beaconStates16K[i], currentEpoch)
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
-
-	// b.Run("300K", func(b *testing.B) {
-	// 	b.N = RunAmount
-	// 	b.ResetTimer()
-	// 	for i := 0; i < b.N; i++ {
-	// 		_, err = helpers.ActiveValidatorIndices(beaconStates300K[i], currentEpoch)
-	// 		if err != nil {
-	// 			b.Fatal(err)
-	// 		}
-	// 	}
-	// })
-}
-
-func BenchmarkValidatorIndexMap(b *testing.B) {
-	b.Run("16K", func(b *testing.B) {
-		b.N = RunAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_ = stateutils.ValidatorIndexMap(beaconState16K)
-		}
-	})
-
-	// b.Run("300K", func(b *testing.B) {
-	// 	b.N = RunAmount
-	// 	b.ResetTimer()
-	// 	for i := 0; i < b.N; i++ {
-	// 		_ = stateutils.ValidatorIndexMap(beaconState300K)
-	// 	}
-	// })
-}
-
 func createFullState(validatorCount uint64) *pb.BeaconState {
 	bState := createGenesisState(validatorCount)
 
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	currentSlot := params.BeaconConfig().SlotsPerEpoch*2048 - 1
-	bState.Slot = currentSlot
-	bState.FinalizedEpoch = helpers.SlotToEpoch(currentSlot) - 1
+	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
+	bState.Slot = epochsPerHistoricalRoot*4*slotsPerEpoch - 1
+	bState.FinalizedEpoch = helpers.SlotToEpoch(bState.Slot) - 2
+	bState.PreviousJustifiedEpoch = helpers.SlotToEpoch(bState.Slot) - 2
+	bState.CurrentJustifiedEpoch = helpers.SlotToEpoch(bState.Slot) - 1
 	bState.JustificationBitfield = 4
 
 	// Block Roots
@@ -330,15 +319,59 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 	prevEpoch := helpers.PrevEpoch(bState)
 	currentEpoch := helpers.CurrentEpoch(bState)
 
-	committeeCount, err := helpers.EpochCommitteeCount(bState, currentEpoch)
+	// Exits and Activations
+	exitCount := uint64(40)
+	slashCount := uint64(40)
+	ejectionCount := uint64(40)
+	activationCount := uint64(40)
+	initiateActivationCount := uint64(40)
+	for index, val := range bState.ValidatorRegistry {
+		if uint64(index)%(validatorCount/ejectionCount) == 0 {
+			// Ejections
+			val.Slashed = false
+			val.EffectiveBalance = params.BeaconConfig().EjectionBalance - 1
+		}
+		if uint64(index)%(validatorCount/exitCount)-1 == 0 {
+			// Exits
+			val.Slashed = false
+			val.ExitEpoch = currentEpoch
+			val.WithdrawableEpoch = currentEpoch + 4
+			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		} else if uint64(index)%(validatorCount/activationCount)-2 == 0 {
+			// Activations
+			activationEpoch := currentEpoch - 1 - params.BeaconConfig().ActivationExitDelay
+			val.Slashed = false
+			val.ExitEpoch = params.BeaconConfig().FarFutureEpoch
+			val.ActivationEpoch = params.BeaconConfig().FarFutureEpoch
+			val.ActivationEligibilityEpoch = activationEpoch
+			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		} else if uint64(index)%(validatorCount/initiateActivationCount)-3 == 0 {
+			// Initiations
+			val.Slashed = false
+			val.ExitEpoch = params.BeaconConfig().FarFutureEpoch
+			val.ActivationEpoch = params.BeaconConfig().FarFutureEpoch
+			val.ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
+			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		} else if uint64(index)%(validatorCount/slashCount)-4 == 0 {
+			// Slashes
+			val.Slashed = true
+			val.WithdrawableEpoch = currentEpoch + params.BeaconConfig().LatestSlashedExitLength/2
+		}
+	}
+
+	prevCommitteeCount, err := helpers.EpochCommitteeCount(bState, prevEpoch)
 	if err != nil {
 		panic(err)
 	}
-	committeeSize := int(validatorCount / committeeCount)
+	prevValidatorCount, err := helpers.ActiveValidatorCount(bState, prevEpoch)
+	if err != nil {
+		panic(err)
+	}
+	prevCommitteeSize := int(prevValidatorCount / prevCommitteeCount)
 
 	attestationsPerEpoch := slotsPerEpoch * params.BeaconConfig().MaxAttestations
 
-	prevRoot, err := helpers.BlockRoot(bState, currentEpoch)
+	prevRoot, err := helpers.BlockRoot(bState, prevEpoch)
 	if err != nil {
 		panic(err)
 	}
@@ -346,7 +379,7 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 	var prevAttestations []*pb.PendingAttestation
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
 		// attestationSlot := (prevEpoch * slotsPerEpoch) + (i % slotsPerEpoch)
-		aggregationBitfield, err := bitutil.SetBitfield(int(i)%committeeSize, committeeSize)
+		aggregationBitfield, err := bitutil.SetBitfield(int(i)%prevCommitteeSize, prevCommitteeSize)
 		if err != nil {
 			panic(err)
 		}
@@ -379,11 +412,21 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 			panic(err)
 		}
 
-		attestation.Data.TargetRoot = headRoot
+		attestation.Data.BeaconBlockRoot = headRoot
 
 		prevAttestations = append(prevAttestations, attestation)
 	}
 	bState.PreviousEpochAttestations = prevAttestations
+
+	curCommitteeCount, err := helpers.EpochCommitteeCount(bState, currentEpoch)
+	if err != nil {
+		panic(err)
+	}
+	curValidatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
+	if err != nil {
+		panic(err)
+	}
+	curCommitteeSize := int(curValidatorCount / curCommitteeCount)
 
 	var currentAttestations []*pb.PendingAttestation
 	currentRoot, err := helpers.BlockRoot(bState, currentEpoch)
@@ -391,7 +434,7 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 		panic(err)
 	}
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
-		aggregationBitfield, err := bitutil.SetBitfield(int(i)%committeeSize, committeeSize)
+		aggregationBitfield, err := bitutil.SetBitfield(int(i)%curCommitteeSize, curCommitteeSize)
 		if err != nil {
 			panic(err)
 		}
@@ -408,7 +451,7 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 				SourceEpoch:     currentEpoch - 1,
 				TargetEpoch:     currentEpoch,
 				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
-				SourceRoot:      params.BeaconConfig().ZeroHash[:],
+				SourceRoot:      currentRoot,
 				TargetRoot:      currentRoot,
 			},
 			AggregationBitfield: aggregationBitfield,
@@ -424,44 +467,11 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 			panic(err)
 		}
 
-		attestation.Data.TargetRoot = headRoot
+		attestation.Data.BeaconBlockRoot = headRoot
 
 		currentAttestations = append(currentAttestations, attestation)
 	}
 	bState.CurrentEpochAttestations = currentAttestations
-
-	// Exits and Activations
-	exitCount := uint64(40)
-	ejectionCount := uint64(40)
-	activationCount := uint64(40)
-	initiateActivationCount := uint64(40)
-	for index, val := range bState.ValidatorRegistry {
-		if uint64(index)%(validatorCount/ejectionCount) == 0 {
-			// Ejections
-			val.EffectiveBalance = params.BeaconConfig().EjectionBalance - 1
-		}
-		if uint64(index)%(validatorCount/exitCount)-3 == 0 {
-			// Exits
-			val.ExitEpoch = currentEpoch
-			val.WithdrawableEpoch = currentEpoch + 4
-			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-		} else if uint64(index)%(validatorCount/activationCount)-5 == 0 {
-			// Activations
-			activationEpoch := currentEpoch - 1 - params.BeaconConfig().ActivationExitDelay
-			val.Slashed = false
-			val.ExitEpoch = params.BeaconConfig().FarFutureEpoch
-			val.ActivationEpoch = params.BeaconConfig().FarFutureEpoch
-			val.ActivationEligibilityEpoch = activationEpoch
-			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-		} else if uint64(index)%(validatorCount/initiateActivationCount)-7 == 0 {
-			// Initiations
-			val.Slashed = false
-			val.ExitEpoch = params.BeaconConfig().FarFutureEpoch
-			val.ActivationEpoch = params.BeaconConfig().FarFutureEpoch
-			val.ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
-			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-		}
-	}
 
 	return bState
 }
@@ -524,15 +534,7 @@ func createGenesisState(numDeposits uint64) *pb.BeaconState {
 func createCleanStates16K(num int) []*pb.BeaconState {
 	cleanStates := make([]*pb.BeaconState, num)
 	for i := 0; i < num; i++ {
-		cleanStates[i] = proto.Clone(beaconState16K).(*pb.BeaconState)
+		cleanStates[i] = proto.Clone(genesisBeaconState16K).(*pb.BeaconState)
 	}
 	return cleanStates
 }
-
-// func createCleanStates300K(num int) []*pb.BeaconState {
-// 	cleanStates := make([]*pb.BeaconState, num)
-// 	for i := 0; i < num; i++ {
-// 		cleanStates[i] = proto.Clone(beaconState300K).(*pb.BeaconState)
-// 	}
-// 	return cleanStates
-// }
