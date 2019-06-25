@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ethereum.testing;
+package testing;
 
 import "google/protobuf/timestamp.proto";
 

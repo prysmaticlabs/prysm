@@ -376,7 +376,7 @@ func verifyAttesterSlashing(beaconState *pb.BeaconState, slashing *pb.AttesterSl
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
 	data2 := att2.Data
-	if !isSlashableAttestationData(data1, data2) {
+	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
 	if err := VerifyIndexedAttestation(beaconState, att1, verifySignatures); err != nil {
@@ -388,7 +388,7 @@ func verifyAttesterSlashing(beaconState *pb.BeaconState, slashing *pb.AttesterSl
 	return nil
 }
 
-// isSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
+// IsSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
 //
 // Spec pseudocode definition:
 //   return (
@@ -397,7 +397,7 @@ func verifyAttesterSlashing(beaconState *pb.BeaconState, slashing *pb.AttesterSl
 //   # Surround vote
 //   (data_1.source_epoch < data_2.source_epoch and data_2.target_epoch < data_1.target_epoch)
 //   )
-func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
+func IsSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 	// Inner attestation data structures for the votes should not be equal,
 	// as that would mean both votes are the same and therefore no slashing
 	// should occur.
@@ -764,7 +764,7 @@ func ProcessValidatorDeposits(
 	for _, deposit := range deposits {
 		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap, verifySignatures, true)
 		if err != nil {
-			return nil, fmt.Errorf("could not process deposit index %d: %v", deposit.Index, err)
+			return nil, fmt.Errorf("could not process deposit from %#x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
 		}
 	}
 	return beaconState, nil
@@ -823,7 +823,7 @@ func ProcessDeposit(
 	verifyTree bool,
 ) (*pb.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
-		return nil, fmt.Errorf("could not verify deposit #%d: %v", deposit.Index, err)
+		return nil, fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
 	}
 	beaconState.DepositIndex++
 	pubKey := deposit.Data.Pubkey
