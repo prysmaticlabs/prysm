@@ -7,9 +7,9 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 message BeaconState {
   // Miscellaneous [1001-2000]
-  uint64 genesis_time = 1001;
-  Fork fork = 1002;
-  uint64 slot = 1003;
+  uint64 slot = 1001;
+  uint64 genesis_time = 1002;
+  Fork fork = 1003;
 
   // Validator registry [2001-3000]
   repeated Validator validator_registry = 2001;
@@ -17,7 +17,7 @@ message BeaconState {
   repeated uint64 balances = 2002;
 
   // Randomness and committees [3001-4000]
-  repeated bytes latest_randao_mixes = 3001 [(gogoproto.moretags) = "ssz:\"size=64,32\""];
+  repeated bytes latest_randao_mixes = 3001 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
   uint64 latest_start_shard = 3002;
 
   // Finality [4001-5000]
@@ -32,12 +32,12 @@ message BeaconState {
   bytes finalized_root = 4009 [(gogoproto.moretags) = "ssz:\"size=32\""];
 
   // Recent state [5001-6000]
-  repeated Crosslink current_crosslinks = 5001;
-  repeated Crosslink previous_crosslinks = 5002;
-  repeated bytes latest_block_roots = 5003 [(gogoproto.moretags) = "ssz:\"size=64,32\""];
-  repeated bytes latest_state_roots = 5004 [(gogoproto.moretags) = "ssz:\"size=64,32\""];
-  repeated bytes latest_active_index_roots = 5005 [(gogoproto.moretags) = "ssz:\"size=64,32\""];
-  repeated uint64 latest_slashed_balances = 5006 [(gogoproto.moretags) = "ssz:\"size=64\""];
+  repeated Crosslink current_crosslinks = 5001 [(gogoproto.moretags) = "ssz:\"size=1024\""];
+  repeated Crosslink previous_crosslinks = 5002 [(gogoproto.moretags) = "ssz:\"size=1024\""];
+  repeated bytes latest_block_roots = 5003 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
+  repeated bytes latest_state_roots = 5004 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
+  repeated bytes latest_active_index_roots = 5005 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
+  repeated uint64 latest_slashed_balances = 5006 [(gogoproto.moretags) = "ssz:\"size=8192\""];
   BeaconBlockHeader latest_block_header = 5007;
   repeated bytes historical_roots = 5008 [(gogoproto.moretags) = "ssz:\"size=?,32\""];
 
@@ -61,8 +61,8 @@ message PendingAttestation {
 }
 
 message Attestation {
-  AttestationData data = 1;
-  bytes aggregation_bitfield = 2;
+  bytes aggregation_bitfield = 1;
+  AttestationData data = 2;
   bytes custody_bitfield = 3;
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
@@ -152,9 +152,9 @@ message BeaconBlockBody {
   bytes randao_reveal = 1 [(gogoproto.moretags) = "ssz:\"size=96\""];
   Eth1Data eth1_data = 2;
   bytes graffiti = 3 [(gogoproto.moretags) = "ssz:\"size=32\""];
-  repeated Attestation attestations = 4;
-  repeated ProposerSlashing proposer_slashings  = 5;
-  repeated AttesterSlashing attester_slashings = 6;
+  repeated ProposerSlashing proposer_slashings  = 4;
+  repeated AttesterSlashing attester_slashings = 5;
+  repeated Attestation attestations = 6;
   repeated Deposit deposits = 7;
   repeated VoluntaryExit voluntary_exits = 8;
   repeated Transfer transfers = 9;
@@ -229,6 +229,6 @@ message Eth1DataVote {
 }
 
 message HistoricalBatch {
-  repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz:\"size=64,32\""];
-  repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz:\"size=64,32\""];
+  repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
+  repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
 }
