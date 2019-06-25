@@ -46,6 +46,8 @@ func runAttestationTest(t *testing.T, filename string) {
 				t.Fatal(err)
 			}
 
+			t.Logf("custody_bitfield: %v", att.CustodyBitfield)
+
 			block := &pb.BeaconBlock{
 				Body: &pb.BeaconBlockBody{
 					Attestations: []*pb.Attestation{

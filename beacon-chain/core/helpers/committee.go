@@ -164,7 +164,14 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 		return nil, errors.New("bitfield is unable to be verified")
 	}
 
-	return committee, nil
+	indices := make([]uint64, 0, len(committee))
+	for i, idx := range committee {
+		if i <= len(bitfield) && bitutil.BitfieldBit(bitfield, i) == 0x1 {
+			indices = append(indices, idx)
+		}
+	}
+
+	return indices, nil
 }
 
 // VerifyBitfield validates a bitfield with a given committee size.
