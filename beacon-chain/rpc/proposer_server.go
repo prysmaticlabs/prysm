@@ -278,13 +278,13 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
 
-	allPendingDeps := ps.beaconDB.PendingDeposits(ctx, bNum)
+	allPendingContainers := ps.beaconDB.PendingContainers(ctx, bNum)
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
-	var pendingDeps []*pbp2p.Deposit
-	for _, dep := range allPendingDeps {
-		if dep.Index >= beaconState.DepositIndex {
+	var pendingDeps []*db.DepositContainer
+	for _, dep := range allPendingContainers {
+		if uint64(dep.Index) >= beaconState.DepositIndex {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}
@@ -294,7 +294,7 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 		if uint64(i) == params.BeaconConfig().MaxDeposits {
 			break
 		}
-		pendingDeps[i], err = constructMerkleProof(depositTrie, pendingDeps[i])
+		pendingDeps[i].Deposit, err = constructMerkleProof(depositTrie, pendingDeps[i].Index, pendingDeps[i].Deposit)
 		if err != nil {
 			return nil, err
 		}
@@ -302,7 +302,7 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 	// Limit the return of pending deposits to not be more than max deposits allowed in block.
 	var pendingDeposits []*pbp2p.Deposit
 	for i := 0; i < len(pendingDeps) && i < int(params.BeaconConfig().MaxDeposits); i++ {
-		pendingDeposits = append(pendingDeposits, pendingDeps[i])
+		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
 	return pendingDeposits, nil
 }

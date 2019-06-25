@@ -198,10 +198,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 				return nil, err
 			}
 
-			totalVotes, err := helpers.TotalBalance(hState, activeValidatorIndices)
-			if err != nil {
-				return nil, err
-			}
+			totalVotes := helpers.TotalBalance(hState, activeValidatorIndices)
 
 			tree = append(tree, &pb.BlockTreeResponse_TreeNode{
 				BlockRoot:         blockRoot[:],
@@ -255,12 +252,12 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	}, nil
 }
 
-func constructMerkleProof(trie *trieutil.MerkleTrie, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
-	proof, err := trie.MerkleProof(int(deposit.Index))
+func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
+	proof, err := trie.MerkleProof(index)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"could not generate merkle proof for deposit at index %d: %v",
-			deposit.Index,
+			index,
 			err,
 		)
 	}
