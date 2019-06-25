@@ -55,7 +55,7 @@ func TestValidatorIndex_InStateNotInDB(t *testing.T) {
 
 	// Wanted validator with public key 'A' is in index '1'.
 	s := &pbp2p.BeaconState{
-		Validators: []*pbp2p.Validator{{Pubkey: []byte{0}}, {Pubkey: []byte{'A'}}, {Pubkey: []byte{'B'}}},
+		ValidatorRegistry: []*pbp2p.Validator{{Pubkey: []byte{0}}, {Pubkey: []byte{'A'}}, {Pubkey: []byte{'B'}}},
 	}
 
 	if err := db.SaveState(context.Background(), s); err != nil {
@@ -301,7 +301,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	}
 
 	// Pending active because activation epoch is still defaulted at far future slot.
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{Validators: []*pbp2p.Validator{
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{ValidatorRegistry: []*pbp2p.Validator{
 		{ActivationEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: pubKey},
 	},
 		Slot: 5000,
@@ -317,7 +317,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/)
+	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0)
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
@@ -359,14 +359,14 @@ func TestValidatorStatus_Active(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	db.InsertDeposit(ctx, deposit, big.NewInt(0), 0)
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		Slot:        10000,
-		Validators: []*pbp2p.Validator{{
+		ValidatorRegistry: []*pbp2p.Validator{{
 			ActivationEpoch: activeEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKey},
@@ -418,7 +418,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
-		Validators: []*pbp2p.Validator{{
+		ValidatorRegistry: []*pbp2p.Validator{{
 			Pubkey:            pubKey,
 			ActivationEpoch:   0,
 			ExitEpoch:         exitEpoch,
@@ -435,7 +435,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	db.InsertDeposit(ctx, deposit, big.NewInt(0), 0)
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -472,7 +472,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: 10000,
-		Validators: []*pbp2p.Validator{{
+		ValidatorRegistry: []*pbp2p.Validator{{
 			WithdrawableEpoch: epoch - 1,
 			ExitEpoch:         epoch - 2,
 			Pubkey:            pubKey},
@@ -488,7 +488,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	db.InsertDeposit(ctx, deposit, big.NewInt(0), 0)
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -525,7 +525,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
-		Validators: []*pbp2p.Validator{{
+		ValidatorRegistry: []*pbp2p.Validator{{
 			Slashed:           true,
 			Pubkey:            pubKey,
 			WithdrawableEpoch: epoch + 1},
@@ -541,7 +541,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	db.InsertDeposit(ctx, deposit, big.NewInt(0), 0)
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -578,7 +578,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
-		Validators: []*pbp2p.Validator{{
+		ValidatorRegistry: []*pbp2p.Validator{{
 			Pubkey:            pubKey,
 			WithdrawableEpoch: epoch + 1},
 		}}); err != nil {
@@ -593,7 +593,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	db.InsertDeposit(ctx, deposit, big.NewInt(0), 0)
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -627,7 +627,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: 0,
-		Validators: []*pbp2p.Validator{{
+		ValidatorRegistry: []*pbp2p.Validator{{
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKey},
@@ -643,7 +643,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0))
+	db.InsertDeposit(ctx, deposit, big.NewInt(0), 0)
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -672,7 +672,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot:              0,
-		Validators: []*pbp2p.Validator{},
+		ValidatorRegistry: []*pbp2p.Validator{},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -723,7 +723,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
-		Validators: []*pbp2p.Validator{
+		ValidatorRegistry: []*pbp2p.Validator{
 			{
 				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
@@ -748,7 +748,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	deposit := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(context.Background(), deposit, big.NewInt(10))
+	db.InsertDeposit(context.Background(), deposit, big.NewInt(10), 0)
 
 	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
@@ -811,7 +811,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
-		Validators: []*pbp2p.Validator{{
+		ValidatorRegistry: []*pbp2p.Validator{{
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKeys[0]},
@@ -838,7 +838,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	dep := &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(context.Background(), dep, big.NewInt(10))
+	db.InsertDeposit(context.Background(), dep, big.NewInt(10), 0)
 	depData = &pbp2p.DepositData{
 		Pubkey:                []byte{'C'},
 		Signature:             []byte("hi"),
@@ -849,7 +849,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	dep = &pbp2p.Deposit{
 		Data: depData,
 	}
-	db.InsertDeposit(context.Background(), dep, big.NewInt(15))
+	db.InsertDeposit(context.Background(), dep, big.NewInt(15), 0)
 
 	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)

@@ -43,10 +43,10 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:      validators,
+		ValidatorRegistry:      validators,
 		Slot:                   0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 
 	tests := []struct {
@@ -96,8 +96,8 @@ func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
 	ClearAllCaches()
 	beaconState := &pb.BeaconState{
 		Slot:                   0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 	}
 	_, err := BeaconProposerIndex(beaconState)
 	expected := fmt.Sprintf("empty first committee at slot %d", 0)
@@ -136,9 +136,9 @@ func TestChurnLimit_OK(t *testing.T) {
 
 		beaconState := &pb.BeaconState{
 			Slot:                   1,
-			Validators:      validators,
-			RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-			ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+			ValidatorRegistry:      validators,
+			LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+			LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
 		}
 		resultChurn, err := ChurnLimit(beaconState)
 		if err != nil {
@@ -158,24 +158,21 @@ func TestDomain_OK(t *testing.T) {
 			PreviousVersion: []byte{0, 0, 0, 2},
 			CurrentVersion:  []byte{0, 0, 0, 3},
 		},
-		Slot: 70,
 	}
-
-	if DomainVersion(state, 9, 1) != 4345298944 {
-		t.Errorf("fork Version not equal to 4345298944 %d", DomainVersion(state, 1, 9))
+	tests := []struct {
+		epoch      uint64
+		domainType uint64
+		version    uint64
+	}{
+		{epoch: 1, domainType: 4, version: 144115188075855876},
+		{epoch: 2, domainType: 4, version: 144115188075855876},
+		{epoch: 2, domainType: 5, version: 144115188075855877},
+		{epoch: 3, domainType: 4, version: 216172782113783812},
+		{epoch: 3, domainType: 5, version: 216172782113783813},
 	}
-
-	if DomainVersion(state, 9, 2) != 8640266240 {
-		t.Errorf("fork Version not equal to 8640266240 %d", DomainVersion(state, 2, 9))
-	}
-
-	if DomainVersion(state, 2, 1) != 4328521728 {
-		t.Errorf("fork Version not equal to 4328521728 %d", DomainVersion(state, 1, 2))
-	}
-	if DomainVersion(state, 2, 2) != 8623489024 {
-		t.Errorf("fork Version not equal to 8623489024 %d", DomainVersion(state, 2, 2))
-	}
-	if DomainVersion(state, 0, 1) != 4328521728 {
-		t.Errorf("fork Version not equal to 4328521728 %d", DomainVersion(state, 1, 0))
+	for _, tt := range tests {
+		if Domain(state, tt.epoch, tt.domainType) != tt.version {
+			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state, tt.epoch, tt.domainType))
+		}
 	}
 }

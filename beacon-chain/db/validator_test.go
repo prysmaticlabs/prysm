@@ -125,7 +125,7 @@ func TestHasAnyValidator(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Validators: []*pb.Validator{},
+		ValidatorRegistry: []*pb.Validator{},
 	}
 
 	has, err := db.HasAnyValidators(beaconState, append(knownPubKeys, unknownPubKeys...))

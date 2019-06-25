@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -67,7 +68,7 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		return indices, nil
 	}
 
-	for i, v := range state.Validators {
+	for i, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
@@ -95,7 +96,7 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	}
 
 	count = 0
-	for _, v := range state.Validators {
+	for _, v := range state.ValidatorRegistry {
 		if IsActiveValidator(v, epoch) {
 			count++
 		}
@@ -207,37 +208,31 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		candidateIndex := firstCommittee[(e+i)%uint64(len(firstCommittee))]
 		b := append(seed[:], bytesutil.Bytes8(i)...)
 		randomByte := hashutil.Hash(b)[i%32]
-		effectiveBal := state.Validators[candidateIndex].EffectiveBalance
+		effectiveBal := state.ValidatorRegistry[candidateIndex].EffectiveBalance
 		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
 			return candidateIndex, nil
 		}
 	}
 }
 
-// DomainVersion returns the domain version for BLS private key to sign and verify.
+// Domain returns the domain version for BLS private key to sign and verify.
 //
 // Spec pseudocode definition:
 //  def get_domain(state: BeaconState,
 //               domain_type: int,
-//               message_epoch: int=None) -> int:
+//               message_epoch: Epoch=None) -> int:
 //    """
 //    Return the signature domain (fork version concatenated with domain type) of a message.
 //    """
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
-//    return bytes_to_int(fork_version + int_to_bytes(domain_type, length=4))
-func DomainVersion(state *pb.BeaconState, epoch uint64, domainType uint64) uint64 {
-	if epoch == 0 {
-		epoch = CurrentEpoch(state)
-	}
+//    return bls_domain(domain_type, fork_version)
+func Domain(state *pb.BeaconState, epoch uint64, domainType uint64) uint64 {
 	var forkVersion []byte
 	if epoch < state.Fork.Epoch {
 		forkVersion = state.Fork.PreviousVersion
 	} else {
 		forkVersion = state.Fork.CurrentVersion
 	}
-	by := []byte{}
-	by = append(by, forkVersion[:4]...)
-	by = append(by, bytesutil.Bytes4(domainType)...)
-	return bytesutil.FromBytes8(by)
+	return bls.Domain(domainType, forkVersion)
 }

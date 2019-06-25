@@ -125,7 +125,7 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 	if err != nil {
 		return 0, fmt.Errorf("could not get attesting indices: %v", err)
 	}
-	return helpers.TotalBalance(state, indices)
+	return helpers.TotalBalance(state, indices), nil
 }
 
 // ProcessJustificationAndFinalization processes justification and finalization during
@@ -259,18 +259,19 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 //            if 3 * get_total_balance(state, attesting_indices) >= 2 * get_total_balance(state, crosslink_committee):
 //                state.current_crosslinks[shard] = winning_crosslink
 func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.PreviousCrosslinks = state.CurrentCrosslinks
+	copy(state.PreviousCrosslinks, state.CurrentCrosslinks)
 	epochs := []uint64{helpers.PrevEpoch(state), helpers.CurrentEpoch(state)}
 	for _, e := range epochs {
-		offset, err := helpers.EpochCommitteeCount(state, e)
+		count, err := helpers.EpochCommitteeCount(state, e)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch committee count: %v", err)
 		}
-		for i := uint64(0); i < offset; i++ {
-			shard, err := helpers.EpochStartShard(state, e)
-			if err != nil {
-				return nil, fmt.Errorf("could not get epoch start shards: %v", err)
-			}
+		startShard, err := helpers.EpochStartShard(state, e)
+		if err != nil {
+			return nil, fmt.Errorf("could not get epoch start shards: %v", err)
+		}
+		for offset := uint64(0); offset < count; offset++ {
+			shard := (startShard + offset) % params.BeaconConfig().ShardCount
 			committee, err := helpers.CrosslinkCommitteeAtEpoch(state, e, shard)
 			if err != nil {
 				return nil, fmt.Errorf("could not get crosslink committee: %v", err)
@@ -279,14 +280,9 @@ func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not get winning crosslink: %v", err)
 			}
-			attestedBalance, err := helpers.TotalBalance(state, indices)
-			if err != nil {
-				return nil, fmt.Errorf("could not get total attested balance: %v", err)
-			}
-			totalBalance, err := helpers.TotalBalance(state, committee)
-			if err != nil {
-				return nil, fmt.Errorf("could not get total committee balance: %v", err)
-			}
+			attestedBalance := helpers.TotalBalance(state, indices)
+			totalBalance := helpers.TotalBalance(state, committee)
+
 			// In order for a crosslink to get included in state, the attesting balance needs to
 			// be greater than 2/3 of the total balance.
 			if 3*attestedBalance >= 2*totalBalance {
@@ -322,7 +318,7 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 	if err != nil {
 		return nil, fmt.Errorf("could not get crosslink delta: %v ", err)
 	}
-	for i := 0; i < len(state.Validators); i++ {
+	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i])
 		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]+clPenalties[i])
 	}
@@ -358,7 +354,7 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 //            validator.activation_epoch = get_delayed_activation_exit_epoch(get_current_epoch(state))
 func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
-	for idx, validator := range state.Validators {
+	for idx, validator := range state.ValidatorRegistry {
 		// Process the validators for activation eligibility.
 		eligibleToActivate := validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch
 		properBalance := validator.EffectiveBalance >= params.BeaconConfig().MaxEffectiveBalance
@@ -375,7 +371,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Queue the validators whose eligible to activate and sort them by activation eligibility epoch number
 	var activationQ []uint64
-	for idx, validator := range state.Validators {
+	for idx, validator := range state.ValidatorRegistry {
 		eligibleActivated := validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch
 		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(state.FinalizedEpoch)
 		if eligibleActivated && canBeActive {
@@ -383,7 +379,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		}
 	}
 	sort.Slice(activationQ, func(i, j int) bool {
-		return state.Validators[i].ActivationEligibilityEpoch < state.Validators[j].ActivationEligibilityEpoch
+		return state.ValidatorRegistry[i].ActivationEligibilityEpoch < state.ValidatorRegistry[j].ActivationEligibilityEpoch
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
@@ -398,7 +394,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		limit = int(churnLimit)
 	}
 	for _, index := range activationQ[:limit] {
-		validator := state.Validators[index]
+		validator := state.ValidatorRegistry[index]
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 			validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
 		}
@@ -432,13 +428,13 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 
 	// Compute slashed balances in the current epoch
-	exitLength := params.BeaconConfig().SlashedExitLength
-	totalAtStart := state.SlashedBalances[(currentEpoch+1)%exitLength]
-	totalAtEnd := state.SlashedBalances[currentEpoch%exitLength]
+	exitLength := params.BeaconConfig().LatestSlashedExitLength
+	totalAtStart := state.LatestSlashedBalances[(currentEpoch+1)%exitLength]
+	totalAtEnd := state.LatestSlashedBalances[currentEpoch%exitLength]
 	totalPenalties := totalAtEnd - totalAtStart
 
 	// Compute slashing for each validator.
-	for index, validator := range state.Validators {
+	for index, validator := range state.ValidatorRegistry {
 		correctEpoch := currentEpoch == validator.WithdrawableEpoch-exitLength/2
 		if validator.Slashed && correctEpoch {
 			minPenalties := totalPenalties * 3
@@ -504,7 +500,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 
 	// Update effective balances with hysteresis.
-	for i, v := range state.Validators {
+	for i, v := range state.ValidatorRegistry {
 		balance := state.Balances[i]
 		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
 		if balance < v.EffectiveBalance || v.EffectiveBalance+3*halfInc < balance {
@@ -520,12 +516,12 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get shard delta: %v", err)
 	}
-	state.StartShard = (state.StartShard + delta) %
+	state.LatestStartShard = (state.LatestStartShard + delta) %
 		params.BeaconConfig().ShardCount
 
 	// Set active index root.
 	activationDelay := params.BeaconConfig().ActivationExitDelay
-	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().ActiveIndexRootsLength
+	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().LatestActiveIndexRootsLength
 	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active indices: %v", err)
@@ -534,24 +530,24 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash active indices: %v", err)
 	}
-	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
+	state.LatestActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
 	// Set total slashed balances.
-	slashedExitLength := params.BeaconConfig().SlashedExitLength
-	state.SlashedBalances[nextEpoch%slashedExitLength] =
-		state.SlashedBalances[currentEpoch%slashedExitLength]
+	slashedExitLength := params.BeaconConfig().LatestSlashedExitLength
+	state.LatestSlashedBalances[nextEpoch%slashedExitLength] =
+		state.LatestSlashedBalances[currentEpoch%slashedExitLength]
 
 	// Set RANDAO mix.
-	randaoMixLength := params.BeaconConfig().RandaoMixesLength
+	randaoMixLength := params.BeaconConfig().LatestRandaoMixesLength
 	mix := helpers.RandaoMix(state, currentEpoch)
-	state.RandaoMixes[nextEpoch%randaoMixLength] = mix
+	state.LatestRandaoMixes[nextEpoch%randaoMixLength] = mix
 
 	// Set historical root accumulator.
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
 	if nextEpoch%epochsPerHistoricalRoot == 0 {
 		historicalBatch := &pb.HistoricalBatch{
-			BlockRoots: state.BlockRoots,
-			StateRoots: state.StateRoots,
+			BlockRoots: state.LatestBlockRoots,
+			StateRoots: state.LatestStateRoots,
 		}
 		batchRoot, err := hashutil.HashProto(historicalBatch)
 		if err != nil {
@@ -589,7 +585,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
 	// Remove the slashed validator indices.
 	for i := 0; i < len(setIndices); i++ {
-		if state.Validators[setIndices[i]].Slashed {
+		if state.ValidatorRegistry[setIndices[i]].Slashed {
 			setIndices = append(setIndices[:i], setIndices[i+1:]...)
 		}
 	}
@@ -630,15 +626,22 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	var candidateCrosslinks []*pb.Crosslink
 	// Filter out shard crosslinks with correct current or previous crosslink data.
 	for _, a := range shardAtts {
-		cFromState := state.CurrentCrosslinks[shard]
-		h, err := hashutil.HashProto(cFromState)
+		stateCrosslink := state.CurrentCrosslinks[shard]
+		stateCrosslinkRoot, err := ssz.HashTreeRoot(stateCrosslink)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not hash crosslink from state: %v", err)
+			return nil, nil, fmt.Errorf("could not hash tree root crosslink from state: %v", err)
 		}
-		if proto.Equal(cFromState, a.Data.Crosslink) || bytes.Equal(h[:], a.Data.Crosslink.ParentRoot) {
+		attCrosslinkRoot, err := ssz.HashTreeRoot(a.Data.Crosslink)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not hash tree root crosslink from attestation: %v", err)
+		}
+		currCrosslinkMatches := bytes.Equal(stateCrosslinkRoot[:], attCrosslinkRoot[:])
+		prevCrosslinkMatches := bytes.Equal(stateCrosslinkRoot[:], a.Data.Crosslink.ParentRoot)
+		if currCrosslinkMatches || prevCrosslinkMatches {
 			candidateCrosslinks = append(candidateCrosslinks, a.Data.Crosslink)
 		}
 	}
+
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
@@ -693,7 +696,7 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not calculate active balance: %v", err)
 	}
-	effectiveBalance := state.Validators[index].EffectiveBalance
+	effectiveBalance := state.ValidatorRegistry[index].EffectiveBalance
 	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
 		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
 	return baseReward, nil
@@ -756,13 +759,13 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		return nil, nil, fmt.Errorf("could not get total active balance: %v", err)
 	}
 
-	rewards := make([]uint64, len(state.Validators))
-	penalties := make([]uint64, len(state.Validators))
+	rewards := make([]uint64, len(state.ValidatorRegistry))
+	penalties := make([]uint64, len(state.ValidatorRegistry))
 
 	// Filter out the list of eligible validator indices. The eligible validator
 	// has to be active or slashed but before withdrawn.
 	var eligible []uint64
-	for i, v := range state.Validators {
+	for i, v := range state.ValidatorRegistry {
 		isActive := helpers.IsActiveValidator(v, prevEpoch)
 		isSlashed := v.Slashed && (prevEpoch+1 < v.WithdrawableEpoch)
 		if isActive || isSlashed {
@@ -800,10 +803,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			}
 			attested[index] = true
 		}
-		attestedBalance, err := helpers.TotalBalance(state, indices)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get total balance: %v", err)
-		}
+		attestedBalance := helpers.TotalBalance(state, indices)
 
 		// Update rewards and penalties to each eligible validator index.
 		for _, index := range eligible {
@@ -864,7 +864,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			}
 			penalties[index] += params.BeaconConfig().BaseRewardsPerEpoch * base
 			if _, ok := attestedTarget[index]; !ok {
-				penalties[index] += state.Validators[index].EffectiveBalance * finalityDelay /
+				penalties[index] += state.ValidatorRegistry[index].EffectiveBalance * finalityDelay /
 					params.BeaconConfig().InactivityPenaltyQuotient
 			}
 		}
@@ -898,8 +898,8 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 //                penalties[index] += base_reward
 //    return rewards, penalties
 func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
-	rewards := make([]uint64, len(state.Validators))
-	penalties := make([]uint64, len(state.Validators))
+	rewards := make([]uint64, len(state.ValidatorRegistry))
+	penalties := make([]uint64, len(state.ValidatorRegistry))
 	epoch := helpers.PrevEpoch(state)
 	count, err := helpers.EpochCommitteeCount(state, epoch)
 	if err != nil {
@@ -925,14 +925,9 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		for _, index := range attestingIndices {
 			attested[index] = true
 		}
-		committeeBalance, err := helpers.TotalBalance(state, committee)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get total committee balance: %v", err)
-		}
-		attestingBalance, err := helpers.TotalBalance(state, attestingIndices)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get total attested balance: %v", err)
-		}
+		committeeBalance := helpers.TotalBalance(state, committee)
+		attestingBalance := helpers.TotalBalance(state, attestingIndices)
+
 		for _, index := range committee {
 			base, err := baseReward(state, index)
 			if err != nil {

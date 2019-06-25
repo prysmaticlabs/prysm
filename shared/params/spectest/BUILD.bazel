@@ -5,14 +5,7 @@ go_library(
     srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/params/spectest",
     visibility = ["//visibility:public"],
-<<<<<<< HEAD
-    deps = [
-        "//shared/params:go_default_library",
-        "@in_gopkg_yaml_v2//:go_default_library",
-    ],
-=======
     deps = ["//shared/params:go_default_library"],
->>>>>>> 7563db053842b82f625ada503724dce4f8fd040e
 )
 
 go_test(

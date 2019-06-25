@@ -6,16 +6,13 @@ package backend
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -103,7 +100,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		return fmt.Errorf("could not generate simulated beacon block %v", err)
 	}
 	newState := sb.state
-	newState.Eth1Data = newBlock.Body.Eth1Data
+	newState.LatestEth1Data = newBlock.Body.Eth1Data
 	newState, err = state.ExecuteStateTransition(
 		context.Background(),
 		sb.state,
@@ -173,30 +170,6 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	return nil
 }
 
-// RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
-// algorithm, then compare the output with the expected output from the YAML file.
-func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
-	defer db.TeardownDB(sb.beaconDB)
-	seed := common.HexToHash(testCase.Seed)
-	testIndices := make([]uint64, testCase.Count, testCase.Count)
-	for i := uint64(0); i < testCase.Count; i++ {
-		testIndices[i] = i
-	}
-	shuffledList := make([]uint64, testCase.Count)
-	for i := uint64(0); i < testCase.Count; i++ {
-		si, err := utils.ShuffledIndex(i, testCase.Count, seed)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		shuffledList[i] = si
-	}
-	if !reflect.DeepEqual(shuffledList, testCase.Shuffled) {
-		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledList)
-	}
-	return nil
-}
-
 // RunStateTransitionTest advances a beacon chain state transition an N amount of
 // slots from a genesis state, with a block being processed at every iteration
 // of the state transition function.
@@ -263,7 +236,7 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state: %v", err)
 	}
-	sb.state.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	sb.state.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	sb.historicalDeposits = initialDeposits
 
 	// We do not expect hashing initial beacon state and genesis block to
@@ -345,47 +318,47 @@ func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 			testCase.Results.Slot,
 		)
 	}
-	if len(sb.state.Validators) != testCase.Results.NumValidators {
+	if len(sb.state.ValidatorRegistry) != testCase.Results.NumValidators {
 		return fmt.Errorf(
 			"incorrect num validators after %d state transitions without blocks, wanted %d, received %d",
 			testCase.Config.NumSlots,
 			testCase.Results.NumValidators,
-			len(sb.state.Validators),
+			len(sb.state.ValidatorRegistry),
 		)
 	}
 	for _, slashed := range testCase.Results.SlashedValidators {
-		if !sb.state.Validators[slashed].Slashed {
+		if !sb.state.ValidatorRegistry[slashed].Slashed {
 			return fmt.Errorf(
 				"expected validator at index %d to have been slashed",
 				slashed,
 			)
 		}
-		if sb.state.Validators[slashed].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+		if sb.state.ValidatorRegistry[slashed].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
 				"expected validator at index %d to have exited",
 				slashed,
 			)
 		}
-		if sb.state.Validators[slashed].WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
+		if sb.state.ValidatorRegistry[slashed].WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
 				"expected validator at index %d withdrawable epoch to have been changed, received: %d",
 				slashed,
-				sb.state.Validators[slashed].WithdrawableEpoch,
+				sb.state.ValidatorRegistry[slashed].WithdrawableEpoch,
 			)
 		}
 	}
 	for _, exited := range testCase.Results.ExitedValidators {
-		if sb.state.Validators[exited].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+		if sb.state.ValidatorRegistry[exited].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
 				"expected validator at index %d to have exited",
 				exited,
 			)
 		}
-		if sb.state.Validators[exited].WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
+		if sb.state.ValidatorRegistry[exited].WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
 				"expected validator at index %d withdrawable epoch to have been changed, received: %d",
 				exited,
-				sb.state.Validators[exited].WithdrawableEpoch,
+				sb.state.ValidatorRegistry[exited].WithdrawableEpoch,
 			)
 		}
 	}

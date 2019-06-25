@@ -7,17 +7,17 @@ import (
 )
 
 func TestTotalBalance_OK(t *testing.T) {
-	state := &pb.BeaconState{Validators: []*pb.Validator{
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{
 		{EffectiveBalance: 27 * 1e9}, {EffectiveBalance: 28 * 1e9},
 		{EffectiveBalance: 32 * 1e9}, {EffectiveBalance: 40 * 1e9},
 	}}
 
-	balance, err := TotalBalance(state, []uint64{0, 1, 2, 3})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if balance != 127*1e9 {
-		t.Errorf("Incorrect TotalEffectiveBalance. Wanted: 127, got: %d", balance)
+	balance := TotalBalance(state, []uint64{0, 1, 2, 3})
+	wanted := state.ValidatorRegistry[0].EffectiveBalance + state.ValidatorRegistry[1].EffectiveBalance +
+		state.ValidatorRegistry[2].EffectiveBalance + state.ValidatorRegistry[3].EffectiveBalance
+
+	if balance != wanted {
+		t.Errorf("Incorrect TotalEffectiveBalance. Wanted: %d, got: %d", wanted, balance)
 	}
 }
 
@@ -53,7 +53,7 @@ func TestIncreseBalance_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		state := &pb.BeaconState{
-			Validators: []*pb.Validator{
+			ValidatorRegistry: []*pb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
 		}
@@ -76,7 +76,7 @@ func TestDecreseBalance_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		state := &pb.BeaconState{
-			Validators: []*pb.Validator{
+			ValidatorRegistry: []*pb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
 		}
