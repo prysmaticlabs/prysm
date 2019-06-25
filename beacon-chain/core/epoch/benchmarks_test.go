@@ -24,10 +24,10 @@ var RunAmount = 32
 var conditions = "MIN"
 
 var genesisBeaconState16K = createFullState(16384)
-var genesisBeaconState300K = createFullState(300000)
+var genesisBeaconState100K = createFullState(100000)
 
 var beaconStates16K = createCleanStates16K(RunAmount)
-var beaconStates300K = createCleanStates300K(RunAmount)
+var beaconStates100K = createCleanStates100K(RunAmount)
 
 func setBenchmarkConfig() {
 	c := params.DemoBeaconConfig()
@@ -63,11 +63,11 @@ func BenchmarkActiveValidatorIndices(b *testing.B) {
 		}
 	})
 
-	b.Run("300K", func(b *testing.B) {
+	b.Run("100K", func(b *testing.B) {
 		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err = helpers.ActiveValidatorIndices(genesisBeaconState300K, currentEpoch)
+			_, err = helpers.ActiveValidatorIndices(genesisBeaconState100K, currentEpoch)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -84,11 +84,11 @@ func BenchmarkValidatorIndexMap(b *testing.B) {
 		}
 	})
 
-	b.Run("300K", func(b *testing.B) {
+	b.Run("100K", func(b *testing.B) {
 		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = stateutils.ValidatorIndexMap(genesisBeaconState300K)
+			_ = stateutils.ValidatorIndexMap(genesisBeaconState100K)
 		}
 	})
 }
@@ -130,29 +130,29 @@ func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
 		}
 	})
 
-	prevEpochAtts, err = e.MatchAttestations(genesisBeaconState300K, prevEpoch)
+	prevEpochAtts, err = e.MatchAttestations(genesisBeaconState100K, prevEpoch)
 	if err != nil {
 		b.Fatal(err)
 	}
-	currentEpochAtts, err = e.MatchAttestations(genesisBeaconState300K, currentEpoch)
+	currentEpochAtts, err = e.MatchAttestations(genesisBeaconState100K, currentEpoch)
 	if err != nil {
 		b.Fatal(err)
 	}
-	prevEpochAttestedBalance, err = e.AttestingBalance(genesisBeaconState300K, prevEpochAtts.Target)
+	prevEpochAttestedBalance, err = e.AttestingBalance(genesisBeaconState100K, prevEpochAtts.Target)
 	if err != nil {
 		b.Fatal(err)
 	}
-	currentEpochAttestedBalance, err = e.AttestingBalance(genesisBeaconState300K, currentEpochAtts.Target)
+	currentEpochAttestedBalance, err = e.AttestingBalance(genesisBeaconState100K, currentEpochAtts.Target)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	b.Run("300K", func(b *testing.B) {
+	b.Run("100K", func(b *testing.B) {
 		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err = e.ProcessJustificationAndFinalization(
-				beaconStates300K[i],
+				beaconStates100K[i],
 				prevEpochAttestedBalance,
 				currentEpochAttestedBalance,
 			)
@@ -177,11 +177,11 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 		}
 	})
 
-	b.Run("300K", func(b *testing.B) {
+	b.Run("100K", func(b *testing.B) {
 		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err := epoch.ProcessCrosslinks(beaconStates300K[i])
+			_, err := epoch.ProcessCrosslinks(beaconStates100K[i])
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -203,11 +203,11 @@ func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
 		}
 	})
 
-	b.Run("300K", func(b *testing.B) {
+	b.Run("100K", func(b *testing.B) {
 		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err = epoch.ProcessRewardsAndPenalties(beaconStates300K[i])
+			_, err = epoch.ProcessRewardsAndPenalties(beaconStates100K[i])
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -229,11 +229,11 @@ func BenchmarkProcessRegistryUpdates(b *testing.B) {
 		}
 	})
 
-	b.Run("300K", func(b *testing.B) {
+	b.Run("100K", func(b *testing.B) {
 		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err = epoch.ProcessRegistryUpdates(beaconStates300K[i])
+			_, err = epoch.ProcessRegistryUpdates(beaconStates100K[i])
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -255,11 +255,11 @@ func BenchmarkProcessSlashings(b *testing.B) {
 		}
 	})
 
-	b.Run("300K", func(b *testing.B) {
+	b.Run("100K", func(b *testing.B) {
 		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err = epoch.ProcessSlashings(beaconStates300K[i])
+			_, err = epoch.ProcessSlashings(beaconStates100K[i])
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -281,11 +281,11 @@ func BenchmarkProcessFinalUpdates(b *testing.B) {
 		}
 	})
 
-	b.Run("300K", func(b *testing.B) {
+	b.Run("100K", func(b *testing.B) {
 		b.N = RunAmount
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err = epoch.ProcessFinalUpdates(beaconStates300K[i])
+			_, err = epoch.ProcessFinalUpdates(beaconStates100K[i])
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -307,13 +307,13 @@ func BenchmarkProcessEpoch(b *testing.B) {
 		}
 	})
 
-	var beaconStates300KEpoch = createCleanStates300K(RunAmount)
+	var beaconStates100KEpoch = createCleanStates100K(RunAmount)
 
-	b.Run("300K", func(b *testing.B) {
+	b.Run("100K", func(b *testing.B) {
 		b.N = 10
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, err := state.ProcessEpoch(context.Background(), beaconStates300KEpoch[i])
+			_, err := state.ProcessEpoch(context.Background(), beaconStates100KEpoch[i])
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -523,8 +523,7 @@ func createGenesisState(numDeposits uint64) *pb.BeaconState {
 			WithdrawalCredentials: []byte{1},
 		}
 		deposits[i] = &pb.Deposit{
-			Data:  depositData,
-			Index: uint64(i),
+			Data: depositData,
 		}
 	}
 
@@ -543,7 +542,7 @@ func createGenesisState(numDeposits uint64) *pb.BeaconState {
 	}
 
 	for i := range deposits {
-		proof, err := depositTrie.MerkleProof(int(deposits[i].Index))
+		proof, err := depositTrie.MerkleProof(i)
 		if err != nil {
 			panic(err)
 		}
@@ -572,10 +571,10 @@ func createCleanStates16K(num int) []*pb.BeaconState {
 	return cleanStates
 }
 
-func createCleanStates300K(num int) []*pb.BeaconState {
+func createCleanStates100K(num int) []*pb.BeaconState {
 	cleanStates := make([]*pb.BeaconState, num)
 	for i := 0; i < num; i++ {
-		cleanStates[i] = proto.Clone(genesisBeaconState300K).(*pb.BeaconState)
+		cleanStates[i] = proto.Clone(genesisBeaconState100K).(*pb.BeaconState)
 	}
 	return cleanStates
 }
