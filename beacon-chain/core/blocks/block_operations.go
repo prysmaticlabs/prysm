@@ -977,7 +977,6 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 			log.Errorf("Skipping deposit: could not verify deposit data signature: %v", err)
 			return beaconState, nil
 		}
-
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
@@ -989,9 +988,10 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance:           amount,
+			EffectiveBalance:           effectiveBalance,
 		})
 		beaconState.Balances = append(beaconState.Balances, amount)
+		valIndexMap[bytesutil.ToBytes32(pubKey)] = len(beaconState.ValidatorRegistry)
 	} else {
 		beaconState = helpers.IncreaseBalance(beaconState, uint64(index), amount)
 	}
@@ -1096,7 +1096,7 @@ func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	}
 	// Verify the validator has not yet exited.
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("validator index %d, has already exited at epoch: %v", exit.ValidatorIndex, validator.ExitEpoch)
+		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {

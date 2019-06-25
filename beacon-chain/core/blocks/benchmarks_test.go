@@ -534,9 +534,6 @@ func createFullBlock(b *testing.B, bState *pb.BeaconState, previousDeposits []*p
 
 	previousDepsLen := uint64(len(previousDeposits))
 	newDeposits, _ := testutil.GenerateDeposits(b, params.BeaconConfig().MaxDeposits, false)
-	for i := 0; i < len(newDeposits); i++ {
-		newDeposits[i].Index = previousDepsLen + uint64(i)
-	}
 
 	encodedDeposits := make([][]byte, previousDepsLen)
 	for i := 0; i < int(previousDepsLen); i++ {
@@ -572,7 +569,6 @@ func createFullBlock(b *testing.B, bState *pb.BeaconState, previousDeposits []*p
 		newDeposits[i] = &pb.Deposit{
 			Data:  newDeposits[i].Data,
 			Proof: proof,
-			Index: previousDepsLen + uint64(i),
 		}
 	}
 
@@ -617,8 +613,7 @@ func createGenesisState(numDeposits int) (*pb.BeaconState, []*pb.Deposit) {
 			WithdrawalCredentials: []byte{1},
 		}
 		deposits[i] = &pb.Deposit{
-			Data:  depositData,
-			Index: uint64(i),
+			Data: depositData,
 		}
 	}
 
@@ -637,7 +632,7 @@ func createGenesisState(numDeposits int) (*pb.BeaconState, []*pb.Deposit) {
 	}
 
 	for i := range deposits {
-		proof, err := depositTrie.MerkleProof(int(deposits[i].Index))
+		proof, err := depositTrie.MerkleProof(i)
 		if err != nil {
 			panic(err)
 		}
