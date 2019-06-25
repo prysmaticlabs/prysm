@@ -1,16 +1,13 @@
 package spectest
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"io/ioutil"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
@@ -41,49 +38,20 @@ func TestBlockProcessingYaml(t *testing.T) {
 
 	for _, testCase := range s.TestCases {
 		t.Logf("Description: %s", testCase.Description)
-		b, err := json.Marshal(testCase.Pre)
-		if err != nil {
-			t.Fatal(err)
-		}
-		preState := &pb.BeaconState{}
+
 		postState := &pb.BeaconState{}
-		testPostState := &pb.BeaconState{}
-
-		err = jsonpb.Unmarshal(bytes.NewReader(b), preState)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		b, err = json.Marshal(testCase.Post)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = jsonpb.Unmarshal(bytes.NewReader(b), testPostState)
-		if err != nil {
-			t.Fatal(err)
-		}
-
 		stateConfig := state.DefaultConfig()
 
 		for _, b := range testCase.Blocks {
-			serializedObj, err := json.Marshal(b)
-			if err != nil {
-				t.Fatal(err)
-			}
-			protoBlock := &pb.BeaconBlock{}
-			if err := jsonpb.Unmarshal(bytes.NewReader(serializedObj), protoBlock); err != nil {
-				t.Fatal(err)
-			}
-			postState, err = state.ExecuteStateTransition(ctx, preState, protoBlock, stateConfig)
+
+			postState, err = state.ExecuteStateTransition(ctx, testCase.Pre, b, stateConfig)
 			if err != nil {
 				t.Fatal(err)
 			}
 		}
 
-		if !reflect.DeepEqual(postState, testPostState) {
-			checkState(postState, testPostState)
-			t.Fatal("Failed")
+		if !reflect.DeepEqual(postState, testCase.Post) {
+			checkState(postState, testCase.Post)
 		}
 	}
 }
