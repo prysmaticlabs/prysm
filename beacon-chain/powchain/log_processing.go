@@ -119,7 +119,6 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	deposit := &pb.Deposit{
 		Data:  depositData,
-		Index: index,
 		Proof: proof,
 	}
 
@@ -134,12 +133,12 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 
 	// We always store all historical deposits in the DB.
-	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), w.depositTrie.Root())
+	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
 	} else {
-		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), w.depositTrie.Root())
+		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -222,7 +221,7 @@ func (w *Web3Service) processPastLogs() error {
 		return fmt.Errorf("could not get head state: %v", err)
 	}
 	if currentState != nil && currentState.DepositIndex > 0 {
-		w.beaconDB.PrunePendingDeposits(w.ctx, currentState.DepositIndex)
+		w.beaconDB.PrunePendingDeposits(w.ctx, int(currentState.DepositIndex))
 	}
 
 	return nil

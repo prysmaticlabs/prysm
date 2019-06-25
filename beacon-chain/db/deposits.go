@@ -23,13 +23,14 @@ var (
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int, depositRoot [32]byte) {
+func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int, index int, depositRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
 		log.WithFields(logrus.Fields{
 			"block":        blockNum,
 			"deposit":      d,
+			"index":        index,
 			"deposit root": hex.EncodeToString(depositRoot[:]),
 		}).Debug("Ignoring nil deposit insertion")
 		return
@@ -37,8 +38,8 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
 	// keep the slice sorted on insertion in order to avoid costly sorting on retrival.
-	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].block.Cmp(blockNum) >= 0 })
-	newDeposits := append([]*depositContainer{{deposit: d, block: blockNum, depositRoot: depositRoot}}, db.deposits[heightIdx:]...)
+	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Index >= index })
+	newDeposits := append([]*DepositContainer{{Deposit: d, block: blockNum, depositRoot: depositRoot, Index: index}}, db.deposits[heightIdx:]...)
 	db.deposits = append(db.deposits[:heightIdx], newDeposits...)
 	historicalDepositsCount.Inc()
 }
@@ -73,12 +74,18 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
 
-	var deposits []*pb.Deposit
+	var depositCntrs []*DepositContainer
 	for _, ctnr := range db.deposits {
 		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
-			deposits = append(deposits, ctnr.deposit)
+			depositCntrs = append(depositCntrs, ctnr)
 		}
 	}
+
+	var deposits []*pb.Deposit
+	for _, dep := range depositCntrs {
+		deposits = append(deposits, dep.Deposit)
+	}
+
 	return deposits
 }
 
@@ -107,8 +114,8 @@ func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Dep
 	var deposit *pb.Deposit
 	var blockNum *big.Int
 	for _, ctnr := range db.deposits {
-		if bytes.Equal(ctnr.deposit.Data.Pubkey, pubKey) {
-			deposit = ctnr.deposit
+		if bytes.Equal(ctnr.Deposit.Data.Pubkey, pubKey) {
+			deposit = ctnr.Deposit
 			blockNum = ctnr.block
 			break
 		}
