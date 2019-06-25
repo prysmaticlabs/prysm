@@ -130,6 +130,21 @@ http_archive(
 )
 
 http_archive(
+    name = "eth2_spec_tests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "56847989737e816ab7d23f3bb2422347dfa81271bae81a94de512c01461fab25",
+    url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.7.1/base64_encoded_archive.tar.gz",
+)
+
+http_archive(
     name = "com_github_bazelbuild_buildtools",
     strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
