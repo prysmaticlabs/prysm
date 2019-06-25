@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -17,8 +18,12 @@ import (
 
 func TestBlockProcessingYaml(t *testing.T) {
 	ctx := context.Background()
+	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/sanity/blocks/sanity_blocks_minimal.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	file, err := ioutil.ReadFile("sanity_blocks_minimal.yaml")
+	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
