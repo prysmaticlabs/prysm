@@ -1394,7 +1394,6 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 
 	deposit.Proof = proof
-	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
@@ -1407,64 +1406,6 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		},
 	}
 	want := "deposit root did not verify"
-	if _, err := blocks.ProcessValidatorDeposits(
-		beaconState,
-		block,
-		false, /* verifySignatures */
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error: %s, received %v", want, err)
-	}
-}
-
-func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
-	deposit := &pb.Deposit{
-		Data: &pb.DepositData{
-			Pubkey: []byte{1, 2, 3},
-		},
-	}
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("Could not generate trie: %v", err)
-	}
-	proof, err := depositTrie.MerkleProof(0)
-	if err != nil {
-		t.Fatalf("Could not generate proof: %v", err)
-	}
-
-	deposit.Proof = proof
-	deposit.Index = 0
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: []*pb.Deposit{deposit},
-		},
-	}
-	registry := []*pb.Validator{
-		{
-			Pubkey:                []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
-		},
-	}
-	balances := []uint64{0}
-	depositRoot := depositTrie.Root()
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Balances:          balances,
-		Slot:              0,
-		GenesisTime:       uint64(0),
-		DepositIndex:      1,
-		LatestEth1Data: &pb.Eth1Data{
-			DepositRoot: depositRoot[:],
-			BlockHash:   []byte{1},
-		},
-	}
-
-	want := "expected deposit merkle tree index to match beacon state deposit index"
 	if _, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
@@ -1497,7 +1438,6 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 
 	deposit.Proof = proof
-	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},

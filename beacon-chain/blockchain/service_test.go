@@ -156,8 +156,7 @@ func createPreChainStartDeposit(pk []byte, index uint64) *pb.Deposit {
 	depositData := &pb.DepositData{Pubkey: pk, Amount: balance}
 
 	return &pb.Deposit{
-		Index: index,
-		Data:  depositData,
+		Data: depositData,
 	}
 }
 

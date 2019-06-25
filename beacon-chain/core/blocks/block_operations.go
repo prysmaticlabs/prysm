@@ -694,7 +694,7 @@ func ProcessValidatorDeposits(
 	for _, deposit := range deposits {
 		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap, verifySignatures, true)
 		if err != nil {
-			return nil, fmt.Errorf("could not process deposit index %d: %v", deposit.Index, err)
+			return nil, fmt.Errorf("could not process deposit from %#x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
 		}
 	}
 	return beaconState, nil
@@ -753,7 +753,7 @@ func ProcessDeposit(
 	verifyTree bool,
 ) (*pb.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
-		return nil, fmt.Errorf("could not verify deposit #%d: %v", deposit.Index, err)
+		return nil, fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
 	}
 	beaconState.DepositIndex++
 	pubKey := deposit.Data.Pubkey
@@ -792,7 +792,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 		if ok := trieutil.VerifyMerkleProof(
 			receiptRoot,
 			leaf[:],
-			int(deposit.Index),
+			int(beaconState.DepositIndex),
 			deposit.Proof,
 		); !ok {
 			return fmt.Errorf(
@@ -800,15 +800,6 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 				receiptRoot,
 			)
 		}
-	}
-
-	// Deposits must be processed in order
-	if deposit.Index != beaconState.DepositIndex {
-		return fmt.Errorf(
-			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
-			beaconState.DepositIndex,
-			deposit.Index,
-		)
 	}
 
 	return nil

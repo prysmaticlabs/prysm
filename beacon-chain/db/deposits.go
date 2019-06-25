@@ -22,7 +22,7 @@ var (
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int) {
+func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int, index int) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
@@ -34,7 +34,7 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum})
+	db.deposits = append(db.deposits, &DepositContainer{Deposit: d, block: blockNum, Index: index})
 	historicalDepositsCount.Inc()
 }
 
@@ -68,16 +68,21 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
 
-	var deposits []*pb.Deposit
+	var depositCntrs []*DepositContainer
 	for _, ctnr := range db.deposits {
 		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
-			deposits = append(deposits, ctnr.deposit)
+			depositCntrs = append(depositCntrs, ctnr)
 		}
 	}
 	// Sort the deposits by Merkle index.
-	sort.SliceStable(deposits, func(i, j int) bool {
-		return deposits[i].Index < deposits[j].Index
+	sort.SliceStable(depositCntrs, func(i, j int) bool {
+		return depositCntrs[i].Index < depositCntrs[j].Index
 	})
+
+	var deposits []*pb.Deposit
+	for _, dep := range depositCntrs {
+		deposits = append(deposits, dep.Deposit)
+	}
 
 	return deposits
 }
@@ -93,8 +98,8 @@ func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Dep
 	var deposit *pb.Deposit
 	var blockNum *big.Int
 	for _, ctnr := range db.deposits {
-		if bytes.Equal(ctnr.deposit.Data.Pubkey, pubKey) {
-			deposit = ctnr.deposit
+		if bytes.Equal(ctnr.Deposit.Data.Pubkey, pubKey) {
+			deposit = ctnr.Deposit
 			blockNum = ctnr.block
 			break
 		}
