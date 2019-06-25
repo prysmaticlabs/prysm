@@ -144,7 +144,6 @@ filegroup(
     url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.7.1/base64_encoded_archive.tar.gz",
 )
 
-
 http_archive(
     name = "com_github_bazelbuild_buildtools",
     strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
