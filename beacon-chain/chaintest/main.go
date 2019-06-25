@@ -24,10 +24,8 @@ func init() {
 
 func readTestsFromYaml(yamlDir string) (tests []interface{}, configs map[string]interface{}, err error) {
 	const forkChoiceTestsFolderName = "fork-choice-tests"
-	const shuffleTestsFolderName = "shuffle-tests"
 	const stateTestsFolderName = "state-tests"
 	const configFilesFolderName = "config"
-	configs = make(map[string]interface{})
 	dirs, err := ioutil.ReadDir(yamlDir)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not read YAML tests directory: %v", err)
