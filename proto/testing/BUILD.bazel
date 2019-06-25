@@ -37,6 +37,7 @@ go_test(
         "@eth2_spec_tests//:test_data",
     ],
     embed = [":go_default_library"],
+    tags = ["spectest"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params/spectest:go_default_library",
@@ -45,5 +46,4 @@ go_test(
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
-    tags = ["spectest"],
 )
