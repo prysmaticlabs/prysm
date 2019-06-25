@@ -20,7 +20,7 @@ var (
 	})
 )
 
-// Container object for holding the deposit and a reference to the block in
+// DepositContainer object for holding the deposit and a reference to the block in
 // which the deposit transaction was included in the proof of work chain.
 type DepositContainer struct {
 	Deposit *pb.Deposit
