@@ -768,7 +768,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		b.Fatalf("Could not generate proof: %v", err)
 	}
 	deposit.Proof = proof
-	deposit.Index = 0
 	root := depositTrie.Root()
 
 	// Set up randao reveal object for block

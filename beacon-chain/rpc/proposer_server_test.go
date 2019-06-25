@@ -12,6 +12,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -378,48 +379,52 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	var mockCreds [32]byte
 
 	// Using the merkleTreeIndex as the block number for this test...
-	readyDeposits := []*pbp2p.Deposit{
+	readyDeposits := []*db.DepositContainer{
 		{
 			Index: 0,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("a"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 		{
 			Index: 1,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("b"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 	}
 
-	recentDeposits := []*pbp2p.Deposit{
+	recentDeposits := []*db.DepositContainer{
 		{
 			Index: 2,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("c"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("c"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 		{
 			Index: 3,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("d"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("d"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index)
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index)
 	}
 
 	bs := &ProposerServer{
@@ -521,42 +526,45 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 	var mockSig [96]byte
 	var mockCreds [32]byte
 
-	readyDeposits := []*pbp2p.Deposit{
+	readyDeposits := []*db.DepositContainer{
 		{
 			Index: 0,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("a"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 		{
 			Index: 1,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("b"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 	}
 
-	var recentDeposits []*pbp2p.Deposit
+	var recentDeposits []*db.DepositContainer
 	for i := 2; i < 16; i++ {
-		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
-			Index: uint64(i),
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte{byte(i)},
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+		recentDeposits = append(recentDeposits, &db.DepositContainer{
+			Index: i,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte{byte(i)},
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		})
 	}
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index)
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index)
 	}
 
 	bs := &ProposerServer{
@@ -578,13 +586,6 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 			"Received unexpected number of pending deposits: %d, wanted: %d",
 			len(deposits),
 			expectedDeposits,
-		)
-	}
-	if deposits[0].Index != beaconState.DepositIndex {
-		t.Errorf(
-			"Received unexpected merkle index: %d, wanted: %d",
-			deposits[0].Index,
-			beaconState.DepositIndex,
 		)
 	}
 }
@@ -613,42 +614,45 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	var mockSig [96]byte
 	var mockCreds [32]byte
 
-	readyDeposits := []*pbp2p.Deposit{
+	readyDeposits := []*db.DepositContainer{
 		{
 			Index: 0,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("a"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 		{
 			Index: 1,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("b"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 	}
 
-	var recentDeposits []*pbp2p.Deposit
+	var recentDeposits []*db.DepositContainer
 	for i := 2; i < 22; i++ {
-		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
-			Index: uint64(i),
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte{byte(i)},
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+		recentDeposits = append(recentDeposits, &db.DepositContainer{
+			Index: i,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte{byte(i)},
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		})
 	}
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index)
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)))
+		d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index)
 	}
 
 	bs := &ProposerServer{
@@ -701,23 +705,23 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 
 func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	t.Skip()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	beacondb := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beacondb)
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	deps := []*pbp2p.Deposit{
-		{Index: 0, Data: &pbp2p.DepositData{
+	deps := []*db.DepositContainer{
+		{Index: 0, Deposit: &pbp2p.Deposit{Data: &pbp2p.DepositData{
 			Pubkey: []byte("a"),
-		}},
-		{Index: 1, Data: &pbp2p.DepositData{
+		}}},
+		{Index: 1, Deposit: &pbp2p.Deposit{Data: &pbp2p.DepositData{
 			Pubkey: []byte("b"),
-		}},
+		}}},
 	}
 	depsData := [][]byte{}
 	for _, dp := range deps {
-		db.InsertDeposit(context.Background(), dp, big.NewInt(0))
-		depHash, err := hashutil.DepositHash(dp.Data)
+		beacondb.InsertDeposit(context.Background(), dp.Deposit, big.NewInt(0), dp.Index)
+		depHash, err := hashutil.DepositHash(dp.Deposit.Data)
 		if err != nil {
 			t.Errorf("Could not hash deposit")
 		}
@@ -745,7 +749,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 		},
 	}
 	proposerServer := &ProposerServer{
-		beaconDB:        db,
+		beaconDB:        beacondb,
 		powChainService: powChainService,
 	}
 

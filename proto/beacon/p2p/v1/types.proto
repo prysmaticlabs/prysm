@@ -189,8 +189,6 @@ message AttesterSlashing {
 message Deposit {
   // Branch in the deposit tree
   repeated bytes proof = 1 [(gogoproto.moretags) = "ssz:\"size=32,32\""];
-  // Index in the deposit tree
-  uint64 index = 2;
   DepositData data = 3;
 }
 
