@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/ghodss/yaml"
@@ -46,11 +47,23 @@ func TestBlockProcessingYaml(t *testing.T) {
 		}
 		preState := &pb.BeaconState{}
 		postState := &pb.BeaconState{}
+		testPostState := &pb.BeaconState{}
 
 		err = jsonpb.Unmarshal(bytes.NewReader(b), preState)
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		b, err = json.Marshal(testCase.Post)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = jsonpb.Unmarshal(bytes.NewReader(b), testPostState)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		stateConfig := state.DefaultConfig()
 
 		for _, b := range testCase.Blocks {
@@ -68,8 +81,55 @@ func TestBlockProcessingYaml(t *testing.T) {
 			}
 		}
 
-		if !reflect.DeepEqual(postState, testCase.Post) {
-			t.Error("Failed")
+		if !reflect.DeepEqual(postState, testPostState) {
+			checkState(postState, testPostState)
+			t.Fatal("Failed")
 		}
 	}
+}
+
+func checkState(a interface{}, b interface{}) {
+	if !validateStruct(a) || !validateStruct(b) {
+		panic("invalid data types provided")
+	}
+	fieldsA := fields(a)
+	fieldsB := fields(b)
+
+	if len(fieldsA) != len(fieldsB) {
+		panic("fields length different")
+	}
+
+	for i, v := range fieldsA {
+		if !reflect.DeepEqual(v, fieldsB[i]) {
+			log.Errorf("Field %s for struct are unequal. Got %v but wanted %v", v.Type().Name(), v, fieldsB[i])
+		}
+	}
+
+}
+
+func validateStruct(a interface{}) bool {
+	valA := reflect.ValueOf(a)
+	if valA.Kind() == reflect.Struct {
+		return true
+	}
+
+	if valA.Kind() == reflect.Ptr {
+		return valA.Elem().Kind() == reflect.Struct
+	}
+
+	return false
+}
+
+func fields(a interface{}) []reflect.Value {
+	val := reflect.ValueOf(a)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	var fields []reflect.Value
+	for i := 0; i < val.NumField(); i++ {
+		if !strings.Contains(val.Type().Field(i).Name, "XXX") {
+			fields = append(fields, val.Field(i))
+		}
+	}
+	return fields
 }
