@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -14,7 +15,11 @@ import (
 )
 
 func TestMainnetRandomYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("ssz_mainnet_random.yaml")
+	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/ssz_static/core/ssz_mainnet_random.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
