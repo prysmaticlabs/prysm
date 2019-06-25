@@ -3,7 +3,7 @@
 
 package spectest
 
-type VoluntaryExitTest struct {
+type BlockOperationTest struct {
 	Title         string   `json:"title"`
 	Summary       string   `json:"summary"`
 	ForksTimeline string   `json:"forks_timeline"`
@@ -83,6 +83,23 @@ type VoluntaryExitTest struct {
 			ValidatorIndex uint64 `json:"validator_index"`
 			Signature      []byte `json:"signature" ssz:"size=96"`
 		} `json:"voluntary_exit"`
+		ProposerSlashing struct {
+			ProposerIndex uint64 `json:"proposer_index"`
+			Header1       struct {
+				Slot       uint64 `json:"slot"`
+				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+				StateRoot  []byte `json:"state_root" ssz:"size=32"`
+				BodyRoot   []byte `json:"body_root" ssz:"size=32"`
+				Signature  []byte `json:"signature" ssz:"size=96"`
+			} `json:"header_1"`
+			Header2 struct {
+				Slot       uint64 `json:"slot"`
+				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+				StateRoot  []byte `json:"state_root" ssz:"size=32"`
+				BodyRoot   []byte `json:"body_root" ssz:"size=32"`
+				Signature  []byte `json:"signature" ssz:"size=96"`
+			} `json:"header_2"`
+		} `json:"proposer_slashing"`
 		Post struct {
 			Slot        uint64 `json:"slot"`
 			GenesisTime uint64 `json:"genesis_time"`

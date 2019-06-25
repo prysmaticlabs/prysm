@@ -17,7 +17,7 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	test := &VoluntaryExitTest{}
+	test := &BlockOperationTest{}
 	if err := yaml.Unmarshal(file, test); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}

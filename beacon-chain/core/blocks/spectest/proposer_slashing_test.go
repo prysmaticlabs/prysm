@@ -17,7 +17,7 @@ func runProposerSlashingTest(t *testing.T, filename string) {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	test := &ProposerSlashingMinimal{}
+	test := &BlockOperationTest{}
 	if err := yaml.Unmarshal(file, test); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
@@ -64,10 +64,6 @@ func runProposerSlashingTest(t *testing.T, filename string) {
 			}
 		})
 	}
-}
-
-func TestProposerSlashingMinimal(t *testing.T) {
-	runProposerSlashingTest(t, "proposer_slashing_minimal.yaml")
 }
 
 func TestProposerSlashingMainnet(t *testing.T) {
