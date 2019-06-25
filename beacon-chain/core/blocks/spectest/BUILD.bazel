@@ -10,15 +10,10 @@ go_library(
         "block_operations.yaml.go",
         "deposit_mainnet.yaml.go",
         "deposits_minimal.go",
-        "json_to_pb_converter.go",
         "transfer_test.yaml.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/spectest",
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_gogo_protobuf//jsonpb:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
-    ],
 )
 
 go_test(
@@ -42,6 +37,7 @@ go_test(
         "//beacon-chain/core/state/stateutils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params/spectest:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
