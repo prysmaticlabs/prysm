@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["sanity_slots_test.yaml.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/state/spectest",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
 )
 
 go_test(
