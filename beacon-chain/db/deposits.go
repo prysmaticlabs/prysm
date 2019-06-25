@@ -85,7 +85,7 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 // DepositsNumberAndRootAtHeight returns number of deposits made prior to blockheight and the
 // root that corresponds to the latest deposit at that blockheight.
 func (db *BeaconDB) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositsNumberAndRootTillHeight")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositsNumberAndRootAtHeight")
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
