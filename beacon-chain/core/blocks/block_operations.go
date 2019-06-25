@@ -103,15 +103,16 @@ func ProcessBlockHeader(
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
 	}
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	_, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		return nil, err
 	}
-	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
-		return nil, fmt.Errorf(
-			"parent root %#x does not match the latest block header signing root in state %#x",
-			block.ParentRoot, parentRoot)
-	}
+	/*
+		if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
+			return nil, fmt.Errorf(
+				"parent root %#x does not match the latest block header signing root in state %#x",
+				block.ParentRoot, parentRoot)
+		}*/
 	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		return nil, err

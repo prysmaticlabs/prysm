@@ -4,6 +4,7 @@ package helpers
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -164,7 +165,19 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 		return nil, errors.New("bitfield is unable to be verified")
 	}
 
-	return committee, nil
+	var attestingIndices []uint64
+	for _, indice := range committee {
+		if mathutil.CeilDiv8(int(indice)) > len(bitfield) {
+			continue
+		}
+		if bitutil.BitfieldBit(bitfield, int(indice)) == 1 {
+			attestingIndices = append(attestingIndices, indice)
+		}
+	}
+	sort.SliceStable(attestingIndices, func(i, j int) bool {
+		return attestingIndices[i] < attestingIndices[j]
+	})
+	return attestingIndices, nil
 }
 
 // VerifyBitfield validates a bitfield with a given committee size.

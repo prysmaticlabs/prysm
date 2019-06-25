@@ -10,10 +10,8 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	log "github.com/sirupsen/logrus"
 )
@@ -53,21 +51,18 @@ func TestBlockProcessingYaml(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		stateConfig := state.DefaultConfig()
 
 		for _, b := range testCase.Blocks {
 			serializedObj, err := json.Marshal(b)
 			if err != nil {
 				t.Fatal(err)
 			}
-			root, _ := ssz.SigningRoot(testCase.Pre.LatestBlockHeader)
-			if root != bytesutil.ToBytes32(b.ParentRoot) {
-				t.Fatalf("root unequal")
-			}
 			protoBlock := &pb.BeaconBlock{}
 			if err := jsonpb.Unmarshal(bytes.NewReader(serializedObj), protoBlock); err != nil {
 				t.Fatal(err)
 			}
-			postState, err = state.ExecuteStateTransition(ctx, preState, protoBlock, &state.TransitionConfig{})
+			postState, err = state.ExecuteStateTransition(ctx, preState, protoBlock, stateConfig)
 			if err != nil {
 				t.Fatal(err)
 			}
