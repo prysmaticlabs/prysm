@@ -1115,7 +1115,7 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 		if err != nil {
 			return fmt.Errorf("could not deserialize validator public key: %v", err)
 		}
-		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainVoluntaryExit)
+		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainTransfer)
 		sig, err := bls.SignatureFromBytes(transfer.Signature)
 		if err != nil {
 			return fmt.Errorf("could not convert bytes to signature: %v", err)
@@ -1129,9 +1129,4 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 		}
 	}
 	return nil
-}
-
-// ClearEth1DataVoteCache clears the eth1 data vote count cache.
-func ClearEth1DataVoteCache() {
-	eth1DataCache = cache.NewEth1DataVoteCache()
 }

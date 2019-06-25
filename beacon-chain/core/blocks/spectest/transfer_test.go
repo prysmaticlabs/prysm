@@ -7,6 +7,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -18,7 +19,7 @@ func runTransferTest(t *testing.T, filename string) {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	test := &TransferTest{}
+	test := &BlockOperationTest{}
 	if err := yaml.Unmarshal(file, test); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
@@ -63,6 +64,7 @@ func runTransferTest(t *testing.T, filename string) {
 			if !reflect.DeepEqual(postState, expectedPost) {
 				t.Error("Post state does not match expected")
 			}
+			helpers.ClearAllCaches()
 		})
 	}
 }
