@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func runAttesterSlashingTest(t *testing.T, filename string) {
@@ -17,7 +18,7 @@ func runAttesterSlashingTest(t *testing.T, filename string) {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	test := &AttesterSlashingTest{}
+	test := &BlockOperationTest{}
 	if err := yaml.Unmarshal(file, test); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
@@ -29,17 +30,17 @@ func runAttesterSlashingTest(t *testing.T, filename string) {
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			pre := &pb.BeaconState{}
-			if err := convertToPb(tt.Pre, pre); err != nil {
+			if err := testutil.ConvertToPb(tt.Pre, pre); err != nil {
 				t.Fatal(err)
 			}
 
 			expectedPost := &pb.BeaconState{}
-			if err = convertToPb(tt.Post, expectedPost); err != nil {
+			if err = testutil.ConvertToPb(tt.Post, expectedPost); err != nil {
 				t.Fatal(err)
 			}
 
 			slashing := &pb.AttesterSlashing{}
-			if err = convertToPb(tt.AttesterSlashing, slashing); err != nil {
+			if err = testutil.ConvertToPb(tt.AttesterSlashing, slashing); err != nil {
 				t.Fatal(err)
 			}
 

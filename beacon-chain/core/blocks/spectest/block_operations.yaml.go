@@ -100,6 +100,46 @@ type BlockOperationTest struct {
 				Signature  []byte `json:"signature" ssz:"size=96"`
 			} `json:"header_2"`
 		} `json:"proposer_slashing"`
+		AttesterSlashing struct {
+			Attestation1 struct {
+				CustodyBit0Indices []uint64 `json:"custody_bit_0_indices"`
+				CustodyBit1Indices []uint64 `json:"custody_bit_1_indices"`
+				Data               struct {
+					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
+					SourceEpoch     uint64 `json:"source_epoch"`
+					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
+					TargetEpoch     uint64 `json:"target_epoch"`
+					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
+					Crosslink       struct {
+						Shard      uint64 `json:"shard"`
+						StartEpoch uint64 `json:"start_epoch"`
+						EndEpoch   uint64 `json:"end_epoch"`
+						ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+						DataRoot   []byte `json:"data_root" ssz:"size=32"`
+					} `json:"crosslink"`
+				} `json:"data"`
+				Signature []byte `json:"signature" ssz:"size=96"`
+			} `json:"attestation_1"`
+			Attestation2 struct {
+				CustodyBit0Indices []uint64      `json:"custody_bit_0_indices"`
+				CustodyBit1Indices []interface{} `json:"custody_bit_1_indices"`
+				Data               struct {
+					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
+					SourceEpoch     uint64 `json:"source_epoch"`
+					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
+					TargetEpoch     uint64 `json:"target_epoch"`
+					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
+					Crosslink       struct {
+						Shard      uint64 `json:"shard"`
+						StartEpoch uint64 `json:"start_epoch"`
+						EndEpoch   uint64 `json:"end_epoch"`
+						ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+						DataRoot   []byte `json:"data_root" ssz:"size=32"`
+					} `json:"crosslink"`
+				} `json:"data"`
+				Signature []byte `json:"signature" ssz:"size=96"`
+			} `json:"attestation_2"`
+		} `json:"attester_slashing"`
 		Post struct {
 			Slot        uint64 `json:"slot"`
 			GenesisTime uint64 `json:"genesis_time"`

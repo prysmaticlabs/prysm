@@ -6,12 +6,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 // Block header test is actually a full block processing test. Not sure why it
@@ -39,13 +39,13 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			pre := &pb.BeaconState{}
-			err := convertToPb(tt.Pre, pre)
+			err := testutil.ConvertToPb(tt.Pre, pre)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			block := &pb.BeaconBlock{}
-			if err := convertToPb(tt.Block, block); err != nil {
+			if err := testutil.ConvertToPb(tt.Block, block); err != nil {
 				t.Fatal(err)
 			}
 
@@ -70,7 +70,7 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 			}
 
 			expectedPost := &pb.BeaconState{}
-			if err := convertToPb(tt.Post, expectedPost); err != nil {
+			if err := testutil.ConvertToPb(tt.Post, expectedPost); err != nil {
 				t.Fatal(err)
 			}
 			if !proto.Equal(post, expectedPost) {
