@@ -38,8 +38,8 @@ type BeaconDB struct {
 	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
-	pendingDeposits       []*depositContainer
-	deposits              []*depositContainer
+	pendingDeposits       []*DepositContainer
+	deposits              []*DepositContainer
 	depositsLock          sync.RWMutex
 	chainstartPubkeys     map[string]bool
 	chainstartPubkeysLock sync.RWMutex

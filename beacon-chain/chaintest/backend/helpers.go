@@ -85,7 +85,6 @@ func generateSimulatedBlock(
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			Data:  depositData,
 			Proof: proof,
-			Index: simObjects.simDeposit.MerkleIndex,
 		})
 	}
 	if simObjects.simProposerSlashing != nil {
@@ -150,7 +149,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 			Signature:             make([]byte, 96),
 			Amount:                params.BeaconConfig().MaxDepositAmount,
 		}
-		deposits[i] = &pb.Deposit{Data: depositData, Index: uint64(i)}
+		deposits[i] = &pb.Deposit{Data: depositData}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys, nil
