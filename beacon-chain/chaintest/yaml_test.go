@@ -15,7 +15,7 @@ func init() {
 
 func TestFromYaml_Pass(t *testing.T) {
 	t.Skip()
-	tests, configs, err := readTestsFromYaml("./tests")
+	tests, err := readTestsFromYaml("./tests")
 	if err != nil {
 		t.Fatalf("Failed to read yaml files: %v", err)
 	}
@@ -25,13 +25,13 @@ func TestFromYaml_Pass(t *testing.T) {
 		t.Fatalf("Could not create backend: %v", err)
 	}
 
-	if err := runTests(tests, configs, sb); err != nil {
+	if err := runTests(tests, sb); err != nil {
 		t.Errorf("Failed to run yaml tests %v", err)
 	}
 }
 
 func BenchmarkStateTestFromYaml(b *testing.B) {
-	tests, configs, err := readTestsFromYaml("./tests")
+	tests, err := readTestsFromYaml("./tests")
 	if err != nil {
 		b.Fatalf("Failed to read yaml files: %v", err)
 	}
@@ -43,7 +43,7 @@ func BenchmarkStateTestFromYaml(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := runTests(tests, configs, sb); err != nil {
+		if err := runTests(tests, sb); err != nil {
 			b.Errorf("Failed to run yaml tests %v", err)
 		}
 	}

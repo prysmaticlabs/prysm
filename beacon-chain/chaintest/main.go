@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
-	"path/filepath"
 	"time"
 
 	"github.com/go-yaml/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
@@ -22,57 +20,46 @@ func init() {
 	})
 }
 
-func readTestsFromYaml(yamlDir string) (tests []interface{}, configs map[string]interface{}, err error) {
+func readTestsFromYaml(yamlDir string) (tests []interface{}, err error) {
 	const forkChoiceTestsFolderName = "fork-choice-tests"
 	const stateTestsFolderName = "state-tests"
-	const configFilesFolderName = "config"
-	configs = make(map[string]interface{})
 	dirs, err := ioutil.ReadDir(yamlDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not read YAML tests directory: %v", err)
+		return nil, fmt.Errorf("could not read YAML tests directory: %v", err)
 	}
 	for _, dir := range dirs {
 		files, err := ioutil.ReadDir(path.Join(yamlDir, dir.Name()))
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not read YAML tests directory: %v", err)
+			return nil, fmt.Errorf("could not read YAML tests directory: %v", err)
 		}
 		for _, file := range files {
 			filePath := path.Join(yamlDir, dir.Name(), file.Name())
 			// #nosec G304
 			data, err := ioutil.ReadFile(filePath)
 			if err != nil {
-				return nil, nil, fmt.Errorf("could not read YAML file: %v", err)
+				return nil, fmt.Errorf("could not read YAML file: %v", err)
 			}
 			switch dir.Name() {
 			case forkChoiceTestsFolderName:
 				decoded := &backend.ForkChoiceTest{}
 				if err := yaml.Unmarshal(data, decoded); err != nil {
-					return nil, nil, fmt.Errorf("could not unmarshal YAML file into test struct: %v", err)
+					return nil, fmt.Errorf("could not unmarshal YAML file into test struct: %v", err)
 				}
 				tests = append(tests, decoded)
 			case stateTestsFolderName:
 				decoded := &backend.StateTest{}
 				if err := yaml.Unmarshal(data, decoded); err != nil {
-					return nil, nil, fmt.Errorf("could not unmarshal YAML file into test struct: %v", err)
+					return nil, fmt.Errorf("could not unmarshal YAML file into test struct: %v", err)
 				}
 				tests = append(tests, decoded)
 
-			case configFilesFolderName:
-				decoded := &params.BeaconChainConfig{}
-				if err := yaml.Unmarshal(data, decoded); err != nil {
-					return nil, nil, fmt.Errorf("could not unmarshal YAML file into config struct: %v", err)
-				}
-				fileName := file.Name()
-				var extension = filepath.Ext(fileName)
-				var name = fileName[0 : len(fileName)-len(extension)]
-				configs[name] = decoded
 			}
 		}
 	}
-	return tests, configs, nil
+	return tests, nil
 }
 
-func runTests(tests []interface{}, configs map[string]interface{}, sb *backend.SimulatedBackend) error {
+func runTests(tests []interface{}, sb *backend.SimulatedBackend) error {
 	for _, tt := range tests {
 		switch typedTest := tt.(type) {
 		case *backend.ForkChoiceTest:
@@ -114,7 +101,7 @@ func main() {
 	customFormatter.FullTimestamp = true
 	log.SetFormatter(customFormatter)
 
-	tests, configs, err := readTestsFromYaml(*yamlDir)
+	tests, err := readTestsFromYaml(*yamlDir)
 	if err != nil {
 		log.Fatalf("Fail to load tests from yaml: %v", err)
 	}
@@ -127,7 +114,7 @@ func main() {
 	log.Info("----Running Tests----")
 	startTime := time.Now()
 
-	err = runTests(tests, configs, sb)
+	err = runTests(tests, sb)
 	if err != nil {
 		log.Fatalf("Test failed %v", err)
 	}
