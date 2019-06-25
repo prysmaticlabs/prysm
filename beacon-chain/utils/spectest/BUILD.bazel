@@ -9,13 +9,13 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["shuffle_yaml_test.go"],
     size = "small",
-   tags = [
+    srcs = ["shuffle_yaml_test.go"],
+    embed = [":go_default_library"],
+    tags = [
         "manual",
         "spectest",
     ],
-    embed = [":go_default_library"],
     deps = [
         "//beacon-chain/utils:go_default_library",
         "//shared/params/spectest:go_default_library",
