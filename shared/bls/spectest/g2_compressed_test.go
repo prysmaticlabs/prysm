@@ -3,7 +3,6 @@ package spectest
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	"github.com/ghodss/yaml"
@@ -14,7 +13,7 @@ import (
 // Note: This actually tests the underlying library as we don't have a need for
 // HashG2Compressed in our local BLS API.
 func TestG2CompressedHash(t *testing.T) {
-	file, err := ioutil.ReadFile("g2_compressed.yaml")
+	file, err := loadBlsYaml("msg_hash_g2_compressed/g2_compressed.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}

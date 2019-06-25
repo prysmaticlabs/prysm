@@ -3,20 +3,14 @@ package spectest
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-// Note about yaml formatting: The domain value is written upstream as
-// hexadecimal integer. This is one case where we want to keep hexadecimal value
-// in the yaml. If a tool was run to convert hexadecimal strings to Base64, the
-// domain values need to be reverted to stay as hexadecimal strings with a
-// struct field type of `uint64`.
 func TestSignMessageYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("sign_msg_formatted.yaml")
+	file, err := loadBlsYaml("sign_msg/sign_msg.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}

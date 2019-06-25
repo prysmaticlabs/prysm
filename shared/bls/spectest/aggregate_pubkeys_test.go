@@ -3,7 +3,6 @@ package spectest
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	"github.com/ghodss/yaml"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestAggregatePubkeysYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("aggregate_pubkeys_formatted.yaml")
+	file, err := loadBlsYaml("aggregate_pubkeys/aggregate_pubkeys.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}

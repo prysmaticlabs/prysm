@@ -22,10 +22,11 @@ go_test(
         "aggregate_sigs_test.go",
         "g2_compressed_test.go",
         "g2_uncompressed_test.go",
+        "helper_test.go",
         "priv_to_pub_test.go",
         "sign_message_test.go",
     ],
-    data = glob(["*.yaml"]),
+    data = ["@eth2_spec_tests//:test_data"],
     embed = [":go_default_library"],
     tags = ["spectest"],
     deps = [
@@ -33,5 +34,6 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_phoreproject_bls//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

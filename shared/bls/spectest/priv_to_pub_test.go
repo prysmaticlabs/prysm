@@ -3,7 +3,6 @@ package spectest
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	"github.com/ghodss/yaml"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestPrivToPubYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("priv_to_pub_formatted.yaml")
+	file, err := loadBlsYaml("priv_to_pub/priv_to_pub.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}

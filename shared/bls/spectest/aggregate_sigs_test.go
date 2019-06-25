@@ -3,7 +3,6 @@ package spectest
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -12,7 +11,7 @@ import (
 )
 
 func TestAggregateSignaturesYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("aggregate_sigs_formatted.yaml")
+	file, err := loadBlsYaml("aggregate_sigs/aggregate_sigs.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}
