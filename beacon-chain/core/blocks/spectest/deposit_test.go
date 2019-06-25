@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestDepositMinimalYaml(t *testing.T) {
@@ -30,17 +31,17 @@ func TestDepositMinimalYaml(t *testing.T) {
 	for _, testCase := range s.TestCases {
 		t.Logf("Testing testcase %s", testCase.Description)
 		preState := &pb.BeaconState{}
-		if err = convertToPb(testCase.Pre, preState); err != nil {
+		if err = testutil.ConvertToPb(testCase.Pre, preState); err != nil {
 			t.Fatal(err)
 		}
 
 		deposit := &pb.Deposit{}
-		if err = convertToPb(testCase.Deposit, deposit); err != nil {
+		if err = testutil.ConvertToPb(testCase.Deposit, deposit); err != nil {
 			t.Fatal(err)
 		}
 
 		testPostState := &pb.BeaconState{}
-		if err = convertToPb(testCase.Post, testPostState); err != nil {
+		if err = testutil.ConvertToPb(testCase.Post, testPostState); err != nil {
 			t.Fatal(err)
 		}
 		valMap := stateutils.ValidatorIndexMap(preState)
@@ -76,17 +77,17 @@ func TestDepositMainnetYaml(t *testing.T) {
 	for _, testCase := range s.TestCases {
 		t.Logf("Testing testcase %s", testCase.Description)
 		preState := &pb.BeaconState{}
-		if err = convertToPb(testCase.Pre, preState); err != nil {
+		if err = testutil.ConvertToPb(testCase.Pre, preState); err != nil {
 			t.Fatal(err)
 		}
 
 		deposit := &pb.Deposit{}
-		if err = convertToPb(testCase.Deposit, deposit); err != nil {
+		if err = testutil.ConvertToPb(testCase.Deposit, deposit); err != nil {
 			t.Fatal(err)
 		}
 
 		testPostState := &pb.BeaconState{}
-		if err = convertToPb(testCase.Post, testPostState); err != nil {
+		if err = testutil.ConvertToPb(testCase.Post, testPostState); err != nil {
 			t.Fatal(err)
 		}
 		valMap := stateutils.ValidatorIndexMap(preState)

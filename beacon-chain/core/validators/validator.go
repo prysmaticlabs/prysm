@@ -176,7 +176,10 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //	  increase_balance(state, whistleblower_index, whistleblowing_reward - proposer_reward)
 //	  decrease_balance(state, slashed_index, whistleblowing_reward)
 func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx uint64) (*pb.BeaconState, error) {
-	state = ExitValidator(state, slashedIdx)
+	state, err := InitiateValidatorExit(state, slashedIdx)
+	if err != nil {
+		return nil, fmt.Errorf("could not initiate validator %d exit: %v", slashedIdx, err)
+	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	state.ValidatorRegistry[slashedIdx].Slashed = true
 	state.ValidatorRegistry[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().LatestSlashedExitLength

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func runProposerSlashingTest(t *testing.T, filename string) {
@@ -29,17 +30,17 @@ func runProposerSlashingTest(t *testing.T, filename string) {
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			pre := &pb.BeaconState{}
-			if err := convertToPb(tt.Pre, pre); err != nil {
+			if err := testutil.ConvertToPb(tt.Pre, pre); err != nil {
 				t.Fatal(err)
 			}
 
 			expectedPost := &pb.BeaconState{}
-			if err = convertToPb(tt.Post, expectedPost); err != nil {
+			if err = testutil.ConvertToPb(tt.Post, expectedPost); err != nil {
 				t.Fatal(err)
 			}
 
 			proposerSlashing := &pb.ProposerSlashing{}
-			if err = convertToPb(tt.ProposerSlashing, proposerSlashing); err != nil {
+			if err = testutil.ConvertToPb(tt.ProposerSlashing, proposerSlashing); err != nil {
 				t.Fatal(err)
 			}
 
