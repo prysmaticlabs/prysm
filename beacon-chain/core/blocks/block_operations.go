@@ -832,7 +832,22 @@ func ProcessDeposit(
 	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 	if !ok {
 		if verifySignatures {
-			// TODO(#2307): Use BLS verification of proof of possession.
+			pub, err := bls.PublicKeyFromBytes(pubKey)
+			if err != nil {
+				return nil, fmt.Errorf("could not deserialize validator public key: %v", err)
+			}
+			domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
+			sig, err := bls.SignatureFromBytes(deposit.Data.Signature)
+			if err != nil {
+				return nil, fmt.Errorf("could not convert bytes to signature: %v", err)
+			}
+			root, err := ssz.SigningRoot(deposit.Data)
+			if err != nil {
+				return nil, fmt.Errorf("could not sign root for deposit data: %v", err)
+			}
+			if !sig.Verify(root[:], pub, domain) {
+				return nil, fmt.Errorf("deposit signature did not verify")
+			}
 		}
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
