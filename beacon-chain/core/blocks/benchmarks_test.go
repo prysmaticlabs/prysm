@@ -108,6 +108,58 @@ func BenchmarkProcessBlockRandao(b *testing.B) {
 	// })
 }
 
+func BenchmarkProcessEth1Data(b *testing.B) {
+	block, root := createFullBlock(b, genesisState16K, deposits16K)
+
+	eth1DataVotes := []*pb.Eth1Data{
+		{
+			BlockHash:   root,
+			DepositRoot: root,
+		},
+	}
+
+	b.Run("16K", func(b *testing.B) {
+		b.N = runAmount
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			beaconState := cleanStates16K[i]
+			beaconState.Eth1DataVotes = eth1DataVotes
+			_, err := blocks.ProcessEth1DataInBlock(beaconState, block)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	// 	block, _ = createFullBlock(b, genesisState300K, deposits300K)
+	// 	eth1DataVotes = []*pb.Eth1Data{
+	// 		{
+	// 			BlockHash:   root,
+	// 			DepositRoot: root,
+	// 		},
+	// 	}
+	// 	genesisState300K.Eth1DataVotes = eth1DataVotes
+	// 	b.Run("300K", func(b *testing.B) {
+	// 		b.N = runAmount
+	// 		b.ResetTimer()
+	// 		for i := 0; i < b.N; i++ {
+	// 			_, err := blocks.ProcessEth1DataInBlock(genesisState300K, block)
+	// 			if err != nil {
+	// 				b.Fatal(err)
+	// 			}
+	// 		}
+	// 	})
+
+	// genesisState4M.Eth1DataVotes = eth1DataVotes
+	// b.Run("4M Validators", func(b *testing.B) {
+	// 	b.N = runAmount
+	// 	b.ResetTimer()
+	// 	for i := 0; i < b.N; i++ {
+	// 		_ = blocks.ProcessEth1DataInBlock(genesisState4M, block)
+	// 	}
+	// })
+}
+
 // func BenchmarkProcessValidatorExits(b *testing.B) {
 // 	block, _ := createFullBlock(b, genesisState16K, deposits16K)
 
@@ -195,7 +247,7 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 				false,
 			)
 			if err != nil {
-				b.Fatal(i)
+				b.Fatal(err)
 			}
 		}
 	})
@@ -301,57 +353,6 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 	// })
 }
 
-func BenchmarkProcessEth1Data(b *testing.B) {
-	block, root := createFullBlock(b, genesisState16K, deposits16K)
-	b.Run("16K", func(b *testing.B) {
-		eth1DataVotes := []*pb.Eth1Data{
-			{
-				BlockHash:   root,
-				DepositRoot: root,
-			},
-		}
-
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			beaconState := cleanStates16K[i]
-			beaconState.Eth1DataVotes = eth1DataVotes
-			_, err := blocks.ProcessEth1DataInBlock(beaconState, block)
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
-
-	// 	block, _ = createFullBlock(b, genesisState300K, deposits300K)
-	// 	eth1DataVotes = []*pb.Eth1Data{
-	// 		{
-	// 			BlockHash:   root,
-	// 			DepositRoot: root,
-	// 		},
-	// 	}
-	// 	genesisState300K.Eth1DataVotes = eth1DataVotes
-	// 	b.Run("300K", func(b *testing.B) {
-	// 		b.N = runAmount
-	// 		b.ResetTimer()
-	// 		for i := 0; i < b.N; i++ {
-	// 			_, err := blocks.ProcessEth1DataInBlock(genesisState300K, block)
-	// 			if err != nil {
-	// 				b.Fatal(err)
-	// 			}
-	// 		}
-	// 	})
-
-	// genesisState4M.Eth1DataVotes = eth1DataVotes
-	// b.Run("4M Validators", func(b *testing.B) {
-	// 	b.N = runAmount
-	// 	b.ResetTimer()
-	// 	for i := 0; i < b.N; i++ {
-	// 		_ = blocks.ProcessEth1DataInBlock(genesisState4M, block)
-	// 	}
-	// })
-}
-
 func BenchmarkProcessBlock(b *testing.B) {
 	block, root := createFullBlock(b, genesisState16K, deposits16K)
 
@@ -361,6 +362,7 @@ func BenchmarkProcessBlock(b *testing.B) {
 		VerifySignatures: false,
 		Logging:          false,
 	}
+
 	b.Run("16K", func(b *testing.B) {
 		b.N = 1
 		b.ResetTimer()
