@@ -19,7 +19,7 @@ func runDepositTest(t *testing.T, filename string) {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	test := &DepositsMinimal{}
+	test := &BlockOperationTest{}
 	if err := yaml.Unmarshal(file, test); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
@@ -64,8 +64,6 @@ func runDepositTest(t *testing.T, filename string) {
 			}
 
 			if !reflect.DeepEqual(post, expectedPost) {
-				t.Log(post)
-				t.Log(expectedPost)
 				t.Error("Post state does not match expected")
 			}
 		})

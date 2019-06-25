@@ -140,6 +140,15 @@ type BlockOperationTest struct {
 				Signature []byte `json:"signature" ssz:"size=96"`
 			} `json:"attestation_2"`
 		} `json:"attester_slashing"`
+		Deposit struct {
+			Proof [][]byte `json:"proof"`
+			Data  struct {
+				Pubkey                []byte `json:"pubkey" ssz:"size=48"`
+				WithdrawalCredentials []byte `json:"withdrawal_credentials" ssz:"size=32"`
+				Amount                uint64 `json:"amount"`
+				Signature             []byte `json:"signature" ssz:"size=96"`
+			} `json:"data"`
+		} `json:"deposit"`
 		Post struct {
 			Slot        uint64 `json:"slot"`
 			GenesisTime uint64 `json:"genesis_time"`
