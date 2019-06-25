@@ -66,10 +66,6 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 	}
 }
 
-func TestVoluntaryExitMinimal(t *testing.T) {
-	runVoluntaryExitTest(t, "voluntary_exit_minimal.yaml")
-}
-
 func TestVoluntaryExitMainnet(t *testing.T) {
 	runVoluntaryExitTest(t, "voluntary_exit_mainnet.yaml")
 }
