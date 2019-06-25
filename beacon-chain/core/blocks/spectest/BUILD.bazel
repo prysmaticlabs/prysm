@@ -7,13 +7,11 @@ go_library(
         "attestation_test.yaml.go",
         "attester_slashing_test.yaml.go",
         "block_header_test.yaml.go",
+        "block_operations.yaml.go",
         "deposit_mainnet.yaml.go",
         "deposits_minimal.go",
         "json_to_pb_converter.go",
-        "proposer_slashing_mainnet.yaml.go",
-        "proposer_slashing_minimal.yaml.go",
         "transfer_test.yaml.go",
-        "voluntary_exit.test.yaml.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/spectest",
     visibility = ["//visibility:public"],
@@ -34,7 +32,9 @@ go_test(
         "transfer_test.go",
         "voluntary_exit_test.go",
     ],
-    data = glob(["*.yaml"]),
+    data = glob(["*.yaml"]) + [
+        "@eth2_spec_tests//:test_data",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
@@ -44,5 +44,6 @@ go_test(
         "//shared/params/spectest:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

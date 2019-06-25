@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -14,7 +15,11 @@ import (
 )
 
 func runAttestationTest(t *testing.T, filename string) {
-	file, err := ioutil.ReadFile(filename)
+	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/operations/attestation/" + filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}
@@ -76,9 +81,9 @@ func runAttestationTest(t *testing.T, filename string) {
 }
 
 func TestAttestationMinimal(t *testing.T) {
-	runAttestationTest(t, "attestation_minimal_formatted.yaml")
+	runAttestationTest(t, "attestation_minimal.yaml")
 }
 
 func TestAttestationMainnet(t *testing.T) {
-	runAttestationTest(t, "attestation_mainnet_formatted.yaml")
+	runAttestationTest(t, "attestation_mainnet.yaml")
 }
