@@ -38,7 +38,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			WithdrawalCredentials: []byte{1},
 		}
 		deposits[i] = &pb.Deposit{
-			Data:  depositData,
+			Data: depositData,
 		}
 	}
 

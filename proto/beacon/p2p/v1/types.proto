@@ -7,9 +7,9 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 message BeaconState {
   // Miscellaneous [1001-2000]
-  uint64 genesis_time = 1001;
-  Fork fork = 1002;
-  uint64 slot = 1003;
+  uint64 slot = 1001;
+  uint64 genesis_time = 1002;
+  Fork fork = 1003;
 
   // Validator registry [2001-3000]
   repeated Validator validator_registry = 2001;
@@ -32,8 +32,8 @@ message BeaconState {
   bytes finalized_root = 4009 [(gogoproto.moretags) = "ssz:\"size=32\""];
 
   // Recent state [5001-6000]
-  repeated Crosslink current_crosslinks = 5001;
-  repeated Crosslink previous_crosslinks = 5002;
+  repeated Crosslink current_crosslinks = 5001 [(gogoproto.moretags) = "ssz:\"size=8\""];
+  repeated Crosslink previous_crosslinks = 5002 [(gogoproto.moretags) = "ssz:\"size=8\""];
   repeated bytes latest_block_roots = 5003 [(gogoproto.moretags) = "ssz:\"size=64,32\""];
   repeated bytes latest_state_roots = 5004 [(gogoproto.moretags) = "ssz:\"size=64,32\""];
   repeated bytes latest_active_index_roots = 5005 [(gogoproto.moretags) = "ssz:\"size=64,32\""];
@@ -152,9 +152,9 @@ message BeaconBlockBody {
   bytes randao_reveal = 1 [(gogoproto.moretags) = "ssz:\"size=96\""];
   Eth1Data eth1_data = 2;
   bytes graffiti = 3 [(gogoproto.moretags) = "ssz:\"size=32\""];
-  repeated Attestation attestations = 4;
-  repeated ProposerSlashing proposer_slashings  = 5;
-  repeated AttesterSlashing attester_slashings = 6;
+  repeated ProposerSlashing proposer_slashings  = 4;
+  repeated AttesterSlashing attester_slashings = 5;
+  repeated Attestation attestations = 6;
   repeated Deposit deposits = 7;
   repeated VoluntaryExit voluntary_exits = 8;
   repeated Transfer transfers = 9;
@@ -188,8 +188,8 @@ message AttesterSlashing {
 
 message Deposit {
   // Branch in the deposit tree
-  repeated bytes proof = 1;
-  DepositData data = 2;
+  repeated bytes proof = 1 [(gogoproto.moretags) = "ssz:\"size=32,32\""];
+  DepositData data = 3;
 }
 
 message VoluntaryExit {
