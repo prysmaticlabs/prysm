@@ -1,4 +1,4 @@
-package backend
+package spectest
 
 // ShuffleTest --
 type ShuffleTest struct {
