@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	dbs "github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -28,6 +29,8 @@ import (
 )
 
 var closedContext = "context closed"
+var mockSig [96]byte
+var mockCreds [32]byte
 
 type faultyPOWChainService struct {
 	chainStartFeed *event.Feed
@@ -254,17 +257,25 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	deps := []*pbp2p.Deposit{
-		{Index: 0, Data: &pbp2p.DepositData{
-			Pubkey:                []byte("a"),
-			WithdrawalCredentials: make([]byte, 32),
-			Signature:             make([]byte, 96),
-		}},
-		{Index: 1, Data: &pbp2p.DepositData{
-			Pubkey:                []byte("b"),
-			WithdrawalCredentials: make([]byte, 32),
-			Signature:             make([]byte, 96),
-		}},
+	deps := []*dbs.DepositContainer{
+		{
+			Index: 0,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index: 1,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
 	}
 	depsData := [][]byte{}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
@@ -272,8 +283,8 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
 	for _, dp := range deps {
-		db.InsertDeposit(context.Background(), dp, big.NewInt(0), depositTrie.Root())
-		depHash, err := hashutil.DepositHash(dp.Data)
+		db.InsertDeposit(context.Background(), dp.Deposit, big.NewInt(0), dp.Index, depositTrie.Root())
+		depHash, err := hashutil.DepositHash(dp.Deposit.Data)
 		if err != nil {
 			t.Errorf("Could not hash deposit")
 		}
@@ -398,29 +409,31 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 
 	var mockSig [96]byte
 	var mockCreds [32]byte
-	deposits := []*pbp2p.Deposit{
-		{
-			Index: 1,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("b"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
-		},
+	deposits := []*dbs.DepositContainer{
 		{
 			Index: 0,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("a"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index: 1,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 	}
 
 	for _, dp := range deposits {
 		var root [32]byte
 		copy(root[:], eth1DataVotes[dp.Index].DepositRoot)
-		db.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), root)
+		db.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, root)
 	}
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: eth1DataVotes,
@@ -492,29 +505,31 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	var mockSig [96]byte
 	var mockCreds [32]byte
-	deposits := []*pbp2p.Deposit{
+	deposits := []*dbs.DepositContainer{
 		{
 			Index: 0,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("a"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 		{
 			Index: 1,
-			Data: &pbp2p.DepositData{
-				Pubkey:                []byte("b"),
-				Signature:             mockSig[:],
-				WithdrawalCredentials: mockCreds[:],
-			},
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
 		},
 	}
 
 	for i, dp := range deposits {
 		var root [32]byte
 		copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)})
-		db.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), root)
+		db.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, root)
 	}
 	numOfVotes := 1000
 	for i := 0; i < numOfVotes; i++ {

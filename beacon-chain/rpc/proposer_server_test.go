@@ -423,7 +423,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := hashutil.DepositHash(dp.Data)
+		depositHash, err := hashutil.DepositHash(dp.Deposit.Data)
 		if err != nil {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
@@ -432,14 +432,10 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
-		// 	d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index)
-		// }
-		// for _, dp := range recentDeposits {
-		// 	d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index)
+		d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
@@ -534,7 +530,7 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := hashutil.DepositHash(dp.Data)
+		depositHash, err := hashutil.DepositHash(dp.Deposit.Data)
 		if err != nil {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
@@ -543,10 +539,10 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
@@ -634,7 +630,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := hashutil.DepositHash(dp.Data)
+		depositHash, err := hashutil.DepositHash(dp.Deposit.Data)
 		if err != nil {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
@@ -643,10 +639,10 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.Index)), depositTrie.Root())
+		d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
