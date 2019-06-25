@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("ssz_minimal_one.yaml")
+func TestMainnetRandomYaml(t *testing.T) {
+	file, err := ioutil.ReadFile("ssz_mainnet_random.yaml")
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}

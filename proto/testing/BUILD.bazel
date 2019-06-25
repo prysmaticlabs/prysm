@@ -34,7 +34,7 @@ go_test(
         "tags_test.go",
     ],
     data = [
-        "ssz_minimal_one.yaml",
+        "ssz_mainnet_random.yaml",
     ],
     embed = [":go_default_library"],
     deps = [
