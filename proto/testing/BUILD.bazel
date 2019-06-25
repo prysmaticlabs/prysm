@@ -33,6 +33,9 @@ go_test(
         "ssz_compatibility_test.go",
         "tags_test.go",
     ],
+    data = [
+        "ssz_minimal_one.yaml",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",

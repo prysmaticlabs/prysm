@@ -2,7 +2,6 @@ package testing
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -10,11 +9,12 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestYaml(t *testing.T) {
-	file, err := ioutil.ReadFile("ssz_minimal_zero.yaml")
+	file, err := ioutil.ReadFile("ssz_minimal_one.yaml")
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
