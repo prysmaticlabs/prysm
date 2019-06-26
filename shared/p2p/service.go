@@ -218,7 +218,7 @@ func (s *Server) Start() {
 
 		peersToWatch = append(peersToWatch, s.bootstrapNode, s.relayNodeAddr)
 
-		log.Info("Listening on ", s.host.Addrs())
+		log.Infof("Listening on %s", s.host.Addrs())
 	}
 
 	for _, staticPeer := range s.staticPeers {
