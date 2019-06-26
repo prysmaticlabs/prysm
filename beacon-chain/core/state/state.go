@@ -113,7 +113,7 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 //
 //    return state
 func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
-	bodyRoot, err := ssz.TreeHash(&pb.BeaconBlockBody{})
+	bodyRoot, err := ssz.HashTreeRoot(&pb.BeaconBlockBody{})
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v", bodyRoot)
 	}
@@ -151,7 +151,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	indexRoot, err := ssz.TreeHash(activeIndices)
+	indexRoot, err := ssz.HashTreeRoot(activeIndices)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v", err)
 	}
