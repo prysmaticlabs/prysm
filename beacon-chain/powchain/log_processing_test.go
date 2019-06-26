@@ -481,69 +481,6 @@ func TestUnpackETH2GenesisLogData_OK(t *testing.T) {
 	}
 }
 
-func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
-	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
-		DepositContract: testAcc.ContractAddr,
-		Reader:          &goodReader{},
-		Logger:          testAcc.Backend,
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.Backend,
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	testAcc.Backend.Commit()
-
-	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
-
-	var pubkey [48]byte
-	var withdrawalCreds [32]byte
-	var sig [96]byte
-	copy(pubkey[:], []byte("pubkey"))
-	copy(sig[:], []byte("sig"))
-	copy(withdrawalCreds[:], []byte("withdrawCreds"))
-
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
-		Signature:             sig[:],
-		WithdrawalCredentials: withdrawalCreds[:],
-	}
-
-	testAcc.TxOpts.Value = contracts.Amount32Eth()
-	testAcc.TxOpts.GasLimit = 1000000
-
-	ok, err := web3Service.HasChainStartLogOccurred()
-	if err != nil {
-		t.Fatalf("Could not check if chain start log occurred: %v", err)
-	}
-	if ok {
-		t.Error("Expected chain start log to not have occurred")
-	}
-
-	// 8 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the deposit contract as the number required for the testnet.
-	for i := 0; i < depositsReqForChainStart; i++ {
-		testAcc.TxOpts.Value = contracts.Amount32Eth()
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
-			t.Fatalf("Could not deposit to deposit contract %v", err)
-		}
-		testAcc.Backend.Commit()
-	}
-	ok, err = web3Service.HasChainStartLogOccurred()
-	if err != nil {
-		t.Fatalf("Could not check if chain start log occurred: %v", err)
-	}
-	if !ok {
-		t.Error("Expected chain start log to have occurred")
-	}
-}
-
 func TestGenesisBlock_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	if err != nil {
@@ -581,14 +518,6 @@ func TestGenesisBlock_OK(t *testing.T) {
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
-
-	ok, err := web3Service.HasChainStartLogOccurred()
-	if err != nil {
-		t.Fatalf("Could not check if chain start log occurred: %v", err)
-	}
-	if ok {
-		t.Error("Expected chain start log to not have occurred")
-	}
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet.

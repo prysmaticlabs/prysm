@@ -2,10 +2,8 @@ package powchain
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -21,39 +19,19 @@ import (
 )
 
 var (
-	depositEventSignature    = []byte("Deposit(bytes,bytes,bytes,bytes,bytes)")
-	chainStartEventSignature = []byte("Eth2Genesis(bytes32,bytes,bytes)")
+	depositEventSignature = []byte("Deposit(bytes,bytes,bytes,bytes,bytes)")
 )
-
-// HasChainStartLogOccurred queries all logs in the deposit contract to verify
-// if ChainStart has occurred.
-func (w *Web3Service) HasChainStartLogOccurred() (bool, error) {
-	return w.depositContractCaller.ChainStarted(&bind.CallOpts{})
-}
 
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
 func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			w.depositContractAddress,
-		},
-		Topics: [][]common.Hash{{hashutil.Hash(chainStartEventSignature)}},
-	}
-	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
-	if err != nil {
-		return 0, err
-	}
-	if len(logs) == 0 {
-		return 0, errors.New("no chainstart logs exist")
-	}
-
-	_, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
-	if err != nil {
-		return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
-	}
-	timestamp := binary.LittleEndian.Uint64(timestampData)
-	return timestamp, nil
+	//TODO: replace with first log that triggred the chain start
+	// _, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
+	// if err != nil {
+	// 	return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
+	// }
+	// timestamp := binary.LittleEndian.Uint64(timestampData)
+	return 0, nil
 }
 
 // ProcessLog is the main method which handles the processing of all
