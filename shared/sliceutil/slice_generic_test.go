@@ -57,9 +57,9 @@ func TestGenericIntersectionWithSSZ(t *testing.T) {
 		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
-		b1, err := ssz.Marshal(tt.setA)
 
-		b2, err1 := ssz.Marshal(tt.setA)
+		b1, err := ssz.Marshal(tt.setA)
+		b2, err1 := ssz.Marshal(tt.setB)
 		if err1 == nil && err == nil {
 
 			result, err := GenericIntersection(b1, b2)
@@ -532,8 +532,7 @@ func BenchmarkGenericIntersectionWithSSZ(b *testing.B) {
 		}
 		for _, tt := range testCases {
 			b1, err := ssz.Marshal(tt.setA)
-
-			b2, err1 := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
 				res, err := GenericIntersection(b1, b2)
@@ -563,9 +562,9 @@ func BenchmarkIntersectionWithSSZ(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			b1, err := ssz.Marshal(tt.setA)
 
-			b2, err1 := ssz.Marshal(tt.setA)
+			b1, err := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
 				ByteIntersection(b1, b2)
@@ -594,8 +593,7 @@ func BenchmarkGenericUnionWithSSZ(b *testing.B) {
 		}
 		for _, tt := range testCases {
 			b1, err := ssz.Marshal(tt.setA)
-
-			b2, err1 := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
 				res, err := GenericUnion(b1, b2)
@@ -626,8 +624,7 @@ func BenchmarkUnionWithSSZ(b *testing.B) {
 		}
 		for _, tt := range testCases {
 			b1, err := ssz.Marshal(tt.setA)
-
-			b2, err1 := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
 				ByteUnion(b1, b2)
@@ -656,7 +653,6 @@ func BenchmarkGenericNotWithSSZ(b *testing.B) {
 		}
 		for _, tt := range testCases {
 			b1, err := ssz.Marshal(tt.setA)
-
 			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
@@ -688,10 +684,10 @@ func BenchmarkNotWithSSZ(b *testing.B) {
 		}
 		for _, tt := range testCases {
 			b1, err := ssz.Marshal(tt.setA)
-
-			b2, err1 := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 				ByteNot(b1, b2)
+
 			}
 
 		}

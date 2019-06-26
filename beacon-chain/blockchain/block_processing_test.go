@@ -510,7 +510,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	pendingDeposits := []*pb.Deposit{
-		createPreChainStartDeposit([]byte{'F'}, beaconState.DepositIndex),
+		createPreChainStartDeposit([]byte{'F'}),
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
@@ -575,7 +575,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	for _, dep := range pendingDeposits {
-		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0), 0)
+		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0), 0, [32]byte{})
 	}
 
 	if len(db.PendingDeposits(chainService.ctx, nil)) != len(pendingDeposits) || len(pendingDeposits) == 0 {
