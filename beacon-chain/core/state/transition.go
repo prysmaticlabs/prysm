@@ -167,7 +167,7 @@ func ProcessBlock(
 	}
 
 	// Process the block's header into the state.
-	state, err = b.ProcessBlockHeader(state, block)
+	state, err = b.ProcessBlockHeader(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block header: %v", err)
 	}

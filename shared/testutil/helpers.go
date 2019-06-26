@@ -31,11 +31,12 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			pubkey = make([]byte, params.BeaconConfig().BLSPubkeyLength)
 			copy(pubkey[:], []byte(strconv.FormatUint(uint64(i), 10)))
 		}
-
+		emptySig := make([]byte, 96)
 		depositData := &pb.DepositData{
 			Pubkey:                pubkey,
 			Amount:                params.BeaconConfig().MaxDepositAmount,
 			WithdrawalCredentials: []byte{1},
+			Signature: emptySig,
 		}
 		deposits[i] = &pb.Deposit{
 			Data: depositData,

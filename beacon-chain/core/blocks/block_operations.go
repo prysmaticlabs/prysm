@@ -100,6 +100,7 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
+	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
@@ -126,7 +127,6 @@ func ProcessBlockHeader(
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		Signature:  emptySig,
 	}
-
 	// Verify proposer is not slashed
 	idx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
@@ -136,24 +136,24 @@ func ProcessBlockHeader(
 	if proposer.Slashed {
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
-	// TODO(#2307) Verify proposer signature.
-	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
-	if err != nil {
-		return nil, fmt.Errorf("could not deserialize proposer public key: %v", err)
+	if verifySignatures {
+		pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
+		if err != nil {
+			return nil, fmt.Errorf("could not deserialize proposer public key: %v", err)
+		}
+		domain := helpers.Domain(beaconState, helpers.SlotToEpoch(block.Slot), params.BeaconConfig().DomainBeaconProposer)
+		sig, err := bls.SignatureFromBytes(block.Signature)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert bytes to signature: %v", err)
+		}
+		root, err := ssz.SigningRoot(block)
+		if err != nil {
+			return nil, fmt.Errorf("could not sign root for header: %v", err)
+		}
+		if !sig.Verify(root[:], pub, domain) {
+			return nil, fmt.Errorf("proposer slashing signature did not verify")
+		}
 	}
-	domain := helpers.Domain(beaconState, helpers.SlotToEpoch(block.Slot), params.BeaconConfig().DomainBeaconProposer)
-	sig, err := bls.SignatureFromBytes(block.Signature)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert bytes to signature: %v", err)
-	}
-	root, err := ssz.SigningRoot(block)
-	if err != nil {
-		return nil, fmt.Errorf("could not sign root for header: %v", err)
-	}
-	if !sig.Verify(root[:], pub, domain) {
-		return nil, fmt.Errorf("proposer slashing signature did not verify")
-	}
-
 	return beaconState, nil
 }
 

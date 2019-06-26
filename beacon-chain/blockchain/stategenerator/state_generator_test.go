@@ -16,6 +16,7 @@ func init() {
 		CacheTreeHash: false,
 	})
 }
+
 func TestGenerateState_OK(t *testing.T) {
 	b, err := backend.NewSimulatedBackend()
 	if err != nil {
