@@ -171,8 +171,8 @@ func (w *Web3Service) isGenesisTrigger(deposits []*pb.Deposit) (bool, error) {
 			activeValidators++
 		}
 	}
-
-	return activeValidators == params.BeaconConfig().GenesisActiveValidatorCount, err
+	triggered := activeValidators == params.BeaconConfig().GenesisActiveValidatorCount
+	return triggered, err
 }
 
 // processChainStart processes the last final steps before chain start.

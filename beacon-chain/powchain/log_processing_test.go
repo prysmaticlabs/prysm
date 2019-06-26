@@ -486,6 +486,8 @@ func TestGenesisBlock_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	newConfig := params.MinimalSpecConfig()
+	params.OverrideBeaconConfig(newConfig)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
