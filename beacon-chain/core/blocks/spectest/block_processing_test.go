@@ -45,10 +45,6 @@ func TestBlockProcessingMinimalYaml(t *testing.T) {
 	for _, testCase := range s.TestCases {
 		t.Logf("Description: %s", testCase.Description)
 
-		if testCase.Description == "attestation" || testCase.Description == "voluntary_exit" {
-			continue
-		}
-
 		postState := &pb.BeaconState{}
 		stateConfig := state.DefaultConfig()
 
@@ -106,9 +102,6 @@ func TestBlockProcessingMainnetYaml(t *testing.T) {
 
 	for _, testCase := range s.TestCases {
 		t.Logf("Description: %s", testCase.Description)
-		if testCase.Description == "attestation" || testCase.Description == "voluntary_exit" {
-			continue
-		}
 
 		postState := &pb.BeaconState{}
 		stateConfig := state.DefaultConfig()
