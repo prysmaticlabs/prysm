@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -52,10 +53,20 @@ func runRegisteryProcessingTests(t *testing.T, filename string) {
 	}
 }
 
+const registryUpdatesPrefix = "eth2_spec_tests/tests/epoch_processing/registry_updates/"
+
 func TestRegistryProcessingMinimal(t *testing.T) {
-	runRegisteryProcessingTests(t, "yaml/registry_updates_minimal.yaml")
+	filepath, err := bazel.Runfile(registryUpdatesPrefix + "registry_updates_minimal.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runRegisteryProcessingTests(t, filepath)
 }
 
 func TestRegistryProcessingMainnet(t *testing.T) {
-	runRegisteryProcessingTests(t, "yaml/registry_updates_mainnet.yaml")
+	filepath, err := bazel.Runfile(registryUpdatesPrefix + "registry_updates_mainnet.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runRegisteryProcessingTests(t, filepath)
 }
