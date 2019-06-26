@@ -936,10 +936,10 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{79, 127, 232, 473, 569, 754, 774}
+	attestedIndices := []uint64{5, 16, 336, 797, 1082, 1450, 1770, 1958}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
-		want := uint64(25298)
+		want := uint64(6324)
 		if rewards[i] != want {
 			t.Errorf("Wanted reward balance %d, got %d", want, rewards[i])
 		}
@@ -1080,7 +1080,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{79, 127, 232, 473, 569, 754, 774}
+	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
 
 	attestedBalance, err := AttestingBalance(state, atts)
 	totalBalance, _ := helpers.TotalActiveBalance(state)
@@ -1237,13 +1237,13 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := uint64(32000202360)
-	if state.Balances[0] != wanted {
+	wanted := uint64(32000076782)
+	if state.Balances[16] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[0])
 	}
 	wanted = uint64(31999898808)
-	if state.Balances[1] != wanted {
+	if state.Balances[17] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[1])
 	}
