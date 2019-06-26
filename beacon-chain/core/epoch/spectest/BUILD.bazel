@@ -18,14 +18,10 @@ go_test(
         "epoch_processing_registry_test.go",
     ],
     data = [
-        "yaml/crosslinks_mainnet.yaml",
-        "yaml/crosslinks_minimal.yaml",
-        "yaml/registry_updates_mainnet.yaml",
-        "yaml/registry_updates_minimal.yaml",
+        "@eth2_spec_tests//:test_data",
     ],
     embed = [":go_default_library"],
     tags = [
-        "manual",
         "spectest",
     ],
     deps = [
@@ -35,5 +31,6 @@ go_test(
         "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
