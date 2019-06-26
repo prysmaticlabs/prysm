@@ -2,11 +2,6 @@ package spectest
 
 import (
 	"context"
-<<<<<<< HEAD
-	"encoding/json"
-	"fmt"
-=======
->>>>>>> 04817e91d09df5d3b149db5bf9cca2d0e8920b5d
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -14,106 +9,12 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
-<<<<<<< HEAD
-	"github.com/gogo/protobuf/jsonpb"
-	ssz "github.com/prysmaticlabs/go-ssz"
-=======
 	"github.com/prysmaticlabs/go-ssz"
->>>>>>> 04817e91d09df5d3b149db5bf9cca2d0e8920b5d
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	log "github.com/sirupsen/logrus"
 )
-
-func TestBlockProcessingMinimalYaml(t *testing.T) {
-	ctx := context.Background()
-	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/sanity/blocks/sanity_blocks_minimal.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	file, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		t.Fatalf("Could not load file %v", err)
-	}
-
-	s := &BlocksMinimal{}
-	if err := yaml.Unmarshal(file, s); err != nil {
-		t.Fatalf("Failed to Unmarshal: %v", err)
-	}
-
-	log.Infof("Title: %v", s.Title)
-	log.Infof("Summary: %v", s.Summary)
-	log.Infof("Fork: %v", s.Forks)
-	log.Infof("Config: %v", s.Config)
-
-	if err := spectest.SetConfig(s.Config); err != nil {
-		t.Fatalf("Could not set config: %v", err)
-	}
-
-	for _, testCase := range s.TestCases {
-<<<<<<< HEAD
-		if testCase.Description != "attester_slashing" {
-			continue
-		}
-		b, err := json.Marshal(testCase.Pre)
-		if err != nil {
-			t.Fatal(err)
-		}
-		preState := &pb.BeaconState{}
-		testPostState := &pb.BeaconState{}
-=======
-		t.Logf("Description: %s", testCase.Description)
-
-		if testCase.Description == "attestation" || testCase.Description == "voluntary_exit" {
-			continue
-		}
-
-		postState := &pb.BeaconState{}
-		stateConfig := state.DefaultConfig()
->>>>>>> 04817e91d09df5d3b149db5bf9cca2d0e8920b5d
-
-		for _, b := range testCase.Blocks {
-
-			postState, err = state.ExecuteStateTransition(ctx, testCase.Pre, b, stateConfig)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-
-<<<<<<< HEAD
-		ourRoot, err := ssz.HashTreeRoot(testCase.Pre)
-		if err != nil {
-			t.Fatal(err)
-		}
-		ourRoot2, err := ssz.HashTreeRoot(preState)
-		if err != nil {
-			t.Fatal(err)
-		}
-		fmt.Printf("Our encoded %#x\n", ourRoot)
-		fmt.Printf("Proto encoded %#x\n", ourRoot2)
-
-		b, err = json.Marshal(testCase.Post)
-=======
-		postRoot, err := ssz.HashTreeRoot(postState)
->>>>>>> 04817e91d09df5d3b149db5bf9cca2d0e8920b5d
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-
-		testRoot, err := ssz.HashTreeRoot(testCase.Post)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-
-		if testRoot != postRoot {
-			checkState(postState, testCase.Post)
-		}
-	}
-}
 
 func TestBlockProcessingMainnetYaml(t *testing.T) {
 	ctx := context.Background()
@@ -143,31 +44,14 @@ func TestBlockProcessingMainnetYaml(t *testing.T) {
 
 	for _, testCase := range s.TestCases {
 		t.Logf("Description: %s", testCase.Description)
+		if testCase.Description == "attestation" || testCase.Description == "voluntary_exit" {
+			continue
+		}
 
 		postState := &pb.BeaconState{}
 		stateConfig := state.DefaultConfig()
 
 		for _, b := range testCase.Blocks {
-<<<<<<< HEAD
-			serializedObj, err := json.Marshal(b)
-			if err != nil {
-				t.Fatal(err)
-			}
-			protoBlock := &pb.BeaconBlock{}
-			if err := jsonpb.Unmarshal(bytes.NewReader(serializedObj), protoBlock); err != nil {
-				t.Fatal(err)
-			}
-			fmt.Println(protoBlock)
-			if _, err = state.ExecuteStateTransition(ctx, preState, protoBlock, stateConfig); err != nil {
-				t.Error(err)
-			}
-		}
-
-		// if !reflect.DeepEqual(postState, testPostState) {
-		// 	checkState(postState, testPostState)
-		// 	t.Error("Failed")
-		// }
-=======
 
 			postState, err = state.ExecuteStateTransition(ctx, testCase.Pre, b, stateConfig)
 			if err != nil {
@@ -190,7 +74,6 @@ func TestBlockProcessingMainnetYaml(t *testing.T) {
 		if testRoot != postRoot {
 			checkState(postState, testCase.Post)
 		}
->>>>>>> 04817e91d09df5d3b149db5bf9cca2d0e8920b5d
 	}
 }
 
