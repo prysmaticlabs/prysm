@@ -166,11 +166,11 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 	}
 
 	var attestingIndices []uint64
-	for _, indice := range committee {
-		if mathutil.CeilDiv8(int(indice)) > len(bitfield) {
+	for i, indice := range committee {
+		if mathutil.CeilDiv8(int(i)) > len(bitfield) {
 			continue
 		}
-		if bitutil.BitfieldBit(bitfield, int(indice)) == 1 {
+		if bitutil.BitfieldBit(bitfield, int(i)) == 1 {
 			attestingIndices = append(attestingIndices, indice)
 		}
 	}
