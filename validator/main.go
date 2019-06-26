@@ -154,6 +154,7 @@ contract in order to activate the validator client`,
 		debug.CPUProfileFlag,
 		debug.TraceFlag,
 		cmd.LogFileName,
+		cmd.EnableUPnPFlag,
 	}
 
 	app.Flags = append(app.Flags, featureconfig.ValidatorFlags...)

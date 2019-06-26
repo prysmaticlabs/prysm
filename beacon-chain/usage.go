@@ -93,6 +93,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PPrivKey,
 			cmd.P2PWhitelist,
 			cmd.StaticPeers,
+			cmd.EnableUPnPFlag,
 		},
 	},
 	{
