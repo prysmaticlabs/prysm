@@ -17,8 +17,6 @@ func BlockSigningRoot(bb *pb.BeaconBlock) ([32]byte, error) {
 		Slot:       bb.Slot,
 		ParentRoot: bb.ParentRoot,
 		BodyRoot:   bodyRoot[:],
-		StateRoot:  bb.StateRoot,
-		Signature:  bb.Signature,
 	}
 	return ssz.SigningRoot(header)
 }
