@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"math/big"
 
-	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -42,9 +42,9 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
 
-	parentRoot, err := ssz.TreeHash(parent)
+	parentRoot, err := blockutil.BlockSigningRoot(parent)
 	if err != nil {
-		return nil, fmt.Errorf("could not get parent block root: %v", err)
+		return nil, fmt.Errorf("could not get parent block signing root: %v", err)
 	}
 
 	// Construct block body
@@ -99,7 +99,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
-	root, err := hashutil.HashBeaconBlock(blk)
+	root, err := blockutil.BlockSigningRoot(blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
@@ -251,7 +251,7 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockRoot)
+	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash)
 	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, h)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
@@ -278,13 +278,13 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
 
-	allPendingDeps := ps.beaconDB.PendingDeposits(ctx, bNum)
+	allPendingContainers := ps.beaconDB.PendingContainers(ctx, bNum)
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
-	var pendingDeps []*pbp2p.Deposit
-	for _, dep := range allPendingDeps {
-		if dep.Index >= beaconState.DepositIndex {
+	var pendingDeps []*db.DepositContainer
+	for _, dep := range allPendingContainers {
+		if uint64(dep.Index) >= beaconState.DepositIndex {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}
@@ -294,7 +294,7 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 		if uint64(i) == params.BeaconConfig().MaxDeposits {
 			break
 		}
-		pendingDeps[i], err = constructMerkleProof(depositTrie, pendingDeps[i])
+		pendingDeps[i].Deposit, err = constructMerkleProof(depositTrie, pendingDeps[i].Index, pendingDeps[i].Deposit)
 		if err != nil {
 			return nil, err
 		}
@@ -302,7 +302,7 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 	// Limit the return of pending deposits to not be more than max deposits allowed in block.
 	var pendingDeposits []*pbp2p.Deposit
 	for i := 0; i < len(pendingDeps) && i < int(params.BeaconConfig().MaxDeposits); i++ {
-		pendingDeposits = append(pendingDeposits, pendingDeps[i])
+		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
 	return pendingDeposits, nil
 }

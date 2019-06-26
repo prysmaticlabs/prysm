@@ -544,3 +544,87 @@ func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
 	}
 }
 
+func TestGenesisBlock_OK(t *testing.T) {
+	testAcc, err := contracts.Setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.ContractAddr,
+		Reader:          &goodReader{},
+		Logger:          testAcc.Backend,
+		HTTPLogger:      &goodLogger{},
+		ContractBackend: testAcc.Backend,
+		BeaconDB:        &db.BeaconDB{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	testAcc.Backend.Commit()
+
+	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+
+	var pubkey [48]byte
+	var withdrawalCreds [32]byte
+	var sig [96]byte
+	copy(pubkey[:], []byte("pubkey"))
+	copy(sig[:], []byte("sig"))
+	copy(withdrawalCreds[:], []byte("withdrawCreds"))
+
+	data := &pb.DepositData{
+		Pubkey:                pubkey[:],
+		Signature:             sig[:],
+		WithdrawalCredentials: withdrawalCreds[:],
+	}
+
+	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.GasLimit = 1000000
+
+	ok, err := web3Service.HasChainStartLogOccurred()
+	if err != nil {
+		t.Fatalf("Could not check if chain start log occurred: %v", err)
+	}
+	if ok {
+		t.Error("Expected chain start log to not have occurred")
+	}
+
+	// 8 Validators are used as size required for beacon-chain to start. This number
+	// is defined in the deposit contract as the number required for the testnet.
+	for i := 0; i < depositsReqForChainStart; i++ {
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+			t.Fatalf("Could not deposit to deposit contract %v", err)
+		}
+		testAcc.Backend.Commit()
+	}
+
+	// // We add in another 8 deposits after chainstart.
+	// for i := 0; i < depositsReqForChainStart; i++ {
+	// 	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	// 	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+	// 		t.Fatalf("Could not deposit to deposit contract %v", err)
+	// 	}
+	// 	testAcc.Backend.Commit()
+	// }
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.depositContractAddress,
+		},
+	}
+
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	for _, log := range logs {
+		web3Service.ProcessLog(log)
+	}
+
+	if !web3Service.chainStarted {
+		t.Error("genesis wasn't trigerred")
+	}
+}

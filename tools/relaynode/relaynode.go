@@ -19,6 +19,7 @@ import (
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	_ "go.uber.org/automaxprocs"
 )
 
 var (

@@ -18,9 +18,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -151,13 +151,12 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
 
 var _ = p2p.Broadcaster(&mockBroadcaster{})
 
-func createPreChainStartDeposit(pk []byte, index uint64) *pb.Deposit {
+func createPreChainStartDeposit(pk []byte) *pb.Deposit {
 	balance := params.BeaconConfig().MaxDepositAmount
 	depositData := &pb.DepositData{Pubkey: pk, Amount: balance}
 
 	return &pb.Deposit{
-		Index: index,
-		Data:  depositData,
+		Data: depositData,
 	}
 }
 
@@ -166,7 +165,7 @@ func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *pb.BeaconBloc
 	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
-	parentHash, err := hashutil.HashBeaconBlock(genesis)
+	parentHash, err := blockutil.BlockSigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("unable to get tree hash root of canonical head: %v", err)
 	}

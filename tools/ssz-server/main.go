@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 
 	ssz "github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	_ "go.uber.org/automaxprocs"
 )
 
 func main() {
@@ -73,7 +73,7 @@ func decodeDepositData(w http.ResponseWriter, r *http.Request) {
 
 	di := &pb.DepositData{}
 
-	if err := ssz.Decode(bytes.NewReader(encodedData), di); err != nil {
+	if err := ssz.Unmarshal(encodedData, di); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := fmt.Fprintf(w, "Failed to decode SSZ data: %v", err)
 		if err != nil {

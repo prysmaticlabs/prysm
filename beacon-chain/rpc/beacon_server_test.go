@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -11,12 +12,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	dbs "github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -27,6 +29,8 @@ import (
 )
 
 var closedContext = "context closed"
+var mockSig [96]byte
+var mockCreds [32]byte
 
 type faultyPOWChainService struct {
 	chainStartFeed *event.Feed
@@ -221,6 +225,344 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Sending ChainStart log and genesis time to connected validator clients")
 }
 
+func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	beaconServer := &BeaconServer{
+		beaconDB: db,
+		powChainService: &faultyPOWChainService{
+			hashesByHeight: make(map[int][]byte),
+		},
+	}
+	beaconState := &pbp2p.BeaconState{
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash: []byte{'a'},
+		},
+		Eth1DataVotes: []*pbp2p.Eth1Data{},
+	}
+	if err := beaconServer.beaconDB.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
+	if _, err := beaconServer.eth1Data(context.Background()); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error %v, received %v", want, err)
+	}
+}
+
+func TestEth1Data_EmptyVotesOk(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	deps := []*dbs.DepositContainer{
+		{
+			Index: 0,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index: 1,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+	depsData := [][]byte{}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("could not setup deposit trie: %v", err)
+	}
+	for _, dp := range deps {
+		db.InsertDeposit(context.Background(), dp.Deposit, big.NewInt(0), dp.Index, depositTrie.Root())
+		depHash, err := hashutil.DepositHash(dp.Deposit.Data)
+		if err != nil {
+			t.Errorf("Could not hash deposit")
+		}
+		depsData = append(depsData, depHash[:])
+	}
+	depositRoot := depositTrie.Root()
+	beaconState := &pbp2p.BeaconState{
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash:   []byte("hash0"),
+			DepositRoot: depositRoot[:],
+		},
+		Eth1DataVotes: []*pbp2p.Eth1Data{},
+	}
+
+	powChainService := &mockPOWChainService{
+		latestBlockNumber: height,
+		hashesByHeight: map[int][]byte{
+			0: []byte("hash0"),
+			1: beaconState.LatestEth1Data.DepositRoot,
+		},
+	}
+	beaconServer := &BeaconServer{
+		beaconDB:        db,
+		powChainService: powChainService,
+	}
+
+	if err := beaconServer.beaconDB.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	result, err := beaconServer.eth1Data(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// If the data vote objects are empty, the deposit root should be the one corresponding
+	// to the deposit contract in the powchain service, fetched using powChainService.DepositRoot()
+	if !bytes.Equal(result.DepositRoot, depositRoot[:]) {
+		t.Errorf(
+			"Expected deposit roots to match, received %#x == %#x",
+			result.DepositRoot,
+			depositRoot,
+		)
+	}
+}
+
+func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	ctx := context.Background()
+	eth1DataVotes := []*pbp2p.Eth1Data{
+		{
+			BlockHash:    []byte("block0"),
+			DepositRoot:  []byte("deposit0001234567890123456789012"),
+			DepositCount: 2,
+		},
+		{
+			BlockHash:    []byte("block1"),
+			DepositRoot:  []byte("deposit1001234567890123456789012"),
+			DepositCount: 2,
+		},
+		{
+			BlockHash:    []byte("block1"),
+			DepositRoot:  []byte("deposit1001234567890123456789012"),
+			DepositCount: 2,
+		},
+		// We include the case in which the vote counts might match, and in that
+		// case we break ties by checking which block hash has the highest
+		// block height in the eth1.0 chain.
+		{
+			BlockHash:    []byte("block2"),
+			DepositRoot:  []byte("deposit2001234567890123456789012"),
+			DepositCount: 2,
+		},
+		{
+			BlockHash:    []byte("block2"),
+			DepositRoot:  []byte("deposit2001234567890123456789012"),
+			DepositCount: 2,
+		},
+		{
+			BlockHash:    []byte("block2"),
+			DepositRoot:  []byte("deposit2001234567890123456789012"),
+			DepositCount: 2,
+		},
+		{
+			BlockHash:    []byte("block4"),
+			DepositRoot:  []byte("deposit3001234567890123456789012"),
+			DepositCount: 2,
+		},
+		{
+			BlockHash:    []byte("block4"),
+			DepositRoot:  []byte("deposit3001234567890123456789012"),
+			DepositCount: 2,
+		},
+		{
+			BlockHash:    []byte("block4"),
+			DepositRoot:  []byte("deposit3001234567890123456789012"),
+			DepositCount: 2,
+		},
+		// We include a case with higher vote count but wrong deposit count
+		// that shouldnt be counted at all.
+		{
+			BlockHash:    []byte("block4"),
+			DepositRoot:  []byte("deposit4001234567890123456789012"),
+			DepositCount: 1,
+		},
+		{
+			BlockHash:    []byte("block4"),
+			DepositRoot:  []byte("deposit4001234567890123456789012"),
+			DepositCount: 1,
+		},
+		{
+			BlockHash:    []byte("block4"),
+			DepositRoot:  []byte("deposit4001234567890123456789012"),
+			DepositCount: 1,
+		},
+		{
+			BlockHash:    []byte("block4"),
+			DepositRoot:  []byte("deposit4001234567890123456789012"),
+			DepositCount: 1,
+		},
+	}
+
+	var mockSig [96]byte
+	var mockCreds [32]byte
+	deposits := []*dbs.DepositContainer{
+		{
+			Index: 0,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index: 1,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+
+	for _, dp := range deposits {
+		var root [32]byte
+		copy(root[:], eth1DataVotes[dp.Index].DepositRoot)
+		db.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, root)
+	}
+	beaconState := &pbp2p.BeaconState{
+		Eth1DataVotes: eth1DataVotes,
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash:   []byte("stub"),
+			DepositRoot: []byte("first"),
+		},
+	}
+	if err := db.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	currentHeight := params.BeaconConfig().Eth1FollowDistance + 9
+	beaconServer := &BeaconServer{
+		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			latestBlockNumber: big.NewInt(int64(currentHeight)),
+			hashesByHeight: map[int][]byte{
+				0: beaconState.LatestEth1Data.DepositRoot,
+				// adding some not relevant blocks heights to test that search works
+				1: {1},
+				2: beaconState.Eth1DataVotes[0].BlockHash,
+				3: {3},
+				4: beaconState.Eth1DataVotes[1].BlockHash,
+				5: {5},
+				6: beaconState.Eth1DataVotes[3].BlockHash,
+				7: {7},
+				// We will give the hash at index 2 in the beacon state's latest eth1 votes
+				// priority in being selected as the best vote by giving it the highest block number.
+				8: beaconState.Eth1DataVotes[2].BlockHash,
+				9: {9},
+			},
+		},
+	}
+
+	eth1data, err := beaconServer.eth1Data(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Vote at index 2 should have won the best vote selection mechanism as it had the highest block number
+	// despite being tied at vote count with the vote at index 3.
+	if !bytes.Equal(eth1data.BlockHash, beaconState.Eth1DataVotes[2].BlockHash) {
+		t.Errorf(
+			"Expected block hashes to match, received %#x == %#x",
+			eth1data.BlockHash,
+			beaconState.Eth1DataVotes[2].BlockHash,
+		)
+	}
+	if !bytes.Equal(eth1data.DepositRoot, beaconState.Eth1DataVotes[2].DepositRoot) {
+		t.Errorf(
+			"Expected deposit roots to match, received %#x == %#x",
+			eth1data.DepositRoot,
+			beaconState.Eth1DataVotes[2].DepositRoot,
+		)
+	}
+}
+
+func Benchmark_Eth1Data(b *testing.B) {
+	db := internal.SetupDB(b)
+	defer internal.TeardownDB(b, db)
+	ctx := context.Background()
+
+	hashesByHeight := make(map[int][]byte)
+
+	beaconState := &pbp2p.BeaconState{
+		Eth1DataVotes: []*pbp2p.Eth1Data{},
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash: []byte("stub"),
+		},
+	}
+	var mockSig [96]byte
+	var mockCreds [32]byte
+	deposits := []*dbs.DepositContainer{
+		{
+			Index: 0,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index: 1,
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+
+	for i, dp := range deposits {
+		var root [32]byte
+		copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)})
+		db.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, root)
+	}
+	numOfVotes := 1000
+	for i := 0; i < numOfVotes; i++ {
+		blockhash := []byte{'b', 'l', 'o', 'c', 'k', byte(i)}
+		deposit := []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)}
+		beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, &pbp2p.Eth1Data{
+			BlockHash:   blockhash,
+			DepositRoot: deposit,
+		})
+		hashesByHeight[i] = blockhash
+	}
+	hashesByHeight[numOfVotes+1] = []byte("stub")
+
+	if err := db.SaveState(ctx, beaconState); err != nil {
+		b.Fatal(err)
+	}
+	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
+	beaconServer := &BeaconServer{
+		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			latestBlockNumber: big.NewInt(int64(currentHeight)),
+			hashesByHeight:    hashesByHeight,
+		},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := beaconServer.eth1Data(context.Background())
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func TestBlockTree_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -251,7 +593,7 @@ func TestBlockTree_OK(t *testing.T) {
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
+	justifiedRoot, _ := blockutil.BlockSigningRoot(justifiedBlock)
 
 	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
 	b1 := &pbp2p.BeaconBlock{
@@ -259,7 +601,7 @@ func TestBlockTree_OK(t *testing.T) {
 		ParentRoot: justifiedRoot[:],
 		StateRoot:  []byte{0x1},
 	}
-	b1Root, _ := hashutil.HashBeaconBlock(b1)
+	b1Root, _ := blockutil.BlockSigningRoot(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
 		ValidatorRegistry: validators,
@@ -272,7 +614,7 @@ func TestBlockTree_OK(t *testing.T) {
 		ParentRoot: justifiedRoot[:],
 		StateRoot:  []byte{0x2},
 	}
-	b2Root, _ := hashutil.HashBeaconBlock(b2)
+	b2Root, _ := blockutil.BlockSigningRoot(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
 		ValidatorRegistry: validators,
@@ -285,7 +627,7 @@ func TestBlockTree_OK(t *testing.T) {
 		ParentRoot: justifiedRoot[:],
 		StateRoot:  []byte{0x3},
 	}
-	b3Root, _ := hashutil.HashBeaconBlock(b3)
+	b3Root, _ := blockutil.BlockSigningRoot(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
 		ValidatorRegistry: validators,
@@ -298,7 +640,7 @@ func TestBlockTree_OK(t *testing.T) {
 		ParentRoot: b1Root[:],
 		StateRoot:  []byte{0x4},
 	}
-	b4Root, _ := hashutil.HashBeaconBlock(b4)
+	b4Root, _ := blockutil.BlockSigningRoot(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              4,
 		ValidatorRegistry: validators,
@@ -311,7 +653,7 @@ func TestBlockTree_OK(t *testing.T) {
 		ParentRoot: b3Root[:],
 		StateRoot:  []byte{0x5},
 	}
-	b5Root, _ := hashutil.HashBeaconBlock(b5)
+	b5Root, _ := blockutil.BlockSigningRoot(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              5,
 		ValidatorRegistry: validators,
@@ -437,13 +779,8 @@ func TestBlockTree_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sort.Slice(resp.Tree, func(i, j int) bool {
-		return string(resp.Tree[i].Block.StateRoot) < string(resp.Tree[j].Block.StateRoot)
-	})
-	for i := range resp.Tree {
-		if !proto.Equal(resp.Tree[i].Block, tree[i].Block) {
-			t.Errorf("Expected %v, received %v", tree[i].Block, resp.Tree[i].Block)
-		}
+	if len(resp.Tree) != 2 {
+		t.Errorf("Wanted len %d, received %d", 2, len(resp.Tree))
 	}
 }
 
@@ -472,14 +809,14 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
+	justifiedRoot, _ := blockutil.BlockSigningRoot(justifiedBlock)
 	validators := []*pbp2p.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
 	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
 	b1 := &pbp2p.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b1Root, _ := hashutil.HashBeaconBlock(b1)
+	b1Root, _ := blockutil.BlockSigningRoot(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
 		ValidatorRegistry: validators,
@@ -491,7 +828,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b2Root, _ := hashutil.HashBeaconBlock(b2)
+	b2Root, _ := blockutil.BlockSigningRoot(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
 		ValidatorRegistry: validators,
@@ -503,7 +840,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b3Root, _ := hashutil.HashBeaconBlock(b3)
+	b3Root, _ := blockutil.BlockSigningRoot(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
 		ValidatorRegistry: validators,
@@ -515,7 +852,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		Slot:       4,
 		ParentRoot: b1Root[:],
 	}
-	b4Root, _ := hashutil.HashBeaconBlock(b4)
+	b4Root, _ := blockutil.BlockSigningRoot(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              4,
 		ValidatorRegistry: validators,
@@ -527,7 +864,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		Slot:       5,
 		ParentRoot: b3Root[:],
 	}
-	b5Root, _ := hashutil.HashBeaconBlock(b5)
+	b5Root, _ := blockutil.BlockSigningRoot(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              5,
 		ValidatorRegistry: validators,
@@ -686,13 +1023,13 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
+	justifiedRoot, _ := blockutil.BlockSigningRoot(justifiedBlock)
 	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
 	b1 := &pbp2p.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b1Root, _ := hashutil.HashBeaconBlock(b1)
+	b1Root, _ := blockutil.BlockSigningRoot(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
 		ValidatorRegistry: validators,
@@ -704,7 +1041,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b2Root, _ := hashutil.HashBeaconBlock(b2)
+	b2Root, _ := blockutil.BlockSigningRoot(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
 		ValidatorRegistry: validators,
@@ -716,7 +1053,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b3Root, _ := hashutil.HashBeaconBlock(b3)
+	b3Root, _ := blockutil.BlockSigningRoot(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              3,
 		ValidatorRegistry: validators,
@@ -728,7 +1065,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		Slot:       4,
 		ParentRoot: b1Root[:],
 	}
-	b4Root, _ := hashutil.HashBeaconBlock(b4)
+	b4Root, _ := blockutil.BlockSigningRoot(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              4,
 		ValidatorRegistry: validators,
@@ -740,7 +1077,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		Slot:       5,
 		ParentRoot: b3Root[:],
 	}
-	b5Root, _ := hashutil.HashBeaconBlock(b5)
+	b5Root, _ := blockutil.BlockSigningRoot(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
 		Slot:              5,
 		ValidatorRegistry: validators,

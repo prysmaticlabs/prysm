@@ -103,7 +103,8 @@ func ProcessBlockHeader(
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
 	}
-	parentRoot, err := ssz.TreeHash(beaconState.LatestBlockHeader)
+
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +113,7 @@ func ProcessBlockHeader(
 			"parent root %#x does not match the latest block header signing root in state %#x",
 			block.ParentRoot, parentRoot)
 	}
-	bodyRoot, err := ssz.TreeHash(block.Body)
+	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +195,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
-	domain := helpers.DomainVersion(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
@@ -354,19 +355,19 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
 	data2 := att2.Data
-	if !isSlashableAttestationData(data1, data2) {
+	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
-	if err := ValidateIndexedAttestation(att1, verifySignatures); err != nil {
+	if err := VerifyIndexedAttestation(att1, verifySignatures); err != nil {
 		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
-	if err := ValidateIndexedAttestation(att2, verifySignatures); err != nil {
+	if err := VerifyIndexedAttestation(att2, verifySignatures); err != nil {
 		return fmt.Errorf("could not validate indexed attestation: %v", err)
 	}
 	return nil
 }
 
-// isSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
+// IsSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
 //
 // Spec pseudocode definition:
 //   return (
@@ -375,66 +376,13 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 //   # Surround vote
 //   (data_1.source_epoch < data_2.source_epoch and data_2.target_epoch < data_1.target_epoch)
 //   )
-func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
+func IsSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 	// Inner attestation data structures for the votes should not be equal,
 	// as that would mean both votes are the same and therefore no slashing
 	// should occur.
-	isDoubleVote := proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
+	isDoubleVote := !proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
 	isSurroundVote := data1.SourceEpoch < data2.SourceEpoch && data2.TargetEpoch < data1.TargetEpoch
 	return isDoubleVote || isSurroundVote
-}
-
-// ValidateIndexedAttestation verifies an attestation's custody and bls bit information.
-//
-// Spec pseudocode definition:
-//  def validate_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> None:
-//    """
-//    Verify validity of ``indexed_attestation``.
-//    """
-//    bit_0_indices = indexed_attestation.custody_bit_0_indices
-//    bit_1_indices = indexed_attestation.custody_bit_1_indices
-//
-//    # Verify no index has custody bit equal to 1 [to be removed in phase 1]
-//    assert len(bit_1_indices) == 0
-//    # Verify max number of indices
-//    assert len(bit_0_indices) + len(bit_1_indices) <= MAX_INDICES_PER_ATTESTATION
-//    # Verify index sets are disjoint
-//    assert len(set(bit_0_indices).intersection(bit_1_indices)) == 0
-//    # Verify indices are sorted
-//    assert bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)
-//    # Verify aggregate signature
-//    assert bls_verify_multiple(
-//        pubkeys=[
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in bit_0_indices]),
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in bit_1_indices]),
-//        ],
-//        message_hashes=[
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
-//        ],
-//        signature=indexed_attestation.signature,
-//        domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target_epoch),
-func ValidateIndexedAttestation(attestation *pb.IndexedAttestation, verifySignatures bool) error {
-	bit0Indices := attestation.CustodyBit_0Indices
-	bit1Indices := attestation.CustodyBit_1Indices
-	if len(bit1Indices) != 0 {
-		return fmt.Errorf("expected no bit 1 indices, received %d", len(bit1Indices))
-	}
-	intersection := sliceutil.IntersectionUint64(bit0Indices, bit1Indices)
-	if len(intersection) != 0 {
-		return fmt.Errorf("expected disjoint bit indices, received %d bits in common", intersection)
-	}
-	if uint64(len(bit0Indices)+len(bit1Indices)) > params.BeaconConfig().MaxIndicesPerAttestation {
-		return fmt.Errorf("exceeded max number of bit indices: %d", len(bit0Indices)+len(bit1Indices))
-	}
-	if !sliceutil.IsUint64Sorted(bit0Indices) || !sliceutil.IsUint64Sorted(bit1Indices) {
-		return errors.New("bit indices not sorted")
-	}
-	if verifySignatures {
-		// TODO(#258): Implement BLS verify of attestation bit information.
-		return nil
-	}
-	return nil
 }
 
 func slashableAttesterIndices(slashing *pb.AttesterSlashing) []uint64 {
@@ -591,7 +539,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 		return nil, fmt.Errorf("expected crosslink end epoch %d, received %d",
 			endEpoch, data.Crosslink.EndEpoch)
 	}
-	crosslinkParentRoot, err := ssz.TreeHash(parentCrosslink)
+	crosslinkParentRoot, err := ssz.HashTreeRoot(parentCrosslink)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash parent crosslink: %v", err)
 	}
@@ -610,7 +558,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	if err != nil {
 		return nil, fmt.Errorf("could not convert to indexed attestation: %v", err)
 	}
-	if err := ValidateIndexedAttestation(indexedAtt, verifySignatures); err != nil {
+	if err := VerifyIndexedAttestation(indexedAtt, verifySignatures); err != nil {
 		return nil, fmt.Errorf("could not verify indexed attestation: %v", err)
 	}
 	return beaconState, nil
@@ -633,33 +581,85 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 //         signature=attestation.signature,
 //     )
 func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
-	attI, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
+	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get attesting indices: %v", err)
 	}
 	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
+	cb1Map := make(map[uint64]bool)
+	for _, idx := range cb1i {
+		cb1Map[idx] = true
+	}
+	cb0i := []uint64{}
+	for _, idx := range attIndices {
+		if !cb1Map[idx] {
+			cb0i = append(cb0i, idx)
+		}
+	}
 	inAtt := &pb.IndexedAttestation{
 		Data:                attestation.Data,
 		Signature:           attestation.Signature,
-		CustodyBit_0Indices: []uint64{},
-		CustodyBit_1Indices: []uint64{},
-	}
-	if len(cb1i) > 0 {
-		cb1iMap := make(map[uint64]bool)
-		for _, in := range cb1i {
-			cb1iMap[in] = true
-		}
-		cb0i := []uint64{}
-		for _, index := range attI {
-			_, ok := cb1iMap[index]
-			if !ok {
-				cb0i = append(cb0i, index)
-			}
-		}
-		inAtt.CustodyBit_0Indices = cb0i
-		inAtt.CustodyBit_1Indices = cb1i
+		CustodyBit_0Indices: cb0i,
+		CustodyBit_1Indices: cb1i,
 	}
 	return inAtt, nil
+}
+
+// VerifyIndexedAttestation determines the validity of an indexed attestation.
+// WIP - signing is not implemented until BLS is integrated into Prysm.
+//
+// Spec pseudocode definition:
+//  def verify_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+//    """
+//    Verify validity of ``indexed_attestation`` fields.
+//    """
+//    custody_bit_0_indices = indexed_attestation.custody_bit_0_indices
+//    custody_bit_1_indices = indexed_attestation.custody_bit_1_indices
+//
+//    # Ensure no duplicate indices across custody bits
+//    assert len(set(custody_bit_0_indices).intersection(set(custody_bit_1_indices))) == 0
+//
+//    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
+//        return False
+//
+//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
+//        return False
+//
+//    return bls_verify_multiple(
+//        pubkeys=[
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
+//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_indices]),
+//        ],
+//        message_hashes=[
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
+//        ],
+//        signature=indexed_attestation.signature,
+//        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
+//    )
+func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
+	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
+	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
+
+	// To be removed in phase 1
+	if len(custodyBit1Indices) > 0 {
+		return fmt.Errorf("expected no bit 1 indices, received %v", len(custodyBit1Indices))
+	}
+
+	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
+	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
+	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
+		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)
+	}
+	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
+	if len(custodyBitIntersection) != 0 {
+		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
+	}
+
+	if verifySignatures {
+		// TODO(#2307): Update using BLS signature verification.
+	}
+	return nil
 }
 
 // ProcessValidatorDeposits is one of the operations performed on each processed
@@ -677,6 +677,11 @@ func ProcessValidatorDeposits(
 ) (*pb.BeaconState, error) {
 	var err error
 	deposits := block.Body.Deposits
+	// Verify that outstanding deposits are processed up to the maximum number of deposits.
+	maxDeposits := beaconState.LatestEth1Data.DepositCount - beaconState.DepositIndex
+	if params.BeaconConfig().MaxDepositAmount < maxDeposits {
+		maxDeposits = params.BeaconConfig().MaxDepositAmount
+	}
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
 		return nil, fmt.Errorf(
 			"number of deposits (%d) exceeds allowed threshold of %d",
@@ -689,7 +694,7 @@ func ProcessValidatorDeposits(
 	for _, deposit := range deposits {
 		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap, verifySignatures, true)
 		if err != nil {
-			return nil, fmt.Errorf("could not process deposit index %d: %v", deposit.Index, err)
+			return nil, fmt.Errorf("could not process deposit from %#x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
 		}
 	}
 	return beaconState, nil
@@ -748,7 +753,7 @@ func ProcessDeposit(
 	verifyTree bool,
 ) (*pb.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
-		return nil, fmt.Errorf("could not verify deposit #%d: %v", deposit.Index, err)
+		return nil, fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
 	}
 	beaconState.DepositIndex++
 	pubKey := deposit.Data.Pubkey
@@ -783,14 +788,14 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 	if verifyTree {
 		// Verify Merkle proof of deposit and deposit trie root.
 		receiptRoot := beaconState.LatestEth1Data.DepositRoot
-		leaf, err := ssz.TreeHash(deposit.Data)
+		leaf, err := ssz.HashTreeRoot(deposit.Data)
 		if err != nil {
 			return fmt.Errorf("could not tree hash deposit data: %v", err)
 		}
 		if ok := trieutil.VerifyMerkleProof(
 			receiptRoot,
 			leaf[:],
-			int(deposit.Index),
+			int(beaconState.DepositIndex),
 			deposit.Proof,
 		); !ok {
 			return fmt.Errorf(
@@ -798,15 +803,6 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 				receiptRoot,
 			)
 		}
-	}
-
-	// Deposits must be processed in order
-	if deposit.Index != beaconState.DepositIndex {
-		return fmt.Errorf(
-			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
-			beaconState.DepositIndex,
-			deposit.Index,
-		)
 	}
 
 	return nil
@@ -939,6 +935,18 @@ func ProcessTransfers(
 			params.BeaconConfig().MaxTransfers,
 		)
 	}
+	// Verify there are no duplicate transfers.
+	transferSet := make(map[[32]byte]bool)
+	for _, transfer := range transfers {
+		h, err := hashutil.HashProto(transfer)
+		if err != nil {
+			return nil, fmt.Errorf("could not hash transfer: %v", err)
+		}
+		if transferSet[h] {
+			return nil, fmt.Errorf("duplicate transfer: %v", transfer)
+		}
+		transferSet[h] = true
+	}
 	for idx, transfer := range transfers {
 		if err := verifyTransfer(beaconState, transfer, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify transfer %d: %v", idx, err)
@@ -1003,7 +1011,7 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	// Verify that the pubkey is valid.
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
 	hashed := hashutil.Hash(transfer.Pubkey)
-	buf = append(buf, hashed[:]...)
+	buf = append(buf, hashed[:][1:]...)
 	if !bytes.Equal(sender.WithdrawalCredentials, buf) {
 		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
 	}

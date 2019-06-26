@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -46,6 +47,20 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var slashings []*pb.ProposerSlashing
 	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings+1; i++ {
 		slashings = append(slashings, &pb.ProposerSlashing{})
@@ -58,13 +73,14 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		Slot: 0,
+		ParentRoot: parentRoot[:],
+		Slot:       0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
 			ProposerSlashings: slashings,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -97,22 +113,35 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings+1; i++ {
 		attesterSlashings = append(attesterSlashings, &pb.AttesterSlashing{})
 	}
-
 	epoch := helpers.CurrentEpoch(beaconState)
 	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
-		Slot: 0,
+		ParentRoot: parentRoot[:],
+		Slot:       0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
 			ProposerSlashings: slashings,
 			AttesterSlashings: attesterSlashings,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -156,7 +185,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -171,15 +200,28 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxAttestations+1; i++ {
 		blockAttestations = append(blockAttestations, &pb.Attestation{})
 	}
-
 	epoch := helpers.CurrentEpoch(beaconState)
 	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
-		Slot: 0,
+		ParentRoot: parentRoot[:],
+		Slot:       0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
 			ProposerSlashings: proposerSlashings,
@@ -187,7 +229,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Attestations:      blockAttestations,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -232,7 +274,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -269,8 +311,23 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits+1; i++ {
 		exits = append(exits, &pb.VoluntaryExit{})
 	}
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
-		Slot: 4,
+		ParentRoot: parentRoot[:],
+		Slot:       4,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      []byte{},
 			ProposerSlashings: proposerSlashings,
@@ -279,7 +336,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			VoluntaryExits:    exits,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -293,7 +350,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,6 +367,16 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesisBlock.Slot,
+		ParentRoot: genesisBlock.ParentRoot,
+		BodyRoot:   bodyRoot[:],
 	}
 	beaconState.LatestSlashedBalances = make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -331,6 +398,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				Data: &pb.AttestationData{
 					SourceEpoch: 0,
 					TargetEpoch: 0,
+					SourceRoot:  []byte{'A'},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -341,6 +409,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				Data: &pb.AttestationData{
 					SourceEpoch: 0,
 					TargetEpoch: 0,
+					SourceRoot:  []byte{'B'},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -381,8 +450,13 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Epoch:          0,
 		},
 	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
-		Slot: beaconState.Slot,
+		ParentRoot: parentRoot[:],
+		Slot:       beaconState.Slot,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      []byte{},
 			ProposerSlashings: proposerSlashings,
@@ -391,7 +465,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			VoluntaryExits:    exits,
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{2},
-				BlockRoot:   []byte{3},
+				BlockHash:   []byte{3},
 			},
 		},
 	}
@@ -404,7 +478,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.CurrentJustifiedRoot = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	encoded, err := ssz.TreeHash(beaconState.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -681,7 +755,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 			Amount: params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	leaf, err := ssz.TreeHash(deposit.Data)
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -694,7 +768,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		b.Fatalf("Could not generate proof: %v", err)
 	}
 	deposit.Proof = proof
-	deposit.Index = 0
 	root := depositTrie.Root()
 
 	// Set up randao reveal object for block
@@ -709,7 +782,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	s.ValidatorRegistry[proposerIdx].Pubkey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
-	domain := helpers.DomainVersion(s, 0, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(s, 0, params.BeaconConfig().DomainRandao)
 	epochSignature := priv.Sign(buf, domain)
 
 	// Set up transfer object for block
@@ -730,7 +803,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	s.ValidatorRegistry[3].WithdrawalCredentials = buf
 
 	// Set up attestations obj for block.
-	encoded, err := ssz.TreeHash(s.CurrentCrosslinks[0])
+	encoded, err := ssz.HashTreeRoot(s.CurrentCrosslinks[0])
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -757,7 +830,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: root[:],
-				BlockRoot:   root[:],
+				BlockHash:   root[:],
 			},
 			RandaoReveal:      epochSignature.Marshal(),
 			Attestations:      attestations,
