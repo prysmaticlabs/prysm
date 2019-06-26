@@ -8,9 +8,7 @@ go_library(
         "attester_slashing_test.yaml.go",
         "block_header_test.yaml.go",
         "block_operations.yaml.go",
-        "deposit_mainnet.yaml.go",
         "deposits_minimal.go",
-        "transfer_test.yaml.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/spectest",
     visibility = ["//visibility:public"],
@@ -33,6 +31,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/state/stateutils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",

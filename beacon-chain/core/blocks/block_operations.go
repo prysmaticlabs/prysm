@@ -636,52 +636,56 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 // WIP - signing is not implemented until BLS is integrated into Prysm.
 //
 // Spec pseudocode definition:
-//  def verify_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
-//    """
-//    Verify validity of ``indexed_attestation`` fields.
-//    """
-//    custody_bit_0_indices = indexed_attestation.custody_bit_0_indices
-//    custody_bit_1_indices = indexed_attestation.custody_bit_1_indices
+//    def validate_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> None:
+//        """
+//        Verify validity of ``indexed_attestation``.
+//        """
+//        bit_0_indices = indexed_attestation.custody_bit_0_indices
+//        bit_1_indices = indexed_attestation.custody_bit_1_indices
 //
-//    # Ensure no duplicate indices across custody bits
-//    assert len(set(custody_bit_0_indices).intersection(set(custody_bit_1_indices))) == 0
-//
-//    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
-//        return False
-//
-//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
-//        return False
-//
-//    return bls_verify_multiple(
-//        pubkeys=[
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_indices]),
-//        ],
-//        message_hashes=[
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
-//        ],
-//        signature=indexed_attestation.signature,
-//        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
-//    )
+//        # Verify no index has custody bit equal to 1 [to be removed in phase 1]
+//        assert len(bit_1_indices) == 0
+//        # Verify max number of indices
+//        assert len(bit_0_indices) + len(bit_1_indices) <= MAX_INDICES_PER_ATTESTATION
+//        # Verify index sets are disjoint
+//        assert len(set(bit_0_indices).intersection(bit_1_indices)) == 0
+//        # Verify indices are sorted
+//        assert bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)
+//        # Verify aggregate signature
+//        assert bls_verify_multiple(
+//            pubkeys=[
+//                bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_0_indices]),
+//                bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_1_indices]),
+//            ],
+//            message_hashes=[
+//                hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
+//                hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
+//            ],
+//            signature=indexed_attestation.signature,
+//            domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target_epoch),
+//        )
 func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
 	// To be removed in phase 1
-	if len(custodyBit1Indices) > 0 {
+	if len(custodyBit1Indices) != 0 {
 		return fmt.Errorf("expected no bit 1 indices, received %v", len(custodyBit1Indices))
 	}
 
 	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
 	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
-	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
+	if  totalIndicesLength > maxIndices{
 		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)
 	}
 	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
 	if len(custodyBitIntersection) != 0 {
 		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
 	}
+
+	// TODO: Verify sorted!
+	//        # Verify indices are sorted
+	//        assert bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)
 
 	if verifySignatures {
 		domain := helpers.Domain(beaconState, indexedAtt.Data.TargetEpoch, params.BeaconConfig().DomainAttestation)
