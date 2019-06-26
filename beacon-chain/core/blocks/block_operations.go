@@ -81,21 +81,22 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 // Spec pseudocode definition:
 //
 //  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
-//     # Verify that the slots match
-//     assert block.slot == state.slot
-//     # Verify that the parent matches
-//     assert block.parent_root == signing_root(state.latest_block_header)
-//     # Save current block as the new latest block
-//     state.latest_block_header = BeaconBlockHeader(
-//         slot=block.slot,
-//         parent_root=block.parent_root,
-//         body_root=hash_tree_root(block.body),
-//     )
-//     # Verify proposer is not slashed
-//     proposer = state.validator_registry[get_beacon_proposer_index(state)]
-//     assert not proposer.slashed
-//     # Verify proposer signature
-//     assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
+//    # Verify that the slots match
+//    assert block.slot == state.slot
+//    # Verify that the parent matches
+//    assert block.parent_root == signing_root(state.latest_block_header)
+//    # Save current block as the new latest block
+//    state.latest_block_header = BeaconBlockHeader(
+//        slot=block.slot,
+//        parent_root=block.parent_root,
+//        state_root=ZERO_HASH,  # Overwritten in next `process_slot` call
+//        body_root=hash_tree_root(block.body),
+//    )
+//    # Verify proposer is not slashed
+//    proposer = state.validators[get_beacon_proposer_index(state)]
+//    assert not proposer.slashed
+//    # Verify proposer signature
+//    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
 func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -117,10 +118,13 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
+	emptySig := make([]byte, 96)
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
 		BodyRoot:   bodyRoot[:],
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		Signature:  emptySig,
 	}
 
 	// Verify proposer is not slashed
@@ -133,6 +137,23 @@ func ProcessBlockHeader(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 	// TODO(#2307) Verify proposer signature.
+	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
+	if err != nil {
+		return nil, fmt.Errorf("could not deserialize proposer public key: %v", err)
+	}
+	domain := helpers.Domain(beaconState, helpers.SlotToEpoch(block.Slot), params.BeaconConfig().DomainBeaconProposer)
+	sig, err := bls.SignatureFromBytes(block.Signature)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert bytes to signature: %v", err)
+	}
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not sign root for header: %v", err)
+	}
+	if !sig.Verify(root[:], pub, domain) {
+		return nil, fmt.Errorf("proposer slashing signature did not verify")
+	}
+
 	return beaconState, nil
 }
 
@@ -607,7 +628,12 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 	if err != nil {
 		return nil, fmt.Errorf("could not get attesting indices: %v", err)
 	}
-	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
+	cb1i, err := helpers.AttestingIndices(state, attestation.Data,
+		attestation.CustodyBitfield)
+	if err != nil {
+		return nil, err
+	}
+
 	cb1Map := make(map[uint64]bool)
 	for _, idx := range cb1i {
 		cb1Map[idx] = true
@@ -631,52 +657,56 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 // WIP - signing is not implemented until BLS is integrated into Prysm.
 //
 // Spec pseudocode definition:
-//  def verify_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
-//    """
-//    Verify validity of ``indexed_attestation`` fields.
-//    """
-//    custody_bit_0_indices = indexed_attestation.custody_bit_0_indices
-//    custody_bit_1_indices = indexed_attestation.custody_bit_1_indices
+//    def validate_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> None:
+//        """
+//        Verify validity of ``indexed_attestation``.
+//        """
+//        bit_0_indices = indexed_attestation.custody_bit_0_indices
+//        bit_1_indices = indexed_attestation.custody_bit_1_indices
 //
-//    # Ensure no duplicate indices across custody bits
-//    assert len(set(custody_bit_0_indices).intersection(set(custody_bit_1_indices))) == 0
-//
-//    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
-//        return False
-//
-//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
-//        return False
-//
-//    return bls_verify_multiple(
-//        pubkeys=[
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_indices]),
-//        ],
-//        message_hashes=[
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
-//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
-//        ],
-//        signature=indexed_attestation.signature,
-//        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
-//    )
+//        # Verify no index has custody bit equal to 1 [to be removed in phase 1]
+//        assert len(bit_1_indices) == 0
+//        # Verify max number of indices
+//        assert len(bit_0_indices) + len(bit_1_indices) <= MAX_INDICES_PER_ATTESTATION
+//        # Verify index sets are disjoint
+//        assert len(set(bit_0_indices).intersection(bit_1_indices)) == 0
+//        # Verify indices are sorted
+//        assert bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)
+//        # Verify aggregate signature
+//        assert bls_verify_multiple(
+//            pubkeys=[
+//                bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_0_indices]),
+//                bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_1_indices]),
+//            ],
+//            message_hashes=[
+//                hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
+//                hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
+//            ],
+//            signature=indexed_attestation.signature,
+//            domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target_epoch),
+//        )
 func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
 	// To be removed in phase 1
-	if len(custodyBit1Indices) > 0 {
+	if len(custodyBit1Indices) != 0 {
 		return fmt.Errorf("expected no bit 1 indices, received %v", len(custodyBit1Indices))
 	}
 
 	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
 	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
-	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
+	if totalIndicesLength > maxIndices {
 		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)
 	}
 	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
 	if len(custodyBitIntersection) != 0 {
 		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
 	}
+
+	// TODO: Verify sorted!
+	//        # Verify indices are sorted
+	//        assert bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)
 
 	if verifySignatures {
 		domain := helpers.Domain(beaconState, indexedAtt.Data.TargetEpoch, params.BeaconConfig().DomainAttestation)
