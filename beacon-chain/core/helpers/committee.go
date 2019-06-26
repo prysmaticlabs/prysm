@@ -4,7 +4,6 @@ package helpers
 import (
 	"errors"
 	"fmt"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -166,7 +165,7 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 
 	indices := make([]uint64, 0, len(committee))
 	for i, idx := range committee {
-		if i <= len(bitfield) && bitutil.BitfieldBit(bitfield, i) == 0x1 {
+		if mathutil.CeilDiv8(i) <= len(bitfield) && bitutil.BitfieldBit(bitfield, i) == 0x1 {
 			indices = append(indices, idx)
 		}
 	}
