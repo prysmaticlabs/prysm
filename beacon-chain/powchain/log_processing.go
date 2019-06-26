@@ -222,6 +222,11 @@ func (w *Web3Service) processPastLogs() error {
 		if err := w.ProcessLog(l); err != nil {
 			log.WithError(err).Error("Could not process log")
 		}
+		if w.chainStarted {
+			timeStamp := w.blockTime.Unix()
+			genesisTime := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
+			w.processChainStart(uint64(genesisTime))
+		}
 	}
 	w.lastRequestedBlock.Set(w.blockHeight)
 
@@ -261,14 +266,13 @@ func (w *Web3Service) requestBatchedLogs() error {
 			if err := w.ProcessLog(l); err != nil {
 				log.WithError(err).Error("Could not process log")
 			}
-		}
-		if w.chainStarted {
-			timeStamp := w.blockTime.Unix()
-			genesisTime := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
-			w.processChainStart(uint64(genesisTime))
+			if w.chainStarted {
+				timeStamp := w.blockTime.Unix()
+				genesisTime := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
+				w.processChainStart(uint64(genesisTime))
+			}
 		}
 	}
-
 	w.lastRequestedBlock.Set(requestedBlock)
 	return nil
 }
