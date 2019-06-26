@@ -35,7 +35,7 @@ func TestAggregatePubkeysYaml(t *testing.T) {
 			}
 
 			if !bytes.Equal(tt.Output, pk.Marshal()) {
-				t.Fatal("Output does not equal marshalled aggregated public " +
+				t.Fatal("Output does not equal marshaled aggregated public " +
 					"key bytes")
 			}
 		})
