@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -136,7 +137,74 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	}, nil
 }
 
-// BlockTreeBySlots returns the current tree of saved blocks and their votes starting from the justified state.
+// eth1Data takes all eth1data votes validate the relevant ones,
+// checks that they are valid against eth1 chain data, count them
+// and returns the best vote.
+func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
+	beaconState, err := bs.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	currentHeight := bs.powChainService.LatestBlockHeight()
+	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRoot)
+	if stateLatestEth1Hash == [32]byte{} {
+		return bs.defaultEth1DataResponse(ctx, currentHeight)
+	}
+	// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
+	// in the canonical eth1.0 chain.
+	_, stateLatestEth1Height, err := bs.powChainService.BlockExists(ctx, stateLatestEth1Hash)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify block with hash exists in Eth1 chain: %#x: %v", stateLatestEth1Hash, err)
+	}
+	dataVotes := []*pbp2p.Eth1Data{}
+	votesMap := helpers.EmptyVoteHierarchyMap()
+	depositCount, depositRootAtHeight := bs.beaconDB.DepositsNumberAndRootAtHeight(ctx, currentHeight)
+	for _, vote := range beaconState.Eth1DataVotes {
+		validVote, blockHeight, err := bs.validateVote(ctx, currentHeight, depositCount, depositRootAtHeight, stateLatestEth1Height, vote)
+
+		if err != nil {
+			return nil, err
+		}
+		if validVote {
+			dataVotes = append(dataVotes, vote)
+			votesMap, err = helpers.CountVote(votesMap, vote, blockHeight)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	if len(dataVotes) == 0 {
+		return bs.defaultEth1DataResponse(ctx, currentHeight)
+	}
+	return votesMap.BestVote, nil
+
+}
+
+func (bs *BeaconServer) validateVote(ctx context.Context, currentHeight *big.Int, depositCount uint64, depositRootAtHeight [32]byte, stateLatestEth1Height *big.Int, vote *pbp2p.Eth1Data) (bool, *big.Int, error) {
+	if ctx.Err() != nil {
+		return false, nil, ctx.Err()
+	}
+	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
+	eth1Hash := bytesutil.ToBytes32(vote.BlockHash)
+	// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
+	blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
+	if err != nil {
+		log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
+			Warn("Could not verify block with hash in ETH1 chain")
+		return false, nil, nil
+	}
+	if !blockExists {
+		return false, nil, nil
+	}
+	isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
+	isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
+	correctDepositCount := depositCount == vote.DepositCount
+	correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
+	return blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data && correctDepositCount && correctDepositRoot, blockHeight, nil
+}
+
+// BlockTreeBySlots returns the current tree of saved blocks and their
+// votes starting from the justified state.
 func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockSlotRequest) (*pb.BlockTreeResponse, error) {
 	justifiedState, err := bs.beaconDB.JustifiedState()
 	if err != nil {
@@ -213,39 +281,22 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 	}, nil
 }
 
-// TODO(#2307): Refactor for v0.6.
-// nolint
-func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pbp2p.Eth1Data, error) {
+// in case no vote for new eth1data vote considered best vote we
+// default into returning the latest deposit root and the block
+// hash of eth1 block hash that is FOLLOW_DISTANCE back from its
+// latest block.
+func (bs *BeaconServer) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*pbp2p.Eth1Data, error) {
+	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
 	// Fetch all historical deposits up to an ancestor height.
-	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
-	depositHashes := [][]byte{}
-	// If there are less than or equal to len(ChainStartDeposits) historical deposits, then we just fetch the default
-	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
-	chainStartDeposits, err := bs.powChainService.ChainStartDepositHashes()
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve chainstart deposit hashes %v", err)
+	depositsTillHeight, depositRoot := bs.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
+	if depositsTillHeight == 0 {
+		return nil, errors.New("could not fetch ETH1_FOLLOW_DISTANCE deposits")
 	}
-	if len(allDeposits) <= len(chainStartDeposits) {
-		depositHashes = chainStartDeposits
-	} else {
-		for i := range allDeposits {
-			hash, err := hashutil.DepositHash(allDeposits[i].Data)
-			if err != nil {
-				return nil, err
-			}
-			depositHashes = append(depositHashes, hash[:])
-		}
-	}
-	depositTrie, err := trieutil.GenerateTrieFromItems(depositHashes, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
-	}
-	depositRoot := depositTrie.Root()
 	return &pbp2p.Eth1Data{
 		DepositRoot: depositRoot[:],
 		BlockHash:   blockHash[:],
