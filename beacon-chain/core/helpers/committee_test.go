@@ -309,6 +309,37 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 	}
 }
 
+func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
+
+	var zeroByte [16]byte
+
+	indices, err := AttestingIndices(state, attestationData, zeroByte[:])
+	if err != nil {
+		t.Fatalf("attesting indices failed: %v", err)
+	}
+
+	if len(indices) != 0 {
+		t.Errorf("Attesting indices are non-zero despite an empty bitfield being provided; Size %d", len(indices))
+	}
+}
+
 func TestVerifyBitfield_OK(t *testing.T) {
 	bitfield := []byte{0xFF}
 	committeeSize := 8
