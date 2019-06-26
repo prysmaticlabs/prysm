@@ -56,7 +56,6 @@ func ExecuteStateTransition(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.StateTransition")
 	defer span.End()
 	var err error
-
 	// Execute per slot transition.
 	state, err = ProcessSlots(ctx, state, block.Slot)
 	if err != nil {
