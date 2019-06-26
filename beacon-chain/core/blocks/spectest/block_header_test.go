@@ -4,9 +4,11 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -22,7 +24,7 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 		t.Fatalf("Failed to read file: %v", err)
 	}
 
-	test := &BlockHeaderTest{}
+	test := &BlockOperationTest{}
 	if err := yaml.Unmarshal(file, test); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
@@ -33,6 +35,7 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
+			helpers.ClearAllCaches()
 			pre := &pb.BeaconState{}
 			err := testutil.ConvertToPb(tt.Pre, pre)
 			if err != nil {
@@ -70,10 +73,20 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 	}
 }
 
+var blkHeaderPrefix = "eth2_spec_tests/tests/operations/block_header/"
+
 func TestBlockHeaderMinimal(t *testing.T) {
-	runBlockHeaderTest(t, "block_header_minimal_formatted.yaml")
+	filepath, err := bazel.Runfile(blkHeaderPrefix + "block_header_minimal.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runBlockHeaderTest(t, filepath)
 }
 
 func TestBlockHeaderMainnet(t *testing.T) {
-	runBlockHeaderTest(t, "block_header_mainnet_formatted.yaml")
+	filepath, err := bazel.Runfile(blkHeaderPrefix + "block_header_mainnet.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runBlockHeaderTest(t, filepath)
 }

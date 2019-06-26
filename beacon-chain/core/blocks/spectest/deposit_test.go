@@ -5,8 +5,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
@@ -14,7 +16,7 @@ import (
 )
 
 func runDepositTest(t *testing.T, filename string) {
-	file, err := ioutil.ReadFile("deposit_minimal.yaml")
+	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
@@ -29,6 +31,7 @@ func runDepositTest(t *testing.T, filename string) {
 	}
 
 	for _, tt := range test.TestCases {
+		helpers.ClearAllCaches()
 		t.Run(tt.Description, func(t *testing.T) {
 			if tt.Description == "invalid_sig_new_deposit" {
 				// TOOD(2857): uncompressed signature format is not supported
@@ -70,10 +73,20 @@ func runDepositTest(t *testing.T, filename string) {
 	}
 }
 
+var depositPrefix = "eth2_spec_tests/tests/operations/deposit/"
+
 func TestDepositMinimalYaml(t *testing.T) {
-	runDepositTest(t, "deposit_minimum.yaml")
+	filepath, err := bazel.Runfile(depositPrefix + "deposit_minimal.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runDepositTest(t, filepath)
 }
 
 func TestDepositMainnetYaml(t *testing.T) {
-	runDepositTest(t, "deposit_mainnet.yaml")
+	filepath, err := bazel.Runfile(depositPrefix + "deposit_mainnet.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runDepositTest(t, filepath)
 }

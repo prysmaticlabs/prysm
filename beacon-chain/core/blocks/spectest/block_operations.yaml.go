@@ -158,6 +158,27 @@ type BlockOperationTest struct {
 			Pubkey    []byte `json:"pubkey" ssz:"size=48"`
 			Signature []byte `json:"signature" ssz:"size=96"`
 		} `json:"transfer"`
+		Block struct {
+			Slot       uint64 `json:"slot"`
+			ParentRoot []byte `json:"parent_root" ssz:"size=32"`
+			StateRoot  []byte `json:"state_root" ssz:"size=32"`
+			Body       struct {
+				RandaoReveal []byte `json:"randao_reveal" ssz:"size=96"`
+				Eth1Data     struct {
+					DepositRoot  []byte `json:"deposit_root" ssz:"size=32"`
+					DepositCount uint64 `json:"deposit_count"`
+					BlockHash    []byte `json:"block_hash" ssz:"size=32"`
+				} `json:"eth1_data"`
+				Graffiti          []byte        `json:"graffiti" ssz:"size=32"`
+				ProposerSlashings []interface{} `json:"proposer_slashings"`
+				AttesterSlashings []interface{} `json:"attester_slashings"`
+				Attestations      []interface{} `json:"attestations"`
+				Deposits          []interface{} `json:"deposits"`
+				VoluntaryExits    []interface{} `json:"voluntary_exits"`
+				Transfers         []interface{} `json:"transfers"`
+			} `json:"body"`
+			Signature []byte `json:"signature" ssz:"size=96"`
+		} `json:"block"`
 		Post struct {
 			Slot        uint64 `json:"slot"`
 			GenesisTime uint64 `json:"genesis_time"`

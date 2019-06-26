@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -30,6 +31,7 @@ func runTransferTest(t *testing.T, filename string) {
 
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
+			helpers.ClearAllCaches()
 			pre := &pb.BeaconState{}
 			if err := testutil.ConvertToPb(tt.Pre, pre); err != nil {
 				t.Fatal(err)
@@ -64,15 +66,24 @@ func runTransferTest(t *testing.T, filename string) {
 			if !reflect.DeepEqual(postState, expectedPost) {
 				t.Error("Post state does not match expected")
 			}
-			helpers.ClearAllCaches()
 		})
 	}
 }
 
+var transferPrefix = "eth2_spec_tests/tests/operations/transfer/"
+
 func TestTransferMinimal(t *testing.T) {
-	runTransferTest(t, "transfer_minimal.yaml")
+	filepath, err := bazel.Runfile(transferPrefix + "transfer_minimal.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runTransferTest(t, filepath)
 }
 
 func TestTransferMainnet(t *testing.T) {
-	runTransferTest(t, "transfer_mainnet.yaml")
+	filepath, err := bazel.Runfile(transferPrefix + "transfer_mainnet.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runTransferTest(t, filepath)
 }

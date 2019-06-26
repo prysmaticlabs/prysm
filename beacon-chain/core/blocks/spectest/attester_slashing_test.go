@@ -5,8 +5,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -29,6 +31,7 @@ func runAttesterSlashingTest(t *testing.T, filename string) {
 
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
+			helpers.ClearAllCaches()
 			pre := &pb.BeaconState{}
 			if err := testutil.ConvertToPb(tt.Pre, pre); err != nil {
 				t.Fatal(err)
@@ -67,10 +70,20 @@ func runAttesterSlashingTest(t *testing.T, filename string) {
 	}
 }
 
+var attesterSlashingPrefix = "eth2_spec_tests/tests/operations/attester_slashing/"
+
 func TestAttesterSlashingMinimal(t *testing.T) {
-	runAttesterSlashingTest(t, "attester_slashing_minimal.yaml")
+	filepath, err := bazel.Runfile(attesterSlashingPrefix + "attester_slashing_minimal.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runAttesterSlashingTest(t, filepath)
 }
 
 func TestAttesterSlashingMainnet(t *testing.T) {
-	runAttesterSlashingTest(t, "attester_slashing_mainnet.yaml")
+	filepath, err := bazel.Runfile(attesterSlashingPrefix + "attester_slashing_mainnet.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runAttesterSlashingTest(t, filepath)
 }

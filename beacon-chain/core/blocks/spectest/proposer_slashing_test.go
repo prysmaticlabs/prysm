@@ -5,8 +5,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -29,6 +31,7 @@ func runProposerSlashingTest(t *testing.T, filename string) {
 
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
+			helpers.ClearAllCaches()
 			pre := &pb.BeaconState{}
 			if err := testutil.ConvertToPb(tt.Pre, pre); err != nil {
 				t.Fatal(err)
@@ -67,6 +70,20 @@ func runProposerSlashingTest(t *testing.T, filename string) {
 	}
 }
 
+var proposerSlashingPrefix = "eth2_spec_tests/tests/operations/proposer_slashing/"
+
+func TestProposerSlashingMinimal(t *testing.T) {
+	filepath, err := bazel.Runfile(proposerSlashingPrefix + "proposer_slashing_minimal.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runProposerSlashingTest(t, filepath)
+}
+
 func TestProposerSlashingMainnet(t *testing.T) {
-	runProposerSlashingTest(t, "proposer_slashing_mainnet.yaml")
+	filepath, err := bazel.Runfile(proposerSlashingPrefix + "proposer_slashing_mainnet.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runProposerSlashingTest(t, filepath)
 }

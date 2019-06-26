@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -67,6 +68,20 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 	}
 }
 
+var exitPrefix = "eth2_spec_tests/tests/operations/voluntary_exit/"
+
+func TestVoluntaryExitMinimal(t *testing.T) {
+	filepath, err := bazel.Runfile(exitPrefix + "voluntary_exit_mainnet.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runVoluntaryExitTest(t, filepath)
+}
+
 func TestVoluntaryExitMainnet(t *testing.T) {
-	runVoluntaryExitTest(t, "voluntary_exit_mainnet.yaml")
+	filepath, err := bazel.Runfile(exitPrefix + "voluntary_exit_mainnet.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runVoluntaryExitTest(t, filepath)
 }
