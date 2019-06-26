@@ -20,6 +20,11 @@ import (
 )
 
 var RunAmount = 32
+var exitCount = uint64(40)
+var slashCount = uint64(40)
+var ejectionCount = uint64(40)
+var activationCount = uint64(40)
+var initiateActivationCount = uint64(40)
 
 var conditions = "MIN"
 
@@ -354,11 +359,6 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(bState)
 
 	// Exits and Activations
-	exitCount := uint64(40)
-	slashCount := uint64(40)
-	ejectionCount := uint64(40)
-	activationCount := uint64(40)
-	initiateActivationCount := uint64(40)
 	for index, val := range bState.ValidatorRegistry {
 		if uint64(index)%(validatorCount/ejectionCount) == 0 {
 			// Ejections
