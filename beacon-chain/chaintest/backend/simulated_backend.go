@@ -6,16 +6,13 @@ package backend
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -170,30 +167,6 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	//
 	// Then, we call the updateHead routine and confirm the
 	// chain's head is the expected result from the test case.
-	return nil
-}
-
-// RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
-// algorithm, then compare the output with the expected output from the YAML file.
-func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
-	defer db.TeardownDB(sb.beaconDB)
-	seed := common.HexToHash(testCase.Seed)
-	testIndices := make([]uint64, testCase.Count, testCase.Count)
-	for i := uint64(0); i < testCase.Count; i++ {
-		testIndices[i] = i
-	}
-	shuffledList := make([]uint64, testCase.Count)
-	for i := uint64(0); i < testCase.Count; i++ {
-		si, err := utils.ShuffledIndex(i, testCase.Count, seed)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		shuffledList[i] = si
-	}
-	if !reflect.DeepEqual(shuffledList, testCase.Shuffled) {
-		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Shuffled, shuffledList)
-	}
 	return nil
 }
 
