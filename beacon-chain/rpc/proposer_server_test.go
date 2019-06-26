@@ -160,6 +160,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 						ParentRoot: encoded[:]},
 				},
 					AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+					CustodyBitfield:     []byte{0x00, 0x00, 0x00, 0x00},
 				},
 			},
 		},
@@ -249,17 +250,20 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 				TargetEpoch: 10,
 				SourceEpoch: expectedEpoch,
 				Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-			}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+			}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}, CustodyBitfield: []byte{0x00, 0x00, 0x00, 0x00},
+			},
 			{Data: &pbp2p.AttestationData{
 				TargetEpoch: 10,
 				SourceEpoch: expectedEpoch,
 				Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-			}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+			}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}, CustodyBitfield: []byte{0x00, 0x00, 0x00, 0x00},
+			},
 			{Data: &pbp2p.AttestationData{
 				TargetEpoch: 10,
 				SourceEpoch: expectedEpoch,
 				Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-			}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+			}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}, CustodyBitfield: []byte{0x00, 0x00, 0x00, 0x00},
+			},
 		},
 	}
 	expectedNumberOfAttestations := 3
@@ -322,17 +326,17 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 			TargetEpoch: 10,
 			SourceEpoch: expectedEpoch,
 			Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}, CustodyBitfield: []byte{0x00, 0x00, 0x00, 0x00}},
 		{Data: &pbp2p.AttestationData{
 			TargetEpoch: 10,
 			SourceEpoch: expectedEpoch,
 			Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}, CustodyBitfield: []byte{0x00, 0x00, 0x00, 0x00}},
 		{Data: &pbp2p.AttestationData{
 			TargetEpoch: 10,
 			SourceEpoch: expectedEpoch,
 			Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}, CustodyBitfield: []byte{0x00, 0x00, 0x00, 0x00}},
 	}
 	if !reflect.DeepEqual(atts, expectedAtts) {
 		t.Error("Did not receive expected attestations")
