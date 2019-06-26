@@ -10,13 +10,13 @@ import (
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
-	ShardCount               uint64 `yaml:"SHARD_COUNT"`                 // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize      uint64 `yaml:"TARGET_COMMITTEE_SIZE"`       // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxIndicesPerAttestation uint64 `yaml:"MAX_INDICES_PER_ATTESTATION"` // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
-	MinPerEpochChurnLimit    uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`   // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
-	ChurnLimitQuotient       uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`        // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
-	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
-	ShuffleRoundCount        uint64 `yaml:"SHUFFLE_ROUND_COUNT"`         // ShuffleRoundCount is used for retrieving the permuted index.
+	ShardCount                  uint64 `yaml:"SHARD_COUNT"`                  // ShardCount is the number of shard chains in Ethereum 2.0.
+	TargetCommitteeSize         uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxIndicesPerAttestation    uint64 `yaml:"MAX_INDICES_PER_ATTESTATION"`  // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
+	MinPerEpochChurnLimit       uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`    // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
+	ChurnLimitQuotient          uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`         // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
+	BaseRewardsPerEpoch         uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`       // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
+	ShuffleRoundCount           uint64 `yaml:"SHUFFLE_ROUND_COUNT"`          // ShuffleRoundCount is used for retrieving the permuted index.
 	GenesisActiveValidatorCount uint64 `yaml:GENESIS_ACTIVE_VALIDATOR_COUNT` // GenesisActiveValidatorCount is minimal number of validators needed to bootstrap beacon chain.
 
 	// Deposit contract constants.
@@ -96,7 +96,7 @@ type BeaconChainConfig struct {
 	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
 	GenesisForkVersion        []byte        `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
-	SecondsPerDay			  int64		// SecondsPerDay defines how many secs are in one day.
+	SecondsPerDay             int64         // SecondsPerDay defines how many secs are in one day.
 }
 
 // DepositContractConfig contains the deposits for
@@ -114,13 +114,13 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:               1024,
-	TargetCommitteeSize:      128,
-	MaxIndicesPerAttestation: 4096,
-	MinPerEpochChurnLimit:    4,
-	ChurnLimitQuotient:       1 << 16,
-	BaseRewardsPerEpoch:      5,
-	ShuffleRoundCount:        90,
+	ShardCount:                  1024,
+	TargetCommitteeSize:         128,
+	MaxIndicesPerAttestation:    4096,
+	MinPerEpochChurnLimit:       4,
+	ChurnLimitQuotient:          1 << 16,
+	BaseRewardsPerEpoch:         5,
+	ShuffleRoundCount:           90,
 	GenesisActiveValidatorCount: 1 << 16,
 
 	// Deposit contract constants.
@@ -196,7 +196,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	GoerliBlockTime:           14, // 14 seconds on average for a goerli block to be created.
 	GenesisForkVersion:        []byte{0, 0, 0, 0},
 	EmptySignature:            [96]byte{},
-	SecondsPerDay: 			86400,
+	SecondsPerDay:             86400,
 
 	// Testnet misc values.
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
@@ -299,6 +299,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DomainDeposit = 3
 	minimalConfig.DomainVoluntaryExit = 4
 	minimalConfig.DomainTransfer = 5
+	minimalConfig.GenesisActiveValidatorCount = 8
 
 	return &minimalConfig
 }
