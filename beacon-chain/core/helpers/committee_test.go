@@ -221,7 +221,8 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	committeeSize := uint64(16)
+	validators := make([]*pb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -245,24 +246,40 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		{
 			attestationSlot: 3,
 			stateSlot:       5,
-			bitfield:        []byte{0x03},
-			wanted:          []uint64{71, 127},
+			bitfield:        []byte{0xFF, 0xFF},
+			wanted:          []uint64{219, 476, 33, 632, 1018, 300, 569, 8, 805, 745, 630, 384, 96, 576, 801, 682},
+		},
+		{
+			attestationSlot: 3,
+			stateSlot:       5,
+			bitfield:        []byte{0xBF, 0xFF},
+			wanted:          []uint64{219, 476, 33, 632, 1018, 300, 8, 805, 745, 630, 384, 96, 576, 801, 682},
 		},
 		{
 			attestationSlot: 2,
 			stateSlot:       10,
-			bitfield:        []byte{0x01},
-			wanted:          []uint64{85},
+			bitfield:        []byte{0x0, 0x01},
+			wanted:          []uint64{5},
 		},
 		{
 			attestationSlot: 11,
 			stateSlot:       10,
-			bitfield:        []byte{0x03},
-			wanted:          []uint64{102, 68},
+			bitfield:        []byte{0x0, 0x03},
+			wanted:          []uint64{1021, 775},
 		}, {
 			attestationSlot: 11,
 			stateSlot:       10,
-			bitfield:        []byte{0x0},
+			bitfield:        []byte{0x01, 0x03},
+			wanted:          []uint64{880, 1021, 775},
+		}, {
+			attestationSlot: 11,
+			stateSlot:       10,
+			bitfield:        []byte{0x1, 0x0},
+			wanted:          []uint64{880},
+		}, {
+			attestationSlot: 11,
+			stateSlot:       10,
+			bitfield:        []byte{0x0, 0x0},
 			wanted:          []uint64{},
 		},
 	}
