@@ -1343,6 +1343,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 
 	want := "over max number of allowed indices"
 	if err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
 		indexedAtt1,
 		false,
 	); !strings.Contains(err.Error(), want) {
@@ -1623,7 +1624,7 @@ func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
 		params.BeaconConfig().MaxVoluntaryExits,
 	)
 
-	if _, err := blocks.ProcessValidatorExits(
+	if _, err := blocks.ProcessVoluntaryExits(
 
 		state,
 		block,
@@ -1655,7 +1656,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 
 	want := "non-active validator cannot exit"
 
-	if _, err := blocks.ProcessValidatorExits(
+	if _, err := blocks.ProcessVoluntaryExits(
 
 		state,
 		block,
@@ -1688,7 +1689,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 
 	want := "expected current epoch >= exit epoch"
 
-	if _, err := blocks.ProcessValidatorExits(
+	if _, err := blocks.ProcessVoluntaryExits(
 
 		state,
 		block,
@@ -1721,7 +1722,7 @@ func TestProcessValidatorExits_NotActiveLongEnoughToExit(t *testing.T) {
 	}
 
 	want := "validator has not been active long enough to exit"
-	if _, err := blocks.ProcessValidatorExits(
+	if _, err := blocks.ProcessVoluntaryExits(
 
 		state,
 		block,
@@ -1754,7 +1755,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 			VoluntaryExits: exits,
 		},
 	}
-	newState, err := blocks.ProcessValidatorExits(state, block, false)
+	newState, err := blocks.ProcessVoluntaryExits(state, block, false)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
