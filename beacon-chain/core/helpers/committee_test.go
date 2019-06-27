@@ -246,19 +246,19 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{127, 71},
+			wanted:          []uint64{71, 127},
 		},
 		{
 			attestationSlot: 2,
 			stateSlot:       10,
 			bitfield:        []byte{0x01},
-			wanted:          []uint64{85, 103},
+			wanted:          []uint64{85},
 		},
 		{
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{102, 68},
+			wanted:          []uint64{68, 102},
 		},
 	}
 
@@ -306,6 +306,38 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 
 	if _, err := AttestingIndices(state, attestationData, []byte{}); err == nil {
 		t.Error("attestation participants should have failed with incorrect bitfield")
+	}
+}
+
+func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+	ClearAllCaches()
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+	}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
+
+	var zeroByte [16]byte
+
+	indices, err := AttestingIndices(state, attestationData, zeroByte[:])
+	if err != nil {
+		t.Fatalf("attesting indices failed: %v", err)
+	}
+
+	if len(indices) != 0 {
+		t.Errorf("Attesting indices are non-zero despite an empty bitfield being provided; Size %d", len(indices))
 	}
 }
 
