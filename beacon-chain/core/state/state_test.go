@@ -2,12 +2,12 @@ package state_test
 
 import (
 	"bytes"
-	"encoding/binary"
 	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -133,14 +133,12 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("PreviousEpochAttestations was not correctly initialized")
 	}
 
-	activeValidators, _ := helpers.ActiveValidatorIndices(newState, 0)
-	indicesBytes := []byte{}
-	for _, val := range activeValidators {
-		buf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(buf, val)
-		indicesBytes = append(indicesBytes, buf...)
+	activeIndices, _ := helpers.ActiveValidatorIndices(newState, 0)
+
+	genesisActiveIndexRoot, err := ssz.HashTreeRoot(activeIndices)
+	if err != nil {
+		t.Fatalf("got error while trying to hash tree root of indices: %v", err)
 	}
-	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	if !bytes.Equal(newState.LatestActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",

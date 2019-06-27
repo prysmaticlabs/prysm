@@ -6,8 +6,8 @@ package state
 import (
 	"bytes"
 	"fmt"
-	"github.com/prysmaticlabs/go-ssz"
 
+	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -58,8 +58,8 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry: nil,
-		Balances:          nil,
+		ValidatorRegistry: []*pb.Validator{},
+		Balances:          []uint64{},
 
 		// Randomness and committees.
 		LatestRandaoMixes: latestRandaoMixes,

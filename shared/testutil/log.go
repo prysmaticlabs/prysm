@@ -12,21 +12,21 @@ import (
 // AssertLogsContain checks that the desired string is a subset of the current log output.
 // Set exitOnFail to true to immediately exit the test on failure
 func AssertLogsContain(t *testing.T, hook *test.Hook, want string) {
-	assertLogs(t, hook, want, true)
+	assertLogs(t, hook, want, true, -1)
 }
 
-// AssertLogsContain checks that the desired string is a subset of the current log output.
+// AssertLogsContainOccerances checks that the desired string is a subset of the current log output.
 // Set exitOnFail to true to immediately exit the test on failure
-func AssertLogsContainOccerances(t *testing.T, hook *test.Hook, want string) {
-	assertLogs(t, hook, want, true)
+func AssertLogsContainOccerances(t *testing.T, hook *test.Hook, want string, count int) {
+	assertLogs(t, hook, want, true, count)
 }
 
 // AssertLogsDoNotContain is the inverse check of AssertLogsContain
 func AssertLogsDoNotContain(t *testing.T, hook *test.Hook, want string) {
-	assertLogs(t, hook, want, false)
+	assertLogs(t, hook, want, false, -1)
 }
 
-func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
+func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool, count int) {
 	t.Logf("scanning for: %s", want)
 	entries := hook.AllEntries()
 	match := false
@@ -35,9 +35,17 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
 		if err != nil {
 			t.Fatalf("Failed to format log entry to string: %v", err)
 		}
-		if strings.Contains(msg, want) {
-			match = true
+		c := strings.Count(msg, want)
+		if count != -1 {
+			if c == count {
+				match = true
+			}
+		} else {
+			if c > 0 {
+				match = true
+			}
 		}
+
 		t.Logf("log: %s", msg)
 	}
 
