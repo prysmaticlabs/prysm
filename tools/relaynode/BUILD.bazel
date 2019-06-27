@@ -14,18 +14,21 @@ go_library(
         "@com_github_libp2p_go_libp2p_circuit//:go_default_library",
         "@com_github_libp2p_go_libp2p_crypto//:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
 
 go_image(
     name = "image",
     srcs = ["relaynode.go"],
-    importpath = "github.com/prysmaticlabs/prysm/tools/relaynode",
-    visibility = ["//visibility:private"],
-    static = "on",
-    tags = ["manual"],
     goarch = "amd64",
     goos = "linux",
+    importpath = "github.com/prysmaticlabs/prysm/tools/relaynode",
+    pure = "on",
+    race = "off",
+    static = "on",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
     deps = [
         "//shared/version:go_default_library",
         "@com_github_ipfs_go_log//:go_default_library",
@@ -33,9 +36,8 @@ go_image(
         "@com_github_libp2p_go_libp2p_circuit//:go_default_library",
         "@com_github_libp2p_go_libp2p_crypto//:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
     ],
-    race = "off",
-    pure = "on",
 )
 
 container_push(

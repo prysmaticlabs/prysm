@@ -28,7 +28,7 @@ func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, validators)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [96]byte
+		var pubKey [48]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
@@ -218,6 +218,9 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	res, err := vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
+	}
+	if len(res.Assignment) == 0 {
+		t.Fatal("No assignments returned")
 	}
 	if res.Assignment[0].Shard >= params.BeaconConfig().ShardCount {
 		t.Errorf("Assigned shard %d can't be higher than %d",
