@@ -304,7 +304,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 		},
 		AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-		CustodyBitfield:     []byte{},
+		CustodyBitfield:     []byte{0x00, 0x00, 0x00, 0x00},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	var exits []*pb.VoluntaryExit
@@ -441,7 +441,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			},
 		},
 		AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-		CustodyBitfield:     []byte{},
+		CustodyBitfield:     []byte{0x00, 0x00, 0x00, 0x00},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	exits := []*pb.VoluntaryExit{

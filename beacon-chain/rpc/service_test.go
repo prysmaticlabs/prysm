@@ -171,7 +171,6 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not listen to port in Start()")
 
 	rpcService.Stop()
-
 }
 
 func TestStatus_CredentialError(t *testing.T) {
