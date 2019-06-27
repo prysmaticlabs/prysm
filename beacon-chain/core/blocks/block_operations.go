@@ -756,7 +756,10 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.Indexe
 		if err != nil {
 			return fmt.Errorf("could not convert bytes to signature: %v", err)
 		}
-		if !sig.VerifyAggregate(pubkeys, msgs, domain) {
+
+		hasVotes := len(custodyBit0Indices) > 0 || len(custodyBit1Indices) > 0
+
+		if hasVotes && !sig.VerifyAggregate(pubkeys, msgs, domain) {
 			return fmt.Errorf("attestation aggregation signature did not verify")
 		}
 	}
