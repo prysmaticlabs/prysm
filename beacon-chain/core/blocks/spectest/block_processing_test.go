@@ -40,7 +40,7 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 			ctx := context.Background()
 
 			// TODO: Unskip these tests.
-			if tt.Description == "attestation" ||  tt.Description == "voluntary_exit" {
+			if tt.Description == "voluntary_exit" {
 				t.Skip("Not passing yet...")
 			}
 
