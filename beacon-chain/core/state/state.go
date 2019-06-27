@@ -119,7 +119,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	// Process initial deposits.
 	var err error
 	validatorMap := make(map[[32]byte]int)
-	for _, deposit := range deposits {
+	for i, deposit := range deposits {
 		eth1DataExists := !bytes.Equal(eth1Data.DepositRoot, []byte{})
 		state, err = b.ProcessDeposit(
 			state,
@@ -129,7 +129,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			eth1DataExists,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not process validator deposit: %v", err)
+			return nil, fmt.Errorf("could not process validator deposit %d: %v", i, err)
 		}
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
