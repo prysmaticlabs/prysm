@@ -119,12 +119,14 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
+	emptySig := make([]byte, 96)
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
 		BodyRoot:   bodyRoot[:],
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		Signature:  emptySig,
 	}
-
 	// Verify proposer is not slashed
 	idx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
