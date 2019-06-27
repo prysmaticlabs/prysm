@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runAttestationTest(t *testing.T, filename string) {
@@ -75,6 +76,7 @@ func runAttestationTest(t *testing.T, filename string) {
 				if err == nil {
 					t.Fatal("Did not fail when expected")
 				}
+				t.Logf("Expected failure; failure reason = %v", err)
 				return
 			} else if err != nil {
 				t.Fatal(err)
@@ -85,6 +87,8 @@ func runAttestationTest(t *testing.T, filename string) {
 				t.Fatal(err)
 			}
 			if !proto.Equal(post, expectedPost) {
+				diff, _ := messagediff.PrettyDiff(post, expectedPost)
+				t.Log(diff)
 				t.Fatal("Post state does not match expected")
 			}
 		})
