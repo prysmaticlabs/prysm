@@ -648,9 +648,13 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 
 	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
 	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
-	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
+	if maxIndices < totalIndicesLength {
 		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)
 	}
+	if totalIndicesLength < 1 {
+		return fmt.Errorf("total indices length is empty, received: %d", totalIndicesLength)
+	}
+
 	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
 	if len(custodyBitIntersection) != 0 {
 		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
