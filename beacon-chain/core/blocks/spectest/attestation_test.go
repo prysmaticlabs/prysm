@@ -57,7 +57,6 @@ func runAttestationTest(t *testing.T, filename string) {
 				},
 			}
 
-			// TODO: TURN ON VERIFY SIGNATURE! Getting a panic...
 			post, err := blocks.ProcessBlockAttestations(pre, block,
 				true /*verify sig*/)
 

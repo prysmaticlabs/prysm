@@ -38,4 +38,5 @@ go_test(
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
+    tags = ["spectest"],
 )
