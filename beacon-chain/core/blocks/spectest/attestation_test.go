@@ -56,7 +56,7 @@ func runAttestationTest(t *testing.T, filename string) {
 
 			// TODO: TURN ON VERIFY SIGNATURE! Getting a panic...
 			post, err := blocks.ProcessBlockAttestations(pre, block,
-				false /*verify sig*/)
+				true /*verify sig*/)
 
 			if !reflect.ValueOf(tt.Post).IsValid() {
 				// Note: This doesn't test anything worthwhile. It essentially tests
