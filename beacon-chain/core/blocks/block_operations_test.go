@@ -309,6 +309,8 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		Slot:       block.Slot,
 		ParentRoot: latestBlockSignedRoot[:],
 		BodyRoot:   bodyRoot[:],
+		StateRoot: params.BeaconConfig().ZeroHash[:],
+		Signature: make([]byte, 96),
 	}
 	if !proto.Equal(nsh, expected) {
 		t.Errorf("Expected %v, received %vk9k", expected, nsh)
@@ -1212,7 +1214,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 				},
 			},
 			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-			CustodyBitfield:     []byte{},
+			CustodyBitfield:     []byte{0x00, 0x00, 0x00, 0x00},
 		},
 	}
 	block := &pb.BeaconBlock{
@@ -1296,7 +1298,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{71, 127},
+			wantedCustodyBit1Indices: []uint64{127, 71},
 		},
 	}
 
@@ -1377,6 +1379,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
 			Pubkey: []byte{1, 2, 3},
+			Signature: make([]byte, 96),
 		},
 	}
 	leaf, err := ssz.HashTreeRoot(deposit.Data)
