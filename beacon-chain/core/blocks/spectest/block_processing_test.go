@@ -9,7 +9,6 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	log "github.com/sirupsen/logrus"
 )
 
 func TestBlockProcessingMinimalYaml(t *testing.T) {
@@ -29,10 +28,10 @@ func TestBlockProcessingMinimalYaml(t *testing.T) {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
-	log.Infof("Title: %v", s.Title)
-	log.Infof("Summary: %v", s.Summary)
-	log.Infof("Fork: %v", s.Forks)
-	log.Infof("Config: %v", s.Config)
+	t.Logf("Title: %v", s.Title)
+	t.Logf("Summary: %v", s.Summary)
+	t.Logf("Fork: %v", s.Forks)
+	t.Logf("Config: %v", s.Config)
 
 	if err := spectest.SetConfig(s.Config); err != nil {
 		t.Fatalf("Could not set config: %v", err)
@@ -70,10 +69,10 @@ func TestBlockProcessingMainnetYaml(t *testing.T) {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
-	log.Infof("Title: %v", s.Title)
-	log.Infof("Summary: %v", s.Summary)
-	log.Infof("Fork: %v", s.Forks)
-	log.Infof("Config: %v", s.Config)
+	t.Logf("Title: %v", s.Title)
+	t.Logf("Summary: %v", s.Summary)
+	t.Logf("Fork: %v", s.Forks)
+	t.Logf("Config: %v", s.Config)
 
 	if err := spectest.SetConfig(s.Config); err != nil {
 		t.Fatalf("Could not set config: %v", err)
