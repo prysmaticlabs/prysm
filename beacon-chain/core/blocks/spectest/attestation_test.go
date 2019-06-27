@@ -54,7 +54,7 @@ func runAttestationTest(t *testing.T, filename string) {
 				},
 			}
 
-			// TODO: TURN ON VERIFY SIGNATURE!
+			// TODO: TURN ON VERIFY SIGNATURE! Getting a panic...
 			post, err := blocks.ProcessBlockAttestations(pre, block,
 				false /*verify sig*/)
 
@@ -67,7 +67,14 @@ func runAttestationTest(t *testing.T, filename string) {
 				return
 			}
 
-			if err != nil {
+			// Note: This doesn't test anything worthwhile. It essentially tests
+			// that *any* error has occurred, not any specific error.
+			if len(tt.Post.ValidatorRegistry) == 0 {
+				if err == nil {
+					t.Fatal("Did not fail when expected")
+				}
+				return
+			} else if err != nil {
 				t.Fatal(err)
 			}
 
