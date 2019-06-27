@@ -1424,6 +1424,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		Data: &pb.DepositData{
 			Pubkey: []byte{1, 2, 3},
 			Amount: params.BeaconConfig().MaxDepositAmount,
+			Signature: make([]byte, 96),
 		},
 	}
 	leaf, err := ssz.HashTreeRoot(deposit.Data)
@@ -1766,33 +1767,6 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
-	}
-}
-
-func TestProcessBeaconTransfers_ThresholdReached(t *testing.T) {
-	transfers := make([]*pb.Transfer, params.BeaconConfig().MaxTransfers+1)
-	registry := []*pb.Validator{}
-	state := &pb.BeaconState{
-		ValidatorRegistry: registry,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Transfers: transfers,
-		},
-	}
-
-	want := fmt.Sprintf(
-		"number of transfers (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxTransfers+1,
-		params.BeaconConfig().MaxTransfers,
-	)
-
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
