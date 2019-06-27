@@ -22,8 +22,6 @@ var runAmount = 30
 var genesisState16K, deposits16K = createGenesisState(16000)
 var block, root = createFullBlock(genesisState16K, deposits16K)
 
-// var genesisState4M = createGenesisState(4000000)
-
 func setBenchmarkConfig(conditions string) {
 	c := params.DemoBeaconConfig()
 	if conditions == "BIG" {
@@ -43,62 +41,32 @@ func setBenchmarkConfig(conditions string) {
 }
 
 func BenchmarkProcessBlockHeader(b *testing.B) {
-	b.Run("16K", func(b *testing.B) {
-		cleanStates16K := createCleanStates16K(runAmount)
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := blocks.ProcessBlockHeader(cleanStates16K[i], block)
-			if err != nil {
-				b.Fatal(err)
-			}
+	cleanStates16K := createCleanStates16K(runAmount)
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := blocks.ProcessBlockHeader(cleanStates16K[i], block)
+		if err != nil {
+			b.Fatal(err)
 		}
-	})
+	}
 }
 
 func BenchmarkProcessBlockRandao(b *testing.B) {
-	b.Run("16K", func(b *testing.B) {
-		cleanStates16K := createCleanStates16K(runAmount)
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := blocks.ProcessRandao(
-				cleanStates16K[i],
-				block.Body,
-				false, /* verify signatures */
-				false, /* disable logging */
-			)
-			if err != nil {
-				b.Fatal(err)
-			}
+	cleanStates16K := createCleanStates16K(runAmount)
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := blocks.ProcessRandao(
+			cleanStates16K[i],
+			block.Body,
+			false, /* verify signatures */
+			false, /* disable logging */
+		)
+		if err != nil {
+			b.Fatal(err)
 		}
-	})
-
-	// b.Run("300K", func(b *testing.B) {
-	// 	b.N = runAmount
-	// 	b.ResetTimer()
-	// 	for i := 0; i < b.N; i++ {
-	// 		_, _ = blocks.ProcessRandao(
-	// 			genesisState300K,
-	// 			blockBody,
-	// 			false, /* verify signatures */
-	// 			false, /* disable logging */
-	// 		)
-	// 	}
-	// })
-
-	// b.Run("4M Validators", func(b *testing.B) {
-	// 	b.N = runAmount
-	// 	b.ResetTimer()
-	// 	for i := 0; i < b.N; i++ {
-	// 		_, _ = blocks.ProcessBlockRandao(
-	// 			genesisState4M,
-	// 			block,
-	// 			false, /* verify signatures */
-	// 			false, /* disable logging */
-	// 		)
-	// 	}
-	// })
+	}
 }
 
 func BenchmarkProcessEth1Data(b *testing.B) {
@@ -109,135 +77,90 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 		},
 	}
 
-	b.Run("16K", func(b *testing.B) {
-		cleanStates16K := createCleanStates16K(runAmount)
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			cleanStates16K[i].Eth1DataVotes = eth1DataVotes
-			_, err := blocks.ProcessEth1DataInBlock(cleanStates16K[i], block)
-			if err != nil {
-				b.Fatal(err)
-			}
+	cleanStates16K := createCleanStates16K(runAmount)
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cleanStates16K[i].Eth1DataVotes = eth1DataVotes
+		_, err := blocks.ProcessEth1DataInBlock(cleanStates16K[i], block)
+		if err != nil {
+			b.Fatal(err)
 		}
-	})
-
-	// 	block, _ = createFullBlock(b, genesisState300K, deposits300K)
-	// 	eth1DataVotes = []*pb.Eth1Data{
-	// 		{
-	// 			BlockHash:   root,
-	// 			DepositRoot: root,
-	// 		},
-	// 	}
-	// 	genesisState300K.Eth1DataVotes = eth1DataVotes
-	// 	b.Run("300K", func(b *testing.B) {
-	// 		b.N = runAmount
-	// 		b.ResetTimer()
-	// 		for i := 0; i < b.N; i++ {
-	// 			_, err := blocks.ProcessEth1DataInBlock(genesisState300K, block)
-	// 			if err != nil {
-	// 				b.Fatal(err)
-	// 			}
-	// 		}
-	// 	})
-
-	// genesisState4M.Eth1DataVotes = eth1DataVotes
-	// b.Run("4M Validators", func(b *testing.B) {
-	// 	b.N = runAmount
-	// 	b.ResetTimer()
-	// 	for i := 0; i < b.N; i++ {
-	// 		_ = blocks.ProcessEth1DataInBlock(genesisState4M, block)
-	// 	}
-	// })
+	}
 }
 
 func BenchmarkProcessValidatorExits(b *testing.B) {
-	b.Run("16K", func(b *testing.B) {
-		cleanStates16K := createCleanStates16K(runAmount)
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			cleanStates16K[i].Slot = params.BeaconConfig().SlotsPerEpoch * 2048
-			_, err := blocks.ProcessValidatorExits(cleanStates16K[i], block, false)
-			if err != nil {
-				b.Fatalf("run %d, %v", i, err)
-			}
+	cleanStates16K := createCleanStates16K(runAmount)
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cleanStates16K[i].Slot = params.BeaconConfig().SlotsPerEpoch * 2048
+		_, err := blocks.ProcessValidatorExits(cleanStates16K[i], block, false)
+		if err != nil {
+			b.Fatalf("run %d, %v", i, err)
 		}
-	})
+	}
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
-	b.Run("16K", func(b *testing.B) {
-		cleanStates16K := createCleanStates16K(runAmount)
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := blocks.ProcessProposerSlashings(
-				cleanStates16K[i],
-				block,
-				false,
-			)
-			if err != nil {
-				b.Fatal(err)
-			}
+	cleanStates16K := createCleanStates16K(runAmount)
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := blocks.ProcessProposerSlashings(
+			cleanStates16K[i],
+			block,
+			false,
+		)
+		if err != nil {
+			b.Fatal(err)
 		}
-	})
+	}
 }
 
 func BenchmarkProcessAttesterSlashings(b *testing.B) {
-	b.Run("16K", func(b *testing.B) {
-		cleanStates16K := createCleanStates16K(runAmount)
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := blocks.ProcessAttesterSlashings(cleanStates16K[i], block, false)
-			if err != nil {
-				b.Fatal(i)
-			}
+	cleanStates16K := createCleanStates16K(runAmount)
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := blocks.ProcessAttesterSlashings(cleanStates16K[i], block, false)
+		if err != nil {
+			b.Fatal(i)
 		}
-	})
+	}
 }
 
 func BenchmarkProcessBlockAttestations(b *testing.B) {
-	b.Run("16K", func(b *testing.B) {
-		cleanStates16K := createCleanStates16K(runAmount)
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := blocks.ProcessBlockAttestations(
-				cleanStates16K[i],
-				block,
-				false,
-			)
-			if err != nil {
-				b.Fatal(err)
-			}
+	cleanStates16K := createCleanStates16K(runAmount)
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := blocks.ProcessBlockAttestations(
+			cleanStates16K[i],
+			block,
+			false,
+		)
+		if err != nil {
+			b.Fatal(err)
 		}
-	})
+	}
 }
 
 func BenchmarkProcessValidatorDeposits(b *testing.B) {
-	b.Run("16K", func(b *testing.B) {
-		cleanStates16K := createCleanStates16K(runAmount)
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			beaconState := cleanStates16K[i]
-			beaconState.LatestEth1Data = &pb.Eth1Data{
-				BlockHash:   root,
-				DepositRoot: root,
-			}
-			_, err := blocks.ProcessValidatorDeposits(
-				cleanStates16K[i],
-				block,
-				true,
-			)
-			if err != nil {
-				b.Fatal(err)
-			}
-			beaconState.DepositIndex = 16000
+	cleanStates16K := createCleanStates16K(runAmount)
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cleanStates16K[i].LatestEth1Data = &pb.Eth1Data{
+			BlockHash:   root,
+			DepositRoot: root,
 		}
-	})
+		_, err := blocks.ProcessValidatorDeposits(cleanStates16K[i], block, true)
+		if err != nil {
+			b.Fatal(err)
+		}
+		cleanStates16K[i].DepositIndex = 16000
+	}
 }
 
 func BenchmarkProcessBlock(b *testing.B) {
@@ -246,22 +169,29 @@ func BenchmarkProcessBlock(b *testing.B) {
 		Logging:          false,
 	}
 
-	b.Run("16K", func(b *testing.B) {
-		cleanStates16KFull := createCleanStates16K(runAmount)
-		b.N = runAmount
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			beaconState := cleanStates16KFull[i]
-			beaconState.LatestEth1Data = &pb.Eth1Data{
-				BlockHash:   root,
-				DepositRoot: root,
-			}
-			if _, err := state.ProcessBlock(context.Background(), beaconState, block, cfg); err != nil {
-				b.Fatal(err)
-			}
-			beaconState.DepositIndex = 16000
+	cleanStates16KFull := createCleanStates16K(runAmount)
+	cleanStates16KFull[0].Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 3
+	cleanStates16KFull[0].CurrentJustifiedEpoch = helpers.PrevEpoch(cleanStates16KFull[0])
+	cleanStates16KFull[0].CurrentCrosslinks[0].EndEpoch = helpers.PrevEpoch(cleanStates16KFull[0]) - 1
+	cleanStates16KFull[0].CurrentCrosslinks[0].StartEpoch = helpers.PrevEpoch(cleanStates16KFull[0]) - 3
+	fullBlock, benchRoot := createFullBlock(cleanStates16KFull[0], deposits16K)
+
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		beaconState := cleanStates16KFull[i]
+		beaconState.LatestEth1Data = &pb.Eth1Data{
+			BlockHash:   benchRoot,
+			DepositRoot: benchRoot,
 		}
-	})
+		beaconState.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 4
+		beaconState.CurrentJustifiedEpoch = helpers.PrevEpoch(beaconState)
+		beaconState.CurrentCrosslinks[0] = cleanStates16KFull[0].CurrentCrosslinks[0]
+		fullBlock.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 4
+		if _, err := state.ProcessBlock(context.Background(), beaconState, fullBlock, cfg); err != nil {
+			b.Fatal(err)
+		}
+	}
 }
 
 func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*pb.BeaconBlock, []byte) {
@@ -304,11 +234,6 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 	maxSlashes := params.BeaconConfig().MaxAttesterSlashings
 	attesterSlashings := make([]*pb.AttesterSlashing, maxSlashes)
 	for i := uint64(0); i < maxSlashes; i++ {
-		aggregationBitfield, err := bitutil.SetBitfield(int(i), committeeSize)
-		if err != nil {
-			panic(err)
-		}
-
 		crosslink := &pb.Crosslink{
 			Shard:    i % params.BeaconConfig().ShardCount,
 			EndEpoch: i,
@@ -323,7 +248,10 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 			TargetEpoch: i,
 			SourceEpoch: i,
 		}
-
+		aggregationBitfield, err := bitutil.SetBitfield(int(i), committeeSize)
+		if err != nil {
+			panic(err)
+		}
 		att1 := &pb.Attestation{
 			Data:                attData1,
 			AggregationBitfield: aggregationBitfield,
@@ -341,7 +269,6 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 		if err != nil {
 			panic(err)
 		}
-
 		slashing := &pb.AttesterSlashing{
 			Attestation_1: indexedAtt1,
 			Attestation_2: indexedAtt2,
@@ -356,7 +283,6 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 
 	attestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttestations; i++ {
-
 		crosslink := &pb.Crosslink{
 			Shard:      i % params.BeaconConfig().ShardCount,
 			StartEpoch: currentEpoch - 2,
@@ -374,7 +300,6 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 		if err != nil {
 			panic(err)
 		}
-
 		att1 := &pb.Attestation{
 			Data: &pb.AttestationData{
 				Crosslink:       crosslink,
@@ -400,7 +325,6 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 
 	previousDepsLen := uint64(len(previousDeposits))
 	newDeposits, _ := testutil.GenerateDeposits(&testing.B{}, params.BeaconConfig().MaxDeposits, false)
-
 	encodedDeposits := make([][]byte, previousDepsLen)
 	for i := 0; i < int(previousDepsLen); i++ {
 		hashedDeposit, err := ssz.HashTreeRoot(previousDeposits[i].Data)
@@ -409,7 +333,6 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 		}
 		encodedDeposits[i] = hashedDeposit[:]
 	}
-
 	newHashes := make([][]byte, len(newDeposits))
 	for i := 0; i < len(newDeposits); i++ {
 		hashedDeposit, err := ssz.HashTreeRoot(newDeposits[i].Data)
@@ -418,26 +341,21 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 		}
 		newHashes[i] = hashedDeposit[:]
 	}
-
 	allData := append(encodedDeposits, newHashes...)
-
 	depositTrie, err := trieutil.GenerateTrieFromItems(allData, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		panic(err)
 	}
-
 	for i := 0; i < len(newDeposits); i++ {
 		proof, err := depositTrie.MerkleProof(int(previousDepsLen) + i)
 		if err != nil {
 			panic(err)
 		}
-
 		newDeposits[i] = &pb.Deposit{
 			Data:  newDeposits[i].Data,
 			Proof: proof,
 		}
 	}
-
 	root := depositTrie.Root()
 
 	parentRoot, err := ssz.SigningRoot(bState.LatestBlockHeader)
@@ -538,13 +456,5 @@ func createCleanStates16K(num int) []*pb.BeaconState {
 	for i := 0; i < num; i++ {
 		cleanStates[i] = proto.Clone(genesisState16K).(*pb.BeaconState)
 	}
-	return cleanStates
-}
-
-func createCleanStates300K(num int) []*pb.BeaconState {
-	cleanStates := make([]*pb.BeaconState, num)
-	// for i := 0; i < num; i++ {
-	// 	cleanStates[i] = proto.Clone(genesisState300K).(*pb.BeaconState)
-	// }
 	return cleanStates
 }
