@@ -483,6 +483,7 @@ func TestUnpackETH2GenesisLogData_OK(t *testing.T) {
 
 func TestGenesisBlock_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
+	hook := logTest.NewGlobal()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
@@ -531,14 +532,14 @@ func TestGenesisBlock_OK(t *testing.T) {
 		testAcc.Backend.Commit()
 	}
 
-	// // We add in another 8 deposits after chainstart.
-	// for i := 0; i < depositsReqForChainStart; i++ {
-	// 	testAcc.TxOpts.Value = contracts.Amount32Eth()
-	// 	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
-	// 		t.Fatalf("Could not deposit to deposit contract %v", err)
-	// 	}
-	// 	testAcc.Backend.Commit()
-	// }
+	// We add in another 8 deposits after chainstart.
+	for i := 0; i < depositsReqForChainStart; i++ {
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+			t.Fatalf("Could not deposit to deposit contract %v", err)
+		}
+		testAcc.Backend.Commit()
+	}
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
@@ -558,4 +559,6 @@ func TestGenesisBlock_OK(t *testing.T) {
 	if !web3Service.chainStarted {
 		t.Error("genesis wasn't trigerred")
 	}
+	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
+	hook.Reset()
 }

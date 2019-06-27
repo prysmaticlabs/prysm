@@ -10,14 +10,14 @@ import (
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
-	ShardCount                  uint64 `yaml:"SHARD_COUNT"`                  // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize         uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxIndicesPerAttestation    uint64 `yaml:"MAX_INDICES_PER_ATTESTATION"`  // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
-	MinPerEpochChurnLimit       uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`    // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
-	ChurnLimitQuotient          uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`         // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
-	BaseRewardsPerEpoch         uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`       // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
-	ShuffleRoundCount           uint64 `yaml:"SHUFFLE_ROUND_COUNT"`          // ShuffleRoundCount is used for retrieving the permuted index.
-	GenesisActiveValidatorCount uint64 `yaml:GENESIS_ACTIVE_VALIDATOR_COUNT` // GenesisActiveValidatorCount is minimal number of validators needed to bootstrap beacon chain.
+	ShardCount                  uint64 `yaml:"SHARD_COUNT"`                    // ShardCount is the number of shard chains in Ethereum 2.0.
+	TargetCommitteeSize         uint64 `yaml:"TARGET_COMMITTEE_SIZE"`          // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxIndicesPerAttestation    uint64 `yaml:"MAX_INDICES_PER_ATTESTATION"`    // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
+	MinPerEpochChurnLimit       uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`      // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
+	ChurnLimitQuotient          uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`           // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
+	BaseRewardsPerEpoch         uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`         // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
+	ShuffleRoundCount           uint64 `yaml:"SHUFFLE_ROUND_COUNT"`            // ShuffleRoundCount is used for retrieving the permuted index.
+	GenesisActiveValidatorCount uint64 `yaml:"GENESIS_ACTIVE_VALIDATOR_COUNT"` // GenesisActiveValidatorCount is minimal number of validators needed to bootstrap beacon chain.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte `yaml:"DEPOSIT_CONTRACT_ADDRESS"`    // DepositContractAddress is the address of the deposit contract in PoW chain.

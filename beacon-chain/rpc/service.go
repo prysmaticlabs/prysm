@@ -50,8 +50,8 @@ type operationService interface {
 }
 
 type powChainService interface {
-	HasChainStartLogOccurred() (bool, error)
-	ETH2GenesisTime() (uint64, error)
+	HasChainStarted() bool
+	ETH2GenesisTime() uint64
 	ChainStartFeed() *event.Feed
 	LatestBlockHeight() *big.Int
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)

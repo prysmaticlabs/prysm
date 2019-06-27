@@ -23,15 +23,14 @@ var (
 )
 
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
-// from the deposit contract.
-func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
-	//TODO: replace with first log that triggred the chain start
-	// _, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
-	// if err != nil {
-	// 	return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
-	// }
-	// timestamp := binary.LittleEndian.Uint64(timestampData)
-	return 0, nil
+// from a local var.
+func (w *Web3Service) ETH2GenesisTime() uint64 {
+	return uint64(w.eth2GenesisTime)
+}
+
+// HasChainStarted returns the chainStarted var value.
+func (w *Web3Service) HasChainStarted() bool {
+	return w.chainStarted
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -224,8 +223,8 @@ func (w *Web3Service) processPastLogs() error {
 		}
 		if w.chainStarted {
 			timeStamp := w.blockTime.Unix()
-			genesisTime := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
-			w.processChainStart(uint64(genesisTime))
+			w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
+			w.processChainStart(uint64(w.eth2GenesisTime))
 		}
 	}
 	w.lastRequestedBlock.Set(w.blockHeight)

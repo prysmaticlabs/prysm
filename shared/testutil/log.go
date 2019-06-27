@@ -15,6 +15,12 @@ func AssertLogsContain(t *testing.T, hook *test.Hook, want string) {
 	assertLogs(t, hook, want, true)
 }
 
+// AssertLogsContain checks that the desired string is a subset of the current log output.
+// Set exitOnFail to true to immediately exit the test on failure
+func AssertLogsContainOccerances(t *testing.T, hook *test.Hook, want string) {
+	assertLogs(t, hook, want, true)
+}
+
 // AssertLogsDoNotContain is the inverse check of AssertLogsContain
 func AssertLogsDoNotContain(t *testing.T, hook *test.Hook, want string) {
 	assertLogs(t, hook, want, false)

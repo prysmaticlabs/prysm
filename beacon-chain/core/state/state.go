@@ -28,6 +28,12 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 		latestActiveIndexRoots[i] = zeroHash
 	}
 
+	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
+
+	if eth1Data == nil {
+		eth1Data = &pb.Eth1Data{}
+	}
+
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(crosslinks); i++ {
 		crosslinks[i] = &pb.Crosslink{
@@ -72,7 +78,7 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 		PreviousCrosslinks:        crosslinks,
 		LatestActiveIndexRoots:    latestActiveIndexRoots,
 		LatestBlockRoots:          latestBlockRoots,
-		LatestSlashedBalances:     nil,
+		LatestSlashedBalances:     latestSlashedExitBalances,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 		LatestBlockHeader:         blkHeader,
