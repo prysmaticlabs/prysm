@@ -20,6 +20,7 @@ go_test(
     embed = [":go_default_library"],
     tags = ["spectest"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//shared/params/spectest:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
