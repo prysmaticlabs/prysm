@@ -105,12 +105,6 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	// Cache latest block header state root.
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
-		sRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Printf("Set the latest block header state root to: %#x\n", sRoot)
-		fmt.Printf("Set the signing root to: %#x\n", sRoot)
 	}
 	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
