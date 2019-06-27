@@ -1096,3 +1096,9 @@ go_repository(
     commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
     importpath = "github.com/koron/go-ssdp",
 )
+
+go_repository(
+    name = "in_gopkg_d4l3k_messagediff_v1",
+    commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",
+    importpath = "gopkg.in/d4l3k/messagediff.v1",
+)

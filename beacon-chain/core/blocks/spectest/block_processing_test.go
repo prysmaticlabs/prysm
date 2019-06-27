@@ -9,6 +9,11 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestBlockProcessingMinimalYaml(t *testing.T) {
@@ -38,17 +43,23 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			ctx := context.Background()
-
-			// TODO: Unskip these tests.
-			if tt.Description == "attestation" ||  tt.Description == "voluntary_exit" {
-				t.Skip("Not passing yet...")
-			}
+			helpers.ClearAllCaches()
 
 			stateConfig := state.DefaultConfig()
+			s := tt.Pre // Pre-state
 			for _, b := range tt.Blocks {
-				if _, err = state.ExecuteStateTransition(ctx, tt.Pre, b, stateConfig); err != nil {
+				if s, err = state.ExecuteStateTransition(ctx, s, b, stateConfig); err != nil {
 					t.Fatal(err)
 				}
+			}
+			expectedPost := &pb.BeaconState{}
+			if err := testutil.ConvertToPb(tt.Post, expectedPost); err != nil {
+				t.Fatal(err)
+			}
+			if !proto.Equal(s, expectedPost) {
+				diff, _ := messagediff.PrettyDiff(s, expectedPost)
+				t.Log(diff)
+				t.Fatal("Post state does not match expected")
 			}
 		})
 	}
