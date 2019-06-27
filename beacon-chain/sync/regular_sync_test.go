@@ -11,6 +11,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -532,7 +533,7 @@ func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 	att := &pb.Attestation{
 		AggregationBitfield: []byte{'A', 'B', 'C'},
 	}
-	hash, err := hashutil.HashProto(att)
+	hash, err := ssz.HashTreeRoot(att)
 	if err != nil {
 		t.Fatalf("Could not hash attestation: %v", err)
 	}
@@ -574,7 +575,7 @@ func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
 	att := &pb.Attestation{
 		AggregationBitfield: []byte{'A', 'B', 'C'},
 	}
-	hash, err := hashutil.HashProto(att)
+	hash, err := ssz.HashTreeRoot(att)
 	if err != nil {
 		t.Fatalf("Could not hash attestation: %v", err)
 	}
@@ -612,7 +613,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	att := &pb.Attestation{
 		AggregationBitfield: []byte{'A', 'B', 'C'},
 	}
-	attRoot, err := hashutil.HashProto(att)
+	attRoot, err := ssz.HashTreeRoot(att)
 	if err != nil {
 		t.Fatalf("Could not hash attestation: %v", err)
 	}
@@ -697,7 +698,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := db.SaveFinalizedState(beaconState); err != nil {
 		t.Fatalf("could not save justified state: %v", err)
 	}
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("could not hash beacon state: %v", err)
 	}

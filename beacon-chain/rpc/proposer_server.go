@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -221,7 +222,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.Bea
 		return nil, fmt.Errorf("could not execute state transition for state root %v", err)
 	}
 
-	root, err := hashutil.HashProto(s)
+	root, err := ssz.HashTreeRoot(s)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon state: %v", err)
 	}

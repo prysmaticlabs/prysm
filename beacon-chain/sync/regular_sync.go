@@ -13,6 +13,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -21,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -300,7 +300,7 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Errorf("Unable to retrieve beacon state, %v", err)
 		return err
 	}
-	root, err := hashutil.HashProto(fState)
+	root, err := ssz.HashTreeRoot(fState)
 	if err != nil {
 		log.Errorf("unable to marshal the beacon state: %v", err)
 		return err
@@ -360,7 +360,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve finalized state: %v", err)
 		return err
 	}
-	finalizedRoot, err := hashutil.HashProto(finalizedState)
+	finalizedRoot, err := ssz.HashTreeRoot(finalizedState)
 	if err != nil {
 		log.Errorf("Could not tree hash block: %v", err)
 		return err
@@ -393,7 +393,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 
 	resp := msg.Data.(*pb.AttestationResponse)
 	attestation := resp.Attestation
-	attestationRoot, err := hashutil.HashProto(attestation)
+	attestationRoot, err := ssz.HashTreeRoot(attestation)
 	if err != nil {
 		log.Errorf("Could not hash received attestation: %v", err)
 		return err
@@ -462,7 +462,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) error {
 	defer span.End()
 	recExit.Inc()
 	exit := msg.Data.(*pb.VoluntaryExit)
-	h, err := hashutil.HashProto(exit)
+	h, err := ssz.HashTreeRoot(exit)
 	if err != nil {
 		log.Errorf("Could not hash incoming exit request: %v", err)
 		return err

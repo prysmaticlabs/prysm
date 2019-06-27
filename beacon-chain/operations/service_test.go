@@ -9,11 +9,11 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -203,7 +203,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	}
 
 	// Verify the invalid attestations are deleted.
-	hash, err := hashutil.HashProto(origAttestations[1])
+	hash, err := ssz.HashTreeRoot(origAttestations[1])
 	if err != nil {
 		t.Fatal(err)
 	}

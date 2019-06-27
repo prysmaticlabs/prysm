@@ -230,7 +230,7 @@ func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.Bea
 	defer span.End()
 
 	slotRootBinary := encodeSlotNumberRoot(beaconState.Slot, blockRoot)
-	stateHash, err := hashutil.HashProto(beaconState)
+	stateHash, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		return err
 	}

@@ -14,7 +14,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -31,7 +30,7 @@ type AttesterServer struct {
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *pbp2p.Attestation) (*pb.AttestResponse, error) {
-	h, err := hashutil.HashProto(att)
+	h, err := ssz.HashTreeRoot(att)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash attestation: %v", err)
 	}

@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -549,7 +548,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 			BlockRoots: state.LatestBlockRoots,
 			StateRoots: state.LatestStateRoots,
 		}
-		batchRoot, err := hashutil.HashProto(historicalBatch)
+		batchRoot, err := ssz.HashTreeRoot(historicalBatch)
 		if err != nil {
 			return nil, fmt.Errorf("could not hash historical batch: %v", err)
 		}

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -166,8 +167,8 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	state1, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
 	state2, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
 
-	root1, err1 := hashutil.HashProto(state1)
-	root2, err2 := hashutil.HashProto(state2)
+	root1, err1 := ssz.HashTreeRoot(state1)
+	root2, err2 := ssz.HashTreeRoot(state2)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)

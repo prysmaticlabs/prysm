@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestBeaconDB_HasExit(t *testing.T) {
@@ -15,7 +15,7 @@ func TestBeaconDB_HasExit(t *testing.T) {
 	d := &pb.VoluntaryExit{
 		Epoch: 100,
 	}
-	hash, err := hashutil.HashProto(d)
+	hash, err := ssz.HashTreeRoot(d)
 	if err != nil {
 		t.Fatalf("could not hash exit request: %v", err)
 	}

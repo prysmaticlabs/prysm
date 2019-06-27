@@ -5,9 +5,8 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
 )
 
@@ -16,16 +15,19 @@ func (db *BeaconDB) SaveAttestation(ctx context.Context, attestation *pb.Attesta
 	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveAttestation")
 	defer span.End()
 
-	encodedAtt, err := proto.Marshal(attestation)
+	encodedAtt, err := ssz.Marshal(attestation)
 	if err != nil {
 		return err
 	}
-	hash := hashutil.Hash(encodedAtt)
+	root, err := ssz.HashTreeRoot(attestation)
+	if err != nil {
+		return err
+	}
 
 	return db.batch(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
-		return a.Put(hash[:], encodedAtt)
+		return a.Put(root[:], encodedAtt)
 	})
 }
 
@@ -34,7 +36,7 @@ func (db *BeaconDB) SaveAttestationTarget(ctx context.Context, attTarget *pb.Att
 	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveAttestationTarget")
 	defer span.End()
 
-	encodedAttTgt, err := proto.Marshal(attTarget)
+	encodedAttTgt, err := ssz.Marshal(attTarget)
 	if err != nil {
 		return err
 	}
@@ -48,7 +50,7 @@ func (db *BeaconDB) SaveAttestationTarget(ctx context.Context, attTarget *pb.Att
 
 // DeleteAttestation deletes the attestation record into the beacon chain db.
 func (db *BeaconDB) DeleteAttestation(attestation *pb.Attestation) error {
-	hash, err := hashutil.HashProto(attestation)
+	hash, err := ssz.HashTreeRoot(attestation)
 	if err != nil {
 		return err
 	}
@@ -134,8 +136,13 @@ func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
 }
 
 func createAttestation(enc []byte) (*pb.Attestation, error) {
-	protoAttestation := &pb.Attestation{}
-	if err := proto.Unmarshal(enc, protoAttestation); err != nil {
+	var zero [32]byte
+	protoAttestation := &pb.Attestation{
+		Data: &pb.AttestationData{
+			BeaconBlockRoot: zero[:],
+		},
+	}
+	if err := ssz.Unmarshal(enc, protoAttestation); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
 	}
 	return protoAttestation, nil
@@ -143,7 +150,7 @@ func createAttestation(enc []byte) (*pb.Attestation, error) {
 
 func createAttestationTarget(enc []byte) (*pb.AttestationTarget, error) {
 	protoAttTgt := &pb.AttestationTarget{}
-	if err := proto.Unmarshal(enc, protoAttTgt); err != nil {
+	if err := ssz.Unmarshal(enc, protoAttTgt); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
 	}
 	return protoAttTgt, nil

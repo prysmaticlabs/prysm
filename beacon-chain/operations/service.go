@@ -8,13 +8,13 @@ import (
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -189,7 +189,7 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 	defer span.End()
 
 	exit := message.(*pb.VoluntaryExit)
-	hash, err := hashutil.HashProto(exit)
+	hash, err := ssz.HashTreeRoot(exit)
 	if err != nil {
 		return err
 	}
@@ -206,7 +206,7 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	defer span.End()
 
 	attestation := message.(*pb.Attestation)
-	hash, err := hashutil.HashProto(attestation)
+	hash, err := ssz.HashTreeRoot(attestation)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message)
 // removePendingAttestations removes a list of attestations from DB.
 func (s *Service) removePendingAttestations(attestations []*pb.Attestation) error {
 	for _, attestation := range attestations {
-		hash, err := hashutil.HashProto(attestation)
+		hash, err := ssz.HashTreeRoot(attestation)
 		if err != nil {
 			return err
 		}

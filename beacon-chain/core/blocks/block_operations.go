@@ -938,7 +938,7 @@ func ProcessTransfers(
 	// Verify there are no duplicate transfers.
 	transferSet := make(map[[32]byte]bool)
 	for _, transfer := range transfers {
-		h, err := hashutil.HashProto(transfer)
+		h, err := ssz.HashTreeRoot(transfer)
 		if err != nil {
 			return nil, fmt.Errorf("could not hash transfer: %v", err)
 		}

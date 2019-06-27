@@ -5,8 +5,8 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
 )
 
@@ -15,7 +15,7 @@ func (db *BeaconDB) SaveExit(ctx context.Context, exit *pb.VoluntaryExit) error 
 	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveExit")
 	defer span.End()
 
-	hash, err := hashutil.HashProto(exit)
+	hash, err := ssz.HashTreeRoot(exit)
 	if err != nil {
 		return err
 	}

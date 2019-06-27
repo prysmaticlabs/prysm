@@ -6,9 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
@@ -27,20 +26,20 @@ func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
 
-	aHash, err := hashutil.HashProto(a)
+	aRoot, err := ssz.HashTreeRoot(a)
 	if err != nil {
 		t.Fatalf("Failed to hash Attestation: %v", err)
 	}
-	aPrime, err := db.Attestation(aHash)
+	aPrime, err := db.Attestation(aRoot)
 	if err != nil {
 		t.Fatalf("Failed to call Attestation: %v", err)
 	}
 
-	aEnc, err := proto.Marshal(a)
+	aEnc, err := ssz.Marshal(a)
 	if err != nil {
 		t.Fatalf("Failed to encode: %v", err)
 	}
-	aPrimeEnc, err := proto.Marshal(aPrime)
+	aPrimeEnc, err := ssz.Marshal(aPrime)
 	if err != nil {
 		t.Fatalf("Failed to encode: %v", err)
 	}
@@ -94,7 +93,7 @@ func TestDeleteAttestation_OK(t *testing.T) {
 		t.Fatalf("Could not save attestation: %v", err)
 	}
 
-	aHash, err := hashutil.HashProto(a)
+	aHash, err := ssz.HashTreeRoot(a)
 	if err != nil {
 		t.Fatalf("Failed to hash Attestation: %v", err)
 	}
@@ -141,7 +140,7 @@ func TestHasAttestation_OK(t *testing.T) {
 			},
 		},
 	}
-	aHash, err := hashutil.HashProto(a)
+	aHash, err := ssz.HashTreeRoot(a)
 	if err != nil {
 		t.Fatalf("Failed to hash Attestation: %v", err)
 	}

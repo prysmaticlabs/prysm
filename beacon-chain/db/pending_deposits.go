@@ -7,8 +7,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -108,7 +108,7 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 		return
 	}
 
-	depRoot, err := hashutil.HashProto(d)
+	depRoot, err := ssz.HashTreeRoot(d)
 	if err != nil {
 		log.Errorf("Could not remove deposit %v", err)
 		return
@@ -119,7 +119,7 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 
 	idx := -1
 	for i, ctnr := range db.pendingDeposits {
-		hash, err := hashutil.HashProto(ctnr.Deposit)
+		hash, err := ssz.HashTreeRoot(ctnr.Deposit)
 		if err != nil {
 			log.Errorf("Could not hash deposit %v", err)
 			continue
