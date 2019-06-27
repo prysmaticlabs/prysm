@@ -130,7 +130,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	// Process genesis deposits
 	validatorMap := make(map[[32]byte]int)
 	for _, deposit := range deposits {
-		eth1DataExists := !bytes.Equal(eth1Data.DepositRoot, []byte{})
+		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
 		state, err = b.ProcessDeposit(
 			state,
 			deposit,
