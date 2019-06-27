@@ -1427,7 +1427,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 			Signature: make([]byte, 96),
 		},
 	}
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	leaf, err := hashutil.DepositHash(deposit.Data)
 	if err != nil {
 		t.Fatal(err)
 	}
