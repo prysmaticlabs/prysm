@@ -559,6 +559,6 @@ func TestGenesisBlock_OK(t *testing.T) {
 	if !web3Service.chainStarted {
 		t.Error("genesis wasn't trigerred")
 	}
-	testutil.AssertLogsContainOccerances(t, hook, "Minimum number of validators reached for beacon-chain to start", depositsReqForChainStart+1)
+	testutil.AssertLogsContainOccerances(t, hook, "Minimum number of validators reached for beacon-chain to start", 1)
 	hook.Reset()
 }

@@ -39,13 +39,15 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.processDepositLog(depositLog)
-		triggered, err := w.isGenesisTrigger(w.chainStartDeposits)
-		if err != nil {
-			return err
-		}
-		if triggered {
-			log.Info("Minimum number of validators reached for beacon-chain to start")
-			w.chainStarted = true
+		if !w.chainStarted {
+			triggered, err := w.isGenesisTrigger(w.chainStartDeposits)
+			if err != nil {
+				return err
+			}
+			if triggered {
+				log.Info("Minimum number of validators reached for beacon-chain to start")
+				w.chainStarted = true
+			}
 		}
 		return nil
 	}
