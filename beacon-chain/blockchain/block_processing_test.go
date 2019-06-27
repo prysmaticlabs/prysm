@@ -68,7 +68,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := SetLatestStateRootsInState(chainService); err != nil {
+	if err := setLatestStateRootsInState(chainService); err != nil {
 		t.Fatal(err)
 	}
 
