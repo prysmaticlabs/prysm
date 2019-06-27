@@ -1063,6 +1063,7 @@ func ProcessTransfers(
 	// Verify there are no duplicate transfers.
 	transferSet := make(map[[32]byte]bool)
 	for _, transfer := range transfers {
+		// SSZ or HashProto here? which is faster?
 		h, err := hashutil.HashProto(transfer)
 		if err != nil {
 			return nil, fmt.Errorf("could not hash transfer: %v", err)

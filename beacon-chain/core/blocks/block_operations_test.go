@@ -309,8 +309,8 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		Slot:       block.Slot,
 		ParentRoot: latestBlockSignedRoot[:],
 		BodyRoot:   bodyRoot[:],
-		StateRoot: params.BeaconConfig().ZeroHash[:],
-		Signature: make([]byte, 96),
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		Signature:  make([]byte, 96),
 	}
 	if !proto.Equal(nsh, expected) {
 		t.Errorf("Expected %v, received %vk9k", expected, nsh)
@@ -1378,7 +1378,7 @@ func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
-			Pubkey: []byte{1, 2, 3},
+			Pubkey:    []byte{1, 2, 3},
 			Signature: make([]byte, 96),
 		},
 	}
@@ -1422,8 +1422,8 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
-			Pubkey: []byte{1, 2, 3},
-			Amount: params.BeaconConfig().MaxDepositAmount,
+			Pubkey:    []byte{1, 2, 3},
+			Amount:    params.BeaconConfig().MaxDepositAmount,
 			Signature: make([]byte, 96),
 		},
 	}
