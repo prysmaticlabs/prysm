@@ -29,7 +29,6 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 	}
 
 	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
-
 	if eth1Data == nil {
 		eth1Data = &pb.Eth1Data{}
 	}

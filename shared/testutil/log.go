@@ -30,6 +30,7 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool, count int
 	t.Logf("scanning for: %s", want)
 	entries := hook.AllEntries()
 	match := false
+	counter := 0
 	for _, e := range entries {
 		msg, err := e.String()
 		if err != nil {
@@ -37,9 +38,7 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool, count int
 		}
 		c := strings.Count(msg, want)
 		if count != -1 {
-			if c == count {
-				match = true
-			}
+			counter += c
 		} else {
 			if c > 0 {
 				match = true
@@ -47,6 +46,9 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool, count int
 		}
 
 		t.Logf("log: %s", msg)
+	}
+	if count != -1 && counter == count {
+		match = true
 	}
 
 	if flag && !match {

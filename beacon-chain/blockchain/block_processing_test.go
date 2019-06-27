@@ -64,8 +64,11 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-
 	if err := SetSlotInState(chainService, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := SetLatestStateRootsInState(chainService); err != nil {
 		t.Fatal(err)
 	}
 
