@@ -26,6 +26,9 @@ func TestBlockProcessingMainnetYaml(t *testing.T) {
 
 func runBlockProcessingTest(t *testing.T, filename string) {
 	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/sanity/blocks/" + filename)
+	if err != nil {
+		t.Fatal(err)
+	}
 	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
