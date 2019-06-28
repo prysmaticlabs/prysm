@@ -35,7 +35,7 @@ var genesisBeaconState = createFullState(validatorNum)
 var beaconStates = createCleanStates(RunAmount)
 
 func setBenchmarkConfig() {
-	fmt.Printf("Running Benchmarks for %d validators\n", validatorNum)
+	fmt.Printf("Running epoch benchmarks for %d validators\n", validatorNum)
 	c := params.DemoBeaconConfig()
 	if conditions == "MAX" {
 		c.MaxAttestations = 128

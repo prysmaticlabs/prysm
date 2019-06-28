@@ -2,6 +2,7 @@ package blocks_test
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"strconv"
 	"testing"
@@ -19,10 +20,12 @@ import (
 )
 
 var runAmount = 30
-var genesisState, deposits = createGenesisState(16000)
+var validatorNum = 65536
+var genesisState, deposits = createGenesisState(validatorNum)
 var block, root = createFullBlock(genesisState, deposits)
 
 func setBenchmarkConfig(conditions string) {
+	fmt.Printf("Running block benchmarks with %d validators\n", validatorNum)
 	c := params.DemoBeaconConfig()
 	if conditions == "BIG" {
 		c.MaxProposerSlashings = 16
@@ -198,19 +201,14 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 	currentSlot := bState.Slot
 	currentEpoch := helpers.CurrentEpoch(bState)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	validatorIndices, err := helpers.ActiveValidatorIndices(bState, currentEpoch)
+	validatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
 	if err != nil {
 		panic(err)
 	}
-	validatorCount := len(validatorIndices)
 
 	committeesPerEpoch, err := helpers.EpochCommitteeCount(bState, currentEpoch)
 	if err != nil {
 		panic(err)
-	}
-
-	if float64(validatorCount)/float64(committeesPerEpoch) > float64(params.BeaconConfig().MaxIndicesPerAttestation) {
-		committeesPerEpoch = uint64(math.Ceil(float64(validatorCount) / float64(params.BeaconConfig().MaxIndicesPerAttestation)))
 	}
 
 	committeeSize := int(math.Ceil(float64(validatorCount) / float64(committeesPerEpoch)))
@@ -300,6 +298,7 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 		if err != nil {
 			panic(err)
 		}
+		custodyBitfield := bitutil.FillBitfield(committeeSize)
 		att1 := &pb.Attestation{
 			Data: &pb.AttestationData{
 				Crosslink:       crosslink,
@@ -310,7 +309,7 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 				TargetRoot:      params.BeaconConfig().ZeroHash[:],
 			},
 			AggregationBitfield: aggregationBitfield,
-			CustodyBitfield:     []byte{1},
+			CustodyBitfield:     custodyBitfield,
 		}
 		attestations[i] = att1
 	}
@@ -319,7 +318,7 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 	for i := 0; i < len(voluntaryExits); i++ {
 		voluntaryExits[i] = &pb.VoluntaryExit{
 			Epoch:          currentEpoch - 1,
-			ValidatorIndex: uint64(validatorCount*2/3 + i),
+			ValidatorIndex: validatorCount*uint64(2/3) + uint64(i),
 		}
 	}
 
