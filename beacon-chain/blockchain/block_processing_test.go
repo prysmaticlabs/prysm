@@ -127,6 +127,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
+	beaconState.DepositIndex = 0
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
@@ -204,6 +205,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
+	beaconState.DepositIndex = 0
 
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
@@ -344,6 +346,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	beaconState.DepositIndex = 0
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -404,6 +407,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	beaconState.DepositIndex = 0
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -484,6 +488,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
+	beaconState.LatestEth1Data.DepositCount = 1
+	beaconState.DepositIndex = 0
 	if err := chainService.beaconDB.SaveJustifiedState(beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -556,7 +562,6 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	beaconState.Slot--
-	beaconState.DepositIndex = 0
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -651,6 +656,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	beaconState.DepositIndex = 0
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}

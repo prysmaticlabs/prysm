@@ -20,47 +20,6 @@ func init() {
 	helpers.ClearShuffledValidatorCache()
 }
 
-func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	tests := []struct {
-		slot            uint64
-		canProcessEpoch bool
-	}{
-		{
-			slot:            1,
-			canProcessEpoch: false,
-		}, {
-			slot:            63,
-			canProcessEpoch: true,
-		},
-		{
-			slot:            64,
-			canProcessEpoch: false,
-		}, {
-			slot:            127,
-			canProcessEpoch: true,
-		}, {
-			slot:            1000000000,
-			canProcessEpoch: false,
-		},
-	}
-
-	for _, tt := range tests {
-		state := &pb.BeaconState{Slot: tt.slot}
-		if CanProcessEpoch(state) != tt.canProcessEpoch {
-			t.Errorf(
-				"CanProcessEpoch(%d) = %v. Wanted %v",
-				tt.slot,
-				CanProcessEpoch(state),
-				tt.canProcessEpoch,
-			)
-		}
-	}
-}
-
 func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	// Generate 2 attestations.
 	atts := make([]*pb.PendingAttestation, 2)
