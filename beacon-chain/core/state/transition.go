@@ -40,7 +40,7 @@ func DefaultConfig() *TransitionConfig {
 	}
 }
 
-// StateTransition defines the procedure for a state transition function.
+// ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
 //  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
@@ -53,7 +53,7 @@ func DefaultConfig() *TransitionConfig {
 //        assert block.state_root == hash_tree_root(state)
 //    # Return post-state
 //    return state
-func StateTransition(
+func ExecuteStateTransition(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -62,7 +62,7 @@ func StateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.StateTransition")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()
 	var err error
 

@@ -211,7 +211,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.Bea
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	s, err := state.StateTransition(
+	s, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
 		block,

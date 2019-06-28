@@ -36,7 +36,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 		Slot: 4,
 	}
 	want := "expected state.slot"
-	if _, err := state.StateTransition(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }

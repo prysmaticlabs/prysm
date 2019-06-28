@@ -212,7 +212,7 @@ func (c *ChainService) AdvanceState(
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	finalizedEpoch := beaconState.FinalizedEpoch
-	newState, err := state.StateTransition(
+	newState, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
 		block,
