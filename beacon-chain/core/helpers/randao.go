@@ -70,6 +70,9 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 //    """
 //    return state.latest_active_index_roots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
+	newRootLength := len(state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength])
+	newRoot := make([]byte, newRootLength)
+	copy(newRoot, state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength])
 	return state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength]
 }
 
@@ -85,7 +88,10 @@ func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
 //    """
 //    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
-	return state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength]
+	newMixLength := len(state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength])
+	newMix := make([]byte, newMixLength)
+	copy(newMix, state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength])
+	return newMix
 }
 
 // CreateRandaoReveal generates a epoch signature using the beacon proposer priv key.

@@ -7,12 +7,11 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
+	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -47,20 +46,23 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 		t.Run(tt.Description, func(t *testing.T) {
 			ctx := context.Background()
 			helpers.ClearAllCaches()
+			blocks.ClearEth1DataVoteCache()
+			if tt.Description != "attestation" {
+				return
+			}
 
 			stateConfig := state.DefaultConfig()
 			s := tt.Pre // Pre-state
 			for _, b := range tt.Blocks {
-				if s, err = state.ExecuteStateTransition(ctx, s, b, stateConfig); err != nil {
+				if tt.Pre, err = state.ExecuteStateTransition(ctx, tt.Pre, b, stateConfig); err != nil {
 					t.Fatal(err)
 				}
 			}
-			expectedPost := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Post, expectedPost); err != nil {
-				t.Fatal(err)
-			}
-			if !proto.Equal(s, expectedPost) {
-				diff, _ := messagediff.PrettyDiff(s, expectedPost)
+
+			tt.Post.CurrentEpochAttestations = nil
+
+			if !proto.Equal(s, tt.Post) {
+				diff, _ := messagediff.PrettyDiff(s, tt.Post)
 				t.Log(diff)
 				t.Fatal("Post state does not match expected")
 			}
