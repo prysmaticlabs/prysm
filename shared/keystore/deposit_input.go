@@ -1,8 +1,6 @@
 package keystore
 
 import (
-	"bytes"
-
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -29,11 +27,11 @@ func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositInput, error)
 		WithdrawalCredentialsHash32: withdrawalCredentialsHash(withdrawalKey),
 	}
 
-	buf := new(bytes.Buffer)
-	if err := ssz.Encode(buf, di); err != nil {
+	buf, err := ssz.Marshal(di)
+	if err != nil {
 		return nil, err
 	}
-	di.ProofOfPossession = depositKey.SecretKey.Sign(buf.Bytes(), params.BeaconConfig().DomainDeposit).Marshal()
+	di.ProofOfPossession = depositKey.SecretKey.Sign(buf, params.BeaconConfig().DomainDeposit).Marshal()
 
 	return di, nil
 }

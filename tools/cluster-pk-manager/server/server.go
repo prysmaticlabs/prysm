@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -147,13 +146,14 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 		if err != nil {
 			return nil, err
 		}
-		serializedData := new(bytes.Buffer)
-		if err := ssz.Encode(serializedData, di); err != nil {
+		
+		serializedData, err := ssz.Marshal(di) 
+		if err != nil {
 			return nil, fmt.Errorf("could not serialize deposit data: %v", err)
 		}
 
 		// Do the actual deposit
-		if err := s.makeDeposit(serializedData.Bytes()); err != nil {
+		if err := s.makeDeposit(serializedData); err != nil {
 			return nil, err
 		}
 		// Store in database

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -211,13 +210,12 @@ func main() {
 				continue
 			}
 
-			serializedData := new(bytes.Buffer)
-			if err := ssz.Encode(serializedData, data); err != nil {
+			serializedData, err := ssz.Marshal(data) 
+			if err != nil {
 				log.Errorf("could not serialize deposit data: %v", err)
 			}
-
 			for i := int64(0); i < numberOfDeposits; i++ {
-				tx, err := depositContract.Deposit(txOps, serializedData.Bytes())
+				tx, err := depositContract.Deposit(txOps, serializedData)
 				if err != nil {
 					log.Error("unable to send transaction to contract")
 				}

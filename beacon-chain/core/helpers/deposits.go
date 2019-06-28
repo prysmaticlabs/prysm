@@ -1,9 +1,9 @@
 package helpers
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -17,11 +17,10 @@ func EncodeDepositData(
 	depositValue uint64,
 	depositTimestamp int64,
 ) ([]byte, error) {
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
+	encodedInput, err := ssz.Marshal(depositInput)
+	if err != nil {
 		return nil, fmt.Errorf("failed to encode deposit input: %v", err)
 	}
-	encodedInput := wBuf.Bytes()
 	depositData := make([]byte, 0, 512)
 	value := make([]byte, 8)
 	binary.LittleEndian.PutUint64(value, depositValue)
@@ -50,9 +49,12 @@ func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
 	depositInput := new(pb.DepositInput)
 	// Since the value deposited and the timestamp are both 8 bytes each,
 	// the deposit data is the chunk after the first 16 bytes.
+
+	log.Println(depositData)
 	depositInputBytes := depositData[16:]
-	rBuf := bytes.NewReader(depositInputBytes)
-	if err := ssz.Decode(rBuf, depositInput); err != nil {
+	log.Println(depositInputBytes)
+	err := ssz.Unmarshal(depositInputBytes, &depositInput)
+	if err != nil {
 		return nil, fmt.Errorf("ssz decode failed: %v", err)
 	}
 	return depositInput, nil

@@ -1064,11 +1064,10 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	depositInput := &pb.DepositInput{
 		Pubkey: []byte{1, 2, 3},
 	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
+	encodedInput , err := ssz.Marshal(depositInput)
+	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
-	encodedInput := wBuf.Bytes()
 	data := []byte{}
 	value := make([]byte, 8)
 	timestamp := make([]byte, 8)
@@ -1122,11 +1121,10 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
+	encodedInput , err := ssz.Marshal(depositInput)
+	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
-	encodedInput := wBuf.Bytes()
 	data := []byte{}
 
 	// We set a deposit value of 1000.
@@ -1205,11 +1203,10 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
+	encodedInput , err := ssz.Marshal(depositInput)
+	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
-	encodedInput := wBuf.Bytes()
 	data := []byte{}
 
 	// We set a deposit value of 1000.
@@ -1274,11 +1271,10 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
+	encodedInput , err := ssz.Marshal(depositInput)
+	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
-	encodedInput := wBuf.Bytes()
 	data := []byte{}
 
 	// We set a deposit value of 1000.
@@ -1435,11 +1431,10 @@ func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented
 		WithdrawalCredentialsHash32: []byte{3, 2, 1},
 		ProofOfPossession:           []byte{},
 	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
+	encodedInput , err := ssz.Marshal(depositInput)
+	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
-	encodedInput := wBuf.Bytes()
 	data := []byte{}
 
 	// We set a deposit value of 1000.

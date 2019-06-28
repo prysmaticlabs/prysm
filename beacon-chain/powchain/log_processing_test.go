@@ -58,13 +58,13 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
+	serializedData, err := ssz.Marshal(data) 
+	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
 	testAcc.txOpts.Value = amount32Eth
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -121,14 +121,14 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
+	serializedData, err := ssz.Marshal(data) 
+	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
 	testAcc.txOpts.Value = amount32Eth
 	badData := []byte("bad data")
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -195,13 +195,13 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
+	serializedData, err := ssz.Marshal(data) 
+	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
 	testAcc.txOpts.Value = amount32Eth
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 	testAcc.backend.Commit()
@@ -276,8 +276,8 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
+	serializedData, err := ssz.Marshal(data) 
+	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
@@ -286,7 +286,7 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -365,13 +365,13 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 			WithdrawalCredentialsHash32: []byte("withdraw"),
 		}
 
-		serializedData := new(bytes.Buffer)
-		if err := ssz.Encode(serializedData, data); err != nil {
+		serializedData, err := ssz.Marshal(data) 
+		if err != nil {
 			t.Fatalf("Could not serialize data %v", err)
 		}
 
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -445,8 +445,8 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
+	serializedData, err := ssz.Marshal(data) 
+	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
@@ -454,7 +454,7 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -513,8 +513,8 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
+	serializedData, err := ssz.Marshal(data) 
+	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 	ok, _, err := web3Service.HasChainStartLogOccurred()
@@ -529,7 +529,7 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()
@@ -574,8 +574,8 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
+	serializedData, err := ssz.Marshal(data) 
+	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 	ok, _, err := web3Service.HasChainStartLogOccurred()
@@ -590,7 +590,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()
@@ -620,7 +620,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	// We add in another 8 deposits after chainstart.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
-		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()
