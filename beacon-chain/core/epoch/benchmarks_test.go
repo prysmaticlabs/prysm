@@ -2,7 +2,7 @@ package epoch_test
 
 import (
 	"context"
-	"fmt"
+	"io/ioutil"
 	"strconv"
 	"testing"
 
@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 )
 
 var RunAmount = 64
@@ -28,16 +29,18 @@ var activationCount = uint64(40)
 var initiateActivationCount = uint64(40)
 
 var validatorNum = uint64(65536)
-var conditions = "MIN"
+var conditions = "SML"
 
 func setBenchmarkConfig() {
-	fmt.Printf("Running epoch benchmarks for %d validators\n", validatorNum)
+	logrus.Printf("Running epoch benchmarks for %d validators", validatorNum)
+	logrus.SetLevel(logrus.PanicLevel)
+	logrus.SetOutput(ioutil.Discard)
 	c := params.DemoBeaconConfig()
-	if conditions == "MAX" {
+	if conditions == "BIG" {
 		c.MaxAttestations = 128
 		c.MaxDeposits = 16
 		c.MaxVoluntaryExits = 16
-	} else if conditions == "MIN" {
+	} else if conditions == "SML" {
 		c.MaxAttesterSlashings = 1
 		c.MaxProposerSlashings = 1
 		c.MaxAttestations = 16
@@ -50,6 +53,11 @@ func setBenchmarkConfig() {
 		EnableCrosslinks: false,
 	}
 	featureconfig.InitFeatureConfig(featureCfg)
+}
+
+func cleanUpConfigs() {
+	params.OverrideBeaconConfig(params.BeaconConfig())
+	logrus.SetLevel(logrus.InfoLevel)
 }
 
 func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
@@ -87,6 +95,7 @@ func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessCrosslinks(b *testing.B) {
@@ -100,6 +109,7 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
@@ -113,6 +123,7 @@ func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessRegistryUpdates(b *testing.B) {
@@ -126,6 +137,7 @@ func BenchmarkProcessRegistryUpdates(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessSlashings(b *testing.B) {
@@ -139,6 +151,7 @@ func BenchmarkProcessSlashings(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessFinalUpdates(b *testing.B) {
@@ -152,6 +165,7 @@ func BenchmarkProcessFinalUpdates(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessEpoch(b *testing.B) {
@@ -166,6 +180,7 @@ func BenchmarkProcessEpoch(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkActiveValidatorIndices(b *testing.B) {
@@ -180,6 +195,7 @@ func BenchmarkActiveValidatorIndices(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkValidatorIndexMap(b *testing.B) {
@@ -189,6 +205,7 @@ func BenchmarkValidatorIndexMap(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = stateutils.ValidatorIndexMap(genesisBeaconState)
 	}
+	cleanUpConfigs()
 }
 
 func createFullState(validatorCount uint64) *pb.BeaconState {
