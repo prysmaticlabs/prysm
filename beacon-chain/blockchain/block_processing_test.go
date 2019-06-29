@@ -47,10 +47,11 @@ func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *Chain
 		t.Fatalf("could not apply block state transition: %v", err)
 	}
 
-	stateRoot, err := hashutil.HashProto(computedState)
+	stateRoot, err := ssz.HashTreeRoot(computedState)
 	if err != nil {
 		t.Fatalf("could not tree hash state: %v", err)
 	}
+
 	block.StateRoot = stateRoot[:]
 	t.Logf("state root after block: %#x", stateRoot)
 }
@@ -365,7 +366,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	}
 
 	beaconState.Slot++
-	parentRoot, err := blockutil.BlockSigningRoot(genesis)
+	parentRoot, err := blockutil.BlockSigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
