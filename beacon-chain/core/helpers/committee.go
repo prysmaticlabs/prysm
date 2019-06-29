@@ -304,7 +304,7 @@ func CommitteeAssignment(
 func ShardDelta(beaconState *pb.BeaconState, epoch uint64) (uint64, error) {
 	committeeCount, err := EpochCommitteeCount(beaconState, epoch)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("could not get committee count: %v", err)
 	}
 	return ShardDeltaFromCommitteeCount(committeeCount), nil
 }
