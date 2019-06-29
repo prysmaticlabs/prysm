@@ -40,7 +40,7 @@ func TestAttestationDataSlot_OK(t *testing.T) {
 }
 
 func TestAttestationDataSlot_ReturnsErrorWithNilState(t *testing.T) {
-	s, err := helpers.AttestationDataSlot(nil/*state*/, &pb.AttestationData{
+	s, err := helpers.AttestationDataSlot(nil /*state*/, &pb.AttestationData{
 		TargetEpoch: 0,
 		Crosslink: &pb.Crosslink{
 			Shard: 0,
@@ -53,7 +53,7 @@ func TestAttestationDataSlot_ReturnsErrorWithNilState(t *testing.T) {
 }
 
 func TestAttestationDataSlot_ReturnsErrorWithNilData(t *testing.T) {
-	s, err := helpers.AttestationDataSlot(&pb.BeaconState{}, nil/*data*/)
+	s, err := helpers.AttestationDataSlot(&pb.BeaconState{}, nil /*data*/)
 	if err != helpers.ErrAttestationDataSlotNilData {
 		t.Errorf("Expected an error, but received %v", err)
 		t.Logf("attestation slot=%v", s)
@@ -72,7 +72,7 @@ func TestAttestationDataSlot_ReturnsErrorWithErroneousTargetEpoch(t *testing.T) 
 		t.Fatal(err)
 	}
 	s, err := helpers.AttestationDataSlot(beaconState, &pb.AttestationData{
-		TargetEpoch: 1<<63-1, // Far future epoch
+		TargetEpoch: 1<<63 - 1, // Far future epoch
 	})
 	if err == nil {
 		t.Error("Expected an error, but received nil")
