@@ -583,7 +583,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
 	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attesting indices from aggregation bitfield: %v", err)
+		return nil, fmt.Errorf("could not get attesting indices: %v", err)
 	}
 	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
 	cb1Map := make(map[uint64]bool)
@@ -648,13 +648,9 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 
 	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
 	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
-	if maxIndices < totalIndicesLength {
+	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
 		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)
 	}
-	if totalIndicesLength < 1 {
-		return fmt.Errorf("total indices length is empty, received: %d", totalIndicesLength)
-	}
-
 	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
 	if len(custodyBitIntersection) != 0 {
 		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
@@ -781,7 +777,6 @@ func ProcessDeposit(
 			EffectiveBalance:           effectiveBalance,
 		})
 		beaconState.Balances = append(beaconState.Balances, amount)
-		valIndexMap[bytesutil.ToBytes32(pubKey)] = len(beaconState.ValidatorRegistry)
 	} else {
 		beaconState = helpers.IncreaseBalance(beaconState, uint64(index), amount)
 	}
