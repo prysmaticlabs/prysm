@@ -95,7 +95,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	ctx := context.Background()
 	defer internal.TeardownDB(t, db)
 
-	deposits, _ := testutil.GenerateDeposits(t, 8, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 8, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -131,7 +131,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	deposits, _ := testutil.GenerateDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
 	state, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -165,7 +165,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 	depChainStart := params.BeaconConfig().DepositsForChainStart / 16
 
-	deposits, _ := testutil.GenerateDeposits(t, depChainStart, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart, false)
 	state, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -243,7 +243,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 	depChainStart := params.BeaconConfig().DepositsForChainStart / 16
-	deposits, _ := testutil.GenerateDeposits(t, depChainStart, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart, false)
 	state, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)

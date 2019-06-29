@@ -14,7 +14,7 @@ import (
 func TestAttestationDataSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	deposits, _ := testutil.GenerateDeposits(t, 100, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
 	if err := db.InitializeState(context.Background(), uint64(0), deposits, nil); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}

@@ -45,7 +45,7 @@ func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 	db := internal.SetupDB(t)
 
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.GenerateDeposits(t, 100, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
 	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}

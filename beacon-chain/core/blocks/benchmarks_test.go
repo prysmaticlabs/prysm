@@ -354,7 +354,7 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 	}
 
 	previousDepsLen := uint64(len(previousDeposits))
-	newDeposits, _ := testutil.GenerateDeposits(&testing.B{}, params.BeaconConfig().MaxDeposits, false)
+	newDeposits, _ := testutil.SetupInitialDeposits(&testing.B{}, params.BeaconConfig().MaxDeposits, false)
 	encodedDeposits := make([][]byte, previousDepsLen)
 	for i := 0; i < int(previousDepsLen); i++ {
 		hashedDeposit, err := ssz.HashTreeRoot(previousDeposits[i].Data)

@@ -38,7 +38,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 
 	numDeposits := params.BeaconConfig().DepositsForChainStart
-	deposits, _ := testutil.GenerateDeposits(t, numDeposits, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
@@ -77,7 +77,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	deposits, _ := testutil.GenerateDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)

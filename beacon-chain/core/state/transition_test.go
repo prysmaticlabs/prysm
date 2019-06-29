@@ -42,7 +42,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, privKeys := testutil.GenerateDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +91,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
-	deposits, privKeys := testutil.GenerateDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	deposits, privKeys := testutil.GenerateDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -242,7 +242,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _ := testutil.GenerateDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -363,7 +363,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	deposits, _ := testutil.GenerateDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
