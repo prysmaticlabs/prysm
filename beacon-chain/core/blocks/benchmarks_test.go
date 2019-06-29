@@ -2,6 +2,7 @@ package blocks_test
 
 import (
 	"context"
+	"io/ioutil"
 	"math"
 	"strconv"
 	"testing"
@@ -24,7 +25,9 @@ var validatorNum = 65536
 var conditions = "SML"
 
 func setBenchmarkConfig() {
+	logrus.Printf("Running block benchmarks for %d validators", validatorNum)
 	logrus.SetLevel(logrus.PanicLevel)
+	logrus.SetOutput(ioutil.Discard)
 	c := params.DemoBeaconConfig()
 	if conditions == "BIG" {
 		c.MaxProposerSlashings = 16
@@ -42,9 +45,8 @@ func setBenchmarkConfig() {
 	params.OverrideBeaconConfig(c)
 }
 
-func cleanUpConfigs() {
+func cleanUp() {
 	params.OverrideBeaconConfig(params.BeaconConfig())
-	logrus.SetLevel(logrus.PanicLevel)
 }
 
 func BenchmarkProcessBlockHeader(b *testing.B) {
@@ -59,7 +61,7 @@ func BenchmarkProcessBlockHeader(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-	cleanUpConfigs()
+	cleanUp()
 }
 
 func BenchmarkProcessBlockRandao(b *testing.B) {
@@ -79,7 +81,7 @@ func BenchmarkProcessBlockRandao(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-	cleanUpConfigs()
+	cleanUp()
 }
 
 func BenchmarkProcessEth1Data(b *testing.B) {
@@ -103,7 +105,7 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-	cleanUpConfigs()
+	cleanUp()
 }
 
 func BenchmarkProcessValidatorExits(b *testing.B) {
@@ -119,7 +121,7 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 			b.Fatalf("run %d, %v", i, err)
 		}
 	}
-	cleanUpConfigs()
+	cleanUp()
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
@@ -138,7 +140,7 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-	cleanUpConfigs()
+	cleanUp()
 }
 
 func BenchmarkProcessAttesterSlashings(b *testing.B) {
@@ -153,7 +155,7 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 			b.Fatal(i)
 		}
 	}
-	cleanUpConfigs()
+	cleanUp()
 }
 
 func BenchmarkProcessBlockAttestations(b *testing.B) {
@@ -172,7 +174,7 @@ func BenchmarkProcessBlockAttestations(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-	cleanUpConfigs()
+	cleanUp()
 }
 
 func BenchmarkProcessValidatorDeposits(b *testing.B) {
@@ -192,7 +194,7 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 		}
 		cleanStates[i].DepositIndex = 16000
 	}
-	cleanUpConfigs()
+	cleanUp()
 }
 
 func BenchmarkProcessBlock(b *testing.B) {
@@ -225,7 +227,7 @@ func BenchmarkProcessBlock(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-	cleanUpConfigs()
+	cleanUp()
 }
 
 func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*pb.BeaconBlock, []byte) {
