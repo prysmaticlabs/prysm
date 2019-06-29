@@ -139,10 +139,11 @@ func ChurnLimit(state *pb.BeaconState) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not get validator count: %v", err)
 	}
-	if validatorCount/params.BeaconConfig().ChurnLimitQuotient > params.BeaconConfig().MinPerEpochChurnLimit {
-		return validatorCount / params.BeaconConfig().ChurnLimitQuotient, nil
+	churnLimit := validatorCount / params.BeaconConfig().ChurnLimitQuotient
+	if churnLimit < params.BeaconConfig().MinPerEpochChurnLimit {
+		churnLimit = params.BeaconConfig().MinPerEpochChurnLimit
 	}
-	return params.BeaconConfig().MinPerEpochChurnLimit, nil
+	return churnLimit, nil
 }
 
 // BeaconProposerIndex returns proposer index of a current slot.

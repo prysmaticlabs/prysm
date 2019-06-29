@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -47,7 +48,7 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 			ctx := context.Background()
 			helpers.ClearAllCaches()
 			blocks.ClearEth1DataVoteCache()
-			if tt.Description != "attestation" {
+			if tt.Description != "attester_slashing" {
 				return
 			}
 

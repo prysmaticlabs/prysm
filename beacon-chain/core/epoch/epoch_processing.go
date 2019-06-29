@@ -354,6 +354,7 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 //            validator.activation_epoch = get_delayed_activation_exit_epoch(get_current_epoch(state))
 func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
+	var err error
 	for idx, validator := range state.ValidatorRegistry {
 		// Process the validators for activation eligibility.
 		eligibleToActivate := validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch
@@ -365,7 +366,10 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
 		belowEjectionBalance := validator.EffectiveBalance <= params.BeaconConfig().EjectionBalance
 		if isActive && belowEjectionBalance {
-			state = validators.ExitValidator(state, uint64(idx))
+			state, err = validators.InitiateValidatorExit(state, uint64(idx))
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
