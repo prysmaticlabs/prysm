@@ -9,8 +9,12 @@ import (
 )
 
 var (
+	// ErrAttestationDataSlotNilState is returned when a nil state argument
+	// is provided to AttestationDataSlot.
 	ErrAttestationDataSlotNilState = errors.New("nil state provided for AttestationDataSlot")
-	ErrAttestationDataSlotNilData  = errors.New("nil data provided for AttestationDataSlot")
+	// ErrAttestationDataSlotNilData is returned when a nil attestation data
+	// argument is provided to AttestationDataSlot.
+	ErrAttestationDataSlotNilData = errors.New("nil data provided for AttestationDataSlot")
 )
 
 // AttestationDataSlot returns current slot of AttestationData for given state
