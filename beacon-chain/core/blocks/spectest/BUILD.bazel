@@ -23,7 +23,6 @@ go_test(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
-        "//shared/params:go_default_library",
         "//shared/params/spectest:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
