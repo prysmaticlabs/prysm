@@ -2,7 +2,6 @@ package blocks_test
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"strconv"
 	"testing"
@@ -17,13 +16,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 )
 
 var runAmount = 64
 var validatorNum = 65536
+var conditions = "SML"
 
-func setBenchmarkConfig(conditions string) {
-	fmt.Printf("Running block benchmarks with %d validators\n", validatorNum)
+func setBenchmarkConfig() {
+	logrus.SetLevel(logrus.PanicLevel)
 	c := params.DemoBeaconConfig()
 	if conditions == "BIG" {
 		c.MaxProposerSlashings = 16
@@ -41,6 +42,11 @@ func setBenchmarkConfig(conditions string) {
 	params.OverrideBeaconConfig(c)
 }
 
+func cleanUpConfigs() {
+	params.OverrideBeaconConfig(params.BeaconConfig())
+	logrus.SetLevel(logrus.PanicLevel)
+}
+
 func BenchmarkProcessBlockHeader(b *testing.B) {
 	genesisState, deposits := createGenesisState(validatorNum)
 	block, _ := createFullBlock(genesisState, deposits)
@@ -53,6 +59,7 @@ func BenchmarkProcessBlockHeader(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessBlockRandao(b *testing.B) {
@@ -72,6 +79,7 @@ func BenchmarkProcessBlockRandao(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessEth1Data(b *testing.B) {
@@ -95,6 +103,7 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessValidatorExits(b *testing.B) {
@@ -110,6 +119,7 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 			b.Fatalf("run %d, %v", i, err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
@@ -128,6 +138,7 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessAttesterSlashings(b *testing.B) {
@@ -142,6 +153,7 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 			b.Fatal(i)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessBlockAttestations(b *testing.B) {
@@ -160,6 +172,7 @@ func BenchmarkProcessBlockAttestations(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessValidatorDeposits(b *testing.B) {
@@ -179,6 +192,7 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 		}
 		cleanStates[i].DepositIndex = 16000
 	}
+	cleanUpConfigs()
 }
 
 func BenchmarkProcessBlock(b *testing.B) {
@@ -211,6 +225,7 @@ func BenchmarkProcessBlock(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	cleanUpConfigs()
 }
 
 func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*pb.BeaconBlock, []byte) {
