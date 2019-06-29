@@ -33,6 +33,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "benchmarks_test.go",
         "block_operations_test.go",
         "block_test.go",
         "validity_conditions_test.go",
@@ -43,6 +44,7 @@ go_test(
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/state/stateutils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bitutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
