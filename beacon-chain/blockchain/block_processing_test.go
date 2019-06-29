@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -512,7 +513,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
-		h, err := ssz.HashTreeRoot(pd.Data)
+		h, err := hashutil.DepositHash(pd.Data)
 		if err != nil {
 			t.Fatal(err)
 		}
