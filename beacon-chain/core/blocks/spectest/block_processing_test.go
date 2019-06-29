@@ -55,11 +55,9 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 			s := tt.Pre // Pre-state
 			for _, b := range tt.Blocks {
 				if tt.Pre, err = state.ExecuteStateTransition(ctx, tt.Pre, b, stateConfig); err != nil {
-					t.Fatal(err)
+					t.Fatalf("Transition failed with block at slot %d: %v", b.Slot, err)
 				}
 			}
-
-			tt.Post.CurrentEpochAttestations = nil
 
 			if !proto.Equal(s, tt.Post) {
 				diff, _ := messagediff.PrettyDiff(s, tt.Post)

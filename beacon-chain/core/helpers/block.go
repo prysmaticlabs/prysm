@@ -19,6 +19,7 @@ import (
 //    assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
 //    return state.latest_block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
 func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
+	blkRoot := make([]byte, 32)
 	earliestSlot := uint64(0)
 	if state.Slot > params.BeaconConfig().SlotsPerHistoricalRoot {
 		earliestSlot = state.Slot - params.BeaconConfig().SlotsPerHistoricalRoot
@@ -30,7 +31,9 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 			state.Slot,
 		)
 	}
-	return state.LatestBlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot], nil
+	rootWanted := state.LatestBlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot]
+	copy(blkRoot, rootWanted)
+	return blkRoot, nil
 }
 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.
