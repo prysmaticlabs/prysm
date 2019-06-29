@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -499,7 +498,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := currentEpoch + 1
 
 	// Reset ETH1 data votes.
-	if (state.Slot+1)%params.BeaconConfig().SlotsPerHistoricalRoot == 0 {
+	if (state.Slot+1)%params.BeaconConfig().SlotsPerEth1VotingPeriod == 0 {
 		state.Eth1DataVotes = nil
 	}
 
@@ -553,7 +552,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 			BlockRoots: state.LatestBlockRoots,
 			StateRoots: state.LatestStateRoots,
 		}
-		batchRoot, err := hashutil.HashProto(historicalBatch)
+		batchRoot, err := ssz.HashTreeRoot(historicalBatch)
 		if err != nil {
 			return nil, fmt.Errorf("could not hash historical batch: %v", err)
 		}
@@ -562,7 +561,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Rotate current and previous epoch attestations.
 	state.PreviousEpochAttestations = state.CurrentEpochAttestations
-	state.CurrentEpochAttestations = nil
+	state.CurrentEpochAttestations = make([]*pb.PendingAttestation, 0, 0)
 
 	return state, nil
 }

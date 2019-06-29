@@ -6,9 +6,12 @@ go_library(
     srcs = [
         "attestation_test.yaml.go",
         "block_operations.yaml.go",
+        "blocks_mainnet.yaml.go",
+        "blocks_minimal.yaml.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/spectest",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = ["//proto/beacon/p2p/v1:go_default_library"],
 )
 
 go_test(
@@ -17,6 +20,7 @@ go_test(
         "attestation_test.go",
         "attester_slashing_test.go",
         "block_header_test.go",
+        "block_processing_test.go",
         "deposit_test.go",
         "proposer_slashing_test.go",
         "transfer_test.go",
@@ -26,17 +30,19 @@ go_test(
         "@eth2_spec_tests//:test_data",
     ],
     embed = [":go_default_library"],
+    tags = ["spectest"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/state/stateutils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
-    tags = ["spectest"],
 )

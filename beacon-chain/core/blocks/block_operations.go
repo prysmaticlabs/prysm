@@ -110,11 +110,13 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
+
 	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
 		return nil, fmt.Errorf(
 			"parent root %#x does not match the latest block header signing root in state %#x",
 			block.ParentRoot, parentRoot)
 	}
+
 	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		return nil, err
@@ -123,11 +125,11 @@ func ProcessBlockHeader(
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
-		BodyRoot:   bodyRoot[:],
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		BodyRoot:   bodyRoot[:],
 		Signature:  emptySig,
 	}
-	// Verify proposer is not slashed
+	// Verify proposer is not slashed.
 	idx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, err

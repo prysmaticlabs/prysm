@@ -56,7 +56,6 @@ func ExecuteStateTransition(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.StateTransition")
 	defer span.End()
 	var err error
-
 	// Execute per slot transition.
 	state, err = ProcessSlots(ctx, state, block.Slot)
 	if err != nil {
@@ -107,7 +106,6 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
-
 	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
@@ -161,13 +159,8 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	r, err := blockutil.BlockSigningRoot(block)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
-	}
-
 	// Process the block's header into the state.
-	state, err = b.ProcessBlockHeader(state, block, config.VerifySignatures)
+	state, err := b.ProcessBlockHeader(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block header: %v", err)
 	}
@@ -212,6 +205,11 @@ func ProcessBlock(
 	state, err = b.ProcessTransfers(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block transfers: %v", err)
+	}
+
+	r, err := blockutil.BlockSigningRoot(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 
 	if config.Logging {

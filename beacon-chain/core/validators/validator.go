@@ -98,7 +98,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 	exitEpochs = append(exitEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
 
 	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
-	exitQueueEpoch := exitEpochs[0]
+	exitQueueEpoch := uint64(0)
 	for _, i := range exitEpochs {
 		if exitQueueEpoch < i {
 			exitQueueEpoch = i
@@ -190,14 +190,14 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposer idx: %v", err)
 	}
-	var whistleBlower uint64
+
 	if whistleBlowerIdx == 0 {
-		whistleBlower = proposerIdx
+		whistleBlowerIdx = proposerIdx
 	}
 	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 	state = helpers.IncreaseBalance(state, proposerIdx, proposerReward)
-	state = helpers.IncreaseBalance(state, whistleBlower, whistleblowerReward-proposerReward)
+	state = helpers.IncreaseBalance(state, whistleBlowerIdx, whistleblowerReward-proposerReward)
 	state = helpers.DecreaseBalance(state, slashedIdx, whistleblowerReward)
 	return state, nil
 }
