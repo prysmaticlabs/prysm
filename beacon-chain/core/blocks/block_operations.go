@@ -1166,3 +1166,8 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	}
 	return nil
 }
+
+// ClearEth1DataVoteCache clears the eth1 data vote count cache.
+func ClearEth1DataVoteCache() {
+	eth1DataCache = cache.NewEth1DataVoteCache()
+}
