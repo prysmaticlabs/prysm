@@ -237,7 +237,6 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EjectionBalance = 3.175 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
-	demoConfig.EjectionBalance = 3.175 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.SlotsPerEth1VotingPeriod = 1
