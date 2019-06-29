@@ -294,20 +294,30 @@ func CommitteeAssignment(
 
 // ShardDelta returns the minimum number of shards get processed in one epoch.
 //
+// Note: if you already have the committee count,
+// use ShardDeltaFromCommitteeCount as EpochCommitteeCount (specifically
+// ActiveValidatorCount) iterates over the entire validator set.
+//
 // Spec pseudocode definition:
 //  def get_shard_delta(state: BeaconState, epoch: Epoch) -> int:
 //    return min(get_epoch_committee_count(state, epoch), SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH)
 func ShardDelta(beaconState *pb.BeaconState, epoch uint64) (uint64, error) {
-	shardCount := params.BeaconConfig().ShardCount
-	minShardDelta := shardCount - shardCount/params.BeaconConfig().SlotsPerEpoch
 	committeeCount, err := EpochCommitteeCount(beaconState, epoch)
 	if err != nil {
-		return 0, fmt.Errorf("could not get committee count: %v", err)
+		return 0, err
 	}
+	return ShardDeltaFromCommitteeCount(committeeCount), nil
+}
+
+// ShardDeltaFromCommitteeCount returns the number of shards that get processed
+// in one epoch. This method is the inner logic of ShardDelta.
+func ShardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
+	shardCount := params.BeaconConfig().ShardCount
+	minShardDelta := shardCount - shardCount/params.BeaconConfig().SlotsPerEpoch
 	if committeeCount < minShardDelta {
-		return committeeCount, nil
+		return committeeCount
 	}
-	return minShardDelta, nil
+	return minShardDelta
 }
 
 // EpochStartShard returns the start shard used to process crosslink
