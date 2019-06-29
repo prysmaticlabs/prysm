@@ -574,22 +574,22 @@ func TestEpochStartShard_MixedActivationValidatorRegistry(t *testing.T) {
 			// Determine activation bucket
 			bkt := i % 10
 			activationEpoch := uint64(0) // zeroth epoch 10%
-			if bkt > 2 && bkt <= 4 { // first epoch 20%
+			if bkt > 2 && bkt <= 4 {     // first epoch 20%
 				activationEpoch = 1
 			} else if bkt > 4 && bkt <= 7 { // second epoch 40%
 				activationEpoch = 2
-			} else {  // Remaining 30% in the third epoch.
+			} else { // Remaining 30% in the third epoch.
 				activationEpoch = 3
 			}
 
 			vs[i-1] = &pb.Validator{
-				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				ActivationEpoch: activationEpoch,
 			}
 		}
 		s := &pb.BeaconState{
 			ValidatorRegistry: vs,
-			Slot: params.BeaconConfig().SlotsPerEpoch * 3,
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 3,
 		}
 		startShard, err := EpochStartShard(s, 2 /*epoch*/)
 		if err != nil {
