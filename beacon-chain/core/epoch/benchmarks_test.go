@@ -3,10 +3,10 @@ package epoch_test
 import (
 	"context"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"strconv"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-var RunAmount = 50
+var RunAmount = 64
 var exitCount = uint64(40)
 var slashCount = uint64(40)
 var ejectionCount = uint64(40)
@@ -30,10 +30,6 @@ var initiateActivationCount = uint64(40)
 var validatorNum = uint64(65536)
 var conditions = "MIN"
 
-var genesisBeaconState = createFullState(validatorNum)
-
-var beaconStates = createCleanStates(RunAmount)
-
 func setBenchmarkConfig() {
 	fmt.Printf("Running epoch benchmarks for %d validators\n", validatorNum)
 	c := params.DemoBeaconConfig()
@@ -42,9 +38,11 @@ func setBenchmarkConfig() {
 		c.MaxDeposits = 16
 		c.MaxVoluntaryExits = 16
 	} else if conditions == "MIN" {
-		c.MaxAttestations = 4
-		// c.MaxDeposits = 2
-		// c.MaxVoluntaryExits = 2
+		c.MaxAttesterSlashings = 1
+		c.MaxProposerSlashings = 1
+		c.MaxAttestations = 16
+		c.MaxDeposits = 2
+		c.MaxVoluntaryExits = 2
 	}
 	params.OverrideBeaconConfig(c)
 
@@ -54,29 +52,9 @@ func setBenchmarkConfig() {
 	featureconfig.InitFeatureConfig(featureCfg)
 }
 
-func BenchmarkActiveValidatorIndices(b *testing.B) {
-	currentEpoch := helpers.CurrentEpoch(genesisBeaconState)
-
-	var err error
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err = helpers.ActiveValidatorIndices(genesisBeaconState, currentEpoch)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkValidatorIndexMap(b *testing.B) {
-	b.N = RunAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = stateutils.ValidatorIndexMap(genesisBeaconState)
-	}
-}
-
 func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
+	var genesisBeaconState = createFullState(validatorNum)
+	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
 	prevEpoch := helpers.PrevEpoch(genesisBeaconState)
 	currentEpoch := helpers.CurrentEpoch(genesisBeaconState)
 
@@ -112,6 +90,8 @@ func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
 }
 
 func BenchmarkProcessCrosslinks(b *testing.B) {
+	var genesisBeaconState = createFullState(validatorNum)
+	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -123,6 +103,8 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 }
 
 func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
+	var genesisBeaconState = createFullState(validatorNum)
+	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -134,6 +116,8 @@ func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
 }
 
 func BenchmarkProcessRegistryUpdates(b *testing.B) {
+	var genesisBeaconState = createFullState(validatorNum)
+	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -145,6 +129,8 @@ func BenchmarkProcessRegistryUpdates(b *testing.B) {
 }
 
 func BenchmarkProcessSlashings(b *testing.B) {
+	var genesisBeaconState = createFullState(validatorNum)
+	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -156,6 +142,8 @@ func BenchmarkProcessSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessFinalUpdates(b *testing.B) {
+	var genesisBeaconState = createFullState(validatorNum)
+	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -167,15 +155,39 @@ func BenchmarkProcessFinalUpdates(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch(b *testing.B) {
-	var beaconStatesEpoch = createCleanStates(RunAmount)
+	var genesisBeaconState = createFullState(validatorNum)
+	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
 
 	b.N = RunAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := state.ProcessEpoch(context.Background(), beaconStatesEpoch[i])
+		_, err := state.ProcessEpoch(context.Background(), beaconStates[i])
 		if err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func BenchmarkActiveValidatorIndices(b *testing.B) {
+	var genesisBeaconState = createFullState(validatorNum)
+	currentEpoch := helpers.CurrentEpoch(genesisBeaconState)
+
+	b.N = RunAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := helpers.ActiveValidatorIndices(genesisBeaconState, currentEpoch)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkValidatorIndexMap(b *testing.B) {
+	var genesisBeaconState = createFullState(validatorNum)
+	b.N = RunAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = stateutils.ValidatorIndexMap(genesisBeaconState)
 	}
 }
 
@@ -416,10 +428,10 @@ func createGenesisState(numDeposits uint64) *pb.BeaconState {
 	return genesisState
 }
 
-func createCleanStates(num int) []*pb.BeaconState {
+func createCleanStates(num int, beaconState *pb.BeaconState) []*pb.BeaconState {
 	cleanStates := make([]*pb.BeaconState, num)
 	for i := 0; i < num; i++ {
-		cleanStates[i] = proto.Clone(genesisBeaconState).(*pb.BeaconState)
+		cleanStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
 	}
 	return cleanStates
 }

@@ -19,10 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-var runAmount = 30
+var runAmount = 64
 var validatorNum = 65536
-var genesisState, deposits = createGenesisState(validatorNum)
-var block, root = createFullBlock(genesisState, deposits)
 
 func setBenchmarkConfig(conditions string) {
 	fmt.Printf("Running block benchmarks with %d validators\n", validatorNum)
@@ -44,7 +42,9 @@ func setBenchmarkConfig(conditions string) {
 }
 
 func BenchmarkProcessBlockHeader(b *testing.B) {
-	cleanStates := createCleanStates(runAmount)
+	genesisState, deposits := createGenesisState(validatorNum)
+	block, _ := createFullBlock(genesisState, deposits)
+	cleanStates := createCleanStates(runAmount, genesisState)
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -56,7 +56,9 @@ func BenchmarkProcessBlockHeader(b *testing.B) {
 }
 
 func BenchmarkProcessBlockRandao(b *testing.B) {
-	cleanStates := createCleanStates(runAmount)
+	genesisState, deposits := createGenesisState(validatorNum)
+	block, _ := createFullBlock(genesisState, deposits)
+	cleanStates := createCleanStates(runAmount, genesisState)
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -73,6 +75,10 @@ func BenchmarkProcessBlockRandao(b *testing.B) {
 }
 
 func BenchmarkProcessEth1Data(b *testing.B) {
+	genesisState, deposits := createGenesisState(validatorNum)
+	block, root := createFullBlock(genesisState, deposits)
+	cleanStates := createCleanStates(runAmount, genesisState)
+
 	eth1DataVotes := []*pb.Eth1Data{
 		{
 			BlockHash:   root,
@@ -80,7 +86,6 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 		},
 	}
 
-	cleanStates := createCleanStates(runAmount)
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -93,7 +98,9 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 }
 
 func BenchmarkProcessValidatorExits(b *testing.B) {
-	cleanStates := createCleanStates(runAmount)
+	genesisState, deposits := createGenesisState(validatorNum)
+	block, _ := createFullBlock(genesisState, deposits)
+	cleanStates := createCleanStates(runAmount, genesisState)
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -106,7 +113,9 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
-	cleanStates := createCleanStates(runAmount)
+	genesisState, deposits := createGenesisState(validatorNum)
+	block, _ := createFullBlock(genesisState, deposits)
+	cleanStates := createCleanStates(runAmount, genesisState)
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -122,7 +131,9 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessAttesterSlashings(b *testing.B) {
-	cleanStates := createCleanStates(runAmount)
+	genesisState, deposits := createGenesisState(validatorNum)
+	block, _ := createFullBlock(genesisState, deposits)
+	cleanStates := createCleanStates(runAmount, genesisState)
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -134,7 +145,9 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessBlockAttestations(b *testing.B) {
-	cleanStates := createCleanStates(runAmount)
+	genesisState, deposits := createGenesisState(validatorNum)
+	block, _ := createFullBlock(genesisState, deposits)
+	cleanStates := createCleanStates(runAmount, genesisState)
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -150,7 +163,9 @@ func BenchmarkProcessBlockAttestations(b *testing.B) {
 }
 
 func BenchmarkProcessValidatorDeposits(b *testing.B) {
-	cleanStates := createCleanStates(runAmount)
+	genesisState, deposits := createGenesisState(validatorNum)
+	block, root := createFullBlock(genesisState, deposits)
+	cleanStates := createCleanStates(runAmount, genesisState)
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -167,12 +182,13 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 }
 
 func BenchmarkProcessBlock(b *testing.B) {
+	genesisState, deposits := createGenesisState(validatorNum)
 	cfg := &state.TransitionConfig{
 		VerifySignatures: false,
 		Logging:          false,
 	}
 
-	cleanStatesFull := createCleanStates(runAmount)
+	cleanStatesFull := createCleanStates(runAmount, genesisState)
 	cleanStatesFull[0].Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 3
 	cleanStatesFull[0].CurrentJustifiedEpoch = helpers.PrevEpoch(cleanStatesFull[0])
 	cleanStatesFull[0].CurrentCrosslinks[0].EndEpoch = helpers.PrevEpoch(cleanStatesFull[0]) - 1
@@ -450,10 +466,10 @@ func createGenesisState(numDeposits int) (*pb.BeaconState, []*pb.Deposit) {
 	return genesisState, deposits
 }
 
-func createCleanStates(num int) []*pb.BeaconState {
+func createCleanStates(num int, beaconState *pb.BeaconState) []*pb.BeaconState {
 	cleanStates := make([]*pb.BeaconState, num)
 	for i := 0; i < num; i++ {
-		cleanStates[i] = proto.Clone(genesisState).(*pb.BeaconState)
+		cleanStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
 	}
 	return cleanStates
 }

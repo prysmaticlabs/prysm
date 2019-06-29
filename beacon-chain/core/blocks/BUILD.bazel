@@ -32,6 +32,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "benchmarks_test.go",
         "block_operations_test.go",
         "block_test.go",
         "eth1_data_test.go",
