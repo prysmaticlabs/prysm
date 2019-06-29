@@ -779,8 +779,8 @@ func TestBlockTree_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resp.Tree) != 2 {
-		t.Errorf("Wanted len %d, received %d", 2, len(resp.Tree))
+	if len(resp.Tree) != 4 {
+		t.Errorf("Wanted len %d, received %d", 4, len(resp.Tree))
 	}
 }
 
