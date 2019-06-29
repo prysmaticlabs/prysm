@@ -73,7 +73,7 @@ func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
 	newRootLength := len(state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength])
 	newRoot := make([]byte, newRootLength)
 	copy(newRoot, state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength])
-	return state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength]
+	return newRoot
 }
 
 // RandaoMix returns the randao mix (xor'ed seed)

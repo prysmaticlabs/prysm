@@ -3,6 +3,7 @@ package helpers
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -72,13 +73,13 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 	for _, test := range tests {
 		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		mix := RandaoMix(state, test.epoch)
-		randaoMap := make(map[*byte]bool)
+		randaoMap := make(map[string]bool)
 		for _, elem := range mix {
-			randaoMap[&elem] = true
+			randaoMap[fmt.Sprintf("%v", &elem)] = true
 		}
 		for _, mx := range randaoMixes {
 			for _, val := range mx {
-				if randaoMap[&val] {
+				if randaoMap[fmt.Sprintf("%v", &val)] {
 					t.Fatalf("two distinct slices still have elements referenced by the same address: %v", &val)
 				}
 			}
@@ -145,13 +146,13 @@ func TestActiveIndexRoot_CopyOK(t *testing.T) {
 	for _, test := range tests {
 		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
 		indexRoot := ActiveIndexRoot(state, test.epoch)
-		rootMap := make(map[*byte]bool)
+		rootMap := make(map[string]bool)
 		for _, elem := range indexRoot {
-			rootMap[&elem] = true
+			rootMap[fmt.Sprintf("%v", &elem)] = true
 		}
 		for _, root := range activeIndexRoots {
 			for _, val := range root {
-				if rootMap[&val] {
+				if rootMap[fmt.Sprintf("%v", &val)] {
 					t.Fatalf("two distinct slices still have elements referenced by the same address: %v", &val)
 				}
 			}
