@@ -219,7 +219,6 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 			}},
 			{Data: &pbp2p.AttestationData{
 				TargetEpoch: 10,
-
 				SourceEpoch: expectedEpoch,
 				Crosslink:   &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
@@ -277,10 +276,14 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Validators:             validators,
-		Slot:                   currentSlot + params.BeaconConfig().MinAttestationInclusionDelay,
-		CurrentJustifiedEpoch:  expectedEpoch,
-		PreviousJustifiedEpoch: expectedEpoch,
+		Validators: validators,
+		Slot:       currentSlot + params.BeaconConfig().MinAttestationInclusionDelay,
+		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
+			Epoch: expectedEpoch,
+		},
+		PreviousJustifiedCheckpoint: &pbp2p.Checkpoint{
+			Epoch: expectedEpoch,
+		},
 		CurrentCrosslinks: []*pbp2p.Crosslink{{
 			StartEpoch: 9,
 			DataRoot:   params.BeaconConfig().ZeroHash[:],

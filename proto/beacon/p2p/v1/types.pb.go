@@ -49,12 +49,12 @@ type BeaconState struct {
 	Eth1Data                    *Eth1Data             `protobuf:"bytes,6001,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
 	Eth1DataVotes               []*Eth1Data           `protobuf:"bytes,6002,rep,name=eth1_data_votes,json=eth1DataVotes,proto3" json:"eth1_data_votes,omitempty"`
 	Eth1DepositIndex            uint64                `protobuf:"varint,6003,opt,name=eth1_deposit_index,json=eth1DepositIndex,proto3" json:"eth1_deposit_index,omitempty"`
-	PreviousJustifiedEpoch      uint64                `protobuf:"varint,10001,opt,name=previous_justified_epoch,json=previousJustifiedEpoch,proto3" json:"previous_justified_epoch,omitempty"`
-	CurrentJustifiedEpoch       uint64                `protobuf:"varint,10002,opt,name=current_justified_epoch,json=currentJustifiedEpoch,proto3" json:"current_justified_epoch,omitempty"`
-	PreviousJustifiedRoot       []byte                `protobuf:"bytes,10003,opt,name=previous_justified_root,json=previousJustifiedRoot,proto3" json:"previous_justified_root,omitempty" ssz:"size=8192"`
-	CurrentJustifiedRoot        []byte                `protobuf:"bytes,10004,opt,name=current_justified_root,json=currentJustifiedRoot,proto3" json:"current_justified_root,omitempty" ssz:"size=8192"`
-	FinalizedEpoch              uint64                `protobuf:"varint,10005,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty"`
-	FinalizedRoot               []byte                `protobuf:"bytes,10006,opt,name=finalized_root,json=finalizedRoot,proto3" json:"finalized_root,omitempty" ssz:"size=32"`
+	PreviousJustifiedCheckpoint.Epoch      uint64                `protobuf:"varint,10001,opt,name=previous_justified_epoch,json=PreviousJustifiedCheckpoint.Epoch,proto3" json:"previous_justified_epoch,omitempty"`
+	CurrentJustifiedCheckpoint.Epoch       uint64                `protobuf:"varint,10002,opt,name=current_justified_epoch,json=CurrentJustifiedCheckpoint.Epoch,proto3" json:"current_justified_epoch,omitempty"`
+	PreviousJustifiedCheckpoint.Root       []byte                `protobuf:"bytes,10003,opt,name=previous_justified_root,json=PreviousJustifiedCheckpoint.Root,proto3" json:"previous_justified_root,omitempty" ssz:"size=8192"`
+	CurrentJustifiedCheckpoint.Root        []byte                `protobuf:"bytes,10004,opt,name=current_justified_root,json=CurrentJustifiedCheckpoint.Root,proto3" json:"current_justified_root,omitempty" ssz:"size=8192"`
+	FinalizedCheckpoint.Epoch              uint64                `protobuf:"varint,10005,opt,name=finalized_epoch,json=FinalizedCheckpoint.Epoch,proto3" json:"finalized_epoch,omitempty"`
+	FinalizedCheckpoint.Root               []byte                `protobuf:"bytes,10006,opt,name=finalized_root,json=FinalizedCheckpoint.Root,proto3" json:"finalized_root,omitempty" ssz:"size=32"`
 	XXX_NoUnkeyedLiteral        struct{}              `json:"-"`
 	XXX_unrecognized            []byte                `json:"-"`
 	XXX_sizecache               int32                 `json:"-"`
@@ -268,44 +268,44 @@ func (m *BeaconState) GetEth1DepositIndex() uint64 {
 	return 0
 }
 
-func (m *BeaconState) GetPreviousJustifiedEpoch() uint64 {
+func (m *BeaconState) GetPreviousJustifiedCheckpoint.Epoch() uint64 {
 	if m != nil {
-		return m.PreviousJustifiedEpoch
+		return m.PreviousJustifiedCheckpoint.Epoch
 	}
 	return 0
 }
 
-func (m *BeaconState) GetCurrentJustifiedEpoch() uint64 {
+func (m *BeaconState) GetCurrentJustifiedCheckpoint.Epoch() uint64 {
 	if m != nil {
-		return m.CurrentJustifiedEpoch
+		return m.CurrentJustifiedCheckpoint.Epoch
 	}
 	return 0
 }
 
-func (m *BeaconState) GetPreviousJustifiedRoot() []byte {
+func (m *BeaconState) GetPreviousJustifiedCheckpoint.Root() []byte {
 	if m != nil {
-		return m.PreviousJustifiedRoot
+		return m.PreviousJustifiedCheckpoint.Root
 	}
 	return nil
 }
 
-func (m *BeaconState) GetCurrentJustifiedRoot() []byte {
+func (m *BeaconState) GetCurrentJustifiedCheckpoint.Root() []byte {
 	if m != nil {
-		return m.CurrentJustifiedRoot
+		return m.CurrentJustifiedCheckpoint.Root
 	}
 	return nil
 }
 
-func (m *BeaconState) GetFinalizedEpoch() uint64 {
+func (m *BeaconState) GetFinalizedCheckpoint.Epoch() uint64 {
 	if m != nil {
-		return m.FinalizedEpoch
+		return m.FinalizedCheckpoint.Epoch
 	}
 	return 0
 }
 
-func (m *BeaconState) GetFinalizedRoot() []byte {
+func (m *BeaconState) GetFinalizedCheckpoint.Root() []byte {
 	if m != nil {
-		return m.FinalizedRoot
+		return m.FinalizedCheckpoint.Root
 	}
 	return nil
 }
@@ -2534,62 +2534,62 @@ func (m *BeaconState) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintTypes(dAtA, i, uint64(m.Eth1DepositIndex))
 	}
-	if m.PreviousJustifiedEpoch != 0 {
+	if m.PreviousJustifiedCheckpoint.Epoch != 0 {
 		dAtA[i] = 0x88
 		i++
 		dAtA[i] = 0xf1
 		i++
 		dAtA[i] = 0x4
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(m.PreviousJustifiedEpoch))
+		i = encodeVarintTypes(dAtA, i, uint64(m.PreviousJustifiedCheckpoint.Epoch))
 	}
-	if m.CurrentJustifiedEpoch != 0 {
+	if m.CurrentJustifiedCheckpoint.Epoch != 0 {
 		dAtA[i] = 0x90
 		i++
 		dAtA[i] = 0xf1
 		i++
 		dAtA[i] = 0x4
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(m.CurrentJustifiedEpoch))
+		i = encodeVarintTypes(dAtA, i, uint64(m.CurrentJustifiedCheckpoint.Epoch))
 	}
-	if len(m.PreviousJustifiedRoot) > 0 {
+	if len(m.PreviousJustifiedCheckpoint.Root) > 0 {
 		dAtA[i] = 0x9a
 		i++
 		dAtA[i] = 0xf1
 		i++
 		dAtA[i] = 0x4
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(len(m.PreviousJustifiedRoot)))
-		i += copy(dAtA[i:], m.PreviousJustifiedRoot)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.PreviousJustifiedCheckpoint.Root)))
+		i += copy(dAtA[i:], m.PreviousJustifiedCheckpoint.Root)
 	}
-	if len(m.CurrentJustifiedRoot) > 0 {
+	if len(m.CurrentJustifiedCheckpoint.Root) > 0 {
 		dAtA[i] = 0xa2
 		i++
 		dAtA[i] = 0xf1
 		i++
 		dAtA[i] = 0x4
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(len(m.CurrentJustifiedRoot)))
-		i += copy(dAtA[i:], m.CurrentJustifiedRoot)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.CurrentJustifiedCheckpoint.Root)))
+		i += copy(dAtA[i:], m.CurrentJustifiedCheckpoint.Root)
 	}
-	if m.FinalizedEpoch != 0 {
+	if m.FinalizedCheckpoint.Epoch != 0 {
 		dAtA[i] = 0xa8
 		i++
 		dAtA[i] = 0xf1
 		i++
 		dAtA[i] = 0x4
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(m.FinalizedEpoch))
+		i = encodeVarintTypes(dAtA, i, uint64(m.FinalizedCheckpoint.Epoch))
 	}
-	if len(m.FinalizedRoot) > 0 {
+	if len(m.FinalizedCheckpoint.Root) > 0 {
 		dAtA[i] = 0xb2
 		i++
 		dAtA[i] = 0xf1
 		i++
 		dAtA[i] = 0x4
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(len(m.FinalizedRoot)))
-		i += copy(dAtA[i:], m.FinalizedRoot)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.FinalizedCheckpoint.Root)))
+		i += copy(dAtA[i:], m.FinalizedCheckpoint.Root)
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -3957,24 +3957,24 @@ func (m *BeaconState) Size() (n int) {
 	if m.Eth1DepositIndex != 0 {
 		n += 3 + sovTypes(uint64(m.Eth1DepositIndex))
 	}
-	if m.PreviousJustifiedEpoch != 0 {
-		n += 3 + sovTypes(uint64(m.PreviousJustifiedEpoch))
+	if m.PreviousJustifiedCheckpoint.Epoch != 0 {
+		n += 3 + sovTypes(uint64(m.PreviousJustifiedCheckpoint.Epoch))
 	}
-	if m.CurrentJustifiedEpoch != 0 {
-		n += 3 + sovTypes(uint64(m.CurrentJustifiedEpoch))
+	if m.CurrentJustifiedCheckpoint.Epoch != 0 {
+		n += 3 + sovTypes(uint64(m.CurrentJustifiedCheckpoint.Epoch))
 	}
-	l = len(m.PreviousJustifiedRoot)
+	l = len(m.PreviousJustifiedCheckpoint.Root)
 	if l > 0 {
 		n += 3 + l + sovTypes(uint64(l))
 	}
-	l = len(m.CurrentJustifiedRoot)
+	l = len(m.CurrentJustifiedCheckpoint.Root)
 	if l > 0 {
 		n += 3 + l + sovTypes(uint64(l))
 	}
-	if m.FinalizedEpoch != 0 {
-		n += 3 + sovTypes(uint64(m.FinalizedEpoch))
+	if m.FinalizedCheckpoint.Epoch != 0 {
+		n += 3 + sovTypes(uint64(m.FinalizedCheckpoint.Epoch))
 	}
-	l = len(m.FinalizedRoot)
+	l = len(m.FinalizedCheckpoint.Root)
 	if l > 0 {
 		n += 3 + l + sovTypes(uint64(l))
 	}
@@ -5561,9 +5561,9 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 			}
 		case 10001:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PreviousJustifiedEpoch", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field PreviousJustifiedCheckpoint.Epoch", wireType)
 			}
-			m.PreviousJustifiedEpoch = 0
+			m.PreviousJustifiedCheckpoint.Epoch = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowTypes
@@ -5573,16 +5573,16 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.PreviousJustifiedEpoch |= uint64(b&0x7F) << shift
+				m.PreviousJustifiedCheckpoint.Epoch |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 10002:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentJustifiedEpoch", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CurrentJustifiedCheckpoint.Epoch", wireType)
 			}
-			m.CurrentJustifiedEpoch = 0
+			m.CurrentJustifiedCheckpoint.Epoch = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowTypes
@@ -5592,14 +5592,14 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.CurrentJustifiedEpoch |= uint64(b&0x7F) << shift
+				m.CurrentJustifiedCheckpoint.Epoch |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 10003:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PreviousJustifiedRoot", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field PreviousJustifiedCheckpoint.Root", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -5626,14 +5626,14 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.PreviousJustifiedRoot = append(m.PreviousJustifiedRoot[:0], dAtA[iNdEx:postIndex]...)
-			if m.PreviousJustifiedRoot == nil {
-				m.PreviousJustifiedRoot = []byte{}
+			m.PreviousJustifiedCheckpoint.Root = append(m.PreviousJustifiedCheckpoint.Root[:0], dAtA[iNdEx:postIndex]...)
+			if m.PreviousJustifiedCheckpoint.Root == nil {
+				m.PreviousJustifiedCheckpoint.Root = []byte{}
 			}
 			iNdEx = postIndex
 		case 10004:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentJustifiedRoot", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CurrentJustifiedCheckpoint.Root", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -5660,16 +5660,16 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.CurrentJustifiedRoot = append(m.CurrentJustifiedRoot[:0], dAtA[iNdEx:postIndex]...)
-			if m.CurrentJustifiedRoot == nil {
-				m.CurrentJustifiedRoot = []byte{}
+			m.CurrentJustifiedCheckpoint.Root = append(m.CurrentJustifiedCheckpoint.Root[:0], dAtA[iNdEx:postIndex]...)
+			if m.CurrentJustifiedCheckpoint.Root == nil {
+				m.CurrentJustifiedCheckpoint.Root = []byte{}
 			}
 			iNdEx = postIndex
 		case 10005:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field FinalizedEpoch", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field FinalizedCheckpoint.Epoch", wireType)
 			}
-			m.FinalizedEpoch = 0
+			m.FinalizedCheckpoint.Epoch = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowTypes
@@ -5679,14 +5679,14 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.FinalizedEpoch |= uint64(b&0x7F) << shift
+				m.FinalizedCheckpoint.Epoch |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 10006:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field FinalizedRoot", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field FinalizedCheckpoint.Root", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -5713,9 +5713,9 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.FinalizedRoot = append(m.FinalizedRoot[:0], dAtA[iNdEx:postIndex]...)
-			if m.FinalizedRoot == nil {
-				m.FinalizedRoot = []byte{}
+			m.FinalizedCheckpoint.Root = append(m.FinalizedCheckpoint.Root[:0], dAtA[iNdEx:postIndex]...)
+			if m.FinalizedCheckpoint.Root == nil {
+				m.FinalizedCheckpoint.Root = []byte{}
 			}
 			iNdEx = postIndex
 		default:

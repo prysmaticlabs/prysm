@@ -24,7 +24,7 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
+	if block.Slot < beaconState.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer

@@ -347,7 +347,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -475,7 +475,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			StartEpoch: helpers.SlotToEpoch(beaconState.Slot),
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -698,7 +698,9 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		Balances:             validatorBalances,
 		Slashings:      make([]uint64, params.BeaconConfig().SlashedExitLength),
 		ActiveIndexRoots:     make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		CurrentJustifiedRoot: []byte("hello-world"),
+		CurrentJustifiedCheckpoint: &pb.Checkpoint {
+			Root: []byte("hello-world"),
+		},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},

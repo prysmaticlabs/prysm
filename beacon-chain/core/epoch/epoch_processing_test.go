@@ -643,10 +643,14 @@ func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
 	a := params.BeaconConfig().MaxDepositAmount
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,
-		PreviousJustifiedEpoch: 0,
-		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  0,
-		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
 		Validators: []*pb.Validator{{ExitEpoch: e, EffectiveBalance: a}, {ExitEpoch: e, EffectiveBalance: a},
 			{ExitEpoch: e, EffectiveBalance: a}, {ExitEpoch: e, EffectiveBalance: a}},
 	}
@@ -669,10 +673,14 @@ func TestProcessJustificationFinalization_NoBlockRootCurrentEpoch(t *testing.T) 
 	}
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,
-		PreviousJustifiedEpoch: 0,
-		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  0,
-		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
 		JustificationBits:  3,
 		Validators:             []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
@@ -695,10 +703,14 @@ func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch*2 + 1,
-		PreviousJustifiedEpoch: 0,
-		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  0,
-		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
 		JustificationBits:  3,
 		Validators:             []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
@@ -709,20 +721,20 @@ func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(newState.CurrentJustifiedRoot, []byte{byte(128)}) {
+	if !bytes.Equal(newState.CurrentJustifiedCheckpoint.Root, []byte{byte(128)}) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
-			[]byte{byte(128)}, newState.CurrentJustifiedRoot)
+			[]byte{byte(128)}, newState.CurrentJustifiedCheckpoint.Root)
 	}
-	if newState.CurrentJustifiedEpoch != 2 {
+	if newState.CurrentJustifiedCheckpoint.Epoch != 2 {
 		t.Errorf("Wanted justified epoch: %d, got: %d",
-			2, newState.CurrentJustifiedEpoch)
+			2, newState.CurrentJustifiedCheckpoint.Epoch)
 	}
-	if !bytes.Equal(newState.FinalizedRoot, params.BeaconConfig().ZeroHash[:]) {
+	if !bytes.Equal(newState.FinalizedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
 		t.Errorf("Wanted current finalized root: %v, got: %v",
-			params.BeaconConfig().ZeroHash, newState.FinalizedRoot)
+			params.BeaconConfig().ZeroHash, newState.FinalizedCheckpoint.Root)
 	}
-	if newState.FinalizedEpoch != 0 {
-		t.Errorf("Wanted finalized epoch: %d, got: %d", 0, newState.FinalizedEpoch)
+	if newState.FinalizedCheckpoint.Epoch != 0 {
+		t.Errorf("Wanted finalized epoch: %d, got: %d", 0, newState.FinalizedCheckpoint.Epoch)
 	}
 }
 
@@ -736,10 +748,14 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch*2 + 1,
-		PreviousJustifiedEpoch: 0,
-		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  0,
-		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
 		JustificationBits:  3,
 		Validators:             []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
@@ -750,20 +766,20 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(newState.CurrentJustifiedRoot, []byte{byte(128)}) {
+	if !bytes.Equal(newState.CurrentJustifiedCheckpoint.Root, []byte{byte(128)}) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
-			[]byte{byte(128)}, newState.CurrentJustifiedRoot)
+			[]byte{byte(128)}, newState.CurrentJustifiedCheckpoint.Root)
 	}
-	if newState.CurrentJustifiedEpoch != 2 {
+	if newState.CurrentJustifiedCheckpoint.Epoch != 2 {
 		t.Errorf("Wanted justified epoch: %d, got: %d",
-			2, newState.CurrentJustifiedEpoch)
+			2, newState.CurrentJustifiedCheckpoint.Epoch)
 	}
-	if !bytes.Equal(newState.FinalizedRoot, params.BeaconConfig().ZeroHash[:]) {
+	if !bytes.Equal(newState.FinalizedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
 		t.Errorf("Wanted current finalized root: %v, got: %v",
-			params.BeaconConfig().ZeroHash, newState.FinalizedRoot)
+			params.BeaconConfig().ZeroHash, newState.FinalizedCheckpoint.Root)
 	}
-	if newState.FinalizedEpoch != 0 {
-		t.Errorf("Wanted finalized epoch: %d, got: %d", 0, newState.FinalizedEpoch)
+	if newState.FinalizedCheckpoint.Epoch != 0 {
+		t.Errorf("Wanted finalized epoch: %d, got: %d", 0, newState.FinalizedCheckpoint.Epoch)
 	}
 }
 

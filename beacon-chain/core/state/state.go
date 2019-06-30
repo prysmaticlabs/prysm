@@ -93,13 +93,19 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		RandaoMixes: latestRandaoMixes,
 
 		// Finality.
-		PreviousJustifiedEpoch: 0,
-		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  0,
-		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
 		JustificationBits:  0,
-		FinalizedEpoch:         0,
-		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
+		FinalizedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root: params.BeaconConfig().ZeroHash[:],
+		},
 
 		// Recent state.
 		CurrentCrosslinks:         crosslinks,

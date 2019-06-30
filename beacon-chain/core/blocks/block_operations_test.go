@@ -1036,7 +1036,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1057,7 +1057,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
-		beaconState.CurrentJustifiedRoot,
+		beaconState.CurrentJustifiedCheckpoint.Root,
 		attestations[0].Data.SourceRoot,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
@@ -1099,7 +1099,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.PreviousJustifiedRoot = []byte("hello-world")
+	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1120,7 +1120,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
-		beaconState.PreviousJustifiedRoot,
+		beaconState.PreviousJustifiedCheckpoint.Root,
 		attestations[0].Data.SourceRoot,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
@@ -1164,7 +1164,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := "mismatched parent crosslink root"
@@ -1236,7 +1236,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])

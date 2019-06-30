@@ -105,7 +105,6 @@ func TestRequestAttestation_OK(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot:                  3*params.BeaconConfig().SlotsPerEpoch + 1,
-		CurrentJustifiedEpoch: 2 + 0,
 		BlockRoots:            make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		CurrentCrosslinks: []*pbp2p.Crosslink{
 			{
@@ -117,7 +116,10 @@ func TestRequestAttestation_OK(t *testing.T) {
 				DataRoot: []byte("A"),
 			},
 		},
-		CurrentJustifiedRoot: justifiedRoot[:],
+		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
+			Epoch: 2,
+			Root: justifiedRoot[:],
+		},
 	}
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
@@ -215,7 +217,6 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		Slot:                  10000,
-		CurrentJustifiedEpoch: helpers.SlotToEpoch(1500),
 		BlockRoots:            make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		PreviousCrosslinks: []*pbp2p.Crosslink{
 			{
@@ -227,7 +228,10 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 				DataRoot: []byte("A"),
 			},
 		},
-		CurrentJustifiedRoot: justifiedBlockRoot[:],
+		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
+				Epoch: helpers.SlotToEpoch(1500),
+				Root: justifiedBlockRoot[:],
+		},
 	}
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
