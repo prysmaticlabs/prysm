@@ -19,6 +19,7 @@ type BeaconChainConfig struct {
 	ShuffleRoundCount         uint64 `yaml:"SHUFFLE_ROUND_COUNT"`          // ShuffleRoundCount is used for retrieving the permuted index.
 	SecondsPerDay             uint64 `yaml:"SECONDS_PER_DAY"`              // SecondsPerDay defines how many seconds are in a given day.
 	MaxValidatorsPerCommittee uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"` // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
+	MinGenesisActiveValidatorCount uint64 `yaml:MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime            uint64 `yaml:"MIN_GENESIS_TIME"`             // MinGenesisTime defines the lower bound of the genesis time.
 	JustificationBitsLength   uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`    // JustificationBitsLength defines the length in bytes of the justification bits.
 
@@ -108,13 +109,18 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:               1024,
-	TargetCommitteeSize:      128,
-	MaxIndicesPerAttestation: 4096,
-	MinPerEpochChurnLimit:    4,
-	ChurnLimitQuotient:       1 << 16,
-	BaseRewardsPerEpoch:      5,
-	ShuffleRoundCount:        90,
+	ShardCount:                1024,
+	TargetCommitteeSize:       128,
+	MaxIndicesPerAttestation:  4096,
+	MinPerEpochChurnLimit:     4,
+	ChurnLimitQuotient:        1 << 16,
+	BaseRewardsPerEpoch:       5,
+	ShuffleRoundCount:         90,
+	SecondsPerDay:             86400,
+	MaxValidatorsPerCommittee: 4096,
+	MinGenesisActiveValidatorCount: 65536,
+	MinGenesisTime:            1578009600,
+	JustificationBitsLength:   4,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
@@ -146,6 +152,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EpochsPerHistoricalVector:      65536,
 	EpochsPerSlashedBalancesVector: 8192,
 	HistoricalRootsLimit:           8192,
+	ValidatorRegistryLimit:         1099511627776,
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor:             32,
@@ -245,6 +252,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ChurnLimitQuotient = 65536
 	minimalConfig.BaseRewardsPerEpoch = 5
 	minimalConfig.ShuffleRoundCount = 10
+	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.MinDepositAmount = 1e9
 	minimalConfig.MaxEffectiveBalance = 32e9
@@ -253,7 +261,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 	minimalConfig.SecondsPerSlot = 6
-	minimalConfig.MinAttestationInclusionDelay = 1
+	minimalConfig.MinAttestationInclusionDelay = 2
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.ActivationExitDelay = 4
@@ -265,6 +273,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.EpochsPerHistoricalVector = 64
 	minimalConfig.EpochsPerSlashedBalancesVector = 64
+	minimalConfig.HistoricalRootsLimit = 16777216
+	minimalConfig.ValidatorRegistryLimit = 1099511627776
 	minimalConfig.BaseRewardFactor = 32
 	minimalConfig.WhistleBlowingRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
