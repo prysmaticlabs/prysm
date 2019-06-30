@@ -1115,6 +1115,9 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	if transfer.Amount > maxVal {
 		maxVal = transfer.Amount
 	}
+	if transfer.Sender > uint64(len(beaconState.ValidatorRegistry)) {
+		return errors.New("transfer sender index out of bounds in validator registry")
+	}
 	sender := beaconState.ValidatorRegistry[transfer.Sender]
 	senderBalance := beaconState.Balances[transfer.Sender]
 	// Verify the amount and fee are not individually too big (for anti-overflow purposes).

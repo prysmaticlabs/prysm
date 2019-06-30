@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -13,6 +14,7 @@ import (
 )
 
 var currentEpochSeed = cache.NewSeedCache()
+var ErrInvalidStateLatestActiveIndexRoots = errors.New("state does not have correct number of latest active index roots")
 
 // GenerateSeed generates the randao seed of a given epoch.
 //
@@ -39,6 +41,11 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 	lookAheadEpoch := epoch + params.BeaconConfig().LatestRandaoMixesLength -
 		params.BeaconConfig().MinSeedLookahead
 
+	// Check that the state has the correct latest active index roots or
+	// randao mix may panic for index out of bounds.
+	if uint64(len(state.LatestActiveIndexRoots)) !=  params.BeaconConfig().LatestActiveIndexRootsLength {
+		return [32]byte{}, ErrInvalidStateLatestActiveIndexRoots
+	}
 	randaoMix := RandaoMix(state, lookAheadEpoch)
 
 	indexRoot := ActiveIndexRoot(state, epoch)
