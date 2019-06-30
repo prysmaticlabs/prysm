@@ -29,7 +29,8 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 			state.Slot,
 		)
 	}
-	rootWanted := state.LatestBlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot]
+
+	rootWanted := state.BlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot]
 	blkRoot := make([]byte, len(rootWanted))
 	copy(blkRoot, rootWanted)
 	return blkRoot, nil
