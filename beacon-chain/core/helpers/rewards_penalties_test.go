@@ -13,8 +13,8 @@ func TestTotalBalance_OK(t *testing.T) {
 	}}
 
 	balance := TotalBalance(state, []uint64{0, 1, 2, 3})
-	wanted := state.ValidatorRegistry[0].EffectiveBalance + state.ValidatorRegistry[1].EffectiveBalance +
-		state.ValidatorRegistry[2].EffectiveBalance + state.ValidatorRegistry[3].EffectiveBalance
+	wanted := state.Validators[0].EffectiveBalance + state.Validators[1].EffectiveBalance +
+		state.Validators[2].EffectiveBalance + state.Validators[3].EffectiveBalance
 
 	if balance != wanted {
 		t.Errorf("Incorrect TotalEffectiveBalance. Wanted: %d, got: %d", wanted, balance)

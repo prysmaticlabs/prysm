@@ -194,12 +194,12 @@ func TestSlashValidator_OK(t *testing.T) {
 	}
 
 	bState := &pb.BeaconState{
-		ValidatorRegistry:      registry,
-		Slot:                   0,
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		Balances:               balances,
+		Validators:       registry,
+		Slot:             0,
+		SlashedBalances:  make([]uint64, params.BeaconConfig().SlashedExitLength),
+		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		Balances:         balances,
 	}
 
 	slashedIdx := uint64(2)
@@ -210,15 +210,15 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Fatalf("Could not slash validator %v", err)
 	}
 
-	if !state.ValidatorRegistry[slashedIdx].Slashed {
+	if !state.Validators[slashedIdx].Slashed {
 		t.Errorf("Validator not slashed despite supposed to being slashed")
 	}
 
-	if state.ValidatorRegistry[slashedIdx].WithdrawableEpoch != helpers.CurrentEpoch(state)+params.BeaconConfig().LatestSlashedExitLength {
-		t.Errorf("Withdrawable epoch not the expected value %d", state.ValidatorRegistry[slashedIdx].WithdrawableEpoch)
+	if state.Validators[slashedIdx].WithdrawableEpoch != helpers.CurrentEpoch(state)+params.BeaconConfig().SlashedExitLength {
+		t.Errorf("Withdrawable epoch not the expected value %d", state.Validators[slashedIdx].WithdrawableEpoch)
 	}
 
-	slashedBalance := state.LatestSlashedBalances[state.Slot%params.BeaconConfig().LatestSlashedExitLength]
+	slashedBalance := state.SlashedBalances[state.Slot%params.BeaconConfig().SlashedExitLength]
 	if slashedBalance != params.BeaconConfig().MaxDepositAmount {
 		t.Errorf("Slashed balance isnt the expected amount: got %d but expected %d", slashedBalance, params.BeaconConfig().MaxDepositAmount)
 	}

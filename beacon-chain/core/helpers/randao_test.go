@@ -46,13 +46,13 @@ func TestRandaoMix_OK(t *testing.T) {
 }
 
 func TestRandaoMix_CopyOK(t *testing.T) {
-	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
+	randaoMixes := make([][]byte, params.BeaconConfig().RandaoMixesLength)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestRandaoMixes: randaoMixes}
+	state := &pb.BeaconState{RandaoMixes: randaoMixes}
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -67,7 +67,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		},
 		{
 			epoch:     99999,
-			randaoMix: randaoMixes[99999%params.BeaconConfig().LatestRandaoMixesLength],
+			randaoMix: randaoMixes[99999%params.BeaconConfig().RandaoMixesLength],
 		},
 	}
 	for _, test := range tests {
@@ -123,13 +123,13 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 }
 
 func TestActiveIndexRoot_CopyOK(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
+	activeIndexRoots := make([][]byte, params.BeaconConfig().ActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestActiveIndexRoots: activeIndexRoots}
+	state := &pb.BeaconState{ActiveIndexRoots: activeIndexRoots}
 	tests := []struct {
 		epoch uint64
 	}{

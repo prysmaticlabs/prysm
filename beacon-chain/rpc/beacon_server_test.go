@@ -237,7 +237,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		},
 	}
 	beaconState := &pbp2p.BeaconState{
-		LatestEth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte{'a'},
 		},
 		Eth1DataVotes: []*pbp2p.Eth1Data{},
@@ -292,7 +292,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	}
 	depositRoot := depositTrie.Root()
 	beaconState := &pbp2p.BeaconState{
-		LatestEth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash:   []byte("hash0"),
 			DepositRoot: depositRoot[:],
 		},
@@ -303,7 +303,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 		latestBlockNumber: height,
 		hashesByHeight: map[int][]byte{
 			0: []byte("hash0"),
-			1: beaconState.LatestEth1Data.DepositRoot,
+			1: beaconState.Eth1Data.DepositRoot,
 		},
 	}
 	beaconServer := &BeaconServer{
@@ -437,7 +437,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: eth1DataVotes,
-		LatestEth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash:   []byte("stub"),
 			DepositRoot: []byte("first"),
 		},
@@ -451,7 +451,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		powChainService: &mockPOWChainService{
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
 			hashesByHeight: map[int][]byte{
-				0: beaconState.LatestEth1Data.DepositRoot,
+				0: beaconState.Eth1Data.DepositRoot,
 				// adding some not relevant blocks heights to test that search works
 				1: {1},
 				2: beaconState.Eth1DataVotes[0].BlockHash,
@@ -499,7 +499,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 
 	beaconState := &pbp2p.BeaconState{
 		Eth1DataVotes: []*pbp2p.Eth1Data{},
-		LatestEth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte("stub"),
 		},
 	}

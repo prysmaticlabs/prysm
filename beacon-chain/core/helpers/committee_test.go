@@ -323,9 +323,9 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
 	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
 
