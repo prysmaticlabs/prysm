@@ -19,6 +19,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "clock_test.go",
         "shuffle_test.go",
@@ -28,5 +29,4 @@ go_test(
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
     ],
-    size = "small",
 )

@@ -20,6 +20,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["depositContract_test.go"],
     embed = [":go_default_library"],
     deps = [
@@ -31,5 +32,4 @@ go_test(
         "@com_github_ethereum_go_ethereum//core:go_default_library",
         "@com_github_ethereum_go_ethereum//crypto:go_default_library",
     ],
-    size = "small",
 )

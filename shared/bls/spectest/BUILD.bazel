@@ -17,6 +17,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "aggregate_pubkeys_test.go",
         "aggregate_sigs_test.go",
@@ -36,5 +37,4 @@ go_test(
         "@com_github_phoreproject_bls//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
-    size = "small",
 )

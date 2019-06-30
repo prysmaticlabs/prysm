@@ -33,6 +33,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
@@ -49,5 +50,4 @@ go_test(
         "@com_github_libp2p_go_libp2p_peer//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
-    size = "small",
 )

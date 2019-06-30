@@ -41,6 +41,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["node_test.go"],
     embed = [":go_default_library"],
     deps = [
@@ -48,5 +49,4 @@ go_test(
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
     ],
-    size = "small",
 )

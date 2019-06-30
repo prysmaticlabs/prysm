@@ -16,6 +16,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["rewards_penalties_test.go"],
     embed = [":go_default_library"],
     deps = [
@@ -23,5 +24,4 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
     ],
-    size = "small",
 )
