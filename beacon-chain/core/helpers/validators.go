@@ -68,7 +68,7 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		return indices, nil
 	}
 
-	for i, v := range state.ValidatorRegistry {
+	for i, v := range state.Validators {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
@@ -96,7 +96,7 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	}
 
 	count = 0
-	for _, v := range state.ValidatorRegistry {
+	for _, v := range state.Validators {
 		if IsActiveValidator(v, epoch) {
 			count++
 		}
@@ -209,7 +209,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		candidateIndex := firstCommittee[(e+i)%uint64(len(firstCommittee))]
 		b := append(seed[:], bytesutil.Bytes8(i)...)
 		randomByte := hashutil.Hash(b)[i%32]
-		effectiveBal := state.ValidatorRegistry[candidateIndex].EffectiveBalance
+		effectiveBal := state.Validators[candidateIndex].EffectiveBalance
 		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
 			return candidateIndex, nil
 		}
