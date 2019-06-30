@@ -90,16 +90,16 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Validator registry fields checks.
-	if len(newState.ValidatorRegistry) != depositsForChainStart {
-		t.Error("ValidatorRegistry was not correctly initialized")
+	if len(newState.Validators) != depositsForChainStart {
+		t.Error("Validators was not correctly initialized")
 	}
 	if len(newState.Balances) != depositsForChainStart {
 		t.Error("Balances was not correctly initialized")
 	}
 
 	// Randomness and committees fields checks.
-	if len(newState.LatestRandaoMixes) != latestRandaoMixesLength {
-		t.Error("Length of LatestRandaoMixes was not correctly initialized")
+	if len(newState.RandaoMixes) != latestRandaoMixesLength {
+		t.Error("Length of RandaoMixes was not correctly initialized")
 	}
 
 	// Finality fields checks.
@@ -112,8 +112,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if newState.FinalizedEpoch != genesisEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
-	if newState.JustificationBitfield != 0 {
-		t.Error("JustificationBitfield was not correctly initialized")
+	if newState.JustificationBits != 0 {
+		t.Error("JustificationBits was not correctly initialized")
 	}
 
 	// Recent state checks.
@@ -141,21 +141,21 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
-	if !bytes.Equal(newState.LatestActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
+	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.LatestActiveIndexRoots[0],
+			newState.ActiveIndexRoots[0],
 		)
 	}
-	if !bytes.Equal(newState.LatestActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
+	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.LatestActiveIndexRoots[0],
+			newState.ActiveIndexRoots[0],
 		)
 	}
 	// deposit root checks.
-	if !bytes.Equal(newState.LatestEth1Data.DepositRoot, eth1Data.DepositRoot) {
-		t.Error("LatestEth1Data DepositRoot was not correctly initialized")
+	if !bytes.Equal(newState.Eth1Data.DepositRoot, eth1Data.DepositRoot) {
+		t.Error("Eth1Data DepositRoot was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.Eth1DataVotes, []*pb.Eth1Data{}) {
 		t.Error("Eth1DataVotes was not correctly initialized")
@@ -185,12 +185,12 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
 
-	want = cap(s.LatestBlockRoots)
+	want = cap(s.BlockRoots)
 	if want != got {
 		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}
 
-	for _, h := range s.LatestBlockRoots {
+	for _, h := range s.BlockRoots {
 		if !bytes.Equal(h, params.BeaconConfig().ZeroHash[:]) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}

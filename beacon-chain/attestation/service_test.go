@@ -55,7 +55,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x01},
+		AggregationBits: []byte{0x01},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
@@ -66,7 +66,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[10].Pubkey)
+	pubkey := bytesutil.ToBytes48(beaconState.Validators[10].Pubkey)
 	if service.store.m[pubkey].Data.Crosslink.Shard !=
 		attestation.Data.Crosslink.Shard {
 		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
@@ -108,8 +108,8 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 		})
 	}
 	beaconState := &pb.BeaconState{
-		Slot:              1,
-		ValidatorRegistry: validators,
+		Slot:       1,
+		Validators: validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -123,7 +123,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x80},
+		AggregationBits: []byte{0x80},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
@@ -142,7 +142,7 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 	ctx := context.Background()
 
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{}},
+		Validators: []*pb.Validator{{}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
+		Validators: []*pb.Validator{{Pubkey: pubKey}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0xC0},
+		AggregationBits: []byte{0xC0},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
@@ -279,10 +279,10 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   1,
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      latestRandaoMixes,
-		LatestActiveIndexRoots: latestActiveIndexRoots,
+		Slot:             1,
+		Validators:       validators,
+		RandaoMixes:      latestRandaoMixes,
+		ActiveIndexRoots: latestActiveIndexRoots,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -297,7 +297,7 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	service.poolLimit = 9
 	for i := 0; i < 10; i++ {
 		attestation := &pb.Attestation{
-			AggregationBitfield: []byte{0x80},
+			AggregationBits: []byte{0x80},
 			Data: &pb.AttestationData{
 				TargetEpoch: 2,
 				Crosslink: &pb.Crosslink{
@@ -347,7 +347,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	attestations := make([]*pb.Attestation, 0)
 	for i := 0; i < 10; i++ {
 		attestations = append(attestations, &pb.Attestation{
-			AggregationBitfield: []byte{0x80},
+			AggregationBits: []byte{0x80},
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard: 1,

@@ -203,7 +203,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
+	beaconState := &pb.BeaconState{Validators: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -233,7 +233,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 
 	pubKey := []byte{'A'}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{
+		Validators: []*pb.Validator{{
 			Pubkey:    pubKey,
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
 	}
@@ -1590,7 +1590,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
+	beaconState := &pb.BeaconState{Validators: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -1655,7 +1655,7 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Balances: []uint64{1e9, 1e9},
-		ValidatorRegistry: []*pb.Validator{
+		Validators: []*pb.Validator{
 			{EffectiveBalance: 1e9},
 			{EffectiveBalance: 1e9},
 		},

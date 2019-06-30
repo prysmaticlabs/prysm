@@ -35,7 +35,7 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 			}
 		}
 		s := &pb.BeaconState{
-			ValidatorRegistry: vals,
+			Validators: vals,
 		}
 		count, err := EpochCommitteeCount(s, 1)
 		if err != nil {
@@ -64,7 +64,7 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 		}
 	}
 	s := &pb.BeaconState{
-		ValidatorRegistry: vals,
+		Validators: vals,
 	}
 	count, err := EpochCommitteeCount(s, 1)
 	if err != nil {
@@ -98,7 +98,7 @@ func TestShardDelta_OK(t *testing.T) {
 			}
 		}
 		s := &pb.BeaconState{
-			ValidatorRegistry: vals,
+			Validators: vals,
 		}
 		delta, err := ShardDelta(s, 1)
 		if err != nil {
@@ -494,7 +494,7 @@ func TestShardDelta_Ok(t *testing.T) {
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
 		}
-		state := &pb.BeaconState{ValidatorRegistry: validators}
+		state := &pb.BeaconState{Validators: validators}
 		delta, err := ShardDelta(state, 0)
 		if err != nil {
 			t.Fatal(err)
@@ -536,7 +536,7 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
 		}
-		state := &pb.BeaconState{ValidatorRegistry: validators, LatestStartShard: 100, Slot: 500}
+		state := &pb.BeaconState{Validators: validators, StartShard: 100, Slot: 500}
 		startShard, err := EpochStartShard(state, 0)
 		if err != nil {
 			t.Fatal(err)
@@ -562,9 +562,9 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestActiveIndexRoots: activeRoots,
-		LatestRandaoMixes:      activeRoots,
+		Validators:       validators,
+		ActiveIndexRoots: activeRoots,
+		RandaoMixes:      activeRoots,
 	}
 
 	tests := []struct {
@@ -575,7 +575,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}{
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0x01},
+				AggregationBits: []byte{0x01},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
@@ -587,7 +587,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		{
 
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0x02},
+				AggregationBits: []byte{0x02},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 10,
@@ -598,7 +598,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0x02},
+				AggregationBits: []byte{0x02},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
@@ -609,7 +609,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0xFF, 0xC0},
+				AggregationBits: []byte{0xFF, 0xC0},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
@@ -621,7 +621,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0xFF},
+				AggregationBits: []byte{0xFF},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
@@ -654,7 +654,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 			continue
 		}
 		if !verified {
-			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBitfield)
+			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBits)
 		}
 	}
 }

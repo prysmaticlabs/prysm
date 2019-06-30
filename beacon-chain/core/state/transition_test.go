@@ -287,7 +287,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	beaconState.LatestBlockRoots = blockRoots
+	beaconState.BlockRoots = blockRoots
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
 			DataRoot: []byte{1},
@@ -303,8 +303,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 				StartEpoch: 0,
 			},
 		},
-		AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-		CustodyBitfield:     []byte{},
+		AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+		CustodyBits:     []byte{},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	var exits []*pb.VoluntaryExit
@@ -422,7 +422,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	beaconState.LatestBlockRoots = blockRoots
+	beaconState.BlockRoots = blockRoots
 	beaconState.CurrentCrosslinks = []*pb.Crosslink{
 		{
 			DataRoot: []byte{1},
@@ -440,8 +440,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				EndEpoch: 64,
 			},
 		},
-		AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-		CustodyBitfield:     []byte{},
+		AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+		CustodyBits:     []byte{},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	exits := []*pb.VoluntaryExit{
@@ -517,7 +517,7 @@ func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
 
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBitfield: []byte{1}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBits: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		LatestBlockRoots:          make([][]byte, 128),
@@ -532,7 +532,7 @@ func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
 func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBitfield: []byte{1}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}}, AggregationBits: []byte{1}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		LatestBlockRoots:         make([][]byte, 128),
@@ -568,7 +568,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	}
 
 	wanted := uint64(1e9)
-	if newState.LatestSlashedBalances[2] != wanted {
+	if newState.Slashings[2] != wanted {
 		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[2])
 	}
 }
@@ -612,7 +612,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 					Shard: i,
 				},
 			},
-			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+			AggregationBits: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
 			InclusionDelay: 1,
 		})
@@ -628,7 +628,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 
 	s := &pb.BeaconState{
 		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		ValidatorRegistry:         validators,
+		Validators:                validators,
 		Balances:                  balances,
 		LatestStartShard:          512,
 		LatestBlockRoots:          make([][]byte, 254),
@@ -779,7 +779,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	s.ValidatorRegistry[proposerIdx].Pubkey = priv.PublicKey().Marshal()
+	s.Validators[proposerIdx].Pubkey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
 	domain := helpers.Domain(s, 0, params.BeaconConfig().DomainRandao)
@@ -800,7 +800,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	pubKey := []byte("A")
 	hashed := hashutil.Hash(pubKey)
 	buf = append(buf, hashed[:]...)
-	s.ValidatorRegistry[3].WithdrawalCredentials = buf
+	s.Validators[3].WithdrawalCredentials = buf
 
 	// Set up attestations obj for block.
 	encoded, err := ssz.HashTreeRoot(s.CurrentCrosslinks[0])
@@ -819,9 +819,9 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 					DataRoot:   params.BeaconConfig().ZeroHash[:],
 				},
 			},
-			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
+			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
 				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
-			CustodyBitfield: []byte{},
+			CustodyBits: []byte{},
 		}
 	}
 
@@ -854,8 +854,8 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 			b.Fatal(err)
 		}
 		// Reset state fields to process block again
-		s.ValidatorRegistry[1].Slashed = false
-		s.ValidatorRegistry[2].Slashed = false
+		s.Validators[1].Slashed = false
+		s.Validators[2].Slashed = false
 		s.Balances[3] += 2 * params.BeaconConfig().MinDepositAmount
 	}
 }

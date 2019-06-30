@@ -17,7 +17,7 @@ func TestRandaoMix_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestRandaoMixes: randaoMixes}
+	state := &pb.BeaconState{RandaoMixes: randaoMixes}
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -52,7 +52,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestRandaoMixes: randaoMixes}
+	state := &pb.BeaconState{RandaoMixes: randaoMixes}
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -94,7 +94,7 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestActiveIndexRoots: activeIndexRoots}
+	state := &pb.BeaconState{ActiveIndexRoots: activeIndexRoots}
 	tests := []struct {
 		epoch uint64
 	}{
@@ -129,7 +129,7 @@ func TestActiveIndexRoot_CopyOK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestActiveIndexRoots: activeIndexRoots}
+	state := &pb.BeaconState{ActiveIndexRoots: activeIndexRoots}
 	tests := []struct {
 		epoch uint64
 	}{
@@ -178,9 +178,9 @@ func TestGenerateSeed_OK(t *testing.T) {
 	}
 	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		LatestActiveIndexRoots: activeIndexRoots,
-		LatestRandaoMixes:      randaoMixes,
-		Slot:                   slot}
+		ActiveIndexRoots: activeIndexRoots,
+		RandaoMixes:      randaoMixes,
+		Slot:             slot}
 
 	got, err := GenerateSeed(state, 10)
 	if err != nil {

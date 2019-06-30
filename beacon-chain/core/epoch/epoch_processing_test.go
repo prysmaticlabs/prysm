@@ -72,7 +72,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 					Shard: uint64(i),
 				},
 			},
-			AggregationBitfield: []byte{0xC0, 0xC0},
+			AggregationBits: []byte{0xC0, 0xC0},
 		}
 	}
 
@@ -102,7 +102,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 
 	// Verify the slashed validator is filtered.
 	slashedValidator := indices[0]
-	state.ValidatorRegistry[slashedValidator].Slashed = true
+	state.Validators[slashedValidator].Slashed = true
 	indices, err = unslashedAttestingIndices(state, atts)
 	if err != nil {
 		t.Fatal(err)
@@ -124,7 +124,7 @@ func TestUnslashedAttestingIndices_CantGetIndicesBitfieldError(t *testing.T) {
 					Shard: uint64(i),
 				},
 			},
-			AggregationBitfield: []byte{0xff},
+			AggregationBits: []byte{0xff},
 		}
 	}
 
@@ -151,7 +151,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 					Shard: uint64(i),
 				},
 			},
-			AggregationBitfield: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+			AggregationBits: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
 		}
 	}
@@ -196,7 +196,7 @@ func TestAttestingBalance_CantGetIndicesBitfieldError(t *testing.T) {
 					Shard: uint64(i),
 				},
 			},
-			AggregationBitfield: []byte{0xFF},
+			AggregationBits: []byte{0xFF},
 		}
 	}
 
@@ -319,7 +319,7 @@ func TestMatchAttestations_CurrentEpoch(t *testing.T) {
 		Slot:                      s + e + 2,
 		CurrentEpochAttestations:  currentAtts,
 		PreviousEpochAttestations: prevAtts,
-		LatestBlockRoots:          blockRoots,
+		BlockRoots:                blockRoots,
 	}
 
 	mAtts, err := MatchAttestations(state, 1)
@@ -395,7 +395,7 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                      gs + e + 2,
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
-		LatestBlockRoots:          make([][]byte, 128),
+		BlockRoots:                make([][]byte, 128),
 		CurrentCrosslinks:         []*pb.Crosslink{{StartEpoch: ge}},
 	}
 
@@ -466,7 +466,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                      gs + e + 2,
 		PreviousEpochAttestations: atts,
-		LatestBlockRoots:          blockRoots,
+		BlockRoots:                blockRoots,
 		CurrentCrosslinks:         crosslinks,
 		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -571,15 +571,15 @@ func TestProcessCrosslinks_SuccessfulUpdate(t *testing.T) {
 				},
 				TargetEpoch: 0,
 			},
-			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
 		})
 	}
 	state := &pb.BeaconState{
 		Slot:                      gs + e + 2,
-		ValidatorRegistry:         validators,
+		Validators:                validators,
 		PreviousEpochAttestations: atts,
 		Balances:                  balances,
-		LatestBlockRoots:          blockRoots,
+		BlockRoots:                blockRoots,
 		CurrentCrosslinks:         crosslinks,
 		LatestRandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		LatestActiveIndexRoots:    make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -610,7 +610,7 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 	for _, tt := range tests {
 		helpers.ClearAllCaches()
 		state := &pb.BeaconState{
-			ValidatorRegistry: []*pb.Validator{
+			Validators: []*pb.Validator{
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
 			Balances: []uint64{tt.a},
 		}
@@ -647,7 +647,7 @@ func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		ValidatorRegistry: []*pb.Validator{{ExitEpoch: e, EffectiveBalance: a}, {ExitEpoch: e, EffectiveBalance: a},
+		Validators: []*pb.Validator{{ExitEpoch: e, EffectiveBalance: a}, {ExitEpoch: e, EffectiveBalance: a},
 			{ExitEpoch: e, EffectiveBalance: a}, {ExitEpoch: e, EffectiveBalance: a}},
 	}
 	// Since Attested balances are less than total balances, nothing happened.
@@ -673,10 +673,10 @@ func TestProcessJustificationFinalization_NoBlockRootCurrentEpoch(t *testing.T) 
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  3,
-		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		JustificationBits:  3,
+		Validators:             []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
-		LatestBlockRoots:       blockRoots,
+		BlockRoots:             blockRoots,
 	}
 	attestedBalance := 4 * e * 3 / 2
 	_, err := ProcessJustificationAndFinalization(state, 0, attestedBalance)
@@ -699,10 +699,10 @@ func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  3,
-		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		JustificationBits:  3,
+		Validators:             []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
-		LatestBlockRoots:       blockRoots,
+		BlockRoots:             blockRoots,
 	}
 	attestedBalance := 4 * e * 3 / 2
 	newState, err := ProcessJustificationAndFinalization(state, 0, attestedBalance)
@@ -740,10 +740,10 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  3,
-		ValidatorRegistry:      []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		JustificationBits:  3,
+		Validators:             []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
-		LatestBlockRoots:       blockRoots,
+		BlockRoots:             blockRoots,
 	}
 	attestedBalance := 4 * e * 3 / 2
 	newState, err := ProcessJustificationAndFinalization(state, attestedBalance, 0)
@@ -788,7 +788,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 	helpers.ClearAllCaches()
 	s := &pb.BeaconState{
 		Slot: 0,
-		ValidatorRegistry: []*pb.Validator{
+		Validators: []*pb.Validator{
 			{Slashed: true,
 				WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
 				EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance},
@@ -812,20 +812,20 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	ne := ce + 1
 	s.Eth1DataVotes = []*pb.Eth1Data{}
 	s.Balances[0] = 29 * 1e9
-	s.LatestSlashedBalances[ce] = 100
-	s.LatestRandaoMixes[ce] = []byte{'A'}
+	s.Slashings[ce] = 100
+	s.RandaoMixes[ce] = []byte{'A'}
 	newS, err := ProcessFinalUpdates(s)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify effective balance is correctly updated.
-	if newS.ValidatorRegistry[0].EffectiveBalance != 29*1e9 {
-		t.Errorf("effective balance incorrectly updated, got %d", s.ValidatorRegistry[0].EffectiveBalance)
+	if newS.Validators[0].EffectiveBalance != 29*1e9 {
+		t.Errorf("effective balance incorrectly updated, got %d", s.Validators[0].EffectiveBalance)
 	}
 
 	// Verify start shard is correctly updated.
-	if newS.LatestStartShard != 64 {
+	if newS.StartShard != 64 {
 		t.Errorf("start shard incorrectly updated, got %d", 64)
 	}
 
@@ -836,14 +836,14 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 
 	// Verify slashed balances correctly updated.
-	if newS.LatestSlashedBalances[ce] != newS.LatestSlashedBalances[ne] {
+	if newS.Slashings[ce] != newS.Slashings[ne] {
 		t.Errorf("wanted slashed balance %d, got %d",
-			newS.LatestSlashedBalances[ce],
-			newS.LatestSlashedBalances[ne])
+			newS.Slashings[ce],
+			newS.Slashings[ne])
 	}
 
 	// Verify randao is correctly updated in the right position.
-	if bytes.Equal(newS.LatestRandaoMixes[ne], params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(newS.RandaoMixes[ne], params.BeaconConfig().ZeroHash[:]) {
 		t.Error("latest RANDAO still zero hashes")
 	}
 
@@ -887,7 +887,7 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
-		ValidatorRegistry: []*pb.Validator{
+		Validators: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
@@ -900,7 +900,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i, validator := range newState.ValidatorRegistry {
+	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
 				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
@@ -923,8 +923,8 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 					DataRoot: []byte{'A'},
 				},
 			},
-			InclusionDelay:      uint64(i + 100),
-			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			InclusionDelay:  uint64(i + 100),
+			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
 		}
 	}
 	state.PreviousEpochAttestations = atts
@@ -1000,8 +1000,8 @@ func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
 					Shard: uint64(i),
 				},
 			},
-			InclusionDelay:      uint64(i + 100),
-			AggregationBitfield: []byte{0xff},
+			InclusionDelay:  uint64(i + 100),
+			AggregationBits: []byte{0xff},
 		}
 	}
 	state.PreviousEpochAttestations = atts
@@ -1027,8 +1027,8 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 					DataRoot: []byte{'A'},
 				},
 			},
-			InclusionDelay:      uint64(i + 100),
-			AggregationBitfield: []byte{0xC0},
+			InclusionDelay:  uint64(i + 100),
+			AggregationBits: []byte{0xC0},
 		}
 	}
 
@@ -1067,8 +1067,8 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 					DataRoot: []byte{'A'},
 				},
 			},
-			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-			InclusionDelay:      1,
+			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			InclusionDelay:  1,
 		}
 	}
 	state.PreviousEpochAttestations = atts
@@ -1115,7 +1115,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	}
 	limit, _ := helpers.ChurnLimit(state)
 	for i := 0; i < int(limit)+10; i++ {
-		state.ValidatorRegistry = append(state.ValidatorRegistry, &pb.Validator{
+		state.Validators = append(state.Validators, &pb.Validator{
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
 			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
@@ -1123,7 +1123,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	newState, _ := ProcessRegistryUpdates(state)
-	for i, validator := range newState.ValidatorRegistry {
+	for i, validator := range newState.Validators {
 		if validator.ActivationEligibilityEpoch != currentEpoch {
 			t.Errorf("could not update registry %d, wanted activation eligibility epoch %d got %d",
 				i, currentEpoch, validator.ActivationEligibilityEpoch)
@@ -1142,7 +1142,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
-		ValidatorRegistry: []*pb.Validator{
+		Validators: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
 				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
@@ -1154,7 +1154,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 		},
 	}
 	newState, _ := ProcessRegistryUpdates(state)
-	for i, validator := range newState.ValidatorRegistry {
+	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
 				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
@@ -1168,7 +1168,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawalDelay
 	state := &pb.BeaconState{
 		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
-		ValidatorRegistry: []*pb.Validator{
+		Validators: []*pb.Validator{
 			{
 				ExitEpoch:         exitEpoch,
 				WithdrawableEpoch: exitEpoch + minWithdrawalDelay},
@@ -1185,7 +1185,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i, validator := range newState.ValidatorRegistry {
+	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != exitEpoch {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
 				i,
@@ -1197,7 +1197,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 }
 
 func TestProcessRewardsAndPenalties_GenesisEpoch(t *testing.T) {
-	state := &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 1, LatestStartShard: 999}
+	state := &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 1, StartShard: 999}
 	newState, err := ProcessRewardsAndPenalties(state)
 	if err != nil {
 		t.Fatal(err)
@@ -1222,8 +1222,8 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 					DataRoot: []byte{'A'},
 				},
 			},
-			AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-			InclusionDelay:      1,
+			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			InclusionDelay:  1,
 		}
 	}
 	state.PreviousEpochAttestations = atts

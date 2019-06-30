@@ -159,7 +159,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 						DataRoot:   params.BeaconConfig().ZeroHash[:],
 						ParentRoot: encoded[:]},
 				},
-					AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+					AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
 				},
 			},
 		},
@@ -249,17 +249,17 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 				TargetEpoch: 10,
 				SourceEpoch: expectedEpoch,
 				Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-			}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+			}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 			{Data: &pbp2p.AttestationData{
 				TargetEpoch: 10,
 				SourceEpoch: expectedEpoch,
 				Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-			}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+			}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 			{Data: &pbp2p.AttestationData{
 				TargetEpoch: 10,
 				SourceEpoch: expectedEpoch,
 				Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-			}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+			}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 		},
 	}
 	expectedNumberOfAttestations := 3
@@ -277,7 +277,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		ValidatorRegistry:      validators,
+		Validators:             validators,
 		Slot:                   currentSlot + params.BeaconConfig().MinAttestationInclusionDelay,
 		CurrentJustifiedEpoch:  expectedEpoch,
 		PreviousJustifiedEpoch: expectedEpoch,
@@ -322,17 +322,17 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 			TargetEpoch: 10,
 			SourceEpoch: expectedEpoch,
 			Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+		}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 		{Data: &pbp2p.AttestationData{
 			TargetEpoch: 10,
 			SourceEpoch: expectedEpoch,
 			Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+		}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 		{Data: &pbp2p.AttestationData{
 			TargetEpoch: 10,
 			SourceEpoch: expectedEpoch,
 			Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
-		}, AggregationBitfield: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
+		}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 	}
 	if !reflect.DeepEqual(atts, expectedAtts) {
 		t.Error("Did not receive expected attestations")
@@ -364,10 +364,10 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	d := internal.SetupDB(t)
 
 	beaconState := &pbp2p.BeaconState{
-		LatestEth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
-		DepositIndex: 2,
+		Eth1DepositIndex: 2,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -480,10 +480,10 @@ func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
 	d := internal.SetupDB(t)
 
 	beaconState := &pbp2p.BeaconState{
-		LatestEth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
-		DepositIndex: 10,
+		Eth1DepositIndex: 10,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -581,10 +581,10 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	d := internal.SetupDB(t)
 
 	beaconState := &pbp2p.BeaconState{
-		LatestEth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
-		DepositIndex: 2,
+		Eth1DepositIndex: 2,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)

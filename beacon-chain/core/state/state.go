@@ -86,34 +86,34 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry: []*pb.Validator{},
-		Balances:          []uint64{},
+		Validators: []*pb.Validator{},
+		Balances:   []uint64{},
 
 		// Randomness and committees.
-		LatestRandaoMixes: latestRandaoMixes,
+		RandaoMixes: latestRandaoMixes,
 
 		// Finality.
 		PreviousJustifiedEpoch: 0,
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  0,
+		JustificationBits:  0,
 		FinalizedEpoch:         0,
 		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
 
 		// Recent state.
 		CurrentCrosslinks:         crosslinks,
 		PreviousCrosslinks:        crosslinks,
-		LatestActiveIndexRoots:    latestActiveIndexRoots,
-		LatestBlockRoots:          latestBlockRoots,
-		LatestSlashedBalances:     latestSlashedExitBalances,
+		ActiveIndexRoots:          latestActiveIndexRoots,
+		BlockRoots:                latestBlockRoots,
+		Slashings:           latestSlashedExitBalances,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 
 		// Eth1 data.
-		LatestEth1Data: eth1Data,
-		Eth1DataVotes:  []*pb.Eth1Data{},
-		DepositIndex:   0,
+		Eth1Data:         eth1Data,
+		Eth1DataVotes:    []*pb.Eth1Data{},
+		Eth1DepositIndex: 0,
 	}
 
 	// Process initial deposits.

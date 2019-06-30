@@ -119,9 +119,9 @@ func TestRequestAttestation_OK(t *testing.T) {
 		},
 		CurrentJustifiedRoot: justifiedRoot[:],
 	}
-	beaconState.LatestBlockRoots[1] = blockRoot[:]
-	beaconState.LatestBlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
-	beaconState.LatestBlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
+	beaconState.BlockRoots[1] = blockRoot[:]
+	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
+	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 		p2p:      &mockBroadcaster{},
@@ -229,9 +229,9 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		},
 		CurrentJustifiedRoot: justifiedBlockRoot[:],
 	}
-	beaconState.LatestBlockRoots[1] = blockRoot[:]
-	beaconState.LatestBlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
-	beaconState.LatestBlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
+	beaconState.BlockRoots[1] = blockRoot[:]
+	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
+	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 		p2p:      &mockBroadcaster{},

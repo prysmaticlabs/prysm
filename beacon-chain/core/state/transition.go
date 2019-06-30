@@ -98,10 +98,10 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash prev state root: %v", err)
 	}
+	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
 
 	state.LatestStateRoots[state.Slot%params.BeaconConfig().HistoricalRootsLimit] = prevStateRoot[:]
 	zeroHash := params.BeaconConfig().ZeroHash
-
 	// Cache latest block header state root.
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
