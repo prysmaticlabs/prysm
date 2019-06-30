@@ -55,6 +55,7 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 		PrvKey:                 ctx.GlobalString(cmd.P2PPrivKey.Name),
 		DepositContractAddress: contractAddress,
 		WhitelistCIDR:          ctx.GlobalString(cmd.P2PWhitelist.Name),
+		EnableUPnP:             ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
 	})
 	if err != nil {
 		return nil, err

@@ -17,6 +17,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "aggregate_pubkeys_test.go",
         "aggregate_sigs_test.go",
