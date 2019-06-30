@@ -24,4 +24,5 @@ go_test(
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
+    size = "small",
 )
