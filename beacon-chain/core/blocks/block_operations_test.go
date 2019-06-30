@@ -612,7 +612,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		Validators:       validators,
 		Slot:             currentSlot,
 		Balances:         validatorBalances,
-		SlashedBalances:  make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:  make([]uint64, params.BeaconConfig().SlashedExitLength),
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
@@ -866,7 +866,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		Slot:             currentSlot,
 		Balances:         validatorBalances,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		SlashedBalances:  make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:  make([]uint64, params.BeaconConfig().SlashedExitLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
@@ -1955,7 +1955,7 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 		Slot:             0,
 		Balances:         validatorBalances,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		SlashedBalances:  make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:  make([]uint64, params.BeaconConfig().SlashedExitLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
 	transfers := []*pb.Transfer{

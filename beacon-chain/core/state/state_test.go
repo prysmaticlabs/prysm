@@ -112,8 +112,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if newState.FinalizedEpoch != genesisEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
-	if newState.JustificationBitfield != 0 {
-		t.Error("JustificationBitfield was not correctly initialized")
+	if newState.JustificationBits != 0 {
+		t.Error("JustificationBits was not correctly initialized")
 	}
 
 	// Recent state checks.
@@ -123,8 +123,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.PreviousCrosslinks) != shardCount {
 		t.Error("Length of PreviousCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.SlashedBalances, make([]uint64, params.BeaconConfig().SlashedExitLength)) {
-		t.Error("SlashedBalances was not correctly initialized")
+	if !reflect.DeepEqual(newState.Slashings, make([]uint64, params.BeaconConfig().SlashedExitLength)) {
+		t.Error("Slashings was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.CurrentEpochAttestations, []*pb.PendingAttestation{}) {
 		t.Error("CurrentEpochAttestations was not correctly initialized")

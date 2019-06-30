@@ -157,7 +157,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SlashedBalances = make([]uint64, params.BeaconConfig().SlashedExitLength)
+	beaconState.Slashings = make([]uint64, params.BeaconConfig().SlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 3,
@@ -247,7 +247,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SlashedBalances = make([]uint64, params.BeaconConfig().SlashedExitLength)
+	beaconState.Slashings = make([]uint64, params.BeaconConfig().SlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 3,
@@ -378,7 +378,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		ParentRoot: genesisBlock.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
-	beaconState.SlashedBalances = make([]uint64, params.BeaconConfig().SlashedExitLength)
+	beaconState.Slashings = make([]uint64, params.BeaconConfig().SlashedExitLength)
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 3,
@@ -558,7 +558,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		BlockRoots:               make([][]byte, 128),
-		SlashedBalances:          []uint64{0, 1e9, 0},
+		Slashings:          []uint64{0, 1e9, 0},
 		RandaoMixes:              make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		CurrentCrosslinks:        crosslinks,
@@ -568,7 +568,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	}
 
 	wanted := uint64(1e9)
-	if newState.SlashedBalances[2] != wanted {
+	if newState.Slashings[2] != wanted {
 		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[2])
 	}
 }
@@ -576,7 +576,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 	newState := &pb.BeaconState{
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		SlashedBalances:  make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:  make([]uint64, params.BeaconConfig().SlashedExitLength),
 		RandaoMixes:      make([][]byte, params.BeaconConfig().SlotsPerEpoch),
 	}
 	config := state.DefaultConfig()
@@ -632,7 +632,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 		Balances:                  balances,
 		StartShard:                512,
 		BlockRoots:                make([][]byte, 254),
-		SlashedBalances:           []uint64{0, 1e9, 0},
+		Slashings:           []uint64{0, 1e9, 0},
 		RandaoMixes:               make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		CurrentCrosslinks:         crosslinks,
@@ -696,7 +696,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		RandaoMixes:          randaoMixes,
 		Validators:           validators,
 		Balances:             validatorBalances,
-		SlashedBalances:      make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:      make([]uint64, params.BeaconConfig().SlashedExitLength),
 		ActiveIndexRoots:     make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		CurrentJustifiedRoot: []byte("hello-world"),
 		Fork: &pb.Fork{

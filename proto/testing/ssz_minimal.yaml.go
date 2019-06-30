@@ -446,7 +446,7 @@ type SszMinimalTest struct {
 				LatestBlockRoots  [][]byte `json:"latest_block_roots" ssz:"size=64,32"`
 				LatestStateRoots  [][]byte `json:"latest_state_roots" ssz:"size=64,32"`
 				ActiveIndexRoots  [][]byte `json:"latest_active_index_roots" ssz:"size=64,32"`
-				SlashedBalances   []uint64 `json:"latest_slashed_balances" ssz:"size=64"`
+				Slashings   []uint64 `json:"latest_slashed_balances" ssz:"size=64"`
 				LatestBlockHeader struct {
 					Slot       uint64 `json:"slot"`
 					ParentRoot []byte `json:"parent_root" ssz:"size=32"`

@@ -673,7 +673,7 @@ func TestProcessJustificationFinalization_NoBlockRootCurrentEpoch(t *testing.T) 
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  3,
+		JustificationBits:  3,
 		Validators:             []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:             blockRoots,
@@ -699,7 +699,7 @@ func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  3,
+		JustificationBits:  3,
 		Validators:             []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:             blockRoots,
@@ -740,7 +740,7 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  3,
+		JustificationBits:  3,
 		Validators:             []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:               []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:             blockRoots,
@@ -772,7 +772,7 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 		Slot:            0,
 		Validators:      []*pb.Validator{{Slashed: true}},
 		Balances:        []uint64{params.BeaconConfig().MaxDepositAmount},
-		SlashedBalances: []uint64{0, 1e9},
+		Slashings: []uint64{0, 1e9},
 	}
 	newState, err := ProcessSlashings(s)
 	if err != nil {
@@ -794,7 +794,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 				EffectiveBalance:  params.BeaconConfig().MaxDepositAmount},
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxDepositAmount}},
 		Balances:        []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
-		SlashedBalances: []uint64{0, 1e9},
+		Slashings: []uint64{0, 1e9},
 	}
 	newState, err := ProcessSlashings(s)
 	if err != nil {
@@ -812,7 +812,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	ne := ce + 1
 	s.Eth1DataVotes = []*pb.Eth1Data{}
 	s.Balances[0] = 29 * 1e9
-	s.SlashedBalances[ce] = 100
+	s.Slashings[ce] = 100
 	s.RandaoMixes[ce] = []byte{'A'}
 	newS, err := ProcessFinalUpdates(s)
 	if err != nil {
@@ -836,10 +836,10 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 
 	// Verify slashed balances correctly updated.
-	if newS.SlashedBalances[ce] != newS.SlashedBalances[ne] {
+	if newS.Slashings[ce] != newS.Slashings[ne] {
 		t.Errorf("wanted slashed balance %d, got %d",
-			newS.SlashedBalances[ce],
-			newS.SlashedBalances[ne])
+			newS.Slashings[ce],
+			newS.Slashings[ne])
 	}
 
 	// Verify randao is correctly updated in the right position.
@@ -1286,7 +1286,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		CurrentCrosslinks: make([]*pb.Crosslink, params.BeaconConfig().ShardCount),
 		RandaoMixes:       make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		SlashedBalances:   make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:   make([]uint64, params.BeaconConfig().SlashedExitLength),
 		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
 	}
 }

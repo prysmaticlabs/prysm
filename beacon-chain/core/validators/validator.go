@@ -184,7 +184,7 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	state.Validators[slashedIdx].Slashed = true
 	state.Validators[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().SlashedExitLength
 	slashedBalance := state.Validators[slashedIdx].EffectiveBalance
-	state.SlashedBalances[currentEpoch%params.BeaconConfig().SlashedExitLength] += slashedBalance
+	state.Slashings[currentEpoch%params.BeaconConfig().SlashedExitLength] += slashedBalance
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {

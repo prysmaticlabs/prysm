@@ -40,7 +40,7 @@ type RegistryUpdatesMinimal struct {
 			CurrentJustifiedEpoch     uint64        `json:"current_justified_epoch"`
 			PreviousJustifiedRoot     []byte        `json:"previous_justified_root" ssz:"size=32"`
 			CurrentJustifiedRoot      []byte        `json:"current_justified_root" ssz:"size=32"`
-			JustificationBitfield     uint64        `json:"justification_bitfield"`
+			JustificationBits     uint64        `json:"justification_bitfield"`
 			FinalizedEpoch            uint64        `json:"finalized_epoch"`
 			FinalizedRoot             []byte        `json:"finalized_root" ssz:"size=32"`
 			CurrentCrosslinks         []struct {
@@ -60,7 +60,7 @@ type RegistryUpdatesMinimal struct {
 			LatestBlockRoots  [][]byte `json:"latest_block_roots"`
 			LatestStateRoots  [][]byte `json:"latest_state_roots"`
 			ActiveIndexRoots  [][]byte `json:"latest_active_index_roots"`
-			SlashedBalances   []uint64 `json:"latest_slashed_balances"`
+			Slashings   []uint64 `json:"latest_slashed_balances"`
 			LatestBlockHeader struct {
 				Slot       uint64 `json:"slot"`
 				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
@@ -108,7 +108,7 @@ type RegistryUpdatesMinimal struct {
 			CurrentJustifiedEpoch     uint64        `json:"current_justified_epoch"`
 			PreviousJustifiedRoot     []byte        `json:"previous_justified_root" ssz:"size=32"`
 			CurrentJustifiedRoot      []byte        `json:"current_justified_root" ssz:"size=32"`
-			JustificationBitfield     uint64        `json:"justification_bitfield"`
+			JustificationBits     uint64        `json:"justification_bitfield"`
 			FinalizedEpoch            uint64        `json:"finalized_epoch"`
 			FinalizedRoot             []byte        `json:"finalized_root" ssz:"size=32"`
 			CurrentCrosslinks         []struct {
@@ -128,7 +128,7 @@ type RegistryUpdatesMinimal struct {
 			LatestBlockRoots  [][]byte `json:"latest_block_roots"`
 			LatestStateRoots  [][]byte `json:"latest_state_roots"`
 			ActiveIndexRoots  [][]byte `json:"latest_active_index_roots"`
-			SlashedBalances   []uint64 `json:"latest_slashed_balances"`
+			Slashings   []uint64 `json:"latest_slashed_balances"`
 			LatestBlockHeader struct {
 				Slot       uint64 `json:"slot"`
 				ParentRoot []byte `json:"parent_root" ssz:"size=32"`

@@ -148,7 +148,7 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:            100, // epoch 2
-		SlashedBalances: []uint64{0},
+		Slashings: []uint64{0},
 		Validators: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
 		},
@@ -196,7 +196,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	bState := &pb.BeaconState{
 		Validators:       registry,
 		Slot:             0,
-		SlashedBalances:  make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:  make([]uint64, params.BeaconConfig().SlashedExitLength),
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 		Balances:         balances,
@@ -218,7 +218,7 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Withdrawable epoch not the expected value %d", state.Validators[slashedIdx].WithdrawableEpoch)
 	}
 
-	slashedBalance := state.SlashedBalances[state.Slot%params.BeaconConfig().SlashedExitLength]
+	slashedBalance := state.Slashings[state.Slot%params.BeaconConfig().SlashedExitLength]
 	if slashedBalance != params.BeaconConfig().MaxDepositAmount {
 		t.Errorf("Slashed balance isnt the expected amount: got %d but expected %d", slashedBalance, params.BeaconConfig().MaxDepositAmount)
 	}

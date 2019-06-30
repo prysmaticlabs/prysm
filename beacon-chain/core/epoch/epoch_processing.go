@@ -193,7 +193,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	oldCurrJustifiedRoot := state.CurrentJustifiedRoot
 	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
 	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
-	state.JustificationBitfield = (state.JustificationBitfield << 1) % (1 << 63)
+	state.JustificationBits = (state.JustificationBits << 1) % (1 << 63)
 	// Process justification.
 	if 3*prevAttestedBal >= 2*totalBal {
 		state.CurrentJustifiedEpoch = prevEpoch
@@ -203,7 +203,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 				prevEpoch, err)
 		}
 		state.CurrentJustifiedRoot = blockRoot
-		state.JustificationBitfield |= 2
+		state.JustificationBits |= 2
 	}
 	if 3*currAttestedBal >= 2*totalBal {
 		state.CurrentJustifiedEpoch = currentEpoch
@@ -213,10 +213,10 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 				prevEpoch, err)
 		}
 		state.CurrentJustifiedRoot = blockRoot
-		state.JustificationBitfield |= 1
+		state.JustificationBits |= 1
 	}
 	// Process finalization.
-	bitfield := state.JustificationBitfield
+	bitfield := state.JustificationBits
 	// When the 2nd, 3rd and 4th most recent epochs are all justified,
 	// 2nd epoch can finalize the 4th epoch as a source.
 	if oldPrevJustifiedEpoch+3 == currentEpoch && (bitfield>>1)%8 == 7 {
@@ -433,8 +433,8 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().SlashedExitLength
-	totalAtStart := state.SlashedBalances[(currentEpoch+1)%exitLength]
-	totalAtEnd := state.SlashedBalances[currentEpoch%exitLength]
+	totalAtStart := state.Slashings[(currentEpoch+1)%exitLength]
+	totalAtEnd := state.Slashings[currentEpoch%exitLength]
 	totalPenalties := totalAtEnd - totalAtStart
 
 	// Compute slashing for each validator.
@@ -538,8 +538,8 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().SlashedExitLength
-	state.SlashedBalances[nextEpoch%slashedExitLength] =
-		state.SlashedBalances[currentEpoch%slashedExitLength]
+	state.Slashings[nextEpoch%slashedExitLength] =
+		state.Slashings[currentEpoch%slashedExitLength]
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().RandaoMixesLength
