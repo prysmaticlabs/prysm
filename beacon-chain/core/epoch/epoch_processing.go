@@ -353,6 +353,7 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 //            validator.activation_epoch = get_delayed_activation_exit_epoch(get_current_epoch(state))
 func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
+	var err error
 	for idx, validator := range state.ValidatorRegistry {
 		// Process the validators for activation eligibility.
 		eligibleToActivate := validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch
@@ -364,7 +365,10 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
 		belowEjectionBalance := validator.EffectiveBalance <= params.BeaconConfig().EjectionBalance
 		if isActive && belowEjectionBalance {
-			state = validators.ExitValidator(state, uint64(idx))
+			state, err = validators.InitiateValidatorExit(state, uint64(idx))
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -494,7 +498,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := currentEpoch + 1
 
 	// Reset ETH1 data votes.
-	if (state.Slot+1)%params.BeaconConfig().SlotsPerHistoricalRoot == 0 {
+	if (state.Slot+1)%params.BeaconConfig().SlotsPerEth1VotingPeriod == 0 {
 		state.Eth1DataVotes = nil
 	}
 
@@ -557,7 +561,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Rotate current and previous epoch attestations.
 	state.PreviousEpochAttestations = state.CurrentEpochAttestations
-	state.CurrentEpochAttestations = nil
+	state.CurrentEpochAttestations = make([]*pb.PendingAttestation, 0, 0)
 
 	return state, nil
 }

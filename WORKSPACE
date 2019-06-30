@@ -177,7 +177,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "a2c7c20ea4b9f5ddfdc3122924822a8033e1db9d",
+    commit = "65835a5f002109998995206338ca888e41503525",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1095,4 +1095,10 @@ go_repository(
     name = "com_github_koron_go_ssdp",
     commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
     importpath = "github.com/koron/go-ssdp",
+)
+
+go_repository(
+    name = "in_gopkg_d4l3k_messagediff_v1",
+    commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",
+    importpath = "gopkg.in/d4l3k/messagediff.v1",
 )
