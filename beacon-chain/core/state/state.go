@@ -97,7 +97,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBits:  0,
+		JustificationBits:      0,
 		FinalizedEpoch:         0,
 		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
 
@@ -106,14 +106,14 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		PreviousCrosslinks:        crosslinks,
 		ActiveIndexRoots:          latestActiveIndexRoots,
 		BlockRoots:                latestBlockRoots,
-		Slashings:           latestSlashedExitBalances,
+		Slashings:                 latestSlashedExitBalances,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 
 		// Eth1 data.
-		Eth1Data:         eth1Data,
-		Eth1DataVotes:    []*pb.Eth1Data{},
-		Eth1DepositIndex: 0,
+		Eth1Data:             eth1Data,
+		Eth1DataVotes:        []*pb.Eth1Data{},
+		Eth1Eth1DepositIndex: 0,
 	}
 
 	// Process initial deposits.
@@ -132,8 +132,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
 		}
 	}
-	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if state.ValidatorRegistry[i].EffectiveBalance >=
+	for i := 0; i < len(state.Validators); i++ {
+		if state.Validators[i].EffectiveBalance >=
 			params.BeaconConfig().MaxEffectiveBalance {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
@@ -154,7 +154,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
-		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot[:]
+		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
 	}
 	return state, nil
 }

@@ -70,9 +70,9 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 //    """
 //    return state.latest_active_index_roots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
-	newRootLength := len(state.LatestActiveIndexRoots[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+	newRootLength := len(state.ActiveIndexRoots[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
 	newRoot := make([]byte, newRootLength)
-	copy(newRoot, state.LatestActiveIndexRoots[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+	copy(newRoot, state.ActiveIndexRoots[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
 	return newRoot
 }
 
@@ -88,9 +88,9 @@ func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
 //    """
 //    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
-	newMixLength := len(state.LatestRandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+	newMixLength := len(state.RandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
 	newMix := make([]byte, newMixLength)
-	copy(newMix, state.LatestRandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+	copy(newMix, state.RandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
 	return newMix
 }
 

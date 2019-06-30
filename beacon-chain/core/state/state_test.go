@@ -123,8 +123,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.PreviousCrosslinks) != shardCount {
 		t.Error("Length of PreviousCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.LatestSlashedBalances, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)) {
-		t.Error("LatestSlashedBalances was not correctly initialized")
+	if !reflect.DeepEqual(newState.Slashings, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)) {
+		t.Error("Slashings was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.CurrentEpochAttestations, []*pb.PendingAttestation{}) {
 		t.Error("CurrentEpochAttestations was not correctly initialized")
@@ -180,7 +180,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	s, _ := state.GenesisBeaconState(nil, 0, nil)
-	want, got := len(s.LatestBlockRoots), int(params.BeaconConfig().HistoricalRootsLimit)
+	want, got := len(s.BlockRoots), int(params.BeaconConfig().HistoricalRootsLimit)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}

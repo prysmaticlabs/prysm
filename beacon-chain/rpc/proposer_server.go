@@ -284,7 +284,7 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*db.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.Eth1DepositIndex {
+		if uint64(dep.Index) >= beaconState.Eth1Eth1DepositIndex {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}

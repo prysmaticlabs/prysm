@@ -10,18 +10,18 @@ import (
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
-	ShardCount                uint64 `yaml:"SHARD_COUNT"`                  // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize       uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxIndicesPerAttestation  uint64 `yaml:"MAX_INDICES_PER_ATTESTATION"`  // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
-	MinPerEpochChurnLimit     uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`    // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
-	ChurnLimitQuotient        uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`         // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
-	BaseRewardsPerEpoch       uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`       // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
-	ShuffleRoundCount         uint64 `yaml:"SHUFFLE_ROUND_COUNT"`          // ShuffleRoundCount is used for retrieving the permuted index.
-	SecondsPerDay             uint64 `yaml:"SECONDS_PER_DAY"`              // SecondsPerDay defines how many seconds are in a given day.
-	MaxValidatorsPerCommittee uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"` // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
+	ShardCount                     uint64 `yaml:"SHARD_COUNT"`                        // ShardCount is the number of shard chains in Ethereum 2.0.
+	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`              // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxIndicesPerAttestation       uint64 `yaml:"MAX_INDICES_PER_ATTESTATION"`        // MaxIndicesPerAttestation is used to determine how many validators participate in an attestation.
+	MinPerEpochChurnLimit          uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`          // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
+	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
+	BaseRewardsPerEpoch            uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`             // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
+	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
+	SecondsPerDay                  uint64 `yaml:"SECONDS_PER_DAY"`                    // SecondsPerDay defines how many seconds are in a given day.
+	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"`       // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
-	MinGenesisTime            uint64 `yaml:"MIN_GENESIS_TIME"`             // MinGenesisTime defines the lower bound of the genesis time.
-	JustificationBitsLength   uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`    // JustificationBitsLength defines the length in bytes of the justification bits.
+	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2018.
+	JustificationBitsLength        uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`          // JustificationBitsLength defines the length in bytes of the justification bits.
 
 	// Deposit contract constants.
 	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
@@ -33,8 +33,8 @@ type BeaconChainConfig struct {
 	EffectiveBalanceIncrement uint64 `yaml:"EFFECTIVE_BALANCE_INCREMENT"` // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 
 	// Initial value constants.
-	FarFutureEpoch          uint64 `yaml:"FAR_FUTURE_EPOCH"`           // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
-	BLSWithdrawalPrefixByte byte   `yaml:"BLS_WITHDRAWAL_PREFIX_BYTE"` // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
+	FarFutureEpoch          uint64   `yaml:"FAR_FUTURE_EPOCH"`           // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
+	BLSWithdrawalPrefixByte byte     `yaml:"BLS_WITHDRAWAL_PREFIX_BYTE"` // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
@@ -44,6 +44,7 @@ type BeaconChainConfig struct {
 	MinSeedLookahead             uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
 	ActivationExitDelay          uint64 `yaml:"ACTIVATION_EXIT_DELAY"`               // ActivationExitDelay is the duration a validator has to wait for entry and exit in epoch.
 	SlotsPerEth1VotingPeriod     uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	SlotsPerHistoricalRoot       uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawalDelay  uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawalEpochs is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod    uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
 	MaxEpochsPerCrosslink        uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxEpochsPerCrosslink defines the max epoch from current a crosslink can be formed at.
@@ -51,10 +52,10 @@ type BeaconChainConfig struct {
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 
 	// State list lengths
-	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"`       // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
-	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"` // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
-	HistoricalRootsLimit      uint64 `yaml:"HISTORICAL_ROOTS_LIMIT"`             // HistoricalRootsLimit the define max historical roots can be saved in state before roll over.
-	ValidatorRegistryLimit    uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT"`           // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
+	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
+	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
+	HistoricalRootsLimit      uint64 `yaml:"HISTORICAL_ROOTS_LIMIT"`       // HistoricalRootsLimit the define max historical roots can be saved in state before roll over.
+	ValidatorsLimit           uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT"`     // ValidatorsLimit defines the upper bound of validators can participate in eth2.
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor             uint64 `yaml:"BASE_REWARD_FACTOR"`             // BaseRewardFactor is used to calculate validator per-slot interest rate.
@@ -99,7 +100,7 @@ type BeaconChainConfig struct {
 type DepositContractConfig struct {
 	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
-	MaxEffectiveBalance      *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
+	MaxEffectiveBalance   *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -110,18 +111,18 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:                1024,
-	TargetCommitteeSize:       128,
-	MaxIndicesPerAttestation:  4096,
-	MinPerEpochChurnLimit:     4,
-	ChurnLimitQuotient:        1 << 16,
-	BaseRewardsPerEpoch:       5,
-	ShuffleRoundCount:         90,
-	SecondsPerDay:             86400,
-	MaxValidatorsPerCommittee: 4096,
+	ShardCount:                     1024,
+	TargetCommitteeSize:            128,
+	MaxIndicesPerAttestation:       4096,
+	MinPerEpochChurnLimit:          4,
+	ChurnLimitQuotient:             1 << 16,
+	BaseRewardsPerEpoch:            5,
+	ShuffleRoundCount:              90,
+	SecondsPerDay:                  86400,
+	MaxValidatorsPerCommittee:      4096,
 	MinGenesisActiveValidatorCount: 65536,
-	MinGenesisTime:            1578009600,
-	JustificationBitsLength:   4,
+	MinGenesisTime:                 1578009600,
+	JustificationBitsLength:        4,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
@@ -144,6 +145,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinSeedLookahead:             1,
 	ActivationExitDelay:          4,
 	SlotsPerEth1VotingPeriod:     1024,
+	SlotsPerHistoricalRoot:       8192,
 	MinValidatorWithdrawalDelay:  256,
 	PersistentCommitteePeriod:    2048,
 	MaxEpochsPerCrosslink:        64,
@@ -154,7 +156,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EpochsPerHistoricalVector: 65536,
 	EpochsPerSlashingsVector:  8192,
 	HistoricalRootsLimit:      8192,
-	ValidatorRegistryLimit:    1099511627776,
+	ValidatorsLimit:           1099511627776,
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor:             32,
@@ -204,7 +206,7 @@ var defaultShardConfig = &ShardChainConfig{
 var defaultDepositContractConfig = &DepositContractConfig{
 	DepositsForChainStart: big.NewInt(16384),
 	MinDepositAmount:      big.NewInt(1e9),
-	MaxEffectiveBalance:      big.NewInt(32e9),
+	MaxEffectiveBalance:   big.NewInt(32e9),
 }
 
 var beaconConfig = defaultBeaconConfig
@@ -239,13 +241,13 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EpochsPerHistoricalVector = 5 * demoConfig.SlotsPerEpoch
 	demoConfig.EpochsPerSlashingsVector = 5 * demoConfig.SlotsPerEpoch
 	demoConfig.HistoricalRootsLimit = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.SlotsPerHistoricalRoot = 5 * demoConfig.SlotsPerEpoch
 
 	return &demoConfig
 }
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
 func MinimalSpecConfig() *BeaconChainConfig {
-
 	minimalConfig := *defaultBeaconConfig
 	minimalConfig.ShardCount = 8
 	minimalConfig.TargetCommitteeSize = 4
@@ -269,6 +271,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ActivationExitDelay = 4
 	minimalConfig.SlotsPerEth1VotingPeriod = 16
 	minimalConfig.HistoricalRootsLimit = 64
+	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawalDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
 	minimalConfig.MaxEpochsPerCrosslink = 4
@@ -276,7 +279,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.EpochsPerHistoricalVector = 64
 	minimalConfig.EpochsPerSlashingsVector = 64
 	minimalConfig.HistoricalRootsLimit = 16777216
-	minimalConfig.ValidatorRegistryLimit = 1099511627776
+	minimalConfig.ValidatorsLimit = 1099511627776
 	minimalConfig.BaseRewardFactor = 32
 	minimalConfig.WhistleBlowingRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
@@ -313,7 +316,7 @@ func DemoContractConfig(depositsReq *big.Int, minDeposit *big.Int, maxDeposit *b
 	return &DepositContractConfig{
 		DepositsForChainStart: depositsReq,
 		MinDepositAmount:      minDeposit,
-		MaxEffectiveBalance:      maxDeposit,
+		MaxEffectiveBalance:   maxDeposit,
 	}
 }
 

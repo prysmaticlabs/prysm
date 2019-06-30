@@ -500,9 +500,9 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pb.BeaconState{
-		Slot:              10,
-		Balances:          []uint64{params.BeaconConfig().MaxEffectiveBalance},
-		ValidatorRegistry: []*pb.Validator{{}},
+		Slot:       10,
+		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
+		Validators: []*pb.Validator{{}},
 	}
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
@@ -571,7 +571,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 			params.BeaconConfig().MaxEffectiveBalance,
 			params.BeaconConfig().MaxEffectiveBalance,
 			params.BeaconConfig().MaxEffectiveBalance},
-		ValidatorRegistry: []*pb.Validator{{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+		Validators: []*pb.Validator{{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
@@ -776,7 +776,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
-		ValidatorRegistry: []*pb.Validator{
+		Validators: []*pb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
@@ -1537,14 +1537,14 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		t.Fatal(err)
 	}
 	gState := &pb.BeaconState{
-		Slot:                   genesisSlot,
-		LatestBlockRoots:       make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
-		LatestRandaoMixes:      latestRandaoMixes,
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		CurrentCrosslinks:      crosslinks,
-		ValidatorRegistry:      validatorRegistry,
-		Balances:               validatorBalances,
+		Slot:              genesisSlot,
+		BlockRoots:        make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
+		RandaoMixes:       latestRandaoMixes,
+		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		CurrentCrosslinks: crosslinks,
+		Validators:        validatorRegistry,
+		Balances:          validatorBalances,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,

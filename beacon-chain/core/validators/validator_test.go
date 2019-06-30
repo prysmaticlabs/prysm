@@ -147,7 +147,7 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 
 func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:            100, // epoch 2
+		Slot:      100, // epoch 2
 		Slashings: []uint64{0},
 		Validators: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
@@ -194,12 +194,12 @@ func TestSlashValidator_OK(t *testing.T) {
 	}
 
 	bState := &pb.BeaconState{
-		ValidatorRegistry:      registry,
-		Slot:                   0,
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Balances:               balances,
+		Validators:       registry,
+		Slot:             0,
+		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Balances:         balances,
 	}
 
 	slashedIdx := uint64(2)
@@ -214,11 +214,11 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Validator not slashed despite supposed to being slashed")
 	}
 
-	if state.ValidatorRegistry[slashedIdx].WithdrawableEpoch != helpers.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector {
-		t.Errorf("Withdrawable epoch not the expected value %d", state.ValidatorRegistry[slashedIdx].WithdrawableEpoch)
+	if state.Validators[slashedIdx].WithdrawableEpoch != helpers.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector {
+		t.Errorf("Withdrawable epoch not the expected value %d", state.Validators[slashedIdx].WithdrawableEpoch)
 	}
 
-	slashedBalance := state.LatestSlashedBalances[state.Slot%params.BeaconConfig().EpochsPerSlashingsVector]
+	slashedBalance := state.Slashings[state.Slot%params.BeaconConfig().EpochsPerSlashingsVector]
 	if slashedBalance != params.BeaconConfig().MaxEffectiveBalance {
 		t.Errorf("Slashed balance isnt the expected amount: got %d but expected %d", slashedBalance, params.BeaconConfig().MaxEffectiveBalance)
 	}
