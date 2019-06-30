@@ -44,14 +44,14 @@ import (
 //
 //    return state
 func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
-	latestRandaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
+	latestRandaoMixes := make([][]byte, params.BeaconConfig().RandaoMixesLength)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 
-	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
+	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().ActiveIndexRootsLength)
 	for i := 0; i < len(latestActiveIndexRoots); i++ {
 		latestActiveIndexRoots[i] = zeroHash
 	}
@@ -68,7 +68,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		latestBlockRoots[i] = zeroHash
 	}
 
-	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
+	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().SlashedExitLength)
 
 	if eth1Data == nil {
 		eth1Data = &pb.Eth1Data{}
@@ -86,34 +86,34 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry: []*pb.Validator{},
-		Balances:          []uint64{},
+		Validators: []*pb.Validator{},
+		Balances:   []uint64{},
 
 		// Randomness and committees.
-		LatestRandaoMixes: latestRandaoMixes,
+		RandaoMixes: latestRandaoMixes,
 
 		// Finality.
 		PreviousJustifiedEpoch: 0,
 		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
 		CurrentJustifiedEpoch:  0,
 		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  0,
+		JustificationBits:  0,
 		FinalizedEpoch:         0,
 		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
 
 		// Recent state.
 		CurrentCrosslinks:         crosslinks,
 		PreviousCrosslinks:        crosslinks,
-		LatestActiveIndexRoots:    latestActiveIndexRoots,
-		LatestBlockRoots:          latestBlockRoots,
-		LatestSlashedBalances:     latestSlashedExitBalances,
+		ActiveIndexRoots:          latestActiveIndexRoots,
+		BlockRoots:                latestBlockRoots,
+		Slashings:           latestSlashedExitBalances,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 
 		// Eth1 data.
-		LatestEth1Data: eth1Data,
-		Eth1DataVotes:  []*pb.Eth1Data{},
-		DepositIndex:   0,
+		Eth1Data:         eth1Data,
+		Eth1DataVotes:    []*pb.Eth1Data{},
+		Eth1DepositIndex: 0,
 	}
 
 	// Process initial deposits.
@@ -132,8 +132,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			return nil, fmt.Errorf("could not process validator deposit %d: %v", i, err)
 		}
 	}
-	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if state.ValidatorRegistry[i].EffectiveBalance >=
+	for i := 0; i < len(state.Validators); i++ {
+		if state.Validators[i].EffectiveBalance >=
 			params.BeaconConfig().MaxDepositAmount {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
@@ -153,8 +153,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
-	for i := uint64(0); i < params.BeaconConfig().LatestActiveIndexRootsLength; i++ {
-		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot[:]
+	for i := uint64(0); i < params.BeaconConfig().ActiveIndexRootsLength; i++ {
+		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
 	}
 	return state, nil
 }

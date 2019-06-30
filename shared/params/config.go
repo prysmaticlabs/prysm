@@ -49,9 +49,9 @@ type BeaconChainConfig struct {
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 
 	// State list lengths
-	LatestRandaoMixesLength      uint64 `yaml:"LATEST_RANDAO_MIXES_LENGTH"`       // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	LatestActiveIndexRootsLength uint64 `yaml:"LATEST_ACTIVE_INDEX_ROOTS_LENGTH"` // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
-	LatestSlashedExitLength      uint64 `yaml:"LATEST_SLASHED_EXIT_LENGTH"`       // LatestSlashedExitLength is used to track penalized exit balances per time interval.
+	RandaoMixesLength      uint64 `yaml:"LATEST_RANDAO_MIXES_LENGTH"`       // RandaoMixesLength is the number of randao mixes kept in the beacon state.
+	ActiveIndexRootsLength uint64 `yaml:"LATEST_ACTIVE_INDEX_ROOTS_LENGTH"` // ActiveIndexRootsLength is the number of index roots kept in beacon state, used by light client.
+	SlashedExitLength      uint64 `yaml:"LATEST_SLASHED_EXIT_LENGTH"`       // SlashedExitLength is used to track penalized exit balances per time interval.
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor             uint64 `yaml:"BASE_REWARD_FACTOR"`             // BaseRewardFactor is used to calculate validator per-slot interest rate.
@@ -150,9 +150,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:           1024,
 
 	// State list length constants.
-	LatestRandaoMixesLength:      8192,
-	LatestActiveIndexRootsLength: 8192,
-	LatestSlashedExitLength:      8192,
+	RandaoMixesLength:      8192,
+	ActiveIndexRootsLength: 8192,
+	SlashedExitLength:      8192,
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor:             32,
@@ -238,9 +238,9 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.SlotsPerEth1VotingPeriod = 1
-	demoConfig.LatestRandaoMixesLength = 5 * demoConfig.SlotsPerEpoch
-	demoConfig.LatestActiveIndexRootsLength = 5 * demoConfig.SlotsPerEpoch
-	demoConfig.LatestSlashedExitLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.RandaoMixesLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.ActiveIndexRootsLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.SlashedExitLength = 5 * demoConfig.SlotsPerEpoch
 	demoConfig.SlotsPerHistoricalRoot = 5 * demoConfig.SlotsPerEpoch
 
 	return &demoConfig
@@ -275,9 +275,9 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.PersistentCommitteePeriod = 2048
 	minimalConfig.MaxEpochsPerCrosslink = 4
 	minimalConfig.MinEpochsToInactivityPenalty = 4
-	minimalConfig.LatestRandaoMixesLength = 64
-	minimalConfig.LatestActiveIndexRootsLength = 64
-	minimalConfig.LatestSlashedExitLength = 64
+	minimalConfig.RandaoMixesLength = 64
+	minimalConfig.ActiveIndexRootsLength = 64
+	minimalConfig.SlashedExitLength = 64
 	minimalConfig.BaseRewardFactor = 32
 	minimalConfig.WhistleBlowingRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8

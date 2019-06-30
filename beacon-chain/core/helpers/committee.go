@@ -347,7 +347,7 @@ func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		return 0, fmt.Errorf("could not get shard delta: %v", err)
 	}
 
-	startShard = (state.LatestStartShard + delta) % params.BeaconConfig().ShardCount
+	startShard = (state.StartShard + delta) % params.BeaconConfig().ShardCount
 	for checkEpoch > epoch {
 		checkEpoch--
 		delta, err = ShardDelta(state, checkEpoch)
@@ -378,5 +378,5 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 	if committee == nil {
 		return false, fmt.Errorf("no committee exist for shard in the attestation")
 	}
-	return VerifyBitfield(att.AggregationBitfield, len(committee))
+	return VerifyBitfield(att.AggregationBits, len(committee))
 }

@@ -21,7 +21,7 @@ type AttestationTest struct {
 				CurrentVersion  []byte `json:"current_version"`
 				Epoch           uint64 `json:"epoch"`
 			} `json:"fork"`
-			ValidatorRegistry []struct {
+			Validators []struct {
 				Pubkey                     []byte `json:"pubkey" ssz:"size=48"`
 				WithdrawalCredentials      []byte `json:"withdrawal_credentials" ssz:"size=32"`
 				ActivationEligibilityEpoch uint64 `json:"activation_eligibility_epoch"`
@@ -108,7 +108,7 @@ type AttestationTest struct {
 				CurrentVersion  []byte `json:"current_version"`
 				Epoch           uint64 `json:"epoch"`
 			} `json:"fork"`
-			ValidatorRegistry []struct {
+			Validators []struct {
 				Pubkey                     []byte `json:"pubkey" ssz:"size=48"`
 				WithdrawalCredentials      []byte `json:"withdrawal_credentials" ssz:"size=32"`
 				ActivationEligibilityEpoch uint64 `json:"activation_eligibility_epoch"`

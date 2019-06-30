@@ -53,7 +53,7 @@ func runProposerSlashingTest(t *testing.T, filename string) {
 			postState, err = blocks.ProcessProposerSlashings(pre, block, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
-			if len(expectedPost.ValidatorRegistry) == 0 {
+			if len(expectedPost.Validators) == 0 {
 				if err == nil {
 					t.Fatal("Did not fail when expected")
 				}

@@ -530,7 +530,7 @@ func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &pb.Attestation{
-		AggregationBitfield: []byte{'A', 'B', 'C'},
+		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	hash, err := hashutil.HashProto(att)
 	if err != nil {
@@ -572,7 +572,7 @@ func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &pb.Attestation{
-		AggregationBitfield: []byte{'A', 'B', 'C'},
+		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	hash, err := hashutil.HashProto(att)
 	if err != nil {
@@ -610,7 +610,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &pb.Attestation{
-		AggregationBitfield: []byte{'A', 'B', 'C'},
+		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	attRoot, err := hashutil.HashProto(att)
 	if err != nil {
