@@ -123,7 +123,7 @@ func ProcessBlockHeader(
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
-		StateRoot:  make([]byte, 32),
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
 		Signature:  emptySig,
 	}
@@ -555,7 +555,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 		)
 	}
 	// To be removed in Phase 1
-	if !bytes.Equal(data.Crosslink.DataRoot, make([]byte, 32)) {
+	if !bytes.Equal(data.Crosslink.DataRoot, params.BeaconConfig().ZeroHash[:]) {
 		return nil, fmt.Errorf("expected data root %#x == ZERO_HASH", data.Crosslink.DataRoot)
 	}
 	indexedAtt, err := ConvertToIndexed(beaconState, att)

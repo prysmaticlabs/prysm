@@ -327,7 +327,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		ParentRoot: parentRoot[:],
-		Slot:       4,
+		Slot:       1,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal:      []byte{},
 			ProposerSlashings: proposerSlashings,

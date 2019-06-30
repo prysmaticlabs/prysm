@@ -19,7 +19,7 @@ type BeaconChainConfig struct {
 	ShuffleRoundCount         uint64 `yaml:"SHUFFLE_ROUND_COUNT"`          // ShuffleRoundCount is used for retrieving the permuted index.
 	SecondsPerDay             uint64 `yaml:"SECONDS_PER_DAY"`              // SecondsPerDay defines how many seconds are in a given day.
 	MaxValidatorsPerCommittee uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"` // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
-	MinGenesisActiveValidatorCount uint64 `yaml:MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
+	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime            uint64 `yaml:"MIN_GENESIS_TIME"`             // MinGenesisTime defines the lower bound of the genesis time.
 	JustificationBitsLength   uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`    // JustificationBitsLength defines the length in bytes of the justification bits.
 
@@ -35,6 +35,7 @@ type BeaconChainConfig struct {
 	// Initial value constants.
 	FarFutureEpoch          uint64 `yaml:"FAR_FUTURE_EPOCH"`           // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	BLSWithdrawalPrefixByte byte   `yaml:"BLS_WITHDRAWAL_PREFIX_BYTE"` // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
+	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
 	SecondsPerSlot               uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
@@ -98,7 +99,7 @@ type BeaconChainConfig struct {
 type DepositContractConfig struct {
 	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
-	MaxDepositAmount      *big.Int // MaxDepositAmount defines the maximum deposit amount in gwei that is required in the deposit contract.
+	MaxEffectiveBalance      *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -133,6 +134,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Initial value constants.
 	FarFutureEpoch:          1<<64 - 1,
+	ZeroHash:                [32]byte{},
 	BLSWithdrawalPrefixByte: byte(0),
 
 	// Time parameter constants.
@@ -202,7 +204,7 @@ var defaultShardConfig = &ShardChainConfig{
 var defaultDepositContractConfig = &DepositContractConfig{
 	DepositsForChainStart: big.NewInt(16384),
 	MinDepositAmount:      big.NewInt(1e9),
-	MaxDepositAmount:      big.NewInt(32e9),
+	MaxEffectiveBalance:      big.NewInt(32e9),
 }
 
 var beaconConfig = defaultBeaconConfig
@@ -311,7 +313,7 @@ func DemoContractConfig(depositsReq *big.Int, minDeposit *big.Int, maxDeposit *b
 	return &DepositContractConfig{
 		DepositsForChainStart: depositsReq,
 		MinDepositAmount:      minDeposit,
-		MaxDepositAmount:      maxDeposit,
+		MaxEffectiveBalance:      maxDeposit,
 	}
 }
 
