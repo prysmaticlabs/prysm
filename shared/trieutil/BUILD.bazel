@@ -13,6 +13,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["sparse_merkle_test.go"],
     embed = [":go_default_library"],
     deps = ["//shared/hashutil:go_default_library"],
