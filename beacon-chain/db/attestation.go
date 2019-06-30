@@ -136,12 +136,7 @@ func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
 }
 
 func createAttestation(enc []byte) (*pb.Attestation, error) {
-	var zero [32]byte
-	protoAttestation := &pb.Attestation{
-		Data: &pb.AttestationData{
-			BeaconBlockRoot: zero[:],
-		},
-	}
+	protoAttestation := &pb.Attestation{}
 	if err := ssz.Unmarshal(enc, protoAttestation); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
 	}
