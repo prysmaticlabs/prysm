@@ -208,31 +208,31 @@ func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 	}{
 		{
 			state: &pb.BeaconState{
-				Slot:           66,
+				Slot:                66,
 				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           72,
+				Slot:                72,
 				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           96,
+				Slot:                96,
 				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           130,
+				Slot:                130,
 				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 2},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           300,
+				Slot:                300,
 				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 4},
 			},
 		},

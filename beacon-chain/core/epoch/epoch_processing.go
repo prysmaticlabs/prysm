@@ -218,13 +218,13 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	// 2nd epoch can finalize the 4th epoch as a source.
 	if oldPrevJustifiedCheckpoint.Epoch+3 == currentEpoch && (bitfield>>1)%8 == 7 {
 		state.FinalizedCheckpoint.Epoch = oldPrevJustifiedCheckpoint.Epoch
-		state.FinalizedCheckpoint.Root = oldCurrJustifiedCheckpoint.Root
+		state.FinalizedCheckpoint.Root = oldPrevJustifiedCheckpoint.Root
 	}
 	// when 2nd and 3rd most recent epochs are all justified,
 	// 2nd epoch can finalize 3rd as a source.
 	if oldPrevJustifiedCheckpoint.Epoch+2 == currentEpoch && (bitfield>>1)%4 == 3 {
 		state.FinalizedCheckpoint.Epoch = oldPrevJustifiedCheckpoint.Epoch
-		state.FinalizedCheckpoint.Root = oldCurrJustifiedCheckpoint.Root
+		state.FinalizedCheckpoint.Root = oldPrevJustifiedCheckpoint.Root
 	}
 	// when 1st, 2nd and 3rd most recent epochs are all justified,
 	// 1st epoch can finalize 3rd as a source.

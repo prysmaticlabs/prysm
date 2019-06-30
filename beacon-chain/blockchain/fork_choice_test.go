@@ -71,7 +71,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		{
 			blockSlot: 64,
 			state: &pb.BeaconState{
-				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 0},
+				FinalizedCheckpoint:        &pb.Checkpoint{Epoch: 0},
 				CurrentJustifiedCheckpoint: &pb.Checkpoint{Epoch: 2},
 			},
 			logAssert: "Chain head block and state updated",
@@ -1541,7 +1541,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		RandaoMixes:       latestRandaoMixes,
 		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		Slashings:   make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:         make([]uint64, params.BeaconConfig().SlashedExitLength),
 		CurrentCrosslinks: crosslinks,
 		Validators:        validatorRegistry,
 		Balances:          validatorBalances,
@@ -1550,7 +1550,10 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
-		LatestBlockHeader: gHeader,
+		LatestBlockHeader:           gHeader,
+		CurrentJustifiedCheckpoint:  &pb.Checkpoint{},
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{},
+		FinalizedCheckpoint:         &pb.Checkpoint{},
 	}
 	return gBlockRoot, gBlock, gState, privKeys
 }

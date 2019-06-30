@@ -95,16 +95,16 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		// Finality.
 		PreviousJustifiedCheckpoint: &pb.Checkpoint{
 			Epoch: 0,
-			Root: params.BeaconConfig().ZeroHash[:],
+			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 		CurrentJustifiedCheckpoint: &pb.Checkpoint{
 			Epoch: 0,
-			Root: params.BeaconConfig().ZeroHash[:],
+			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-		JustificationBits:  0,
+		JustificationBits: 0,
 		FinalizedCheckpoint: &pb.Checkpoint{
 			Epoch: 0,
-			Root: params.BeaconConfig().ZeroHash[:],
+			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
 		// Recent state.
@@ -112,7 +112,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		PreviousCrosslinks:        crosslinks,
 		ActiveIndexRoots:          latestActiveIndexRoots,
 		BlockRoots:                latestBlockRoots,
-		Slashings:           latestSlashedExitBalances,
+		Slashings:                 latestSlashedExitBalances,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 

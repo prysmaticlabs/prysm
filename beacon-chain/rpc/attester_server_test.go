@@ -104,8 +104,8 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Slot:                  3*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:            make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		Slot:       3*params.BeaconConfig().SlotsPerEpoch + 1,
+		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		CurrentCrosslinks: []*pbp2p.Crosslink{
 			{
 				DataRoot: []byte("A"),
@@ -118,7 +118,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 		},
 		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
 			Epoch: 2,
-			Root: justifiedRoot[:],
+			Root:  justifiedRoot[:],
 		},
 	}
 	beaconState.BlockRoots[1] = blockRoot[:]
@@ -216,8 +216,8 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot:                  10000,
-		BlockRoots:            make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		Slot:       10000,
+		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		PreviousCrosslinks: []*pbp2p.Crosslink{
 			{
 				DataRoot: []byte("A"),
@@ -229,8 +229,8 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 			},
 		},
 		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
-				Epoch: helpers.SlotToEpoch(1500),
-				Root: justifiedBlockRoot[:],
+			Epoch: helpers.SlotToEpoch(1500),
+			Root:  justifiedBlockRoot[:],
 		},
 	}
 	beaconState.BlockRoots[1] = blockRoot[:]

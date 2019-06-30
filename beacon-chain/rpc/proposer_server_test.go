@@ -136,13 +136,16 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 
 	stateSlot := uint64(100)
 	beaconState := &pbp2p.BeaconState{
-		Slot:               stateSlot,
-		Validators:         validators,
-		CurrentCrosslinks:  crosslinks,
-		PreviousCrosslinks: crosslinks,
-		StartShard:         100,
-		RandaoMixes:        make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots:   make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		Slot:                        stateSlot,
+		Validators:                  validators,
+		CurrentCrosslinks:           crosslinks,
+		PreviousCrosslinks:          crosslinks,
+		StartShard:                  100,
+		RandaoMixes:                 make([][]byte, params.BeaconConfig().RandaoMixesLength),
+		ActiveIndexRoots:            make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		FinalizedCheckpoint:         &pbp2p.Checkpoint{},
+		PreviousJustifiedCheckpoint: &pbp2p.Checkpoint{},
+		CurrentJustifiedCheckpoint:  &pbp2p.Checkpoint{},
 	}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.PreviousCrosslinks[0])

@@ -356,7 +356,7 @@ func (m *BeaconBlockResponse) GetAttestation() *Attestation {
 type BatchedBeaconBlockRequest struct {
 	StartSlot            uint64   `protobuf:"varint,1,opt,name=start_slot,json=startSlot,proto3" json:"start_slot,omitempty"` // Deprecated: Do not use.
 	EndSlot              uint64   `protobuf:"varint,2,opt,name=end_slot,json=endSlot,proto3" json:"end_slot,omitempty"`       // Deprecated: Do not use.
-	FinalizedCheckpoint.Root        []byte   `protobuf:"bytes,3,opt,name=finalized_root,json=FinalizedCheckpoint.Root,proto3" json:"finalized_root,omitempty"`
+	FinalizedRoot        []byte   `protobuf:"bytes,3,opt,name=finalized_root,json=finalizedRoot,proto3" json:"finalized_root,omitempty"`
 	CanonicalRoot        []byte   `protobuf:"bytes,4,opt,name=canonical_root,json=canonicalRoot,proto3" json:"canonical_root,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -412,9 +412,9 @@ func (m *BatchedBeaconBlockRequest) GetEndSlot() uint64 {
 	return 0
 }
 
-func (m *BatchedBeaconBlockRequest) GetFinalizedCheckpoint.Root() []byte {
+func (m *BatchedBeaconBlockRequest) GetFinalizedRoot() []byte {
 	if m != nil {
-		return m.FinalizedCheckpoint.Root
+		return m.FinalizedRoot
 	}
 	return nil
 }
@@ -1887,11 +1887,11 @@ func (m *BatchedBeaconBlockRequest) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintMessages(dAtA, i, uint64(m.EndSlot))
 	}
-	if len(m.FinalizedCheckpoint.Root) > 0 {
+	if len(m.FinalizedRoot) > 0 {
 		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintMessages(dAtA, i, uint64(len(m.FinalizedCheckpoint.Root)))
-		i += copy(dAtA[i:], m.FinalizedCheckpoint.Root)
+		i = encodeVarintMessages(dAtA, i, uint64(len(m.FinalizedRoot)))
+		i += copy(dAtA[i:], m.FinalizedRoot)
 	}
 	if len(m.CanonicalRoot) > 0 {
 		dAtA[i] = 0x22
@@ -2729,7 +2729,7 @@ func (m *BatchedBeaconBlockRequest) Size() (n int) {
 	if m.EndSlot != 0 {
 		n += 1 + sovMessages(uint64(m.EndSlot))
 	}
-	l = len(m.FinalizedCheckpoint.Root)
+	l = len(m.FinalizedRoot)
 	if l > 0 {
 		n += 1 + l + sovMessages(uint64(l))
 	}
@@ -3785,7 +3785,7 @@ func (m *BatchedBeaconBlockRequest) Unmarshal(dAtA []byte) error {
 			}
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field FinalizedCheckpoint.Root", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field FinalizedRoot", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -3812,9 +3812,9 @@ func (m *BatchedBeaconBlockRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.FinalizedCheckpoint.Root = append(m.FinalizedCheckpoint.Root[:0], dAtA[iNdEx:postIndex]...)
-			if m.FinalizedCheckpoint.Root == nil {
-				m.FinalizedCheckpoint.Root = []byte{}
+			m.FinalizedRoot = append(m.FinalizedRoot[:0], dAtA[iNdEx:postIndex]...)
+			if m.FinalizedRoot == nil {
+				m.FinalizedRoot = []byte{}
 			}
 			iNdEx = postIndex
 		case 4:
