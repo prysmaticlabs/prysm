@@ -304,11 +304,15 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
+	var zeroHash [32]byte
+	var zeroSig [96]byte
 	nsh := newState.LatestBlockHeader
 	expected := &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: latestBlockSignedRoot[:],
 		BodyRoot:   bodyRoot[:],
+		StateRoot:  zeroHash[:],
+		Signature:  zeroSig[:],
 	}
 	if !proto.Equal(nsh, expected) {
 		t.Errorf("Expected %v, received %vk9k", expected, nsh)

@@ -810,6 +810,10 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	if len(newS.HistoricalRoots) != 1 {
 		t.Errorf("wanted slashed balance %d, got %d", 1, len(newS.HistoricalRoots[ce]))
 	}
+
+	if newS.CurrentEpochAttestations == nil {
+		t.Error("nil value stored in current epoch attestations instead of empty slice")
+	}
 }
 
 func TestCrosslinkDelta_NoOneAttested(t *testing.T) {

@@ -125,7 +125,6 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
-
 	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
@@ -187,6 +186,7 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
+	// Process the block's header into the state.
 	state, err := b.ProcessBlockHeader(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block header: %v", err)
@@ -301,6 +301,23 @@ func ProcessOperations(
 	state, err = b.ProcessTransfers(state, body, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block transfers: %v", err)
+	}
+
+	r, err := blockutil.BlockSigningRoot(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+
+	if config.Logging {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Verified block slot == state slot")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Verified and processed block RANDAO")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Processed ETH1 data")
+		log.WithField(
+			"attestationsInBlock", len(block.Body.Attestations),
+		).Info("Block attestations")
+		log.WithField(
+			"depositsInBlock", len(block.Body.Deposits),
+		).Info("Block deposits")
 	}
 	return state, nil
 }
