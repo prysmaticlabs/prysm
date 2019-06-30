@@ -15,6 +15,8 @@ import (
 )
 
 func runTransferTest(t *testing.T, filename string) {
+	t.Skip("Transfer tests are disabled. See https://github.com/ethereum/eth2.0-specs/pull/1238#issuecomment-507054595")
+
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
