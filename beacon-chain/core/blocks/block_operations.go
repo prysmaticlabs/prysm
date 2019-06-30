@@ -490,10 +490,10 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 		return nil, err
 	}
 	pendingAtt := &pb.PendingAttestation{
-		Data:                data,
-		AggregationBitfield: att.AggregationBitfield,
-		InclusionDelay:      beaconState.Slot - attestationSlot,
-		ProposerIndex:       proposerIndex,
+		Data:            data,
+		AggregationBits: att.AggregationBits,
+		InclusionDelay:  beaconState.Slot - attestationSlot,
+		ProposerIndex:   proposerIndex,
 	}
 
 	if !(data.TargetEpoch == helpers.PrevEpoch(beaconState) || data.TargetEpoch == helpers.CurrentEpoch(beaconState)) {
@@ -585,11 +585,11 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 //         signature=attestation.signature,
 //     )
 func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
-	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBitfield)
+	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBits)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attesting indices: %v", err)
 	}
-	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBitfield)
+	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
 	cb1Map := make(map[uint64]bool)
 	for _, idx := range cb1i {
 		cb1Map[idx] = true
@@ -799,7 +799,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 		if ok := trieutil.VerifyMerkleProof(
 			receiptRoot,
 			leaf[:],
-			int(beaconState.DepositIndex),
+			int(beaconState.Eth1DepositIndex),
 			deposit.Proof,
 		); !ok {
 			return fmt.Errorf(
@@ -809,18 +809,6 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 		}
 	}
 
-<<<<<<< HEAD
-	// Deposits must be processed in order
-	if deposit.Index != beaconState.Eth1DepositIndex {
-		return fmt.Errorf(
-			"expected deposit merkle tree index to match beacon state deposit index, wanted: %d, received: %d",
-			beaconState.Eth1DepositIndex,
-			deposit.Index,
-		)
-	}
-
-=======
->>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
 	return nil
 }
 

@@ -180,7 +180,7 @@ func TestGenerateSeed_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		ActiveIndexRoots: activeIndexRoots,
 		RandaoMixes:      randaoMixes,
-		Slot:                   slot}
+		Slot:             slot}
 
 	got, err := GenerateSeed(state, 10)
 	if err != nil {

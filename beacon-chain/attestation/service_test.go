@@ -38,8 +38,8 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   1,
-		Validators:      validators,
+		Slot:             1,
+		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
@@ -55,7 +55,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x01},
+		AggregationBits: []byte{0x01},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
@@ -74,8 +74,8 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState = &pb.BeaconState{
-		Slot:                   36,
-		Validators:      validators,
+		Slot:             36,
+		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
@@ -108,7 +108,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 		})
 	}
 	beaconState := &pb.BeaconState{
-		Slot:              1,
+		Slot:       1,
 		Validators: validators,
 	}
 	block := &pb.BeaconBlock{
@@ -123,7 +123,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x80},
+		AggregationBits: []byte{0x80},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
@@ -227,10 +227,10 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   1,
+		Slot:             1,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		Validators:      validators,
+		Validators:       validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -243,7 +243,7 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0xC0},
+		AggregationBits: []byte{0xC0},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
@@ -279,8 +279,8 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   1,
-		Validators:      validators,
+		Slot:             1,
+		Validators:       validators,
 		RandaoMixes:      latestRandaoMixes,
 		ActiveIndexRoots: latestActiveIndexRoots,
 	}
@@ -297,7 +297,7 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	service.poolLimit = 9
 	for i := 0; i < 10; i++ {
 		attestation := &pb.Attestation{
-			AggregationBitfield: []byte{0x80},
+			AggregationBits: []byte{0x80},
 			Data: &pb.AttestationData{
 				TargetEpoch: 2,
 				Crosslink: &pb.Crosslink{
@@ -329,10 +329,10 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:                   1,
+		Slot:             1,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		Validators:      validators,
+		Validators:       validators,
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -347,7 +347,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	attestations := make([]*pb.Attestation, 0)
 	for i := 0; i < 10; i++ {
 		attestations = append(attestations, &pb.Attestation{
-			AggregationBitfield: []byte{0x80},
+			AggregationBits: []byte{0x80},
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard: 1,

@@ -384,5 +384,5 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 	if committee == nil {
 		return false, fmt.Errorf("no committee exist for shard in the attestation")
 	}
-	return VerifyBitfield(att.AggregationBitfield, len(committee))
+	return VerifyBitfield(att.AggregationBits, len(committee))
 }

@@ -353,12 +353,9 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 //            validator.activation_epoch = get_delayed_activation_exit_epoch(get_current_epoch(state))
 func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
-<<<<<<< HEAD
-	for idx, validator := range state.Validators {
-=======
+
 	var err error
-	for idx, validator := range state.ValidatorRegistry {
->>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
+	for idx, validator := range state.Validators {
 		// Process the validators for activation eligibility.
 		eligibleToActivate := validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch
 		properBalance := validator.EffectiveBalance >= params.BeaconConfig().MaxEffectiveBalance
@@ -582,7 +579,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
 	for _, att := range atts {
-		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBitfield)
+		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
 		if err != nil {
 			return nil, fmt.Errorf("could not get attester indices: %v", err)
 		}
@@ -829,7 +826,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	// For every index, filter the matching source attestation that correspond to the index,
 	// sort by inclusion delay and get the one that was included on chain first.
 	for _, att := range atts.source {
-		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBitfield)
+		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get attester indices: %v", err)
 		}

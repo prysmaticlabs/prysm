@@ -14,11 +14,11 @@ import (
 func TestHasVoted_OK(t *testing.T) {
 	// Setting bit field to 11111111.
 	pendingAttestation := &pb.Attestation{
-		AggregationBitfield: []byte{255},
+		AggregationBits: []byte{255},
 	}
 
-	for i := 0; i < len(pendingAttestation.AggregationBitfield); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBitfield, i)
+	for i := 0; i < len(pendingAttestation.AggregationBits); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBits, i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d with : %v", i, err)
 		}
@@ -29,11 +29,11 @@ func TestHasVoted_OK(t *testing.T) {
 
 	// Setting bit field to 10101000.
 	pendingAttestation = &pb.Attestation{
-		AggregationBitfield: []byte{84},
+		AggregationBits: []byte{84},
 	}
 
-	for i := 0; i < len(pendingAttestation.AggregationBitfield); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBitfield, i)
+	for i := 0; i < len(pendingAttestation.AggregationBits); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBits, i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d : %v", i, err)
 		}
@@ -147,7 +147,7 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 
 func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                  100, // epoch 2
+		Slot:            100, // epoch 2
 		SlashedBalances: []uint64{0},
 		Validators: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
@@ -260,7 +260,7 @@ func TestInitializeValidatoreStore(t *testing.T) {
 
 	bState := &pb.BeaconState{
 		Validators: registry,
-		Slot:              0,
+		Slot:       0,
 	}
 
 	if _, ok := VStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {

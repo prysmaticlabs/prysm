@@ -511,11 +511,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	pendingDeposits := []*pb.Deposit{
-<<<<<<< HEAD
-		createPreChainStartDeposit([]byte{'F'}, beaconState.Eth1DepositIndex),
-=======
 		createPreChainStartDeposit([]byte{'F'}),
->>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
@@ -888,7 +884,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 			},
 			RandaoReveal: randaoReveal,
 			Attestations: []*pb.Attestation{{
-				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				AggregationBits: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					SourceRoot: parentRoot[:],
@@ -921,7 +917,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
@@ -963,7 +959,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
@@ -1001,7 +997,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {

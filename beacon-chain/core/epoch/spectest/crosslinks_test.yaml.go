@@ -35,8 +35,8 @@ type CrosslinksTest struct {
 			LatestRandaoMixes         [][]byte `json:"latest_randao_mixes" ssz:"size=64,32"`
 			LatestStartShard          uint64   `json:"latest_start_shard"`
 			PreviousEpochAttestations []struct {
-				AggregationBitfield []byte `json:"aggregation_bitfield"`
-				Data                struct {
+				AggregationBits []byte `json:"aggregation_bitfield"`
+				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
 					SourceEpoch     uint64 `json:"source_epoch"`
 					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
@@ -54,8 +54,8 @@ type CrosslinksTest struct {
 				ProposerIndex  uint64 `json:"proposer_index"`
 			} `json:"previous_epoch_attestations"`
 			CurrentEpochAttestations []struct {
-				AggregationBitfield []byte `json:"aggregation_bitfield"`
-				Data                struct {
+				AggregationBits []byte `json:"aggregation_bitfield"`
+				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
 					SourceEpoch     uint64 `json:"source_epoch"`
 					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
@@ -139,8 +139,8 @@ type CrosslinksTest struct {
 			LatestRandaoMixes         [][]byte `json:"latest_randao_mixes" ssz:"size=64,32"`
 			LatestStartShard          uint64   `json:"latest_start_shard"`
 			PreviousEpochAttestations []struct {
-				AggregationBitfield []byte `json:"aggregation_bitfield"`
-				Data                struct {
+				AggregationBits []byte `json:"aggregation_bitfield"`
+				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
 					SourceEpoch     uint64 `json:"source_epoch"`
 					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
@@ -158,8 +158,8 @@ type CrosslinksTest struct {
 				ProposerIndex  uint64 `json:"proposer_index"`
 			} `json:"previous_epoch_attestations"`
 			CurrentEpochAttestations []struct {
-				AggregationBitfield []byte `json:"aggregation_bitfield"`
-				Data                struct {
+				AggregationBits []byte `json:"aggregation_bitfield"`
+				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
 					SourceEpoch     uint64 `json:"source_epoch"`
 					SourceRoot      []byte `json:"source_root" ssz:"size=32"`

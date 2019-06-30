@@ -220,13 +220,9 @@ func (w *Web3Service) processPastLogs() error {
 	if err != nil {
 		return fmt.Errorf("could not get head state: %v", err)
 	}
-<<<<<<< HEAD
+
 	if currentState != nil && currentState.Eth1DepositIndex > 0 {
-		w.beaconDB.PrunePendingDeposits(w.ctx, currentState.Eth1DepositIndex)
-=======
-	if currentState != nil && currentState.DepositIndex > 0 {
-		w.beaconDB.PrunePendingDeposits(w.ctx, int(currentState.DepositIndex))
->>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
+		w.beaconDB.PrunePendingDeposits(w.ctx, int(currentState.Eth1DepositIndex))
 	}
 
 	return nil

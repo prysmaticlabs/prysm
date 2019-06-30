@@ -282,15 +282,9 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
-<<<<<<< HEAD
-	var pendingDeps []*pbp2p.Deposit
-	for _, dep := range allPendingDeps {
-		if dep.Index >= beaconState.Eth1DepositIndex {
-=======
 	var pendingDeps []*db.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.DepositIndex {
->>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
+		if uint64(dep.Index) >= beaconState.Eth1DepositIndex {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}

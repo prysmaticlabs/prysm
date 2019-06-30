@@ -26,7 +26,7 @@ func TestMessageMetrics_OK(t *testing.T) {
 		t.Error("Expected metric adapter")
 	}
 	data := &pb.Attestation{
-		AggregationBitfield: []byte{99},
+		AggregationBits: []byte{99},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 0,
