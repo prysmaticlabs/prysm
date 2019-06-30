@@ -53,7 +53,7 @@ message Fork {
 }
 
 message PendingAttestation {
-  bytes aggregation_bitfield = 1;
+  bytes aggregation_bits = 1;
   AttestationData data = 2;
   uint64 inclusion_delay = 3;
   uint64 proposer_index = 4;
@@ -61,9 +61,14 @@ message PendingAttestation {
 
 message Attestation {
   AttestationData data = 1;
-  bytes aggregation_bitfield = 2;
-  bytes custody_bitfield = 3;
+  bytes aggregation_bits = 2;
+  bytes custody_bits = 3;
   bytes signature = 4; // bytes96
+}
+
+message Checkpoint {
+  uint64 epoch = 1;
+  bytes root = 2;
 }
 
 message AttestationData {
@@ -71,13 +76,17 @@ message AttestationData {
   bytes beacon_block_root = 1;
 
   // FFG vote
-  uint64 source_epoch = 2;
-  bytes source_root = 3;
-  uint64 target_epoch = 4;
-  bytes target_root = 5;
+  Checkpoint source = 2;
+  Checkpoint target = 3;
 
   // Crosslink vote
-  Crosslink crosslink = 6;
+  Crosslink crosslink = 4;
+
+  // Deprecated
+  uint64 source_epoch = 1000;
+  bytes source_root = 1001;
+  uint64 target_epoch = 1002;
+  bytes target_root = 1003;
 }
 
 message AttestationTarget {
@@ -88,6 +97,7 @@ message AttestationTarget {
 
 message AttestationDataAndCustodyBit {
   AttestationData data = 1;
+  // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
   bool custody_bit = 2;
 }
 
@@ -220,7 +230,6 @@ message Eth1Data {
   bytes deposit_root = 1;
   // Total number of deposits
   uint64 deposit_count = 2;
-  // Block hash
   bytes block_hash = 3;
 }
 
@@ -232,4 +241,9 @@ message Eth1DataVote {
 message HistoricalBatch {
   repeated bytes block_roots = 1;
   repeated bytes state_roots = 2;
+}
+
+message CompactCommittee {
+  repeated bytes pubkeys = 1;
+  repeated uint64 compact_validators = 2;
 }
