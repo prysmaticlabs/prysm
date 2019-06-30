@@ -16,4 +16,5 @@ go_test(
     srcs = ["sparse_merkle_test.go"],
     embed = [":go_default_library"],
     deps = ["//shared/hashutil:go_default_library"],
+    size = "small",
 )

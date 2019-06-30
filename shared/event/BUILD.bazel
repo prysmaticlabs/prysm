@@ -21,4 +21,5 @@ go_test(
         "subscription_test.go",
     ],
     embed = [":go_default_library"],
+    size = "small",
 )

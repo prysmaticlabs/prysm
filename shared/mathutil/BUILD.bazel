@@ -11,4 +11,5 @@ go_test(
     name = "go_default_test",
     srcs = ["math_helper_test.go"],
     embed = [":go_default_library"],
+    size = "small",
 )

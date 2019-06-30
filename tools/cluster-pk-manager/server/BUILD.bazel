@@ -55,6 +55,7 @@ go_test(
     srcs = ["server_test.go"],
     embed = [":go_default_library"],
     deps = ["//proto/cluster:go_default_library"],
+    size = "small",
 )
 
 go_image(

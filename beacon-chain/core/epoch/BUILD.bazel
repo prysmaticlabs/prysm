@@ -39,4 +39,5 @@ go_test(
         "//shared/params:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
     ],
+    size = "small",
 )

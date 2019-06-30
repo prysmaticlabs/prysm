@@ -13,4 +13,5 @@ go_test(
     srcs = ["slotticker_test.go"],
     embed = [":go_default_library"],
     deps = ["//shared/params:go_default_library"],
+    size = "small",
 )

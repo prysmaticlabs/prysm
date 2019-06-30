@@ -12,4 +12,5 @@ go_test(
     srcs = ["external_ip_test.go"],
     embed = [":go_default_library"],
     tags = ["requires-network"],
+    size = "small",
 )

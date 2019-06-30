@@ -42,4 +42,5 @@ go_test(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
     ],
+    size = "small",
 )

@@ -29,4 +29,5 @@ go_test(
         "//beacon-chain/chaintest/backend:go_default_library",
         "//shared/featureconfig:go_default_library",
     ],
+    size = "small",
 )
