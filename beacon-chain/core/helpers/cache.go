@@ -1,6 +1,8 @@
 package helpers
 
-import "github.com/prysmaticlabs/prysm/beacon-chain/cache"
+import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+)
 
 // ClearShuffledValidatorCache clears the shuffled indices cache from scratch.
 func ClearShuffledValidatorCache() {

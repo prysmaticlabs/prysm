@@ -185,7 +185,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -274,7 +274,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -398,6 +398,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				Data: &pb.AttestationData{
 					SourceEpoch: 0,
 					TargetEpoch: 0,
+					SourceRoot:  []byte{'A'},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -408,6 +409,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				Data: &pb.AttestationData{
 					SourceEpoch: 0,
 					TargetEpoch: 0,
+					SourceRoot:  []byte{'B'},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -766,7 +768,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		b.Fatalf("Could not generate proof: %v", err)
 	}
 	deposit.Proof = proof
-	deposit.Index = 0
 	root := depositTrie.Root()
 
 	// Set up randao reveal object for block
@@ -781,7 +782,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	s.Validators[proposerIdx].Pubkey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
-	domain := helpers.DomainVersion(s, 0, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(s, 0, params.BeaconConfig().DomainRandao)
 	epochSignature := priv.Sign(buf, domain)
 
 	// Set up transfer object for block

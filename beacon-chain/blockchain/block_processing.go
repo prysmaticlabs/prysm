@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -15,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -114,7 +114,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	// Check state root
 	if featureconfig.FeatureConfig().EnableCheckBlockStateRoot {
-		stateRoot, err := hashutil.HashProto(beaconState)
+		stateRoot, err := ssz.HashTreeRoot(beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not hash beacon state: %v", err)
 		}

@@ -47,10 +47,11 @@ func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *Chain
 		t.Fatalf("could not apply block state transition: %v", err)
 	}
 
-	stateRoot, err := hashutil.HashProto(computedState)
+	stateRoot, err := ssz.HashTreeRoot(computedState)
 	if err != nil {
 		t.Fatalf("could not tree hash state: %v", err)
 	}
+
 	block.StateRoot = stateRoot[:]
 	t.Logf("state root after block: %#x", stateRoot)
 }
@@ -365,7 +366,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	}
 
 	beaconState.Slot++
-	parentRoot, err := blockutil.BlockSigningRoot(genesis)
+	parentRoot, err := blockutil.BlockSigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -510,7 +511,11 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	pendingDeposits := []*pb.Deposit{
+<<<<<<< HEAD
 		createPreChainStartDeposit([]byte{'F'}, beaconState.Eth1DepositIndex),
+=======
+		createPreChainStartDeposit([]byte{'F'}),
+>>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
@@ -525,8 +530,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatalf("Could not generate deposit trie: %v", err)
 	}
 	for i := range pendingDeposits {
-		pendingDeposits[i].Index = 0
-		proof, err := depositTrie.MerkleProof(int(pendingDeposits[i].Index))
+		proof, err := depositTrie.MerkleProof(0)
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}
@@ -576,7 +580,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	for _, dep := range pendingDeposits {
-		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
+		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0), 0, [32]byte{})
 	}
 
 	if len(db.PendingDeposits(chainService.ctx, nil)) != len(pendingDeposits) || len(pendingDeposits) == 0 {

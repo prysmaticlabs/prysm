@@ -64,7 +64,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
@@ -122,7 +122,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
@@ -171,7 +171,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	}
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
@@ -224,7 +224,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
@@ -281,7 +281,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.DomainVersion(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("Failed to generate private key got: %v", err)
@@ -304,11 +304,15 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
+	var zeroHash [32]byte
+	var zeroSig [96]byte
 	nsh := newState.LatestBlockHeader
 	expected := &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: latestBlockSignedRoot[:],
 		BodyRoot:   bodyRoot[:],
+		StateRoot:  zeroHash[:],
+		Signature:  zeroSig[:],
 	}
 	if !proto.Equal(nsh, expected) {
 		t.Errorf("Expected %v, received %vk9k", expected, nsh)
@@ -331,7 +335,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := uint64(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
@@ -633,6 +637,25 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			newStateVals[1].ExitEpoch, validators[1].ExitEpoch)
 	}
 }
+func TestSlashableAttestationData_CanSlash(t *testing.T) {
+	att1 := &pb.AttestationData{
+		TargetEpoch: 1,
+		SourceRoot:  []byte{'A'},
+	}
+	att2 := &pb.AttestationData{
+		TargetEpoch: 1,
+		SourceRoot:  []byte{'B'},
+	}
+	if !blocks.IsSlashableAttestationData(att1, att2) {
+		t.Error("atts should have been slashable")
+	}
+	att1.TargetEpoch = 4
+	att1.SourceEpoch = 2
+	att2.SourceEpoch = 3
+	if !blocks.IsSlashableAttestationData(att1, att2) {
+		t.Error("atts should have been slashable")
+	}
+}
 
 func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
 	slashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
@@ -714,7 +737,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -762,7 +785,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -816,7 +839,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
+					SourceEpoch: 1,
 					TargetEpoch: 0,
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
@@ -1264,20 +1287,20 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x01},
-			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{127, 71},
+			wantedCustodyBit0Indices: []uint64{71},
+			wantedCustodyBit1Indices: []uint64{127},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x02},
-			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{127, 71},
+			wantedCustodyBit0Indices: []uint64{127},
+			wantedCustodyBit1Indices: []uint64{71},
 		},
 		{
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{127, 71},
+			wantedCustodyBit1Indices: []uint64{71, 127},
 		},
 	}
 
@@ -1375,7 +1398,6 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 
 	deposit.Proof = proof
-	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
@@ -1397,6 +1419,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
 func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
@@ -1455,6 +1478,8 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	}
 }
 
+=======
+>>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
 func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
@@ -1478,7 +1503,6 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 
 	deposit.Proof = proof
-	deposit.Index = 0
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
@@ -2013,9 +2037,15 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
 	pubKey := []byte("A")
 	hashed := hashutil.Hash(pubKey)
+<<<<<<< HEAD
 	buf = append(buf, hashed[:]...)
 	state.Validators[0].WithdrawalCredentials = buf
 	state.Validators[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
+=======
+	buf = append(buf, hashed[:][1:]...)
+	state.ValidatorRegistry[0].WithdrawalCredentials = buf
+	state.ValidatorRegistry[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
+>>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
 	newState, err := blocks.ProcessTransfers(
 		state,
 		block,

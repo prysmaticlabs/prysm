@@ -70,7 +70,14 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 //    """
 //    return state.latest_active_index_roots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
+<<<<<<< HEAD
 	return state.ActiveIndexRoots[epoch%params.BeaconConfig().ActiveIndexRootsLength]
+=======
+	newRootLength := len(state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength])
+	newRoot := make([]byte, newRootLength)
+	copy(newRoot, state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength])
+	return newRoot
+>>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
 }
 
 // RandaoMix returns the randao mix (xor'ed seed)
@@ -85,7 +92,14 @@ func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
 //    """
 //    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
+<<<<<<< HEAD
 	return state.RandaoMixes[epoch%params.BeaconConfig().RandaoMixesLength]
+=======
+	newMixLength := len(state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength])
+	newMix := make([]byte, newMixLength)
+	copy(newMix, state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength])
+	return newMix
+>>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
 }
 
 // CreateRandaoReveal generates a epoch signature using the beacon proposer priv key.
@@ -97,7 +111,7 @@ func CreateRandaoReveal(beaconState *pb.BeaconState, epoch uint64, privKeys []*b
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
+	domain := Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal(), nil

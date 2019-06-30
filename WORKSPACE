@@ -130,6 +130,21 @@ http_archive(
 )
 
 http_archive(
+    name = "eth2_spec_tests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "56847989737e816ab7d23f3bb2422347dfa81271bae81a94de512c01461fab25",
+    url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.7.1/base64_encoded_archive.tar.gz",
+)
+
+http_archive(
     name = "com_github_bazelbuild_buildtools",
     strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
@@ -162,7 +177,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "be5e1bd95e5c389a672eec5b57831441a160a0b7",
+    commit = "65835a5f002109998995206338ca888e41503525",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1080,4 +1095,10 @@ go_repository(
     name = "com_github_koron_go_ssdp",
     commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
     importpath = "github.com/koron/go-ssdp",
+)
+
+go_repository(
+    name = "in_gopkg_d4l3k_messagediff_v1",
+    commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",
+    importpath = "gopkg.in/d4l3k/messagediff.v1",
 )

@@ -177,6 +177,74 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	}
 }
 
+func TestSlashValidator_OK(t *testing.T) {
+	registry := make([]*pb.Validator, 0)
+	indices := make([]uint64, 0)
+	balances := make([]uint64, 0)
+	validatorsLimit := 100
+	for i := 0; i < validatorsLimit; i++ {
+		registry = append(registry, &pb.Validator{
+			Pubkey:           []byte(strconv.Itoa(i)),
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxDepositAmount,
+		})
+		indices = append(indices, uint64(i))
+		balances = append(balances, params.BeaconConfig().MaxDepositAmount)
+	}
+
+	bState := &pb.BeaconState{
+		ValidatorRegistry:      registry,
+		Slot:                   0,
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Balances:               balances,
+	}
+
+	slashedIdx := uint64(2)
+	whistleIdx := uint64(10)
+
+	state, err := SlashValidator(bState, slashedIdx, whistleIdx)
+	if err != nil {
+		t.Fatalf("Could not slash validator %v", err)
+	}
+
+	if !state.ValidatorRegistry[slashedIdx].Slashed {
+		t.Errorf("Validator not slashed despite supposed to being slashed")
+	}
+
+	if state.ValidatorRegistry[slashedIdx].WithdrawableEpoch != helpers.CurrentEpoch(state)+params.BeaconConfig().LatestSlashedExitLength {
+		t.Errorf("Withdrawable epoch not the expected value %d", state.ValidatorRegistry[slashedIdx].WithdrawableEpoch)
+	}
+
+	slashedBalance := state.LatestSlashedBalances[state.Slot%params.BeaconConfig().LatestSlashedExitLength]
+	if slashedBalance != params.BeaconConfig().MaxDepositAmount {
+		t.Errorf("Slashed balance isnt the expected amount: got %d but expected %d", slashedBalance, params.BeaconConfig().MaxDepositAmount)
+	}
+
+	proposer, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Errorf("Could not get proposer %v", err)
+	}
+
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
+	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
+
+	if state.Balances[proposer] != params.BeaconConfig().MaxDepositAmount+proposerReward {
+		t.Errorf("Did not get expected balance for proposer %d", state.Balances[proposer])
+	}
+
+	if state.Balances[whistleIdx] != params.BeaconConfig().MaxDepositAmount+whistleblowerReward-proposerReward {
+		t.Errorf("Did not get expected balance for whistleblower %d", state.Balances[whistleIdx])
+	}
+
+	if state.Balances[slashedIdx] != params.BeaconConfig().MaxDepositAmount-whistleblowerReward {
+		t.Errorf("Did not get expected balance for slashed validator %d", state.Balances[slashedIdx])
+	}
+
+}
+
 func TestInitializeValidatoreStore(t *testing.T) {
 	registry := make([]*pb.Validator, 0)
 	indices := make([]uint64, 0)

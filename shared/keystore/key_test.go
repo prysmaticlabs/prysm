@@ -36,7 +36,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 
 	err = newKey.UnmarshalJSON(marshalledObject)
 	if err != nil {
-		t.Fatalf("unable to unmarshall object %v", err)
+		t.Fatalf("unable to unmarshal object %v", err)
 	}
 
 	if !bytes.Equal([]byte(newKey.ID), []byte(testID)) {

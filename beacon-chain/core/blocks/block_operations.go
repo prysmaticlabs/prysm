@@ -103,26 +103,31 @@ func ProcessBlockHeader(
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
 	}
+
 	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		return nil, err
 	}
+
 	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
 		return nil, fmt.Errorf(
 			"parent root %#x does not match the latest block header signing root in state %#x",
 			block.ParentRoot, parentRoot)
 	}
+
 	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		return nil, err
 	}
+	emptySig := make([]byte, 96)
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
+		Signature:  emptySig,
 	}
-
-	// Verify proposer is not slashed
+	// Verify proposer is not slashed.
 	idx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, err
@@ -194,7 +199,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
-	domain := helpers.DomainVersion(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(body.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
@@ -354,7 +359,7 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
 	data2 := att2.Data
-	if !isSlashableAttestationData(data1, data2) {
+	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
 	if err := VerifyIndexedAttestation(att1, verifySignatures); err != nil {
@@ -366,7 +371,7 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 	return nil
 }
 
-// isSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
+// IsSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
 //
 // Spec pseudocode definition:
 //   return (
@@ -375,11 +380,11 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 //   # Surround vote
 //   (data_1.source_epoch < data_2.source_epoch and data_2.target_epoch < data_1.target_epoch)
 //   )
-func isSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
+func IsSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 	// Inner attestation data structures for the votes should not be equal,
 	// as that would mean both votes are the same and therefore no slashing
 	// should occur.
-	isDoubleVote := proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
+	isDoubleVote := !proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
 	isSurroundVote := data1.SourceEpoch < data2.SourceEpoch && data2.TargetEpoch < data1.TargetEpoch
 	return isDoubleVote || isSurroundVote
 }
@@ -693,7 +698,7 @@ func ProcessValidatorDeposits(
 	for _, deposit := range deposits {
 		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap, verifySignatures, true)
 		if err != nil {
-			return nil, fmt.Errorf("could not process deposit index %d: %v", deposit.Index, err)
+			return nil, fmt.Errorf("could not process deposit from %#x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
 		}
 	}
 	return beaconState, nil
@@ -752,7 +757,7 @@ func ProcessDeposit(
 	verifyTree bool,
 ) (*pb.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
-		return nil, fmt.Errorf("could not verify deposit #%d: %v", deposit.Index, err)
+		return nil, fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
 	}
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.Pubkey
@@ -794,7 +799,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 		if ok := trieutil.VerifyMerkleProof(
 			receiptRoot,
 			leaf[:],
-			int(deposit.Index),
+			int(beaconState.DepositIndex),
 			deposit.Proof,
 		); !ok {
 			return fmt.Errorf(
@@ -804,6 +809,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 		}
 	}
 
+<<<<<<< HEAD
 	// Deposits must be processed in order
 	if deposit.Index != beaconState.Eth1DepositIndex {
 		return fmt.Errorf(
@@ -813,6 +819,8 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 		)
 	}
 
+=======
+>>>>>>> db5463e7faffc24c0ed472be18f07aead1e0fcbb
 	return nil
 }
 
@@ -1019,7 +1027,7 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	// Verify that the pubkey is valid.
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
 	hashed := hashutil.Hash(transfer.Pubkey)
-	buf = append(buf, hashed[:]...)
+	buf = append(buf, hashed[:][1:]...)
 	if !bytes.Equal(sender.WithdrawalCredentials, buf) {
 		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
 	}

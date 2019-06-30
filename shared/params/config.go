@@ -273,7 +273,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawalDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
-	minimalConfig.MaxEpochsPerCrosslink = 64
+	minimalConfig.MaxEpochsPerCrosslink = 4
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.RandaoMixesLength = 64
 	minimalConfig.ActiveIndexRootsLength = 64
