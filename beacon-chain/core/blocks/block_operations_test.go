@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/go-ssz"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -820,7 +820,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
+		Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 	}
 
@@ -854,7 +854,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 70,
+		Slot: params.BeaconConfig().GenesisSlot + 70,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		PreviousJustifiedRoot:  blockRoots[0],
@@ -863,8 +863,8 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Shard:                    0,
-				Slot:                     params.BeaconConfig().GenesisSlot + 20,
+				Shard: 0,
+				Slot:  params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
 				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{2}},
 				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
@@ -902,7 +902,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 70,
+		Slot: params.BeaconConfig().GenesisSlot + 70,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -911,8 +911,8 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Shard:                    0,
-				Slot:                     params.BeaconConfig().GenesisSlot + 20,
+				Shard: 0,
+				Slot:  params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
 				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 				CrosslinkDataRootHash32:  []byte{1},
@@ -951,7 +951,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + 70,
+		Slot: params.BeaconConfig().GenesisSlot + 70,
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -959,8 +959,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 	att1 := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                    0,
-			Slot:                     params.BeaconConfig().GenesisSlot + 20,
+			Shard: 0,
+			Slot:  params.BeaconConfig().GenesisSlot + 20,
 			JustifiedBlockRootHash32: blockRoots[0],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
@@ -1064,7 +1064,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	depositInput := &pb.DepositInput{
 		Pubkey: []byte{1, 2, 3},
 	}
-	encodedInput , err := ssz.Marshal(depositInput)
+	encodedInput, err := ssz.Marshal(depositInput)
 	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
@@ -1117,11 +1117,11 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// validator helper function to fail with error when the public key
 	// currently exists in the validator registry.
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 	}
-	encodedInput , err := ssz.Marshal(depositInput)
+	encodedInput, err := ssz.Marshal(depositInput)
 	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
@@ -1172,7 +1172,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// the one specified in the deposit input, causing a failure.
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{4, 5, 6},
 		},
 	}
@@ -1199,11 +1199,11 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 
 func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 	}
-	encodedInput , err := ssz.Marshal(depositInput)
+	encodedInput, err := ssz.Marshal(depositInput)
 	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
@@ -1244,7 +1244,7 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 	}
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		},
 	}
@@ -1267,11 +1267,11 @@ func TestProcessValidatorDeposits_IncorrectMerkleIndex(t *testing.T) {
 
 func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 	}
-	encodedInput , err := ssz.Marshal(depositInput)
+	encodedInput, err := ssz.Marshal(depositInput)
 	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
@@ -1322,7 +1322,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		},
 	}
@@ -1394,7 +1394,7 @@ func TestProcessValidatorDeposits_InvalidSSZ_DepositIndexIncremented(t *testing.
 	}
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		},
 	}
@@ -1427,11 +1427,11 @@ func TestProcessValidatorDeposits_InvalidSSZ_DepositIndexIncremented(t *testing.
 func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented(t *testing.T) {
 	hook := logTest.NewGlobal()
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{3, 2, 1},
 		ProofOfPossession:           []byte{},
 	}
-	encodedInput , err := ssz.Marshal(depositInput)
+	encodedInput, err := ssz.Marshal(depositInput)
 	if err != nil {
 		t.Fatalf("failed to encode deposit input: %v", err)
 	}
@@ -1482,7 +1482,7 @@ func TestProcessValidatorDeposits_InvalidWithdrawalCreds_DepositIndexIncremented
 	}
 	registry := []*pb.Validator{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		},
 	}

@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/go-ssz"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -58,7 +58,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData, err := ssz.Marshal(data) 
+	serializedData, err := ssz.Marshal(data)
 	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
@@ -121,7 +121,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData, err := ssz.Marshal(data) 
+	serializedData, err := ssz.Marshal(data)
 	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
@@ -195,7 +195,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData, err := ssz.Marshal(data) 
+	serializedData, err := ssz.Marshal(data)
 	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
@@ -276,7 +276,7 @@ func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData, err := ssz.Marshal(data) 
+	serializedData, err := ssz.Marshal(data)
 	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
@@ -365,7 +365,7 @@ func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 			WithdrawalCredentialsHash32: []byte("withdraw"),
 		}
 
-		serializedData, err := ssz.Marshal(data) 
+		serializedData, err := ssz.Marshal(data)
 		if err != nil {
 			t.Fatalf("Could not serialize data %v", err)
 		}
@@ -445,7 +445,7 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData, err := ssz.Marshal(data) 
+	serializedData, err := ssz.Marshal(data)
 	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
@@ -513,7 +513,7 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData, err := ssz.Marshal(data) 
+	serializedData, err := ssz.Marshal(data)
 	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
@@ -574,7 +574,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
 
-	serializedData, err := ssz.Marshal(data) 
+	serializedData, err := ssz.Marshal(data)
 	if err != nil {
 		t.Fatalf("Could not serialize data %v", err)
 	}
