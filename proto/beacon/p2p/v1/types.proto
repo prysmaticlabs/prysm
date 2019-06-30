@@ -12,9 +12,9 @@ message BeaconState {
   Fork fork = 1003;
 
   // Validator registry [2001-3000]
-  repeated Validator validators = 2001;
+  repeated Validator validators = 2001 [(gogoproto.moretags) = "ssz:\"size=1099511627776\""];
   // Balances in Gwei
-  repeated uint64 balances = 2002;
+  repeated uint64 balances = 2002 [(gogoproto.moretags) = "ssz:\"size=1099511627776\""];
 
   // Randomness and committees [3001-4000]
   repeated bytes randao_mixes = 3001 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
@@ -22,8 +22,8 @@ message BeaconState {
   repeated bytes compact_committees_roots = 3003 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
 
   // Finality [4001-5000]
-  repeated PendingAttestation previous_epoch_attestations = 4001 [(gogoproto.moretags) = "ssz:\"size=32\""];
-  repeated PendingAttestation current_epoch_attestations = 4002 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  repeated PendingAttestation previous_epoch_attestations = 4001 [(gogoproto.moretags) = "ssz:\"size=8192\""];
+  repeated PendingAttestation current_epoch_attestations = 4002 [(gogoproto.moretags) = "ssz:\"size=8192\""];
   uint64 justification_bits = 4003;
   Checkpoint previous_justified_checkpoint = 4004;
   Checkpoint current_justified_checkpoint = 4005;
@@ -37,11 +37,11 @@ message BeaconState {
   repeated bytes active_index_roots = 5005 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
   repeated uint64 slashings = 5006 [(gogoproto.moretags) = "ssz:\"size=8192\""];
   BeaconBlockHeader latest_block_header = 5007;
-  repeated bytes historical_roots = 5008 [(gogoproto.moretags) = "ssz:\"size=?,32\""];
+  repeated bytes historical_roots = 5008 [(gogoproto.moretags) = "ssz:\"size=16777216,32\""];
 
   // Ethereum 1.0 chain data [6001-7000]
   Eth1Data eth1_data = 6001;
-  repeated Eth1Data eth1_data_votes = 6002;
+  repeated Eth1Data eth1_data_votes = 6002 [(gogoproto.moretags) = "ssz:\"size=1024\""];
   uint64 eth1_deposit_index = 6003;
 
   // Deprecated [10001-20000]
@@ -62,7 +62,7 @@ message Fork {
 message PendingAttestation {
   // Bitfield representation of validator indices that have voted exactly
   // the same vote and have been aggregated into this attestation.
-  bytes aggregation_bits = 1;
+  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz:\"size=4096\""];
   AttestationData data = 2;
   // The difference of when attestation gets created and get included on chain.
   uint64 inclusion_delay = 3;
@@ -74,9 +74,9 @@ message Attestation {
   AttestationData data = 1;
   // Bitfield representation of validator indices that have voted exactly
   // the same vote and have been aggregated into this attestation.
-  bytes aggregation_bits = 2;
+  bytes aggregation_bits = 2 [(gogoproto.moretags) = "ssz:\"size=4096\""];
   // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data. Not used in phase 0.
-  bytes custody_bits = 3;
+  bytes custody_bits = 3 [(gogoproto.moretags) = "ssz:\"size=4096\""];
   // 96 byte BLS aggregate signature.
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
@@ -123,8 +123,8 @@ message AttestationDataAndCustodyBit {
 
 message IndexedAttestation {
   // Validator indices
-  repeated uint64 custody_bit_0_indices = 1;
-  repeated uint64 custody_bit_1_indices = 2;
+  repeated uint64 custody_bit_0_indices = 1 [(gogoproto.moretags) = "ssz:\"size=4096\""];
+  repeated uint64 custody_bit_1_indices = 2 [(gogoproto.moretags) = "ssz:\"size=4096\""];
   AttestationData data = 3;
   // 96 bytes aggregate signature.
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
@@ -203,17 +203,17 @@ message BeaconBlockBody {
   // is not used for anything other than a fun message.
   bytes graffiti = 3 [(gogoproto.moretags) = "ssz:\"size=32\""];
   // At most MAX_PROPOSER_SLASHINGS.
-  repeated ProposerSlashing proposer_slashings  = 4;
+  repeated ProposerSlashing proposer_slashings  = 4 [(gogoproto.moretags) = "ssz:\"size=16\""];
   // At most MAX_ATTESTER_SLASHINGS.
-  repeated AttesterSlashing attester_slashings = 5;
+  repeated AttesterSlashing attester_slashings = 5 [(gogoproto.moretags) = "ssz:\"size=1\""];
   // At most MAX_ATTESTATIONS.
-  repeated Attestation attestations = 6;
+  repeated Attestation attestations = 6 [(gogoproto.moretags) = "ssz:\"size=128\""];
   // At most MAX_DEPOSITS.
-  repeated Deposit deposits = 7;
+  repeated Deposit deposits = 7 [(gogoproto.moretags) = "ssz:\"size=16\""];
   // At most MAX_VOLUNTARY_EXITS.
-  repeated VoluntaryExit voluntary_exits = 8;
+  repeated VoluntaryExit voluntary_exits = 8 [(gogoproto.moretags) = "ssz:\"size=16\""];
   // At most MAX_TRANSFERS.
-  repeated Transfer transfers = 9;
+  repeated Transfer transfers = 9 [(gogoproto.moretags) = "ssz:\"size=0\""];
 }
 
 message SlashableAttestation {
@@ -253,7 +253,7 @@ message AttesterSlashing {
 
 message Deposit {
   // 32 byte roots in the deposit tree branch.
-  repeated bytes proof = 1 [(gogoproto.moretags) = "ssz:\"size=32,32\""];
+  repeated bytes proof = 1 [(gogoproto.moretags) = "ssz:\"size=33,32\""];
   DepositData data = 3;
 }
 
@@ -308,7 +308,7 @@ message HistoricalBatch {
 
 message CompactCommittee {
   // The list of the validator public keys in the committee.
-  repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz:\"size=?,48\""];
+  repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz:\"size=4096,48\""];
   // The list of the validator indices in the committee.
-  repeated uint64 compact_validators = 2;
+  repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz:\"size=4096\""];
 }
