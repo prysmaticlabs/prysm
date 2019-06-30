@@ -18,19 +18,19 @@ var clock utils.Clock = &utils.RealClock{}
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
 		Slot:       0,
-		ParentRoot: params.BeaconConfig().ZeroHash[:],
+		ParentRoot: make([]byte, 32),
 		StateRoot:  stateRoot,
 		Signature:  params.BeaconConfig().EmptySignature[:],
 		Body: &pb.BeaconBlockBody{
-			RandaoReveal:      params.BeaconConfig().ZeroHash[:],
+			RandaoReveal:      make([]byte, 32),
 			ProposerSlashings: []*pb.ProposerSlashing{},
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
 			VoluntaryExits:    []*pb.VoluntaryExit{},
 			Eth1Data: &pb.Eth1Data{
-				DepositRoot: params.BeaconConfig().ZeroHash[:],
-				BlockHash:   params.BeaconConfig().ZeroHash[:],
+				DepositRoot: make([]byte, 32),
+				BlockHash:   make([]byte, 32),
 			},
 		},
 	}

@@ -431,7 +431,7 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 
 	// Compute slashed balances in the current epoch
-	exitLength := params.BeaconConfig().LatestSlashedExitLength
+	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	totalAtStart := state.LatestSlashedBalances[(currentEpoch+1)%exitLength]
 	totalAtEnd := state.LatestSlashedBalances[currentEpoch%exitLength]
 	totalPenalties := totalAtEnd - totalAtStart
@@ -524,7 +524,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set active index root.
 	activationDelay := params.BeaconConfig().ActivationExitDelay
-	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().LatestActiveIndexRootsLength
+	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
 	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active indices: %v", err)
@@ -536,17 +536,17 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.LatestActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
 	// Set total slashed balances.
-	slashedExitLength := params.BeaconConfig().LatestSlashedExitLength
+	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	state.LatestSlashedBalances[nextEpoch%slashedExitLength] =
 		state.LatestSlashedBalances[currentEpoch%slashedExitLength]
 
 	// Set RANDAO mix.
-	randaoMixLength := params.BeaconConfig().LatestRandaoMixesLength
+	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
 	mix := helpers.RandaoMix(state, currentEpoch)
 	state.LatestRandaoMixes[nextEpoch%randaoMixLength] = mix
 
 	// Set historical root accumulator.
-	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
+	epochsPerHistoricalRoot := params.BeaconConfig().HistoricalRootsLimit / params.BeaconConfig().SlotsPerEpoch
 	if nextEpoch%epochsPerHistoricalRoot == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.LatestBlockRoots,
@@ -647,8 +647,8 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 
 	if len(candidateCrosslinks) == 0 {
 		return &pb.Crosslink{
-			DataRoot:   params.BeaconConfig().ZeroHash[:],
-			ParentRoot: params.BeaconConfig().ZeroHash[:],
+			DataRoot:   make([]byte, 32),
+			ParentRoot: make([]byte, 32),
 		}, nil, nil
 	}
 	var crosslinkAtts []*pb.PendingAttestation

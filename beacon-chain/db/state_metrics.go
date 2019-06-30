@@ -80,7 +80,7 @@ func reportStateMetrics(state *pb.BeaconState) {
 		if v.Slashed {
 			validatorSlashedGauge.WithLabelValues(
 				strconv.Itoa(i), //Validator index
-			).Set(float64(v.WithdrawableEpoch - params.BeaconConfig().LatestSlashedExitLength))
+			).Set(float64(v.WithdrawableEpoch - params.BeaconConfig().EpochsPerSlashingsVector))
 		} else {
 			validatorSlashedGauge.WithLabelValues(
 				strconv.Itoa(i), //Validator index

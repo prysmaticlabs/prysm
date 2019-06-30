@@ -187,18 +187,18 @@ func TestSlashValidator_OK(t *testing.T) {
 			Pubkey:           []byte(strconv.Itoa(i)),
 			ActivationEpoch:  0,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxDepositAmount,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		})
 		indices = append(indices, uint64(i))
-		balances = append(balances, params.BeaconConfig().MaxDepositAmount)
+		balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
 	}
 
 	bState := &pb.BeaconState{
 		ValidatorRegistry:      registry,
 		Slot:                   0,
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Balances:               balances,
 	}
 
@@ -214,13 +214,13 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Validator not slashed despite supposed to being slashed")
 	}
 
-	if state.ValidatorRegistry[slashedIdx].WithdrawableEpoch != helpers.CurrentEpoch(state)+params.BeaconConfig().LatestSlashedExitLength {
+	if state.ValidatorRegistry[slashedIdx].WithdrawableEpoch != helpers.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector {
 		t.Errorf("Withdrawable epoch not the expected value %d", state.ValidatorRegistry[slashedIdx].WithdrawableEpoch)
 	}
 
-	slashedBalance := state.LatestSlashedBalances[state.Slot%params.BeaconConfig().LatestSlashedExitLength]
-	if slashedBalance != params.BeaconConfig().MaxDepositAmount {
-		t.Errorf("Slashed balance isnt the expected amount: got %d but expected %d", slashedBalance, params.BeaconConfig().MaxDepositAmount)
+	slashedBalance := state.LatestSlashedBalances[state.Slot%params.BeaconConfig().EpochsPerSlashingsVector]
+	if slashedBalance != params.BeaconConfig().MaxEffectiveBalance {
+		t.Errorf("Slashed balance isnt the expected amount: got %d but expected %d", slashedBalance, params.BeaconConfig().MaxEffectiveBalance)
 	}
 
 	proposer, err := helpers.BeaconProposerIndex(state)
@@ -231,15 +231,15 @@ func TestSlashValidator_OK(t *testing.T) {
 	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 
-	if state.Balances[proposer] != params.BeaconConfig().MaxDepositAmount+proposerReward {
+	if state.Balances[proposer] != params.BeaconConfig().MaxEffectiveBalance+proposerReward {
 		t.Errorf("Did not get expected balance for proposer %d", state.Balances[proposer])
 	}
 
-	if state.Balances[whistleIdx] != params.BeaconConfig().MaxDepositAmount+whistleblowerReward-proposerReward {
+	if state.Balances[whistleIdx] != params.BeaconConfig().MaxEffectiveBalance+whistleblowerReward-proposerReward {
 		t.Errorf("Did not get expected balance for whistleblower %d", state.Balances[whistleIdx])
 	}
 
-	if state.Balances[slashedIdx] != params.BeaconConfig().MaxDepositAmount-whistleblowerReward {
+	if state.Balances[slashedIdx] != params.BeaconConfig().MaxEffectiveBalance-whistleblowerReward {
 		t.Errorf("Did not get expected balance for slashed validator %d", state.Balances[slashedIdx])
 	}
 

@@ -123,7 +123,7 @@ func ProcessBlockHeader(
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
-		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		StateRoot:  make([]byte, 32),
 		BodyRoot:   bodyRoot[:],
 		Signature:  emptySig,
 	}
@@ -177,7 +177,7 @@ func ProcessRandao(
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
-	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
+	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
 	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
@@ -555,7 +555,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 		)
 	}
 	// To be removed in Phase 1
-	if !bytes.Equal(data.Crosslink.DataRoot, params.BeaconConfig().ZeroHash[:]) {
+	if !bytes.Equal(data.Crosslink.DataRoot, make([]byte, 32)) {
 		return nil, fmt.Errorf("expected data root %#x == ZERO_HASH", data.Crosslink.DataRoot)
 	}
 	indexedAtt, err := ConvertToIndexed(beaconState, att)
@@ -683,8 +683,8 @@ func ProcessValidatorDeposits(
 	deposits := block.Body.Deposits
 	// Verify that outstanding deposits are processed up to the maximum number of deposits.
 	maxDeposits := beaconState.LatestEth1Data.DepositCount - beaconState.DepositIndex
-	if params.BeaconConfig().MaxDepositAmount < maxDeposits {
-		maxDeposits = params.BeaconConfig().MaxDepositAmount
+	if params.BeaconConfig().MaxEffectiveBalance < maxDeposits {
+		maxDeposits = params.BeaconConfig().MaxEffectiveBalance
 	}
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
 		return nil, fmt.Errorf(

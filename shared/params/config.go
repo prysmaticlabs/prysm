@@ -50,10 +50,10 @@ type BeaconChainConfig struct {
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 
 	// State list lengths
-	EpochsPerHistoricalVector      uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"`       // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
-	EpochsPerSlashedBalancesVector uint64 `yaml:"EPOCHS_PER_SLASHED_BALANCES_VECTOR"` // EpochsPerSlashedBalancesVector defines max length in epoch to store old stats to recompute slashing witness.
-	HistoricalRootsLimit           uint64 `yaml:"HISTORICAL_ROOTS_LIMIT"`             // HistoricalRootsLimit the define max historical roots can be saved in state before roll over.
-	ValidatorRegistryLimit         uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT"`           // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
+	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"`       // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
+	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"` // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
+	HistoricalRootsLimit      uint64 `yaml:"HISTORICAL_ROOTS_LIMIT"`             // HistoricalRootsLimit the define max historical roots can be saved in state before roll over.
+	ValidatorRegistryLimit    uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT"`           // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor             uint64 `yaml:"BASE_REWARD_FACTOR"`             // BaseRewardFactor is used to calculate validator per-slot interest rate.
@@ -149,10 +149,10 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:           1024,
 
 	// State list length constants.
-	EpochsPerHistoricalVector:      65536,
-	EpochsPerSlashedBalancesVector: 8192,
-	HistoricalRootsLimit:           8192,
-	ValidatorRegistryLimit:         1099511627776,
+	EpochsPerHistoricalVector: 65536,
+	EpochsPerSlashingsVector:  8192,
+	HistoricalRootsLimit:      8192,
+	ValidatorRegistryLimit:    1099511627776,
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor:             32,
@@ -235,7 +235,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.SlotsPerEth1VotingPeriod = 1
 	demoConfig.EpochsPerHistoricalVector = 5 * demoConfig.SlotsPerEpoch
-	demoConfig.EpochsPerSlashedBalancesVector = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.EpochsPerSlashingsVector = 5 * demoConfig.SlotsPerEpoch
 	demoConfig.HistoricalRootsLimit = 5 * demoConfig.SlotsPerEpoch
 
 	return &demoConfig
@@ -272,7 +272,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxEpochsPerCrosslink = 4
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.EpochsPerHistoricalVector = 64
-	minimalConfig.EpochsPerSlashedBalancesVector = 64
+	minimalConfig.EpochsPerSlashingsVector = 64
 	minimalConfig.HistoricalRootsLimit = 16777216
 	minimalConfig.ValidatorRegistryLimit = 1099511627776
 	minimalConfig.BaseRewardFactor = 32
