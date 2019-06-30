@@ -33,6 +33,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "block_cache_test.go",
         "block_reader_test.go",
