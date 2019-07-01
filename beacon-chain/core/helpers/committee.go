@@ -327,6 +327,9 @@ func ShardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
 // it gets rewritten where there's a reorg or a new finalized block.
 //
 // Spec pseudocode definition:
+//    """
+//    Return the start shard of the 0th committee in an epoch.
+//    """
 //   def get_epoch_start_shard(state: BeaconState, epoch: Epoch) -> Shard:
 //    assert epoch <= get_current_epoch(state) + 1
 //    check_epoch = get_current_epoch(state) + 1
@@ -387,4 +390,38 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 		return false, fmt.Errorf("no committee exist for shard in the attestation")
 	}
 	return VerifyBitfield(att.AggregationBits, len(committee))
+}
+
+// CompactCommitteesRoot returns the index root of a given epoch.
+//
+// Spec pseudocode definition:
+//   def get_compact_committees_root(state: BeaconState, epoch: Epoch) -> Hash:
+//    """
+//    Return the compact committee root for the current epoch.
+//    """
+//    committees = [CompactCommittee() for _ in range(SHARD_COUNT)]
+//    start_shard = get_epoch_start_shard(state, epoch)
+//    for committee_number in range(get_epoch_committee_count(state, epoch)):
+//        shard = Shard((start_shard + committee_number) % SHARD_COUNT)
+//        for index in get_crosslink_committee(state, epoch, shard):
+//            validator = state.validators[index]
+//            committees[shard].pubkeys.append(validator.pubkey)
+//            compact_balance = validator.effective_balance // EFFECTIVE_BALANCE_INCREMENT
+//            # `index` (top 6 bytes) + `slashed` (16th bit) + `compact_balance` (bottom 15 bits)
+//            compact_validator = uint64((index << 16) + (validator.slashed << 15) + compact_balance)
+//            committees[shard].compact_validators.append(compact_validator)
+//    return hash_tree_root(Vector[CompactCommittee, SHARD_COUNT](committees))
+func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([]byte, error) {
+	compactCommList := make([]*pb.CompactCommittee, params.BeaconConfig().ShardCount)
+	comCount, err := EpochCommitteeCount(state, epoch)
+	if err != nil {
+		return nil, err
+	}
+	startShard, err := EpochStartShard(state, epoch)
+	if err != nil {
+		return nil, err
+	}
+	for i := uint64(1); i <= comCount; i++ {
+
+	}
 }
