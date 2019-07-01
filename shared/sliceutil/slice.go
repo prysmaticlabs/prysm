@@ -4,6 +4,10 @@ package sliceutil
 // completely contained in the second array with time
 // complexity of approximately o(n).
 func SubsetUint64(a []uint64, b []uint64) bool {
+	if len(a) > len(b) {
+		return false
+	}
+
 	set := make(map[uint64]uint64)
 	for _, v := range b {
 		set[v] ++
