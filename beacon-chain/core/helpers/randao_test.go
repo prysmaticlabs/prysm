@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"runtime"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -47,7 +48,6 @@ func TestRandaoMix_OK(t *testing.T) {
 
 func TestRandaoMix_CopyOK(t *testing.T) {
 	ClearAllCaches()
-
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
@@ -86,6 +86,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 				}
 			}
 		}
+		runtime.GC()
 	}
 }
 
@@ -162,7 +163,7 @@ func TestActiveIndexRoot_CopyOK(t *testing.T) {
 				}
 			}
 		}
-
+		runtime.GC()
 	}
 }
 
