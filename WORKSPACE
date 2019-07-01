@@ -41,9 +41,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "4c4fea5c7fb0768bd440e6bf0a893bdb0449f3f41707522eaa9ada3d1152402f",
-    strip_prefix = "rules_k8s-7475ba20133e4a3f585a3648db6d055e7d1c5f78",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/7475ba20133e4a3f585a3648db6d055e7d1c5f78.tar.gz",
+    sha256 = "ae72777e383df42f42831413b938f71cbb2fa61637b3246808d75261a2af38a8",
+    strip_prefix = "rules_k8s-dda7ab9151cb95f944e59beabaa0d960825ee17c",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/dda7ab9151cb95f944e59beabaa0d960825ee17c.tar.gz",
 )
 
 load(
@@ -140,8 +140,10 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "56847989737e816ab7d23f3bb2422347dfa81271bae81a94de512c01461fab25",
-    url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.7.1/base64_encoded_archive.tar.gz",
+    sha256 = "c61141122adf9d9eed4ce5e70cb5bd6434944e60493f4e8f572fa02637cc7a4d",
+    # TODO: Update the fork repo with the image on the next tag.
+    #url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.7.1/base64_encoded_archive.tar.gz",
+    url = "https://prysmaticlabs.com/uploads/base64_encoded_archive.tar.gz",
 )
 
 http_archive(
@@ -177,7 +179,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "a2c7c20ea4b9f5ddfdc3122924822a8033e1db9d",
+    commit = "65835a5f002109998995206338ca888e41503525",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -567,7 +569,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "4217c9f31f5816db02addc94e56061da77f288d8",
+    commit = "9d007e481048296f09f59bd19bb7ae584563cd95",  # v1.0.0
     importpath = "github.com/syndtr/goleveldb",
 )
 
@@ -641,7 +643,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "7d6a80ca5263a2575832c437c6f35181243c4bec",  # v0.4.1
+    commit = "31bed53e4047fd6c510e43a941f90cb31be0972a",  # v0.6.0
     importpath = "github.com/prometheus/common",
 )
 
@@ -1095,4 +1097,10 @@ go_repository(
     name = "com_github_koron_go_ssdp",
     commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
     importpath = "github.com/koron/go-ssdp",
+)
+
+go_repository(
+    name = "in_gopkg_d4l3k_messagediff_v1",
+    commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",
+    importpath = "gopkg.in/d4l3k/messagediff.v1",
 )

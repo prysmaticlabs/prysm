@@ -109,7 +109,7 @@ func TestIncomingAttestation_OK(t *testing.T) {
 	})
 
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{'A'},
+		AggregationBits: []byte{'A'},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 100,

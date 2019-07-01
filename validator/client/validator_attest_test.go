@@ -139,14 +139,14 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			Crosslink:       &pbp2p.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
 			SourceEpoch:     3,
 		},
-		CustodyBitfield: make([]byte, (len(committee)+7)/8),
-		Signature:       []byte("signed"),
+		CustodyBits: make([]byte, (len(committee)+7)/8),
+		Signature:   []byte("signed"),
 	}
 	aggregationBitfield, err := bitutil.SetBitfield(4, len(committee))
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedAttestation.AggregationBitfield = aggregationBitfield
+	expectedAttestation.AggregationBits = aggregationBitfield
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
@@ -272,7 +272,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 
 	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	if len(generatedAttestation.AggregationBitfield) != 2 {
-		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBitfield))
+	if len(generatedAttestation.AggregationBits) != 2 {
+		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBits))
 	}
 }

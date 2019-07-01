@@ -95,10 +95,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	}).Info("Attesting to beacon chain head...")
 
 	attestation := &pbp2p.Attestation{
-		Data:                data,
-		CustodyBitfield:     custodyBitfield,
-		AggregationBitfield: aggregationBitfield,
-		Signature:           sig,
+		Data:            data,
+		CustodyBits:     custodyBitfield,
+		AggregationBits: aggregationBitfield,
+		Signature:       sig,
 	}
 
 	attResp, err := v.attesterClient.SubmitAttestation(ctx, attestation)

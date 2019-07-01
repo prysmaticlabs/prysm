@@ -20,6 +20,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "logrus_collector_test.go",
         "service_test.go",

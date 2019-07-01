@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"fmt"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -30,7 +29,11 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 			state.Slot,
 		)
 	}
-	return state.LatestBlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot], nil
+
+	rootWanted := state.BlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot]
+	blkRoot := make([]byte, len(rootWanted))
+	copy(blkRoot, rootWanted)
+	return blkRoot, nil
 }
 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.

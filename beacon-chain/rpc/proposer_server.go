@@ -251,7 +251,7 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash)
+	h := bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
 	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, h)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
@@ -260,12 +260,12 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 	// If this doesn't match the number of deposits stored in the cache, the generated trie will not be the same and
 	// root will fail to verify. This can happen in a scenario where we perhaps have a deposit from height 101,
 	// so we want to avoid any possible mismatches in these lengths.
-	upToLatestEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
-	if len(upToLatestEth1DataDeposits) != len(allDeps) {
+	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
+	if len(upToEth1DataDeposits) != len(allDeps) {
 		return nil, nil
 	}
 	depositData := [][]byte{}
-	for _, dep := range upToLatestEth1DataDeposits {
+	for _, dep := range upToEth1DataDeposits {
 		depHash, err := hashutil.DepositHash(dep.Data)
 		if err != nil {
 			return nil, fmt.Errorf("coulf not hash deposit data %v", err)
@@ -284,7 +284,7 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*db.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.DepositIndex {
+		if uint64(dep.Index) >= beaconState.Eth1DepositIndex {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}

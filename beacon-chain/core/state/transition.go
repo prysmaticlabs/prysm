@@ -117,21 +117,19 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash prev state root: %v", err)
 	}
+	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
 
-	state.LatestStateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
 	zeroHash := params.BeaconConfig().ZeroHash
-
 	// Cache latest block header state root.
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
 		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
-
 	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
 	}
 	// Cache the block root.
-	state.LatestBlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot[:]
+	state.BlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot[:]
 	return state, nil
 }
 
@@ -257,8 +255,8 @@ func ProcessOperations(
 	defer span.End()
 
 	maxDeposits := params.BeaconConfig().MaxDeposits
-	if state.LatestEth1Data.DepositCount-state.DepositIndex < maxDeposits {
-		maxDeposits = state.LatestEth1Data.DepositCount - state.DepositIndex
+	if state.Eth1Data.DepositCount-state.Eth1DepositIndex < maxDeposits {
+		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
 	}
 	// Verify outstanding deposits are processed up to max number of deposits
 	if len(body.Deposits) != int(maxDeposits) {
@@ -302,6 +300,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, fmt.Errorf("could not process block transfers: %v", err)
 	}
+
 	return state, nil
 }
 
