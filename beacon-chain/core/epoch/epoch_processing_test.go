@@ -1115,7 +1115,8 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		wanted := 3 * (base * attestedBalance / totalBalance)
 		// Base rewards for proposer and attesters working together getting attestation
 		// on chain in the fatest manner
-		wanted += base * params.BeaconConfig().MinAttestationInclusionDelay
+		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
+		wanted += (base - proposerReward) * params.BeaconConfig().MinAttestationInclusionDelay
 		if rewards[i] != wanted {
 			t.Errorf("Wanted reward balance %d, got %d", wanted, rewards[i])
 		}
