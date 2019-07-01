@@ -4,8 +4,6 @@ package helpers
 import (
 	"errors"
 	"fmt"
-	"sort"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -140,19 +138,16 @@ func ComputeCommittee(
 	return shuffledIndices, nil
 }
 
-// AttestingIndices returns the attesting participants indices. We removed sorting because it's irrelevant
-// in production, we don't need to reduce the surface of possible valid input.
+// AttestingIndices returns the attesting participants indices from the attestation data.
 //
 // Spec pseudocode definition:
-//   def get_attesting_indices(state: BeaconState,
-//                          attestation_data: AttestationData,
-//                          bitfield: bytes) -> List[ValidatorIndex]:
+//   def get_attesting_indices(state: BeaconState, data: AttestationData, bitfield: bytes) -> Set[ValidatorIndex]:
 //    """
-//    Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
+//    Return the set of attesting indices corresponding to ``data`` and ``bitfield``.
 //    """
 //    committee = get_crosslink_committee(state, attestation_data.target_epoch, attestation_data.crosslink.shard)
 //    assert verify_bitfield(bitfield, len(committee))
-//    return sorted([index for i, index in enumerate(committee) if get_bitfield_bit(bitfield, i) == 0b1])
+//    return set(index for i, index in enumerate(committee) if get_bitfield_bit(bitfield, i) == 0b1)
 func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield []byte) ([]uint64, error) {
 	committee, err := CrosslinkCommitteeAtEpoch(state, data.TargetEpoch, data.Crosslink.Shard)
 	if err != nil {
@@ -165,19 +160,17 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 		return nil, errors.New("bitfield is unable to be verified")
 	}
 
-	var attestingIndices []uint64
-	for i, index := range committee {
-		if mathutil.CeilDiv8(int(i)) > len(bitfield) {
-			continue
+	indices := make([]uint64, 0, len(committee))
+	indicesSet := make(map[uint64]bool)
+	for i, idx := range committee {
+		if !indicesSet[idx] {
+			if mathutil.CeilDiv8(i) <= len(bitfield) && bitutil.BitfieldBit(bitfield, i) == 0x1 {
+				indices = append(indices, idx)
+			}
 		}
-		if bitutil.BitfieldBit(bitfield, int(i)) == 1 {
-			attestingIndices = append(attestingIndices, index)
-		}
+		indicesSet[idx] = true
 	}
-	sort.SliceStable(attestingIndices, func(i, j int) bool {
-		return attestingIndices[i] < attestingIndices[j]
-	})
-	return attestingIndices, nil
+	return indices, nil
 }
 
 // VerifyBitfield validates a bitfield with a given committee size.
