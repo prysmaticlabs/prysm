@@ -558,7 +558,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		BlockRoots:               make([][]byte, 128),
-		Slashings:                []uint64{0, 1e9, 0},
+		Slashings:                []uint64{0, 1e9, 1e9},
 		RandaoMixes:              make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks:        crosslinks,
@@ -569,9 +569,9 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted := uint64(1e9)
+	wanted := uint64(0)
 	if newState.Slashings[2] != wanted {
-		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[2])
+		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Slashings[2])
 	}
 }
 
