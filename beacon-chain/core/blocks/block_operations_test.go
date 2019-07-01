@@ -1698,6 +1698,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 
 	state.Validators[0].WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
 	state.Validators[0].ActivationEligibilityEpoch = 0
+	state.Balances[0] = params.BeaconConfig().MinDepositAmount + params.BeaconConfig().MaxEffectiveBalance
 	block.Body.Transfers = []*pb.Transfer{
 		{
 			Fee:    params.BeaconConfig().MinDepositAmount,

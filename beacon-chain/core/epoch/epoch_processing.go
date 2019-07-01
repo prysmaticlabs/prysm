@@ -839,6 +839,8 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	}
 
 	for i, a := range attestersVotedSoruce {
+		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+
 		baseReward, err := baseReward(state, i)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get proposer reward: %v", err)
@@ -846,8 +848,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
 		rewards[a.ProposerIndex] += proposerReward
 		attesterReward := baseReward - proposerReward
-		attesterRewardFactor := (params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay -
-			a.InclusionDelay) / params.BeaconConfig().SlotsPerEpoch
+		attesterRewardFactor := (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
 		rewards[i] += attesterReward * attesterRewardFactor
 	}
 
