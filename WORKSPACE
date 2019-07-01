@@ -140,7 +140,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "c61141122adf9d9eed4ce5e70cb5bd6434944e60493f4e8f572fa02637cc7a4d",
+    sha256 = "5e787c3ac2f2b75a3eda82d903d118e960e5440aada0a484c5669bd2c57058bc",
     # TODO: Update the fork repo with the image on the next tag.
     #url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.7.1/base64_encoded_archive.tar.gz",
     url = "https://prysmaticlabs.com/uploads/base64_encoded_archive.tar.gz",

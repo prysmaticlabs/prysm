@@ -39,7 +39,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	justifiedState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	justifiedState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	justifiedState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		StateRoot: []byte{},
 	}

@@ -136,13 +136,13 @@ func (rs *RegularSync) validateAndProcessBlock(
 		return nil, nil, false, err
 	}
 
-	finalizedSlot := helpers.StartSlot(beaconState.FinalizedEpoch)
+	finalizedSlot := helpers.StartSlot(beaconState.FinalizedCheckpoint.Epoch)
 	slot := block.Slot
 	span.AddAttributes(
 		trace.Int64Attribute("block.Slot", int64(slot)),
 		trace.Int64Attribute("finalized slot", int64(finalizedSlot)),
 	)
-	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
+	if block.Slot < beaconState.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err

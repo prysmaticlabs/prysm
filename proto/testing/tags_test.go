@@ -31,7 +31,7 @@ func TestSSZTagSize(t *testing.T) {
 		t.Errorf("wanted signature size: %d, got: %d", sigSize, sizes[0])
 	}
 
-	sizes, err = sszTagSizes(pb.BeaconState{}, "FinalizedRoot")
+	sizes, err = sszTagSizes(pb.BeaconState{}, "FinalizedCheckpoint.Root")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1006,7 +1006,7 @@ func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositData := &pbp2p.DepositData{
 			Pubkey: pubKey[:],
-			Amount: params.BeaconConfig().MaxDepositAmount,
+			Amount: params.BeaconConfig().MaxEffectiveBalance,
 		}
 
 		deposits[i] = &pbp2p.Deposit{Data: depositData}
