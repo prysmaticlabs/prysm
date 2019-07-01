@@ -588,8 +588,8 @@ func TestEpochStartShard_MixedActivationValidatorRegistry(t *testing.T) {
 			}
 		}
 		s := &pb.BeaconState{
-			ValidatorRegistry: vs,
-			Slot:              params.BeaconConfig().SlotsPerEpoch * 3,
+			Validators: vs,
+			Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
 		}
 		startShard, err := EpochStartShard(s, 2 /*epoch*/)
 		if err != nil {
