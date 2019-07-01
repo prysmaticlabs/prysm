@@ -19,8 +19,8 @@ import (
 //    return state.latest_block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
 func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 	earliestSlot := uint64(0)
-	if state.Slot > params.BeaconConfig().SlotsPerHistoricalRoot {
-		earliestSlot = state.Slot - params.BeaconConfig().SlotsPerHistoricalRoot
+	if state.Slot > params.BeaconConfig().HistoricalRootsLimit {
+		earliestSlot = state.Slot - params.BeaconConfig().HistoricalRootsLimit
 	}
 	if slot < earliestSlot || slot >= state.Slot {
 		return []byte{}, fmt.Errorf("slot %d is not within range %d to %d",
@@ -29,8 +29,7 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 			state.Slot,
 		)
 	}
-
-	rootWanted := state.BlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot]
+	rootWanted := state.BlockRoots[slot%params.BeaconConfig().HistoricalRootsLimit]
 	blkRoot := make([]byte, len(rootWanted))
 	copy(blkRoot, rootWanted)
 	return blkRoot, nil

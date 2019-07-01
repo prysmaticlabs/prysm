@@ -47,15 +47,15 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pbp2p.Validator{
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxDepositAmount,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		}
 	}
 
 	state := &pbp2p.BeaconState{
 		Slot:             params.BeaconConfig().SlotsPerEpoch + 1,
 		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	if err := db.SaveState(context.Background(), state); err != nil {
@@ -104,9 +104,8 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Slot:                  3*params.BeaconConfig().SlotsPerEpoch + 1,
-		CurrentJustifiedEpoch: 2 + 0,
-		BlockRoots:            make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		Slot:       3*params.BeaconConfig().SlotsPerEpoch + 1,
+		BlockRoots: make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
 		CurrentCrosslinks: []*pbp2p.Crosslink{
 			{
 				DataRoot: []byte("A"),
@@ -117,7 +116,10 @@ func TestRequestAttestation_OK(t *testing.T) {
 				DataRoot: []byte("A"),
 			},
 		},
-		CurrentJustifiedRoot: justifiedRoot[:],
+		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
+			Epoch: 2,
+			Root:  justifiedRoot[:],
+		},
 	}
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
@@ -180,16 +182,16 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	//
 	// State slot = 10000
 	// Last justified slot = epoch start of 1500
-	// SlotsPerHistoricalRoot = 8192
+	// HistoricalRootsLimit = 8192
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	// Ensure SlotsPerHistoricalRoot matches scenario
+	// Ensure HistoricalRootsLimit matches scenario
 	cfg := params.BeaconConfig()
-	cfg.SlotsPerHistoricalRoot = 8192
+	cfg.HistoricalRootsLimit = 8192
 	params.OverrideBeaconConfig(cfg)
 
 	block := &pbp2p.BeaconBlock{
@@ -214,9 +216,8 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot:                  10000,
-		CurrentJustifiedEpoch: helpers.SlotToEpoch(1500),
-		BlockRoots:            make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		Slot:       10000,
+		BlockRoots: make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
 		PreviousCrosslinks: []*pbp2p.Crosslink{
 			{
 				DataRoot: []byte("A"),
@@ -227,7 +228,10 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 				DataRoot: []byte("A"),
 			},
 		},
-		CurrentJustifiedRoot: justifiedBlockRoot[:],
+		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
+			Epoch: helpers.SlotToEpoch(1500),
+			Root:  justifiedBlockRoot[:],
+		},
 	}
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]

@@ -305,13 +305,15 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) (uint64, error) {
 
 // ShardDeltaFromCommitteeCount returns the number of shards that get processed
 // in one epoch. This method is the inner logic of ShardDelta.
+// Returns the minimum of the committeeCount and maximum shard delta which is
+// defined as SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH.
 func ShardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
 	shardCount := params.BeaconConfig().ShardCount
-	minShardDelta := shardCount - shardCount/params.BeaconConfig().SlotsPerEpoch
-	if committeeCount < minShardDelta {
+	maxShardDelta := shardCount - shardCount/params.BeaconConfig().SlotsPerEpoch
+	if committeeCount < maxShardDelta {
 		return committeeCount
 	}
-	return minShardDelta
+	return maxShardDelta
 }
 
 // EpochStartShard returns the start shard used to process crosslink
@@ -350,11 +352,11 @@ func EpochStartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	startShard = (state.StartShard + delta) % params.BeaconConfig().ShardCount
 	for checkEpoch > epoch {
 		checkEpoch--
-		delta, err = ShardDelta(state, checkEpoch)
+		d, err := ShardDelta(state, checkEpoch)
 		if err != nil {
 			return 0, fmt.Errorf("could not get shard delta: %v", err)
 		}
-		startShard = (startShard + params.BeaconConfig().ShardCount - delta) % params.BeaconConfig().ShardCount
+		startShard = (startShard + params.BeaconConfig().ShardCount - d) % params.BeaconConfig().ShardCount
 	}
 
 	if err := startShardCache.AddStartShard(&cache.StartShardByEpoch{

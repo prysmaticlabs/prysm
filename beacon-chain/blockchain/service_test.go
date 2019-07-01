@@ -152,7 +152,7 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
 var _ = p2p.Broadcaster(&mockBroadcaster{})
 
 func createPreChainStartDeposit(pk []byte) *pb.Deposit {
-	balance := params.BeaconConfig().MaxDepositAmount
+	balance := params.BeaconConfig().MaxEffectiveBalance
 	depositData := &pb.DepositData{Pubkey: pk, Amount: balance, Signature: make([]byte, 96)}
 
 	return &pb.Deposit{

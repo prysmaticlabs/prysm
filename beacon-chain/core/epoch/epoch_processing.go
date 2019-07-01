@@ -187,59 +187,56 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 		return nil, fmt.Errorf("could not get total balance: %v", err)
 	}
 
-	oldPrevJustifiedEpoch := state.PreviousJustifiedEpoch
-	oldPrevJustifiedRoot := state.PreviousJustifiedRoot
-	oldCurrJustifiedEpoch := state.CurrentJustifiedEpoch
-	oldCurrJustifiedRoot := state.CurrentJustifiedRoot
-	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
-	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
+	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint
+	oldCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint
+	state.PreviousJustifiedCheckpoint = state.CurrentJustifiedCheckpoint
 	state.JustificationBits = (state.JustificationBits << 1) % (1 << 63)
 	// Process justification.
 	if 3*prevAttestedBal >= 2*totalBal {
-		state.CurrentJustifiedEpoch = prevEpoch
+		state.CurrentJustifiedCheckpoint.Epoch = prevEpoch
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block root for previous epoch %d: %v",
 				prevEpoch, err)
 		}
-		state.CurrentJustifiedRoot = blockRoot
+		state.CurrentJustifiedCheckpoint.Root = blockRoot
 		state.JustificationBits |= 2
 	}
 	if 3*currAttestedBal >= 2*totalBal {
-		state.CurrentJustifiedEpoch = currentEpoch
+		state.CurrentJustifiedCheckpoint.Epoch = currentEpoch
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block root for current epoch %d: %v",
 				prevEpoch, err)
 		}
-		state.CurrentJustifiedRoot = blockRoot
+		state.CurrentJustifiedCheckpoint.Root = blockRoot
 		state.JustificationBits |= 1
 	}
 	// Process finalization.
 	bitfield := state.JustificationBits
 	// When the 2nd, 3rd and 4th most recent epochs are all justified,
 	// 2nd epoch can finalize the 4th epoch as a source.
-	if oldPrevJustifiedEpoch+3 == currentEpoch && (bitfield>>1)%8 == 7 {
-		state.FinalizedEpoch = oldPrevJustifiedEpoch
-		state.FinalizedRoot = oldPrevJustifiedRoot
+	if oldPrevJustifiedCheckpoint.Epoch+3 == currentEpoch && (bitfield>>1)%8 == 7 {
+		state.FinalizedCheckpoint.Epoch = oldPrevJustifiedCheckpoint.Epoch
+		state.FinalizedCheckpoint.Root = oldPrevJustifiedCheckpoint.Root
 	}
 	// when 2nd and 3rd most recent epochs are all justified,
 	// 2nd epoch can finalize 3rd as a source.
-	if oldPrevJustifiedEpoch+2 == currentEpoch && (bitfield>>1)%4 == 3 {
-		state.FinalizedEpoch = oldPrevJustifiedEpoch
-		state.FinalizedRoot = oldPrevJustifiedRoot
+	if oldPrevJustifiedCheckpoint.Epoch+2 == currentEpoch && (bitfield>>1)%4 == 3 {
+		state.FinalizedCheckpoint.Epoch = oldPrevJustifiedCheckpoint.Epoch
+		state.FinalizedCheckpoint.Root = oldPrevJustifiedCheckpoint.Root
 	}
 	// when 1st, 2nd and 3rd most recent epochs are all justified,
 	// 1st epoch can finalize 3rd as a source.
-	if oldCurrJustifiedEpoch+2 == currentEpoch && (bitfield>>0)%8 == 7 {
-		state.FinalizedEpoch = oldCurrJustifiedEpoch
-		state.FinalizedRoot = oldCurrJustifiedRoot
+	if oldCurrJustifiedCheckpoint.Epoch+2 == currentEpoch && (bitfield>>0)%8 == 7 {
+		state.FinalizedCheckpoint.Epoch = oldCurrJustifiedCheckpoint.Epoch
+		state.FinalizedCheckpoint.Root = oldCurrJustifiedCheckpoint.Root
 	}
 	// when 1st, 2nd most recent epochs are all justified,
 	// 1st epoch can finalize 2nd as a source.
-	if oldCurrJustifiedEpoch+1 == currentEpoch && (bitfield>>0)%4 == 3 {
-		state.FinalizedEpoch = oldCurrJustifiedEpoch
-		state.FinalizedRoot = oldCurrJustifiedRoot
+	if oldCurrJustifiedCheckpoint.Epoch+1 == currentEpoch && (bitfield>>0)%4 == 3 {
+		state.FinalizedCheckpoint.Epoch = oldCurrJustifiedCheckpoint.Epoch
+		state.FinalizedCheckpoint.Root = oldCurrJustifiedCheckpoint.Root
 	}
 	return state, nil
 }
@@ -377,7 +374,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var activationQ []uint64
 	for idx, validator := range state.Validators {
 		eligibleActivated := validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch
-		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(state.FinalizedEpoch)
+		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(state.FinalizedCheckpoint.Epoch)
 		if eligibleActivated && canBeActive {
 			activationQ = append(activationQ, uint64(idx))
 		}
@@ -432,7 +429,7 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 
 	// Compute slashed balances in the current epoch
-	exitLength := params.BeaconConfig().SlashedExitLength
+	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	totalAtStart := state.Slashings[(currentEpoch+1)%exitLength]
 	totalAtEnd := state.Slashings[currentEpoch%exitLength]
 	totalPenalties := totalAtEnd - totalAtStart
@@ -525,7 +522,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set active index root.
 	activationDelay := params.BeaconConfig().ActivationExitDelay
-	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().ActiveIndexRootsLength
+	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
 	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active indices: %v", err)
@@ -537,17 +534,17 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
 	// Set total slashed balances.
-	slashedExitLength := params.BeaconConfig().SlashedExitLength
+	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	state.Slashings[nextEpoch%slashedExitLength] =
 		state.Slashings[currentEpoch%slashedExitLength]
 
 	// Set RANDAO mix.
-	randaoMixLength := params.BeaconConfig().RandaoMixesLength
+	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
 	mix := helpers.RandaoMix(state, currentEpoch)
 	state.RandaoMixes[nextEpoch%randaoMixLength] = mix
 
 	// Set historical root accumulator.
-	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
+	epochsPerHistoricalRoot := params.BeaconConfig().HistoricalRootsLimit / params.BeaconConfig().SlotsPerEpoch
 	if nextEpoch%epochsPerHistoricalRoot == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots,
@@ -851,7 +848,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	// Apply penalties for quadratic leaks.
 	// When epoch since finality exceeds inactivity penalty constant, the penalty gets increased
 	// based on the finality delay.
-	finalityDelay := prevEpoch - state.FinalizedEpoch
+	finalityDelay := prevEpoch - state.FinalizedCheckpoint.Epoch
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
 		targetIndices, err := unslashedAttestingIndices(state, atts.Target)
 		if err != nil {

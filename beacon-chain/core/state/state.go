@@ -44,14 +44,14 @@ import (
 //
 //    return state
 func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
-	latestRandaoMixes := make([][]byte, params.BeaconConfig().RandaoMixesLength)
+	latestRandaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 
-	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().ActiveIndexRootsLength)
+	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(latestActiveIndexRoots); i++ {
 		latestActiveIndexRoots[i] = zeroHash
 	}
@@ -63,12 +63,12 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		}
 	}
 
-	latestBlockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	latestBlockRoots := make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	for i := 0; i < len(latestBlockRoots); i++ {
 		latestBlockRoots[i] = zeroHash
 	}
 
-	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().SlashedExitLength)
+	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
 	if eth1Data == nil {
 		eth1Data = &pb.Eth1Data{}
@@ -93,20 +93,26 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		RandaoMixes: latestRandaoMixes,
 
 		// Finality.
-		PreviousJustifiedEpoch: 0,
-		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  0,
-		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBits:  0,
-		FinalizedEpoch:         0,
-		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		JustificationBits: 0,
+		FinalizedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
 
 		// Recent state.
 		CurrentCrosslinks:         crosslinks,
 		PreviousCrosslinks:        crosslinks,
 		ActiveIndexRoots:          latestActiveIndexRoots,
 		BlockRoots:                latestBlockRoots,
-		Slashings:           latestSlashedExitBalances,
+		Slashings:                 latestSlashedExitBalances,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 
@@ -134,7 +140,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 	for i := 0; i < len(state.Validators); i++ {
 		if state.Validators[i].EffectiveBalance >=
-			params.BeaconConfig().MaxDepositAmount {
+			params.BeaconConfig().MaxEffectiveBalance {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)
@@ -153,7 +159,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		indicesBytes = append(indicesBytes, buf...)
 	}
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
-	for i := uint64(0); i < params.BeaconConfig().ActiveIndexRootsLength; i++ {
+	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
 		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
 	}
 	return state, nil

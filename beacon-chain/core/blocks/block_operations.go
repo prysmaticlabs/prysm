@@ -196,7 +196,7 @@ func ProcessRandao(
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
-	latestMixesLength := params.BeaconConfig().RandaoMixesLength
+	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.RandaoMixes[currentEpoch%latestMixesLength]
 	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
@@ -551,14 +551,14 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	var ffgTargetEpoch uint64
 	var parentCrosslink *pb.Crosslink
 	if data.TargetEpoch == helpers.CurrentEpoch(beaconState) {
-		ffgSourceEpoch = beaconState.CurrentJustifiedEpoch
-		ffgSourceRoot = beaconState.CurrentJustifiedRoot
+		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint.Epoch
+		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.CurrentEpoch(beaconState)
 		parentCrosslink = beaconState.CurrentCrosslinks[data.Crosslink.Shard]
 		beaconState.CurrentEpochAttestations = append(beaconState.CurrentEpochAttestations, pendingAtt)
 	} else {
-		ffgSourceEpoch = beaconState.PreviousJustifiedEpoch
-		ffgSourceRoot = beaconState.PreviousJustifiedRoot
+		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint.Epoch
+		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.PrevEpoch(beaconState)
 		parentCrosslink = beaconState.PreviousCrosslinks[data.Crosslink.Shard]
 		beaconState.PreviousEpochAttestations = append(beaconState.PreviousEpochAttestations, pendingAtt)
@@ -784,8 +784,8 @@ func ProcessValidatorDeposits(
 	deposits := block.Body.Deposits
 	// Verify that outstanding deposits are processed up to the maximum number of deposits.
 	maxDeposits := beaconState.Eth1Data.DepositCount - beaconState.Eth1DepositIndex
-	if params.BeaconConfig().MaxDepositAmount < maxDeposits {
-		maxDeposits = params.BeaconConfig().MaxDepositAmount
+	if params.BeaconConfig().MaxEffectiveBalance < maxDeposits {
+		maxDeposits = params.BeaconConfig().MaxEffectiveBalance
 	}
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
 		return nil, fmt.Errorf(

@@ -82,7 +82,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	beaconState.LatestBlockHeader = &pbp2p.BeaconBlockHeader{
 		StateRoot: []byte{},
 	}
@@ -136,13 +136,16 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 
 	stateSlot := uint64(100)
 	beaconState := &pbp2p.BeaconState{
-		Slot:               stateSlot,
-		Validators:         validators,
-		CurrentCrosslinks:  crosslinks,
-		PreviousCrosslinks: crosslinks,
-		StartShard:         100,
-		RandaoMixes:        make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots:   make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		Slot:                        stateSlot,
+		Validators:                  validators,
+		CurrentCrosslinks:           crosslinks,
+		PreviousCrosslinks:          crosslinks,
+		StartShard:                  100,
+		RandaoMixes:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:            make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		FinalizedCheckpoint:         &pbp2p.Checkpoint{},
+		PreviousJustifiedCheckpoint: &pbp2p.Checkpoint{},
+		CurrentJustifiedCheckpoint:  &pbp2p.Checkpoint{},
 	}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.PreviousCrosslinks[0])
@@ -220,7 +223,6 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 			}},
 			{Data: &pbp2p.AttestationData{
 				TargetEpoch: 10,
-
 				SourceEpoch: expectedEpoch,
 				Crosslink:   &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
@@ -281,16 +283,20 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	}
 
 	beaconState := &pbp2p.BeaconState{
-		Validators:             validators,
-		Slot:                   currentSlot + params.BeaconConfig().MinAttestationInclusionDelay,
-		CurrentJustifiedEpoch:  expectedEpoch,
-		PreviousJustifiedEpoch: expectedEpoch,
+		Validators: validators,
+		Slot:       currentSlot + params.BeaconConfig().MinAttestationInclusionDelay,
+		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
+			Epoch: expectedEpoch,
+		},
+		PreviousJustifiedCheckpoint: &pbp2p.Checkpoint{
+			Epoch: expectedEpoch,
+		},
 		CurrentCrosslinks: []*pbp2p.Crosslink{{
 			StartEpoch: 9,
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		}},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -471,7 +477,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	}
 }
 
-func TestPendingDeposits_CantReturnBelowStateDepositIndex(t *testing.T) {
+func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))

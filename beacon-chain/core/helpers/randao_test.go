@@ -11,7 +11,7 @@ import (
 )
 
 func TestRandaoMix_OK(t *testing.T) {
-	randaoMixes := make([][]byte, params.BeaconConfig().RandaoMixesLength)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
@@ -32,7 +32,7 @@ func TestRandaoMix_OK(t *testing.T) {
 		},
 		{
 			epoch:     99999,
-			randaoMix: randaoMixes[99999%params.BeaconConfig().RandaoMixesLength],
+			randaoMix: randaoMixes[99999%params.BeaconConfig().EpochsPerHistoricalVector],
 		},
 	}
 	for _, test := range tests {
@@ -46,7 +46,9 @@ func TestRandaoMix_OK(t *testing.T) {
 }
 
 func TestRandaoMix_CopyOK(t *testing.T) {
-	randaoMixes := make([][]byte, params.BeaconConfig().RandaoMixesLength)
+	ClearAllCaches()
+
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
@@ -67,7 +69,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		},
 		{
 			epoch:     99999,
-			randaoMix: randaoMixes[99999%params.BeaconConfig().RandaoMixesLength],
+			randaoMix: randaoMixes[99999%params.BeaconConfig().EpochsPerHistoricalVector],
 		},
 	}
 	for _, test := range tests {
@@ -88,7 +90,8 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 }
 
 func TestActiveIndexRoot_OK(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().ActiveIndexRootsLength)
+
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
@@ -113,9 +116,9 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 		for i := 0; i <= int(params.BeaconConfig().ActivationExitDelay); i++ {
 			indexRoot := ActiveIndexRoot(state, test.epoch+uint64(i))
 
-			if !bytes.Equal(activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().ActiveIndexRootsLength], indexRoot) {
+			if !bytes.Equal(activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().EpochsPerHistoricalVector], indexRoot) {
 				t.Errorf("Incorrect index root. Wanted: %#x, got: %#x",
-					activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().ActiveIndexRootsLength], indexRoot)
+					activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().EpochsPerHistoricalVector], indexRoot)
 			}
 		}
 
@@ -123,7 +126,9 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 }
 
 func TestActiveIndexRoot_CopyOK(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().ActiveIndexRootsLength)
+	ClearAllCaches()
+
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
@@ -164,13 +169,13 @@ func TestActiveIndexRoot_CopyOK(t *testing.T) {
 func TestGenerateSeed_OK(t *testing.T) {
 	ClearAllCaches()
 
-	activeIndexRoots := make([][]byte, params.BeaconConfig().ActiveIndexRootsLength)
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
-	randaoMixes := make([][]byte, params.BeaconConfig().RandaoMixesLength)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
