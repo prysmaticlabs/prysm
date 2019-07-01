@@ -8,6 +8,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func TestShuffleList_InvalidValidatorCount(t *testing.T) {
+	maxShuffleListSize = 20
+	list := make([]uint64, 21)
+	if _, err := ShuffleList(list, [32]byte{123, 125}); err == nil {
+		t.Error("Shuffle should have failed when validator count exceeds ModuloBias")
+		maxShuffleListSize = 1 << 40
+	}
+	maxShuffleListSize = 1 << 40
+}
+
 func TestShuffleList_OK(t *testing.T) {
 	var list1 []uint64
 	seed1 := [32]byte{1, 128, 12}

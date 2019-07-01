@@ -16,6 +16,8 @@ const positionWindowSize = int8(4)
 const pivotViewSize = seedSize + roundSize
 const totalSize = seedSize + roundSize + positionWindowSize
 
+var maxShuffleListSize uint64 = 1 << 40
+
 // SplitIndices splits a list into n pieces.
 func SplitIndices(l []uint64, n uint64) [][]uint64 {
 	var divided [][]uint64
@@ -48,6 +50,7 @@ func UnShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, er
 //     Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
 //     """
 //     assert index < index_count
+//     assert index_count <= 2**40
 //     # Swap or not (https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf)
 //     # See the 'generalized domain' algorithm on page 3
 //     for round in range(SHUFFLE_ROUND_COUNT):
@@ -67,7 +70,10 @@ func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffle 
 		return 0, fmt.Errorf("input index %d out of bounds: %d",
 			index, indexCount)
 	}
-
+	if indexCount > maxShuffleListSize {
+		return 0, fmt.Errorf("list size %d out of bounds",
+			indexCount)
+	}
 	rounds := uint8(params.BeaconConfig().ShuffleRoundCount)
 	round := uint8(0)
 	if !shuffle {
@@ -160,7 +166,10 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 	if len(input) <= 1 {
 		return input, nil
 	}
-
+	if uint64(len(input)) > maxShuffleListSize {
+		return nil, fmt.Errorf("list size %d out of bounds",
+			len(input))
+	}
 	rounds := uint8(params.BeaconConfig().ShuffleRoundCount)
 	if rounds == 0 {
 		return input, nil
