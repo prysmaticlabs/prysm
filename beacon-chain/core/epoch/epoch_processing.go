@@ -181,8 +181,14 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint
 	oldCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint
 	state.PreviousJustifiedCheckpoint = state.CurrentJustifiedCheckpoint
-	state.JustificationBits = (state.JustificationBits << 1) % (1 << 63)
 	// Process justification.
+	if len(state.JustificationBits) != 1 {
+		return nil, errors.New("state justification bits is not exactly 1 byte")
+	}
+	// Note that the justification bits are type [4]BitVector. This means that
+	// the maximum value is 0b1111 for a uint8 field.
+	state.JustificationBits[0] <<= 1
+	state.JustificationBits[0] &= 0x0F // mask with 0b1111. This eliminates the first left most 4 bits.
 	if 3*prevAttestedBal >= 2*totalBal {
 		state.CurrentJustifiedCheckpoint.Epoch = prevEpoch
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
@@ -191,7 +197,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 				prevEpoch, err)
 		}
 		state.CurrentJustifiedCheckpoint.Root = blockRoot
-		state.JustificationBits |= 2
+		state.JustificationBits[0] |= 2
 	}
 	if 3*currAttestedBal >= 2*totalBal {
 		state.CurrentJustifiedCheckpoint.Epoch = currentEpoch
@@ -201,10 +207,10 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 				prevEpoch, err)
 		}
 		state.CurrentJustifiedCheckpoint.Root = blockRoot
-		state.JustificationBits |= 1
+		state.JustificationBits[0] |= 1
 	}
 	// Process finalization.
-	bitfield := state.JustificationBits
+	bitfield := state.JustificationBits[0]
 	// When the 2nd, 3rd and 4th most recent epochs are all justified,
 	// 2nd epoch can finalize the 4th epoch as a source.
 	if oldPrevJustifiedCheckpoint.Epoch+3 == currentEpoch && (bitfield>>1)%8 == 7 {
