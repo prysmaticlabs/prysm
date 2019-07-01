@@ -27,15 +27,6 @@ type MatchedAttestations struct {
 	head   []*pb.PendingAttestation
 }
 
-// CanProcessEpoch checks the eligibility to process epoch.
-// The epoch can be processed at the end of the last slot of every epoch
-//
-// Spec pseudocode definition:
-//    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-func CanProcessEpoch(state *pb.BeaconState) bool {
-	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
-}
-
 // MatchAttestations matches the attestations gathered in a span of an epoch
 // and categorize them whether they correctly voted for source, target and head.
 // We combined the individual helpers from spec for efficiency and to achieve O(N) run time.
@@ -841,8 +832,11 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 		}
-		rewards[a.ProposerIndex] += base / params.BeaconConfig().ProposerRewardQuotient
-		rewards[i] += base * params.BeaconConfig().MinAttestationInclusionDelay / a.InclusionDelay
+		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
+		maxAttesterReward := base - proposerReward
+		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+		attesterFactor := slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay
+		rewards[i] += maxAttesterReward * attesterFactor / slotsPerEpoch
 	}
 
 	// Apply penalties for quadratic leaks.

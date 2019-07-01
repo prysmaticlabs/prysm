@@ -240,11 +240,11 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 //    slash_validator(state, proposer_slashing.proposer_index)
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	body := block.Body
 	registry := beaconState.Validators
+
 	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
 		return nil, fmt.Errorf(
 			"number of proposer slashings (%d) exceeds allowed threshold of %d",
@@ -252,6 +252,7 @@ func ProcessProposerSlashings(
 			params.BeaconConfig().MaxProposerSlashings,
 		)
 	}
+
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
 		proposer := registry[slashing.ProposerIndex]
@@ -318,10 +319,9 @@ func verifyProposerSlashing(
 //    assert slashed_any
 func ProcessAttesterSlashings(
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	body := block.Body
 	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
 		return nil, fmt.Errorf(
 			"number of attester slashings (%d) exceeds allowed threshold of %d",
@@ -397,22 +397,15 @@ func slashableAttesterIndices(slashing *pb.AttesterSlashing) []uint64 {
 	return sliceutil.IntersectionUint64(indices1, indices2)
 }
 
-// ProcessBlockAttestations applies processing operations to a block's inner attestation
+// ProcessAttestations applies processing operations to a block's inner attestation
 // records. This function returns a list of pending attestations which can then be
 // appended to the BeaconState's latest attestations.
-func ProcessBlockAttestations(
+func ProcessAttestations(
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	atts := block.Body.Attestations
-	if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
-		return nil, fmt.Errorf(
-			"number of attestations in block (%d) exceeds allowed threshold of %d",
-			len(atts),
-			params.BeaconConfig().MaxAttestations,
-		)
-	}
+	atts := body.Attestations
 
 	var err error
 	for idx, attestation := range atts {
@@ -666,21 +659,20 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 	return nil
 }
 
-// ProcessValidatorDeposits is one of the operations performed on each processed
+// ProcessDeposits is one of the operations performed on each processed
 // beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
 // into the beacon chain.
 //
 // Spec pseudocode definition:
-//   Verify that len(block.body.deposits) <= MAX_DEPOSITS.
 //   For each deposit in block.body.deposits:
 //     process_deposit(state, deposit)
-func ProcessValidatorDeposits(
+func ProcessDeposits(
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
-	deposits := block.Body.Deposits
+	deposits := body.Deposits
 	// Verify that outstanding deposits are processed up to the maximum number of deposits.
 	maxDeposits := beaconState.Eth1Data.DepositCount - beaconState.Eth1DepositIndex
 	if params.BeaconConfig().MaxEffectiveBalance < maxDeposits {
@@ -812,7 +804,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 	return nil
 }
 
-// ProcessValidatorExits is one of the operations performed
+// ProcessVolundaryExits is one of the operations performed
 // on each processed beacon block to determine which validators
 // should exit the state's validator registry.
 //
@@ -835,13 +827,13 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 //    # Initiate exit
 //    initiate_validator_exit(state, exit.validator_index)
-func ProcessValidatorExits(
+func ProcessVolundaryExits(
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
-	exits := block.Body.VoluntaryExits
+	exits := body.VoluntaryExits
 	if uint64(len(exits)) > params.BeaconConfig().MaxVoluntaryExits {
 		return nil, fmt.Errorf(
 			"number of exits (%d) exceeds allowed threshold of %d",
@@ -928,10 +920,10 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 //    assert not (0 < state.balances[transfer.recipient] < MIN_DEPOSIT_AMOUNT)
 func ProcessTransfers(
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	transfers := block.Body.Transfers
+	transfers := body.Transfers
 	if uint64(len(transfers)) > params.BeaconConfig().MaxTransfers {
 		return nil, fmt.Errorf(
 			"number of transfers (%d) exceeds allowed threshold of %d",

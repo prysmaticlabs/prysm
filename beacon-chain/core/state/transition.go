@@ -15,6 +15,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -27,6 +28,7 @@ var log = logrus.WithField("prefix", "core/state")
 // verification on or off depending on when and where it is used.
 type TransitionConfig struct {
 	VerifySignatures bool
+	VerifyStateRoot  bool
 	Logging          bool
 }
 
@@ -39,11 +41,18 @@ func DefaultConfig() *TransitionConfig {
 }
 
 // ExecuteStateTransition defines the procedure for a state transition function.
+//
 // Spec pseudocode definition:
-//  We now define the state transition function. At a high level the state transition is made up of three parts:
-//  - The per-slot transitions focuses on increasing the slot number and recording recent block headers.
-//  - The per-epoch transitions focuses on the validator registry, adjusting balances, and finalizing slots.
-//  - The per-block transitions focuses on verifying block operations, verifying attestations, and signatures.
+//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
+//    # Process slots (including those with no blocks) since block
+//    process_slots(state, block.slot)
+//    # Process block
+//    process_block(state, block)
+//    # Validate state root (`validate_state_root == True` in production)
+//    if validate_state_root:
+//        assert block.state_root == hash_tree_root(state)
+//    # Return post-state
+//    return state
 func ExecuteStateTransition(
 	ctx context.Context,
 	state *pb.BeaconState,
@@ -53,10 +62,11 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.StateTransition")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()
 	var err error
-	// Execute per slot transition.
+
+	// Execute per slots transition.
 	state, err = ProcessSlots(ctx, state, block.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not process slot: %v", err)
@@ -70,7 +80,16 @@ func ExecuteStateTransition(
 		}
 	}
 
-	// TODO(#2307): Validate state root.
+	if config.VerifyStateRoot {
+		postStateRoot, err := ssz.HashTreeRoot(state)
+		if err != nil {
+			return nil, fmt.Errorf("could not tree hash processed state: %v", err)
+		}
+		if bytes.Equal(postStateRoot[:], block.StateRoot) {
+			return nil, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
+				postStateRoot[:], block.StateRoot)
+		}
+	}
 
 	return state, nil
 }
@@ -136,7 +155,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 		if err != nil {
 			return nil, fmt.Errorf("could not process slot: %v", err)
 		}
-		if e.CanProcessEpoch(state) {
+		if CanProcessEpoch(state) {
 			state, err = ProcessEpoch(ctx, state)
 			if err != nil {
 				return nil, fmt.Errorf("could not process epoch: %v", err)
@@ -150,6 +169,14 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 // ProcessBlock creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
 // processing block attestations, and more.
+//
+// Spec pseudocode definition:
+//
+//  def process_block(state: BeaconState, block: BeaconBlock) -> None:
+//    process_block_header(state, block)
+//    process_randao(state, block.body)
+//    process_eth1_data(state, block.body)
+//    process_operations(state, block.body)
 func ProcessBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
@@ -159,44 +186,24 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	// Process the block's header into the state.
 	state, err := b.ProcessBlockHeader(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block header: %v", err)
 	}
-	// Verify block RANDAO.
+
 	state, err = b.ProcessRandao(state, block.Body, config.VerifySignatures, config.Logging)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process randao: %v", err)
 	}
-	// Process ETH1 data.
+
 	state, err = b.ProcessEth1DataInBlock(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process eth1 data: %v", err)
 	}
-	state, err = b.ProcessAttesterSlashings(state, block, config.VerifySignatures)
+
+	state, err = ProcessOperations(ctx, state, block.Body, config)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
-	}
-	state, err = b.ProcessProposerSlashings(state, block, config.VerifySignatures)
-	if err != nil {
-		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
-	}
-	state, err = b.ProcessBlockAttestations(state, block, config.VerifySignatures)
-	if err != nil {
-		return nil, fmt.Errorf("could not process block attestations: %v", err)
-	}
-	state, err = b.ProcessValidatorDeposits(state, block, config.VerifySignatures)
-	if err != nil {
-		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
-	}
-	state, err = b.ProcessValidatorExits(state, block, config.VerifySignatures)
-	if err != nil {
-		return nil, fmt.Errorf("could not process validator exits: %v", err)
-	}
-	state, err = b.ProcessTransfers(state, block, config.VerifySignatures)
-	if err != nil {
-		return nil, fmt.Errorf("could not process block transfers: %v", err)
+		return nil, fmt.Errorf("could not process block operation: %v", err)
 	}
 
 	r, err := blockutil.BlockSigningRoot(block)
@@ -218,6 +225,95 @@ func ProcessBlock(
 	return state, nil
 }
 
+// ProcessOperations processes the operations in the beacon block and updates beacon state
+// with the operations in block.
+//
+// Spec pseudocode definition:
+//
+//  def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
+//    # Verify that outstanding deposits are processed up to the maximum number of deposits
+//    assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
+//    # Verify that there are no duplicate transfers
+//    assert len(body.transfers) == len(set(body.transfers))
+//
+//    all_operations = (
+//        (body.proposer_slashings, process_proposer_slashing),
+//        (body.attester_slashings, process_attester_slashing),
+//        (body.attestations, process_attestation),
+//        (body.deposits, process_deposit),
+//        (body.voluntary_exits, process_voluntary_exit),
+//        (body.transfers, process_transfer),
+//    )  # type: Sequence[Tuple[List, Callable]]
+//    for operations, function in all_operations:
+//        for operation in operations:
+//            function(state, operation)
+func ProcessOperations(
+	ctx context.Context,
+	state *pb.BeaconState,
+	body *pb.BeaconBlockBody,
+	config *TransitionConfig) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
+	defer span.End()
+
+	maxDeposits := params.BeaconConfig().MaxDeposits
+	if state.Eth1Data.DepositCount-state.Eth1DepositIndex < maxDeposits {
+		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
+	}
+	// Verify outstanding deposits are processed up to max number of deposits
+	if len(body.Deposits) != int(maxDeposits) {
+		return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
+			maxDeposits, len(body.Deposits))
+	}
+	// Verify that there are no duplicate transfers
+	transferSet := make(map[[32]byte]bool)
+	for _, transfer := range body.Transfers {
+		h, err := hashutil.HashProto(transfer)
+		if err != nil {
+			return nil, fmt.Errorf("could not hash transfer: %v", err)
+		}
+		if transferSet[h] {
+			return nil, fmt.Errorf("duplicate transfer: %v", transfer)
+		}
+		transferSet[h] = true
+	}
+
+	state, err := b.ProcessProposerSlashings(state, body, config.VerifySignatures)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
+	}
+	state, err = b.ProcessAttesterSlashings(state, body, config.VerifySignatures)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
+	}
+	state, err = b.ProcessAttestations(state, body, config.VerifySignatures)
+	if err != nil {
+		return nil, fmt.Errorf("could not process block attestations: %v", err)
+	}
+	state, err = b.ProcessDeposits(state, body, config.VerifySignatures)
+	if err != nil {
+		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
+	}
+	state, err = b.ProcessVolundaryExits(state, body, config.VerifySignatures)
+	if err != nil {
+		return nil, fmt.Errorf("could not process validator exits: %v", err)
+	}
+	state, err = b.ProcessTransfers(state, body, config.VerifySignatures)
+	if err != nil {
+		return nil, fmt.Errorf("could not process block transfers: %v", err)
+	}
+
+	return state, nil
+}
+
+// CanProcessEpoch checks the eligibility to process epoch.
+// The epoch can be processed at the end of the last slot of every epoch
+//
+// Spec pseudocode definition:
+//    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+func CanProcessEpoch(state *pb.BeaconState) bool {
+	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
+}
+
 // ProcessEpoch describes the per epoch operations that are performed on the
 // beacon state. It focuses on the validator registry, adjusting balances, and finalizing slots.
 //
@@ -228,8 +324,11 @@ func ProcessBlock(
 //    process_crosslinks(state)
 //    process_rewards_and_penalties(state)
 //    process_registry_updates(state)
+//    # @process_reveal_deadlines
+//    # @process_challenge_deadlines
 //    process_slashings(state)
 //    process_final_updates(state)
+//    # @after_process_final_updates
 func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
