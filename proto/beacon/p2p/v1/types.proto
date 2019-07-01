@@ -43,14 +43,6 @@ message BeaconState {
   Eth1Data eth1_data = 6001;
   repeated Eth1Data eth1_data_votes = 6002;
   uint64 eth1_deposit_index = 6003;
-
-  // Deprecated [10001-20000]
-  uint64 previous_justified_epoch = 10001;
-  uint64 current_justified_epoch = 10002;
-  bytes previous_justified_root = 10003 [(gogoproto.moretags) = "ssz:\"size=8192\""];
-  bytes current_justified_root = 10004 [(gogoproto.moretags) = "ssz:\"size=8192\""];
-  uint64 finalized_epoch = 10005;
-  bytes finalized_root = 10006 [(gogoproto.moretags) = "ssz:\"size=32\""];
 }
 
 message Fork {

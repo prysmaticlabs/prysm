@@ -103,13 +103,13 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Finality fields checks.
-	if newState.PreviousJustifiedEpoch != genesisEpochNumber {
-		t.Error("PreviousJustifiedEpoch was not correctly initialized")
+	if newState.PreviousJustifiedCheckpoint.Epoch != genesisEpochNumber {
+		t.Error("PreviousJustifiedCheckpoint.Epoch was not correctly initialized")
 	}
-	if newState.CurrentJustifiedEpoch != genesisEpochNumber {
+	if newState.CurrentJustifiedCheckpoint.Epoch != genesisEpochNumber {
 		t.Error("JustifiedEpoch was not correctly initialized")
 	}
-	if newState.FinalizedEpoch != genesisEpochNumber {
+	if newState.FinalizedCheckpoint.Epoch != genesisEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
 	if newState.JustificationBits != 0 {

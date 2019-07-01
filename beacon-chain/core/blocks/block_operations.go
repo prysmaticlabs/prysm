@@ -510,14 +510,14 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	var ffgTargetEpoch uint64
 	var parentCrosslink *pb.Crosslink
 	if data.TargetEpoch == helpers.CurrentEpoch(beaconState) {
-		ffgSourceEpoch = beaconState.CurrentJustifiedEpoch
-		ffgSourceRoot = beaconState.CurrentJustifiedRoot
+		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint.Epoch
+		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.CurrentEpoch(beaconState)
 		parentCrosslink = beaconState.CurrentCrosslinks[data.Crosslink.Shard]
 		beaconState.CurrentEpochAttestations = append(beaconState.CurrentEpochAttestations, pendingAtt)
 	} else {
-		ffgSourceEpoch = beaconState.PreviousJustifiedEpoch
-		ffgSourceRoot = beaconState.PreviousJustifiedRoot
+		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint.Epoch
+		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.PrevEpoch(beaconState)
 		parentCrosslink = beaconState.PreviousCrosslinks[data.Crosslink.Shard]
 		beaconState.PreviousEpochAttestations = append(beaconState.PreviousEpochAttestations, pendingAtt)

@@ -347,7 +347,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -475,7 +475,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			StartEpoch: helpers.SlotToEpoch(beaconState.Slot),
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -562,7 +562,9 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 		RandaoMixes:              make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks:        crosslinks,
-		CurrentEpochAttestations: atts})
+		CurrentEpochAttestations: atts,
+		FinalizedCheckpoint:      &pb.Checkpoint{},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -691,14 +693,16 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 
 	s := &pb.BeaconState{
-		Slot:                 20,
-		BlockRoots:           make([][]byte, 254),
-		RandaoMixes:          randaoMixes,
-		Validators:           validators,
-		Balances:             validatorBalances,
-		Slashings:            make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		ActiveIndexRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentJustifiedRoot: []byte("hello-world"),
+		Slot:             20,
+		BlockRoots:       make([][]byte, 254),
+		RandaoMixes:      randaoMixes,
+		Validators:       validators,
+		Balances:         validatorBalances,
+		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CurrentJustifiedCheckpoint: &pb.Checkpoint{
+			Root: []byte("hello-world"),
+		},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
