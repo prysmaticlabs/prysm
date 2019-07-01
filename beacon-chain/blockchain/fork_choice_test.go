@@ -63,7 +63,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		// Higher slot, different state, but higher last finalized slot.
 		{
 			blockSlot: 64,
-			state:     &pb.BeaconState{FinalizedEpoch: 2},
+			state:     &pb.BeaconState{FinalizedCheckpoint: &pb.Checkpoint{Epoch: 2}},
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, same last finalized slot,
@@ -71,8 +71,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		{
 			blockSlot: 64,
 			state: &pb.BeaconState{
-				FinalizedEpoch:        0,
-				CurrentJustifiedEpoch: 2,
+				FinalizedCheckpoint:        &pb.Checkpoint{Epoch: 0},
+				CurrentJustifiedCheckpoint: &pb.Checkpoint{Epoch: 2},
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -1292,9 +1292,9 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 
 	// New justified slot in state is at slot 64.
 	offset := uint64(64)
-	gState.CurrentJustifiedEpoch = 1
+	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.CurrentJustifiedEpoch, privKeys)
+	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.CurrentJustifiedCheckpoint.Epoch, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
@@ -1370,9 +1370,9 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gState.FinalizedEpoch = 1
+	gState.FinalizedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.FinalizedEpoch, privKeys)
+	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.FinalizedCheckpoint.Epoch, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
@@ -1445,7 +1445,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	// New justified slot in state is at slot 64, but it's a skip slot...
 	offset := uint64(64)
 	lastAvailableSlot := uint64(60)
-	gState.CurrentJustifiedEpoch = 1
+	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
 	epochSignature, err := helpers.CreateRandaoReveal(gState, 0, privKeys)
 	if err != nil {
@@ -1541,7 +1541,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		RandaoMixes:       latestRandaoMixes,
 		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
-		Slashings:   make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:         make([]uint64, params.BeaconConfig().SlashedExitLength),
 		CurrentCrosslinks: crosslinks,
 		Validators:        validatorRegistry,
 		Balances:          validatorBalances,
@@ -1550,7 +1550,10 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
-		LatestBlockHeader: gHeader,
+		LatestBlockHeader:           gHeader,
+		CurrentJustifiedCheckpoint:  &pb.Checkpoint{},
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{},
+		FinalizedCheckpoint:         &pb.Checkpoint{},
 	}
 	return gBlockRoot, gBlock, gState, privKeys
 }

@@ -612,7 +612,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		Validators:       validators,
 		Slot:             currentSlot,
 		Balances:         validatorBalances,
-		Slashings:  make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:        make([]uint64, params.BeaconConfig().SlashedExitLength),
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
@@ -866,7 +866,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		Slot:             currentSlot,
 		Balances:         validatorBalances,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		Slashings:  make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:        make([]uint64, params.BeaconConfig().SlashedExitLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
 	block := &pb.BeaconBlock{
@@ -1036,7 +1036,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1057,7 +1057,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
-		beaconState.CurrentJustifiedRoot,
+		beaconState.CurrentJustifiedCheckpoint.Root,
 		attestations[0].Data.SourceRoot,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
@@ -1099,7 +1099,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	beaconState.PreviousJustifiedRoot = []byte("hello-world")
+	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
@@ -1120,7 +1120,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
-		beaconState.PreviousJustifiedRoot,
+		beaconState.PreviousJustifiedCheckpoint.Root,
 		attestations[0].Data.SourceRoot,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
@@ -1164,7 +1164,7 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := "mismatched parent crosslink root"
@@ -1236,7 +1236,7 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedRoot = []byte("hello-world")
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -1955,7 +1955,7 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 		Slot:             0,
 		Balances:         validatorBalances,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		Slashings:  make([]uint64, params.BeaconConfig().SlashedExitLength),
+		Slashings:        make([]uint64, params.BeaconConfig().SlashedExitLength),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
 	}
 	transfers := []*pb.Transfer{

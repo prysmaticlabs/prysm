@@ -211,7 +211,7 @@ func (c *ChainService) AdvanceState(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	finalizedEpoch := beaconState.FinalizedEpoch
+	finalizedEpoch := beaconState.FinalizedCheckpoint.Epoch
 	newState, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
@@ -225,7 +225,7 @@ func (c *ChainService) AdvanceState(
 		return beaconState, &BlockFailedProcessingErr{err}
 	}
 	// Prune the block cache and helper caches on every new finalized epoch.
-	if newState.FinalizedEpoch > finalizedEpoch {
+	if newState.FinalizedCheckpoint.Epoch > finalizedEpoch {
 		helpers.ClearAllCaches()
 		c.beaconDB.ClearBlockCache()
 	}

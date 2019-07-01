@@ -42,7 +42,7 @@ type TargetsFetcher interface {
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
 func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconState) error {
-	lastJustifiedSlot := helpers.StartSlot(state.CurrentJustifiedEpoch)
+	lastJustifiedSlot := helpers.StartSlot(state.CurrentJustifiedCheckpoint.Epoch)
 	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		}
 	}
 
-	lastFinalizedSlot := helpers.StartSlot(state.FinalizedEpoch)
+	lastFinalizedSlot := helpers.StartSlot(state.FinalizedCheckpoint.Epoch)
 	savedFinalizedBlock, err := c.beaconDB.FinalizedBlock()
 	// If the last processed finalized slot in state is greater than
 	// the slot of finalized block saved in DB.
