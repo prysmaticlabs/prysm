@@ -33,7 +33,7 @@ type SanitySlotsTest struct {
 			} `json:"validator_registry"`
 			Balances                  []uint64      `json:"balances"`
 			RandaoMixes               [][]byte      `json:"latest_randao_mixes"`
-			LatestStartShard          uint64        `json:"latest_start_shard"`
+			StartShard                uint64        `json:"latest_start_shard"`
 			PreviousEpochAttestations []interface{} `json:"previous_epoch_attestations"`
 			CurrentEpochAttestations  []interface{} `json:"current_epoch_attestations"`
 			PreviousJustifiedEpoch    uint64        `json:"previous_justified_epoch"`
@@ -57,8 +57,8 @@ type SanitySlotsTest struct {
 				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
 				DataRoot   []byte `json:"data_root" ssz:"size=32"`
 			} `json:"previous_crosslinks"`
-			LatestBlockRoots  [][]byte `json:"latest_block_roots"`
-			LatestStateRoots  [][]byte `json:"latest_state_roots"`
+			BlockRoots        [][]byte `json:"latest_block_roots"`
+			StateRoots        [][]byte `json:"latest_state_roots"`
 			ActiveIndexRoots  [][]byte `json:"latest_active_index_roots"`
 			Slashings         []uint64 `json:"latest_slashed_balances"`
 			LatestBlockHeader struct {
@@ -74,8 +74,8 @@ type SanitySlotsTest struct {
 				DepositCount uint64 `json:"deposit_count"`
 				BlockHash    []byte `json:"block_hash" ssz:"size=32"`
 			} `json:"latest_eth1_data"`
-			Eth1DataVotes []interface{} `json:"eth1_data_votes"`
-			DepositIndex  uint64        `json:"deposit_index"`
+			Eth1DataVotes    []interface{} `json:"eth1_data_votes"`
+			Eth1DepositIndex uint64        `json:"deposit_index"`
 		} `json:"pre"`
 		Slots uint64 `json:"slots"`
 		Post  struct {
@@ -98,7 +98,7 @@ type SanitySlotsTest struct {
 			} `json:"validator_registry"`
 			Balances                  []uint64      `json:"balances"`
 			RandaoMixes               [][]byte      `json:"latest_randao_mixes"`
-			LatestStartShard          uint64        `json:"latest_start_shard"`
+			StartShard                uint64        `json:"latest_start_shard"`
 			PreviousEpochAttestations []interface{} `json:"previous_epoch_attestations"`
 			CurrentEpochAttestations  []interface{} `json:"current_epoch_attestations"`
 			PreviousJustifiedEpoch    uint64        `json:"previous_justified_epoch"`
@@ -122,8 +122,8 @@ type SanitySlotsTest struct {
 				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
 				DataRoot   []byte `json:"data_root" ssz:"size=32"`
 			} `json:"previous_crosslinks"`
-			LatestBlockRoots  [][]byte `json:"latest_block_roots"`
-			LatestStateRoots  [][]byte `json:"latest_state_roots"`
+			BlockRoots        [][]byte `json:"latest_block_roots"`
+			StateRoots        [][]byte `json:"latest_state_roots"`
 			ActiveIndexRoots  [][]byte `json:"latest_active_index_roots"`
 			Slashings         []uint64 `json:"latest_slashed_balances"`
 			LatestBlockHeader struct {
@@ -139,8 +139,8 @@ type SanitySlotsTest struct {
 				DepositCount uint64 `json:"deposit_count"`
 				BlockHash    []byte `json:"block_hash" ssz:"size=32"`
 			} `json:"latest_eth1_data"`
-			Eth1DataVotes []interface{} `json:"eth1_data_votes"`
-			DepositIndex  uint64        `json:"deposit_index"`
+			Eth1DataVotes    []interface{} `json:"eth1_data_votes"`
+			Eth1DepositIndex uint64        `json:"deposit_index"`
 		} `json:"post"`
 	} `json:"test_cases"`
 }

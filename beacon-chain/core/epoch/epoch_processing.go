@@ -429,7 +429,7 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 
 	// Compute slashed balances in the current epoch
-	exitLength := params.BeaconConfig().SlashedExitLength
+	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	totalAtStart := state.Slashings[(currentEpoch+1)%exitLength]
 	totalAtEnd := state.Slashings[currentEpoch%exitLength]
 	totalPenalties := totalAtEnd - totalAtStart
@@ -522,7 +522,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set active index root.
 	activationDelay := params.BeaconConfig().ActivationExitDelay
-	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().ActiveIndexRootsLength
+	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
 	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active indices: %v", err)
@@ -534,17 +534,17 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
 	// Set total slashed balances.
-	slashedExitLength := params.BeaconConfig().SlashedExitLength
+	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	state.Slashings[nextEpoch%slashedExitLength] =
 		state.Slashings[currentEpoch%slashedExitLength]
 
 	// Set RANDAO mix.
-	randaoMixLength := params.BeaconConfig().RandaoMixesLength
+	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
 	mix := helpers.RandaoMix(state, currentEpoch)
 	state.RandaoMixes[nextEpoch%randaoMixLength] = mix
 
 	// Set historical root accumulator.
-	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
+	epochsPerHistoricalRoot := params.BeaconConfig().HistoricalRootsLimit / params.BeaconConfig().SlotsPerEpoch
 	if nextEpoch%epochsPerHistoricalRoot == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots,

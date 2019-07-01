@@ -38,18 +38,18 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("ZeroHash should be all 0s for these tests to pass")
 	}
 
-	if params.BeaconConfig().RandaoMixesLength != 8192 {
-		t.Error("RandaoMixesLength should be 8192 for these tests to pass")
+	if params.BeaconConfig().EpochsPerHistoricalVector != 65536 {
+		t.Error("EpochsPerHistoricalVector should be 8192 for these tests to pass")
 	}
-	latestRandaoMixesLength := int(params.BeaconConfig().RandaoMixesLength)
+	latestRandaoMixesLength := int(params.BeaconConfig().EpochsPerHistoricalVector)
 
 	if params.BeaconConfig().ShardCount != 1024 {
 		t.Error("ShardCount should be 1024 for these tests to pass")
 	}
 	shardCount := int(params.BeaconConfig().ShardCount)
 
-	if params.BeaconConfig().SlotsPerHistoricalRoot != 8192 {
-		t.Error("SlotsPerHistoricalRoot should be 8192 for these tests to pass")
+	if params.BeaconConfig().HistoricalRootsLimit != 8192 {
+		t.Error("HistoricalRootsLimit should be 8192 for these tests to pass")
 	}
 
 	if params.BeaconConfig().DepositsForChainStart != 16384 {
@@ -57,8 +57,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	depositsForChainStart := int(params.BeaconConfig().DepositsForChainStart)
 
-	if params.BeaconConfig().SlashedExitLength != 8192 {
-		t.Error("slashed exit length should be 8192 for these tests to pass")
+	if params.BeaconConfig().EpochsPerSlashingsVector != 8192 {
+		t.Error("EpochsPerSlashingsVector should be 8192 for these tests to pass")
 	}
 
 	genesisTime := uint64(99999)
@@ -123,7 +123,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.PreviousCrosslinks) != shardCount {
 		t.Error("Length of PreviousCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.Slashings, make([]uint64, params.BeaconConfig().SlashedExitLength)) {
+	if !reflect.DeepEqual(newState.Slashings, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)) {
 		t.Error("Slashings was not correctly initialized")
 	}
 	if !reflect.DeepEqual(newState.CurrentEpochAttestations, []*pb.PendingAttestation{}) {
@@ -180,7 +180,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	s, _ := state.GenesisBeaconState(nil, 0, nil)
-	want, got := len(s.BlockRoots), int(params.BeaconConfig().SlotsPerHistoricalRoot)
+	want, got := len(s.BlockRoots), int(params.BeaconConfig().HistoricalRootsLimit)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}

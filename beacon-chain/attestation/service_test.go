@@ -40,8 +40,8 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Slot:             1,
 		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	block := &pb.BeaconBlock{
 		Slot: 1,
@@ -76,8 +76,8 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	beaconState = &pb.BeaconState{
 		Slot:             36,
 		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -228,8 +228,8 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot:             1,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators:       validators,
 	}
 	block := &pb.BeaconBlock{
@@ -330,8 +330,8 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot:             1,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().RandaoMixesLength),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().ActiveIndexRootsLength),
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators:       validators,
 	}
 	block := &pb.BeaconBlock{

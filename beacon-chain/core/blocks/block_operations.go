@@ -177,7 +177,7 @@ func ProcessRandao(
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
-	latestMixesLength := params.BeaconConfig().RandaoMixesLength
+	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.RandaoMixes[currentEpoch%latestMixesLength]
 	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
@@ -683,8 +683,8 @@ func ProcessValidatorDeposits(
 	deposits := block.Body.Deposits
 	// Verify that outstanding deposits are processed up to the maximum number of deposits.
 	maxDeposits := beaconState.Eth1Data.DepositCount - beaconState.Eth1DepositIndex
-	if params.BeaconConfig().MaxDepositAmount < maxDeposits {
-		maxDeposits = params.BeaconConfig().MaxDepositAmount
+	if params.BeaconConfig().MaxEffectiveBalance < maxDeposits {
+		maxDeposits = params.BeaconConfig().MaxEffectiveBalance
 	}
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
 		return nil, fmt.Errorf(
