@@ -188,8 +188,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	// Note that the justification bits are type [4]BitVector. This means that
 	// the maximum value is 0b1111 for a uint8 field.
 	state.JustificationBits[0] <<= 1
-	state.JustificationBits[0] &= 0x0F // 0b1111
-	//state.JustificationBits = []byte{(state.JustificationBits[0] << 1)}
+	state.JustificationBits[0] &= 0x0F // mask with 0b1111. This eliminates the first left most 4 bits.
 	if 3*prevAttestedBal >= 2*totalBal {
 		state.CurrentJustifiedCheckpoint.Epoch = prevEpoch
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
