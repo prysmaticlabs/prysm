@@ -51,3 +51,12 @@ func ClosestPowerOf2(n uint64) uint64 {
 	exponent := math.Floor(math.Log2(float64(n)))
 	return PowerOf2(uint64(exponent))
 }
+
+// MaxOfTwoValues returns the largest integer of the two
+// given ones.
+func MaxOfTwoValues(a uint64, b uint64) uint64 {
+	if a > b {
+		return a
+	}
+	return b
+}

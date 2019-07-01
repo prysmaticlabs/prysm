@@ -181,6 +181,9 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 		return nil, fmt.Errorf("could not initiate validator exit %v", err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
+	validator := state.Validators[slashedIdx]
+	validator.Slashed = true
+
 	state.Validators[slashedIdx].Slashed = true
 	state.Validators[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().EpochsPerSlashingsVector
 	slashedBalance := state.Validators[slashedIdx].EffectiveBalance

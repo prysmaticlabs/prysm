@@ -164,3 +164,42 @@ func TestClosestPowerOf2(t *testing.T) {
 		}
 	}
 }
+
+func TestMaxValue(t *testing.T) {
+	tests := []struct {
+		a      uint64
+		b      uint64
+		result uint64
+	}{
+		{
+			a:      10,
+			b:      8,
+			result: 10,
+		},
+		{
+			a:      300,
+			b:      256,
+			result: 300,
+		},
+		{
+			a:      1200,
+			b:      1024,
+			result: 1200,
+		},
+		{
+			a:      4500,
+			b:      4096,
+			result: 4500,
+		},
+		{
+			a:      9999,
+			b:      9999,
+			result: 9999,
+		},
+	}
+	for _, tt := range tests {
+		if tt.result != MaxOfTwoValues(tt.a, tt.b) {
+			t.Fatalf("MaxOfTwoValues(%d) = %d, wanted: %d", tt.a, ClosestPowerOf2(tt.a), tt.result)
+		}
+	}
+}
