@@ -77,7 +77,7 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(productionConfig)
 }
 
-func TestShardDelta_OK(t *testing.T) {
+func TestShardDelta_Ok(t *testing.T) {
 	minShardDelta := params.BeaconConfig().ShardCount -
 		params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
 	tests := []struct {
@@ -472,7 +472,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	}
 }
 
-func TestShardDelta_Ok(t *testing.T) {
+func TestShardDelta_OK(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	min := params.BeaconConfig().ShardCount - params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
 	tests := []struct {
@@ -544,6 +544,61 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 		if test.startShard != startShard {
 			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
 		}
+	}
+}
+
+func TestEpochStartShard_MixedActivationValidatorRegistry(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	tests := []struct {
+		validatorCount uint64
+		startShard     uint64
+	}{
+		{0 * validatorsPerEpoch, 960},
+		{1 * validatorsPerEpoch, 960},
+		{2 * validatorsPerEpoch, 960},
+		{3 * validatorsPerEpoch, 960},
+		{4 * validatorsPerEpoch, 896},
+	}
+	for _, test := range tests {
+		ClearAllCaches()
+		vs := make([]*pb.Validator, test.validatorCount)
+		// Build validator list with the following ratio:
+		// 10% activated in epoch 0
+		// 20% activated in epoch 1
+		// 40% activated in epoch 2
+		// 30% activated in epoch 3
+		// The validator set is broken up in buckets like this such that the
+		// shard delta between epochs will be different and we can test the
+		// inner logic of determining the start shard.
+		for i := uint64(1); i <= test.validatorCount; i++ {
+			// Determine activation bucket
+			bkt := i % 10
+			activationEpoch := uint64(0) // zeroth epoch 10%
+			if bkt > 2 && bkt <= 4 {     // first epoch 20%
+				activationEpoch = 1
+			} else if bkt > 4 && bkt <= 7 { // second epoch 40%
+				activationEpoch = 2
+			} else { // Remaining 30% in the third epoch.
+				activationEpoch = 3
+			}
+
+			vs[i-1] = &pb.Validator{
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+				ActivationEpoch: activationEpoch,
+			}
+		}
+		s := &pb.BeaconState{
+			ValidatorRegistry: vs,
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 3,
+		}
+		startShard, err := EpochStartShard(s, 2 /*epoch*/)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.startShard != startShard {
+			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
+		}
+
 	}
 }
 
