@@ -67,9 +67,9 @@ message Attestation {
   // Bitfield representation of validator indices that have voted exactly
   // the same vote and have been aggregated into this attestation.
   // Spec type: Bitlist[4096]
-  bytes aggregation_bits = 2; // [(gogoproto.moretags) = "ssz:\"size=4096\""];
+  bytes aggregation_bits = 2;
   // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data. Not used in phase 0.
-  bytes custody_bits = 3; // [(gogoproto.moretags) = "ssz:\"size=4096\""];
+  bytes custody_bits = 3;
   // 96 byte BLS aggregate signature.
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
