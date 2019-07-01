@@ -48,7 +48,7 @@ type BeaconState struct {
 	HistoricalRoots             [][]byte              `protobuf:"bytes,5008,rep,name=historical_roots,json=historicalRoots,proto3" json:"historical_roots,omitempty" ssz:"size=?,32"`
 	Eth1Data                    *Eth1Data             `protobuf:"bytes,6001,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
 	Eth1DataVotes               []*Eth1Data           `protobuf:"bytes,6002,rep,name=eth1_data_votes,json=eth1DataVotes,proto3" json:"eth1_data_votes,omitempty"`
-	Eth1Eth1DepositIndex        uint64                `protobuf:"varint,6003,opt,name=eth1_deposit_index,json=eth1Eth1DepositIndex,proto3" json:"eth1_deposit_index,omitempty"`
+	Eth1DepositIndex            uint64                `protobuf:"varint,6003,opt,name=eth1_deposit_index,json=eth1DepositIndex,proto3" json:"eth1_deposit_index,omitempty"`
 	PreviousJustifiedEpoch      uint64                `protobuf:"varint,10001,opt,name=previous_justified_epoch,json=previousJustifiedEpoch,proto3" json:"previous_justified_epoch,omitempty"`
 	CurrentJustifiedEpoch       uint64                `protobuf:"varint,10002,opt,name=current_justified_epoch,json=currentJustifiedEpoch,proto3" json:"current_justified_epoch,omitempty"`
 	PreviousJustifiedRoot       []byte                `protobuf:"bytes,10003,opt,name=previous_justified_root,json=previousJustifiedRoot,proto3" json:"previous_justified_root,omitempty" ssz:"size=8192"`
@@ -261,9 +261,9 @@ func (m *BeaconState) GetEth1DataVotes() []*Eth1Data {
 	return nil
 }
 
-func (m *BeaconState) GetEth1Eth1DepositIndex() uint64 {
+func (m *BeaconState) GetEth1DepositIndex() uint64 {
 	if m != nil {
-		return m.Eth1Eth1DepositIndex
+		return m.Eth1DepositIndex
 	}
 	return 0
 }
@@ -2525,14 +2525,14 @@ func (m *BeaconState) MarshalTo(dAtA []byte) (int, error) {
 			i += n
 		}
 	}
-	if m.Eth1Eth1DepositIndex != 0 {
+	if m.Eth1DepositIndex != 0 {
 		dAtA[i] = 0x98
 		i++
 		dAtA[i] = 0xf7
 		i++
 		dAtA[i] = 0x2
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(m.Eth1Eth1DepositIndex))
+		i = encodeVarintTypes(dAtA, i, uint64(m.Eth1DepositIndex))
 	}
 	if m.PreviousJustifiedEpoch != 0 {
 		dAtA[i] = 0x88
@@ -3954,8 +3954,8 @@ func (m *BeaconState) Size() (n int) {
 			n += 3 + l + sovTypes(uint64(l))
 		}
 	}
-	if m.Eth1Eth1DepositIndex != 0 {
-		n += 3 + sovTypes(uint64(m.Eth1Eth1DepositIndex))
+	if m.Eth1DepositIndex != 0 {
+		n += 3 + sovTypes(uint64(m.Eth1DepositIndex))
 	}
 	if m.PreviousJustifiedEpoch != 0 {
 		n += 3 + sovTypes(uint64(m.PreviousJustifiedEpoch))
@@ -5542,9 +5542,9 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 6003:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Eth1Eth1DepositIndex", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Eth1DepositIndex", wireType)
 			}
-			m.Eth1Eth1DepositIndex = 0
+			m.Eth1DepositIndex = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowTypes
@@ -5554,7 +5554,7 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Eth1Eth1DepositIndex |= uint64(b&0x7F) << shift
+				m.Eth1DepositIndex |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}

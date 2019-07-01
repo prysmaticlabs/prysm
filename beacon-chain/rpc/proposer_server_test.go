@@ -367,7 +367,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
-		Eth1Eth1DepositIndex: 2,
+		Eth1DepositIndex: 2,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -483,7 +483,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
-		Eth1Eth1DepositIndex: 10,
+		Eth1DepositIndex: 10,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -584,7 +584,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		Eth1Data: &pbp2p.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
-		Eth1Eth1DepositIndex: 2,
+		Eth1DepositIndex: 2,
 	}
 	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)

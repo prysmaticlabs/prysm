@@ -682,7 +682,7 @@ func ProcessValidatorDeposits(
 	var err error
 	deposits := block.Body.Deposits
 	// Verify that outstanding deposits are processed up to the maximum number of deposits.
-	maxDeposits := beaconState.Eth1Data.DepositCount - beaconState.Eth1Eth1DepositIndex
+	maxDeposits := beaconState.Eth1Data.DepositCount - beaconState.Eth1DepositIndex
 	if params.BeaconConfig().MaxEffectiveBalance < maxDeposits {
 		maxDeposits = params.BeaconConfig().MaxEffectiveBalance
 	}
@@ -759,7 +759,7 @@ func ProcessDeposit(
 	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
 		return nil, fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
 	}
-	beaconState.Eth1Eth1DepositIndex++
+	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.Pubkey
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
@@ -799,7 +799,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 		if ok := trieutil.VerifyMerkleProof(
 			receiptRoot,
 			leaf[:],
-			int(beaconState.Eth1Eth1DepositIndex),
+			int(beaconState.Eth1DepositIndex),
 			deposit.Proof,
 		); !ok {
 			return fmt.Errorf(

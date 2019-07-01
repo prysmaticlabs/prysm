@@ -113,7 +113,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		// Eth1 data.
 		Eth1Data:             eth1Data,
 		Eth1DataVotes:        []*pb.Eth1Data{},
-		Eth1Eth1DepositIndex: 0,
+		Eth1DepositIndex: 0,
 	}
 
 	// Process initial deposits.

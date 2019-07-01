@@ -1364,7 +1364,7 @@ func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 		Eth1Data: &pb.Eth1Data{
 			DepositCount: params.BeaconConfig().MaxDeposits,
 		},
-		Eth1Eth1DepositIndex: 0,
+		Eth1DepositIndex: 0,
 	}
 	want := "exceeds allowed threshold"
 	if _, err := blocks.ProcessValidatorDeposits(
