@@ -57,6 +57,7 @@ var appFlags = []cli.Flag{
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
 	cmd.LogFileName,
+	cmd.EnableUPnPFlag,
 }
 
 func init() {

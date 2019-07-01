@@ -32,6 +32,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["simulated_backend_test.go"],
     embed = [":go_default_library"],
     deps = [

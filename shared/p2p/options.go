@@ -28,13 +28,19 @@ func buildOptions(cfg *ServerConfig) []libp2p.Option {
 		log.Errorf("Failed to p2p listen: %v", err)
 	}
 
-	return []libp2p.Option{
+	options := []libp2p.Option{
 		libp2p.ListenAddrs(listen),
 		libp2p.EnableRelay(), // Allows dialing to peers via relay.
 		optionConnectionManager(cfg.MaxPeers),
 		whitelistSubnet(cfg.WhitelistCIDR),
 		privKey(cfg.PrvKey),
 	}
+
+	if cfg.EnableUPnP {
+		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
+	}
+
+	return options
 }
 
 // whitelistSubnet adds a whitelist multiaddress filter for a given CIDR subnet.
