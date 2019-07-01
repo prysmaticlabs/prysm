@@ -561,10 +561,10 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 		b uint64
 		c uint64
 	}{
-		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 202390},
-		{30 * 1e9, 30 * 1e9, 1108513},
-		{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance, 1144869},
-		{40 * 1e9, params.BeaconConfig().MaxEffectiveBalance, 1144869},
+		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 404781},
+		{30 * 1e9, 30 * 1e9, 2217026},
+		{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance, 2289739},
+		{40 * 1e9, params.BeaconConfig().MaxEffectiveBalance, 2289739},
 	}
 	for _, tt := range tests {
 		helpers.ClearAllCaches()
@@ -920,7 +920,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	attestedIndices := []uint64{5, 16, 336, 797, 1082, 1450, 1770, 1958}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
-		want := uint64(6324)
+		want := uint64(12649)
 		if rewards[i] != want {
 			t.Errorf("Wanted reward balance %d, got %d", want, rewards[i])
 		}
@@ -1074,7 +1074,8 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		wanted := 3 * (base * attestedBalance / totalBalance)
 		// Base rewards for proposer and attesters working together getting attestation
 		// on chain in the fatest manner
-		wanted += base * params.BeaconConfig().MinAttestationInclusionDelay
+		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
+		wanted += (base - proposerReward) * params.BeaconConfig().MinAttestationInclusionDelay
 		if rewards[i] != wanted {
 			t.Errorf("Wanted reward balance %d, got %d", wanted, rewards[i])
 		}
@@ -1222,13 +1223,13 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(state.Balances)
-	wanted := uint64(31999974696)
+	wanted := uint64(31999797616)
 	if state.Balances[0] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[0])
 	}
-	wanted = uint64(31999898808)
-	if state.Balances[1] != wanted {
+	wanted = uint64(31999995452)
+	if state.Balances[4] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[1])
 	}
