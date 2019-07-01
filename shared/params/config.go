@@ -157,7 +157,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ValidatorsLimit:           1099511627776,
 
 	// Reward and penalty quotients constants.
-	BaseRewardFactor:             32,
+	BaseRewardFactor:             64,
 	ProposerRewardQuotient:       8,
 	WhistleBlowingRewardQuotient: 512,
 	InactivityPenaltyQuotient:    1 << 25,
@@ -279,7 +279,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.EpochsPerSlashingsVector = 64
 	minimalConfig.HistoricalRootsLimit = 16777216
 	minimalConfig.ValidatorsLimit = 1099511627776
-	minimalConfig.BaseRewardFactor = 32
+	minimalConfig.BaseRewardFactor = 64
 	minimalConfig.WhistleBlowingRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
 	minimalConfig.InactivityPenaltyQuotient = 33554432
