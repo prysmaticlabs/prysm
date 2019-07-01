@@ -102,7 +102,7 @@ func main() {
 		},
 		cli.Int64Flag{
 			Name:        "maxDeposit",
-			Value:       params.ContractConfig().MaxDepositAmount.Int64(),
+			Value:       params.ContractConfig().MaxEffectiveBalance.Int64(),
 			Usage:       "Maximum deposit value allowed in contract",
 			Destination: &maxDepositAmount,
 		},

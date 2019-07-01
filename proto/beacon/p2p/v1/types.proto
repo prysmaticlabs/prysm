@@ -12,39 +12,37 @@ message BeaconState {
   Fork fork = 1003;
 
   // Validator registry [2001-3000]
-  repeated Validator validator_registry = 2001;
+  repeated Validator validators = 2001;
   // Balances in Gwei
   repeated uint64 balances = 2002;
 
   // Randomness and committees [3001-4000]
-  repeated bytes latest_randao_mixes = 3001 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
-  uint64 latest_start_shard = 3002;
+  repeated bytes randao_mixes = 3001 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
+  uint64 start_shard = 3002;
+  repeated bytes compact_committees_roots = 3003 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
 
   // Finality [4001-5000]
-  repeated PendingAttestation previous_epoch_attestations = 4001;
-  repeated PendingAttestation current_epoch_attestations = 4002;
-  uint64 previous_justified_epoch = 4003;
-  uint64 current_justified_epoch = 4004;
-  bytes previous_justified_root = 4005 [(gogoproto.moretags) = "ssz:\"size=32\""];
-  bytes current_justified_root = 4006 [(gogoproto.moretags) = "ssz:\"size=32\""];
-  uint64 justification_bitfield = 4007;
-  uint64 finalized_epoch = 4008;
-  bytes finalized_root = 4009 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  repeated PendingAttestation previous_epoch_attestations = 4001 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  repeated PendingAttestation current_epoch_attestations = 4002 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  uint64 justification_bits = 4003;
+  Checkpoint previous_justified_checkpoint = 4004;
+  Checkpoint current_justified_checkpoint = 4005;
+  Checkpoint finalized_checkpoint = 4006;
 
   // Recent state [5001-6000]
   repeated Crosslink current_crosslinks = 5001 [(gogoproto.moretags) = "ssz:\"size=1024\""];
   repeated Crosslink previous_crosslinks = 5002 [(gogoproto.moretags) = "ssz:\"size=1024\""];
-  repeated bytes latest_block_roots = 5003 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
-  repeated bytes latest_state_roots = 5004 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
-  repeated bytes latest_active_index_roots = 5005 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
-  repeated uint64 latest_slashed_balances = 5006 [(gogoproto.moretags) = "ssz:\"size=8192\""];
+  repeated bytes block_roots = 5003 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
+  repeated bytes state_roots = 5004 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
+  repeated bytes active_index_roots = 5005 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
+  repeated uint64 slashings = 5006 [(gogoproto.moretags) = "ssz:\"size=8192\""];
   BeaconBlockHeader latest_block_header = 5007;
   repeated bytes historical_roots = 5008 [(gogoproto.moretags) = "ssz:\"size=?,32\""];
 
   // Ethereum 1.0 chain data [6001-7000]
-  Eth1Data latest_eth1_data = 6001;
+  Eth1Data eth1_data = 6001;
   repeated Eth1Data eth1_data_votes = 6002;
-  uint64 deposit_index = 6003;
+  uint64 eth1_deposit_index = 6003;
 }
 
 message Fork {
@@ -54,34 +52,56 @@ message Fork {
 }
 
 message PendingAttestation {
-  bytes aggregation_bitfield = 1;
+  // Bitfield representation of validator indices that have voted exactly
+  // the same vote and have been aggregated into this attestation.
+  bytes aggregation_bits = 1;
   AttestationData data = 2;
+  // The difference of when attestation gets created and get included on chain.
   uint64 inclusion_delay = 3;
+  // The proposer who included the attestation in the block.
   uint64 proposer_index = 4;
 }
 
 message Attestation {
-  bytes aggregation_bitfield = 1;
-  AttestationData data = 2;
-  bytes custody_bitfield = 3;
+  AttestationData data = 1;
+  // Bitfield representation of validator indices that have voted exactly
+  // the same vote and have been aggregated into this attestation.
+  bytes aggregation_bits = 2;
+  // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data. Not used in phase 0.
+  bytes custody_bits = 3;
+  // 96 byte BLS aggregate signature.
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
 
+message Checkpoint {
+  // The Epoch of when the check point happens.
+  uint64 epoch = 1;
+  // The block root of when the check point happens.
+  bytes root = 2 [(gogoproto.moretags) = "ssz:\"size=32\""];
+}
+
 message AttestationData {
-  // LMD GHOST vote
+  // 32 byte root of the LMD GHOST block vote.
   bytes beacon_block_root = 1 [(gogoproto.moretags) = "ssz:\"size=32\""];
 
-  // FFG vote
-  uint64 source_epoch = 2;
-  bytes source_root = 3 [(gogoproto.moretags) = "ssz:\"size=32\""];
-  uint64 target_epoch = 4;
-  bytes target_root = 5 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  // Casper Friendly Finality Gadget to check point beacon chain
+  // for justification and finalization.
+  Checkpoint source = 2;
+  Checkpoint target = 3;
 
-  // Crosslink vote
-  Crosslink crosslink = 6;
+  // Crosslink voted by this attestation.
+  Crosslink crosslink = 4;
+
+  // Deprecated
+  uint64 source_epoch = 1001;
+  bytes source_root = 1002;
+  uint64 target_epoch = 1003;
+  bytes target_root = 1004;
 }
 
 message AttestationTarget {
+  // Used internally to track LMD GHOST block votes and to find
+  // the head of the chain.
   uint64 slot = 1;
   bytes block_root = 2 [(gogoproto.moretags) = "ssz:\"size=32\""];
   bytes parent_root = 3 [(gogoproto.moretags) = "ssz:\"size=32\""];
@@ -89,6 +109,7 @@ message AttestationTarget {
 
 message AttestationDataAndCustodyBit {
   AttestationData data = 1;
+  // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
   bool custody_bit = 2;
 }
 
@@ -97,138 +118,189 @@ message IndexedAttestation {
   repeated uint64 custody_bit_0_indices = 1;
   repeated uint64 custody_bit_1_indices = 2;
   AttestationData data = 3;
-  // Aggregate signature
+  // 96 bytes aggregate signature.
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
 
 message Validator {
+  // 96 byte BLS public key used for the validator's activities.
   bytes pubkey = 1 [(gogoproto.moretags) = "ssz:\"size=48\""];
+  // 32 byte hash of the withdrawal destination public key.
   bytes withdrawal_credentials = 2[(gogoproto.moretags) = "ssz:\"size=32\""];
-  // Epoch when became eligible for activation
+  // Epoch when the validator became eligible for activation. This field may
+  // be zero if the validator was present in the Ethereum 2.0 genesis.
   uint64 activation_eligibility_epoch = 3;
-  // Epoch when validator activated
+  // Epoch when the validator was activated. This field may be zero if the
+  // validator was present in the Ethereum 2.0 genesis.
   uint64 activation_epoch = 4;
-  // Epoch when validator exited
+  // Epoch when the validator was exited. This field may be zero if the
+  // validator has not exited.
   uint64 exit_epoch = 5;
-  // Epoch when validator is eligible to withdraw
+  // Epoch when the validator is eligible to withdraw their funds. This field
+  // may be zero if the validator has not exited.
   uint64 withdrawable_epoch = 6;
-  // Was the validator slashed
+  // Whether or not the validator has been slashed.
   bool slashed = 7;
-  // Effective balance
+  // The validators current effective balance in gwei.
   uint64 effective_balance = 8;
 }
 
-message ShardReassignmentRecord {
-  uint64 validator_index = 1;
-  uint64 shard = 2;
-  uint64 slot = 3;
-}
-
 message Crosslink {
+  // The shard that crosslinks to the beacon chain.
   uint64 shard = 1;
+  // Start epoch must match the parent crosslink's end epoch.
   uint64 start_epoch = 2;
+  // Ending epoch for this crosslink period. This field matches the attestation
+  // target epoch or the start epoch + MAX_EPOCHS_PER_CROSSLINK, whichever is
+  // less.
   uint64 end_epoch = 3;
+  // 32 byte root of the parent crosslink.
   bytes parent_root = 4 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  // 32 byte root of the crosslinked shard data since the previous crosslink.
   bytes data_root = 5 [(gogoproto.moretags) = "ssz:\"size=32\""];
 }
 
 message BeaconBlockHeader {
+  // Beacon chain slot that this block represents.
   uint64 slot = 1;
+  // 32 byte merkle tree root of the parent ssz encoded block.
   bytes parent_root = 2 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  // 32 byte merkle tree root of the resulting ssz encoded state after processing this block.
   bytes state_root = 3 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  // 32 byte merkle tree root of the ssz encoded block body.
   bytes body_root = 4 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 5 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
 
 message BeaconBlock {
+  // Beacon chain slot that this block represents.
   uint64 slot = 1;
+  // 32 byte root of the parent block.
   bytes parent_root = 2 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  // 32 byte root of the resulting state after processing this block.
   bytes state_root = 3 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  // The block body itself.
   BeaconBlockBody body = 4;
+  // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 5 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
 
 message BeaconBlockBody {
+  // The validators RANDAO reveal 96 byte value.
   bytes randao_reveal = 1 [(gogoproto.moretags) = "ssz:\"size=96\""];
+  // A reference to the Ethereum 1.x chain.
   Eth1Data eth1_data = 2;
+  // 32 byte field of arbitrary data. This field may contain any data and
+  // is not used for anything other than a fun message.
   bytes graffiti = 3 [(gogoproto.moretags) = "ssz:\"size=32\""];
+  // At most MAX_PROPOSER_SLASHINGS.
   repeated ProposerSlashing proposer_slashings  = 4;
+  // At most MAX_ATTESTER_SLASHINGS.
   repeated AttesterSlashing attester_slashings = 5;
+  // At most MAX_ATTESTATIONS.
   repeated Attestation attestations = 6;
+  // At most MAX_DEPOSITS.
   repeated Deposit deposits = 7;
+  // At most MAX_VOLUNTARY_EXITS.
   repeated VoluntaryExit voluntary_exits = 8;
+  // At most MAX_TRANSFERS.
   repeated Transfer transfers = 9;
 }
 
 message SlashableAttestation {
   repeated uint64 validator_indices = 1;
-  bytes custody_bitfield = 2;
+  bytes custody_bits = 2;
   AttestationData data = 3;
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
 
 message DepositData {
+  // 48 byte BLS public key of the validator.
   bytes pubkey = 1 [(gogoproto.moretags) = "ssz:\"size=48\""];
+  // A 32 byte hash of the withdrawal address public key.
   bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz:\"size=32\""];
-  // Amount in Gwei
+  // Deposit amount in gwei.
   uint64 amount = 3;
+  // 96 byte signature from the validators public key.
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
 
 message ProposerSlashing {
+  // Validator index of the validator that proposed the two conflicting block
+  // headers.
   uint64 proposer_index = 1;
+  // First conflicting block header.
   BeaconBlockHeader header_1 = 2;
+  // Second conflicting block header.
   BeaconBlockHeader header_2 = 3;
 }
 
 message AttesterSlashing {
+  // First conflicting attestation.
   IndexedAttestation attestation_1 = 1;
+  // Second conflicting attestation.
   IndexedAttestation attestation_2 = 2;
 }
 
 message Deposit {
-  // Branch in the deposit tree
+  // 32 byte roots in the deposit tree branch.
   repeated bytes proof = 1 [(gogoproto.moretags) = "ssz:\"size=32,32\""];
   DepositData data = 3;
 }
 
 message VoluntaryExit {
-  // Minimum epoch for processing exit
+  // The epoch on when exit request becomes valid.
   uint64 epoch = 1;
+  // Index of the exiting validator.
   uint64 validator_index = 2;
+  // Validator's 96 byte signature
   bytes signature = 3 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
 
 message Transfer {
+  // Validator index of the sender.
   uint64 sender = 1;
+  // Validator index of the recipient.
   uint64 recipient = 2;
-  // Amount in Gwei
+  // Amount in gwei sent to the recipient.
   uint64 amount = 3;
-  // Fee in Gwei for block proposer
+  // Fee in gwei for the block proposer to include this transfer.
   uint64 fee = 4;
-  // Inclusion slot
+  // Slot at which transfer must be processed. This is used for replay protection.
   uint64 slot = 5;
-  // Sender withdrawal pubkey and signature
+  // 48 byte sender's withdrawal public key.
   bytes pubkey = 6 [(gogoproto.moretags) = "ssz:\"size=48\""];
-  // Sender signature
+  // 96 byte signature from the sender's withdrawal key.
   bytes signature = 7 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
 
 message Eth1Data {
-  // Root of the deposit tree
+  // The 32 byte deposit tree root for the last deposit included in this
+  // block.
   bytes deposit_root = 1 [(gogoproto.moretags) = "ssz:\"size=32\""];
-  // Total number of deposits
+  // The total number of deposits included in the beacon chain since genesis
+  // including the deposits in this block.
   uint64 deposit_count = 2;
-  // Block hash
+  // The 32 byte block hash of the Ethereum 1.x block considered for deposit
+  // inclusion.
   bytes block_hash = 3 [(gogoproto.moretags) = "ssz:\"size=32\""];
 }
 
 message Eth1DataVote {
   Eth1Data eth1_data = 1;
+  // The total vote count of the Eth1DataVote.
   uint64 vote_count = 2;
 }
 
 message HistoricalBatch {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
+}
+
+message CompactCommittee {
+  // The list of the validator public keys in the committee.
+  repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz:\"size=?,48\""];
+  // The list of the validator indices in the committee.
+  repeated uint64 compact_validators = 2;
 }

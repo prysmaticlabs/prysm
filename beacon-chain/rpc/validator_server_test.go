@@ -56,7 +56,7 @@ func TestValidatorIndex_InStateNotInDB(t *testing.T) {
 
 	// Wanted validator with public key 'A' is in index '1'.
 	s := &pbp2p.BeaconState{
-		ValidatorRegistry: []*pbp2p.Validator{{Pubkey: []byte{0}}, {Pubkey: []byte{'A'}}, {Pubkey: []byte{'B'}}},
+		Validators: []*pbp2p.Validator{{Pubkey: []byte{0}}, {Pubkey: []byte{'A'}}, {Pubkey: []byte{'B'}}},
 	}
 
 	if err := db.SaveState(context.Background(), s); err != nil {
@@ -302,7 +302,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	}
 
 	// Pending active because activation epoch is still defaulted at far future slot.
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{ValidatorRegistry: []*pbp2p.Validator{
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{Validators: []*pbp2p.Validator{
 		{ActivationEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: pubKey},
 	},
 		Slot: 5000,
@@ -375,7 +375,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		Slot:        10000,
-		ValidatorRegistry: []*pbp2p.Validator{{
+		Validators: []*pbp2p.Validator{{
 			ActivationEpoch: activeEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKey},
@@ -427,7 +427,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
-		ValidatorRegistry: []*pbp2p.Validator{{
+		Validators: []*pbp2p.Validator{{
 			Pubkey:            pubKey,
 			ActivationEpoch:   0,
 			ExitEpoch:         exitEpoch,
@@ -485,7 +485,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: 10000,
-		ValidatorRegistry: []*pbp2p.Validator{{
+		Validators: []*pbp2p.Validator{{
 			WithdrawableEpoch: epoch - 1,
 			ExitEpoch:         epoch - 2,
 			Pubkey:            pubKey},
@@ -542,7 +542,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
-		ValidatorRegistry: []*pbp2p.Validator{{
+		Validators: []*pbp2p.Validator{{
 			Slashed:           true,
 			Pubkey:            pubKey,
 			WithdrawableEpoch: epoch + 1},
@@ -599,7 +599,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
-		ValidatorRegistry: []*pbp2p.Validator{{
+		Validators: []*pbp2p.Validator{{
 			Pubkey:            pubKey,
 			WithdrawableEpoch: epoch + 1},
 		}}); err != nil {
@@ -652,7 +652,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: 0,
-		ValidatorRegistry: []*pbp2p.Validator{{
+		Validators: []*pbp2p.Validator{{
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKey},
@@ -700,8 +700,8 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
-		Slot:              0,
-		ValidatorRegistry: []*pbp2p.Validator{},
+		Slot:       0,
+		Validators: []*pbp2p.Validator{},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -752,7 +752,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
-		ValidatorRegistry: []*pbp2p.Validator{
+		Validators: []*pbp2p.Validator{
 			{
 				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
@@ -843,7 +843,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
-		ValidatorRegistry: []*pbp2p.Validator{{
+		Validators: []*pbp2p.Validator{{
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			Pubkey:          pubKeys[0]},
@@ -1006,7 +1006,7 @@ func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositData := &pbp2p.DepositData{
 			Pubkey: pubKey[:],
-			Amount: params.BeaconConfig().MaxDepositAmount,
+			Amount: params.BeaconConfig().MaxEffectiveBalance,
 		}
 
 		deposits[i] = &pbp2p.Deposit{Data: depositData}

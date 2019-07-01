@@ -109,8 +109,8 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		t.Fatal(err)
 	}
 	genesisState := &pb.BeaconState{
-		Slot:           0,
-		FinalizedEpoch: 0,
+		Slot:                0,
+		FinalizedCheckpoint: &pb.Checkpoint{Epoch: 0},
 	}
 	if err := db.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)

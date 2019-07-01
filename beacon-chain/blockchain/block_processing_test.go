@@ -117,7 +117,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -128,6 +128,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
+	beaconState.Eth1DepositIndex = 0
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
@@ -194,7 +195,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -205,6 +206,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
+	beaconState.Eth1DepositIndex = 0
 
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
@@ -257,7 +259,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -345,12 +347,13 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	beaconState.Eth1DepositIndex = 0
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -405,6 +408,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	beaconState.Eth1DepositIndex = 0
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -413,7 +417,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -479,12 +483,14 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
+	beaconState.Eth1Data.DepositCount = 1
+	beaconState.Eth1DepositIndex = 0
 	if err := chainService.beaconDB.SaveJustifiedState(beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -533,7 +539,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		pendingDeposits[i].Proof = proof
 	}
 	depositRoot := depositTrie.Root()
-	beaconState.LatestEth1Data.DepositRoot = depositRoot[:]
+	beaconState.Eth1Data.DepositRoot = depositRoot[:]
 	if err := db.SaveHistoricalState(context.Background(), beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
@@ -557,7 +563,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	beaconState.Slot--
-	beaconState.DepositIndex = 0
+
+	beaconState.Eth1DepositIndex = 0
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -594,8 +601,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < len(beaconState.ValidatorRegistry); i++ {
-		pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[i].Pubkey)
+	for i := 0; i < len(beaconState.Validators); i++ {
+		pubKey := bytesutil.ToBytes48(beaconState.Validators[i].Pubkey)
 		attsService.InsertAttestationIntoStore(pubKey, &pb.Attestation{
 			Data: &pb.AttestationData{
 				BeaconBlockRoot: blockRoot[:],
@@ -652,6 +659,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	beaconState.Eth1DepositIndex = 0
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -660,7 +668,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -831,7 +839,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -859,7 +867,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		t.Fatalf("unable to get root of canonical head: %v", err)
 	}
 
-	beaconState.LatestEth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &pb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}
@@ -884,7 +892,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 			},
 			RandaoReveal: randaoReveal,
 			Attestations: []*pb.Attestation{{
-				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				AggregationBits: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					SourceRoot: parentRoot[:],
@@ -916,8 +924,8 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 		})
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Validators: validators,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
@@ -958,8 +966,8 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 		})
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Validators: validators,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
@@ -996,8 +1004,8 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		})
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Validators: validators,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
