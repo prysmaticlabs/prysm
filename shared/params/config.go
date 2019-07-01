@@ -19,7 +19,7 @@ type BeaconChainConfig struct {
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
 	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"`       // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
-	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2018.
+	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
 	JustificationBitsLength        uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`          // JustificationBitsLength defines the length in bytes of the justification bits.
 
 	// Deposit contract constants.
@@ -240,6 +240,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EpochsPerSlashingsVector = 5 * demoConfig.SlotsPerEpoch
 	demoConfig.HistoricalRootsLimit = 5 * demoConfig.SlotsPerEpoch
 	demoConfig.SlotsPerHistoricalRoot = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.MinGenesisTime = 0
 
 	return &demoConfig
 }
@@ -295,6 +296,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DomainDeposit = 3
 	minimalConfig.DomainVoluntaryExit = 4
 	minimalConfig.DomainTransfer = 5
+	minimalConfig.MinGenesisTime = 0
 
 	return &minimalConfig
 }
