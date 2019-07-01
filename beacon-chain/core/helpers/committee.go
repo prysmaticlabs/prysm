@@ -412,7 +412,8 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 //            committees[shard].compact_validators.append(compact_validator)
 //    return hash_tree_root(Vector[CompactCommittee, SHARD_COUNT](committees))
 func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([]byte, error) {
-	compactCommList := make([]*pb.CompactCommittee, params.BeaconConfig().ShardCount)
+	shardCount := params.BeaconConfig().ShardCount
+	compactCommList := make([]*pb.CompactCommittee, shardCount)
 	comCount, err := EpochCommitteeCount(state, epoch)
 	if err != nil {
 		return nil, err
@@ -422,6 +423,22 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([]byte, error) 
 		return nil, err
 	}
 	for i := uint64(1); i <= comCount; i++ {
+		shard := (startShard + i) % shardCount
+		crossComm, err := CrosslinkCommitteeAtEpoch(state, epoch, shard)
+		if err != nil {
+			return nil, err
+		}
 
+		for _, indice := range crossComm {
+			validator := state.Validators[indice]
+			compactCommList[shard].Pubkeys = append(compactCommList[shard].Pubkeys, validator.Pubkey)
+			compactBalance := validator.EffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
+			// index (top 6 bytes) + slashed (16th bit) + compact_balance (bottom 15 bits)
+			compactIndice := indice << 16
+			if validator.Slashed {
+				compactIndice
+			}
+
+		}
 	}
 }
