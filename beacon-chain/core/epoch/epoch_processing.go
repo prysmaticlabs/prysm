@@ -84,7 +84,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	for _, srcAtt := range srcAtts {
 		// If the target root matches attestation's target root,
 		// then we know this attestation has correctly voted for target.
-		if bytes.Equal(srcAtt.Data.TargetRoot, targetRoot) {
+		if bytes.Equal(srcAtt.Data.Target.Root, targetRoot) {
 			tgtAtts = append(tgtAtts, srcAtt)
 		}
 

@@ -639,19 +639,19 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 }
 func TestSlashableAttestationData_CanSlash(t *testing.T) {
 	att1 := &pb.AttestationData{
-		TargetEpoch: 1,
-		SourceRoot:  []byte{'A'},
+		Target: &pb.Checkpoint{Epoch: 1},
+		Source: &pb.Checkpoint{Root: []byte{'A'}},
 	}
 	att2 := &pb.AttestationData{
-		TargetEpoch: 1,
-		SourceRoot:  []byte{'B'},
+		Target: &pb.Checkpoint{Epoch: 1},
+		Source: &pb.Checkpoint{Root: []byte{'B'}},
 	}
 	if !blocks.IsSlashableAttestationData(att1, att2) {
 		t.Error("atts should have been slashable")
 	}
-	att1.TargetEpoch = 4
-	att1.SourceEpoch = 2
-	att2.SourceEpoch = 3
+	att1.Target.Epoch = 4
+	att1.Source.Epoch = 2
+	att2.Source.Epoch = 3
 	if !blocks.IsSlashableAttestationData(att1, att2) {
 		t.Error("atts should have been slashable")
 	}
@@ -691,8 +691,8 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -700,8 +700,8 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 1,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 1},
 					Crosslink: &pb.Crosslink{
 						Shard: 3,
 					},
@@ -737,8 +737,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -748,8 +748,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -785,8 +785,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -795,8 +795,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -839,8 +839,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -849,8 +849,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -905,7 +905,7 @@ func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	state := &pb.BeaconState{}
+	s := &pb.BeaconState{}
 
 	want := fmt.Sprintf(
 		"number of attestations in block (%d) exceeds allowed threshold of %d",
@@ -914,7 +914,7 @@ func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
 	)
 
 	if _, err := blocks.ProcessBlockAttestations(
-		state,
+		s,
 		block,
 		false,
 	); !strings.Contains(err.Error(), want) {
@@ -926,7 +926,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -972,7 +972,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -993,7 +993,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 
 	want := fmt.Sprintf(
 		"expected target epoch %d == %d or %d",
-		attestations[0].Data.TargetEpoch,
+		attestations[0].Data.Target.Epoch,
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
 	)
@@ -1012,8 +1012,8 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 1,
+				Target: &pb.Checkpoint{Epoch: 0},
+				Source: &pb.Checkpoint{Epoch: 1},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -1042,7 +1042,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	want := fmt.Sprintf(
 		"expected source epoch %d, received %d",
 		helpers.CurrentEpoch(beaconState),
-		attestations[0].Data.SourceEpoch,
+		attestations[0].Data.Source.Epoch,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
@@ -1052,13 +1052,13 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.SourceEpoch = helpers.CurrentEpoch(beaconState)
-	block.Body.Attestations[0].Data.SourceRoot = []byte{}
+	block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
+	block.Body.Attestations[0].Data.Source.Root = []byte{}
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
 		beaconState.CurrentJustifiedCheckpoint.Root,
-		attestations[0].Data.SourceRoot,
+		attestations[0].Data.Source.Root,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
@@ -1075,8 +1075,8 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 1,
+				Target: &pb.Checkpoint{Epoch: 0},
+				Source: &pb.Checkpoint{Epoch: 1},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -1105,7 +1105,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	want := fmt.Sprintf(
 		"expected source epoch %d, received %d",
 		helpers.PrevEpoch(beaconState),
-		attestations[0].Data.SourceEpoch,
+		attestations[0].Data.Source.Epoch,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
@@ -1115,13 +1115,13 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.SourceEpoch = helpers.PrevEpoch(beaconState)
-	block.Body.Attestations[0].Data.SourceRoot = []byte{}
+	block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
+	block.Body.Attestations[0].Data.Source.Root = []byte{}
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
 		beaconState.PreviousJustifiedCheckpoint.Root,
-		attestations[0].Data.SourceRoot,
+		attestations[0].Data.Source.Root,
 	)
 	if _, err := blocks.ProcessBlockAttestations(
 		beaconState,
@@ -1138,9 +1138,11 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 0,
-				SourceRoot:  []byte("hello-world"),
+				Target: &pb.Checkpoint{Epoch: 0},
+				Source: &pb.Checkpoint{
+					Epoch: 0,
+					Root:  []byte("hello-world"),
+				},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -1207,9 +1209,8 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 0,
-				SourceRoot:  []byte("hello-world"),
+				Target: &pb.Checkpoint{Epoch: 0},
+				Source: &pb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 				Crosslink: &pb.Crosslink{
 					Shard:      0,
 					StartEpoch: 0,
@@ -1307,8 +1308,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	attestation := &pb.Attestation{
 		Signature: []byte("signed"),
 		Data: &pb.AttestationData{
-			SourceEpoch: 0,
-			TargetEpoch: 0,
+			Source: &pb.Checkpoint{Epoch: 0},
+			Target: &pb.Checkpoint{Epoch: 0},
 			Crosslink: &pb.Crosslink{
 				Shard: 3,
 			},
