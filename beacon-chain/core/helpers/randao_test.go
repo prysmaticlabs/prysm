@@ -128,6 +128,7 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 
 func TestActiveIndexRoot_CopyOK(t *testing.T) {
 	ClearAllCaches()
+	runtime.GC()
 
 	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
