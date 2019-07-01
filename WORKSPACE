@@ -1092,4 +1092,5 @@ go_repository(
     commit = "035448cee754a2d959cea5a0ea6503324e5c731e",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
+load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
 go_ssz_dependencies()
