@@ -430,23 +430,17 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	totalAtStart := state.Slashings[(currentEpoch+1)%exitLength]
-	totalAtEnd := state.Slashings[currentEpoch%exitLength]
-	totalPenalties := totalAtEnd - totalAtStart
 
 	// Compute slashing for each validator.
 	for index, validator := range state.Validators {
-		correctEpoch := currentEpoch == validator.WithdrawableEpoch-exitLength/2
+		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
 		if validator.Slashed && correctEpoch {
-			minPenalties := totalPenalties * 3
-			if minPenalties > totalBalance {
-				minPenalties = totalBalance
+			totalSlashing := uint64(0)
+			for _, slashing := range state.Slashings {
+				totalSlashing += slashing
 			}
-			effectiveBal := validator.EffectiveBalance
-			penalty := effectiveBal * minPenalties / totalBalance
-			if penalty < effectiveBal/params.BeaconConfig().MinSlashingPenaltyQuotient {
-				penalty = effectiveBal / params.BeaconConfig().MinSlashingPenaltyQuotient
-			}
+			minSlashing := mathutil.MinOfTwoValues(totalSlashing*3, totalBalance)
+			penalty := validator.EffectiveBalance * minSlashing / totalBalance
 			state = helpers.DecreaseBalance(state, uint64(index), penalty)
 		}
 	}
@@ -535,8 +529,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	state.Slashings[nextEpoch%slashedExitLength] =
-		state.Slashings[currentEpoch%slashedExitLength]
+	state.Slashings[nextEpoch%slashedExitLength] = 0
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
