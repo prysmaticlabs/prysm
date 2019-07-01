@@ -1,7 +1,7 @@
 # Prysmatic Labs Ethereum Serenity Implementation
 
 [![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg?branch=master)](https://buildkite.com/prysmatic-labs/prysm)
-![ETH2.0_Spec_Version 0.6.0](https://img.shields.io/badge/ETH2.0%20Spec%20Version-v0.6.0-blue.svg)
+[![ETH2.0_Spec_Version 0.8.0](https://img.shields.io/badge/ETH2.0%20Spec%20Version-v0.8.0-blue.svg)](https://github.com/ethereum/eth2.0-specs/commit/8d324b7497bcb558e0183a30002d78d18704e3fa)
 
 This is the main repository for the Go implementation of the Ethereum 2.0 Serenity [Prysmatic Labs](https://prysmaticlabs.com).
 
