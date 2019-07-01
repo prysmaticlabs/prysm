@@ -194,7 +194,7 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	if whistleBlowerIdx == 0 {
 		whistleBlowerIdx = proposerIdx
 	}
-	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 	state = helpers.IncreaseBalance(state, proposerIdx, proposerReward)
 	state = helpers.IncreaseBalance(state, whistleBlowerIdx, whistleblowerReward-proposerReward)
