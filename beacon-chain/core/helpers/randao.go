@@ -43,7 +43,7 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 
 	// Check that the state has the correct latest active index roots or
 	// randao mix may panic for index out of bounds.
-	if uint64(len(state.ActiveIndexRoots)) !=  params.BeaconConfig().ActiveIndexRootsLength {
+	if uint64(len(state.ActiveIndexRoots)) != params.BeaconConfig().EpochsPerHistoricalVector {
 		return [32]byte{}, ErrInvalidStateLatestActiveIndexRoots
 	}
 	randaoMix := RandaoMix(state, lookAheadEpoch)

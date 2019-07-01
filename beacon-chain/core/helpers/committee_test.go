@@ -569,7 +569,7 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 	}
 }
 
-func TestEpochStartShard_MixedActivationValidatorRegistry(t *testing.T) {
+func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	tests := []struct {
 		validatorCount uint64
@@ -610,8 +610,8 @@ func TestEpochStartShard_MixedActivationValidatorRegistry(t *testing.T) {
 			}
 		}
 		s := &pb.BeaconState{
-			ValidatorRegistry: vs,
-			Slot:              params.BeaconConfig().SlotsPerEpoch * 3,
+			Validators: vs,
+			Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
 		}
 		startShard, err := EpochStartShard(s, 2 /*epoch*/)
 		if err != nil {

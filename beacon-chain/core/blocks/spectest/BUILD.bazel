@@ -16,7 +16,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "small",
+    size = "medium",
     srcs = [
         "attestation_test.go",
         "attester_slashing_test.go",

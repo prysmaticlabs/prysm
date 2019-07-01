@@ -95,7 +95,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, fmt.Errorf("could not get head: %v", err)
 	}
-	validatorRegistry, err := vs.beaconDB.Validators(ctx)
+	Validators, err := vs.beaconDB.Validators(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -120,7 +120,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                       balance,
 		AverageActiveValidatorBalance: avgBalance,
-		TotalValidators:               uint64(len(validatorRegistry)),
+		TotalValidators:               uint64(len(Validators)),
 		TotalActiveValidators:         uint64(activeCount),
 	}, nil
 }

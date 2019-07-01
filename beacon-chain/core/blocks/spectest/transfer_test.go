@@ -15,8 +15,6 @@ import (
 )
 
 func runTransferTest(t *testing.T, filename string) {
-	t.Skip("Transfer tests are disabled. See https://github.com/ethereum/eth2.0-specs/pull/1238#issuecomment-507054595")
-
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
@@ -75,6 +73,7 @@ func runTransferTest(t *testing.T, filename string) {
 var transferPrefix = "eth2_spec_tests/tests/operations/transfer/"
 
 func TestTransferMinimal(t *testing.T) {
+	t.Skip("Transfer tests are disabled. See https://github.com/ethereum/eth2.0-specs/pull/1238#issuecomment-507054595")
 	filepath, err := bazel.Runfile(transferPrefix + "transfer_minimal.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -83,6 +82,7 @@ func TestTransferMinimal(t *testing.T) {
 }
 
 func TestTransferMainnet(t *testing.T) {
+	t.Skip("Transfer tests are disabled. See https://github.com/ethereum/eth2.0-specs/pull/1238#issuecomment-507054595")
 	filepath, err := bazel.Runfile(transferPrefix + "transfer_mainnet.yaml")
 	if err != nil {
 		t.Fatal(err)

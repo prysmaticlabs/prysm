@@ -1511,7 +1511,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
-	var validatorRegistry []*pb.Validator
+	var Validators []*pb.Validator
 	var validatorBalances []uint64
 	var privKeys []*bls.SecretKey
 	for i := uint64(0); i < 64; i++ {
@@ -1520,7 +1520,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 			t.Fatal(err)
 		}
 		privKeys = append(privKeys, priv)
-		validatorRegistry = append(validatorRegistry,
+		Validators = append(Validators,
 			&pb.Validator{
 				Pubkey:    priv.PublicKey().Marshal(),
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1543,7 +1543,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		CurrentCrosslinks: crosslinks,
-		Validators:        validatorRegistry,
+		Validators:        Validators,
 		Balances:          validatorBalances,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
