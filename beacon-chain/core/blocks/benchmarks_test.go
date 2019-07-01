@@ -49,7 +49,7 @@ func BenchmarkProcessBlockHeader(b *testing.B) {
 	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
 	cleanStates := createCleanStates(genesisState)
-	b.N = len(cleanStates)
+	b.N = 30
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := blocks.ProcessBlockHeader(cleanStates[i], block)
@@ -64,7 +64,7 @@ func BenchmarkProcessBlockRandao(b *testing.B) {
 	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
 	cleanStates := createCleanStates(genesisState)
-	b.N = len(cleanStates)
+	b.N = 30
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := blocks.ProcessRandao(
@@ -92,7 +92,7 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 		},
 	}
 
-	b.N = len(cleanStates)
+	b.N = 30
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cleanStates[i].Eth1DataVotes = eth1DataVotes
@@ -108,11 +108,11 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
 	cleanStates := createCleanStates(genesisState)
-	b.N = len(cleanStates)
+	b.N = 30
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cleanStates[i].Slot = params.BeaconConfig().SlotsPerEpoch * 2048
-		_, err := blocks.ProcessValidatorExits(cleanStates[i], block, false)
+		_, err := blocks.ProcessVolundaryExits(cleanStates[i], block.Body, false)
 		if err != nil {
 			b.Fatalf("run %d, %v", i, err)
 		}
@@ -124,12 +124,12 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
 	cleanStates := createCleanStates(genesisState)
-	b.N = len(cleanStates)
+	b.N = 30
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := blocks.ProcessProposerSlashings(
 			cleanStates[i],
-			block,
+			block.Body,
 			false,
 		)
 		if err != nil {
@@ -143,10 +143,10 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
 	cleanStates := createCleanStates(genesisState)
-	b.N = len(cleanStates)
+	b.N = 30
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessAttesterSlashings(cleanStates[i], block, false)
+		_, err := blocks.ProcessAttesterSlashings(cleanStates[i], block.Body, false)
 		if err != nil {
 			b.Fatal(i)
 		}
@@ -158,12 +158,12 @@ func BenchmarkProcessBlockAttestations(b *testing.B) {
 	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
 	cleanStates := createCleanStates(genesisState)
-	b.N = len(cleanStates)
+	b.N = 30
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessBlockAttestations(
+		_, err := blocks.ProcessAttestations(
 			cleanStates[i],
-			block,
+			block.Body,
 			false,
 		)
 		if err != nil {
@@ -177,18 +177,17 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 	genesisState, deposits := createGenesisState()
 	block, root := createFullBlock(genesisState, deposits)
 	cleanStates := createCleanStates(genesisState)
-	b.N = len(cleanStates)
+	b.N = 30
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		cleanStates[i].LatestEth1Data = &pb.Eth1Data{
+		cleanStates[i].Eth1Data = &pb.Eth1Data{
 			BlockHash:   root,
 			DepositRoot: root,
 		}
-		_, err := blocks.ProcessValidatorDeposits(cleanStates[i], block, true)
+		_, err := blocks.ProcessDeposits(cleanStates[i], block.Body, true)
 		if err != nil {
 			b.Fatal(err)
 		}
-		cleanStates[i].DepositIndex = 16000
 	}
 	cleanUp()
 }
@@ -202,21 +201,21 @@ func BenchmarkProcessBlock(b *testing.B) {
 
 	cleanStates := createCleanStates(genesisState)
 	cleanStates[0].Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 3
-	cleanStates[0].CurrentJustifiedEpoch = helpers.PrevEpoch(cleanStates[0])
+	cleanStates[0].CurrentJustifiedCheckpoint.Epoch = helpers.PrevEpoch(cleanStates[0])
 	cleanStates[0].CurrentCrosslinks[0].EndEpoch = helpers.PrevEpoch(cleanStates[0]) - 1
 	cleanStates[0].CurrentCrosslinks[0].StartEpoch = helpers.PrevEpoch(cleanStates[0]) - 3
 	fullBlock, benchRoot := createFullBlock(cleanStates[0], deposits)
 
-	b.N = len(cleanStates)
+	b.N = 30
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		beaconState := cleanStates[i]
-		beaconState.LatestEth1Data = &pb.Eth1Data{
+		beaconState.Eth1Data = &pb.Eth1Data{
 			BlockHash:   benchRoot,
 			DepositRoot: benchRoot,
 		}
 		beaconState.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 4
-		beaconState.CurrentJustifiedEpoch = helpers.PrevEpoch(beaconState)
+		beaconState.CurrentJustifiedCheckpoint.Epoch = helpers.PrevEpoch(beaconState)
 		beaconState.CurrentCrosslinks[0] = cleanStates[0].CurrentCrosslinks[0]
 		fullBlock.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 4
 		if _, err := state.ProcessBlock(context.Background(), beaconState, fullBlock, cfg); err != nil {
@@ -275,17 +274,17 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 			TargetEpoch: i,
 			SourceEpoch: i,
 		}
-		aggregationBitfield, err := bitutil.SetBitfield(int(i), committeeSize)
+		aggregationBits, err := bitutil.SetBitfield(int(i), committeeSize)
 		if err != nil {
 			panic(err)
 		}
 		att1 := &pb.Attestation{
-			Data:                attData1,
-			AggregationBitfield: aggregationBitfield,
+			Data:            attData1,
+			AggregationBits: aggregationBits,
 		}
 		att2 := &pb.Attestation{
-			Data:                attData2,
-			AggregationBitfield: aggregationBitfield,
+			Data:            attData2,
+			AggregationBits: aggregationBits,
 		}
 
 		indexedAtt1, err := blocks.ConvertToIndexed(bState, att1)
@@ -337,8 +336,8 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 				SourceRoot:      params.BeaconConfig().ZeroHash[:],
 				TargetRoot:      params.BeaconConfig().ZeroHash[:],
 			},
-			AggregationBitfield: aggregationBitfield,
-			CustodyBitfield:     custodyBitfield,
+			AggregationBits: aggregationBitfield,
+			CustodyBits:     custodyBitfield,
 		}
 		attestations[i] = att1
 	}
@@ -422,7 +421,7 @@ func createGenesisState() (*pb.BeaconState, []*pb.Deposit) {
 
 		depositData := &pb.DepositData{
 			Pubkey:                pubkey,
-			Amount:                params.BeaconConfig().MaxDepositAmount,
+			Amount:                params.BeaconConfig().MaxEffectiveBalance,
 			WithdrawalCredentials: []byte{1},
 		}
 		deposits[i] = &pb.Deposit{
@@ -464,7 +463,7 @@ func createGenesisState() (*pb.BeaconState, []*pb.Deposit) {
 	}
 
 	genesisState.Slot = 4*params.BeaconConfig().SlotsPerEpoch - 1
-	genesisState.CurrentJustifiedEpoch = helpers.CurrentEpoch(genesisState) - 1
+	genesisState.CurrentJustifiedCheckpoint.Epoch = helpers.CurrentEpoch(genesisState) - 1
 	genesisState.CurrentCrosslinks = []*pb.Crosslink{
 		{
 			Shard:      0,
@@ -481,8 +480,8 @@ func createGenesisState() (*pb.BeaconState, []*pb.Deposit) {
 }
 
 func createCleanStates(beaconState *pb.BeaconState) []*pb.BeaconState {
-	cleanStates := make([]*pb.BeaconState, 42)
-	for i := 0; i < len(cleanStates); i++ {
+	cleanStates := make([]*pb.BeaconState, 30)
+	for i := 0; i < 30; i++ {
 		cleanStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
 	}
 	return cleanStates
