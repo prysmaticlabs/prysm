@@ -551,24 +551,29 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 //
 // Spec pseudocode definition:
 //   def convert_to_indexed(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
-//     """
-//     Convert ``attestation`` to (almost) indexed-verifiable form.
-//     """
-//     attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bitfield)
-//     custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bitfield)
-//     custody_bit_0_indices = [index for index in attesting_indices if index not in custody_bit_1_indices]
-//     return IndexedAttestation(
-//         custody_bit_0_indices=custody_bit_0_indices,
-//         custody_bit_1_indices=custody_bit_1_indices,
-//         data=attestation.data,
-//         signature=attestation.signature,
-//     )
+//    """
+//    Convert ``attestation`` to (almost) indexed-verifiable form.
+//    """
+//    attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bitfield)
+//    custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bitfield)
+//    assert custody_bit_1_indices.issubset(attesting_indices)
+//    custody_bit_0_indices = attesting_indices.difference(custody_bit_1_indices)
+//
+//    return IndexedAttestation(
+//        custody_bit_0_indices=sorted(custody_bit_0_indices),
+//        custody_bit_1_indices=sorted(custody_bit_1_indices),
+//        data=attestation.data,
+//        signature=attestation.signature,
+//    )
 func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
 	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBits)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attesting indices: %v", err)
 	}
 	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
+	if !sliceutil.SubsetUint64(cb1i, attIndices) {
+		return nil, fmt.Errorf("%v is not a subset of %v", cb1i, attIndices)
+	}
 	cb1Map := make(map[uint64]bool)
 	for _, idx := range cb1i {
 		cb1Map[idx] = true
