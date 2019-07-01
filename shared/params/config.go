@@ -17,7 +17,6 @@ type BeaconChainConfig struct {
 	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	BaseRewardsPerEpoch            uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`             // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
-	SecondsPerDay                  uint64 `yaml:"SECONDS_PER_DAY"`                    // SecondsPerDay defines how many seconds are in a given day.
 	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"`       // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2018.
@@ -118,7 +117,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ChurnLimitQuotient:             1 << 16,
 	BaseRewardsPerEpoch:            5,
 	ShuffleRoundCount:              90,
-	SecondsPerDay:                  86400,
 	MaxValidatorsPerCommittee:      4096,
 	MinGenesisActiveValidatorCount: 65536,
 	MinGenesisTime:                 1578009600,
