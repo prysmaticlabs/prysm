@@ -21,18 +21,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var RunAmount = 64
-var exitCount = uint64(40)
-var slashCount = uint64(40)
-var ejectionCount = uint64(40)
-var activationCount = uint64(40)
-var initiateActivationCount = uint64(40)
-
-var validatorNum = uint64(65536)
-var conditions = "SML"
-
-func setBenchmarkConfig() {
-	logrus.Printf("Running epoch benchmarks for %d validators", validatorNum)
+func setBenchmarkConfig(conditions string, validatorCount uint64) {
+	logrus.Printf("Running epoch benchmarks for %d validators", validatorCount)
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
 	c := params.DemoBeaconConfig()
@@ -61,8 +51,8 @@ func cleanUpConfigs() {
 }
 
 func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
-	var genesisBeaconState = createFullState(validatorNum)
-	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
+	var genesisBeaconState = createFullState()
+	var beaconStates = createCleanStates(genesisBeaconState)
 	prevEpoch := helpers.PrevEpoch(genesisBeaconState)
 	currentEpoch := helpers.CurrentEpoch(genesisBeaconState)
 
@@ -83,7 +73,7 @@ func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	b.N = RunAmount
+	b.N = len(beaconStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := e.ProcessJustificationAndFinalization(
@@ -99,9 +89,9 @@ func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
 }
 
 func BenchmarkProcessCrosslinks(b *testing.B) {
-	var genesisBeaconState = createFullState(validatorNum)
-	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
-	b.N = RunAmount
+	var genesisBeaconState = createFullState()
+	var beaconStates = createCleanStates(genesisBeaconState)
+	b.N = len(beaconStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := epoch.ProcessCrosslinks(beaconStates[i])
@@ -113,9 +103,9 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 }
 
 func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
-	var genesisBeaconState = createFullState(validatorNum)
-	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
-	b.N = RunAmount
+	var genesisBeaconState = createFullState()
+	var beaconStates = createCleanStates(genesisBeaconState)
+	b.N = len(beaconStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := epoch.ProcessRewardsAndPenalties(beaconStates[i])
@@ -127,9 +117,9 @@ func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
 }
 
 func BenchmarkProcessRegistryUpdates(b *testing.B) {
-	var genesisBeaconState = createFullState(validatorNum)
-	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
-	b.N = RunAmount
+	var genesisBeaconState = createFullState()
+	var beaconStates = createCleanStates(genesisBeaconState)
+	b.N = len(beaconStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := epoch.ProcessRegistryUpdates(beaconStates[i])
@@ -141,9 +131,9 @@ func BenchmarkProcessRegistryUpdates(b *testing.B) {
 }
 
 func BenchmarkProcessSlashings(b *testing.B) {
-	var genesisBeaconState = createFullState(validatorNum)
-	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
-	b.N = RunAmount
+	var genesisBeaconState = createFullState()
+	var beaconStates = createCleanStates(genesisBeaconState)
+	b.N = len(beaconStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := epoch.ProcessSlashings(beaconStates[i])
@@ -155,9 +145,9 @@ func BenchmarkProcessSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessFinalUpdates(b *testing.B) {
-	var genesisBeaconState = createFullState(validatorNum)
-	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
-	b.N = RunAmount
+	var genesisBeaconState = createFullState()
+	var beaconStates = createCleanStates(genesisBeaconState)
+	b.N = len(beaconStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := epoch.ProcessFinalUpdates(beaconStates[i])
@@ -169,10 +159,9 @@ func BenchmarkProcessFinalUpdates(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch(b *testing.B) {
-	var genesisBeaconState = createFullState(validatorNum)
-	var beaconStates = createCleanStates(RunAmount, genesisBeaconState)
-
-	b.N = RunAmount
+	var genesisBeaconState = createFullState()
+	var beaconStates = createCleanStates(genesisBeaconState)
+	b.N = len(beaconStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := state.ProcessEpoch(context.Background(), beaconStates[i])
@@ -184,10 +173,10 @@ func BenchmarkProcessEpoch(b *testing.B) {
 }
 
 func BenchmarkActiveValidatorIndices(b *testing.B) {
-	var genesisBeaconState = createFullState(validatorNum)
+	var genesisBeaconState = createFullState()
 	currentEpoch := helpers.CurrentEpoch(genesisBeaconState)
 
-	b.N = RunAmount
+	b.N = 100
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := helpers.ActiveValidatorIndices(genesisBeaconState, currentEpoch)
@@ -199,8 +188,8 @@ func BenchmarkActiveValidatorIndices(b *testing.B) {
 }
 
 func BenchmarkValidatorIndexMap(b *testing.B) {
-	var genesisBeaconState = createFullState(validatorNum)
-	b.N = RunAmount
+	var genesisBeaconState = createFullState()
+	b.N = 100
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = stateutils.ValidatorIndexMap(genesisBeaconState)
@@ -208,7 +197,8 @@ func BenchmarkValidatorIndexMap(b *testing.B) {
 	cleanUpConfigs()
 }
 
-func createFullState(validatorCount uint64) *pb.BeaconState {
+func createFullState() *pb.BeaconState {
+	validatorCount := uint64(65536)
 	bState := createGenesisState(validatorCount)
 
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
@@ -240,7 +230,12 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 	prevEpoch := helpers.PrevEpoch(bState)
 	currentEpoch := helpers.CurrentEpoch(bState)
 
-	// Exits and Activations
+	// Registry Changes
+	var exitCount = uint64(40)
+	var slashCount = uint64(40)
+	var ejectionCount = uint64(40)
+	var activationCount = uint64(40)
+	var initiateActivationCount = uint64(40)
 	for index, val := range bState.ValidatorRegistry {
 		if uint64(index)%(validatorCount/ejectionCount) == 0 {
 			// Ejections
@@ -392,7 +387,7 @@ func createFullState(validatorCount uint64) *pb.BeaconState {
 }
 
 func createGenesisState(numDeposits uint64) *pb.BeaconState {
-	setBenchmarkConfig()
+	setBenchmarkConfig("SML", numDeposits)
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		pubkey := []byte{}
@@ -445,9 +440,9 @@ func createGenesisState(numDeposits uint64) *pb.BeaconState {
 	return genesisState
 }
 
-func createCleanStates(num int, beaconState *pb.BeaconState) []*pb.BeaconState {
-	cleanStates := make([]*pb.BeaconState, num)
-	for i := 0; i < num; i++ {
+func createCleanStates(beaconState *pb.BeaconState) []*pb.BeaconState {
+	cleanStates := make([]*pb.BeaconState, 42)
+	for i := 0; i < len(cleanStates); i++ {
 		cleanStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
 	}
 	return cleanStates

@@ -20,12 +20,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var runAmount = 64
-var validatorNum = 65536
-var conditions = "SML"
-
-func setBenchmarkConfig() {
-	logrus.Printf("Running block benchmarks for %d validators", validatorNum)
+func setBenchmarkConfig(conditions string, validatorCount uint64) {
+	logrus.Printf("Running block benchmarks for %d validators", validatorCount)
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
 	c := params.DemoBeaconConfig()
@@ -50,10 +46,10 @@ func cleanUp() {
 }
 
 func BenchmarkProcessBlockHeader(b *testing.B) {
-	genesisState, deposits := createGenesisState(validatorNum)
+	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
-	cleanStates := createCleanStates(runAmount, genesisState)
-	b.N = runAmount
+	cleanStates := createCleanStates(genesisState)
+	b.N = len(cleanStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := blocks.ProcessBlockHeader(cleanStates[i], block)
@@ -65,10 +61,10 @@ func BenchmarkProcessBlockHeader(b *testing.B) {
 }
 
 func BenchmarkProcessBlockRandao(b *testing.B) {
-	genesisState, deposits := createGenesisState(validatorNum)
+	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
-	cleanStates := createCleanStates(runAmount, genesisState)
-	b.N = runAmount
+	cleanStates := createCleanStates(genesisState)
+	b.N = len(cleanStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := blocks.ProcessRandao(
@@ -85,9 +81,9 @@ func BenchmarkProcessBlockRandao(b *testing.B) {
 }
 
 func BenchmarkProcessEth1Data(b *testing.B) {
-	genesisState, deposits := createGenesisState(validatorNum)
+	genesisState, deposits := createGenesisState()
 	block, root := createFullBlock(genesisState, deposits)
-	cleanStates := createCleanStates(runAmount, genesisState)
+	cleanStates := createCleanStates(genesisState)
 
 	eth1DataVotes := []*pb.Eth1Data{
 		{
@@ -96,7 +92,7 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 		},
 	}
 
-	b.N = runAmount
+	b.N = len(cleanStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cleanStates[i].Eth1DataVotes = eth1DataVotes
@@ -109,10 +105,10 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 }
 
 func BenchmarkProcessValidatorExits(b *testing.B) {
-	genesisState, deposits := createGenesisState(validatorNum)
+	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
-	cleanStates := createCleanStates(runAmount, genesisState)
-	b.N = runAmount
+	cleanStates := createCleanStates(genesisState)
+	b.N = len(cleanStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cleanStates[i].Slot = params.BeaconConfig().SlotsPerEpoch * 2048
@@ -125,10 +121,10 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
-	genesisState, deposits := createGenesisState(validatorNum)
+	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
-	cleanStates := createCleanStates(runAmount, genesisState)
-	b.N = runAmount
+	cleanStates := createCleanStates(genesisState)
+	b.N = len(cleanStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := blocks.ProcessProposerSlashings(
@@ -144,10 +140,10 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessAttesterSlashings(b *testing.B) {
-	genesisState, deposits := createGenesisState(validatorNum)
+	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
-	cleanStates := createCleanStates(runAmount, genesisState)
-	b.N = runAmount
+	cleanStates := createCleanStates(genesisState)
+	b.N = len(cleanStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := blocks.ProcessAttesterSlashings(cleanStates[i], block, false)
@@ -159,10 +155,10 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessBlockAttestations(b *testing.B) {
-	genesisState, deposits := createGenesisState(validatorNum)
+	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
-	cleanStates := createCleanStates(runAmount, genesisState)
-	b.N = runAmount
+	cleanStates := createCleanStates(genesisState)
+	b.N = len(cleanStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := blocks.ProcessBlockAttestations(
@@ -178,10 +174,10 @@ func BenchmarkProcessBlockAttestations(b *testing.B) {
 }
 
 func BenchmarkProcessValidatorDeposits(b *testing.B) {
-	genesisState, deposits := createGenesisState(validatorNum)
+	genesisState, deposits := createGenesisState()
 	block, root := createFullBlock(genesisState, deposits)
-	cleanStates := createCleanStates(runAmount, genesisState)
-	b.N = runAmount
+	cleanStates := createCleanStates(genesisState)
+	b.N = len(cleanStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cleanStates[i].LatestEth1Data = &pb.Eth1Data{
@@ -198,30 +194,30 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 }
 
 func BenchmarkProcessBlock(b *testing.B) {
-	genesisState, deposits := createGenesisState(validatorNum)
+	genesisState, deposits := createGenesisState()
 	cfg := &state.TransitionConfig{
 		VerifySignatures: false,
 		Logging:          false,
 	}
 
-	cleanStatesFull := createCleanStates(runAmount, genesisState)
-	cleanStatesFull[0].Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 3
-	cleanStatesFull[0].CurrentJustifiedEpoch = helpers.PrevEpoch(cleanStatesFull[0])
-	cleanStatesFull[0].CurrentCrosslinks[0].EndEpoch = helpers.PrevEpoch(cleanStatesFull[0]) - 1
-	cleanStatesFull[0].CurrentCrosslinks[0].StartEpoch = helpers.PrevEpoch(cleanStatesFull[0]) - 3
-	fullBlock, benchRoot := createFullBlock(cleanStatesFull[0], deposits)
+	cleanStates := createCleanStates(genesisState)
+	cleanStates[0].Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 3
+	cleanStates[0].CurrentJustifiedEpoch = helpers.PrevEpoch(cleanStates[0])
+	cleanStates[0].CurrentCrosslinks[0].EndEpoch = helpers.PrevEpoch(cleanStates[0]) - 1
+	cleanStates[0].CurrentCrosslinks[0].StartEpoch = helpers.PrevEpoch(cleanStates[0]) - 3
+	fullBlock, benchRoot := createFullBlock(cleanStates[0], deposits)
 
-	b.N = runAmount
+	b.N = len(cleanStates)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		beaconState := cleanStatesFull[i]
+		beaconState := cleanStates[i]
 		beaconState.LatestEth1Data = &pb.Eth1Data{
 			BlockHash:   benchRoot,
 			DepositRoot: benchRoot,
 		}
 		beaconState.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 4
 		beaconState.CurrentJustifiedEpoch = helpers.PrevEpoch(beaconState)
-		beaconState.CurrentCrosslinks[0] = cleanStatesFull[0].CurrentCrosslinks[0]
+		beaconState.CurrentCrosslinks[0] = cleanStates[0].CurrentCrosslinks[0]
 		fullBlock.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 4
 		if _, err := state.ProcessBlock(context.Background(), beaconState, fullBlock, cfg); err != nil {
 			b.Fatal(err)
@@ -415,9 +411,10 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 	return block, root[:]
 }
 
-func createGenesisState(numDeposits int) (*pb.BeaconState, []*pb.Deposit) {
-	setBenchmarkConfig()
-	deposits := make([]*pb.Deposit, numDeposits)
+func createGenesisState() (*pb.BeaconState, []*pb.Deposit) {
+	validatorCount := uint64(65536)
+	setBenchmarkConfig("SML", validatorCount)
+	deposits := make([]*pb.Deposit, validatorCount)
 	for i := 0; i < len(deposits); i++ {
 		pubkey := []byte{}
 		pubkey = make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -483,9 +480,9 @@ func createGenesisState(numDeposits int) (*pb.BeaconState, []*pb.Deposit) {
 	return genesisState, deposits
 }
 
-func createCleanStates(num int, beaconState *pb.BeaconState) []*pb.BeaconState {
-	cleanStates := make([]*pb.BeaconState, num)
-	for i := 0; i < num; i++ {
+func createCleanStates(beaconState *pb.BeaconState) []*pb.BeaconState {
+	cleanStates := make([]*pb.BeaconState, 42)
+	for i := 0; i < len(cleanStates); i++ {
 		cleanStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
 	}
 	return cleanStates
