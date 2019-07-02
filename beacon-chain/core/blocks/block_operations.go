@@ -360,16 +360,17 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 // IsSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
 //
 // Spec pseudocode definition:
-//   return (
-//   # Double vote
-//   (data_1 != data_2 and data_1.target_epoch == data_2.target_epoch) or
-//   # Surround vote
-//   (data_1.source_epoch < data_2.source_epoch and data_2.target_epoch < data_1.target_epoch)
-//   )
+//   def is_slashable_attestation_data(data_1: AttestationData, data_2: AttestationData) -> bool:
+//    """
+//    Check if ``data_1`` and ``data_2`` are slashable according to Casper FFG rules.
+//    """
+//    return (
+//        # Double vote
+//        (data_1 != data_2 and data_1.target.epoch == data_2.target.epoch) or
+//        # Surround vote
+//        (data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch)
+//    )
 func IsSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
-	// Inner attestation data structures for the votes should not be equal,
-	// as that would mean both votes are the same and therefore no slashing
-	// should occur.
 	isDoubleVote := !proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
 	isSurroundVote := data1.SourceEpoch < data2.SourceEpoch && data2.TargetEpoch < data1.TargetEpoch
 	return isDoubleVote || isSurroundVote
@@ -597,34 +598,40 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 // WIP - signing is not implemented until BLS is integrated into Prysm.
 //
 // Spec pseudocode definition:
-//  def verify_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+//  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
 //    """
-//    Verify validity of ``indexed_attestation`` fields.
+//    Verify validity of ``indexed_attestation``.
 //    """
-//    custody_bit_0_indices = indexed_attestation.custody_bit_0_indices
-//    custody_bit_1_indices = indexed_attestation.custody_bit_1_indices
+//    bit_0_indices = indexed_attestation.custody_bit_0_indices
+//    bit_1_indices = indexed_attestation.custody_bit_1_indices
 //
-//    # Ensure no duplicate indices across custody bits
-//    assert len(set(custody_bit_0_indices).intersection(set(custody_bit_1_indices))) == 0
-//
-//    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
+//    # Verify no index has custody bit equal to 1 [to be removed in phase 1]
+//    if not len(bit_1_indices) == 0:
 //        return False
-//
-//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
+//    # Verify max number of indices
+//    if not len(bit_0_indices) + len(bit_1_indices) <= MAX_VALIDATORS_PER_COMMITTEE:
 //        return False
-//
-//    return bls_verify_multiple(
+//    # Verify index sets are disjoint
+//    if not len(set(bit_0_indices).intersection(bit_1_indices)) == 0:
+//        return False
+//    # Verify indices are sorted
+//    if not (bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)):
+//        return False
+//    # Verify aggregate signature
+//    if not bls_verify_multiple(
 //        pubkeys=[
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_indices]),
+//            bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_0_indices]),
+//            bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_1_indices]),
 //        ],
 //        message_hashes=[
 //            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
 //            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
 //        ],
 //        signature=indexed_attestation.signature,
-//        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
-//    )
+//        domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target.epoch),
+//    ):
+//        return False
+//    return True
 func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
@@ -634,7 +641,7 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 		return fmt.Errorf("expected no bit 1 indices, received %v", len(custodyBit1Indices))
 	}
 
-	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
+	maxIndices := params.BeaconConfig().MaxValidatorsPerCommittee
 	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
 	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
 		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)
@@ -870,10 +877,13 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 //    assert state.balances[transfer.sender] >= max(transfer.amount, transfer.fee)
 //    # A transfer is valid in only one slot
 //    assert state.slot == transfer.slot
-//    # Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE
+//    # Sender must satisfy at least one of the following conditions in the parenthesis:
 //    assert (
+//		  # * Has not been activated
 //        state.validator_registry[transfer.sender].activation_eligibility_epoch == FAR_FUTURE_EPOCH or
+//        # * Is withdrawable
 //        get_current_epoch(state) >= state.validator_registry[transfer.sender].withdrawable_epoch or
+//        # * Balance after transfer is more than the effective balance threshold
 //        transfer.amount + transfer.fee + MAX_EFFECTIVE_BALANCE <= state.balances[transfer.sender]
 //    )
 //    # Verify that the pubkey is valid
