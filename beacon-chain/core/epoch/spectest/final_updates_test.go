@@ -8,13 +8,13 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-func runCrosslinkProcessingTests(t *testing.T, filename string) {
+func runFinalUpdatesTests(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
@@ -37,7 +37,7 @@ func runCrosslinkProcessingTests(t *testing.T, filename string) {
 			}
 
 			var postState *pb.BeaconState
-			postState, err = epoch.ProcessCrosslinks(preState)
+			postState, err = epoch.ProcessFinalUpdates(preState)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -49,26 +49,27 @@ func runCrosslinkProcessingTests(t *testing.T, filename string) {
 
 			if !reflect.DeepEqual(postState, expectedPostState) {
 				t.Error("Did not get expected state")
+				diff, _ := messagediff.PrettyDiff(s, tt.Post)
+				t.Log(diff)
 			}
 		})
 	}
 }
 
-const crosslinkPrefix = "eth2_spec_tests/tests/epoch_processing/crosslinks/"
+const finalUpdatesPrefix = "eth2_spec_tests/tests/epoch_processing/final_updates/"
 
-func TestCrosslinksProcessingMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(crosslinkPrefix + "crosslinks_minimal.yaml")
+func TestFinalUpdatesMinimal(t *testing.T) {
+	filepath, err := bazel.Runfile(finalUpdatesPrefix + "final_updates_minimal.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	runCrosslinkProcessingTests(t, filepath)
+	runFinalUpdatesTests(t, filepath)
 }
 
-func TestCrosslinksProcessingMainnet(t *testing.T) {
-	helpers.ClearAllCaches()
-	filepath, err := bazel.Runfile(crosslinkPrefix + "crosslinks_mainnet.yaml")
+func TestFinalUpdatesMainnet(t *testing.T) {
+	filepath, err := bazel.Runfile(finalUpdatesPrefix + "final_updates_mainnet.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	runCrosslinkProcessingTests(t, filepath)
+	runFinalUpdatesTests(t, filepath)
 }

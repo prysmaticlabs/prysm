@@ -3,7 +3,7 @@
 
 package spectest
 
-type CrosslinksTest struct {
+type EpochProcessingTest struct {
 	Title         string   `json:"title"`
 	Summary       string   `json:"summary"`
 	ForksTimeline string   `json:"forks_timeline"`
@@ -30,19 +30,23 @@ type CrosslinksTest struct {
 				WithdrawableEpoch          uint64 `json:"withdrawable_epoch"`
 				Slashed                    bool   `json:"slashed"`
 				EffectiveBalance           uint64 `json:"effective_balance"`
-			} `json:"validator_registry"`
+			} `json:"validators"`
 			Balances                  []uint64 `json:"balances"`
-			RandaoMixes               [][]byte `json:"latest_randao_mixes" ssz:"size=64,32"`
-			StartShard                uint64   `json:"latest_start_shard"`
+			RandaoMixes               [][]byte `json:"randao_mixes" ssz:"size=64,32"`
+			StartShard                uint64   `json:"start_shard"`
 			PreviousEpochAttestations []struct {
-				AggregationBits []byte `json:"aggregation_bitfield"`
+				AggregationBits []byte `json:"aggregation_bits"`
 				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-					SourceEpoch     uint64 `json:"source_epoch"`
-					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-					TargetEpoch     uint64 `json:"target_epoch"`
-					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-					Crosslink       struct {
+					Source          struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"source"`
+					Target struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"target"`
+					Crosslink struct {
 						Shard      uint64 `json:"shard"`
 						StartEpoch uint64 `json:"start_epoch"`
 						EndEpoch   uint64 `json:"end_epoch"`
@@ -54,14 +58,18 @@ type CrosslinksTest struct {
 				ProposerIndex  uint64 `json:"proposer_index"`
 			} `json:"previous_epoch_attestations"`
 			CurrentEpochAttestations []struct {
-				AggregationBits []byte `json:"aggregation_bitfield"`
+				AggregationBits []byte `json:"aggregation_bits"`
 				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-					SourceEpoch     uint64 `json:"source_epoch"`
-					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-					TargetEpoch     uint64 `json:"target_epoch"`
-					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-					Crosslink       struct {
+					Source          struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"source"`
+					Target struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"target"`
+					Crosslink struct {
 						Shard      uint64 `json:"shard"`
 						StartEpoch uint64 `json:"start_epoch"`
 						EndEpoch   uint64 `json:"end_epoch"`
@@ -72,14 +80,20 @@ type CrosslinksTest struct {
 				InclusionDelay uint64 `json:"inclusion_delay"`
 				ProposerIndex  uint64 `json:"proposer_index"`
 			} `json:"current_epoch_attestations"`
-			PreviousJustifiedEpoch uint64 `json:"previous_justified_epoch"`
-			CurrentJustifiedEpoch  uint64 `json:"current_justified_epoch"`
-			PreviousJustifiedRoot  []byte `json:"previous_justified_root" ssz:"size=32"`
-			CurrentJustifiedRoot   []byte `json:"current_justified_root" ssz:"size=32"`
-			JustificationBits      uint64 `json:"justification_bitfield"`
-			FinalizedEpoch         uint64 `json:"finalized_epoch"`
-			FinalizedRoot          []byte `json:"finalized_root" ssz:"size=32"`
-			CurrentCrosslinks      []struct {
+			PreviousJustifiedCheckpoint struct {
+				Epoch uint64 `json:"epoch"`
+				Root  []byte `json:"root" ssz:"size=32"`
+			} `json:"previous_justified_checkpoint"`
+			CurrentJustifiedCheckpoint struct {
+				Epoch uint64 `json:"epoch"`
+				Root  []byte `json:"root" ssz:"size=32"`
+			} `json:"current_justified_checkpoint"`
+			JustificationBits   []byte `json:"justification_bits" ssz:"size=1"`
+			FinalizedCheckpoint struct {
+				Epoch uint64 `json:"epoch"`
+				Root  []byte `json:"root" ssz:"size=32"`
+			} `json:"finalized_checkpoint"`
+			CurrentCrosslinks []struct {
 				Shard      uint64 `json:"shard"`
 				StartEpoch uint64 `json:"start_epoch"`
 				EndEpoch   uint64 `json:"end_epoch"`
@@ -93,10 +107,10 @@ type CrosslinksTest struct {
 				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
 				DataRoot   []byte `json:"data_root" ssz:"size=32"`
 			} `json:"previous_crosslinks" ssz:"size=8"`
-			BlockRoots        [][]byte `json:"latest_block_roots" ssz:"size=64,32"`
-			StateRoots        [][]byte `json:"latest_state_roots" ssz:"size=64,32"`
-			ActiveIndexRoots  [][]byte `json:"latest_active_index_roots" ssz:"size=64,32"`
-			Slashings         []uint64 `json:"latest_slashed_balances" ssz:"size=64"`
+			BlockRoots        [][]byte `json:"block_roots" ssz:"size=64,32"`
+			StateRoots        [][]byte `json:"state_roots" ssz:"size=64,32"`
+			ActiveIndexRoots  [][]byte `json:"active_index_roots" ssz:"size=64,32"`
+			Slashings         []uint64 `json:"slashings" ssz:"size=64"`
 			LatestBlockHeader struct {
 				Slot       uint64 `json:"slot"`
 				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
@@ -109,13 +123,13 @@ type CrosslinksTest struct {
 				DepositRoot  []byte `json:"deposit_root" ssz:"size=32"`
 				DepositCount uint64 `json:"deposit_count"`
 				BlockHash    []byte `json:"block_hash" ssz:"size=32"`
-			} `json:"latest_eth1_data"`
+			} `json:"eth1_data"`
 			Eth1DataVotes []struct {
 				DepositRoot  []byte `json:"deposit_root" ssz:"size=32"`
 				DepositCount uint64 `json:"deposit_count"`
 				BlockHash    []byte `json:"block_hash" ssz:"size=32"`
 			} `json:"eth1_data_votes"`
-			Eth1DepositIndex uint64 `json:"deposit_index"`
+			Eth1DepositIndex uint64 `json:"eth1_deposit_index"`
 		} `json:"pre"`
 		Post struct {
 			Slot        uint64 `json:"slot"`
@@ -134,19 +148,23 @@ type CrosslinksTest struct {
 				WithdrawableEpoch          uint64 `json:"withdrawable_epoch"`
 				Slashed                    bool   `json:"slashed"`
 				EffectiveBalance           uint64 `json:"effective_balance"`
-			} `json:"validator_registry"`
+			} `json:"validators"`
 			Balances                  []uint64 `json:"balances"`
-			RandaoMixes               [][]byte `json:"latest_randao_mixes" ssz:"size=64,32"`
-			StartShard                uint64   `json:"latest_start_shard"`
+			RandaoMixes               [][]byte `json:"randao_mixes" ssz:"size=64,32"`
+			StartShard                uint64   `json:"start_shard"`
 			PreviousEpochAttestations []struct {
-				AggregationBits []byte `json:"aggregation_bitfield"`
+				AggregationBits []byte `json:"aggregation_bits"`
 				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-					SourceEpoch     uint64 `json:"source_epoch"`
-					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-					TargetEpoch     uint64 `json:"target_epoch"`
-					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-					Crosslink       struct {
+					Source          struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"source"`
+					Target struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"target"`
+					Crosslink struct {
 						Shard      uint64 `json:"shard"`
 						StartEpoch uint64 `json:"start_epoch"`
 						EndEpoch   uint64 `json:"end_epoch"`
@@ -158,14 +176,18 @@ type CrosslinksTest struct {
 				ProposerIndex  uint64 `json:"proposer_index"`
 			} `json:"previous_epoch_attestations"`
 			CurrentEpochAttestations []struct {
-				AggregationBits []byte `json:"aggregation_bitfield"`
+				AggregationBits []byte `json:"aggregation_bits"`
 				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-					SourceEpoch     uint64 `json:"source_epoch"`
-					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-					TargetEpoch     uint64 `json:"target_epoch"`
-					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-					Crosslink       struct {
+					Source          struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"source"`
+					Target struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"target"`
+					Crosslink struct {
 						Shard      uint64 `json:"shard"`
 						StartEpoch uint64 `json:"start_epoch"`
 						EndEpoch   uint64 `json:"end_epoch"`
@@ -176,14 +198,20 @@ type CrosslinksTest struct {
 				InclusionDelay uint64 `json:"inclusion_delay"`
 				ProposerIndex  uint64 `json:"proposer_index"`
 			} `json:"current_epoch_attestations"`
-			PreviousJustifiedEpoch uint64 `json:"previous_justified_epoch"`
-			CurrentJustifiedEpoch  uint64 `json:"current_justified_epoch"`
-			PreviousJustifiedRoot  []byte `json:"previous_justified_root" ssz:"size=32"`
-			CurrentJustifiedRoot   []byte `json:"current_justified_root" ssz:"size=32"`
-			JustificationBits      uint64 `json:"justification_bitfield"`
-			FinalizedEpoch         uint64 `json:"finalized_epoch"`
-			FinalizedRoot          []byte `json:"finalized_root" ssz:"size=32"`
-			CurrentCrosslinks      []struct {
+			PreviousJustifiedCheckpoint struct {
+				Epoch uint64 `json:"epoch"`
+				Root  []byte `json:"root" ssz:"size=32"`
+			} `json:"previous_justified_checkpoint"`
+			CurrentJustifiedCheckpoint struct {
+				Epoch uint64 `json:"epoch"`
+				Root  []byte `json:"root" ssz:"size=32"`
+			} `json:"current_justified_checkpoint"`
+			JustificationBits   []byte `json:"justification_bits" ssz:"size=1"`
+			FinalizedCheckpoint struct {
+				Epoch uint64 `json:"epoch"`
+				Root  []byte `json:"root" ssz:"size=32"`
+			} `json:"finalized_checkpoint"`
+			CurrentCrosslinks []struct {
 				Shard      uint64 `json:"shard"`
 				StartEpoch uint64 `json:"start_epoch"`
 				EndEpoch   uint64 `json:"end_epoch"`
@@ -197,10 +225,10 @@ type CrosslinksTest struct {
 				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
 				DataRoot   []byte `json:"data_root" ssz:"size=32"`
 			} `json:"previous_crosslinks" ssz:"size=8"`
-			BlockRoots        [][]byte `json:"latest_block_roots" ssz:"size=64,32"`
-			StateRoots        [][]byte `json:"latest_state_roots" ssz:"size=64,32"`
-			ActiveIndexRoots  [][]byte `json:"latest_active_index_roots" ssz:"size=64,32"`
-			Slashings         []uint64 `json:"latest_slashed_balances" ssz:"size=64"`
+			BlockRoots        [][]byte `json:"block_roots" ssz:"size=64,32"`
+			StateRoots        [][]byte `json:"state_roots" ssz:"size=64,32"`
+			ActiveIndexRoots  [][]byte `json:"active_index_roots" ssz:"size=64,32"`
+			Slashings         []uint64 `json:"slashings" ssz:"size=64"`
 			LatestBlockHeader struct {
 				Slot       uint64 `json:"slot"`
 				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
@@ -213,13 +241,13 @@ type CrosslinksTest struct {
 				DepositRoot  []byte `json:"deposit_root" ssz:"size=32"`
 				DepositCount uint64 `json:"deposit_count"`
 				BlockHash    []byte `json:"block_hash" ssz:"size=32"`
-			} `json:"latest_eth1_data"`
+			} `json:"eth1_data"`
 			Eth1DataVotes []struct {
 				DepositRoot  []byte `json:"deposit_root" ssz:"size=32"`
 				DepositCount uint64 `json:"deposit_count"`
 				BlockHash    []byte `json:"block_hash" ssz:"size=32"`
 			} `json:"eth1_data_votes"`
-			Eth1DepositIndex uint64 `json:"deposit_index"`
+			Eth1DepositIndex uint64 `json:"eth1_deposit_index"`
 		} `json:"post"`
 	} `json:"test_cases"`
 }
