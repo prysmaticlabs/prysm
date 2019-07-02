@@ -246,7 +246,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{71, 127},
+			wanted:          []uint64{127, 71},
 		},
 		{
 			attestationSlot: 2,
@@ -258,7 +258,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{68, 102},
+			wanted:          []uint64{102, 68},
 		},
 	}
 

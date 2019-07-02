@@ -24,7 +24,8 @@ message BeaconState {
   // Finality [4001-5000]
   repeated PendingAttestation previous_epoch_attestations = 4001 [(gogoproto.moretags) = "ssz:\"size=32\""];
   repeated PendingAttestation current_epoch_attestations = 4002 [(gogoproto.moretags) = "ssz:\"size=32\""];
-  uint64 justification_bits = 4003;
+  // Spec type [4]Bitvector which means this would be a fixed size of 1 byte.
+  bytes justification_bits = 4003 [(gogoproto.moretags) = "ssz:\"size=1\""];
   Checkpoint previous_justified_checkpoint = 4004;
   Checkpoint current_justified_checkpoint = 4005;
   Checkpoint finalized_checkpoint = 4006;
