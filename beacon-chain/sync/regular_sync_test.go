@@ -531,7 +531,7 @@ func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &pb.Attestation{
-		AggregationBitfield: []byte{'A', 'B', 'C'},
+		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	hash, err := ssz.HashTreeRoot(att)
 	if err != nil {
@@ -573,7 +573,7 @@ func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &pb.Attestation{
-		AggregationBitfield: []byte{'A', 'B', 'C'},
+		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	hash, err := ssz.HashTreeRoot(att)
 	if err != nil {
@@ -611,7 +611,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &pb.Attestation{
-		AggregationBitfield: []byte{'A', 'B', 'C'},
+		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	attRoot, err := ssz.HashTreeRoot(att)
 	if err != nil {

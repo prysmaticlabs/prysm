@@ -78,7 +78,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 			return err
 		}
 
-		for i, validator := range beaconState.ValidatorRegistry {
+		for i, validator := range beaconState.Validators {
 			h := hashutil.Hash(validator.Pubkey)
 			buf := make([]byte, binary.MaxVarintLen64)
 			n := binary.PutUvarint(buf, uint64(i))
@@ -168,10 +168,10 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	}
 	stateHash := hashutil.Hash(enc)
 	tempState := &pb.BeaconState{}
-	tempState.ValidatorRegistry = beaconState.ValidatorRegistry
+	tempState.Validators = beaconState.Validators
 
 	copy(db.validatorBalances, beaconState.Balances)
-	db.validatorRegistry = proto.Clone(tempState).(*pb.BeaconState).ValidatorRegistry
+	db.validatorRegistry = proto.Clone(tempState).(*pb.BeaconState).Validators
 	db.serializedState = enc
 	db.stateHash = stateHash
 
@@ -345,9 +345,9 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64, bl
 	return beaconState, err
 }
 
-// ValidatorRegistry fetches the current validator registry stored in state.
-func (db *BeaconDB) ValidatorRegistry(ctx context.Context) ([]*pb.Validator, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorRegistry")
+// Validators fetches the current validator registry stored in state.
+func (db *BeaconDB) Validators(ctx context.Context) ([]*pb.Validator, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.Validators")
 	defer span.End()
 
 	db.stateLock.RLock()
@@ -355,13 +355,13 @@ func (db *BeaconDB) ValidatorRegistry(ctx context.Context) ([]*pb.Validator, err
 
 	// Return in-memory cached state, if available.
 	if db.validatorRegistry != nil {
-		_, span := trace.StartSpan(ctx, "proto.Clone.ValidatorRegistry")
+		_, span := trace.StartSpan(ctx, "proto.Clone.Validators")
 		defer span.End()
 		tempState := &pb.BeaconState{
-			ValidatorRegistry: db.validatorRegistry,
+			Validators: db.validatorRegistry,
 		}
 		newState := proto.Clone(tempState).(*pb.BeaconState)
-		return newState.ValidatorRegistry, nil
+		return newState.Validators, nil
 	}
 
 	var beaconState *pb.BeaconState
@@ -380,7 +380,7 @@ func (db *BeaconDB) ValidatorRegistry(ctx context.Context) ([]*pb.Validator, err
 		return err
 	})
 
-	return beaconState.ValidatorRegistry, err
+	return beaconState.Validators, err
 }
 
 // ValidatorFromState fetches the validator with the desired index from the cached registry.
@@ -421,7 +421,7 @@ func (db *BeaconDB) ValidatorFromState(ctx context.Context, index uint64) (*pb.V
 		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
 
-	return beaconState.ValidatorRegistry[index], err
+	return beaconState.Validators[index], err
 }
 
 // Balances fetches the current validator balances stored in state.

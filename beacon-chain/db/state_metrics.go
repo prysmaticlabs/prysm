@@ -62,12 +62,12 @@ func reportStateMetrics(state *pb.BeaconState) {
 	// Validator balances
 	for i, bal := range state.Balances {
 		validatorBalancesGauge.WithLabelValues(
-			"0x" + hex.EncodeToString(state.ValidatorRegistry[i].Pubkey), // Validator
+			"0x" + hex.EncodeToString(state.Validators[i].Pubkey), // Validator
 		).Set(float64(bal))
 	}
 
 	var active float64
-	for i, v := range state.ValidatorRegistry {
+	for i, v := range state.Validators {
 		// Track individual Validator's activation epochs
 		validatorActivatedGauge.WithLabelValues(
 			strconv.Itoa(i), //Validator index
@@ -80,7 +80,7 @@ func reportStateMetrics(state *pb.BeaconState) {
 		if v.Slashed {
 			validatorSlashedGauge.WithLabelValues(
 				strconv.Itoa(i), //Validator index
-			).Set(float64(v.WithdrawableEpoch - params.BeaconConfig().LatestSlashedExitLength))
+			).Set(float64(v.WithdrawableEpoch - params.BeaconConfig().EpochsPerSlashingsVector))
 		} else {
 			validatorSlashedGauge.WithLabelValues(
 				strconv.Itoa(i), //Validator index
@@ -95,10 +95,17 @@ func reportStateMetrics(state *pb.BeaconState) {
 
 	// Slot number
 	lastSlotGauge.Set(float64(state.Slot))
+
 	// Last justified slot
-	lastJustifiedEpochGauge.Set(float64(state.CurrentJustifiedEpoch))
+	if state.CurrentJustifiedCheckpoint != nil {
+		lastJustifiedEpochGauge.Set(float64(state.CurrentJustifiedCheckpoint.Epoch))
+	}
 	// Last previous justified slot
-	lastPrevJustifiedEpochGauge.Set(float64(state.PreviousJustifiedEpoch))
+	if state.PreviousJustifiedCheckpoint != nil {
+		lastPrevJustifiedEpochGauge.Set(float64(state.PreviousJustifiedCheckpoint.Epoch))
+	}
 	// Last finalized slot
-	lastFinalizedEpochGauge.Set(float64(state.FinalizedEpoch))
+	if state.FinalizedCheckpoint != nil {
+		lastFinalizedEpochGauge.Set(float64(state.FinalizedCheckpoint.Epoch))
+	}
 }

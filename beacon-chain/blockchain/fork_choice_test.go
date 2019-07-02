@@ -63,7 +63,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		// Higher slot, different state, but higher last finalized slot.
 		{
 			blockSlot: 64,
-			state:     &pb.BeaconState{FinalizedEpoch: 2},
+			state:     &pb.BeaconState{FinalizedCheckpoint: &pb.Checkpoint{Epoch: 2}},
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, same last finalized slot,
@@ -71,8 +71,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		{
 			blockSlot: 64,
 			state: &pb.BeaconState{
-				FinalizedEpoch:        0,
-				CurrentJustifiedEpoch: 2,
+				FinalizedCheckpoint:        &pb.Checkpoint{Epoch: 0},
+				CurrentJustifiedCheckpoint: &pb.Checkpoint{Epoch: 2},
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -203,7 +203,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
+	beaconState := &pb.BeaconState{Validators: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -233,7 +233,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 
 	pubKey := []byte{'A'}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{
+		Validators: []*pb.Validator{{
 			Pubkey:    pubKey,
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
 	}
@@ -500,9 +500,9 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState := &pb.BeaconState{
-		Slot:              10,
-		Balances:          []uint64{params.BeaconConfig().MaxDepositAmount},
-		ValidatorRegistry: []*pb.Validator{{}},
+		Slot:       10,
+		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
+		Validators: []*pb.Validator{{}},
 	}
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
@@ -567,14 +567,14 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Slot: 10,
 		Balances: []uint64{
-			params.BeaconConfig().MaxDepositAmount,
-			params.BeaconConfig().MaxDepositAmount,
-			params.BeaconConfig().MaxDepositAmount,
-			params.BeaconConfig().MaxDepositAmount},
-		ValidatorRegistry: []*pb.Validator{{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
-			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
-			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
-			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount}},
+			params.BeaconConfig().MaxEffectiveBalance,
+			params.BeaconConfig().MaxEffectiveBalance,
+			params.BeaconConfig().MaxEffectiveBalance,
+			params.BeaconConfig().MaxEffectiveBalance},
+		Validators: []*pb.Validator{{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
 	}
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
@@ -776,11 +776,11 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
-		ValidatorRegistry: []*pb.Validator{
-			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
-			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
-			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount},
-			{EffectiveBalance: params.BeaconConfig().MaxDepositAmount}},
+		Validators: []*pb.Validator{
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
 	}
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
@@ -917,7 +917,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	validatorCount := 8
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < validatorCount; i++ {
-		balances[i] = params.BeaconConfig().MaxDepositAmount
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
 	chainService := setupBeaconChainBenchmark(b, beaconDB)
@@ -998,7 +998,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	validatorCount := 8
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < validatorCount; i++ {
-		balances[i] = params.BeaconConfig().MaxDepositAmount
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
 	chainService := setupBeaconChainBenchmark(b, beaconDB)
@@ -1077,7 +1077,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	validatorCount := 64
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < validatorCount; i++ {
-		balances[i] = params.BeaconConfig().MaxDepositAmount
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
 	chainService := setupBeaconChainBenchmark(b, beaconDB)
@@ -1156,7 +1156,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	validatorCount := 16384
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < validatorCount; i++ {
-		balances[i] = params.BeaconConfig().MaxDepositAmount
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
 	chainService := setupBeaconChainBenchmark(b, beaconDB)
@@ -1292,9 +1292,9 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 
 	// New justified slot in state is at slot 64.
 	offset := uint64(64)
-	gState.CurrentJustifiedEpoch = 1
+	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.CurrentJustifiedEpoch, privKeys)
+	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.CurrentJustifiedCheckpoint.Epoch, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
@@ -1370,9 +1370,9 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gState.FinalizedEpoch = 1
+	gState.FinalizedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.FinalizedEpoch, privKeys)
+	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.FinalizedCheckpoint.Epoch, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
@@ -1445,7 +1445,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	// New justified slot in state is at slot 64, but it's a skip slot...
 	offset := uint64(64)
 	lastAvailableSlot := uint64(60)
-	gState.CurrentJustifiedEpoch = 1
+	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
 	epochSignature, err := helpers.CreateRandaoReveal(gState, 0, privKeys)
 	if err != nil {
@@ -1506,7 +1506,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	}
 	latestRandaoMixes := make(
 		[][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength,
+		params.BeaconConfig().EpochsPerHistoricalVector,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
@@ -1525,7 +1525,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 				Pubkey:    priv.PublicKey().Marshal(),
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			})
-		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxDepositAmount)
+		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxEffectiveBalance)
 	}
 	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
 	gBlockRoot, err := blockutil.BlockSigningRoot(gBlock)
@@ -1537,20 +1537,23 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		t.Fatal(err)
 	}
 	gState := &pb.BeaconState{
-		Slot:                   genesisSlot,
-		LatestBlockRoots:       make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		LatestRandaoMixes:      latestRandaoMixes,
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
-		CurrentCrosslinks:      crosslinks,
-		ValidatorRegistry:      validatorRegistry,
-		Balances:               validatorBalances,
+		Slot:              genesisSlot,
+		BlockRoots:        make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
+		RandaoMixes:       latestRandaoMixes,
+		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		CurrentCrosslinks: crosslinks,
+		Validators:        validatorRegistry,
+		Balances:          validatorBalances,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
-		LatestBlockHeader: gHeader,
+		LatestBlockHeader:           gHeader,
+		CurrentJustifiedCheckpoint:  &pb.Checkpoint{},
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{},
+		FinalizedCheckpoint:         &pb.Checkpoint{},
 	}
 	return gBlockRoot, gBlock, gState, privKeys
 }
@@ -1590,7 +1593,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
+	beaconState := &pb.BeaconState{Validators: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -1655,7 +1658,7 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Balances: []uint64{1e9, 1e9},
-		ValidatorRegistry: []*pb.Validator{
+		Validators: []*pb.Validator{
 			{EffectiveBalance: 1e9},
 			{EffectiveBalance: 1e9},
 		},

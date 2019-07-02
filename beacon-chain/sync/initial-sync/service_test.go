@@ -66,7 +66,9 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 func (ms *mockChainService) AdvanceState(
 	ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
+	return &pb.BeaconState{
+		FinalizedCheckpoint: &pb.Checkpoint{},
+	}, nil
 }
 
 func (ms *mockChainService) VerifyBlockValidity(
@@ -145,7 +147,6 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 	chainHead := &pb.ChainHeadResponse{}
 
 	ss.processBatchedBlocks(msg, chainHead)
-
 }
 
 func TestProcessingBlocks_SkippedSlots(t *testing.T) {

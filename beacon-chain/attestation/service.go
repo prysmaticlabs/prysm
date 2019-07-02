@@ -101,10 +101,10 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
 func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
-	if index >= uint64(len(beaconState.ValidatorRegistry)) {
+	if index >= uint64(len(beaconState.Validators)) {
 		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
-	validator := beaconState.ValidatorRegistry[index]
+	validator := beaconState.Validators[index]
 
 	pubKey := bytesutil.ToBytes48(validator.Pubkey)
 	a.store.RLock()
@@ -242,7 +242,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 
 	// The participation bitfield from attestation is represented in bytes,
 	// here we multiply by 8 to get an accurate validator count in bits.
-	bitfield := attestation.AggregationBitfield
+	bitfield := attestation.AggregationBits
 	totalBits := len(bitfield) * 8
 
 	// Check each bit of participation bitfield to find out which
@@ -262,14 +262,14 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 			return nil
 		}
 
-		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
+		if int(committee[i]) >= len(beaconState.Validators) {
 			log.Debugf("index doesn't exist in validator registry: index %d", committee[i])
 			return nil
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
-		pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[committee[i]].Pubkey)
+		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].Pubkey)
 		newAttestationSlot := slot
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()

@@ -13,6 +13,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["block_processing_test.go"],
     data = [
         "@eth2_spec_tests//:test_data",

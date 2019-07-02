@@ -34,7 +34,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 
 		depositData := &pb.DepositData{
 			Pubkey:                pubkey,
-			Amount:                params.BeaconConfig().MaxDepositAmount,
+			Amount:                params.BeaconConfig().MaxEffectiveBalance,
 			WithdrawalCredentials: []byte{1},
 		}
 		deposits[i] = &pb.Deposit{
