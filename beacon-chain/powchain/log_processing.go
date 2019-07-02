@@ -3,6 +3,9 @@ package powchain
 import (
 	"encoding/binary"
 	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -15,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
-	"math/big"
 )
 
 var (
@@ -45,6 +47,8 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 				return err
 			}
 			if triggered {
+				//TODO: get block time by hash
+				w.blockTime = time.Now()
 				timeStamp := w.blockTime.Unix()
 				w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
 				w.processChainStart(uint64(w.eth2GenesisTime))
@@ -170,19 +174,18 @@ func (w *Web3Service) isGenesisTrigger(deposits []*pb.Deposit) (bool, error) {
 	}
 
 	activeValidators := uint64(0)
-	for _, v := range s.ValidatorRegistry {
+	for _, v := range s.Validators {
 		if v.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance {
 			activeValidators++
 		}
 	}
-	triggered := activeValidators == params.BeaconConfig().GenesisActiveValidatorCount
+	triggered := activeValidators == params.BeaconConfig().MinGenesisActiveValidatorCount
 	return triggered, err
 }
 
 // processChainStart processes the last final steps before chain start.
 func (w *Web3Service) processChainStart(genesisTime uint64) {
 	chainStartCount.Inc()
-
 	depHashes, err := w.ChainStartDepositHashes()
 	if err != nil {
 		log.Errorf("Generating chainstart deposit hashes failed: %v", err)
@@ -205,7 +208,7 @@ func (w *Web3Service) processChainStart(genesisTime uint64) {
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": genesisTime,
 	}).Info("Sending chainstart signal to blockchain service")
-	w.chainStartFeed.Send(genesisTime)
+	w.chainStartFeed.Send(time.Unix(int64(genesisTime), 0))
 }
 
 // processPastLogs processes all the past logs from the deposit contract and

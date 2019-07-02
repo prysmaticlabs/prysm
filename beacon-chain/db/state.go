@@ -39,7 +39,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	if err != nil {
 		return err
 	}
-	beaconState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 
 	// #nosec G104
 	stateEnc, _ := proto.Marshal(beaconState)

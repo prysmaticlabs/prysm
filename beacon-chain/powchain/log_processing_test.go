@@ -293,7 +293,8 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	}
 
 	cfg := params.BeaconConfig()
-	cfg.GenesisActiveValidatorCount = 8
+
+	cfg.MinGenesisActiveValidatorCount = 8
 	params.OverrideBeaconConfig(cfg)
 	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
@@ -307,7 +308,6 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	for _, log := range logs {
 		web3Service.ProcessLog(log)
 	}
-
 	cachedDeposits := web3Service.ChainStartDeposits()
 	if len(cachedDeposits) != depositsReqForChainStart {
 		t.Errorf(
@@ -316,7 +316,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 			depositsReqForChainStart,
 		)
 	}
-
+	<-genesisTimeChan
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
@@ -488,7 +488,7 @@ func TestGenesisBlock_OK(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	cfg := params.BeaconConfig()
-	cfg.GenesisActiveValidatorCount = 8
+	cfg.MinGenesisActiveValidatorCount = 8
 	params.OverrideBeaconConfig(cfg)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,

@@ -139,7 +139,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error while trying to hash tree root of indices: %v", err)
 	}
-	if !bytes.Equal(newState.LatestActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
+	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
 			newState.ActiveIndexRoots[0],
