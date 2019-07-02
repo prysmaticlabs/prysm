@@ -3,10 +3,10 @@ package helpers
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -74,15 +74,14 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 	for _, test := range tests {
 		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		mix := RandaoMix(state, test.epoch)
-		randaoMap := make(map[string]bool)
-		for _, elem := range mix {
-			randaoMap[fmt.Sprintf("%v", &elem)] = true
-		}
+		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
+		binary.LittleEndian.PutUint64(mix, uniqueNumber)
+
 		for _, mx := range randaoMixes {
-			for _, val := range mx {
-				if randaoMap[fmt.Sprintf("%v", &val)] {
-					t.Fatalf("two distinct slices still have elements referenced by the same address: %v", &val)
-				}
+			mxNum := bytesutil.FromBytes8(mx)
+			if mxNum == uniqueNumber {
+				t.Fatalf("two distinct slices which have different representations in memory still contain"+
+					"the same value: %d", mxNum)
 			}
 		}
 	}
@@ -146,15 +145,14 @@ func TestActiveIndexRoot_CopyOK(t *testing.T) {
 	for _, test := range tests {
 		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
 		indexRoot := ActiveIndexRoot(state, test.epoch)
-		rootMap := make(map[string]bool)
-		for _, elem := range indexRoot {
-			rootMap[fmt.Sprintf("%v", &elem)] = true
-		}
+		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
+		binary.LittleEndian.PutUint64(indexRoot, uniqueNumber)
+
 		for _, root := range activeIndexRoots {
-			for _, val := range root {
-				if rootMap[fmt.Sprintf("%v", &val)] {
-					t.Fatalf("two distinct slices still have elements referenced by the same address: %v", &val)
-				}
+			rootNum := bytesutil.FromBytes8(root)
+			if rootNum == uniqueNumber {
+				t.Fatalf("two distinct slices which have different representations in memory still contain"+
+					"the same value: %d", rootNum)
 			}
 		}
 	}
