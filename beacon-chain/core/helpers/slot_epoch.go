@@ -8,11 +8,11 @@ import (
 // SlotToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
-//  def slot_to_epoch(slot: Slot) -> Epoch:
-//   """
-//   Return the epoch number of the given ``slot``.
-//   """
-//   return slot // SLOTS_PER_EPOCH
+//  def compute_epoch_of_slot(slot: Slot) -> Epoch:
+//    """
+//    Return the epoch number of ``slot``.
+//    """
+//    return Epoch(slot // SLOTS_PER_EPOCH)
 func SlotToEpoch(slot uint64) uint64 {
 	return slot / params.BeaconConfig().SlotsPerEpoch
 }
@@ -23,9 +23,9 @@ func SlotToEpoch(slot uint64) uint64 {
 // Spec pseudocode definition:
 //  def get_current_epoch(state: BeaconState) -> Epoch:
 //    """
-//    Return the current epoch of the given ``state``.
+//    Return the current epoch.
 //    """
-//    return slot_to_epoch(state.slot)
+//    return compute_epoch_of_slot(state.slot)
 func CurrentEpoch(state *pb.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot)
 }
@@ -37,11 +37,10 @@ func CurrentEpoch(state *pb.BeaconState) uint64 {
 // Spec pseudocode definition:
 //  def get_previous_epoch(state: BeaconState) -> Epoch:
 //    """`
-//    Return the previous epoch of the given ``state``.
-//    Return the current epoch if it's genesis epoch.
+//    Return the previous epoch (unless the current epoch is ``GENESIS_EPOCH``).
 //    """
 //    current_epoch = get_current_epoch(state)
-//    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else current_epoch - 1
+//    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
 func PrevEpoch(state *pb.BeaconState) uint64 {
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch == 0 {
@@ -60,11 +59,11 @@ func NextEpoch(state *pb.BeaconState) uint64 {
 // current epoch.
 //
 // Spec pseudocode definition:
-//  def get_epoch_start_slot(epoch: Epoch) -> Slot:
+//  def compute_start_slot_of_epoch(epoch: Epoch) -> Slot:
 //    """
-//    Return the starting slot of the given ``epoch``.
+//    Return the start slot of ``epoch``.
 //    """
-//    return epoch * SLOTS_PER_EPOCH
+//    return Slot(epoch * SLOTS_PER_EPOCH
 func StartSlot(epoch uint64) uint64 {
 	return epoch * params.BeaconConfig().SlotsPerEpoch
 }

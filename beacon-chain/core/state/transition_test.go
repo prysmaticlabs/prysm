@@ -528,7 +528,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < shardCount; i++ {
-		if _, err := helpers.CrosslinkCommitteeAtEpoch(s, 0, i); err != nil {
+		if _, err := helpers.CrosslinkCommittee(s, 0, i); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -732,7 +732,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < shardCount; i++ {
-		if _, err := helpers.CrosslinkCommitteeAtEpoch(s, 0, i); err != nil {
+		if _, err := helpers.CrosslinkCommittee(s, 0, i); err != nil {
 			b.Fatal(err)
 		}
 	}
