@@ -49,6 +49,15 @@ func cleanUpConfigs() {
 	params.OverrideBeaconConfig(params.BeaconConfig())
 }
 
+func TestBenchmarkEpoch_PerformsSuccessfully(t *testing.T) {
+	beaconState := createFullState()
+	_, err := state.ProcessEpoch(context.Background(), beaconState)
+	if err != nil {
+		t.Fatalf("failed to process epoch, benchmarks will fail: %v", err)
+	}
+	cleanUpConfigs()
+}
+
 func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
 	genesisBeaconState := createFullState()
 	beaconStates := createCleanStates(genesisBeaconState)

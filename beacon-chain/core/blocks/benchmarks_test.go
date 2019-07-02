@@ -45,6 +45,28 @@ func cleanUp() {
 	params.OverrideBeaconConfig(params.BeaconConfig())
 }
 
+func TestBenchmarkProcessBlock_PerformsSuccessfully(t *testing.T) {
+	beaconState, deposits := createGenesisState()
+	cfg := &state.TransitionConfig{
+		VerifySignatures: false,
+		Logging:          false,
+	}
+
+	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 3
+	beaconState.CurrentJustifiedCheckpoint.Epoch = helpers.PrevEpoch(beaconState)
+	beaconState.CurrentCrosslinks[0].EndEpoch = helpers.PrevEpoch(beaconState) - 1
+	beaconState.CurrentCrosslinks[0].StartEpoch = helpers.PrevEpoch(beaconState) - 3
+	fullBlock, benchRoot := createFullBlock(beaconState, deposits)
+	beaconState.Eth1Data = &pb.Eth1Data{
+		BlockHash:   benchRoot,
+		DepositRoot: benchRoot,
+	}
+	if _, err := state.ProcessBlock(context.Background(), beaconState, fullBlock, cfg); err != nil {
+		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
+	}
+	cleanUp()
+}
+
 func BenchmarkProcessBlockHeader(b *testing.B) {
 	genesisState, deposits := createGenesisState()
 	block, _ := createFullBlock(genesisState, deposits)
