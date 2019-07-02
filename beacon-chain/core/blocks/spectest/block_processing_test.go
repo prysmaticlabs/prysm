@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestBlockProcessingMinimalYaml(t *testing.T) {
