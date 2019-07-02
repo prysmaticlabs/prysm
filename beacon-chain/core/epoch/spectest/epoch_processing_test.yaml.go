@@ -30,8 +30,8 @@ type EpochProcessingTest struct {
 				WithdrawableEpoch          uint64 `json:"withdrawable_epoch"`
 				Slashed                    bool   `json:"slashed"`
 				EffectiveBalance           uint64 `json:"effective_balance"`
-			} `json:"validators"`
-			Balances                  []uint64 `json:"balances"`
+			} `json:"validators" ssz:"size=1099511627776"`
+			Balances                  []uint64 `json:"balances" ssz:"size=1099511627776"`
 			RandaoMixes               [][]byte `json:"randao_mixes" ssz:"size=64,32"`
 			StartShard                uint64   `json:"start_shard"`
 			PreviousEpochAttestations []struct {
@@ -111,13 +111,6 @@ type EpochProcessingTest struct {
 			StateRoots        [][]byte `json:"state_roots" ssz:"size=64,32"`
 			ActiveIndexRoots  [][]byte `json:"active_index_roots" ssz:"size=64,32"`
 			Slashings         []uint64 `json:"slashings" ssz:"size=64"`
-			LatestBlockHeader struct {
-				Slot       uint64 `json:"slot"`
-				ParentRoot []byte `json:"parent_root" ssz:"size=32"`
-				StateRoot  []byte `json:"state_root" ssz:"size=32"`
-				BodyRoot   []byte `json:"body_root" ssz:"size=32"`
-				Signature  []byte `json:"signature" ssz:"size=96"`
-			} `json:"latest_block_header"`
 			HistoricalRoots [][]byte `json:"historical_roots" ssz:"size=?,32"`
 			Eth1Data        struct {
 				DepositRoot  []byte `json:"deposit_root" ssz:"size=32"`

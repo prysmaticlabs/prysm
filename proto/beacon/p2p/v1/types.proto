@@ -12,9 +12,9 @@ message BeaconState {
   Fork fork = 1003;
 
   // Validator registry [2001-3000]
-  repeated Validator validators = 2001;
+  repeated Validator validators = 2001 [(gogoproto.moretags) = "ssz:\"size=1099511627776\""];
   // Balances in Gwei
-  repeated uint64 balances = 2002;
+  repeated uint64 balances = 2002 [(gogoproto.moretags) = "ssz:\"size=1099511627776\""];
 
   // Randomness and committees [3001-4000]
   repeated bytes randao_mixes = 3001 [(gogoproto.moretags) = "ssz:\"size=8192,32\""];
