@@ -424,7 +424,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
-	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
+	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*pbp2p.Validator{{

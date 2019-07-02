@@ -610,7 +610,7 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 //    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
 //        return False
 //
-//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
+//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_VALIDATORS_PER_COMMITTEE):
 //        return False
 //
 //    return bls_verify_multiple(
@@ -634,7 +634,7 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 		return fmt.Errorf("expected no bit 1 indices, received %v", len(custodyBit1Indices))
 	}
 
-	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
+	maxIndices := params.BeaconConfig().MaxValidatorsPerCommittee
 	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
 	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
 		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)

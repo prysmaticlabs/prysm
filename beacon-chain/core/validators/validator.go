@@ -121,7 +121,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 		exitQueueEpoch++
 	}
 	state.Validators[idx].ExitEpoch = exitQueueEpoch
-	state.Validators[idx].WithdrawableEpoch = exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
+	state.Validators[idx].WithdrawableEpoch = exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	return state, nil
 }
 
@@ -170,11 +170,11 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //    proposer_index = get_beacon_proposer_index(state)
 //    if whistleblower_index is None:
 //      whistleblower_index = proposer_index
-//	  whistleblowing_reward = slashed_balance // WHISTLEBLOWING_REWARD_QUOTIENT
-//	  proposer_reward = whistleblowing_reward // PROPOSER_REWARD_QUOTIENT
+//	  whistleblower_reward = slashed_balance // WHISTLEBLOWER_REWARD_QUOTIENT
+//	  proposer_reward = whistleblower_reward // PROPOSER_REWARD_QUOTIENT
 //	  increase_balance(state, proposer_index, proposer_reward)
-//	  increase_balance(state, whistleblower_index, whistleblowing_reward - proposer_reward)
-//	  decrease_balance(state, slashed_index, whistleblowing_reward)
+//	  increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
+//	  decrease_balance(state, slashed_index, whistleblower_reward)
 func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx uint64) (*pb.BeaconState, error) {
 	state, err := InitiateValidatorExit(state, slashedIdx)
 	if err != nil {
@@ -194,7 +194,7 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	if whistleBlowerIdx == 0 {
 		whistleBlowerIdx = proposerIdx
 	}
-	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleblowerRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 	state = helpers.IncreaseBalance(state, proposerIdx, proposerReward)
 	state = helpers.IncreaseBalance(state, whistleBlowerIdx, whistleblowerReward-proposerReward)

@@ -228,7 +228,7 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Could not get proposer %v", err)
 	}
 
-	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleblowerRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 
 	if state.Balances[proposer] != params.BeaconConfig().MaxEffectiveBalance+proposerReward {
