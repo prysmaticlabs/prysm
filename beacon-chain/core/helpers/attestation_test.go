@@ -23,7 +23,7 @@ func TestAttestationDataSlot_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	offset := uint64(0)
-	committeeCount, _ := helpers.EpochCommitteeCount(beaconState, 0)
+	committeeCount, _ := helpers.CommitteeCount(beaconState, 0)
 	expect := offset / (committeeCount / params.BeaconConfig().SlotsPerEpoch)
 	attSlot, err := helpers.AttestationDataSlot(beaconState, &pb.AttestationData{
 		TargetEpoch: 0,

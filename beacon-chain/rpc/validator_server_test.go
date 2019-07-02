@@ -985,7 +985,7 @@ func BenchmarkAssignment(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < validatorCount/params.BeaconConfig().TargetCommitteeSize; i++ {
-		if _, err := helpers.CrosslinkCommitteeAtEpoch(state, 0, i); err != nil {
+		if _, err := helpers.CrosslinkCommittee(state, 0, i); err != nil {
 			b.Fatal(err)
 		}
 	}
