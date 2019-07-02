@@ -16,19 +16,19 @@ import (
 
 // BeaconState gets called to return a beacon state where all the fields are set to genesis values.
 func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *pb.Eth1Data) *pb.BeaconState {
-	latestRandaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
+	latestRandaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 
-	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
+	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(latestActiveIndexRoots); i++ {
 		latestActiveIndexRoots[i] = zeroHash
 	}
 
-	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
+	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	if eth1Data == nil {
 		eth1Data = &pb.Eth1Data{}
 	}
@@ -40,9 +40,13 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 		}
 	}
 
-	latestBlockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	latestBlockRoots := make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	for i := 0; i < len(latestBlockRoots); i++ {
 		latestBlockRoots[i] = zeroHash
+	}
+
+	if eth1Data == nil {
+		eth1Data = &pb.Eth1Data{}
 	}
 
 	state := &pb.BeaconState{
@@ -57,35 +61,41 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry: []*pb.Validator{},
-		Balances:          []uint64{},
+		Validators: []*pb.Validator{},
+		Balances:   []uint64{},
 
 		// Randomness and committees.
-		LatestRandaoMixes: latestRandaoMixes,
+		RandaoMixes: latestRandaoMixes,
 
 		// Finality.
-		PreviousJustifiedEpoch: 0,
-		PreviousJustifiedRoot:  params.BeaconConfig().ZeroHash[:],
-		CurrentJustifiedEpoch:  0,
-		CurrentJustifiedRoot:   params.BeaconConfig().ZeroHash[:],
-		JustificationBitfield:  0,
-		FinalizedEpoch:         0,
-		FinalizedRoot:          params.BeaconConfig().ZeroHash[:],
+		PreviousJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		JustificationBits: []byte{0},
+		FinalizedCheckpoint: &pb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
 
 		// Recent state.
 		CurrentCrosslinks:         crosslinks,
 		PreviousCrosslinks:        crosslinks,
-		LatestActiveIndexRoots:    latestActiveIndexRoots,
-		LatestBlockRoots:          latestBlockRoots,
-		LatestSlashedBalances:     latestSlashedExitBalances,
+		ActiveIndexRoots:          latestActiveIndexRoots,
+		BlockRoots:                latestBlockRoots,
+		Slashings:                 latestSlashedExitBalances,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 		LatestBlockHeader:         blkHeader,
 
 		// Eth1 data.
-		LatestEth1Data: eth1Data,
-		Eth1DataVotes:  []*pb.Eth1Data{},
-		DepositIndex:   0,
+		Eth1Data:         eth1Data,
+		Eth1DataVotes:    []*pb.Eth1Data{},
+		Eth1DepositIndex: 0,
 	}
 	return state
 }
@@ -117,6 +127,39 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 //        state.latest_active_index_roots[index] = genesis_active_index_root
 //
 //    return state
+
+// def initialize_beacon_state_from_eth1(eth1_block_hash: Hash,
+//                                       eth1_timestamp: uint64,
+//                                       deposits: Sequence[Deposit]) -> BeaconState:
+//     state = BeaconState(
+//         genesis_time=eth1_timestamp - eth1_timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
+//         eth1_data=Eth1Data(block_hash=eth1_block_hash, deposit_count=len(deposits)),
+//         latest_block_header=BeaconBlockHeader(body_root=hash_tree_root(BeaconBlockBody())),
+//     )
+//
+//     # Process deposits
+//     leaves = list(map(lambda deposit: deposit.data, deposits))
+//     for index, deposit in enumerate(deposits):
+//         deposit_data_list = List[DepositData, 2**DEPOSIT_CONTRACT_TREE_DEPTH](*leaves[:index + 1])
+//         state.eth1_data.deposit_root = hash_tree_root(deposit_data_list)
+//         process_deposit(state, deposit)
+//
+//     # Process activations
+//     for index, validator in enumerate(state.validators):
+//         balance = state.balances[index]
+//         validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
+//         if validator.effective_balance == MAX_EFFECTIVE_BALANCE:
+//             validator.activation_eligibility_epoch = GENESIS_EPOCH
+//             validator.activation_epoch = GENESIS_EPOCH
+//
+//     # Populate active_index_roots and compact_committees_roots
+//     indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, GENESIS_EPOCH))
+//     active_index_root = hash_tree_root(indices_list)
+//     committee_root = get_compact_committees_root(state, GENESIS_EPOCH)
+//     for index in range(EPOCHS_PER_HISTORICAL_VECTOR):
+//         state.active_index_roots[index] = active_index_root
+//         state.compact_committees_roots[index] = committee_root
+//     return state
 func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
 	bodyRoot, err := ssz.HashTreeRoot(&pb.BeaconBlockBody{})
 	if err != nil {
@@ -143,11 +186,11 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 
 	// Process genesis activations
-	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if state.ValidatorRegistry[i].EffectiveBalance >=
-			params.BeaconConfig().MaxDepositAmount {
-			state.ValidatorRegistry[i].ActivationEligibilityEpoch = 0
-			state.ValidatorRegistry[i].ActivationEpoch = 0
+	for i := 0; i < len(state.Validators); i++ {
+		if state.Validators[i].EffectiveBalance >=
+			params.BeaconConfig().MaxEffectiveBalance {
+			state.Validators[i].ActivationEligibilityEpoch = 0
+			state.Validators[i].ActivationEpoch = 0
 		}
 	}
 
@@ -160,8 +203,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v", err)
 	}
-	for i := uint64(0); i < params.BeaconConfig().LatestActiveIndexRootsLength; i++ {
-		state.LatestActiveIndexRoots[i] = indexRoot[:]
+	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
+		state.ActiveIndexRoots[i] = indexRoot[:]
 	}
 	return state, nil
 }

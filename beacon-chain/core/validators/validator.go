@@ -43,7 +43,7 @@ var VStore = validatorStore{
 //
 //    validator.activation_epoch = GENESIS_EPOCH if is_genesis else get_entry_exit_effect_epoch(get_current_epoch(state))
 func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.BeaconState, error) {
-	validator := state.ValidatorRegistry[idx]
+	validator := state.Validators[idx]
 	if genesis {
 		validator.ActivationEligibilityEpoch = 0
 		validator.ActivationEpoch = 0
@@ -51,7 +51,7 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
 	}
 
-	state.ValidatorRegistry[idx] = validator
+	state.Validators[idx] = validator
 
 	log.WithFields(logrus.Fields{
 		"index":           idx,
@@ -85,12 +85,12 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 //   validator.exit_epoch = exit_queue_epoch
 //   validator.withdrawable_epoch = validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
-	validator := state.ValidatorRegistry[idx]
+	validator := state.Validators[idx]
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state, nil
 	}
 	exitEpochs := []uint64{}
-	for _, val := range state.ValidatorRegistry {
+	for _, val := range state.Validators {
 		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch)
 		}
@@ -98,7 +98,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 	exitEpochs = append(exitEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
 
 	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
-	exitQueueEpoch := exitEpochs[0]
+	exitQueueEpoch := uint64(0)
 	for _, i := range exitEpochs {
 		if exitQueueEpoch < i {
 			exitQueueEpoch = i
@@ -107,7 +107,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := 0
-	for _, val := range state.ValidatorRegistry {
+	for _, val := range state.Validators {
 		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn++
 		}
@@ -120,8 +120,8 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 	if uint64(exitQueueChurn) >= churn {
 		exitQueueEpoch++
 	}
-	state.ValidatorRegistry[idx].ExitEpoch = exitQueueEpoch
-	state.ValidatorRegistry[idx].WithdrawableEpoch = exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
+	state.Validators[idx].ExitEpoch = exitQueueEpoch
+	state.Validators[idx].WithdrawableEpoch = exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
 	return state, nil
 }
 
@@ -142,7 +142,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 //
 //    validator.exit_epoch = get_entry_exit_effect_epoch(get_current_epoch(state))
 func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
-	validator := state.ValidatorRegistry[idx]
+	validator := state.Validators[idx]
 
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state
@@ -176,25 +176,28 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //	  increase_balance(state, whistleblower_index, whistleblowing_reward - proposer_reward)
 //	  decrease_balance(state, slashed_index, whistleblowing_reward)
 func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx uint64) (*pb.BeaconState, error) {
-	state = ExitValidator(state, slashedIdx)
+	state, err := InitiateValidatorExit(state, slashedIdx)
+	if err != nil {
+		return nil, fmt.Errorf("could not initiate validator exit %v", err)
+	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	state.ValidatorRegistry[slashedIdx].Slashed = true
-	state.ValidatorRegistry[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().LatestSlashedExitLength
-	slashedBalance := state.ValidatorRegistry[slashedIdx].EffectiveBalance
-	state.LatestSlashedBalances[currentEpoch%params.BeaconConfig().LatestSlashedExitLength] += slashedBalance
+	state.Validators[slashedIdx].Slashed = true
+	state.Validators[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().EpochsPerSlashingsVector
+	slashedBalance := state.Validators[slashedIdx].EffectiveBalance
+	state.Slashings[currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector] += slashedBalance
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposer idx: %v", err)
 	}
-	var whistleBlower uint64
+
 	if whistleBlowerIdx == 0 {
-		whistleBlower = proposerIdx
+		whistleBlowerIdx = proposerIdx
 	}
 	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 	state = helpers.IncreaseBalance(state, proposerIdx, proposerReward)
-	state = helpers.IncreaseBalance(state, whistleBlower, whistleblowerReward-proposerReward)
+	state = helpers.IncreaseBalance(state, whistleBlowerIdx, whistleblowerReward-proposerReward)
 	state = helpers.DecreaseBalance(state, slashedIdx, whistleblowerReward)
 	return state, nil
 }

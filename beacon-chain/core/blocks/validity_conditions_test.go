@@ -77,7 +77,7 @@ func TestIsValidBlock_InvalidSlot(t *testing.T) {
 	block.Slot = 3
 	db.hasBlock = true
 
-	beaconState.LatestEth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &pb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}
@@ -106,7 +106,7 @@ func TestIsValidBlock_InvalidPoWReference(t *testing.T) {
 	db.hasBlock = true
 	block.Slot = 4
 	powClient.blockExists = false
-	beaconState.LatestEth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &pb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}
@@ -129,7 +129,7 @@ func TestIsValidBlock_InvalidGenesis(t *testing.T) {
 	powClient.blockExists = false
 
 	beaconState.Slot = 3
-	beaconState.LatestEth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &pb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}
@@ -159,7 +159,7 @@ func TestIsValidBlock_GoodBlock(t *testing.T) {
 	powClient.blockExists = true
 
 	beaconState.Slot = 3
-	beaconState.LatestEth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &pb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}

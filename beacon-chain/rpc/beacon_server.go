@@ -139,7 +139,7 @@ func (bs *BeaconServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	currentHeight := bs.powChainService.LatestBlockHeight()
-	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRoot)
+	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.Eth1Data.DepositRoot)
 	if stateLatestEth1Hash == [32]byte{} {
 		return bs.defaultEth1DataResponse(ctx, currentHeight)
 	}
@@ -190,10 +190,10 @@ func (bs *BeaconServer) validateVote(ctx context.Context, currentHeight *big.Int
 		return false, nil, nil
 	}
 	isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
-	isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
+	isAheadStateEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
 	correctDepositCount := depositCount == vote.DepositCount
 	correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
-	return blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data && correctDepositCount && correctDepositRoot, blockHeight, nil
+	return blockExists && isBehindFollowDistance && isAheadStateEth1Data && correctDepositCount && correctDepositRoot, blockHeight, nil
 }
 
 // BlockTreeBySlots returns the current tree of saved blocks and their

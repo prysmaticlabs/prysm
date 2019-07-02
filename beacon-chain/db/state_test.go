@@ -208,32 +208,32 @@ func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 	}{
 		{
 			state: &pb.BeaconState{
-				Slot:           66,
-				FinalizedEpoch: 1,
+				Slot:                66,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           72,
-				FinalizedEpoch: 1,
+				Slot:                72,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           96,
-				FinalizedEpoch: 1,
+				Slot:                96,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           130,
-				FinalizedEpoch: 2,
+				Slot:                130,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 2},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           300,
-				FinalizedEpoch: 4,
+				Slot:                300,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 4},
 			},
 		},
 	}
@@ -333,7 +333,7 @@ func TestHistoricalState_Pruning(t *testing.T) {
 		}
 
 		// Save a dummy genesis state so that db doesnt return an error.
-		if err := db.SaveHistoricalState(context.Background(), &pb.BeaconState{Slot: 0, FinalizedEpoch: 0}, root); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), &pb.BeaconState{Slot: 0, FinalizedCheckpoint: &pb.Checkpoint{}}, root); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 

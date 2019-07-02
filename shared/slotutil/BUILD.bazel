@@ -9,6 +9,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["slotticker_test.go"],
     embed = [":go_default_library"],
 )
