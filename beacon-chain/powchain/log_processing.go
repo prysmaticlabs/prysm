@@ -45,6 +45,9 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 				return err
 			}
 			if triggered {
+				timeStamp := w.blockTime.Unix()
+				w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
+				w.processChainStart(uint64(w.eth2GenesisTime))
 				log.Info("Minimum number of validators reached for beacon-chain to start")
 				w.chainStarted = true
 			}
@@ -223,11 +226,6 @@ func (w *Web3Service) processPastLogs() error {
 		if err := w.ProcessLog(l); err != nil {
 			log.WithError(err).Error("Could not process log")
 		}
-		if w.chainStarted {
-			timeStamp := w.blockTime.Unix()
-			w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
-			w.processChainStart(uint64(w.eth2GenesisTime))
-		}
 	}
 	w.lastRequestedBlock.Set(w.blockHeight)
 
@@ -266,11 +264,6 @@ func (w *Web3Service) requestBatchedLogs() error {
 		for _, l := range logs {
 			if err := w.ProcessLog(l); err != nil {
 				log.WithError(err).Error("Could not process log")
-			}
-			if w.chainStarted {
-				timeStamp := w.blockTime.Unix()
-				genesisTime := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
-				w.processChainStart(uint64(genesisTime))
 			}
 		}
 	}

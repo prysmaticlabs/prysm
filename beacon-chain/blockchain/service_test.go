@@ -218,15 +218,6 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 	return service.beaconDB.SaveState(context.Background(), bState)
 }
 
-func setLatestStateRootsInState(service *ChainService) error {
-	bState, err := service.beaconDB.HeadState(context.Background())
-	if err != nil {
-		return err
-	}
-	bState.LatestStateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	return service.beaconDB.SaveState(context.Background(), bState)
-}
-
 func TestChainStartStop_Uninitialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)

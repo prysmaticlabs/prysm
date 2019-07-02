@@ -18,6 +18,7 @@ type BeaconChainConfig struct {
 	BaseRewardsPerEpoch         uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`         // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	ShuffleRoundCount           uint64 `yaml:"SHUFFLE_ROUND_COUNT"`            // ShuffleRoundCount is used for retrieving the permuted index.
 	GenesisActiveValidatorCount uint64 `yaml:"GENESIS_ACTIVE_VALIDATOR_COUNT"` // GenesisActiveValidatorCount is minimal number of validators needed to bootstrap beacon chain.
+	MinGenesisTime              uint64 `yaml:"MIN_GENESIS_TIME"`               // MinGenesisTime is the date and time in which the beacon chain is considered to begin.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte `yaml:"DEPOSIT_CONTRACT_ADDRESS"`    // DepositContractAddress is the address of the deposit contract in PoW chain.
@@ -122,6 +123,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	BaseRewardsPerEpoch:         5,
 	ShuffleRoundCount:           90,
 	GenesisActiveValidatorCount: 1 << 16,
+	MinGenesisTime:              1578009600, //(Jan 3, 2020)
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
@@ -299,7 +301,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DomainDeposit = 3
 	minimalConfig.DomainVoluntaryExit = 4
 	minimalConfig.DomainTransfer = 5
-	minimalConfig.GenesisActiveValidatorCount = 8
+	minimalConfig.GenesisActiveValidatorCount = 64
 
 	return &minimalConfig
 }

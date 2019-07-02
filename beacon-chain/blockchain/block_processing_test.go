@@ -68,10 +68,6 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := setLatestStateRootsInState(chainService); err != nil {
-		t.Fatal(err)
-	}
-
 	parentBlock := &pb.BeaconBlock{
 		Slot: 1,
 	}

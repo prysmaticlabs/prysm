@@ -487,8 +487,9 @@ func TestGenesisBlock_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	newConfig := params.MinimalSpecConfig()
-	params.OverrideBeaconConfig(newConfig)
+	cfg := params.BeaconConfig()
+	cfg.GenesisActiveValidatorCount = 8
+	params.OverrideBeaconConfig(cfg)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -559,6 +560,6 @@ func TestGenesisBlock_OK(t *testing.T) {
 	if !web3Service.chainStarted {
 		t.Error("genesis wasn't trigerred")
 	}
-	testutil.AssertLogsContainOccerances(t, hook, "Minimum number of validators reached for beacon-chain to start", 1)
+	testutil.AssertLogsContainOccurences(t, hook, "Minimum number of validators reached for beacon-chain to start", 1)
 	hook.Reset()
 }
