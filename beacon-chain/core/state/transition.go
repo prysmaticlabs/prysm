@@ -259,6 +259,19 @@ func ProcessOperations(
 		return nil, fmt.Errorf("could not verify operation lengths: %v", err)
 	}
 
+	// Verify that there are no duplicate transfers
+	transferSet := make(map[[32]byte]bool)
+	for _, transfer := range body.Transfers {
+		h, err := hashutil.HashProto(transfer)
+		if err != nil {
+			return nil, fmt.Errorf("could not hash transfer: %v", err)
+		}
+		if transferSet[h] {
+			return nil, fmt.Errorf("duplicate transfer: %v", transfer)
+		}
+		transferSet[h] = true
+	}
+
 	state, err := b.ProcessProposerSlashings(state, body, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block proposer slashings: %v", err)
@@ -336,19 +349,6 @@ func verifyOperationLengths(state *pb.BeaconState, body *pb.BeaconBlockBody) err
 	if len(body.Deposits) != int(maxDeposits) {
 		return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
 			maxDeposits, len(body.Deposits))
-	}
-
-	// Verify that there are no duplicate transfers
-	transferSet := make(map[[32]byte]bool)
-	for _, transfer := range body.Transfers {
-		h, err := hashutil.HashProto(transfer)
-		if err != nil {
-			return fmt.Errorf("could not hash transfer: %v", err)
-		}
-		if transferSet[h] {
-			return fmt.Errorf("duplicate transfer: %v", transfer)
-		}
-		transferSet[h] = true
 	}
 
 	return nil
