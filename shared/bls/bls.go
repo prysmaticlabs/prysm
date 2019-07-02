@@ -128,11 +128,13 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 // Domain returns the bls domain given by the domain type and the operation 4 byte fork version.
 //
 // Spec pseudocode definition:
-//  def bls_domain(domain_type: int, fork_version: bytes=b'\x00\x00\x00\x00') -> int:
+//  def get_domain(state: BeaconState, domain_type: DomainType, message_epoch: Epoch=None) -> Domain:
 //    """
-//    Return the bls domain given by the ``domain_type`` and optional 4 byte ``fork_version`` (defaults to zero).
+//    Return the signature domain (fork version concatenated with domain type) of a message.
 //    """
-//    return bytes_to_int(int_to_bytes(domain_type, length=4) + fork_version)
+//    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
+//    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
+//    return compute_domain(domain_type, fork_version)
 func Domain(domainType uint64, forkVersion []byte) uint64 {
 	b := []byte{}
 	b = append(b, bytesutil.Bytes4(domainType)...)

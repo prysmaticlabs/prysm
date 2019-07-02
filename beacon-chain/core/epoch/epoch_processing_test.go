@@ -1093,7 +1093,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedCheckpoint: &pb.Checkpoint{},
 	}
-	limit, _ := helpers.ChurnLimit(state)
+	limit, _ := helpers.ValidatorChurnLimit(state)
 	for i := 0; i < int(limit)+10; i++ {
 		state.Validators = append(state.Validators, &pb.Validator{
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
