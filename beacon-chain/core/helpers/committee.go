@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -411,22 +412,22 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 //            compact_validator = uint64((index << 16) + (validator.slashed << 15) + compact_balance)
 //            committees[shard].compact_validators.append(compact_validator)
 //    return hash_tree_root(Vector[CompactCommittee, SHARD_COUNT](committees))
-func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([]byte, error) {
+func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 	shardCount := params.BeaconConfig().ShardCount
 	compactCommList := make([]*pb.CompactCommittee, shardCount)
 	comCount, err := EpochCommitteeCount(state, epoch)
 	if err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
 	startShard, err := EpochStartShard(state, epoch)
 	if err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
 	for i := uint64(1); i <= comCount; i++ {
 		shard := (startShard + i) % shardCount
 		crossComm, err := CrosslinkCommitteeAtEpoch(state, epoch, shard)
 		if err != nil {
-			return nil, err
+			return [32]byte{}, err
 		}
 
 		for _, indice := range crossComm {
@@ -435,10 +436,15 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([]byte, error) 
 			compactBalance := validator.EffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 			// index (top 6 bytes) + slashed (16th bit) + compact_balance (bottom 15 bits)
 			compactIndice := indice << 16
+			var slashedBit uint64
 			if validator.Slashed {
-				compactIndice
+				slashedBit = 1 << 16
 			}
+			compactValidator := compactIndice | (slashedBit | compactBalance>>49)
+			compactCommList[shard].CompactValidators = append(compactCommList[shard].CompactValidators, compactValidator)
 
 		}
 	}
+
+	return ssz.HashTreeRoot(compactCommList)
 }
