@@ -243,11 +243,9 @@ func ProcessProposerSlashings(
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	registry := beaconState.Validators
-
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
-		proposer := registry[slashing.ProposerIndex]
+		proposer := beaconState.Validators[slashing.ProposerIndex]
 		if err = verifyProposerSlashing(beaconState, proposer, slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing %d: %v", idx, err)
 		}
@@ -314,7 +312,6 @@ func ProcessAttesterSlashings(
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-
 	for idx, slashing := range body.AttesterSlashings {
 		if err := verifyAttesterSlashing(slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attester slashing #%d: %v", idx, err)
@@ -391,10 +388,8 @@ func ProcessAttestations(
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	atts := body.Attestations
-
 	var err error
-	for idx, attestation := range atts {
+	for idx, attestation := range body.Attestations {
 		beaconState, err = ProcessAttestation(beaconState, attestation, verifySignatures)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)

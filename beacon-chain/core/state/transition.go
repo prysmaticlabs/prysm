@@ -255,15 +255,59 @@ func ProcessOperations(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
 	defer span.End()
 
+	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
+		return nil, fmt.Errorf(
+			"number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
+			len(body.ProposerSlashings),
+			params.BeaconConfig().MaxProposerSlashings,
+		)
+	}
+
+	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
+		return nil, fmt.Errorf(
+			"number of attester slashings (%d) in block body exceeds allowed threshold of %d",
+			len(body.AttesterSlashings),
+			params.BeaconConfig().MaxAttesterSlashings,
+		)
+	}
+
+	if uint64(len(body.Attestations)) > params.BeaconConfig().MaxAttestations {
+		return nil, fmt.Errorf(
+			"number of attester slashings (%d) in block body exceeds allowed threshold of %d",
+			len(body.Attestations),
+			params.BeaconConfig().MaxAttestations,
+		)
+	}
+
 	maxDeposits := params.BeaconConfig().MaxDeposits
 	if state.Eth1Data.DepositCount-state.Eth1DepositIndex < maxDeposits {
 		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
 	}
 	// Verify outstanding deposits are processed up to max number of deposits
 	if len(body.Deposits) != int(maxDeposits) {
-		return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
-			maxDeposits, len(body.Deposits))
+		return nil, fmt.Errorf(
+			"number of deposits (%d) in block body exceeds allowed threshold of %d",
+			len(body.Deposits),
+			maxDeposits,
+		)
 	}
+
+	if uint64(len(body.VoluntaryExits)) > params.BeaconConfig().MaxVoluntaryExits {
+		return nil, fmt.Errorf(
+			"number of exits (%d) in block body exceeds allowed threshold of %d",
+			len(body.VoluntaryExits),
+			params.BeaconConfig().MaxVoluntaryExits,
+		)
+	}
+
+	if uint64(len(body.Transfers)) > params.BeaconConfig().MaxTransfers {
+		return nil, fmt.Errorf(
+			"number of transfers (%d) in block body exceeds allowed threshold of %d",
+			len(body.Transfers),
+			params.BeaconConfig().MaxTransfers,
+		)
+	}
+
 	// Verify that there are no duplicate transfers
 	transferSet := make(map[[32]byte]bool)
 	for _, transfer := range body.Transfers {
