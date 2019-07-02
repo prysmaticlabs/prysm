@@ -2,6 +2,7 @@ package spectest
 
 import (
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -17,6 +18,9 @@ import (
 
 // This is a subset of state.ProcessEpoch.
 func processJustificationAndFinalizationWrapper(state *pb.BeaconState) (*pb.BeaconState, error) {
+	// This process mutates the state, so we'll make a copy in order to print debug before/after.
+	state = proto.Clone(state).(*pb.BeaconState)
+
 	prevEpochAtts, err := epoch.MatchAttestations(state, helpers.PrevEpoch(state))
 	if err != nil {
 		return nil, fmt.Errorf("could not get target atts prev epoch %d: %v",
