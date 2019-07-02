@@ -445,6 +445,5 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 
 		}
 	}
-
 	return ssz.HashTreeRoot(compactCommList)
 }

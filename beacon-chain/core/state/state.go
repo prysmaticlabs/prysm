@@ -158,8 +158,15 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		binary.LittleEndian.PutUint64(buf, val)
 		indicesBytes = append(indicesBytes, buf...)
 	}
+	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
+	if err != nil {
+		return nil, fmt.Errorf("could not get compact committee root %v", err)
+	}
+
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
+		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
+
 		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
 	}
 	return state, nil
