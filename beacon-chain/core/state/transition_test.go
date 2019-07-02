@@ -86,7 +86,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 			Deposits: blkDeposits,
 		},
 	}
-	want := "could not verify block proposer slashing"
+	want := "could not process block proposer slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -149,7 +149,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 			Deposits: make([]*pb.Deposit, 16),
 		},
 	}
-	want := "could not verify block attester slashing"
+	want := "could not process block attester slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -578,13 +578,14 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 
 	s := &pb.BeaconState{
-		Slot:             20,
-		BlockRoots:       make([][]byte, 254),
-		RandaoMixes:      randaoMixes,
-		Validators:       validators,
-		Balances:         validatorBalances,
-		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slot:              20,
+		LatestBlockHeader: &pb.BeaconBlockHeader{},
+		BlockRoots:        make([][]byte, 254),
+		RandaoMixes:       randaoMixes,
+		Validators:        validators,
+		Balances:          validatorBalances,
+		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentJustifiedCheckpoint: &pb.Checkpoint{
 			Root: []byte("hello-world"),
 		},
@@ -715,7 +716,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 
 	blk := &pb.BeaconBlock{
-		Slot: s.Slot + 1,
+		Slot: s.Slot,
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: root[:],
