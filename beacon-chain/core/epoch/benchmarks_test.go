@@ -206,7 +206,7 @@ func createFullState() *pb.BeaconState {
 	bState.FinalizedCheckpoint.Epoch = helpers.SlotToEpoch(bState.Slot) - 2
 	bState.PreviousJustifiedCheckpoint.Epoch = helpers.SlotToEpoch(bState.Slot) - 2
 	bState.CurrentJustifiedCheckpoint.Epoch = helpers.SlotToEpoch(bState.Slot) - 1
-	bState.JustificationBits = 4
+	bState.JustificationBits = []byte{4}
 
 	var blockRoots [][]byte
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
