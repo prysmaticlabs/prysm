@@ -246,131 +246,6 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 }
 
-func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	helpers.ClearAllCaches()
-
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-	proposerSlashings := []*pb.ProposerSlashing{
-		{
-			ProposerIndex: 3,
-			Header_1: &pb.BeaconBlockHeader{
-				Slot:      1,
-				Signature: []byte("A"),
-			},
-			Header_2: &pb.BeaconBlockHeader{
-				Slot:      1,
-				Signature: []byte("B"),
-			},
-		},
-	}
-	attesterSlashings := []*pb.AttesterSlashing{
-		{
-			Attestation_1: &pb.IndexedAttestation{
-				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
-					Crosslink: &pb.Crosslink{
-						Shard: 4,
-					}},
-				CustodyBit_0Indices: []uint64{0, 1},
-			},
-			Attestation_2: &pb.IndexedAttestation{
-				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
-					Crosslink: &pb.Crosslink{
-						Shard: 4,
-					}},
-				CustodyBit_0Indices: []uint64{0, 1},
-			},
-		},
-	}
-	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-	beaconState.BlockRoots = blockRoots
-	beaconState.CurrentCrosslinks = []*pb.Crosslink{
-		{
-			DataRoot: []byte{1},
-		},
-	}
-	blockAtt := &pb.Attestation{
-		Data: &pb.AttestationData{
-			TargetEpoch: 0,
-			SourceEpoch: 0,
-			SourceRoot:  []byte("hello-world"),
-			Crosslink: &pb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
-		},
-		AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-		CustodyBits:     []byte{},
-	}
-	attestations := []*pb.Attestation{blockAtt}
-	var exits []*pb.VoluntaryExit
-	for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits+1; i++ {
-		exits = append(exits, &pb.VoluntaryExit{})
-	}
-	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
-		Slot:       genesisBlock.Slot,
-		ParentRoot: genesisBlock.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-	}
-	beaconState.Eth1DepositIndex = 0
-
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	block := &pb.BeaconBlock{
-		ParentRoot: parentRoot[:],
-		Slot:       1,
-		Body: &pb.BeaconBlockBody{
-			RandaoReveal:      []byte{},
-			ProposerSlashings: proposerSlashings,
-			AttesterSlashings: attesterSlashings,
-			Attestations:      attestations,
-			VoluntaryExits:    exits,
-			Eth1Data: &pb.Eth1Data{
-				DepositRoot: []byte{2},
-				BlockHash:   []byte{3},
-			},
-		},
-	}
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.CurrentCrosslinks = []*pb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
-	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	want := "could not process validator exits"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
@@ -642,6 +517,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 		Validators:                validators,
 		Balances:                  balances,
 		StartShard:                512,
+		FinalizedCheckpoint:       &pb.Checkpoint{},
 		BlockRoots:                make([][]byte, 254),
 		Slashings:                 []uint64{0, 1e9, 0},
 		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
