@@ -32,8 +32,6 @@ type BeaconChainConfig struct {
 	EffectiveBalanceIncrement uint64 `yaml:"EFFECTIVE_BALANCE_INCREMENT"` // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 
 	// Initial value constants.
-	GenesisSlot             byte     `yaml:"GENESIS_SLOT"`               // GenesisSlot is the initial slot that ETH2 will use starting from genesis.
-	GenesisEpoch            byte     `yaml:"GENESIS_EPOCH"`              // GenesisEpoch is the initial epoch that ETH2 will use starting from genesis.
 	BLSWithdrawalPrefixByte byte     `yaml:"BLS_WITHDRAWAL_PREFIX_BYTE"` // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
@@ -133,8 +131,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EffectiveBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
-	GenesisSlot:             0,
-	GenesisEpoch:            0,
 	BLSWithdrawalPrefixByte: byte(0),
 	ZeroHash:                [32]byte{},
 
