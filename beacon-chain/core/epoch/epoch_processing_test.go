@@ -1146,7 +1146,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	epoch := uint64(5)
 	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
-	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawalDelay
+	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	state := &pb.BeaconState{
 		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*pb.Validator{

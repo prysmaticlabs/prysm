@@ -10,7 +10,7 @@ func SubsetUint64(a []uint64, b []uint64) bool {
 
 	set := make(map[uint64]uint64)
 	for _, v := range b {
-		set[v] ++
+		set[v]++
 	}
 
 	for _, v := range a {

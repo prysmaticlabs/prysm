@@ -641,7 +641,7 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 		return fmt.Errorf("expected no bit 1 indices, received %v", len(custodyBit1Indices))
 	}
 
-	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
+	maxIndices := params.BeaconConfig().MaxValidatorsPerCommittee
 	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
 	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
 		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)

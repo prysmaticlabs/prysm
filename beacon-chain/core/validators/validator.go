@@ -30,37 +30,6 @@ var VStore = validatorStore{
 	exitedValidators:    make(map[uint64][]uint64),
 }
 
-// ActivateValidator takes in validator index and updates
-// validator's activation slot.
-//
-// Spec pseudocode definition:
-//  def activate_validator(state: BeaconState, index: ValidatorIndex, is_genesis: bool) -> None:
-//    """
-//    Activate the validator of the given ``index``.
-//    Note that this function mutates ``state``.
-//    """
-//    validator = state.validator_registry[index]
-//
-//    validator.activation_epoch = GENESIS_EPOCH if is_genesis else get_entry_exit_effect_epoch(get_current_epoch(state))
-func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.BeaconState, error) {
-	validator := state.Validators[idx]
-	if genesis {
-		validator.ActivationEligibilityEpoch = 0
-		validator.ActivationEpoch = 0
-	} else {
-		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
-	}
-
-	state.Validators[idx] = validator
-
-	log.WithFields(logrus.Fields{
-		"index":           idx,
-		"activationEpoch": validator.ActivationEpoch,
-	}).Info("Validator activated")
-
-	return state, nil
-}
-
 // InitiateValidatorExit takes in validator index and updates
 // validator with correct voluntary exit parameters.
 //
@@ -121,7 +90,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 		exitQueueEpoch++
 	}
 	state.Validators[idx].ExitEpoch = exitQueueEpoch
-	state.Validators[idx].WithdrawableEpoch = exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
+	state.Validators[idx].WithdrawableEpoch = exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	return state, nil
 }
 
@@ -172,7 +141,6 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //    # Apply proposer and whistleblower rewards
 //    proposer_index = get_beacon_proposer_index(state)
 //    if whistleblower_index is None:
-//        whistleblower_index = proposer_index
 //    whistleblower_reward = Gwei(validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT)
 //    proposer_reward = Gwei(whistleblower_reward // PROPOSER_REWARD_QUOTIENT)
 //    increase_balance(state, proposer_index, proposer_reward)
@@ -196,7 +164,7 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	if whistleBlowerIdx == 0 {
 		whistleBlowerIdx = proposerIdx
 	}
-	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleblowerRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 	state = helpers.IncreaseBalance(state, proposerIdx, proposerReward)
 	state = helpers.IncreaseBalance(state, whistleBlowerIdx, whistleblowerReward-proposerReward)
