@@ -914,7 +914,105 @@ func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 	}
 }
 
-func TestProcessOperation_IncorrentDeposits(t *testing.T) {
+func TestProcessOperations_OverMaxProposerSlashings(t *testing.T) {
+	maxSlashings := params.BeaconConfig().MaxProposerSlashings
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: make([]*pb.ProposerSlashing, maxSlashings+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperations_OverMaxAttesterSlashings(t *testing.T) {
+	maxSlashings := params.BeaconConfig().MaxAttesterSlashings
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			AttesterSlashings: make([]*pb.AttesterSlashing, maxSlashings+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperations_OverMaxAttestations(t *testing.T) {
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.Attestations), params.BeaconConfig().MaxAttestations)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperations_OverMaxTransfers(t *testing.T) {
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: make([]*pb.Transfer, params.BeaconConfig().MaxTransfers+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of transfers (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.Transfers), params.BeaconConfig().MaxTransfers)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperation_OverMaxVoluntaryExits(t *testing.T) {
+	maxExits := params.BeaconConfig().MaxVoluntaryExits
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			VoluntaryExits: make([]*pb.VoluntaryExit, maxExits+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.VoluntaryExits), maxExits)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperations_IncorrectDeposits(t *testing.T) {
 	s := &pb.BeaconState{
 		Eth1Data:         &pb.Eth1Data{DepositCount: 100},
 		Eth1DepositIndex: 98,
@@ -938,6 +1036,8 @@ func TestProcessOperation_IncorrentDeposits(t *testing.T) {
 }
 
 func TestProcessOperation_DuplicateTransfer(t *testing.T) {
+	testConfig := params.BeaconConfig()
+	testConfig.MaxTransfers = 2
 	transfers := []*pb.Transfer{
 		{
 			Amount: 1,

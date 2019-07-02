@@ -273,28 +273,15 @@ func ProcessOperations(
 
 	if uint64(len(body.Attestations)) > params.BeaconConfig().MaxAttestations {
 		return nil, fmt.Errorf(
-			"number of attester slashings (%d) in block body exceeds allowed threshold of %d",
+			"number of attestations (%d) in block body exceeds allowed threshold of %d",
 			len(body.Attestations),
 			params.BeaconConfig().MaxAttestations,
 		)
 	}
 
-	maxDeposits := params.BeaconConfig().MaxDeposits
-	if state.Eth1Data.DepositCount-state.Eth1DepositIndex < maxDeposits {
-		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
-	}
-	// Verify outstanding deposits are processed up to max number of deposits
-	if len(body.Deposits) != int(maxDeposits) {
-		return nil, fmt.Errorf(
-			"number of deposits (%d) in block body exceeds allowed threshold of %d",
-			len(body.Deposits),
-			maxDeposits,
-		)
-	}
-
 	if uint64(len(body.VoluntaryExits)) > params.BeaconConfig().MaxVoluntaryExits {
 		return nil, fmt.Errorf(
-			"number of exits (%d) in block body exceeds allowed threshold of %d",
+			"number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
 			len(body.VoluntaryExits),
 			params.BeaconConfig().MaxVoluntaryExits,
 		)
@@ -306,6 +293,16 @@ func ProcessOperations(
 			len(body.Transfers),
 			params.BeaconConfig().MaxTransfers,
 		)
+	}
+
+	maxDeposits := params.BeaconConfig().MaxDeposits
+	if state.Eth1Data.DepositCount-state.Eth1DepositIndex < maxDeposits {
+		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
+	}
+	// Verify outstanding deposits are processed up to max number of deposits
+	if len(body.Deposits) != int(maxDeposits) {
+		return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
+			maxDeposits, len(body.Deposits))
 	}
 
 	// Verify that there are no duplicate transfers
