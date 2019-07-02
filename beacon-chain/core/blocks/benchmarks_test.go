@@ -51,11 +51,6 @@ func TestBenchmarkProcessBlock_PerformsSuccessfully(t *testing.T) {
 		VerifySignatures: false,
 		Logging:          false,
 	}
-
-	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 3
-	beaconState.CurrentJustifiedCheckpoint.Epoch = helpers.PrevEpoch(beaconState)
-	beaconState.CurrentCrosslinks[0].EndEpoch = helpers.PrevEpoch(beaconState) - 1
-	beaconState.CurrentCrosslinks[0].StartEpoch = helpers.PrevEpoch(beaconState) - 3
 	fullBlock, benchRoot := createFullBlock(beaconState, deposits)
 	beaconState.Eth1Data = &pb.Eth1Data{
 		BlockHash:   benchRoot,
@@ -222,10 +217,6 @@ func BenchmarkProcessBlock(b *testing.B) {
 	}
 
 	cleanStates := createCleanStates(genesisState)
-	cleanStates[0].Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 3
-	cleanStates[0].CurrentJustifiedCheckpoint.Epoch = helpers.PrevEpoch(cleanStates[0])
-	cleanStates[0].CurrentCrosslinks[0].EndEpoch = helpers.PrevEpoch(cleanStates[0]) - 1
-	cleanStates[0].CurrentCrosslinks[0].StartEpoch = helpers.PrevEpoch(cleanStates[0]) - 3
 	fullBlock, benchRoot := createFullBlock(cleanStates[0], deposits)
 
 	b.N = 30
@@ -236,10 +227,6 @@ func BenchmarkProcessBlock(b *testing.B) {
 			BlockHash:   benchRoot,
 			DepositRoot: benchRoot,
 		}
-		beaconState.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 4
-		beaconState.CurrentJustifiedCheckpoint.Epoch = helpers.PrevEpoch(beaconState)
-		beaconState.CurrentCrosslinks[0] = cleanStates[0].CurrentCrosslinks[0]
-		fullBlock.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 4
 		if _, err := state.ProcessBlock(context.Background(), beaconState, fullBlock, cfg); err != nil {
 			b.Fatal(err)
 		}
@@ -483,16 +470,17 @@ func createGenesisState(numDeposits int) (*pb.BeaconState, []*pb.Deposit) {
 		panic(err)
 	}
 
-	genesisState.Slot = 4*params.BeaconConfig().SlotsPerEpoch - 1
-	genesisState.CurrentJustifiedCheckpoint.Epoch = helpers.CurrentEpoch(genesisState) - 1
+	genesisState.Slot = params.BeaconConfig().SlotsPerEpoch*2048 + 3
+	genesisState.CurrentJustifiedCheckpoint.Epoch = helpers.PrevEpoch(genesisState)
 	genesisState.CurrentCrosslinks = []*pb.Crosslink{
 		{
 			Shard:      0,
-			StartEpoch: 0,
-			EndEpoch:   1,
+			StartEpoch: helpers.PrevEpoch(genesisState) - 3,
+			EndEpoch:   helpers.PrevEpoch(genesisState) - 1,
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		},
 	}
+
 	genesisState.LatestBlockHeader = &pb.BeaconBlockHeader{
 		Slot: genesisState.Slot,
 	}
