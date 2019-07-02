@@ -896,25 +896,7 @@ func ProcessTransfers(
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	transfers := body.Transfers
-	if uint64(len(transfers)) > params.BeaconConfig().MaxTransfers {
-		return nil, fmt.Errorf(
-			"number of transfers (%d) exceeds allowed threshold of %d",
-			len(transfers),
-			params.BeaconConfig().MaxTransfers,
-		)
-	}
-	// Verify there are no duplicate transfers.
-	transferSet := make(map[[32]byte]bool)
-	for _, transfer := range transfers {
-		h, err := ssz.HashTreeRoot(transfer)
-		if err != nil {
-			return nil, fmt.Errorf("could not hash transfer: %v", err)
-		}
-		if transferSet[h] {
-			return nil, fmt.Errorf("duplicate transfer: %v", transfer)
-		}
-		transferSet[h] = true
-	}
+
 	for idx, transfer := range transfers {
 		if err := verifyTransfer(beaconState, transfer, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify transfer %d: %v", idx, err)
