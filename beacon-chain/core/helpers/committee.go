@@ -419,17 +419,20 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 	shardCount := params.BeaconConfig().ShardCount
 	compactCommList := make([]*pb.CompactCommittee, shardCount)
-	comCount, err := EpochCommitteeCount(state, epoch)
+	for i := range compactCommList {
+		compactCommList[i] = &pb.CompactCommittee{}
+	}
+	comCount, err := CommitteeCount(state, epoch)
 	if err != nil {
 		return [32]byte{}, err
 	}
-	startShard, err := EpochStartShard(state, epoch)
+	startShard, err := StartShard(state, epoch)
 	if err != nil {
 		return [32]byte{}, err
 	}
-	for i := uint64(1); i <= comCount; i++ {
+	for i := uint64(0); i < comCount; i++ {
 		shard := (startShard + i) % shardCount
-		crossComm, err := CrosslinkCommitteeAtEpoch(state, epoch, shard)
+		crossComm, err := CrosslinkCommittee(state, epoch, shard)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -437,17 +440,25 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 		for _, indice := range crossComm {
 			validator := state.Validators[indice]
 			compactCommList[shard].Pubkeys = append(compactCommList[shard].Pubkeys, validator.Pubkey)
-			compactBalance := validator.EffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
-			// index (top 6 bytes) + slashed (16th bit) + compact_balance (bottom 15 bits)
-			compactIndice := indice << 16
-			var slashedBit uint64
-			if validator.Slashed {
-				slashedBit = 1 << 16
-			}
-			compactValidator := compactIndice | (slashedBit | compactBalance>>49)
+			compactValidator := compressValidator(validator, indice)
 			compactCommList[shard].CompactValidators = append(compactCommList[shard].CompactValidators, compactValidator)
 
 		}
 	}
 	return ssz.HashTreeRoot(compactCommList)
+}
+
+func compressValidator(validator *pb.Validator, idx uint64) uint64 {
+	compactBalance := validator.EffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
+	// index (top 6 bytes) + slashed (16th bit) + compact_balance (bottom 15 bits)
+	compactIndice := idx << 16
+	var slashedBit uint64
+	if validator.Slashed {
+		slashedBit = 1 << 16
+	}
+	// clear out the top 49 Most Significant Bits and set it to zero
+	compactBalance <<= 49
+	compactBalance >>= 49
+	compactValidator := compactIndice | uint64(slashedBit|compactBalance)
+	return compactValidator
 }
