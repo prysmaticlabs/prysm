@@ -906,6 +906,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
 
 	want := fmt.Sprintf(
@@ -1010,6 +1011,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousCrosslinks = []*pb.Crosslink{
 		{

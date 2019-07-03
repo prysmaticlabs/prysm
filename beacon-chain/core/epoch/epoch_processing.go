@@ -524,6 +524,13 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
+	commRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
+	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get compact committee root %v", err)
+	}
+	state.CompactCommitteesRoots[commRootPosition] = comRoot[:]
+
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	state.Slashings[nextEpoch%slashedExitLength] = 0

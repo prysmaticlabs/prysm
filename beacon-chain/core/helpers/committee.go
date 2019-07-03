@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -394,4 +395,72 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 		return false, fmt.Errorf("no committee exist for shard in the attestation")
 	}
 	return VerifyBitfield(att.AggregationBits, len(committee))
+}
+
+// CompactCommitteesRoot returns the index root of a given epoch.
+//
+// Spec pseudocode definition:
+//   def get_compact_committees_root(state: BeaconState, epoch: Epoch) -> Hash:
+//    """
+//    Return the compact committee root for the current epoch.
+//    """
+//    committees = [CompactCommittee() for _ in range(SHARD_COUNT)]
+//    start_shard = get_epoch_start_shard(state, epoch)
+//    for committee_number in range(get_epoch_committee_count(state, epoch)):
+//        shard = Shard((start_shard + committee_number) % SHARD_COUNT)
+//        for index in get_crosslink_committee(state, epoch, shard):
+//            validator = state.validators[index]
+//            committees[shard].pubkeys.append(validator.pubkey)
+//            compact_balance = validator.effective_balance // EFFECTIVE_BALANCE_INCREMENT
+//            # `index` (top 6 bytes) + `slashed` (16th bit) + `compact_balance` (bottom 15 bits)
+//            compact_validator = uint64((index << 16) + (validator.slashed << 15) + compact_balance)
+//            committees[shard].compact_validators.append(compact_validator)
+//    return hash_tree_root(Vector[CompactCommittee, SHARD_COUNT](committees))
+func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
+	shardCount := params.BeaconConfig().ShardCount
+	compactCommList := make([]*pb.CompactCommittee, shardCount)
+	for i := range compactCommList {
+		compactCommList[i] = &pb.CompactCommittee{}
+	}
+	comCount, err := CommitteeCount(state, epoch)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	startShard, err := StartShard(state, epoch)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	for i := uint64(0); i < comCount; i++ {
+		shard := (startShard + i) % shardCount
+		crossComm, err := CrosslinkCommittee(state, epoch, shard)
+		if err != nil {
+			return [32]byte{}, err
+		}
+
+		for _, indice := range crossComm {
+			validator := state.Validators[indice]
+			compactCommList[shard].Pubkeys = append(compactCommList[shard].Pubkeys, validator.Pubkey)
+			compactValidator := compressValidator(validator, indice)
+			compactCommList[shard].CompactValidators = append(compactCommList[shard].CompactValidators, compactValidator)
+
+		}
+	}
+	return ssz.HashTreeRoot(compactCommList)
+}
+
+// compressValidator compacts all the validator data such as validator index,slashing info and balance
+// into a single uint64 field.
+func compressValidator(validator *pb.Validator, idx uint64) uint64 {
+	compactBalance := validator.EffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
+	// index (top 6 bytes) + slashed (16th bit) + compact_balance (bottom 15 bits)
+	compactIndice := idx << 16
+	var slashedBit uint64
+	if validator.Slashed {
+		slashedBit = 1 << 16
+	}
+	// clear out the top 49 most Significant Bits and set it to zero
+	compactBalance <<= 49
+	compactBalance >>= 49
+	compactValidator := compactIndice | uint64(slashedBit|compactBalance)
+	return compactValidator
 }
