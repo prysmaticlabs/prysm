@@ -110,31 +110,7 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
 //
 // Spec pseudocode definition:
-//  def get_genesis_beacon_state(deposits: List[Deposit], genesis_time: int, genesis_eth1_data: Eth1Data) -> BeaconState:
-//    state = BeaconState(
-//        genesis_time=genesis_time,
-//        latest_eth1_data=genesis_eth1_data,
-//        latest_block_header=BeaconBlockHeader(body_root=hash_tree_root(BeaconBlockBody())),
-//    )
-//
-//    # Process genesis deposits
-//    for deposit in deposits:
-//        process_deposit(state, deposit)
-//
-//    # Process genesis activations
-//    for validator in state.validator_registry:
-//        if validator.effective_balance >= MAX_EFFECTIVE_BALANCE:
-//            validator.activation_eligibility_epoch = GENESIS_EPOCH
-//            validator.activation_epoch = GENESIS_EPOCH
-//
-//    # Populate latest_active_index_roots
-//    genesis_active_index_root = hash_tree_root(get_active_validator_indices(state, GENESIS_EPOCH))
-//    for index in range(LATEST_ACTIVE_INDEX_ROOTS_LENGTH):
-//        state.latest_active_index_roots[index] = genesis_active_index_root
-//
-//    return state
-
-// def initialize_beacon_state_from_eth1(eth1_block_hash: Hash,
+//  def initialize_beacon_state_from_eth1(eth1_block_hash: Hash,
 //                                       eth1_timestamp: uint64,
 //                                       deposits: Sequence[Deposit]) -> BeaconState:
 //     state = BeaconState(
