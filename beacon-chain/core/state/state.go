@@ -143,9 +143,10 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 	for idx, deposit := range deposits {
 		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
-		depositDataList := make([]*pb.DepositData, 0, 1<<params.BeaconConfig().DepositContractTreeDepth)
-		copy(depositDataList, leaves[:idx+1])
-		dr, err := ssz.HashTreeRoot(depositDataList)
+		if idx+1 > 1<<params.BeaconConfig().DepositContractTreeDepth {
+			return nil, fmt.Errorf("deposits out of bound: %v", err)
+		}
+		dr, err := ssz.HashTreeRoot(leaves[:idx+1])
 		if err != nil {
 			return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
 		}
@@ -177,16 +178,15 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	indicesList := make([]uint64, 0, params.BeaconConfig().ValidatorRagistryLimit)
-	copy(indicesList, activeIndices)
-	indexRoot, err := ssz.HashTreeRoot(indicesList)
+	if uint64(len(activeIndices)) > params.BeaconConfig().ValidatorRegistryLimit {
+		return nil, fmt.Errorf("activeIndices out of bound: %v", len(activeIndices))
+	}
+	indexRoot, err := ssz.HashTreeRoot(activeIndices)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v", err)
 	}
-	//TODO: committee_root = get_compact_committees_root(state, GENESIS_EPOCH)
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
 		state.ActiveIndexRoots[i] = indexRoot[:]
-		//TODO: state.compact_committees_roots[index] = committee_root
 	}
 	return state, nil
 }

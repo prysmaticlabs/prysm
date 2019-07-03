@@ -53,7 +53,7 @@ type BeaconChainConfig struct {
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
 	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
 	HistoricalRootsLimit      uint64 `yaml:"HISTORICAL_ROOTS_LIMIT"`       // HistoricalRootsLimit the define max historical roots can be saved in state before roll over.
-	ValidatorsRegistryLimit   uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT"`     // ValidatorsRegistryLimit defines the upper bound of validators can participate in eth2.
+	ValidatorRegistryLimit   uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT"`     // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor            uint64 `yaml:"BASE_REWARD_FACTOR"`            // BaseRewardFactor is used to calculate validator per-slot interest rate.
@@ -153,7 +153,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EpochsPerHistoricalVector: 65536,
 	EpochsPerSlashingsVector:  8192,
 	HistoricalRootsLimit:      8192,
-	ValidatorsRegistryLimit:   1099511627776,
+	ValidatorRegistryLimit:   1099511627776,
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor:            64,
@@ -278,7 +278,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.EpochsPerHistoricalVector = 64
 	minimalConfig.EpochsPerSlashingsVector = 64
 	minimalConfig.HistoricalRootsLimit = 16777216
-	minimalConfig.ValidatorsRegistryLimit = 1099511627776
+	minimalConfig.ValidatorRegistryLimit = 1099511627776
 	minimalConfig.BaseRewardFactor = 64
 	minimalConfig.WhistleBlowerRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8

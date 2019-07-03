@@ -13,7 +13,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -31,18 +30,14 @@ var (
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, deposits []*pb.Deposit, eth1Data *pb.Eth1Data) error {
+func (db *BeaconDB) InitializeState(ctx context.Context, genesisState *pb.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InitializeState")
 	defer span.End()
 
-	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
-	if err != nil {
-		return err
-	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	genesisState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 
 	// #nosec G104
-	stateEnc, _ := proto.Marshal(beaconState)
+	stateEnc, _ := proto.Marshal(genesisState)
 	stateHash := hashutil.Hash(stateEnc)
 	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
@@ -54,7 +49,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	db.serializedState = stateEnc
 	db.stateHash = stateHash
 
-	if err := db.SaveState(ctx, beaconState); err != nil {
+	if err := db.SaveState(ctx, genesisState); err != nil {
 		return err
 	}
 
@@ -80,7 +75,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 			return err
 		}
 
-		for i, validator := range beaconState.Validators {
+		for i, validator := range genesisState.Validators {
 			h := hashutil.Hash(validator.Pubkey)
 			buf := make([]byte, binary.MaxVarintLen64)
 			n := binary.PutUvarint(buf, uint64(i))

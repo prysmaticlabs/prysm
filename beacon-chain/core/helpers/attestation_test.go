@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -15,7 +16,11 @@ func TestAttestationDataSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), uint64(0), deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(context.Background())
@@ -64,7 +69,11 @@ func TestAttestationDataSlot_ReturnsErrorWithErroneousTargetEpoch(t *testing.T) 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), uint64(0), deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(context.Background())
@@ -84,7 +93,11 @@ func TestAttestationDataSlot_ReturnsErrorWhenTargetEpochLessThanCurrentEpoch(t *
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), uint64(0), deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(context.Background())
