@@ -255,17 +255,17 @@ func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 	copy(state.PreviousCrosslinks, state.CurrentCrosslinks)
 	epochs := []uint64{helpers.PrevEpoch(state), helpers.CurrentEpoch(state)}
 	for _, e := range epochs {
-		count, err := helpers.EpochCommitteeCount(state, e)
+		count, err := helpers.CommitteeCount(state, e)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch committee count: %v", err)
 		}
-		startShard, err := helpers.EpochStartShard(state, e)
+		startShard, err := helpers.StartShard(state, e)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch start shards: %v", err)
 		}
 		for offset := uint64(0); offset < count; offset++ {
 			shard := (startShard + offset) % params.BeaconConfig().ShardCount
-			committee, err := helpers.CrosslinkCommitteeAtEpoch(state, e, shard)
+			committee, err := helpers.CrosslinkCommittee(state, e, shard)
 			if err != nil {
 				return nil, fmt.Errorf("could not get crosslink committee: %v", err)
 			}
@@ -382,7 +382,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Only activate just enough validators according to the activation churn limit.
 	limit := len(activationQ)
-	churnLimit, err := helpers.ChurnLimit(state)
+	churnLimit, err := helpers.ValidatorChurnLimit(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not get churn limit: %v", err)
 	}
@@ -427,23 +427,17 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	totalAtStart := state.Slashings[(currentEpoch+1)%exitLength]
-	totalAtEnd := state.Slashings[currentEpoch%exitLength]
-	totalPenalties := totalAtEnd - totalAtStart
 
 	// Compute slashing for each validator.
 	for index, validator := range state.Validators {
-		correctEpoch := currentEpoch == validator.WithdrawableEpoch-exitLength/2
+		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
 		if validator.Slashed && correctEpoch {
-			minPenalties := totalPenalties * 3
-			if minPenalties > totalBalance {
-				minPenalties = totalBalance
+			totalSlashing := uint64(0)
+			for _, slashing := range state.Slashings {
+				totalSlashing += slashing
 			}
-			effectiveBal := validator.EffectiveBalance
-			penalty := effectiveBal * minPenalties / totalBalance
-			if penalty < effectiveBal/params.BeaconConfig().MinSlashingPenaltyQuotient {
-				penalty = effectiveBal / params.BeaconConfig().MinSlashingPenaltyQuotient
-			}
+			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
+			penalty := validator.EffectiveBalance * minSlashing / totalBalance
 			state = helpers.DecreaseBalance(state, uint64(index), penalty)
 		}
 	}
@@ -532,8 +526,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	state.Slashings[nextEpoch%slashedExitLength] =
-		state.Slashings[currentEpoch%slashedExitLength]
+	state.Slashings[nextEpoch%slashedExitLength] = 0
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
@@ -902,17 +895,17 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	rewards := make([]uint64, len(state.Validators))
 	penalties := make([]uint64, len(state.Validators))
 	epoch := helpers.PrevEpoch(state)
-	count, err := helpers.EpochCommitteeCount(state, epoch)
+	count, err := helpers.CommitteeCount(state, epoch)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get epoch committee count: %v", err)
 	}
-	startShard, err := helpers.EpochStartShard(state, epoch)
+	startShard, err := helpers.StartShard(state, epoch)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get epoch start shard: %v", err)
 	}
 	for i := uint64(0); i < count; i++ {
 		shard := (startShard + i) % params.BeaconConfig().ShardCount
-		committee, err := helpers.CrosslinkCommitteeAtEpoch(state, epoch, shard)
+		committee, err := helpers.CrosslinkCommittee(state, epoch, shard)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get crosslink's committee: %v", err)
 		}
