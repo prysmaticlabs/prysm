@@ -57,7 +57,7 @@ type BeaconChainConfig struct {
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor            uint64 `yaml:"BASE_REWARD_FACTOR"`            // BaseRewardFactor is used to calculate validator per-slot interest rate.
-	WhistleblowerRewardQuotient uint64 `yaml:"WHISTLEBLOWer_REWARD_QUOTIENT"` // WhistleBlowerRewardQuotient is used to calculate whistler blower reward.
+	WhistleBlowerRewardQuotient uint64 `yaml:"WHISTLEBLOWER_REWARD_QUOTIENT"` // WhistleBlowerRewardQuotient is used to calculate whistler blower reward.
 	ProposerRewardQuotient      uint64 `yaml:"PROPOSER_REWARD_QUOTIENT"`      // ProposerRewardQuotient is used to calculate the reward for proposers.
 	InactivityPenaltyQuotient   uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT"`   // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
 	MinSlashingPenaltyQuotient  uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT"` // MinSlashingPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
@@ -156,7 +156,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor:            64,
-	WhistleblowerRewardQuotient: 512,
+	WhistleBlowerRewardQuotient: 512,
 	ProposerRewardQuotient:      8,
 	InactivityPenaltyQuotient:   1 << 25,
 	MinSlashingPenaltyQuotient:  32,
@@ -278,7 +278,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.HistoricalRootsLimit = 16777216
 	minimalConfig.ValidatorsLimit = 1099511627776
 	minimalConfig.BaseRewardFactor = 64
-	minimalConfig.WhistleblowerRewardQuotient = 512
+	minimalConfig.WhistleBlowerRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
 	minimalConfig.InactivityPenaltyQuotient = 33554432
 	minimalConfig.MinSlashingPenaltyQuotient = 32

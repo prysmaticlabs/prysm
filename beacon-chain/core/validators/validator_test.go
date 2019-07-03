@@ -188,7 +188,7 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Could not get proposer %v", err)
 	}
 
-	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleblowerRewardQuotient
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 
 	if state.Balances[proposer] != params.BeaconConfig().MaxEffectiveBalance+proposerReward {
@@ -199,8 +199,9 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Did not get expected balance for whistleblower %d", state.Balances[whistleIdx])
 	}
 
-	if state.Balances[slashedIdx] != params.BeaconConfig().MaxEffectiveBalance-whistleblowerReward {
-		t.Errorf("Did not get expected balance for slashed validator %d", state.Balances[slashedIdx])
+	if state.Balances[slashedIdx] != params.BeaconConfig().MaxEffectiveBalance-(state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient) {
+		t.Errorf("Did not get expected balance for slashed validator, wanted %d but got %d",
+			state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient, state.Balances[slashedIdx])
 	}
 
 }

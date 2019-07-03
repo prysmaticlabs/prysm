@@ -777,7 +777,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := uint64(31 * 1e9)
+	wanted := uint64(31882303762)
 	if newState.Balances[0] != wanted {
 		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[0])
 	}
@@ -789,7 +789,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	ne := ce + 1
 	s.Eth1DataVotes = []*pb.Eth1Data{}
 	s.Balances[0] = 29 * 1e9
-	s.Slashings[ce] = 100
+	s.Slashings[ce] = 0
 	s.RandaoMixes[ce] = []byte{'A'}
 	newS, err := ProcessFinalUpdates(s)
 	if err != nil {
@@ -1269,6 +1269,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		CurrentCrosslinks:           make([]*pb.Crosslink, params.BeaconConfig().ShardCount),
 		RandaoMixes:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots:            make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CompactCommitteesRoots:      make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector),
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		BlockRoots:                  make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
 		FinalizedCheckpoint:         &pb.Checkpoint{},
