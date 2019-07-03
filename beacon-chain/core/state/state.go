@@ -11,6 +11,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -168,7 +169,7 @@ func BeaconState(blkHeader *pb.BeaconBlockHeader, genesisTime uint64, eth1Data *
 func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
 	bodyRoot, err := ssz.HashTreeRoot(&pb.BeaconBlockBody{})
 	if err != nil {
-		return nil, fmt.Errorf("could not hash tree root: %v", bodyRoot)
+		return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
 	}
 	blkHeader := &pb.BeaconBlockHeader{BodyRoot: bodyRoot[:]}
 
@@ -176,8 +177,19 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 
 	// Process genesis deposits
 	validatorMap := make(map[[32]byte]int)
+	leaves := []*pb.DepositData{}
 	for _, deposit := range deposits {
+		leaves = append(leaves, deposit.Data)
+	}
+	for idx, deposit := range deposits {
 		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
+		depositDataList := make([]*pb.DepositData, 0, 1<<params.BeaconConfig().DepositContractTreeDepth)
+		copy(depositDataList, leaves[:idx+1])
+		dr, err := ssz.HashTreeRoot(depositDataList)
+		if err != nil {
+			return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
+		}
+		state.Eth1Data.DepositRoot = dr[:]
 		state, err = b.ProcessDeposit(
 			state,
 			deposit,
@@ -191,8 +203,10 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 
 	// Process genesis activations
-	for i := 0; i < len(state.Validators); i++ {
-		if state.Validators[i].EffectiveBalance >=
+	for i, validator := range state.Validators {
+		balance := state.Balances[i]
+		validator.EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+		if state.Validators[i].EffectiveBalance ==
 			params.BeaconConfig().MaxEffectiveBalance {
 			state.Validators[i].ActivationEligibilityEpoch = 0
 			state.Validators[i].ActivationEpoch = 0
@@ -204,12 +218,16 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	indexRoot, err := ssz.HashTreeRoot(activeIndices)
+	indicesList := make([]uint64, 0, params.BeaconConfig().ValidatorsRegistryLimit)
+	copy(indicesList, activeIndices)
+	indexRoot, err := ssz.HashTreeRoot(indicesList)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v", err)
 	}
+	//TODO: committee_root = get_compact_committees_root(state, GENESIS_EPOCH)
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
 		state.ActiveIndexRoots[i] = indexRoot[:]
+		//TODO: state.compact_committees_roots[index] = committee_root
 	}
 	return state, nil
 }
