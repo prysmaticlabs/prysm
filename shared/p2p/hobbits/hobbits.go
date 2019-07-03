@@ -5,19 +5,21 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	"github.com/renaynay/go-hobbits/tcp"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/renaynay/prysm/beacon-chain/db"
 )
 
 type HobbitsNode struct {
 	sync.Mutex
-	host      string
-	port      int
-	staticPeers     []string
-	peerConns []net.Conn
-	feeds     map[reflect.Type]p2p.Feed
-	server    *tcp.Server
+	host        string
+	port        int
+	staticPeers []string
+	peerConns   []net.Conn
+	feeds       map[reflect.Type]p2p.Feed
+	server      *tcp.Server
+	db          *db.BeaconDB
 }
 
 type HobbitsMessage encoding.Message
@@ -39,10 +41,19 @@ const (
 var topicMapping map[reflect.Type]string // TODO: initialize with a const?
 
 type GossipHeader struct {
-	topic          string   `bson:"topic"`
+	topic string `bson:"topic"`
 }
 
-type RPC struct { // TODO: make an RPC Body to catch the method_id... looks like the header and body are smashed
-					// TODO: in the spec
+type RPC struct {
+	// TODO: make an RPC Body to catch the method_id... looks like the header and body are smashed
+	// TODO: in the spec
+}
 
+type Hello struct {
+	networkID            uint8    `bson:"network_id"`
+	chainID              uint8    `bson:"chain_id"`
+	latestFinalizedRoot  [32]byte `bson:"latest_finalized_root"`
+	latestFinalizedEpoch uint64   `bson:"latest_finalized_epoch"`
+	bestRoot             [32]byte `bson:"best_root"`
+	bestSlot             uint64   `bson:"best_slot"`
 }

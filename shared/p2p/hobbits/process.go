@@ -4,7 +4,9 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/renaynay/go-hobbits/encoding"
+	"github.com/renaynay/prysm/bazel-prysm/external/go_sdk/src/context"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/pkg/errors"
@@ -32,18 +34,37 @@ func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Con
 }
 
 func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
-	method, err := h.parseMethodID(message.Header) // TODO: this is confusing b/c header and body for RPC are smushed together?
+	method, err := h.parseMethodID(message.Header)
 	if err != nil {
 		return errors.Wrap(err, "could not parse method_id: ")
 	}
 
 	switch method {
 	case HELLO:
-		// TODO: retrieve data and send it
+		headStateRoot := h.db.HeadStateRoot()
 
-		h.peerConns = append(h.peerConns, conn)
+		headState, err := h.db.HeadState(context.Background())
+		if err != nil {
+			headState = nil
+		}
 
-		err := h.server.SendMessage(conn, encoding.Message(message))
+		headStateSlot := headState.Slot
+
+		finalizedState, err := h.db.FinalizedState()
+		if err != nil {
+			finalizedState = nil
+		}
+
+		hashedFinalizedState, err := hashutil.HashProto(finalizedState)
+		if err != nil {
+			hashedFinalizedState = [32]byte{}
+		}
+
+
+
+
+
+		err = h.server.SendMessage(conn, encoding.Message(message))
 		if err != nil {
 			return errors.Wrap(err, "error sending hobbits message: ")
 		}
