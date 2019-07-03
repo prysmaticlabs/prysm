@@ -2,6 +2,7 @@ package hobbits
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"reflect"
 	"time"
@@ -10,10 +11,12 @@ import (
 	"github.com/renaynay/go-hobbits/encoding"
 	"github.com/renaynay/go-hobbits/tcp"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/strconv"
 )
 
 func NewHobbitsNode(host string, port int, peers []string) HobbitsNode {
 	return HobbitsNode{
+		nodeId:      strconv.Itoa(rand.Int()),
 		host:        host,
 		port:        port,
 		staticPeers: peers,

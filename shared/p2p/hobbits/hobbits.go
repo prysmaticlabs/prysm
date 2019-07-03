@@ -8,11 +8,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	"github.com/renaynay/go-hobbits/tcp"
-	"github.com/renaynay/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
 type HobbitsNode struct {
 	sync.Mutex
+	nodeId 		string
 	host        string
 	port        int
 	staticPeers []string
@@ -50,10 +51,9 @@ type RPC struct {
 }
 
 type Hello struct {
-	networkID            uint8    `bson:"network_id"`
-	chainID              uint8    `bson:"chain_id"`
-	latestFinalizedRoot  [32]byte `bson:"latest_finalized_root"`
-	latestFinalizedEpoch uint64   `bson:"latest_finalized_epoch"`
-	bestRoot             [32]byte `bson:"best_root"`
-	bestSlot             uint64   `bson:"best_slot"`
+	NodeID               string   `bson:"node_id"`
+	LatestFinalizedRoot  [32]byte `bson:"latest_finalized_root"`
+	LatestFinalizedEpoch uint64   `bson:"latest_finalized_epoch"`
+	BestRoot             [32]byte `bson:"best_root"`
+	BestSlot             uint64   `bson:"best_slot"`
 }

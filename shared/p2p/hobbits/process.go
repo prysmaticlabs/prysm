@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/renaynay/go-hobbits/encoding"
-	"github.com/renaynay/prysm/bazel-prysm/external/go_sdk/src/context"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/context"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/pkg/errors"
@@ -41,30 +41,42 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 
 	switch method {
 	case HELLO:
-		headStateRoot := h.db.HeadStateRoot()
+		var response Hello
+
+		response.NodeID = h.nodeId
+
+		response.BestRoot = h.db.HeadStateRoot()
 
 		headState, err := h.db.HeadState(context.Background())
 		if err != nil {
-			headState = nil
+			response.BestSlot = 0
 		}
 
-		headStateSlot := headState.Slot
+		response.BestSlot = headState.Slot // best slot
 
 		finalizedState, err := h.db.FinalizedState()
 		if err != nil {
 			finalizedState = nil
 		}
 
-		hashedFinalizedState, err := hashutil.HashProto(finalizedState)
+		response.LatestFinalizedEpoch = finalizedState.Slot / 64 // finalized epoch
+
+		hashedFinalizedState, err := hashutil.HashProto(finalizedState) // finalized root
 		if err != nil {
-			hashedFinalizedState = [32]byte{}
+			response.LatestFinalizedRoot = [32]byte{}
+		}
+		response.LatestFinalizedRoot = hashedFinalizedState
+
+		responseBody, err := bson.Marshal(response)
+
+		responseMessage := HobbitsMessage{
+			Version:  message.Version,
+			Protocol: message.Protocol,
+			Header:   message.Header,
+			Body:     responseBody,
 		}
 
-
-
-
-
-		err = h.server.SendMessage(conn, encoding.Message(message))
+		err = h.server.SendMessage(conn, encoding.Message(responseMessage))
 		if err != nil {
 			return errors.Wrap(err, "error sending hobbits message: ")
 		}
@@ -106,7 +118,7 @@ func (h *HobbitsNode) removePeer(peer net.Conn) error {
 	}
 
 	h.peerConns = append(h.peerConns[:index], h.peerConns[index+1:]...) // TODO: is there a better way to delete
-																			// TODO: an element from an array by its value?
+	// TODO: an element from an array by its value?
 
 	return nil
 }
