@@ -7,9 +7,11 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -170,7 +172,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	indicesList := make([]uint64, 0, params.BeaconConfig().ValidatorsRegistryLimit)
+	indicesList := make([]uint64, 0, params.BeaconConfig().ValidatorRagistryLimit)
 	copy(indicesList, activeIndices)
 	indexRoot, err := ssz.HashTreeRoot(indicesList)
 	if err != nil {
