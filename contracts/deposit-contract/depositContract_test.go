@@ -7,9 +7,8 @@ import (
 	"math/big"
 	"testing"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestSetupRegistrationContract_OK(t *testing.T) {
@@ -107,45 +106,6 @@ func TestValidatorRegister_OK(t *testing.T) {
 
 	if merkleTreeIndex[2] != 2 {
 		t.Errorf("Deposit event total desposit count miss matched. Want: %v, Got: %v", 3, merkleTreeIndex[2])
-	}
-}
-
-// normal test case, test beacon chain start log event.
-func TestETH2Genesis_OK(t *testing.T) {
-	testAccount, err := Setup()
-	if err != nil {
-		t.Fatal(err)
-	}
-	testAccount.TxOpts.Value = Amount32Eth()
-	testAccount.TxOpts.GasLimit = 1000000
-
-	var pubkey [48]byte
-	var withdrawalCreds [32]byte
-	var sig [96]byte
-
-	for i := 0; i < 8; i++ {
-		_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubkey[:], withdrawalCreds[:], sig[:])
-		testAccount.Backend.Commit()
-		if err != nil {
-			t.Errorf("Validator registration failed: %v", err)
-		}
-	}
-
-	testAccount.Backend.Commit()
-
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			testAccount.ContractAddr,
-		},
-	}
-
-	logs, err := testAccount.Backend.FilterLogs(context.Background(), query)
-	if err != nil {
-		t.Fatalf("Unable to get logs %v", err)
-	}
-
-	if logs[8].Topics[0] != hashutil.HashKeccak256([]byte("Eth2Genesis(bytes32,bytes,bytes)")) {
-		t.Error("Chain start did not even get emitted")
 	}
 }
 

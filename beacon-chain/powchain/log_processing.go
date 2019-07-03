@@ -2,7 +2,6 @@ package powchain
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -18,33 +17,14 @@ import (
 )
 
 var (
-	depositEventSignature    = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
-	chainStartEventSignature = []byte("Eth2Genesis(bytes32,bytes,bytes)")
+	depositEventSignature = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
 )
 
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
 func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			w.depositContractAddress,
-		},
-		Topics: [][]common.Hash{{hashutil.Hash(chainStartEventSignature)}},
-	}
-	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
-	if err != nil {
-		return 0, err
-	}
-	if len(logs) == 0 {
-		return 0, errors.New("no chainstart logs exist")
-	}
-
-	_, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
-	if err != nil {
-		return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
-	}
-	timestamp := binary.LittleEndian.Uint64(timestampData)
-	return timestamp, nil
+	// (#2861): A No-Op until this PR is implemented
+	return 0, nil
 }
 
 // ProcessLog is the main method which handles the processing of all
