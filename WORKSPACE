@@ -1097,3 +1097,15 @@ go_repository(
     commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
     importpath = "github.com/koron/go-ssdp",
 )
+
+go_repository(
+    name = "com_github_renaynay_go_hobbits",
+    commit = "c26ab989e631fd6a356ab9b4bced59b6322350b3",
+    importpath = "github.com/renaynay/go-hobbits",
+)
+
+go_repository(
+    name = "in_gopkg_mgo_v2",
+    commit = "9856a29383ce1c59f308dd1cf0363a79b5bef6b5",
+    importpath = "gopkg.in/mgo.v2",
+)
