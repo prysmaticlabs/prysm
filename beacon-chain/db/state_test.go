@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -27,7 +28,11 @@ func TestInitializeState_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
@@ -70,7 +75,11 @@ func TestFinalizeState_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 20, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -100,7 +109,11 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(b, 10, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
+	if err != nil {
+		b.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}
 

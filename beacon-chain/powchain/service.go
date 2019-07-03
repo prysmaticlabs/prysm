@@ -97,6 +97,7 @@ type Web3Service struct {
 	isRunning               bool
 	runError                error
 	lastRequestedBlock      *big.Int
+	candidateState          *pb.BeaconState
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -188,6 +189,11 @@ func (w *Web3Service) ChainStartFeed() *event.Feed {
 // by the deposit contract and cached in the powchain service.
 func (w *Web3Service) ChainStartDeposits() []*pb.Deposit {
 	return w.chainStartDeposits
+}
+
+// CandidateState returns candidate state produced by calling GenesisBeaconState with the current eth1data.
+func (w *Web3Service) CandidateState() *pb.BeaconState {
+	return w.candidateState
 }
 
 // ChainStartETH1Data returns the eth1 data at chainstart.

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -46,7 +47,11 @@ func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, unixTime, nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 

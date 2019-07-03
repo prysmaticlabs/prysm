@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -42,7 +42,12 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.processDepositLog(depositLog)
 		if !w.chainStarted {
-			triggered, err := w.isGenesisTrigger(w.chainStartDeposits)
+			candidateState, err := state.GenesisBeaconState(w.chainStartDeposits, 0, nil)
+			if err != nil {
+				return err
+			}
+			w.candidateState = candidateState
+			triggered, err := w.isValidGenesisState(candidateState)
 			if err != nil {
 				return err
 			}
@@ -144,43 +149,27 @@ func (w *Web3Service) processDepositLog(depositLog gethTypes.Log) {
 	}
 }
 
-// isGenesisTrigger gets called whenever there's a deposit event,
+// isValidGenesisState gets called whenever there's a deposit event,
 // it checks whether there's enough effective balance to trigger genesis.
 // Spec pseudocode definition:
-//   def is_genesis_trigger(deposits: List[Deposit], timestamp: uint64) -> bool:
-//    # Process deposits
-//    state = BeaconState()
-//    for deposit in deposits:
-//        process_deposit(state, deposit)
-//
-//    # Count active validators at genesis
-//    active_validator_count = 0
-//    for validator in state.validator_registry:
-//        if validator.effective_balance == MAX_EFFECTIVE_BALANCE:
-//            active_validator_count += 1
-//
-//    # Check effective balance to trigger genesis
-//    GENESIS_ACTIVE_VALIDATOR_COUNT = 2**16
-//    return active_validator_count == GENESIS_ACTIVE_VALIDATOR_COUNT
-func (w *Web3Service) isGenesisTrigger(deposits []*pb.Deposit) (bool, error) {
-	s := state.BeaconState(nil, 0, nil)
-	validatorMap := make(map[[32]byte]int)
-	var err error
-	for _, d := range deposits {
-		s, err = blocks.ProcessDeposit(s, d, validatorMap, false, false)
-		if err != nil {
-			return false, fmt.Errorf("could not process deposit: %v", err)
-		}
+//  def is_valid_genesis_state(state: BeaconState) -> bool:
+//     if state.genesis_time < MIN_GENESIS_TIME:
+//         return False
+//     if len(get_active_validator_indices(state, GENESIS_EPOCH)) < MIN_GENESIS_ACTIVE_VALIDATOR_COUNT:
+//         return False
+//     return True
+func (w *Web3Service) isValidGenesisState(state *pb.BeaconState) (bool, error) {
+	if state.GenesisTime < params.BeaconConfig().MinGenesisTime {
+		return false, nil
 	}
-
-	activeValidators := uint64(0)
-	for _, v := range s.Validators {
-		if v.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance {
-			activeValidators++
-		}
+	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
+	if err != nil {
+		return false, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	triggered := activeValidators == params.BeaconConfig().MinGenesisActiveValidatorCount
-	return triggered, err
+	if uint64(len(activeIndices)) < params.BeaconConfig().MinGenesisActiveValidatorCount {
+		return false, nil
+	}
+	return true, nil
 }
 
 // processChainStart processes the last final steps before chain start.

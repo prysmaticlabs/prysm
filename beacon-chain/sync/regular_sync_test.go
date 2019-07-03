@@ -12,6 +12,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -186,7 +187,11 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -264,7 +269,11 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -654,7 +663,11 @@ func TestHandleStateReq_NOState(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -684,7 +697,11 @@ func TestHandleStateReq_OK(t *testing.T) {
 
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := db.InitializeState(context.Background(), unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
+	candidateState, err := state.GenesisBeaconState([]*pb.Deposit{}, unixTime, nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(ctx)

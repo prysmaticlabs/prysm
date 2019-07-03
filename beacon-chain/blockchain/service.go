@@ -7,12 +7,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"runtime"
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -116,9 +115,7 @@ func (c *ChainService) Start() {
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSub event.Subscription) {
-	initialDeposits := c.web3Service.ChainStartDeposits()
-
-	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data())
+	beaconState, err := c.initializeBeaconChain(genesisTime, c.web3Service.CandidateState())
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
@@ -130,20 +127,13 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 // initializes the state and genesis block of the beacon chain to persistent storage
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
-func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
-	eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
+func (c *ChainService) initializeBeaconChain(genesisTime time.Time, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
 	defer span.End()
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
-	unixTime := uint64(genesisTime.Unix())
-	if err := c.beaconDB.InitializeState(c.ctx, unixTime, deposits, eth1data); err != nil {
+	if err := c.beaconDB.InitializeState(c.ctx, beaconState); err != nil {
 		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
-	}
-
-	beaconState, err := state.GenesisBeaconState(deposits, unixTime, eth1data)
-	if err != nil {
-		return nil, fmt.Errorf("could not create genesis beacon state: %v", err)
 	}
 
 	stateRoot, err := ssz.HashTreeRoot(beaconState)

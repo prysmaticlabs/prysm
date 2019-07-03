@@ -100,7 +100,11 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		}
 		unixTime := uint64(time.Now().Unix())
 		deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-		if err := beaconDb.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
+		candidateState, err := state.GenesisBeaconState(deposits, unixTime, nil)
+		if err != nil {
+			t.Fatalf("Unable to generate candidate state %v", err)
+		}
+		if err := beaconDb.InitializeState(context.Background(), candidateState); err != nil {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 

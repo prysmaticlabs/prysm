@@ -9,11 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -62,7 +61,11 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, unixTime, nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	if err := SetSlotInState(chainService, 1); err != nil {
@@ -826,7 +829,11 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
+	candidateState, err := state.GenesisBeaconState(deposits, unixTime, nil)
+	if err != nil {
+		t.Fatalf("Unable to generate candidate state %v", err)
+	}
+	if err := db.InitializeState(context.Background(), candidateState); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(ctx)
