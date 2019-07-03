@@ -184,7 +184,7 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	currentEpoch := helpers.CurrentEpoch(state)
 	validator := state.Validators[slashedIdx]
 	validator.Slashed = true
-	maxWithdrawableEpoch := mathutil.MaxOfTwoValues(validator.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
+	maxWithdrawableEpoch := mathutil.Max(validator.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
 	validator.WithdrawableEpoch = maxWithdrawableEpoch
 	state.Slashings[currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector] += validator.EffectiveBalance
 	helpers.DecreaseBalance(state, slashedIdx, validator.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient)

@@ -430,7 +430,7 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 			for _, slashing := range state.Slashings {
 				totalSlashing += slashing
 			}
-			minSlashing := mathutil.MinOfTwoValues(totalSlashing*3, totalBalance)
+			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
 			penalty := validator.EffectiveBalance * minSlashing / totalBalance
 			state = helpers.DecreaseBalance(state, uint64(index), penalty)
 		}

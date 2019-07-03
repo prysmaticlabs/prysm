@@ -52,18 +52,24 @@ func ClosestPowerOf2(n uint64) uint64 {
 	return PowerOf2(uint64(exponent))
 }
 
-// MaxOfTwoValues returns the larger integer of the two
-// given ones.
-func MaxOfTwoValues(a uint64, b uint64) uint64 {
+// Max returns the larger integer of the two
+// given ones.This is used over the Max function
+// in the standard math library because the Max function
+// in the standard library has to check for some special
+// floating point cases making it slower by a magnitude of 10.
+func Max(a uint64, b uint64) uint64 {
 	if a > b {
 		return a
 	}
 	return b
 }
 
-// MinOfTwoValues returns the smaller integer of the two
-// given ones.
-func MinOfTwoValues(a uint64, b uint64) uint64 {
+// Min returns the smaller integer of the two
+// given ones. This is used over the Min function
+// in the standard math library because the Min function
+// in the standard library has to check for some special
+// floating point cases making it slower by a magnitude of 10.
+func Min(a uint64, b uint64) uint64 {
 	if a < b {
 		return a
 	}

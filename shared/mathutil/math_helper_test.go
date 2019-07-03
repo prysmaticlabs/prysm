@@ -198,8 +198,8 @@ func TestMaxValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.result != MaxOfTwoValues(tt.a, tt.b) {
-			t.Fatalf("MaxOfTwoValues(%d) = %d, wanted: %d", tt.a, MaxOfTwoValues(tt.a, tt.b), tt.result)
+		if tt.result != Max(tt.a, tt.b) {
+			t.Fatalf("Max(%d) = %d, wanted: %d", tt.a, Max(tt.a, tt.b), tt.result)
 		}
 	}
 }
@@ -237,8 +237,8 @@ func TestMinValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.result != MinOfTwoValues(tt.a, tt.b) {
-			t.Fatalf("MinOfTwoValues(%d) = %d, wanted: %d", tt.a, MinOfTwoValues(tt.a, tt.b), tt.result)
+		if tt.result != Min(tt.a, tt.b) {
+			t.Fatalf("Min(%d) = %d, wanted: %d", tt.a, Min(tt.a, tt.b), tt.result)
 		}
 	}
 }
