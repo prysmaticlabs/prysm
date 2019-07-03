@@ -456,7 +456,7 @@ func compressValidator(validator *pb.Validator, idx uint64) uint64 {
 	if validator.Slashed {
 		slashedBit = 1 << 16
 	}
-	// clear out the top 49 Most Significant Bits and set it to zero
+	// clear out the top 49 most Significant Bits and set it to zero
 	compactBalance <<= 49
 	compactBalance >>= 49
 	compactValidator := compactIndice | uint64(slashedBit|compactBalance)
