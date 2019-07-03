@@ -431,36 +431,6 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		)
 	}
 }
-
-func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
-	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
-	registry := []*pb.Validator{}
-	currentSlot := uint64(0)
-
-	want := fmt.Sprintf(
-		"number of proposer slashings (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxProposerSlashings+1,
-		params.BeaconConfig().MaxProposerSlashings,
-	)
-	beaconState := &pb.BeaconState{
-		Validators: registry,
-		Slot:       currentSlot,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			ProposerSlashings: slashings,
-		},
-	}
-
-	if _, err := blocks.ProcessProposerSlashings(
-		beaconState,
-		block.Body,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 	registry := make([]*pb.Validator, 2)
 	currentSlot := uint64(0)
@@ -656,35 +626,6 @@ func TestSlashableAttestationData_CanSlash(t *testing.T) {
 	att2.Source.Epoch = 3
 	if !blocks.IsSlashableAttestationData(att1, att2) {
 		t.Error("atts should have been slashable")
-	}
-}
-
-func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
-	slashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
-	registry := []*pb.Validator{}
-	currentSlot := uint64(0)
-
-	beaconState := &pb.BeaconState{
-		Validators: registry,
-		Slot:       currentSlot,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			AttesterSlashings: slashings,
-		},
-	}
-	want := fmt.Sprintf(
-		"number of attester slashings (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxAttesterSlashings+1,
-		params.BeaconConfig().MaxAttesterSlashings,
-	)
-
-	if _, err := blocks.ProcessAttesterSlashings(
-		beaconState,
-		block.Body,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -1333,28 +1274,6 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 }
 
-func TestProcessDeposits_ThresholdReached(t *testing.T) {
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: make([]*pb.Deposit, params.BeaconConfig().MaxDeposits+1),
-		},
-	}
-	beaconState := &pb.BeaconState{
-		Eth1Data: &pb.Eth1Data{
-			DepositCount: params.BeaconConfig().MaxDeposits,
-		},
-		Eth1DepositIndex: 0,
-	}
-	want := "exceeds allowed threshold"
-	if _, err := blocks.ProcessDeposits(
-		beaconState,
-		block.Body,
-		false, /* verifySignatures */
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error: %s, received %v", want, err)
-	}
-}
-
 func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
@@ -1588,33 +1507,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	}
 }
 
-func TestProcessVolundaryExits_ThresholdReached(t *testing.T) {
-	exits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits+1)
-	registry := []*pb.Validator{}
-	state := &pb.BeaconState{
-		Validators: registry,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			VoluntaryExits: exits,
-		},
-	}
-
-	want := fmt.Sprintf(
-		"number of exits (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxVoluntaryExits+1,
-		params.BeaconConfig().MaxVoluntaryExits,
-	)
-
-	if _, err := blocks.ProcessVolundaryExits(
-		state,
-		block.Body,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessVolundaryExits_ValidatorNotActive(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
@@ -1743,65 +1635,6 @@ func TestProcessVolundaryExits_AppliesCorrectStatus(t *testing.T) {
 	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
-	}
-}
-
-func TestProcessBeaconTransfers_ThresholdReached(t *testing.T) {
-	transfers := make([]*pb.Transfer, params.BeaconConfig().MaxTransfers+1)
-	registry := []*pb.Validator{}
-	state := &pb.BeaconState{
-		Validators: registry,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Transfers: transfers,
-		},
-	}
-
-	want := fmt.Sprintf(
-		"number of transfers (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxTransfers+1,
-		params.BeaconConfig().MaxTransfers,
-	)
-
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block.Body,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBeaconTransfers_DuplicateTransfer(t *testing.T) {
-	testConfig := params.BeaconConfig()
-	testConfig.MaxTransfers = 2
-	params.OverrideBeaconConfig(testConfig)
-	transfers := []*pb.Transfer{
-		{
-			Amount: 1,
-		},
-		{
-			Amount: 1,
-		},
-	}
-	registry := []*pb.Validator{}
-	state := &pb.BeaconState{
-		Validators: registry,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Transfers: transfers,
-		},
-	}
-
-	want := "duplicate transfer"
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block.Body,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
