@@ -21,9 +21,12 @@ var (
 //
 // Spec pseudocode definition:
 //   def get_attestation_data_slot(state: BeaconState, data: AttestationData) -> Slot:
-//     committee_count = get_epoch_committee_count(state, data.target_epoch)
-//     offset = (data.crosslink.shard + SHARD_COUNT - get_epoch_start_shard(state, data.target_epoch)) % SHARD_COUNT
-//     return get_epoch_start_slot(data.target_epoch) + offset // (committee_count // SLOTS_PER_EPOCH)
+//    """
+//    Return the slot corresponding to the attestation ``data``.
+//    """
+//    committee_count = get_committee_count(state, data.target.epoch)
+//    offset = (data.crosslink.shard + SHARD_COUNT - get_start_shard(state, data.target.epoch)) % SHARD_COUNT
+//    return Slot(compute_start_slot_of_epoch(data.target.epoch) + offset // (committee_count // SLOTS_PER_EPOCH))
 func AttestationDataSlot(state *pb.BeaconState, data *pb.AttestationData) (uint64, error) {
 	if state == nil {
 		return 0, ErrAttestationDataSlotNilState
@@ -31,13 +34,13 @@ func AttestationDataSlot(state *pb.BeaconState, data *pb.AttestationData) (uint6
 	if data == nil {
 		return 0, ErrAttestationDataSlotNilData
 	}
-	committeeCount, err := EpochCommitteeCount(state, data.Target.Epoch)
+	committeeCount, err := CommitteeCount(state, data.Target.Epoch)
 	if err != nil {
 		return 0, err
 	}
 
-	epochStartShardNumber, err := EpochStartShard(state, data.Target.Epoch)
-	if err != nil { // This should never happen if EpochCommitteeCount was successful
+	epochStartShardNumber, err := StartShard(state, data.Target.Epoch)
+	if err != nil { // This should never happen if CommitteeCount was successful
 		return 0, fmt.Errorf("could not determine epoch start shard: %v", err)
 	}
 	offset := (data.Crosslink.Shard + params.BeaconConfig().ShardCount -

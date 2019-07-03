@@ -687,6 +687,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
+	helpers.ClearAllCaches()
 
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
