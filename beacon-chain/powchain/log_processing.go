@@ -2,7 +2,6 @@ package powchain
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,9 +21,31 @@ import (
 )
 
 var (
-	depositEventSignature    = []byte("Deposit(bytes,bytes,bytes,bytes,bytes)")
-	chainStartEventSignature = []byte("Eth2Genesis(bytes32,bytes,bytes)")
+	depositEventSignature = []byte("Deposit(bytes,bytes,bytes,bytes,bytes)")
 )
+
+// isValidGenesisState gets called whenever there's a deposit event,
+// it checks whether there's enough effective balance to trigger genesis.
+// Spec pseudocode definition:
+//  def is_valid_genesis_state(state: BeaconState) -> bool:
+//     if state.genesis_time < MIN_GENESIS_TIME:
+//         return False
+//     if len(get_active_validator_indices(state, GENESIS_EPOCH)) < MIN_GENESIS_ACTIVE_VALIDATOR_COUNT:
+//         return False
+//     return True
+func (w *Web3Service) isValidGenesisState(state *pb.BeaconState) (bool, error) {
+	if state.GenesisTime < params.BeaconConfig().MinGenesisTime {
+		return false, nil
+	}
+	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
+	if err != nil {
+		return false, fmt.Errorf("could not get active validator indices: %v", err)
+	}
+	if uint64(len(activeIndices)) < params.BeaconConfig().MinGenesisActiveValidatorCount {
+		return false, nil
+	}
+	return true, nil
+}
 
 // HasChainStartLogOccurred queries all logs in the deposit contract to verify
 // if ChainStart has occurred.
@@ -34,26 +56,7 @@ func (w *Web3Service) HasChainStartLogOccurred() (bool, error) {
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
 func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			w.depositContractAddress,
-		},
-		Topics: [][]common.Hash{{hashutil.Hash(chainStartEventSignature)}},
-	}
-	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
-	if err != nil {
-		return 0, err
-	}
-	if len(logs) == 0 {
-		return 0, errors.New("no chainstart logs exist")
-	}
-
-	_, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
-	if err != nil {
-		return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
-	}
-	timestamp := binary.LittleEndian.Uint64(timestampData)
-	return timestamp, nil
+	return 0, nil
 }
 
 // ProcessLog is the main method which handles the processing of all
