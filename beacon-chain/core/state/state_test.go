@@ -112,7 +112,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if newState.FinalizedCheckpoint.Epoch != genesisEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
-	if newState.JustificationBits != 0 {
+	if newState.JustificationBits[0] != 0x00 {
 		t.Error("JustificationBits was not correctly initialized")
 	}
 
@@ -163,8 +163,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	state1, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
-	state2, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
+	helpers.ClearAllCaches()
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	state1, _ := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
+	state2, _ := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
 
 	root1, err1 := hashutil.HashProto(state1)
 	root2, err2 := hashutil.HashProto(state2)
@@ -179,6 +181,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
+	helpers.ClearAllCaches()
 	s, _ := state.GenesisBeaconState(nil, 0, nil)
 	want, got := len(s.BlockRoots), int(params.BeaconConfig().HistoricalRootsLimit)
 	if want != got {

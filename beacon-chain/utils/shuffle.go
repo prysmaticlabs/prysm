@@ -45,23 +45,24 @@ func UnShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, er
 }
 
 // Spec pseudocode definition:
-//   def get_shuffled_index(index: ValidatorIndex, index_count: int, seed: Bytes32) -> ValidatorIndex:
-//     """
-//     Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
-//     """
-//     assert index < index_count
-//     assert index_count <= 2**40
-//     # Swap or not (https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf)
-//     # See the 'generalized domain' algorithm on page 3
-//     for round in range(SHUFFLE_ROUND_COUNT):
-//         pivot = bytes_to_int(hash(seed + int_to_bytes(round, length=1))[0:8]) % index_count
-//         flip = (pivot + index_count - index) % index_count
-//         position = max(index, flip)
-//         source = hash(seed + int_to_bytes(round, length=1) + int_to_bytes(position // 256, length=4))
-//         byte = source[(position % 256) // 8]
-//         bit = (byte >> (position % 8)) % 2
-//         index = flip if bit else index
-//     return index
+//   def compute_shuffled_index(index: ValidatorIndex, index_count: uint64, seed: Hash) -> ValidatorIndex:
+//    """
+//    Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
+//    """
+//    assert index < index_count
+//
+//    # Swap or not (https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf)
+//    # See the 'generalized domain' algorithm on page 3
+//    for current_round in range(SHUFFLE_ROUND_COUNT):
+//        pivot = bytes_to_int(hash(seed + int_to_bytes(current_round, length=1))[0:8]) % index_count
+//        flip = ValidatorIndex((pivot + index_count - index) % index_count)
+//        position = max(index, flip)
+//        source = hash(seed + int_to_bytes(current_round, length=1) + int_to_bytes(position // 256, length=4))
+//        byte = source[(position % 256) // 8]
+//        bit = (byte >> (position % 8)) % 2
+//        index = flip if bit else index
+//
+//    return ValidatorIndex(index)
 func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffle bool) (uint64, error) {
 	if params.BeaconConfig().ShuffleRoundCount == 0 {
 		return index, nil

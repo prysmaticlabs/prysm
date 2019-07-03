@@ -10,7 +10,6 @@ import (
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -57,6 +56,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		latestActiveIndexRoots[i] = zeroHash
 	}
 
+	compactRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(crosslinks); i++ {
 		crosslinks[i] = &pb.Crosslink{
@@ -102,7 +103,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-		JustificationBits: 0,
+		JustificationBits: []byte{0},
 		FinalizedCheckpoint: &pb.Checkpoint{
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
@@ -112,6 +113,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		CurrentCrosslinks:         crosslinks,
 		PreviousCrosslinks:        crosslinks,
 		ActiveIndexRoots:          latestActiveIndexRoots,
+		CompactCommitteesRoots:    compactRoots,
 		BlockRoots:                latestBlockRoots,
 		Slashings:                 latestSlashedExitBalances,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
@@ -141,16 +143,10 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 
 	for i := 0; i < len(state.Validators); i++ {
-		minBalance := state.Balances[i] - state.Balances[i]%params.BeaconConfig().EffectiveBalanceIncrement
-		if minBalance > params.BeaconConfig().MaxEffectiveBalance {
-			minBalance = params.BeaconConfig().MaxEffectiveBalance
-		}
-		state.Validators[i].EffectiveBalance = minBalance
-		if state.Validators[i].EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance {
-			state, err = v.ActivateValidator(state, uint64(i), true)
-			if err != nil {
-				return nil, fmt.Errorf("could not activate validator: %v", err)
-			}
+		if state.Validators[i].EffectiveBalance >=
+			params.BeaconConfig().MaxEffectiveBalance {
+			state.Validators[i].ActivationEligibilityEpoch = 0
+			state.Validators[i].ActivationEpoch = 0
 		}
 	}
 	activeValidators, err := helpers.ActiveValidatorIndices(state, 0)
@@ -164,8 +160,15 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		binary.LittleEndian.PutUint64(buf, val)
 		indicesBytes = append(indicesBytes, buf...)
 	}
+	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
+	if err != nil {
+		return nil, fmt.Errorf("could not get compact committee root %v", err)
+	}
+
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
+		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
+
 		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
 	}
 	return state, nil

@@ -732,7 +732,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 						Shard: 4,
 					},
 				},
-				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
+				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
@@ -742,7 +742,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 						Shard: 4,
 					},
 				},
-				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
+				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			},
 		},
 	}
@@ -906,6 +906,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
 
 	want := fmt.Sprintf(
@@ -1010,6 +1011,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousCrosslinks = []*pb.Crosslink{
 		{
@@ -1217,7 +1219,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			aggregationBitfield:      []byte{0x03},
 			custodyBitfield:          []byte{0x03},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{71, 127},
+			wantedCustodyBit1Indices: []uint64{127, 71},
 		},
 	}
 
@@ -1254,11 +1256,11 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
-		CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+5),
+		CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+5),
 		CustodyBit_1Indices: []uint64{},
 	}
 
-	for i := uint64(0); i < params.BeaconConfig().MaxIndicesPerAttestation+5; i++ {
+	for i := uint64(0); i < params.BeaconConfig().MaxValidatorsPerCommittee+5; i++ {
 		indexedAtt1.CustodyBit_0Indices[i] = i
 	}
 
@@ -1633,6 +1635,42 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
+	}
+}
+
+func TestProcessBeaconTransfers_NotEnoughSenderBalance(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
+	state := &pb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+	}
+	transfers := []*pb.Transfer{
+		{
+			Fee:    params.BeaconConfig().MaxEffectiveBalance,
+			Amount: params.BeaconConfig().MaxEffectiveBalance,
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: transfers,
+		},
+	}
+	want := fmt.Sprintf(
+		"expected sender balance %d >= %d",
+		balances[0],
+		transfers[0].Fee+transfers[0].Amount,
+	)
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block.Body,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
