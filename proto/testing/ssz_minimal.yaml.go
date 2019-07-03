@@ -14,14 +14,18 @@ type SszMinimalTest struct {
 	TestCases     []struct {
 		Attestation struct {
 			Value struct {
-				AggregationBits []byte `json:"aggregation_bitfield"`
+				AggregationBits []byte `json:"aggregation_bits"`
 				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-					SourceEpoch     uint64 `json:"source_epoch"`
-					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-					TargetEpoch     uint64 `json:"target_epoch"`
-					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-					Crosslink       struct {
+					Source          struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"source"`
+					Target struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"target"`
+					Crosslink struct {
 						Shard      uint64 `json:"shard"`
 						StartEpoch uint64 `json:"start_epoch"`
 						EndEpoch   uint64 `json:"end_epoch"`
@@ -29,7 +33,7 @@ type SszMinimalTest struct {
 						DataRoot   []byte `json:"data_root" ssz:"size=32"`
 					} `json:"crosslink"`
 				} `json:"data"`
-				CustodyBits []byte `json:"custody_bitfield"`
+				CustodyBits []byte `json:"custody_bits"`
 				Signature   []byte `json:"signature" ssz:"size=96"`
 			} `json:"value"`
 			Serialized  []byte `json:"serialized"`
@@ -39,11 +43,15 @@ type SszMinimalTest struct {
 		AttestationData struct {
 			Value struct {
 				BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-				SourceEpoch     uint64 `json:"source_epoch"`
-				SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-				TargetEpoch     uint64 `json:"target_epoch"`
-				TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-				Crosslink       struct {
+				Source          struct {
+					Epoch uint64 `json:"epoch"`
+					Root  []byte `json:"root" ssz:"size=32"`
+				} `json:"source"`
+				Target struct {
+					Epoch uint64 `json:"epoch"`
+					Root  []byte `json:"root" ssz:"size=32"`
+				} `json:"target"`
+				Crosslink struct {
 					Shard      uint64 `json:"shard"`
 					StartEpoch uint64 `json:"start_epoch"`
 					EndEpoch   uint64 `json:"end_epoch"`
@@ -58,11 +66,15 @@ type SszMinimalTest struct {
 			Value struct {
 				Data struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-					SourceEpoch     uint64 `json:"source_epoch"`
-					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-					TargetEpoch     uint64 `json:"target_epoch"`
-					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-					Crosslink       struct {
+					Source          struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"source"`
+					Target struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"target"`
+					Crosslink struct {
 						Shard      uint64 `json:"shard"`
 						StartEpoch uint64 `json:"start_epoch"`
 						EndEpoch   uint64 `json:"end_epoch"`
@@ -82,11 +94,15 @@ type SszMinimalTest struct {
 					CustodyBit1Indices []uint64 `json:"custody_bit_1_indices"`
 					Data               struct {
 						BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-						SourceEpoch     uint64 `json:"source_epoch"`
-						SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-						TargetEpoch     uint64 `json:"target_epoch"`
-						TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-						Crosslink       struct {
+						Source          struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"source"`
+						Target struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"target"`
+						Crosslink struct {
 							Shard      uint64 `json:"shard"`
 							StartEpoch uint64 `json:"start_epoch"`
 							EndEpoch   uint64 `json:"end_epoch"`
@@ -101,11 +117,15 @@ type SszMinimalTest struct {
 					CustodyBit1Indices []uint64 `json:"custody_bit_1_indices"`
 					Data               struct {
 						BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-						SourceEpoch     uint64 `json:"source_epoch"`
-						SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-						TargetEpoch     uint64 `json:"target_epoch"`
-						TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-						Crosslink       struct {
+						Source          struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"source"`
+						Target struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"target"`
+						Crosslink struct {
 							Shard      uint64 `json:"shard"`
 							StartEpoch uint64 `json:"start_epoch"`
 							EndEpoch   uint64 `json:"end_epoch"`
@@ -155,11 +175,15 @@ type SszMinimalTest struct {
 							CustodyBit1Indices []uint64 `json:"custody_bit_1_indices"`
 							Data               struct {
 								BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-								SourceEpoch     uint64 `json:"source_epoch"`
-								SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-								TargetEpoch     uint64 `json:"target_epoch"`
-								TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-								Crosslink       struct {
+								Source          struct {
+									Epoch uint64 `json:"epoch"`
+									Root  []byte `json:"root" ssz:"size=32"`
+								} `json:"source"`
+								Target struct {
+									Epoch uint64 `json:"epoch"`
+									Root  []byte `json:"root" ssz:"size=32"`
+								} `json:"target"`
+								Crosslink struct {
 									Shard      uint64 `json:"shard"`
 									StartEpoch uint64 `json:"start_epoch"`
 									EndEpoch   uint64 `json:"end_epoch"`
@@ -174,11 +198,15 @@ type SszMinimalTest struct {
 							CustodyBit1Indices []uint64 `json:"custody_bit_1_indices"`
 							Data               struct {
 								BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-								SourceEpoch     uint64 `json:"source_epoch"`
-								SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-								TargetEpoch     uint64 `json:"target_epoch"`
-								TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-								Crosslink       struct {
+								Source          struct {
+									Epoch uint64 `json:"epoch"`
+									Root  []byte `json:"root" ssz:"size=32"`
+								} `json:"source"`
+								Target struct {
+									Epoch uint64 `json:"epoch"`
+									Root  []byte `json:"root" ssz:"size=32"`
+								} `json:"target"`
+								Crosslink struct {
 									Shard      uint64 `json:"shard"`
 									StartEpoch uint64 `json:"start_epoch"`
 									EndEpoch   uint64 `json:"end_epoch"`
@@ -190,14 +218,18 @@ type SszMinimalTest struct {
 						} `json:"attestation_2"`
 					} `json:"attester_slashings"`
 					Attestations []struct {
-						AggregationBits []byte `json:"aggregation_bitfield"`
+						AggregationBits []byte `json:"aggregation_bits"`
 						Data            struct {
 							BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-							SourceEpoch     uint64 `json:"source_epoch"`
-							SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-							TargetEpoch     uint64 `json:"target_epoch"`
-							TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-							Crosslink       struct {
+							Source          struct {
+								Epoch uint64 `json:"epoch"`
+								Root  []byte `json:"root" ssz:"size=32"`
+							} `json:"source"`
+							Target struct {
+								Epoch uint64 `json:"epoch"`
+								Root  []byte `json:"root" ssz:"size=32"`
+							} `json:"target"`
+							Crosslink struct {
 								Shard      uint64 `json:"shard"`
 								StartEpoch uint64 `json:"start_epoch"`
 								EndEpoch   uint64 `json:"end_epoch"`
@@ -205,7 +237,7 @@ type SszMinimalTest struct {
 								DataRoot   []byte `json:"data_root" ssz:"size=32"`
 							} `json:"crosslink"`
 						} `json:"data"`
-						CustodyBits []byte `json:"custody_bitfield"`
+						CustodyBits []byte `json:"custody_bits"`
 						Signature   []byte `json:"signature" ssz:"size=96"`
 					} `json:"attestations"`
 					Deposits []struct {
@@ -270,11 +302,15 @@ type SszMinimalTest struct {
 						CustodyBit1Indices []uint64 `json:"custody_bit_1_indices"`
 						Data               struct {
 							BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-							SourceEpoch     uint64 `json:"source_epoch"`
-							SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-							TargetEpoch     uint64 `json:"target_epoch"`
-							TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-							Crosslink       struct {
+							Source          struct {
+								Epoch uint64 `json:"epoch"`
+								Root  []byte `json:"root" ssz:"size=32"`
+							} `json:"source"`
+							Target struct {
+								Epoch uint64 `json:"epoch"`
+								Root  []byte `json:"root" ssz:"size=32"`
+							} `json:"target"`
+							Crosslink struct {
 								Shard      uint64 `json:"shard"`
 								StartEpoch uint64 `json:"start_epoch"`
 								EndEpoch   uint64 `json:"end_epoch"`
@@ -289,11 +325,15 @@ type SszMinimalTest struct {
 						CustodyBit1Indices []uint64 `json:"custody_bit_1_indices"`
 						Data               struct {
 							BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-							SourceEpoch     uint64 `json:"source_epoch"`
-							SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-							TargetEpoch     uint64 `json:"target_epoch"`
-							TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-							Crosslink       struct {
+							Source          struct {
+								Epoch uint64 `json:"epoch"`
+								Root  []byte `json:"root" ssz:"size=32"`
+							} `json:"source"`
+							Target struct {
+								Epoch uint64 `json:"epoch"`
+								Root  []byte `json:"root" ssz:"size=32"`
+							} `json:"target"`
+							Crosslink struct {
 								Shard      uint64 `json:"shard"`
 								StartEpoch uint64 `json:"start_epoch"`
 								EndEpoch   uint64 `json:"end_epoch"`
@@ -305,14 +345,18 @@ type SszMinimalTest struct {
 					} `json:"attestation_2"`
 				} `json:"attester_slashings"`
 				Attestations []struct {
-					AggregationBits []byte `json:"aggregation_bitfield"`
+					AggregationBits []byte `json:"aggregation_bits"`
 					Data            struct {
 						BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-						SourceEpoch     uint64 `json:"source_epoch"`
-						SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-						TargetEpoch     uint64 `json:"target_epoch"`
-						TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-						Crosslink       struct {
+						Source          struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"source"`
+						Target struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"target"`
+						Crosslink struct {
 							Shard      uint64 `json:"shard"`
 							StartEpoch uint64 `json:"start_epoch"`
 							EndEpoch   uint64 `json:"end_epoch"`
@@ -320,7 +364,7 @@ type SszMinimalTest struct {
 							DataRoot   []byte `json:"data_root" ssz:"size=32"`
 						} `json:"crosslink"`
 					} `json:"data"`
-					CustodyBits []byte `json:"custody_bitfield"`
+					CustodyBits []byte `json:"custody_bits"`
 					Signature   []byte `json:"signature" ssz:"size=96"`
 				} `json:"attestations"`
 				Deposits []struct {
@@ -385,14 +429,18 @@ type SszMinimalTest struct {
 				RandaoMixes               [][]byte `json:"latest_randao_mixes" ssz:"size=64,32"`
 				StartShard                uint64   `json:"latest_start_shard"`
 				PreviousEpochAttestations []struct {
-					AggregationBits []byte `json:"aggregation_bitfield"`
+					AggregationBits []byte `json:"aggregation_bits"`
 					Data            struct {
 						BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-						SourceEpoch     uint64 `json:"source_epoch"`
-						SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-						TargetEpoch     uint64 `json:"target_epoch"`
-						TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-						Crosslink       struct {
+						Source          struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"source"`
+						Target struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"target"`
+						Crosslink struct {
 							Shard      uint64 `json:"shard"`
 							StartEpoch uint64 `json:"start_epoch"`
 							EndEpoch   uint64 `json:"end_epoch"`
@@ -404,14 +452,18 @@ type SszMinimalTest struct {
 					ProposerIndex  uint64 `json:"proposer_index"`
 				} `json:"previous_epoch_attestations"`
 				CurrentEpochAttestations []struct {
-					AggregationBits []byte `json:"aggregation_bitfield"`
+					AggregationBits []byte `json:"aggregation_bits"`
 					Data            struct {
 						BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-						SourceEpoch     uint64 `json:"source_epoch"`
-						SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-						TargetEpoch     uint64 `json:"target_epoch"`
-						TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-						Crosslink       struct {
+						Source          struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"source"`
+						Target struct {
+							Epoch uint64 `json:"epoch"`
+							Root  []byte `json:"root" ssz:"size=32"`
+						} `json:"target"`
+						Crosslink struct {
 							Shard      uint64 `json:"shard"`
 							StartEpoch uint64 `json:"start_epoch"`
 							EndEpoch   uint64 `json:"end_epoch"`
@@ -426,7 +478,7 @@ type SszMinimalTest struct {
 				CurrentJustifiedEpoch  uint64 `json:"current_justified_epoch"`
 				PreviousJustifiedRoot  []byte `json:"previous_justified_root" ssz:"size=32"`
 				CurrentJustifiedRoot   []byte `json:"current_justified_root" ssz:"size=32"`
-				JustificationBits      uint64 `json:"justification_bitfield"`
+				JustificationBits      []byte `json:"justification_bits"`
 				FinalizedEpoch         uint64 `json:"finalized_epoch"`
 				FinalizedRoot          []byte `json:"finalized_root" ssz:"size=32"`
 				CurrentCrosslinks      []struct {
@@ -537,11 +589,15 @@ type SszMinimalTest struct {
 				CustodyBit1Indices []uint64 `json:"custody_bit_1_indices"`
 				Data               struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-					SourceEpoch     uint64 `json:"source_epoch"`
-					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-					TargetEpoch     uint64 `json:"target_epoch"`
-					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-					Crosslink       struct {
+					Source          struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"source"`
+					Target struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"target"`
+					Crosslink struct {
 						Shard      uint64 `json:"shard"`
 						StartEpoch uint64 `json:"start_epoch"`
 						EndEpoch   uint64 `json:"end_epoch"`
@@ -557,14 +613,18 @@ type SszMinimalTest struct {
 		} `json:"IndexedAttestation,omitempty"`
 		PendingAttestation struct {
 			Value struct {
-				AggregationBits []byte `json:"aggregation_bitfield"`
+				AggregationBits []byte `json:"aggregation_bits"`
 				Data            struct {
 					BeaconBlockRoot []byte `json:"beacon_block_root" ssz:"size=32"`
-					SourceEpoch     uint64 `json:"source_epoch"`
-					SourceRoot      []byte `json:"source_root" ssz:"size=32"`
-					TargetEpoch     uint64 `json:"target_epoch"`
-					TargetRoot      []byte `json:"target_root" ssz:"size=32"`
-					Crosslink       struct {
+					Source          struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"source"`
+					Target struct {
+						Epoch uint64 `json:"epoch"`
+						Root  []byte `json:"root" ssz:"size=32"`
+					} `json:"target"`
+					Crosslink struct {
 						Shard      uint64 `json:"shard"`
 						StartEpoch uint64 `json:"start_epoch"`
 						EndEpoch   uint64 `json:"end_epoch"`

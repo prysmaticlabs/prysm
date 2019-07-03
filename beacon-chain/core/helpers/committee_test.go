@@ -269,7 +269,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		attestationData.Crosslink = &pb.Crosslink{
 			Shard: tt.attestationSlot,
 		}
-		attestationData.TargetEpoch = 0
+		attestationData.Target = &pb.Checkpoint{Epoch: 0}
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
 		if err != nil {
@@ -303,7 +303,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}, Target: &pb.Checkpoint{}}
 
 	if _, err := AttestingIndices(state, attestationData, []byte{}); err == nil {
 		t.Error("attestation participants should have failed with incorrect bitfield")
@@ -328,7 +328,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}, Target: &pb.Checkpoint{}}
 
 	var zeroByte [16]byte
 
@@ -636,6 +636,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot: 5,
@@ -648,6 +649,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 10,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot: 10,
@@ -659,6 +661,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot: 20,
@@ -670,6 +673,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot:   5,
@@ -682,6 +686,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot:           20,
