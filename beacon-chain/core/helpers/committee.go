@@ -448,6 +448,8 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 	return ssz.HashTreeRoot(compactCommList)
 }
 
+// compressValidator compacts all the validator data such as validator index,slashing info and balance
+// into a single uint64 field.
 func compressValidator(validator *pb.Validator, idx uint64) uint64 {
 	compactBalance := validator.EffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// index (top 6 bytes) + slashed (16th bit) + compact_balance (bottom 15 bits)
