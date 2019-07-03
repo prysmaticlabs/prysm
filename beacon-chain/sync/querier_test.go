@@ -20,7 +20,7 @@ type genesisPowChain struct {
 	feed *event.Feed
 }
 
-func (mp *genesisPowChain) HasChainStartLogOccurred() (bool, error) {
+func (mp *genesisPowChain) HasChainStartOccurred() (bool, error) {
 	return false, nil
 }
 
@@ -36,7 +36,7 @@ type afterGenesisPowChain struct {
 	feed *event.Feed
 }
 
-func (mp *afterGenesisPowChain) HasChainStartLogOccurred() (bool, error) {
+func (mp *afterGenesisPowChain) HasChainStartOccurred() (bool, error) {
 	return true, nil
 }
 
