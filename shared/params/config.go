@@ -156,7 +156,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor:            64,
-	WhistleblowerRewardQuotient: 512,
+	WhistleBlowerRewardQuotient: 512,
 	ProposerRewardQuotient:      8,
 	InactivityPenaltyQuotient:   1 << 25,
 	MinSlashingPenaltyQuotient:  32,
