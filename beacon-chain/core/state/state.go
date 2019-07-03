@@ -130,6 +130,11 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		Eth1DepositIndex: 0,
 	}
 
+	bodyRoot, err := ssz.HashTreeRoot(&pb.BeaconBlockBody{})
+	if err != nil {
+		return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
+	}
+
 	// Process initial deposits.
 	validatorMap := make(map[[32]byte]int)
 	leaves := []*pb.DepositData{}
