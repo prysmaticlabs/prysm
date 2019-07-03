@@ -110,8 +110,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	log.WithFields(logrus.Fields{
 		"headRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot)),
 		"shard":       data.Crosslink.Shard,
-		"sourceEpoch": data.SourceEpoch,
-		"targetEpoch": data.TargetEpoch,
+		"sourceEpoch": data.Source.Epoch,
+		"targetEpoch": data.Target.Epoch,
 		"validator":   truncatedPk,
 	}).Info("Attested latest head")
 
@@ -120,8 +120,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.Root)),
 		trace.Int64Attribute("shard", int64(data.Crosslink.Shard)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
-		trace.Int64Attribute("justifiedEpoch", int64(data.SourceEpoch)),
-		trace.Int64Attribute("targetEpoch", int64(data.TargetEpoch)),
+		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
+		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
 }

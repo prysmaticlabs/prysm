@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"strings"
 	"testing"
@@ -22,12 +23,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		CacheTreeHash: false,
 	})
+	logrus.SetOutput(ioutil.Discard) // Ignore "validator activated" logs
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
@@ -428,7 +431,6 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		)
 	}
 }
-
 func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 	registry := make([]*pb.Validator, 2)
 	currentSlot := uint64(0)
@@ -609,19 +611,19 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 }
 func TestSlashableAttestationData_CanSlash(t *testing.T) {
 	att1 := &pb.AttestationData{
-		TargetEpoch: 1,
-		SourceRoot:  []byte{'A'},
+		Target: &pb.Checkpoint{Epoch: 1},
+		Source: &pb.Checkpoint{Root: []byte{'A'}},
 	}
 	att2 := &pb.AttestationData{
-		TargetEpoch: 1,
-		SourceRoot:  []byte{'B'},
+		Target: &pb.Checkpoint{Epoch: 1},
+		Source: &pb.Checkpoint{Root: []byte{'B'}},
 	}
 	if !blocks.IsSlashableAttestationData(att1, att2) {
 		t.Error("atts should have been slashable")
 	}
-	att1.TargetEpoch = 4
-	att1.SourceEpoch = 2
-	att2.SourceEpoch = 3
+	att1.Target.Epoch = 4
+	att1.Source.Epoch = 2
+	att2.Source.Epoch = 3
 	if !blocks.IsSlashableAttestationData(att1, att2) {
 		t.Error("atts should have been slashable")
 	}
@@ -632,8 +634,8 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -641,8 +643,8 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 1,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 1},
 					Crosslink: &pb.Crosslink{
 						Shard: 3,
 					},
@@ -678,8 +680,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -689,8 +691,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -726,8 +728,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -736,8 +738,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -780,8 +782,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -790,8 +792,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -839,11 +841,11 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
+func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -881,7 +883,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
+func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	helpers.ClearActiveIndicesCache()
 	helpers.ClearActiveCountCache()
 	helpers.ClearStartShardCache()
@@ -889,7 +891,8 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
+				Source: &pb.Checkpoint{Epoch: 0},
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -911,7 +914,7 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 
 	want := fmt.Sprintf(
 		"expected target epoch %d == %d or %d",
-		attestations[0].Data.TargetEpoch,
+		attestations[0].Data.Target.Epoch,
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
 	)
@@ -924,14 +927,14 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
+func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 1,
+				Target: &pb.Checkpoint{Epoch: 0},
+				Source: &pb.Checkpoint{Epoch: 1},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -960,7 +963,7 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	want := fmt.Sprintf(
 		"expected source epoch %d, received %d",
 		helpers.CurrentEpoch(beaconState),
-		attestations[0].Data.SourceEpoch,
+		attestations[0].Data.Source.Epoch,
 	)
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
@@ -970,13 +973,13 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.SourceEpoch = helpers.CurrentEpoch(beaconState)
-	block.Body.Attestations[0].Data.SourceRoot = []byte{}
+	block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
+	block.Body.Attestations[0].Data.Source.Root = []byte{}
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
 		beaconState.CurrentJustifiedCheckpoint.Root,
-		attestations[0].Data.SourceRoot,
+		attestations[0].Data.Source.Root,
 	)
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
@@ -987,14 +990,14 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
+func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 1,
+				Source: &pb.Checkpoint{Epoch: 1},
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -1024,7 +1027,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	want := fmt.Sprintf(
 		"expected source epoch %d, received %d",
 		helpers.PrevEpoch(beaconState),
-		attestations[0].Data.SourceEpoch,
+		attestations[0].Data.Source.Epoch,
 	)
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
@@ -1034,13 +1037,13 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.SourceEpoch = helpers.PrevEpoch(beaconState)
-	block.Body.Attestations[0].Data.SourceRoot = []byte{}
+	block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
+	block.Body.Attestations[0].Data.Source.Root = []byte{}
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
 		beaconState.PreviousJustifiedCheckpoint.Root,
-		attestations[0].Data.SourceRoot,
+		attestations[0].Data.Source.Root,
 	)
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
@@ -1051,15 +1054,14 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
+func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 0,
-				SourceRoot:  []byte("hello-world"),
+				Source: &pb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -1120,15 +1122,14 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_OK(t *testing.T) {
+func TestProcessAttestations_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 0,
-				SourceRoot:  []byte("hello-world"),
+				Source: &pb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard:      0,
 					StartEpoch: 0,
@@ -1226,8 +1227,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	attestation := &pb.Attestation{
 		Signature: []byte("signed"),
 		Data: &pb.AttestationData{
-			SourceEpoch: 0,
-			TargetEpoch: 0,
+			Source: &pb.Checkpoint{Epoch: 0},
+			Target: &pb.Checkpoint{Epoch: 0},
 			Crosslink: &pb.Crosslink{
 				Shard: 3,
 			},
@@ -1273,7 +1274,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
+func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
 			Pubkey: []byte{1, 2, 3},
@@ -1316,7 +1317,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
+func TestProcessDeposits_ProcessCorrectly(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
 			Pubkey: []byte{1, 2, 3},
@@ -1506,7 +1507,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
+func TestProcessVolundaryExits_ValidatorNotActive(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
@@ -1529,7 +1530,6 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	want := "non-active validator cannot exit"
 
 	if _, err := blocks.ProcessVolundaryExits(
-
 		state,
 		block.Body,
 		false,
@@ -1538,7 +1538,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
+func TestProcessVolundaryExits_InvalidExitEpoch(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			Epoch: 10,
@@ -1571,7 +1571,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorExits_NotActiveLongEnoughToExit(t *testing.T) {
+func TestProcessVolundaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
@@ -1604,7 +1604,7 @@ func TestProcessValidatorExits_NotActiveLongEnoughToExit(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
+func TestProcessVolundaryExits_AppliesCorrectStatus(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,

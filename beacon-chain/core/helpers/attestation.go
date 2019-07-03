@@ -34,17 +34,17 @@ func AttestationDataSlot(state *pb.BeaconState, data *pb.AttestationData) (uint6
 	if data == nil {
 		return 0, ErrAttestationDataSlotNilData
 	}
-	committeeCount, err := CommitteeCount(state, data.TargetEpoch)
+	committeeCount, err := CommitteeCount(state, data.Target.Epoch)
 	if err != nil {
 		return 0, err
 	}
 
-	epochStartShardNumber, err := StartShard(state, data.TargetEpoch)
+	epochStartShardNumber, err := StartShard(state, data.Target.Epoch)
 	if err != nil { // This should never happen if CommitteeCount was successful
 		return 0, fmt.Errorf("could not determine epoch start shard: %v", err)
 	}
 	offset := (data.Crosslink.Shard + params.BeaconConfig().ShardCount -
 		epochStartShardNumber) % params.BeaconConfig().ShardCount
 
-	return StartSlot(data.TargetEpoch) + offset/(committeeCount/params.BeaconConfig().SlotsPerEpoch), nil
+	return StartSlot(data.Target.Epoch) + offset/(committeeCount/params.BeaconConfig().SlotsPerEpoch), nil
 }

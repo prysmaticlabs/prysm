@@ -161,6 +161,8 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 						Shard:      beaconState.Slot - params.BeaconConfig().MinAttestationInclusionDelay,
 						DataRoot:   params.BeaconConfig().ZeroHash[:],
 						ParentRoot: encoded[:]},
+					Source: &pbp2p.Checkpoint{},
+					Target: &pbp2p.Checkpoint{},
 				},
 					AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
 				},
@@ -216,51 +218,52 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		pendingAttestations: []*pbp2p.Attestation{
 			//Expired attestations
 			{Data: &pbp2p.AttestationData{
-				TargetEpoch: 10,
-				SourceEpoch: expectedEpoch,
-				Crosslink:   &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				Target: &pbp2p.Checkpoint{Epoch: 10},
+				Source: &pbp2p.Checkpoint{Epoch: expectedEpoch},
+
+				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
 			{Data: &pbp2p.AttestationData{
-				TargetEpoch: 10,
-				SourceEpoch: expectedEpoch,
-				Crosslink:   &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				Target:    &pbp2p.Checkpoint{Epoch: 10},
+				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
 			{Data: &pbp2p.AttestationData{
-				TargetEpoch: 10,
-				SourceEpoch: expectedEpoch,
-				Crosslink:   &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				Target:    &pbp2p.Checkpoint{Epoch: 10},
+				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
 			{Data: &pbp2p.AttestationData{
-				TargetEpoch: 10,
-				SourceEpoch: expectedEpoch,
-				Crosslink:   &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				Target:    &pbp2p.Checkpoint{Epoch: 10},
+				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
 			{Data: &pbp2p.AttestationData{
-				TargetEpoch: 10,
-				SourceEpoch: expectedEpoch,
-				Crosslink:   &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				Target:    &pbp2p.Checkpoint{Epoch: 10},
+				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
 			// Non-expired attestation with incorrect justified epoch
 			{Data: &pbp2p.AttestationData{
-				TargetEpoch: 10,
-				SourceEpoch: expectedEpoch - 1,
-				Crosslink:   &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				Target:    &pbp2p.Checkpoint{Epoch: 10},
+				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch - 1},
+				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
 			// Non-expired attestations with correct justified epoch
 			{Data: &pbp2p.AttestationData{
-				TargetEpoch: 10,
-				SourceEpoch: expectedEpoch,
-				Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+				Target:    &pbp2p.Checkpoint{Epoch: 10},
+				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 			}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 			{Data: &pbp2p.AttestationData{
-				TargetEpoch: 10,
-				SourceEpoch: expectedEpoch,
-				Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+				Target:    &pbp2p.Checkpoint{Epoch: 10},
+				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 			}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 			{Data: &pbp2p.AttestationData{
-				TargetEpoch: 10,
-				SourceEpoch: expectedEpoch,
-				Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+				Target:    &pbp2p.Checkpoint{Epoch: 10},
+				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 			}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 		},
 	}
@@ -325,19 +328,19 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 
 	expectedAtts := []*pbp2p.Attestation{
 		{Data: &pbp2p.AttestationData{
-			TargetEpoch: 10,
-			SourceEpoch: expectedEpoch,
-			Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+			Target:    &pbp2p.Checkpoint{Epoch: 10},
+			Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+			Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 		}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 		{Data: &pbp2p.AttestationData{
-			TargetEpoch: 10,
-			SourceEpoch: expectedEpoch,
-			Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+			Target:    &pbp2p.Checkpoint{Epoch: 10},
+			Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+			Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 		}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 		{Data: &pbp2p.AttestationData{
-			TargetEpoch: 10,
-			SourceEpoch: expectedEpoch,
-			Crosslink:   &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+			Target:    &pbp2p.Checkpoint{Epoch: 10},
+			Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
+			Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 		}, AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0}},
 	}
 	if !reflect.DeepEqual(atts, expectedAtts) {
