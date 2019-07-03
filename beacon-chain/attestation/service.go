@@ -284,7 +284,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 			log.WithFields(
 				logrus.Fields{
 					"attestationSlot": slot,
-					"sourceEpoch":     attestation.Data.SourceEpoch,
+					"sourceEpoch":     attestation.Data.Source.Epoch,
 				},
 			).Debug("Attestation store updated")
 

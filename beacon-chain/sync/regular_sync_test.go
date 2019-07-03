@@ -397,7 +397,10 @@ func TestReceiveAttestation_OK(t *testing.T) {
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard: 1,
-				}},
+				},
+				Source: &pb.Checkpoint{},
+				Target: &pb.Checkpoint{},
+			},
 		},
 	}
 
@@ -448,7 +451,10 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard: 900,
-				}},
+				},
+				Source: &pb.Checkpoint{},
+				Target: &pb.Checkpoint{},
+			},
 		},
 	}
 

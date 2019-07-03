@@ -158,7 +158,7 @@ func ComputeCommittee(
 //    committee = get_crosslink_committee(state, data.target.epoch, data.crosslink.shard)
 //    return set(index for i, index in enumerate(committee) if bits[i])
 func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield []byte) ([]uint64, error) {
-	committee, err := CrosslinkCommittee(state, data.TargetEpoch, data.Crosslink.Shard)
+	committee, err := CrosslinkCommittee(state, data.Target.Epoch, data.Crosslink.Shard)
 	if err != nil {
 		return nil, fmt.Errorf("could not get committee: %v", err)
 	}
@@ -386,7 +386,7 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 // VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
 // to the committees at that slot.
 func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (bool, error) {
-	committee, err := CrosslinkCommittee(bState, att.Data.TargetEpoch, att.Data.Crosslink.Shard)
+	committee, err := CrosslinkCommittee(bState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
 	if err != nil {
 		return false, fmt.Errorf("could not retrieve crosslink committees at slot: %v", err)
 	}

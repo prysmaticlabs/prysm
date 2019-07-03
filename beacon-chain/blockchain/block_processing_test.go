@@ -297,7 +297,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 			RandaoReveal: []byte{},
 			Attestations: []*pb.Attestation{{
 				Data: &pb.AttestationData{
-					TargetEpoch: 5,
+					Target: &pb.Checkpoint{Epoch: 5},
 				},
 			}},
 		},
@@ -895,7 +895,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 				AggregationBits: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					SourceRoot: parentRoot[:],
+					Source: &pb.Checkpoint{Root: parentRoot[:]},
 					Crosslink: &pb.Crosslink{
 						Shard: 960,
 					},
