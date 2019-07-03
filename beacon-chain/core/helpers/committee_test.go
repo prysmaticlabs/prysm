@@ -37,7 +37,7 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 		s := &pb.BeaconState{
 			Validators: vals,
 		}
-		count, err := EpochCommitteeCount(s, 1)
+		count, err := CommitteeCount(s, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -66,7 +66,7 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 	s := &pb.BeaconState{
 		Validators: vals,
 	}
-	count, err := EpochCommitteeCount(s, 1)
+	count, err := CommitteeCount(s, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{71, 127},
+			wanted:          []uint64{127, 71},
 		},
 		{
 			attestationSlot: 2,
@@ -258,7 +258,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        []byte{0x03},
-			wanted:          []uint64{68, 102},
+			wanted:          []uint64{102, 68},
 		},
 	}
 
@@ -507,7 +507,7 @@ func TestShardDelta_OK(t *testing.T) {
 }
 
 func TestEpochStartShard_EpochOutOfBound(t *testing.T) {
-	_, err := EpochStartShard(&pb.BeaconState{}, 2)
+	_, err := StartShard(&pb.BeaconState{}, 2)
 	want := "epoch 2 can't be greater than 1"
 	if err.Error() != want {
 		t.Fatalf("Did not generate correct error. Want: %s, got: %s",
@@ -537,7 +537,7 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 			}
 		}
 		state := &pb.BeaconState{Validators: validators, StartShard: 100, Slot: 500}
-		startShard, err := EpochStartShard(state, 0)
+		startShard, err := StartShard(state, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -591,7 +591,7 @@ func TestEpochStartShard_MixedActivationValidatorRegistry(t *testing.T) {
 			Validators: vs,
 			Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
 		}
-		startShard, err := EpochStartShard(s, 2 /*epoch*/)
+		startShard, err := StartShard(s, 2 /*epoch*/)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -733,7 +733,7 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -772,7 +772,7 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -811,7 +811,7 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -851,7 +851,7 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -891,7 +891,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}

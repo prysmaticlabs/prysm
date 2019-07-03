@@ -601,7 +601,8 @@ func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().SlotsPerEpoch * 2,
+		JustificationBits: []byte{0x00},
+		Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
 		PreviousJustifiedCheckpoint: &pb.Checkpoint{
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
@@ -640,7 +641,7 @@ func TestProcessJustificationFinalization_NoBlockRootCurrentEpoch(t *testing.T) 
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-		JustificationBits: 3,
+		JustificationBits: []byte{0x03}, // 0b0011
 		Validators:        []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:          []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:        blockRoots,
@@ -671,7 +672,7 @@ func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 		FinalizedCheckpoint: &pb.Checkpoint{},
-		JustificationBits:   3,
+		JustificationBits:   []byte{0x03}, // 0b0011
 		Validators:          []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:          blockRoots,
@@ -716,7 +717,7 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-		JustificationBits: 3,
+		JustificationBits: []byte{0x03}, // 0b0011
 		Validators:        []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:          []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:        blockRoots, FinalizedCheckpoint: &pb.Checkpoint{},
@@ -1092,7 +1093,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedCheckpoint: &pb.Checkpoint{},
 	}
-	limit, _ := helpers.ChurnLimit(state)
+	limit, _ := helpers.ValidatorChurnLimit(state)
 	for i := 0; i < int(limit)+10; i++ {
 		state.Validators = append(state.Validators, &pb.Validator{
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1145,7 +1146,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	epoch := uint64(5)
 	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
-	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawalDelay
+	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	state := &pb.BeaconState{
 		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*pb.Validator{

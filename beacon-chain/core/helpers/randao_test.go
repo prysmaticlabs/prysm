@@ -179,7 +179,7 @@ func TestGenerateSeed_OK(t *testing.T) {
 		RandaoMixes:      randaoMixes,
 		Slot:             slot}
 
-	got, err := GenerateSeed(state, 10)
+	got, err := Seed(state, 10)
 	if err != nil {
 		t.Fatal(err)
 	}

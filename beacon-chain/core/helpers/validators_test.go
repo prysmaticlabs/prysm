@@ -140,12 +140,12 @@ func TestChurnLimit_OK(t *testing.T) {
 			RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 			ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		}
-		resultChurn, err := ChurnLimit(beaconState)
+		resultChurn, err := ValidatorChurnLimit(beaconState)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if resultChurn != test.wantedChurn {
-			t.Errorf("ChurnLimit(%d) = %d, want = %d",
+			t.Errorf("ValidatorChurnLimit(%d) = %d, want = %d",
 				test.validatorCount, resultChurn, test.wantedChurn)
 		}
 	}
