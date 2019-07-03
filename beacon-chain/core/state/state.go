@@ -10,7 +10,6 @@ import (
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -141,10 +140,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	for i := 0; i < len(state.Validators); i++ {
 		if state.Validators[i].EffectiveBalance >=
 			params.BeaconConfig().MaxEffectiveBalance {
-			state, err = v.ActivateValidator(state, uint64(i), true)
-			if err != nil {
-				return nil, fmt.Errorf("could not activate validator: %v", err)
-			}
+			state.Validators[i].ActivationEligibilityEpoch = 0
+			state.Validators[i].ActivationEpoch = 0
 		}
 	}
 	activeValidators, err := helpers.ActiveValidatorIndices(state, 0)

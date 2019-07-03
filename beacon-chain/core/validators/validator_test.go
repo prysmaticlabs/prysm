@@ -46,46 +46,6 @@ func TestHasVoted_OK(t *testing.T) {
 	}
 }
 
-func TestActivateValidatorGenesis_OK(t *testing.T) {
-	state := &pb.BeaconState{
-		Validators: []*pb.Validator{
-			{Pubkey: []byte{'A'}},
-		},
-	}
-	newState, err := ActivateValidator(state, 0, true)
-	if err != nil {
-		t.Fatalf("could not execute activateValidator:%v", err)
-	}
-	if newState.Validators[0].ActivationEpoch != 0 {
-		t.Errorf("Wanted activation epoch = genesis epoch, got %d",
-			newState.Validators[0].ActivationEpoch)
-	}
-	if newState.Validators[0].ActivationEligibilityEpoch != 0 {
-		t.Errorf("Wanted activation eligibility epoch = genesis epoch, got %d",
-			newState.Validators[0].ActivationEligibilityEpoch)
-	}
-}
-
-func TestActivateValidator_OK(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 100, // epoch 2
-		Validators: []*pb.Validator{
-			{Pubkey: []byte{'A'}},
-		},
-	}
-	newState, err := ActivateValidator(state, 0, false)
-	if err != nil {
-		t.Fatalf("could not execute activateValidator:%v", err)
-	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	wantedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	if newState.Validators[0].ActivationEpoch != wantedEpoch {
-		t.Errorf("Wanted activation slot = %d, got %d",
-			wantedEpoch,
-			newState.Validators[0].ActivationEpoch)
-	}
-}
-
 func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	exitEpoch := uint64(199)
 	state := &pb.BeaconState{Validators: []*pb.Validator{{
@@ -228,7 +188,7 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Could not get proposer %v", err)
 	}
 
-	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleblowerRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 
 	if state.Balances[proposer] != params.BeaconConfig().MaxEffectiveBalance+proposerReward {

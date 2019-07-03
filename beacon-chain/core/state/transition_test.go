@@ -86,7 +86,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 			Deposits: blkDeposits,
 		},
 	}
-	want := "could not verify block proposer slashing"
+	want := "could not process block proposer slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -149,7 +149,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 			Deposits: make([]*pb.Deposit, 16),
 		},
 	}
-	want := "could not verify block attester slashing"
+	want := "could not process block attester slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -241,131 +241,6 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 	want := "could not process block attestations"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	helpers.ClearAllCaches()
-
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-	proposerSlashings := []*pb.ProposerSlashing{
-		{
-			ProposerIndex: 3,
-			Header_1: &pb.BeaconBlockHeader{
-				Slot:      1,
-				Signature: []byte("A"),
-			},
-			Header_2: &pb.BeaconBlockHeader{
-				Slot:      1,
-				Signature: []byte("B"),
-			},
-		},
-	}
-	attesterSlashings := []*pb.AttesterSlashing{
-		{
-			Attestation_1: &pb.IndexedAttestation{
-				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
-					Crosslink: &pb.Crosslink{
-						Shard: 4,
-					}},
-				CustodyBit_0Indices: []uint64{0, 1},
-			},
-			Attestation_2: &pb.IndexedAttestation{
-				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
-					Crosslink: &pb.Crosslink{
-						Shard: 4,
-					}},
-				CustodyBit_0Indices: []uint64{0, 1},
-			},
-		},
-	}
-	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
-	}
-	beaconState.BlockRoots = blockRoots
-	beaconState.CurrentCrosslinks = []*pb.Crosslink{
-		{
-			DataRoot: []byte{1},
-		},
-	}
-	blockAtt := &pb.Attestation{
-		Data: &pb.AttestationData{
-			TargetEpoch: 0,
-			SourceEpoch: 0,
-			SourceRoot:  []byte("hello-world"),
-			Crosslink: &pb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
-		},
-		AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-		CustodyBits:     []byte{},
-	}
-	attestations := []*pb.Attestation{blockAtt}
-	var exits []*pb.VoluntaryExit
-	for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits+1; i++ {
-		exits = append(exits, &pb.VoluntaryExit{})
-	}
-	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
-		Slot:       genesisBlock.Slot,
-		ParentRoot: genesisBlock.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-	}
-	beaconState.Eth1DepositIndex = 0
-
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	block := &pb.BeaconBlock{
-		ParentRoot: parentRoot[:],
-		Slot:       1,
-		Body: &pb.BeaconBlockBody{
-			RandaoReveal:      []byte{},
-			ProposerSlashings: proposerSlashings,
-			AttesterSlashings: attesterSlashings,
-			Attestations:      attestations,
-			VoluntaryExits:    exits,
-			Eth1Data: &pb.Eth1Data{
-				DepositRoot: []byte{2},
-				BlockHash:   []byte{3},
-			},
-		},
-	}
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.CurrentCrosslinks = []*pb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
-	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	want := "could not process validator exits"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -642,6 +517,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 		Validators:                validators,
 		Balances:                  balances,
 		StartShard:                512,
+		FinalizedCheckpoint:       &pb.Checkpoint{},
 		BlockRoots:                make([][]byte, 254),
 		Slashings:                 []uint64{0, 1e9, 0},
 		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -652,7 +528,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < shardCount; i++ {
-		if _, err := helpers.CrosslinkCommitteeAtEpoch(s, 0, i); err != nil {
+		if _, err := helpers.CrosslinkCommittee(s, 0, i); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -702,13 +578,14 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 
 	s := &pb.BeaconState{
-		Slot:             20,
-		BlockRoots:       make([][]byte, 254),
-		RandaoMixes:      randaoMixes,
-		Validators:       validators,
-		Balances:         validatorBalances,
-		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slot:              20,
+		LatestBlockHeader: &pb.BeaconBlockHeader{},
+		BlockRoots:        make([][]byte, 254),
+		RandaoMixes:       randaoMixes,
+		Validators:        validators,
+		Balances:          validatorBalances,
+		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentJustifiedCheckpoint: &pb.Checkpoint{
 			Root: []byte("hello-world"),
 		},
@@ -839,7 +716,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 
 	blk := &pb.BeaconBlock{
-		Slot: s.Slot + 1,
+		Slot: s.Slot,
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: root[:],
@@ -855,7 +732,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < shardCount; i++ {
-		if _, err := helpers.CrosslinkCommitteeAtEpoch(s, 0, i); err != nil {
+		if _, err := helpers.CrosslinkCommittee(s, 0, i); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -914,7 +791,105 @@ func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 	}
 }
 
-func TestProcessOperation_IncorrentDeposits(t *testing.T) {
+func TestProcessOperations_OverMaxProposerSlashings(t *testing.T) {
+	maxSlashings := params.BeaconConfig().MaxProposerSlashings
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: make([]*pb.ProposerSlashing, maxSlashings+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperations_OverMaxAttesterSlashings(t *testing.T) {
+	maxSlashings := params.BeaconConfig().MaxAttesterSlashings
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			AttesterSlashings: make([]*pb.AttesterSlashing, maxSlashings+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperations_OverMaxAttestations(t *testing.T) {
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.Attestations), params.BeaconConfig().MaxAttestations)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperations_OverMaxTransfers(t *testing.T) {
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: make([]*pb.Transfer, params.BeaconConfig().MaxTransfers+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of transfers (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.Transfers), params.BeaconConfig().MaxTransfers)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperation_OverMaxVoluntaryExits(t *testing.T) {
+	maxExits := params.BeaconConfig().MaxVoluntaryExits
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			VoluntaryExits: make([]*pb.VoluntaryExit, maxExits+1),
+		},
+	}
+
+	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
+		len(block.Body.VoluntaryExits), maxExits)
+	if _, err := state.ProcessOperations(
+		context.Background(),
+		&pb.BeaconState{},
+		block.Body,
+		state.DefaultConfig(),
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessOperations_IncorrectDeposits(t *testing.T) {
 	s := &pb.BeaconState{
 		Eth1Data:         &pb.Eth1Data{DepositCount: 100},
 		Eth1DepositIndex: 98,
@@ -938,6 +913,8 @@ func TestProcessOperation_IncorrentDeposits(t *testing.T) {
 }
 
 func TestProcessOperation_DuplicateTransfer(t *testing.T) {
+	testConfig := params.BeaconConfig()
+	testConfig.MaxTransfers = 2
 	transfers := []*pb.Transfer{
 		{
 			Amount: 1,
