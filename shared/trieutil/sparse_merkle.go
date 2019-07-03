@@ -100,8 +100,8 @@ func BranchIndices(merkleIndex int, depth int) []int {
 	return indices
 }
 
-// Root of the Merkle trie.
-func (m *MerkleTrie) Root() [32]byte {
+// HashTreeRoot of the Merkle trie as defined in the deposit contract.
+func (m *MerkleTrie) HashTreeRoot() [32]byte {
 	var zeroBytes [32]byte
 	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], zeroBytes[:]) {
 		newNode := append(m.branches[0][0], bytesutil.Bytes8(0)...)
@@ -112,6 +112,11 @@ func (m *MerkleTrie) Root() [32]byte {
 	newNode := append(m.branches[0][0], bytesutil.Bytes8(depositCount)...)
 	newNode = append(newNode, zeroBytes[:24]...)
 	return hashutil.Hash(newNode)
+}
+
+// Root returns the root node of the deposit trie
+func (m *MerkleTrie) Root() [32]byte {
+	return bytesutil.ToBytes32(m.branches[0][0])
 }
 
 // Items returns the original items passed in when creating the Merkle trie.

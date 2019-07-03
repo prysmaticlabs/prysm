@@ -62,7 +62,7 @@ func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if depRoot != trie.Root() {
+	if depRoot != trie.HashTreeRoot() {
 		t.Errorf("Trie root for an empty trie isn't as expected. Expected: %#x but got %#x", depRoot, trie.Root())
 	}
 }
@@ -165,7 +165,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if depRoot != localTrie.Root() {
+	if depRoot != localTrie.HashTreeRoot() {
 		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
 	}
 
@@ -208,7 +208,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if depRoot != localTrie.Root() {
+		if depRoot != localTrie.HashTreeRoot() {
 			t.Errorf("Local deposit trie root and contract deposit trie root are not equal for index %d. Expected %#x , Got %#x", i, depRoot, localTrie.Root())
 		}
 	}
@@ -231,7 +231,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if depRoot != localTrie.Root() {
+	if depRoot != localTrie.HashTreeRoot() {
 		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
 	}
 
@@ -278,7 +278,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if depRoot == localTrie.Root() {
+		if depRoot == localTrie.HashTreeRoot() {
 			t.Errorf("Local deposit trie root and contract deposit trie root are equal for index %d when they were expected to be not equal", i)
 		}
 	}
