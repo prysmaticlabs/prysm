@@ -143,7 +143,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 	for idx, deposit := range deposits {
 		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
-		if idx+1 > 1<<params.BeaconConfig().DepositContractTreeDepth {
+		if uint64(idx+1) > mathutil.PowerOf2(params.BeaconConfig().DepositContractTreeDepth) {
 			return nil, fmt.Errorf("deposits out of bound: %v", err)
 		}
 		dr, err := ssz.HashTreeRoot(leaves[:idx+1])
