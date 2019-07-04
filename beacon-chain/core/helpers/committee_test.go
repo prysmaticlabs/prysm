@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -268,7 +269,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		attestationData.Crosslink = &pb.Crosslink{
 			Shard: tt.attestationSlot,
 		}
-		attestationData.TargetEpoch = 0
+		attestationData.Target = &pb.Checkpoint{Epoch: 0}
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
 		if err != nil {
@@ -302,7 +303,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}, Target: &pb.Checkpoint{}}
 
 	if _, err := AttestingIndices(state, attestationData, []byte{}); err == nil {
 		t.Error("attestation participants should have failed with incorrect bitfield")
@@ -327,7 +328,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}, Target: &pb.Checkpoint{}}
 
 	var zeroByte [16]byte
 
@@ -635,6 +636,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot: 5,
@@ -647,6 +649,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 10,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot: 10,
@@ -658,6 +661,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot: 20,
@@ -669,6 +673,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot:   5,
@@ -681,6 +686,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot:           20,
@@ -711,6 +717,46 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		if !verified {
 			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBits)
 		}
+	}
+}
+
+func TestCompactCommitteesRoot_OK(t *testing.T) {
+	ClearAllCaches()
+	// Create 10 committees
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*pb.Validator, validatorCount)
+	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		activeRoots[i] = []byte{'A'}
+	}
+
+	state := &pb.BeaconState{
+		Slot:             196,
+		Validators:       validators,
+		ActiveIndexRoots: activeRoots,
+		RandaoMixes:      activeRoots,
+	}
+
+	_, err := CompactCommitteesRoot(state, 1)
+	if err != nil {
+		t.Fatalf("Could not get compact root %v", err)
+	}
+}
+
+func TestCompressValidator_OK(t *testing.T) {
+	validator := &pb.Validator{
+		EffectiveBalance: 32e9,
+		Slashed:          true,
+	}
+	compactVal := compressValidator(validator, 128)
+	// Expected Value in Bits: 0000000000000000000000000000000000000000100000010000000000100000
+	expectedVal := mathutil.PowerOf2(5) + mathutil.PowerOf2(16) + mathutil.PowerOf2(23)
+	if expectedVal != compactVal {
+		t.Errorf("Unexpected Compressed value received %d", compactVal)
 	}
 }
 

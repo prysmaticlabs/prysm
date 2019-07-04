@@ -72,9 +72,10 @@ message Attestation {
   AttestationData data = 1;
   // Bitfield representation of validator indices that have voted exactly
   // the same vote and have been aggregated into this attestation.
-  bytes aggregation_bits = 2 [(gogoproto.moretags) = "ssz:\"size=4096\""];
+  // Spec type: Bitlist[4096]
+  bytes aggregation_bits = 2;
   // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data. Not used in phase 0.
-  bytes custody_bits = 3 [(gogoproto.moretags) = "ssz:\"size=4096\""];
+  bytes custody_bits = 3;
   // 96 byte BLS aggregate signature.
   bytes signature = 4 [(gogoproto.moretags) = "ssz:\"size=96\""];
 }
@@ -97,12 +98,6 @@ message AttestationData {
 
   // Crosslink voted by this attestation.
   Crosslink crosslink = 4;
-
-  // Deprecated
-  uint64 source_epoch = 1001;
-  bytes source_root = 1002;
-  uint64 target_epoch = 1003;
-  bytes target_root = 1004;
 }
 
 message AttestationTarget {
@@ -306,7 +301,7 @@ message HistoricalBatch {
 
 message CompactCommittee {
   // The list of the validator public keys in the committee.
-  repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz:\"size=?,48\""];
+  repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz:\"size=4096,48\""];
   // The list of the validator indices in the committee.
-  repeated uint64 compact_validators = 2;
+  repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz:\"size=4096\""];
 }

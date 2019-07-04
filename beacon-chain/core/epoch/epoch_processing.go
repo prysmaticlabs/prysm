@@ -75,7 +75,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	for _, srcAtt := range srcAtts {
 		// If the target root matches attestation's target root,
 		// then we know this attestation has correctly voted for target.
-		if bytes.Equal(srcAtt.Data.TargetRoot, targetRoot) {
+		if bytes.Equal(srcAtt.Data.Target.Root, targetRoot) {
 			tgtAtts = append(tgtAtts, srcAtt)
 		}
 
@@ -523,6 +523,13 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("could not tree hash active indices: %v", err)
 	}
 	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
+
+	commRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
+	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get compact committee root %v", err)
+	}
+	state.CompactCommitteesRoots[commRootPosition] = comRoot[:]
 
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector

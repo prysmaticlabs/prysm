@@ -60,6 +60,8 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
 			},
+			Target: &pb.Checkpoint{},
+			Source: &pb.Checkpoint{},
 		},
 	}
 
@@ -248,6 +250,8 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
 			},
+			Target: &pb.Checkpoint{},
+			Source: &pb.Checkpoint{},
 		},
 	}
 
@@ -299,7 +303,8 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 		attestation := &pb.Attestation{
 			AggregationBits: []byte{0x80},
 			Data: &pb.AttestationData{
-				TargetEpoch: 2,
+				Target: &pb.Checkpoint{Epoch: 2},
+				Source: &pb.Checkpoint{},
 				Crosslink: &pb.Crosslink{
 					Shard: 1,
 				},
@@ -352,6 +357,8 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 				Crosslink: &pb.Crosslink{
 					Shard: 1,
 				},
+				Target: &pb.Checkpoint{},
+				Source: &pb.Checkpoint{},
 			},
 		})
 	}
