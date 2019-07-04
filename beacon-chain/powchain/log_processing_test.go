@@ -517,10 +517,8 @@ func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
-	ok, err := web3Service.HasChainStartLogOccurred()
-	if err != nil {
-		t.Fatalf("Could not check if chain start log occurred: %v", err)
-	}
+	ok := web3Service.HasChainStarted()
+
 	if ok {
 		t.Error("Expected chain start log to not have occurred")
 	}
@@ -534,10 +532,7 @@ func TestHasETH2GenesisLogOccurred_OK(t *testing.T) {
 		}
 		testAcc.Backend.Commit()
 	}
-	ok, err = web3Service.HasChainStartLogOccurred()
-	if err != nil {
-		t.Fatalf("Could not check if chain start log occurred: %v", err)
-	}
+	ok = web3Service.HasChainStarted()
 	if !ok {
 		t.Error("Expected chain start log to have occurred")
 	}
@@ -581,10 +576,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
-	ok, err := web3Service.HasChainStartLogOccurred()
-	if err != nil {
-		t.Fatalf("Could not check if chain start log occurred: %v", err)
-	}
+	ok := web3Service.HasChainStarted()
 	if ok {
 		t.Error("Expected chain start log to not have occurred")
 	}
@@ -598,10 +590,7 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 		}
 		testAcc.Backend.Commit()
 	}
-	ok, err = web3Service.HasChainStartLogOccurred()
-	if err != nil {
-		t.Fatalf("Could not check if chain start log occurred: %v", err)
-	}
+	ok = web3Service.HasChainStarted()
 	if !ok {
 		t.Error("Expected chain start log to have occurred")
 	}

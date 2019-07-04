@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -47,10 +46,9 @@ func (w *Web3Service) isValidGenesisState(state *pb.BeaconState) (bool, error) {
 	return true, nil
 }
 
-// HasChainStartLogOccurred queries all logs in the deposit contract to verify
-// if ChainStart has occurred.
-func (w *Web3Service) HasChainStartLogOccurred() (bool, error) {
-	return w.depositContractCaller.ChainStarted(&bind.CallOpts{})
+// HasChainStarted returns the boolean value of chainStarted.
+func (w *Web3Service) HasChainStarted() bool {
+	return w.chainStarted
 }
 
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
@@ -65,10 +63,6 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
-		return
-	}
-	if depositLog.Topics[0] == hashutil.HashKeccak256(chainStartEventSignature) && !w.chainStarted {
-		w.ProcessChainStartLog(depositLog)
 		return
 	}
 	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")

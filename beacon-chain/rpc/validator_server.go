@@ -221,10 +221,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	chainStarted, err := vs.powChainService.HasChainStartLogOccurred()
-	if err != nil {
-		return nil, err
-	}
+	chainStarted := vs.powChainService.HasChainStarted()
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
@@ -241,10 +238,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	if err != nil {
 		return false, nil, err
 	}
-	chainStarted, err := vs.powChainService.HasChainStartLogOccurred()
-	if err != nil {
-		return false, nil, err
-	}
+	chainStarted := vs.powChainService.HasChainStarted()
 
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
