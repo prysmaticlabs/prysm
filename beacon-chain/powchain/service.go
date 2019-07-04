@@ -194,10 +194,10 @@ func (w *Web3Service) ChainStartETH1Data() *pb.Eth1Data {
 	return w.chainStartETH1Data
 }
 
-// HasChainStartOccurred returns whether the deposits from
+// HasChainStarted returns whether the deposits from
 // the deposit contract received so far are valid enough
 // to kick start the beacon chain.
-func (w *Web3Service) HasChainStartOccurred() (bool, error) {
+func (w *Web3Service) HasChainStarted() (bool, error) {
 	return false, nil
 }
 

@@ -19,7 +19,7 @@ import (
 var queryLog = logrus.WithField("prefix", "syncQuerier")
 
 type powChainService interface {
-	HasChainStartOccurred() (bool, error)
+	HasChainStarted() (bool, error)
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	ChainStartFeed() *event.Feed
 }
@@ -91,7 +91,7 @@ func NewQuerierService(ctx context.Context,
 
 // Start begins the goroutine.
 func (q *Querier) Start() {
-	hasChainStarted, err := q.powchain.HasChainStartOccurred()
+	hasChainStarted, err := q.powchain.HasChainStarted()
 	if err != nil {
 		queryLog.Errorf("Unable to get current state of the deposit contract %v", err)
 		return

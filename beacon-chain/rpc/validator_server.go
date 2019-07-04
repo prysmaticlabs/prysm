@@ -221,7 +221,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	chainStarted, err := vs.powChainService.HasChainStartOccurred()
+	chainStarted, err := vs.powChainService.HasChainStarted()
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	if err != nil {
 		return false, nil, err
 	}
-	chainStarted, err := vs.powChainService.HasChainStartOccurred()
+	chainStarted, err := vs.powChainService.HasChainStarted()
 	if err != nil {
 		return false, nil, err
 	}
