@@ -14,7 +14,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -154,15 +153,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedAttestation.AggregationBits = aggregationBitfield
-	domain, err := validator.validatorClient.DomainData(
-		context.Background(),
-		&pb.DomainRequest{
-			Epoch: expectedAttestation.Data.Target.Epoch,
-			Domain: params.BeaconConfig().DomainBeaconProposer},
-		)
-	if err != nil {
-		t.Fatal(err)
-	}
+
 	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
 		Data: expectedAttestation.Data,
 		CustodyBit: false,
@@ -173,7 +164,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	}
 
 	k := hex.EncodeToString(validatorKey.PublicKey.Marshal())
-	sig := validator.keys[k].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
+	sig := validator.keys[k].SecretKey.Sign(root[:], 0).Marshal()
 	expectedAttestation.Signature = sig
 
 
