@@ -41,7 +41,7 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 
 	switch method {
 	case HELLO:
-		response := h.rpcHello(message)
+		response := h.rpcHello()
 
 		responseBody, err := bson.Marshal(response)
 
@@ -81,7 +81,7 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 	return nil
 }
 
-func (h *HobbitsNode) rpcHello(message HobbitsMessage) Hello {
+func (h *HobbitsNode) rpcHello() Hello {
 	var response Hello
 
 	response.NodeID = h.NodeId
