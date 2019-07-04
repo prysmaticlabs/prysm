@@ -65,9 +65,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 				//TODO: get block time by hash
 				timeStamp := uint64(w.blockTime.Unix())
 				w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
-				w.processChainStart(uint64(w.eth2GenesisTime))
-				log.Info("Minimum number of validators reached for beacon-chain to start")
-				w.chainStarted = true
+				w.ProcessChainStart(uint64(w.eth2GenesisTime))
 			}
 		}
 		return
@@ -157,25 +155,19 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 }
 
-// ProcessChainStartLog processes the log which had been received from
+// ProcessChainStart processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
-func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
+func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 	chainStartCount.Inc()
-	chainStartDepositRoot, _, timestampData, err := contracts.UnpackChainStartLogData(depositLog.Data)
-	if err != nil {
-		log.Errorf("Unable to unpack ChainStart log data %v", err)
-		return
-	}
 
-	w.chainStartETH1Data = &pb.Eth1Data{
-		BlockHash:   depositLog.BlockHash[:],
-		DepositRoot: chainStartDepositRoot[:],
-	}
+	// w.chainStartETH1Data = &pb.Eth1Data{
+	// 	BlockHash:   depositLog.BlockHash[:],
+	// 	DepositRoot: chainStartDepositRoot[:],
+	// }
 
-	timestamp := binary.LittleEndian.Uint64(timestampData)
 	w.chainStarted = true
-	w.depositRoot = chainStartDepositRoot[:]
-	chainStartTime := time.Unix(int64(timestamp), 0)
+	//w.depositRoot = chainStartDepositRoot[:]
+	chainStartTime := time.Unix(int64(genesisTime), 0)
 
 	depHashes, err := w.ChainStartDepositHashes()
 	if err != nil {

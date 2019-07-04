@@ -146,9 +146,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 	for idx, deposit := range deposits {
 		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
-		depositDataList := make([]*pb.DepositData, 0, 1<<params.BeaconConfig().DepositContractTreeDepth)
-		copy(depositDataList, leaves[:idx+1])
-		dr, err := ssz.HashTreeRoot(depositDataList)
+		dr, err := ssz.HashTreeRoot(leaves[:idx+1])
 		if err != nil {
 			return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
 		}

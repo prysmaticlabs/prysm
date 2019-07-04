@@ -41,12 +41,12 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			Data: depositData,
 		}
 	}
-
+	deposits, _ = GenerateDepositProof(t, deposits)
 	return deposits, privKeys
 }
 
-// GenerateEth1Data takes an array of deposits and generates the deposit trie for them.
-func GenerateEth1Data(t testing.TB, deposits []*pb.Deposit) *pb.Eth1Data {
+// GenerateDepositProof takes an array of deposits and generates the deposit trie for them and proofs.
+func GenerateDepositProof(t testing.TB, deposits []*pb.Deposit) ([]*pb.Deposit, [32]byte) {
 	encodedDeposits := make([][]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
 		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
@@ -69,6 +69,12 @@ func GenerateEth1Data(t testing.TB, deposits []*pb.Deposit) *pb.Eth1Data {
 		deposits[i].Proof = proof
 	}
 	root := depositTrie.Root()
+	return deposits, root
+}
+
+// GenerateEth1Data takes an array of deposits and generates the deposit trie for them.
+func GenerateEth1Data(t testing.TB, deposits []*pb.Deposit) *pb.Eth1Data {
+	_, root := GenerateDepositProof(t, deposits)
 	eth1Data := &pb.Eth1Data{
 		BlockHash:   root[:],
 		DepositRoot: root[:],
