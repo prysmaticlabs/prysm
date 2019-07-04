@@ -56,6 +56,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "addr_factory_test.go",
         "connection_manager_test.go",
@@ -107,6 +108,7 @@ go_test(
 
 go_test(
     name = "go_norace_test",
+    size = "small",
     srcs = [
         "discovery_norace_test.go",
         "service_norace_test.go",
