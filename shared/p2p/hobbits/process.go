@@ -135,16 +135,20 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 		return errors.Wrap(err, "error parsing topic: ")
 	}
 
-	err = h.Broadcast(message)
-	if err != nil {
-		return errors.Wrap(err, "error broadcasting: ")
-	}
+	h.Broadcast(context.Background(), nil)
 
 	return nil
 }
 
 func (h *HobbitsNode) parseMethodID(header []byte) (RPCMethod, error) {
-	return RPCMethod(0), nil
+	var unmarshaledHeader RPCHeader
+
+	err := bson.Unmarshal(header, unmarshaledHeader)
+	if err != nil {
+		return RPCMethod(0), errors.Wrap(err, "could not unmarshal the header of the message: ")
+	}
+
+	return RPCMethod(unmarshaledHeader.methodID), nil
 }
 
 // parseTopic takes care of parsing the topic and updating the node's feeds

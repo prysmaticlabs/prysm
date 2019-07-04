@@ -25,7 +25,7 @@ type HobbitsNode struct {
 
 type HobbitsMessage encoding.Message
 
-type RPCMethod int
+type RPCMethod uint64
 
 const (
 	HELLO RPCMethod = iota
@@ -45,9 +45,8 @@ type GossipHeader struct {
 	topic string `bson:"topic"`
 }
 
-type RPC struct {
-	// TODO: make an RPC Body to catch the method_id... looks like the header and body are smashed
-	// TODO: in the spec
+type RPCHeader struct {
+	methodID uint64 `bson:"method_id"`
 }
 
 type Hello struct {
@@ -59,8 +58,14 @@ type Hello struct {
 }
 
 // Hobbits toggles a HobbitsNode and requires a host, port and list of peers to which it tries to connect.
-func Hobbits(host string, port int, peers []string) *HobbitsNode {
-	node := NewHobbitsNode(host, port, peers)
+func Hobbits(host string, port int, peers []string, db *db.BeaconDB) *HobbitsNode {
+	node := NewHobbitsNode(host, port, peers, db)
 
 	return &node
+}
+
+func (h *HobbitsNode) Start() {
+	go h.Listen()
+
+	go h.OpenConns()
 }
