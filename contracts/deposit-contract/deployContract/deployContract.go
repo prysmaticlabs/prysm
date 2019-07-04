@@ -180,10 +180,7 @@ func main() {
 		addr, tx, _, err := contracts.DeployDepositContract(
 			txOps,
 			client,
-			big.NewInt(depositsForChainStart),
 			big.NewInt(minDepositAmount),
-			big.NewInt(maxDepositAmount),
-			big.NewInt(int64(customChainstartDelay)),
 			drain,
 		)
 

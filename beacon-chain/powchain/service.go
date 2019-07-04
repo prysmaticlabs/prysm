@@ -195,6 +195,13 @@ func (w *Web3Service) ChainStartETH1Data() *pb.Eth1Data {
 	return w.chainStartETH1Data
 }
 
+// HasChainStarted returns whether the deposits from
+// the deposit contract received so far are valid enough
+// to kick start the beacon chain.
+func (w *Web3Service) HasChainStarted() (bool, error) {
+	return false, nil
+}
+
 // Status is service health checks. Return nil or error.
 func (w *Web3Service) Status() error {
 	// Web3Service don't start
@@ -245,7 +252,7 @@ func (w *Web3Service) Client() Client {
 // initDataFromContract calls the deposit contract and finds the deposit count
 // and deposit root.
 func (w *Web3Service) initDataFromContract() error {
-	root, err := w.depositContractCaller.GetDepositRoot(&bind.CallOpts{})
+	root, err := w.depositContractCaller.GetHashTreeRoot(&bind.CallOpts{})
 	if err != nil {
 		return fmt.Errorf("could not retrieve deposit root %v", err)
 	}

@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	depositEventSignature = []byte("Deposit(bytes,bytes,bytes,bytes,bytes)")
+	depositEventSignature = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
 )
 
 // isValidGenesisState gets called whenever there's a deposit event,
@@ -42,14 +42,10 @@ func (w *Web3Service) isValidGenesisState(chainStartDepositCount uint64, current
 	return true
 }
 
-// HasChainStarted returns the boolean value of chainStarted.
-func (w *Web3Service) HasChainStarted() bool {
-	return w.chainStarted
-}
-
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
 func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
+	// (#2861): A No-Op until this PR is implemented
 	return 0, nil
 }
 
