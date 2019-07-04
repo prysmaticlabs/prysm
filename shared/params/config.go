@@ -14,6 +14,7 @@ type BeaconChainConfig struct {
 	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
 	JustificationBitsLength  uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`   // JustificationBitsLength defines the length in bytes of the justification bits.
+	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
 
 	// Misc constants.
 	ShardCount                     uint64 `yaml:"SHARD_COUNT"`                        // ShardCount is the number of shard chains in Ethereum 2.0.
@@ -113,6 +114,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	BaseRewardsPerEpoch:      5,
 	DepositContractTreeDepth: 32,
 	JustificationBitsLength:  4,
+	SecondsPerDay:            86400,
 
 	// Misc constant.
 	ShardCount:                     1024,

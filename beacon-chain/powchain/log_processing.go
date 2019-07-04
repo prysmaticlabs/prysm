@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -64,7 +63,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 			triggered := w.isValidGenesisState(uint64(len(w.chainStartDeposits)), 0)
 			if triggered {
 				//TODO: get block time by hash
-				timeStamp := w.blockTime.Unix()
+				timeStamp := uint64(w.blockTime.Unix())
 				w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
 				w.processChainStart(uint64(w.eth2GenesisTime))
 				log.Info("Minimum number of validators reached for beacon-chain to start")
