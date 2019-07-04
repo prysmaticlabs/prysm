@@ -3,8 +3,8 @@ package hobbits
 import (
 	"net"
 	"reflect"
+	"context"
 
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/context"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/renaynay/go-hobbits/encoding"
 	"gopkg.in/mgo.v2/bson"

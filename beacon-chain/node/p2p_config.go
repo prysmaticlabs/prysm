@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	p2p "github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric"
-	"github.com/renaynay/prysm/beacon-chain/db"
+	"github.com/renaynay/prysm/shared/p2p/hobbits"
 	"github.com/urfave/cli"
 )
 
@@ -43,6 +43,12 @@ func configureP2P(ctx *cli.Context) (p2p.P2pComposite, error) {
 	for _, entry := range ctx.GlobalStringSlice(cmd.StaticPeers.Name) {
 		peers := strings.Split(entry, ",")
 		staticPeers = append(staticPeers, peers...)
+	}
+
+	if ctx.GlobalBool(cmd.Hobbits.Name) {
+		s := hobbits.Hobbits(ctx.GlobalString(cmd.P2PHost.Name), ctx.GlobalInt(cmd.P2PPort.Name), staticPeers)
+
+		return s, nil
 	}
 
 	s, err := p2p.NewServer(&p2p.ServerConfig{

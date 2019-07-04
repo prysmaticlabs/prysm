@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	"github.com/renaynay/go-hobbits/tcp"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
 type HobbitsNode struct {
@@ -56,4 +56,11 @@ type Hello struct {
 	LatestFinalizedEpoch uint64   `bson:"latest_finalized_epoch"`
 	BestRoot             [32]byte `bson:"best_root"`
 	BestSlot             uint64   `bson:"best_slot"`
+}
+
+// Hobbits toggles a HobbitsNode and requires a host, port and list of peers to which it tries to connect.
+func Hobbits(host string, port int, peers []string) *HobbitsNode {
+	node := NewHobbitsNode(host, port, peers)
+
+	return &node
 }

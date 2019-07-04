@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	"github.com/renaynay/go-hobbits/tcp"
-	"github.com/renaynay/prysm/shared"
-	"github.com/renaynay/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 func NewHobbitsNode(host string, port int, peers []string) HobbitsNode {
@@ -27,7 +27,7 @@ func NewHobbitsNode(host string, port int, peers []string) HobbitsNode {
 		StaticPeers: peers,
 		PeerConns:   []net.Conn{},
 		feeds:       map[reflect.Type]p2p.Feed{},
-		DB: 	//TODO; how tf to initialize the db?,
+		DB: 	nil,//TODO; how tf to initialize the db?,
 	}
 }
 

@@ -11,16 +11,15 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/db:go_default_library",
+        "//shared:go_default_library",
+        "//shared/event:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/p2p:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_libp2p_go_libp2p_peer//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prysmaticlabs_prysm//bazel-prysm/external/go_sdk/src/context:go_default_library",
         "@com_github_renaynay_go_hobbits//encoding:go_default_library",
         "@com_github_renaynay_go_hobbits//tcp:go_default_library",
-        "@com_github_renaynay_prysm//shared:go_default_library",
-        "@com_github_renaynay_prysm//shared/event:go_default_library",
         "@in_gopkg_mgo_v2//bson:go_default_library",
     ],
 )
