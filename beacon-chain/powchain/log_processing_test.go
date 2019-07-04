@@ -469,20 +469,6 @@ func TestETH1DataGenesis_OK(t *testing.T) {
 		t.Error("Expected chain start log to have occurred")
 	}
 
-	eth2GenesisIterator, err := testAcc.Contract.FilterEth2Genesis(nil)
-	if err != nil {
-		t.Fatalf("Could not create chainstart iterator: %v", err)
-	}
-
-	defer eth2GenesisIterator.Close()
-	eth2GenesisIterator.Next()
-	chainStartlog := eth2GenesisIterator.Event
-
-	expectedETH1Data := &pb.Eth1Data{
-		BlockHash:   chainStartlog.Raw.BlockHash[:],
-		DepositRoot: chainStartlog.DepositRoot[:],
-	}
-
 	// We add in another 8 deposits after chainstart.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.TxOpts.Value = contracts.Amount32Eth()
