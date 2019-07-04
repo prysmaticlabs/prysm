@@ -101,14 +101,15 @@ func BranchIndices(merkleIndex int, depth int) []int {
 }
 
 // HashTreeRoot of the Merkle trie as defined in the deposit contract.
+//  Spec Definition:
+//   sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
 func (m *MerkleTrie) HashTreeRoot() [32]byte {
 	var zeroBytes [32]byte
-	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], zeroBytes[:]) {
-		newNode := append(m.branches[0][0], bytesutil.Bytes8(0)...)
-		newNode = append(newNode, zeroBytes[:24]...)
-		return hashutil.Hash(newNode)
-	}
 	depositCount := uint64(len(m.originalItems))
+	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], zeroBytes[:]) {
+		// Accounting for empty tries
+		depositCount = 0
+	}
 	newNode := append(m.branches[0][0], bytesutil.Bytes8(depositCount)...)
 	newNode = append(newNode, zeroBytes[:24]...)
 	return hashutil.Hash(newNode)
