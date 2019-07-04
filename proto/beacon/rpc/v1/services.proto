@@ -171,6 +171,7 @@ message ValidatorStatusResponse {
 
 message DomainRequest {
   uint64 epoch = 1;
+  uint64 domain = 2;
 }
 
 message DomainResponse {
