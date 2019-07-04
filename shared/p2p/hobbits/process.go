@@ -4,9 +4,9 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/context"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/renaynay/go-hobbits/encoding"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/context"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/pkg/errors"
@@ -14,14 +14,14 @@ import (
 
 func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Conn) error {
 	switch message.Protocol {
-	case "RPC":
+	case encoding.RPC:
 		err := h.processRPC(message, conn)
 		if err != nil {
 			return errors.Wrap(err, "error processing an RPC hobbits message")
 		}
 
 		return nil
-	case "GOSSIP":
+	case encoding.GOSSIP:
 		err := h.processGossip(message)
 		if err != nil {
 			return errors.Wrap(err, "error processing a GOSSIP hobbits message")
@@ -41,31 +41,7 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 
 	switch method {
 	case HELLO:
-		var response Hello
-
-		response.NodeID = h.nodeId
-
-		response.BestRoot = h.db.HeadStateRoot()
-
-		headState, err := h.db.HeadState(context.Background())
-		if err != nil {
-			response.BestSlot = 0
-		}
-
-		response.BestSlot = headState.Slot // best slot
-
-		finalizedState, err := h.db.FinalizedState()
-		if err != nil {
-			finalizedState = nil
-		}
-
-		response.LatestFinalizedEpoch = finalizedState.Slot / 64 // finalized epoch
-
-		hashedFinalizedState, err := hashutil.HashProto(finalizedState) // finalized root
-		if err != nil {
-			response.LatestFinalizedRoot = [32]byte{}
-		}
-		response.LatestFinalizedRoot = hashedFinalizedState
+		response := h.rpcHello(message)
 
 		responseBody, err := bson.Marshal(response)
 
@@ -76,7 +52,7 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 			Body:     responseBody,
 		}
 
-		err = h.server.SendMessage(conn, encoding.Message(responseMessage))
+		err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
 		if err != nil {
 			return errors.Wrap(err, "error sending hobbits message: ")
 		}
@@ -105,10 +81,40 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 	return nil
 }
 
+func (h *HobbitsNode) rpcHello(message HobbitsMessage) Hello {
+	var response Hello
+
+	response.NodeID = h.NodeId
+
+	response.BestRoot = h.DB.HeadStateRoot()
+
+	headState, err := h.DB.HeadState(context.Background())
+	if err != nil {
+		response.BestSlot = 0
+	}
+
+	response.BestSlot = headState.Slot // best slot
+
+	finalizedState, err := h.DB.FinalizedState()
+	if err != nil {
+		finalizedState = nil
+	}
+
+	response.LatestFinalizedEpoch = finalizedState.Slot / 64 // finalized epoch
+
+	hashedFinalizedState, err := hashutil.HashProto(finalizedState) // finalized root
+	if err != nil {
+		response.LatestFinalizedRoot = [32]byte{}
+	}
+	response.LatestFinalizedRoot = hashedFinalizedState
+
+	return response
+}
+
 func (h *HobbitsNode) removePeer(peer net.Conn) error {
 	index := 0
 
-	for i, p := range h.peerConns {
+	for i, p := range h.PeerConns {
 		if reflect.DeepEqual(peer, p) {
 			index = i
 		}
@@ -117,7 +123,7 @@ func (h *HobbitsNode) removePeer(peer net.Conn) error {
 		return errors.New("error removing peer from node's static peers")
 	}
 
-	h.peerConns = append(h.peerConns[:index], h.peerConns[index+1:]...) // TODO: is there a better way to delete
+	h.PeerConns = append(h.PeerConns[:index], h.PeerConns[index+1:]...) // TODO: is there a better way to delete
 	// TODO: an element from an array by its value?
 
 	return nil

@@ -5,28 +5,29 @@ import (
 	"math/rand"
 	"net"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	"github.com/renaynay/go-hobbits/tcp"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/strconv"
 )
 
 func NewHobbitsNode(host string, port int, peers []string) HobbitsNode {
 	return HobbitsNode{
-		nodeId:      strconv.Itoa(rand.Int()),
-		host:        host,
-		port:        port,
-		staticPeers: peers,
-		peerConns:   []net.Conn{},
+		NodeId:      strconv.Itoa(rand.Int()),
+		Host:        host,
+		Port:        port,
+		StaticPeers: peers,
+		PeerConns:   []net.Conn{},
 		feeds:       map[reflect.Type]p2p.Feed{},
+		DB: 	//TODO; how tf to initialize the db?,
 	}
 }
 
 func (h *HobbitsNode) OpenConns() error {
-	for _, p := range h.staticPeers {
+	for _, p := range h.StaticPeers {
 		p := p
 
 		go func() {
@@ -46,7 +47,7 @@ func (h *HobbitsNode) OpenConns() error {
 
 			h.Lock()
 
-			h.peerConns = append(h.peerConns, conn)
+			h.PeerConns = append(h.PeerConns, conn)
 
 			h.Unlock()
 		}()
@@ -56,16 +57,16 @@ func (h *HobbitsNode) OpenConns() error {
 }
 
 func (h *HobbitsNode) Listen() error {
-	h.server = tcp.NewServer(h.host, h.port)
+	h.Server = tcp.NewServer(h.Host, h.Port)
 
-	return h.server.Listen(func(conn net.Conn, message encoding.Message) {
+	return h.Server.Listen(func(conn net.Conn, message encoding.Message) {
 		h.processHobbitsMessage(HobbitsMessage(message), conn)
 	})
 }
 
 func (h *HobbitsNode) Broadcast(message HobbitsMessage) error {
-	for _, peer := range h.peerConns {
-		err := h.server.SendMessage(peer, encoding.Message(message))
+	for _, peer := range h.PeerConns {
+		err := h.Server.SendMessage(peer, encoding.Message(message))
 		if err != nil {
 			return errors.Wrap(err, "error broadcasting: ")
 		}

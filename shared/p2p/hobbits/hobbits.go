@@ -13,14 +13,14 @@ import (
 
 type HobbitsNode struct {
 	sync.Mutex
-	nodeId 		string
-	host        string
-	port        int
-	staticPeers []string
-	peerConns   []net.Conn
+	NodeId      string
+	Host        string
+	Port        int
+	StaticPeers []string
+	PeerConns   []net.Conn
 	feeds       map[reflect.Type]p2p.Feed
-	server      *tcp.Server
-	db          *db.BeaconDB
+	Server      *tcp.Server
+	DB          *db.BeaconDB
 }
 
 type HobbitsMessage encoding.Message
