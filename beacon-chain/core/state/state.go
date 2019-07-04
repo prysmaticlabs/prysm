@@ -180,9 +180,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	indicesList := make([]uint64, 0, params.BeaconConfig().ValidatorRagistryLimit)
-	copy(indicesList, activeIndices)
-	indexRoot, err := ssz.HashTreeRoot(indicesList)
+	genesisActiveIndexRoot, err := ssz.HashTreeRoot(activeIndices)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v", err)
 	}
@@ -190,8 +188,6 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not get compact committee root %v", err)
 	}
-
-	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
 		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
 
