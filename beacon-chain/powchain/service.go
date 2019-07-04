@@ -96,6 +96,7 @@ type Web3Service struct {
 	isRunning               bool
 	runError                error
 	lastRequestedBlock      *big.Int
+	eth2GenesisTime         time.Time
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.

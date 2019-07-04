@@ -24,7 +24,8 @@ var (
 )
 
 // isValidGenesisState gets called whenever there's a deposit event,
-// it checks whether there's enough effective balance to trigger genesis.
+// it checks whether there's enough effective balance to trigger and
+// if the minimum genesis time arrived already.
 // Spec pseudocode definition:
 //  def is_valid_genesis_state(state: BeaconState) -> bool:
 //     if state.genesis_time < MIN_GENESIS_TIME:
@@ -32,18 +33,14 @@ var (
 //     if len(get_active_validator_indices(state, GENESIS_EPOCH)) < MIN_GENESIS_ACTIVE_VALIDATOR_COUNT:
 //         return False
 //     return True
-func (w *Web3Service) isValidGenesisState(state *pb.BeaconState) (bool, error) {
-	if state.GenesisTime < params.BeaconConfig().MinGenesisTime {
-		return false, nil
+func (w *Web3Service) isValidGenesisState(chainStartDepositCount uint64, currentTime uint64) bool {
+	if currentTime < params.BeaconConfig().MinGenesisTime {
+		return false
 	}
-	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
-	if err != nil {
-		return false, fmt.Errorf("could not get active validator indices: %v", err)
+	if chainStartDepositCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
+		return false
 	}
-	if uint64(len(activeIndices)) < params.BeaconConfig().MinGenesisActiveValidatorCount {
-		return false, nil
-	}
-	return true, nil
+	return true
 }
 
 // HasChainStarted returns the boolean value of chainStarted.
@@ -63,6 +60,17 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
+		if !w.chainStarted {
+			triggered := w.isValidGenesisState(uint64(len(w.chainStartDeposits)), 0)
+			if triggered {
+				//TODO: get block time by hash
+				timeStamp := w.blockTime.Unix()
+				w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
+				w.processChainStart(uint64(w.eth2GenesisTime))
+				log.Info("Minimum number of validators reached for beacon-chain to start")
+				w.chainStarted = true
+			}
+		}
 		return
 	}
 	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
