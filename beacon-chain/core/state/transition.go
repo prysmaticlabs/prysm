@@ -146,7 +146,6 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 //        state.slot += 1
 //    ]
 func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
-	logrus.Printf("state slot %d", state.Slot)
 	if state.Slot > slot {
 		return nil, fmt.Errorf("expected state.slot %d < block.slot %d", state.Slot, slot)
 	}
