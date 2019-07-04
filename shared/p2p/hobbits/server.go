@@ -27,7 +27,6 @@ func NewHobbitsNode(host string, port int, peers []string, db *db.BeaconDB) Hobb
 		StaticPeers: peers,
 		PeerConns:   []net.Conn{},
 		feeds:       map[reflect.Type]p2p.Feed{},
-		Server:		tcp.NewServer(host, port),
 		DB:          db,
 	}
 }
