@@ -9,7 +9,6 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -33,12 +32,9 @@ func TestSlotProcessingMainnet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, tt := range s.TestCases {
+	for i, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
-
-			var postState *pb.BeaconState
-
-			postState, err = state.ProcessSlots(context.Background(), tt.Pre, tt.Pre.Slot+tt.Slots)
+			postState, err := state.ProcessSlots(context.Background(), tt.Pre, tt.Pre.Slot+tt.Slots)
 			if err != nil {
 				t.Fatal(err)
 			}
