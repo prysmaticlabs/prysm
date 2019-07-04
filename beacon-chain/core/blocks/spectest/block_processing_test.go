@@ -47,6 +47,9 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 			ctx := context.Background()
 			helpers.ClearAllCaches()
 			blocks.ClearEth1DataVoteCache()
+			if tt.Description != "prev_slot_block_transition" {
+				return
+			}
 
 			stateConfig := state.DefaultConfig()
 			s := tt.Pre // Pre-state
