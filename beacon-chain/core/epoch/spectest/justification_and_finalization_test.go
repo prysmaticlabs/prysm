@@ -2,13 +2,13 @@ package spectest
 
 import (
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"io/ioutil"
 	"reflect"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -18,6 +18,8 @@ import (
 
 // This is a subset of state.ProcessEpoch.
 func processJustificationAndFinalizationWrapper(state *pb.BeaconState) (*pb.BeaconState, error) {
+	helpers.ClearAllCaches()
+
 	// This process mutates the state, so we'll make a copy in order to print debug before/after.
 	state = proto.Clone(state).(*pb.BeaconState)
 
