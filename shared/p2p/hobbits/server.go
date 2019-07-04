@@ -1,6 +1,7 @@
 package hobbits
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net"
@@ -8,10 +9,14 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	"github.com/renaynay/go-hobbits/tcp"
+	"github.com/renaynay/prysm/shared"
+	"github.com/renaynay/prysm/shared/event"
 )
 
 func NewHobbitsNode(host string, port int, peers []string) HobbitsNode {
@@ -76,3 +81,20 @@ func (h *HobbitsNode) Broadcast(message HobbitsMessage) error {
 
 	return nil
 }
+
+// Send conforms to the p2p composite interface.
+func (h *HobbitsNode) Send(ctx context.Context, msg proto.Message, peer peer.ID) error {
+	return nil
+}
+
+// ReputationManager conforms to the p2p composite interface
+func (h *HobbitsNode) ReputationManager(peer peer.ID, val int) {
+}
+
+// Subscriber conforms to the p2p composite interface
+func (h *HobbitsNode) Subscriber(msg proto.Message, channel chan p2p.Message) event.Subscription {
+	return nil
+}
+
+// Service conforms to the p2p composite interface
+type Service shared.Service

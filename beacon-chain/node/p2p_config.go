@@ -7,8 +7,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	p2p "github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric"
+	"github.com/renaynay/prysm/beacon-chain/db"
 	"github.com/urfave/cli"
 )
 
@@ -29,7 +30,7 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_ATTESTATION_RESPONSE:                &pb.AttestationResponse{},
 }
 
-func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
+func configureP2P(ctx *cli.Context) (p2p.P2pComposite, error) {
 	contractAddress := ctx.GlobalString(utils.DepositContractFlag.Name)
 	if contractAddress == "" {
 		var err error
