@@ -57,6 +57,6 @@ func (b Bitlist) Len() uint64 {
 
 // Bytes returns the underlying byte array without the length bit.
 func (b Bitlist) Bytes() []byte {
-
+	// TODO
 	return b
 }
