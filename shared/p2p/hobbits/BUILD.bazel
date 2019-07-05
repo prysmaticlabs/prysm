@@ -31,4 +31,9 @@ go_test(
         "server_test.go",
     ],
     embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/db:go_default_library",
+        "@com_github_renaynay_go_hobbits//encoding:go_default_library",
+        "@in_gopkg_mgo_v2//bson:go_default_library",
+    ],
 )
