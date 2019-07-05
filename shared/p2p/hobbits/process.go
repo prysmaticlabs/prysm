@@ -1,6 +1,7 @@
 package hobbits
 
 import (
+	"log"
 	"net"
 	"reflect"
 	"context"
@@ -15,6 +16,8 @@ import (
 func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Conn) error {
 	switch message.Protocol {
 	case encoding.RPC:
+		log.Println("beginning to process the RPC message")
+
 		err := h.processRPC(message, conn)
 		if err != nil {
 			return errors.Wrap(err, "error processing an RPC hobbits message")
@@ -36,11 +39,14 @@ func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Con
 func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 	method, err := h.parseMethodID(message.Header)
 	if err != nil {
+		log.Println("method id could not be parsed from message header")
 		return errors.Wrap(err, "could not parse method_id: ")
 	}
 
 	switch method {
 	case HELLO:
+		log.Println("HELLO received")
+
 		response := h.rpcHello()
 
 		responseBody, err := bson.Marshal(response)
@@ -56,6 +62,8 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 		if err != nil {
 			return errors.Wrap(err, "error sending hobbits message: ")
 		}
+
+		log.Println("sending HELLO...")
 	case GOODBYE:
 		err := h.removePeer(conn)
 		if err != nil {

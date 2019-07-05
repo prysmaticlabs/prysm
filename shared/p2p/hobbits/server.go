@@ -3,6 +3,7 @@ package hobbits
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"net"
 	"reflect"
@@ -65,7 +66,11 @@ func (h *HobbitsNode) Listen() error {
 	h.Server = tcp.NewServer(h.Host, h.Port)
 
 	return h.Server.Listen(func(conn net.Conn, message encoding.Message) {
+		log.Println("Prysm hobbits node listening for messages...")
+
 		h.processHobbitsMessage(HobbitsMessage(message), conn)
+
+		log.Println("a message has been received")
 	})
 }
 
