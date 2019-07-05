@@ -63,52 +63,52 @@ func TestBitlist_BitAt(t *testing.T) {
 	}{
 		{
 			bitlist: Bitlist{0x01}, // 0b00000001
-			idx:     55,
+			idx:     55,            // Out of bounds
 			want:    false,
 		},
 		{
 			bitlist: Bitlist{0x01}, // 0b00000001
-			idx:     0,
+			idx:     0,             //          ^ (length bit)
 			want:    false,
 		},
 		{
 			bitlist: Bitlist{0x0E}, // 0b00001110
-			idx:     0,
+			idx:     0,             //          ^
 			want:    false,
 		},
 		{
 			bitlist: Bitlist{0x0E}, // 0b00001110
-			idx:     1,
+			idx:     1,             //         ^
 			want:    true,
 		},
 		{
 			bitlist: Bitlist{0x0E}, // 0b00001110
-			idx:     3,
-			want:    true,
-		},
-		{
-			bitlist: Bitlist{0x0E}, // 0b00001110
-			idx:     4,
+			idx:     3,             //       ^
 			want:    false,
 		},
 		{
-			bitlist: Bitlist{0xFF, 0x0F}, // 0b11111111, 0b00001111
-			idx:     4,
-			want:    true,
-		},
-		{
-			bitlist: Bitlist{0xFF, 0x0F}, // 0b11111111, 0b00001111
-			idx:     12,
+			bitlist: Bitlist{0x0E}, // 0b00001110
+			idx:     4,             //       ^ (length bit)
 			want:    false,
 		},
 		{
 			bitlist: Bitlist{0xFF, 0x0F}, // 0b11111111, 0b00001111
-			idx:     11,
+			idx:     4,                   //      ^
 			want:    true,
+		},
+		{
+			bitlist: Bitlist{0xFF, 0x0F}, // 0b11111111, 0b00001111
+			idx:     12,                  //                  ^
+			want:    false,
+		},
+		{
+			bitlist: Bitlist{0xFF, 0x0F}, // 0b11111111, 0b00001111
+			idx:     11,                  //                   ^ (length bit)
+			want:    false,
 		},
 		{
 			bitlist: Bitlist{0x00, 0x0F}, // 0b00000000, 0b00001111
-			idx:     11,
+			idx:     10,                  //                    ^
 			want:    true,
 		},
 	}
@@ -135,73 +135,79 @@ func TestBitlist_SetBitAt(t *testing.T) {
 	}{
 		{
 			bitlist: Bitlist{0x01}, // 0b00000001
-			idx:     0,
+			idx:     0,             //          ^
 			val:     true,
 			want:    Bitlist{0x01}, // 0b00000001
 		},
 		{
 			bitlist: Bitlist{0x02}, // 0b00000010
-			idx:     0,
+			idx:     0,             //          ^
 			val:     true,
 			want:    Bitlist{0x03}, // 0b00000011
 		},
 		{
 			bitlist: Bitlist{0x10}, // 0b00010000
-			idx:     0,
+			idx:     0,             //          ^
 			val:     true,
 			want:    Bitlist{0x11}, // 0b00010001
 		},
 		{
 			bitlist: Bitlist{0x10}, // 0b00010000
-			idx:     0,
+			idx:     0,             //          ^
 			val:     true,
 			want:    Bitlist{0x11}, // 0b00010001
 		},
 		{
 			bitlist: Bitlist{0x10}, // 0b00010000
-			idx:     64,
+			idx:     64,            // Out of bounds
 			val:     true,
 			want:    Bitlist{0x10}, // 0b00010001
 		},
 		{
 			bitlist: Bitlist{0x1F}, // 0b00011111
-			idx:     0,
+			idx:     0,             //          ^
 			val:     true,
 			want:    Bitlist{0x1F}, // 0b00011111
 		},
 		{
 			bitlist: Bitlist{0x1F}, // 0b00011111
-			idx:     0,
+			idx:     1,             //         ^
 			val:     false,
-			want:    Bitlist{0x1E}, // 0b00011110
+			want:    Bitlist{0x1D}, // 0b00011101
 		},
 		{
 			bitlist: Bitlist{0x1F}, // 0b00011111
-			idx:     64,
+			idx:     4,             //      ^ (length bit)
+			val:     false,
+			want:    Bitlist{0x1F}, // 0b00011111
+		},
+		{
+			bitlist: Bitlist{0x1F}, // 0b00011111
+			idx:     64,            // Out of bounds
 			val:     false,
 			want:    Bitlist{0x1F}, // 0b00011111
 		},
 		{
 			bitlist: Bitlist{0x1F, 0x01}, // 0b00011111, 0b00000001
-			idx:     0,
+			idx:     0,                   //          ^
 			val:     true,
 			want:    Bitlist{0x1F, 0x01}, // 0b00011111, 0b00000001
 		},
 		{
 			bitlist: Bitlist{0x1F, 0x01}, // 0b00011111, 0b00000001
-			idx:     0,
+			idx:     0,                   //          ^
 			val:     false,
 			want:    Bitlist{0x1E, 0x01}, // 0b00011110, 0b00000001
 		},
 		{
 			bitlist: Bitlist{0x00, 0x10}, // 0b00000000, 0b00010000
-			idx:     8,
+			idx:     8,                   //                      ^
 			val:     true,
 			want:    Bitlist{0x00, 0x11}, // 0b00000000, 0b00010001
 		},
 		{
 			bitlist: Bitlist{0x00, 0x11}, // 0b00000000, 0b00010001
-			idx:     8,
+			idx:     8,                   //                      ^
 			val:     false,
 			want:    Bitlist{0x00, 0x10}, // 0b00000000, 0b00010000
 		},
