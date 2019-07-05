@@ -11,6 +11,10 @@ func TestBitlist_Len(t *testing.T) {
 		want    uint64
 	}{
 		{
+			bitlist: Bitlist{},
+			want:    0,
+		},
+		{
 			bitlist: Bitlist{0x01}, // 0b00000001
 			want:    0,
 		},
@@ -61,6 +65,11 @@ func TestBitlist_BitAt(t *testing.T) {
 		idx     uint64
 		want    bool
 	}{
+		{
+			bitlist: Bitlist{},
+			idx:     0,
+			want:    false,
+		},
 		{
 			bitlist: Bitlist{0x01}, // 0b00000001
 			idx:     55,            // Out of bounds
@@ -133,6 +142,12 @@ func TestBitlist_SetBitAt(t *testing.T) {
 		val     bool
 		want    Bitlist
 	}{
+		{
+			bitlist: Bitlist{},
+			idx:     0,
+			val:     true,
+			want:    Bitlist{},
+		},
 		{
 			bitlist: Bitlist{0x01}, // 0b00000001
 			idx:     0,             //          ^

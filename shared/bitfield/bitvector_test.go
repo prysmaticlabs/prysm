@@ -7,6 +7,7 @@ import (
 
 func TestBitvector4_Len(t *testing.T) {
 	bvs := []Bitvector4{
+		{},
 		{0x01},
 		{0x02},
 		{0x03},
@@ -61,7 +62,7 @@ func TestBitvector4_BitAt(t *testing.T) {
 			want:    true,
 		},
 		{
-			bitlist: Bitvector4{0x0E}, // 0b00001110
+			bitlist: Bitvector4{0x1E}, // 0b00011110
 			idx:     4,                //      ^
 			want:    false,
 		},
@@ -113,7 +114,13 @@ func TestBitvector4_SetBitAt(t *testing.T) {
 		},
 		{
 			bitvector: Bitvector4{0x00}, // 0b00000000
-			idx:       64,               // Out of bounds
+			idx:       4,                //      ^
+			val:       true,
+			want:      Bitvector4{0x00}, // 0b00001000
+		},
+		{
+			bitvector: Bitvector4{0x00}, // 0b00000000
+			idx:       5,                // Out of bounds
 			val:       true,
 			want:      Bitvector4{0x00}, // 0b00000000
 		},

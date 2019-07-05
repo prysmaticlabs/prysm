@@ -18,7 +18,7 @@ type Bitlist []byte
 func (b Bitlist) BitAt(idx uint64) bool {
 	// Out of bounds, must be false.
 	upperBounds := b.Len()
-	if idx >= upperBounds || upperBounds == 0 {
+	if idx >= upperBounds {
 		return false
 	}
 
@@ -29,7 +29,7 @@ func (b Bitlist) BitAt(idx uint64) bool {
 func (b Bitlist) SetBitAt(idx uint64, val bool) {
 	// Out of bounds, do nothing.
 	upperBounds := b.Len()
-	if idx >= upperBounds || upperBounds == 0 {
+	if idx >= upperBounds {
 		return
 	}
 
@@ -43,6 +43,9 @@ func (b Bitlist) SetBitAt(idx uint64, val bool) {
 }
 
 func (b Bitlist) Len() uint64 {
+	if len(b) == 0 {
+		return 0
+	}
 	// The most significant bit is present in the last byte in the array.
 	last := b[len(b)-1]
 

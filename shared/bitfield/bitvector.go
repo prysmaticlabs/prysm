@@ -6,8 +6,7 @@ type Bitvector4 []byte
 
 func (b Bitvector4) BitAt(idx uint64) bool {
 	// Out of bounds, must be false.
-	upperBounds := b.Len()
-	if idx > upperBounds || upperBounds == 0 {
+	if idx >= b.Len() {
 		return false
 	}
 
@@ -18,8 +17,7 @@ func (b Bitvector4) BitAt(idx uint64) bool {
 
 func (b Bitvector4) SetBitAt(idx uint64, val bool) {
 	// Out of bounds, do nothing.
-	upperBounds := b.Len()
-	if idx > upperBounds || upperBounds == 0 {
+	if idx >= b.Len() {
 		return
 	}
 
