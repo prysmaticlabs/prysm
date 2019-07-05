@@ -33,11 +33,11 @@ func (b Bitlist) SetBitAt(idx uint64, val bool) {
 		return
 	}
 
-	i := uint8(1 << (idx % 8))
+	bit := uint8(1 << (idx % 8))
 	if val {
-		b[idx/8] |= i
+		b[idx/8] |= bit
 	} else {
-		b[idx/8] &^= i
+		b[idx/8] &^= bit
 	}
 
 }
@@ -55,8 +55,27 @@ func (b Bitlist) Len() uint64 {
 	return uint64(8*(len(b)-1) + msb - 1)
 }
 
-// Bytes returns the underlying byte array without the length bit.
+// Bytes returns the trimmed underlying byte array without the length bit. The
+// leading zeros in the bitlist will be trimmed to the smallest byte length
+// representation of the bitlist. This may produce an empty byte slice if all
+// bits were zero.
 func (b Bitlist) Bytes() []byte {
-	// TODO
-	return b
+	ret := make([]byte, len(b))
+	copy(ret, b)
+
+	// Clear the most significant bit (the length bit).
+	msb := uint8(bits.Len8(ret[len(ret)-1])) - 1
+	clearBit := uint8(1 << msb)
+	ret[len(ret)-1] &^= clearBit
+
+	// Clear any leading zero bytes.
+	newLen := len(ret)
+	for i := len(ret) - 1; i >= 0; i-- {
+		if ret[i] != 0x00 {
+			break
+		}
+		newLen = i
+	}
+
+	return ret[:newLen]
 }
