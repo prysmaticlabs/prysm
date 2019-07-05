@@ -25,7 +25,7 @@ type HobbitsNode struct {
 
 type HobbitsMessage encoding.Message
 
-type RPCMethod uint64
+type RPCMethod uint8
 
 const (
 	HELLO RPCMethod = iota
@@ -46,7 +46,7 @@ type GossipHeader struct {
 }
 
 type RPCHeader struct {
-	methodID uint64 `bson:"method_id"`
+	MethodID uint8 `bson:"method_id"`
 }
 
 type Hello struct {
@@ -60,6 +60,7 @@ type Hello struct {
 // Hobbits toggles a HobbitsNode and requires a host, port and list of peers to which it tries to connect.
 func Hobbits(host string, port int, peers []string, db *db.BeaconDB) *HobbitsNode {
 	node := NewHobbitsNode(host, port, peers, db)
+	node.Server = tcp.NewServer(node.Host, node.Port)
 
 	return &node
 }

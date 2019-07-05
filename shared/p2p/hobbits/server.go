@@ -3,7 +3,6 @@ package hobbits
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"reflect"
@@ -17,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
-	"github.com/renaynay/go-hobbits/tcp"
 )
 
 func NewHobbitsNode(host string, port int, peers []string, db *db.BeaconDB) HobbitsNode {
@@ -63,15 +61,18 @@ func (h *HobbitsNode) OpenConns() error {
 }
 
 func (h *HobbitsNode) Listen() error {
-	h.Server = tcp.NewServer(h.Host, h.Port)
-
-	return h.Server.Listen(func(conn net.Conn, message encoding.Message) {
-		log.Println("Prysm hobbits node listening for messages...")
+	err := h.Server.Listen(func(conn net.Conn, message encoding.Message) {
+		fmt.Println("Prysm hobbits node listening for messages...")
 
 		h.processHobbitsMessage(HobbitsMessage(message), conn)
 
-		log.Println("a message has been received")
+		fmt.Println("a message has been received")
 	})
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (h *HobbitsNode) Broadcast(ctx context.Context, message proto.Message) {

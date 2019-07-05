@@ -1,38 +1,90 @@
 package hobbits
 
-//import (
-//	"reflect"
-//	"strconv"
-//	"testing"
-//)
-//
-//func TestNewHobbitsNode(t *testing.T) {
-//	var test = []struct {
-//		node HobbitsNode
-//		host        string
-//		port        int
-//		staticPeers []string
-//	}{
-//		{
-//			node: NewHobbitsNode("123.12.14", 3333,[]string{"192.0.2.1"}),
-//			host: "123.12.14",
-//			port: 3333,
-//			staticPeers: []string{"192.0.2.1"},
-//		},
-//		{
-//			node: NewHobbitsNode("192.0.2.1", 5555, []string{"65.93.214.134", "66.171.248.170"}),
-//			host: "192.0.2.1",
-//			port: 5555,
-//			staticPeers: []string{"65.93.214.134", "66.171.248.170"},
-//		},
-//
-//	}
-//
-//	for i, tt := range test {
-//		t.Run(strconv.Itoa(i), func(t *testing.T) {
-//			if !reflect.DeepEqual(tt.node.Host, tt.host) || !reflect.DeepEqual(tt.node.Port, tt.port) || !reflect.DeepEqual(tt.node.StaticPeers, tt.staticPeers){
-//				t.Error("return value of NewHobbitsNode does not match expected value")
-//			}
-//		})
-//	}
-//}
+import (
+	"fmt"
+	"net"
+	"testing"
+	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/renaynay/go-hobbits/encoding"
+	"gopkg.in/mgo.v2/bson"
+)
+
+func TestHobbitsNode_Listen(t *testing.T) {
+	db, err := db.NewDB("go/src/renaynay/db")
+	if err != nil {
+		t.Errorf("can't construct new DB")
+	}
+
+	hobNode := Hobbits("127.0.0.1", 0, []string{}, db)
+
+	go func() {
+		hobNode.Listen()
+	}()
+
+	time.Sleep(3000000000)
+
+	for {
+		if hobNode.Server.Addr() != nil {
+			break
+		}
+
+		time.Sleep(1)
+	}
+
+	conn, err := net.Dial("tcp", hobNode.Server.Addr().String())
+	if err != nil {
+		t.Error("could not connect to TCP server: ", err)
+	}
+
+	responseBody := Hello{
+		NodeID:               "12",
+		LatestFinalizedRoot:  [32]byte{},
+		LatestFinalizedEpoch: 0,
+		BestRoot:             [32]byte{},
+		BestSlot:             0,
+	}
+
+	marshBody, err := bson.Marshal(responseBody)
+	if err != nil {
+		t.Errorf("error bson marshaling response boyd")
+	}
+
+	responseHeader := RPCHeader{
+		MethodID: 0x00,
+	}
+
+	marshHeader, err := bson.Marshal(responseHeader)
+	if err != nil {
+		fmt.Println("error bson marshaling response header")
+	}
+
+	msg := HobbitsMessage{
+		Version:  "12.4", // TODO: hits an error when over 2 decimals
+		Protocol: encoding.RPC,
+		Header:   marshHeader,
+		Body:     marshBody,
+	}
+
+	toSend, err := encoding.Marshal(encoding.Message(msg))
+	if err != nil {
+		t.Errorf("could not marshal message for writing to conn")
+	}
+
+	_, err = conn.Write([]byte(toSend))
+	if err != nil {
+		t.Error("could not write to the TCP server: ", err)
+	}
+
+	read := []byte{}
+
+	_, err = conn.Read(read)
+	if err != nil {
+		t.Errorf("can't read from conn")
+	}
+
+	fmt.Println(read)
+
+	select {}
+}
