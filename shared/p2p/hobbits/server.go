@@ -30,11 +30,9 @@ func NewHobbitsNode(host string, port int, peers []string, db *db.BeaconDB) Hobb
 	}
 }
 
-func (h *HobbitsNode) OpenConns() error {
+func (h *HobbitsNode)  OpenConns() error {
 	for _, p := range h.StaticPeers {
-		p := p
-
-		go func() {
+		go func(p string) {
 			var conn net.Conn
 			var err error
 
@@ -54,7 +52,7 @@ func (h *HobbitsNode) OpenConns() error {
 			h.PeerConns = append(h.PeerConns, conn)
 
 			h.Unlock()
-		}()
+		}(p)
 	}
 
 	return nil
