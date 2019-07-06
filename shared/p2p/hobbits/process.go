@@ -6,6 +6,7 @@ import (
 	"net"
 	"reflect"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/renaynay/go-hobbits/encoding"
 	"gopkg.in/mgo.v2/bson"
@@ -16,11 +17,11 @@ import (
 func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Conn) error {
 	switch message.Protocol {
 	case encoding.RPC:
-		fmt.Println("beginning to process the RPC message...")
+		log.Trace("beginning to process the RPC message...")
 
 		err := h.processRPC(message, conn)
 		if err != nil {
-			fmt.Println("there was an error processing an RPC hobbits msg ") // TODO DELETE
+			log.Trace("there was an error processing an RPC hobbits msg ") // TODO DELETE
 			return errors.Wrap(err, "error processing an RPC hobbits message")
 		}
 	case encoding.GOSSIP:
@@ -38,13 +39,13 @@ func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Con
 func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 	method, err := h.parseMethodID(message.Header)
 	if err != nil {
-		fmt.Println("method id could not be parsed from message header")
+		log.Trace("method id could not be parsed from message header")
 		return errors.Wrap(err, "could not parse method_id: ")
 	}
 
 	switch method {
 	case HELLO:
-		fmt.Println("HELLO received")
+		log.Trace("HELLO received")
 
 		response := h.rpcHello()
 
@@ -59,11 +60,11 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 
 		err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
 		if err != nil {
-			fmt.Println("error sending a HELLO back") // TODO delete
+			log.Trace("error sending a HELLO back") // TODO delete
 			return errors.Wrap(err, "error sending hobbits message: ")
 		}
 
-		fmt.Println("sending HELLO...?")
+		log.Trace("sending HELLO...?")
 	case GOODBYE:
 		err := h.removePeer(conn)
 		if err != nil {

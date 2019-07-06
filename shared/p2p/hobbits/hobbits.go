@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
@@ -61,6 +62,8 @@ type Hello struct {
 func Hobbits(host string, port int, peers []string, db *db.BeaconDB) *HobbitsNode {
 	node := NewHobbitsNode(host, port, peers, db)
 	node.Server = tcp.NewServer(node.Host, node.Port)
+
+	log.Trace("node has been constructed")
 
 	return &node
 }

@@ -3,6 +3,8 @@ package node
 import (
 	"strings"
 
+
+	"github.com/sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -49,9 +51,12 @@ func configureP2P(ctx *cli.Context, db *db.BeaconDB) (p2p.P2pComposite, error) {
 	if ctx.GlobalBool(cmd.Hobbits.Name) {
 		s := hobbits.Hobbits(ctx.GlobalString(cmd.P2PHost.Name), ctx.GlobalInt(cmd.P2PPort.Name), staticPeers, db)
 
-		log.Debug("")
+		logrus.Debug("")
+		logrus.Trace("constructed a hobbits node...")
 
 		s.Start()
+
+		logrus.Trace("called start on hobbits node...")
 
 		return s, nil
 	}

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -59,10 +60,12 @@ func (h *HobbitsNode)  OpenConns() error {
 }
 
 func (h *HobbitsNode) Listen() error {
+	log.Trace("hobbits node is listening")
+
 	err := h.Server.Listen(func(conn net.Conn, message encoding.Message) {
 		h.processHobbitsMessage(HobbitsMessage(message), conn)
 
-		fmt.Println("a message has been received")
+		log.Trace("a message has been received")
 	})
 
 	if err != nil {
