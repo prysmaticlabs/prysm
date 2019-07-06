@@ -1,7 +1,6 @@
 package hobbits
 
 import (
-	"fmt"
 	"net"
 	"reflect"
 	"sync"
@@ -69,8 +68,5 @@ func Hobbits(host string, port int, peers []string, db *db.BeaconDB) *HobbitsNod
 func (h *HobbitsNode) Start() {
 	go h.Listen()
 
-	err := h.OpenConns()
-	if err != nil {
-		fmt.Println("can't open any conns") // TODO: change this error message later
-	}
+	go h.OpenConns()
 }

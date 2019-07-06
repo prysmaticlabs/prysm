@@ -60,8 +60,6 @@ func (h *HobbitsNode)  OpenConns() error {
 
 func (h *HobbitsNode) Listen() error {
 	err := h.Server.Listen(func(conn net.Conn, message encoding.Message) {
-		fmt.Println("Prysm hobbits node listening for messages...")
-
 		h.processHobbitsMessage(HobbitsMessage(message), conn)
 
 		fmt.Println("a message has been received")
