@@ -1102,3 +1102,9 @@ go_repository(
     commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",
     importpath = "gopkg.in/d4l3k/messagediff.v1",
 )
+
+go_repository(
+    name = "com_github_prysmaticlabs_go_bitfield",
+    commit = "66dcdec9762a9f5935d9466b18f4bee852d1b091",
+    importpath = "github.com/prysmaticlabs/go-bitfield",
+)
