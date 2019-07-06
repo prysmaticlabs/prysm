@@ -77,8 +77,8 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		BeaconBlockRoot: []byte{},
-		TargetRoot:      []byte{},
-		SourceRoot:      []byte{},
+		Target:          &pbp2p.Checkpoint{},
+		Source:          &pbp2p.Checkpoint{},
 		Crosslink:       &pbp2p.Crosslink{},
 	}, nil)
 	m.attesterClient.EXPECT().SubmitAttestation(
@@ -114,10 +114,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		BeaconBlockRoot: []byte("A"),
-		TargetRoot:      []byte("B"),
-		SourceRoot:      []byte("C"),
+		Target:          &pbp2p.Checkpoint{Root: []byte("B")},
+		Source:          &pbp2p.Checkpoint{Root: []byte("C"), Epoch: 3},
 		Crosslink:       &pbp2p.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
-		SourceEpoch:     3,
 	}, nil)
 
 	var generatedAttestation *pbp2p.Attestation
@@ -134,10 +133,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	expectedAttestation := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
 			BeaconBlockRoot: []byte("A"),
-			TargetRoot:      []byte("B"),
-			SourceRoot:      []byte("C"),
+			Target:          &pbp2p.Checkpoint{Root: []byte("B")},
+			Source:          &pbp2p.Checkpoint{Root: []byte("C"), Epoch: 3},
 			Crosslink:       &pbp2p.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
-			SourceEpoch:     3,
 		},
 		CustodyBits: make([]byte, (len(committee)+7)/8),
 		Signature:   []byte("signed"),
@@ -208,10 +206,9 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		BeaconBlockRoot: []byte("A"),
-		TargetRoot:      []byte("B"),
-		SourceRoot:      []byte("C"),
+		Target:          &pbp2p.Checkpoint{Root: []byte("B")},
+		Source:          &pbp2p.Checkpoint{Root: []byte("C"), Epoch: 3},
 		Crosslink:       &pbp2p.Crosslink{DataRoot: []byte{'D'}},
-		SourceEpoch:     3,
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
@@ -255,11 +252,9 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		TargetRoot:      []byte("B"),
-		SourceRoot:      []byte("C"),
-		Crosslink:       &pbp2p.Crosslink{DataRoot: []byte{'D'}},
-		SourceEpoch:     3,
+		Target:    &pbp2p.Checkpoint{Root: []byte("B")},
+		Source:    &pbp2p.Checkpoint{Root: []byte("C"), Epoch: 3},
+		Crosslink: &pbp2p.Crosslink{DataRoot: []byte{'D'}},
 	}, nil)
 
 	var generatedAttestation *pbp2p.Attestation

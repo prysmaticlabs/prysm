@@ -2,13 +2,10 @@ package powchain
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -16,44 +13,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	depositEventSignature    = []byte("Deposit(bytes,bytes,bytes,bytes,bytes)")
-	chainStartEventSignature = []byte("Eth2Genesis(bytes32,bytes,bytes)")
+	depositEventSignature = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
 )
-
-// HasChainStartLogOccurred queries all logs in the deposit contract to verify
-// if ChainStart has occurred.
-func (w *Web3Service) HasChainStartLogOccurred() (bool, error) {
-	return w.depositContractCaller.ChainStarted(&bind.CallOpts{})
-}
 
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
 func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			w.depositContractAddress,
-		},
-		Topics: [][]common.Hash{{hashutil.Hash(chainStartEventSignature)}},
-	}
-	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
-	if err != nil {
-		return 0, err
-	}
-	if len(logs) == 0 {
-		return 0, errors.New("no chainstart logs exist")
-	}
-
-	_, _, timestampData, err := contracts.UnpackChainStartLogData(logs[0].Data)
-	if err != nil {
-		return 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
-	}
-	timestamp := binary.LittleEndian.Uint64(timestampData)
-	return timestamp, nil
+	// (#2861): A No-Op until this PR is implemented
+	return 0, nil
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -62,10 +33,6 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
-		return
-	}
-	if depositLog.Topics[0] == hashutil.HashKeccak256(chainStartEventSignature) && !w.chainStarted {
-		w.ProcessChainStartLog(depositLog)
 		return
 	}
 	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
@@ -151,50 +118,6 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
-}
-
-// ProcessChainStartLog processes the log which had been received from
-// the ETH1.0 chain by trying to determine when to start the beacon chain.
-func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
-	chainStartCount.Inc()
-	chainStartDepositRoot, _, timestampData, err := contracts.UnpackChainStartLogData(depositLog.Data)
-	if err != nil {
-		log.Errorf("Unable to unpack ChainStart log data %v", err)
-		return
-	}
-
-	w.chainStartETH1Data = &pb.Eth1Data{
-		BlockHash:   depositLog.BlockHash[:],
-		DepositRoot: chainStartDepositRoot[:],
-	}
-
-	timestamp := binary.LittleEndian.Uint64(timestampData)
-	w.chainStarted = true
-	w.depositRoot = chainStartDepositRoot[:]
-	chainStartTime := time.Unix(int64(timestamp), 0)
-
-	depHashes, err := w.ChainStartDepositHashes()
-	if err != nil {
-		log.Errorf("Generating chainstart deposit hashes failed: %v", err)
-		return
-	}
-
-	// We then update the in-memory deposit trie from the chain start
-	// deposits at this point, as this trie will be later needed for
-	// incoming, post-chain start deposits.
-	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(
-		depHashes,
-		int(params.BeaconConfig().DepositContractTreeDepth),
-	)
-	if err != nil {
-		log.Fatalf("Unable to generate deposit trie from ChainStart deposits: %v", err)
-	}
-	w.depositTrie = sparseMerkleTrie
-
-	log.WithFields(logrus.Fields{
-		"ChainStartTime": chainStartTime,
-	}).Info("Minimum number of validators reached for beacon-chain to start")
-	w.chainStartFeed.Send(chainStartTime)
 }
 
 // processPastLogs processes all the past logs from the deposit contract and

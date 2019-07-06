@@ -3,11 +3,10 @@ package helpers
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"runtime"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -48,8 +47,6 @@ func TestRandaoMix_OK(t *testing.T) {
 
 func TestRandaoMix_CopyOK(t *testing.T) {
 	ClearAllCaches()
-	runtime.GC()
-
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
@@ -77,15 +74,14 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 	for _, test := range tests {
 		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		mix := RandaoMix(state, test.epoch)
-		randaoMap := make(map[string]bool)
-		for _, elem := range mix {
-			randaoMap[fmt.Sprintf("%v", &elem)] = true
-		}
+		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
+		binary.LittleEndian.PutUint64(mix, uniqueNumber)
+
 		for _, mx := range randaoMixes {
-			for _, val := range mx {
-				if randaoMap[fmt.Sprintf("%v", &val)] {
-					t.Fatalf("two distinct slices still have elements referenced by the same address: %v", &val)
-				}
+			mxNum := bytesutil.FromBytes8(mx)
+			if mxNum == uniqueNumber {
+				t.Fatalf("two distinct slices which have different representations in memory still contain"+
+					"the same value: %d", mxNum)
 			}
 		}
 	}
@@ -129,8 +125,9 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 
 func TestActiveIndexRoot_CopyOK(t *testing.T) {
 	ClearAllCaches()
-	runtime.GC()
-
+	conf := params.BeaconConfig()
+	conf.EpochsPerHistoricalVector = 100
+	params.OverrideBeaconConfig(conf)
 	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
@@ -144,28 +141,20 @@ func TestActiveIndexRoot_CopyOK(t *testing.T) {
 		{
 			epoch: 34,
 		},
-		{
-			epoch: 3444,
-		},
-		{
-			epoch: 999999,
-		},
 	}
 	for _, test := range tests {
 		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
 		indexRoot := ActiveIndexRoot(state, test.epoch)
-		rootMap := make(map[string]bool)
-		for _, elem := range indexRoot {
-			rootMap[fmt.Sprintf("%v", &elem)] = true
-		}
+		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
+		binary.LittleEndian.PutUint64(indexRoot, uniqueNumber)
+
 		for _, root := range activeIndexRoots {
-			for _, val := range root {
-				if rootMap[fmt.Sprintf("%v", &val)] {
-					t.Fatalf("two distinct slices still have elements referenced by the same address: %v", &val)
-				}
+			rootNum := bytesutil.FromBytes8(root)
+			if rootNum == uniqueNumber {
+				t.Fatalf("two distinct slices which have different representations in memory still contain"+
+					"the same value: %d", rootNum)
 			}
 		}
-
 	}
 }
 
@@ -190,7 +179,7 @@ func TestGenerateSeed_OK(t *testing.T) {
 		RandaoMixes:      randaoMixes,
 		Slot:             slot}
 
-	got, err := GenerateSeed(state, 10)
+	got, err := Seed(state, 10)
 	if err != nil {
 		t.Fatal(err)
 	}

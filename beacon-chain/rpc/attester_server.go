@@ -153,10 +153,11 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	}
 	res = &pbp2p.AttestationData{
 		BeaconBlockRoot: headRoot[:],
-		SourceEpoch:     headState.CurrentJustifiedCheckpoint.Epoch,
-		SourceRoot:      headState.CurrentJustifiedCheckpoint.Root,
-		TargetEpoch:     targetEpoch,
-		TargetRoot:      targetRoot,
+		Source:          headState.CurrentJustifiedCheckpoint,
+		Target: &pbp2p.Checkpoint{
+			Epoch: targetEpoch,
+			Root:  targetRoot,
+		},
 		Crosslink: &pbp2p.Crosslink{
 			Shard:      req.Shard,
 			StartEpoch: startEpoch,
