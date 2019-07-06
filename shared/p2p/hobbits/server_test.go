@@ -77,14 +77,7 @@ func TestHobbitsNode_Listen(t *testing.T) {
 		t.Error("could not write to the TCP server: ", err)
 	}
 
-	read := []byte{}
-
-	_, err = conn.Read(read)
-	if err != nil {
-		t.Errorf("can't read from conn")
-	}
-
-	fmt.Println(read)
+	fmt.Println("writing...")
 
 	select {}
 }

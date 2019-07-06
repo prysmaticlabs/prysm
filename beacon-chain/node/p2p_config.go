@@ -49,6 +49,8 @@ func configureP2P(ctx *cli.Context, db *db.BeaconDB) (p2p.P2pComposite, error) {
 	if ctx.GlobalBool(cmd.Hobbits.Name) {
 		s := hobbits.Hobbits(ctx.GlobalString(cmd.P2PHost.Name), ctx.GlobalInt(cmd.P2PPort.Name), staticPeers, db)
 
+		s.Start()
+
 		return s, nil
 	}
 

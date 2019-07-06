@@ -59,10 +59,11 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 
 		err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
 		if err != nil {
+			fmt.Println("error sending a HELLO back") // TODO delete
 			return errors.Wrap(err, "error sending hobbits message: ")
 		}
 
-		fmt.Println("sending HELLO...")
+		fmt.Println("sending HELLO...?")
 	case GOODBYE:
 		err := h.removePeer(conn)
 		if err != nil {
