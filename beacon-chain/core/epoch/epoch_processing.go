@@ -741,7 +741,7 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 //        rewards[index] += get_base_reward(state, index) * MIN_ATTESTATION_INCLUSION_DELAY // attestation.inclusion_delay
 //
 //    # Inactivity penalty
-//    finality_delay = previous_epoch - state.finalized_epoch
+//    finality_delay = previous_epoch - state.finalized_checkpoint.epoch
 //    if finality_delay > MIN_EPOCHS_TO_INACTIVITY_PENALTY:
 //        matching_target_attesting_indices = get_unslashed_attesting_indices(state, matching_target_attestations)
 //        for index in eligible_validator_indices:

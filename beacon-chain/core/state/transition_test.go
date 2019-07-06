@@ -811,7 +811,7 @@ func TestProcessOperation_OverMaxVoluntaryExits(t *testing.T) {
 	maxExits := params.BeaconConfig().MaxVoluntaryExits
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			VoluntaryExits: make([]*pb.VoluntaryExit, maxExits+1),
+			VoluntaryExits: make([]*pb.VoluntaryExit, maxExits),
 		},
 	}
 
