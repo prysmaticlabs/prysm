@@ -25,6 +25,8 @@ func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Con
 			return errors.Wrap(err, "error processing an RPC hobbits message")
 		}
 	case encoding.GOSSIP:
+		log.Trace("beginning to process the GOSSIP message...")
+
 		err := h.processGossip(message)
 		if err != nil {
 			return errors.Wrap(err, "error processing a GOSSIP hobbits message")
@@ -147,6 +149,8 @@ func (h *HobbitsNode) removePeer(peer net.Conn) error {
 }
 
 func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
+	log.Trace("processing GOSSIP message")
+
 	_, err := h.parseTopic(message)
 	if err != nil {
 		return errors.Wrap(err, "error parsing topic: ")
