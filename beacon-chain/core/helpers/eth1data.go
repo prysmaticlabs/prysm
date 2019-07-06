@@ -52,9 +52,8 @@ func CountVote(voteMap *VoteHierarchyMap, vote *pb.Eth1Data, blockHeight *big.In
 		voteMap.mostVotes = v.votes
 		voteMap.BestVote = vote
 		voteMap.bestVoteHeight = blockHeight
-	} else if v.votes == voteMap.mostVotes &&
+	} else if v.votes == voteMap.mostVotes && v.height.Cmp(voteMap.bestVoteHeight) == 1 {
 		//breaking ties by favoring votes with higher block height.
-		v.height.Cmp(voteMap.bestVoteHeight) == 1 {
 		voteMap.BestVote = vote
 		voteMap.bestVoteHeight = v.height
 	}

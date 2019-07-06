@@ -785,7 +785,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 	return nil
 }
 
-// ProcessVolundaryExits is one of the operations performed
+// ProcessVoluntaryExits is one of the operations performed
 // on each processed beacon block to determine which validators
 // should exit the state's validator registry.
 //
@@ -808,7 +808,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 //    # Initiate exit
 //    initiate_validator_exit(state, exit.validator_index)
-func ProcessVolundaryExits(
+func ProcessVoluntaryExits(
 	beaconState *pb.BeaconState,
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
