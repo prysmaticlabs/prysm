@@ -1,6 +1,7 @@
 package spectest
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"reflect"
@@ -62,7 +63,12 @@ func runShuffleTests(t *testing.T, filepath string) {
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
 // algorithm, then compare the output with the expected output from the YAML file.
 func runShuffleTest(testCase *ShuffleTestCase) error {
-	seed := common.HexToHash(testCase.Seed)
+	baseSeed, err := base64.StdEncoding.DecodeString(testCase.Seed)
+	if err != nil {
+		return err
+	}
+
+	seed := common.BytesToHash(baseSeed)
 	testIndices := make([]uint64, testCase.Count, testCase.Count)
 	for i := uint64(0); i < testCase.Count; i++ {
 		testIndices[i] = i
