@@ -897,7 +897,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 	}
 	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
 				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
 		}
 	}
@@ -1258,7 +1258,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 	newState, _ := ProcessRegistryUpdates(state)
 	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
 				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
 		}
 	}
@@ -1282,7 +1282,7 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 	newState, _ := ProcessRegistryUpdates(state)
 	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay+1 {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
 				i, params.BeaconConfig().ActivationExitDelay+1, validator.ExitEpoch)
 		}
 	}
@@ -1310,7 +1310,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	}
 	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != exitEpoch {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
 				i,
 				exitEpoch,
 				validator.ExitEpoch,
