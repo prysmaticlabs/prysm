@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -283,8 +284,8 @@ func TestDomain_OK(t *testing.T) {
 		{epoch: 3, domainType: 5, version: 216172782113783813},
 	}
 	for _, tt := range tests {
-		if Domain(state, tt.epoch, tt.domainType) != tt.version {
-			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state, tt.epoch, tt.domainType))
+		if Domain(state, tt.epoch, bytesutil.Bytes4(tt.domainType)) != tt.version {
+			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state, tt.epoch, bytesutil.Bytes4(tt.domainType)))
 		}
 	}
 }
