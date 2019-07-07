@@ -28,7 +28,6 @@ go_test(
     srcs = ["depositContract_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/hashutil:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
     ],

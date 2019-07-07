@@ -69,6 +69,8 @@ func TestSubmitAttestation_OK(t *testing.T) {
 				Shard:    935,
 				DataRoot: []byte{'a'},
 			},
+			Source: &pbp2p.Checkpoint{},
+			Target: &pbp2p.Checkpoint{},
 		},
 	}
 	if _, err := attesterServer.SubmitAttestation(context.Background(), req); err != nil {
@@ -162,9 +164,13 @@ func TestRequestAttestation_OK(t *testing.T) {
 
 	expectedInfo := &pbp2p.AttestationData{
 		BeaconBlockRoot: blockRoot[:],
-		SourceEpoch:     2 + 0,
-		SourceRoot:      justifiedRoot[:],
-		TargetEpoch:     3,
+		Source: &pbp2p.Checkpoint{
+			Epoch: 2,
+			Root:  justifiedRoot[:],
+		},
+		Target: &pbp2p.Checkpoint{
+			Epoch: 3,
+		},
 		Crosslink: &pbp2p.Crosslink{
 			EndEpoch:   3,
 			ParentRoot: crosslinkRoot[:],
@@ -274,9 +280,13 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 
 	expectedInfo := &pbp2p.AttestationData{
 		BeaconBlockRoot: blockRoot[:],
-		SourceEpoch:     helpers.SlotToEpoch(1500),
-		SourceRoot:      justifiedBlockRoot[:],
-		TargetEpoch:     156,
+		Source: &pbp2p.Checkpoint{
+			Epoch: helpers.SlotToEpoch(1500),
+			Root:  justifiedBlockRoot[:],
+		},
+		Target: &pbp2p.Checkpoint{
+			Epoch: 156,
+		},
 		Crosslink: &pbp2p.Crosslink{
 			ParentRoot: crosslinkRoot[:],
 			EndEpoch:   params.BeaconConfig().SlotsPerEpoch,
@@ -301,7 +311,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	}
 
 	res := &pbp2p.AttestationData{
-		TargetEpoch: 55,
+		Target: &pbp2p.Checkpoint{Epoch: 55},
 	}
 
 	if err := server.cache.MarkInProgress(req); err != nil {

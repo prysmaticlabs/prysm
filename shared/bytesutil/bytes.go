@@ -40,14 +40,14 @@ func Bytes3(x uint64) []byte {
 	return bytes[:3]
 }
 
-// Bytes4 returns integer x to bytes in little-endian format, x.to_bytes(4, 'big').
+// Bytes4 returns integer x to bytes in little-endian format, x.to_bytes(4, 'little').
 func Bytes4(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:4]
 }
 
-// Bytes8 returns integer x to bytes in little-endian format, x.to_bytes(8, 'big').
+// Bytes8 returns integer x to bytes in little-endian format, x.to_bytes(8, 'little').
 func Bytes8(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)

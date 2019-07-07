@@ -225,7 +225,7 @@ func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestatio
 func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
 
-	committee, err := helpers.CrosslinkCommitteeAtEpoch(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Crosslink.Shard)
+	committee, err := helpers.CrosslinkCommittee(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Crosslink.Shard)
 	if err != nil {
 		return err
 	}
@@ -284,7 +284,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 			log.WithFields(
 				logrus.Fields{
 					"attestationSlot": slot,
-					"sourceEpoch":     attestation.Data.SourceEpoch,
+					"sourceEpoch":     attestation.Data.Source.Epoch,
 				},
 			).Debug("Attestation store updated")
 

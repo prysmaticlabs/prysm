@@ -27,15 +27,6 @@ type MatchedAttestations struct {
 	head   []*pb.PendingAttestation
 }
 
-// CanProcessEpoch checks the eligibility to process epoch.
-// The epoch can be processed at the end of the last slot of every epoch
-//
-// Spec pseudocode definition:
-//    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-func CanProcessEpoch(state *pb.BeaconState) bool {
-	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
-}
-
 // MatchAttestations matches the attestations gathered in a span of an epoch
 // and categorize them whether they correctly voted for source, target and head.
 // We combined the individual helpers from spec for efficiency and to achieve O(N) run time.
@@ -84,7 +75,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	for _, srcAtt := range srcAtts {
 		// If the target root matches attestation's target root,
 		// then we know this attestation has correctly voted for target.
-		if bytes.Equal(srcAtt.Data.TargetRoot, targetRoot) {
+		if bytes.Equal(srcAtt.Data.Target.Root, targetRoot) {
 			tgtAtts = append(tgtAtts, srcAtt)
 		}
 
@@ -190,8 +181,14 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint
 	oldCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint
 	state.PreviousJustifiedCheckpoint = state.CurrentJustifiedCheckpoint
-	state.JustificationBits = (state.JustificationBits << 1) % (1 << 63)
 	// Process justification.
+	if len(state.JustificationBits) != 1 {
+		return nil, errors.New("state justification bits is not exactly 1 byte")
+	}
+	// Note that the justification bits are type [4]BitVector. This means that
+	// the maximum value is 0b1111 for a uint8 field.
+	state.JustificationBits[0] <<= 1
+	state.JustificationBits[0] &= 0x0F // mask with 0b1111. This eliminates the first left most 4 bits.
 	if 3*prevAttestedBal >= 2*totalBal {
 		state.CurrentJustifiedCheckpoint.Epoch = prevEpoch
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
@@ -200,7 +197,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 				prevEpoch, err)
 		}
 		state.CurrentJustifiedCheckpoint.Root = blockRoot
-		state.JustificationBits |= 2
+		state.JustificationBits[0] |= 2
 	}
 	if 3*currAttestedBal >= 2*totalBal {
 		state.CurrentJustifiedCheckpoint.Epoch = currentEpoch
@@ -210,10 +207,10 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 				prevEpoch, err)
 		}
 		state.CurrentJustifiedCheckpoint.Root = blockRoot
-		state.JustificationBits |= 1
+		state.JustificationBits[0] |= 1
 	}
 	// Process finalization.
-	bitfield := state.JustificationBits
+	bitfield := state.JustificationBits[0]
 	// When the 2nd, 3rd and 4th most recent epochs are all justified,
 	// 2nd epoch can finalize the 4th epoch as a source.
 	if oldPrevJustifiedCheckpoint.Epoch+3 == currentEpoch && (bitfield>>1)%8 == 7 {
@@ -258,17 +255,17 @@ func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 	copy(state.PreviousCrosslinks, state.CurrentCrosslinks)
 	epochs := []uint64{helpers.PrevEpoch(state), helpers.CurrentEpoch(state)}
 	for _, e := range epochs {
-		count, err := helpers.EpochCommitteeCount(state, e)
+		count, err := helpers.CommitteeCount(state, e)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch committee count: %v", err)
 		}
-		startShard, err := helpers.EpochStartShard(state, e)
+		startShard, err := helpers.StartShard(state, e)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch start shards: %v", err)
 		}
 		for offset := uint64(0); offset < count; offset++ {
 			shard := (startShard + offset) % params.BeaconConfig().ShardCount
-			committee, err := helpers.CrosslinkCommitteeAtEpoch(state, e, shard)
+			committee, err := helpers.CrosslinkCommittee(state, e, shard)
 			if err != nil {
 				return nil, fmt.Errorf("could not get crosslink committee: %v", err)
 			}
@@ -385,7 +382,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Only activate just enough validators according to the activation churn limit.
 	limit := len(activationQ)
-	churnLimit, err := helpers.ChurnLimit(state)
+	churnLimit, err := helpers.ValidatorChurnLimit(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not get churn limit: %v", err)
 	}
@@ -430,23 +427,17 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	totalAtStart := state.Slashings[(currentEpoch+1)%exitLength]
-	totalAtEnd := state.Slashings[currentEpoch%exitLength]
-	totalPenalties := totalAtEnd - totalAtStart
 
 	// Compute slashing for each validator.
 	for index, validator := range state.Validators {
-		correctEpoch := currentEpoch == validator.WithdrawableEpoch-exitLength/2
+		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
 		if validator.Slashed && correctEpoch {
-			minPenalties := totalPenalties * 3
-			if minPenalties > totalBalance {
-				minPenalties = totalBalance
+			totalSlashing := uint64(0)
+			for _, slashing := range state.Slashings {
+				totalSlashing += slashing
 			}
-			effectiveBal := validator.EffectiveBalance
-			penalty := effectiveBal * minPenalties / totalBalance
-			if penalty < effectiveBal/params.BeaconConfig().MinSlashingPenaltyQuotient {
-				penalty = effectiveBal / params.BeaconConfig().MinSlashingPenaltyQuotient
-			}
+			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
+			penalty := validator.EffectiveBalance * minSlashing / totalBalance
 			state = helpers.DecreaseBalance(state, uint64(index), penalty)
 		}
 	}
@@ -533,10 +524,16 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
+	commRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
+	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get compact committee root %v", err)
+	}
+	state.CompactCommitteesRoots[commRootPosition] = comRoot[:]
+
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	state.Slashings[nextEpoch%slashedExitLength] =
-		state.Slashings[currentEpoch%slashedExitLength]
+	state.Slashings[nextEpoch%slashedExitLength] = 0
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
@@ -841,8 +838,11 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get base reward: %v", err)
 		}
-		rewards[a.ProposerIndex] += base / params.BeaconConfig().ProposerRewardQuotient
-		rewards[i] += base * params.BeaconConfig().MinAttestationInclusionDelay / a.InclusionDelay
+		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
+		maxAttesterReward := base - proposerReward
+		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+		attesterFactor := slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay
+		rewards[i] += maxAttesterReward * attesterFactor / slotsPerEpoch
 	}
 
 	// Apply penalties for quadratic leaks.
@@ -902,17 +902,17 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	rewards := make([]uint64, len(state.Validators))
 	penalties := make([]uint64, len(state.Validators))
 	epoch := helpers.PrevEpoch(state)
-	count, err := helpers.EpochCommitteeCount(state, epoch)
+	count, err := helpers.CommitteeCount(state, epoch)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get epoch committee count: %v", err)
 	}
-	startShard, err := helpers.EpochStartShard(state, epoch)
+	startShard, err := helpers.StartShard(state, epoch)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get epoch start shard: %v", err)
 	}
 	for i := uint64(0); i < count; i++ {
 		shard := (startShard + i) % params.BeaconConfig().ShardCount
-		committee, err := helpers.CrosslinkCommitteeAtEpoch(state, epoch, shard)
+		committee, err := helpers.CrosslinkCommittee(state, epoch, shard)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get crosslink's committee: %v", err)
 		}

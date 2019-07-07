@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"strings"
 	"testing"
@@ -22,12 +23,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		CacheTreeHash: false,
 	})
+	logrus.SetOutput(ioutil.Discard) // Ignore "validator activated" logs
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
@@ -428,37 +431,6 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		)
 	}
 }
-
-func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
-	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
-	registry := []*pb.Validator{}
-	currentSlot := uint64(0)
-
-	want := fmt.Sprintf(
-		"number of proposer slashings (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxProposerSlashings+1,
-		params.BeaconConfig().MaxProposerSlashings,
-	)
-	beaconState := &pb.BeaconState{
-		Validators: registry,
-		Slot:       currentSlot,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			ProposerSlashings: slashings,
-		},
-	}
-
-	if _, err := blocks.ProcessProposerSlashings(
-
-		beaconState,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 	registry := make([]*pb.Validator, 2)
 	currentSlot := uint64(0)
@@ -486,7 +458,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 	want := "mismatched header epochs"
 	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -521,7 +493,7 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	if _, err := blocks.ProcessProposerSlashings(
 
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -568,7 +540,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 
 	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -624,7 +596,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	newState, err := blocks.ProcessProposerSlashings(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	)
 	if err != nil {
@@ -639,50 +611,21 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 }
 func TestSlashableAttestationData_CanSlash(t *testing.T) {
 	att1 := &pb.AttestationData{
-		TargetEpoch: 1,
-		SourceRoot:  []byte{'A'},
+		Target: &pb.Checkpoint{Epoch: 1},
+		Source: &pb.Checkpoint{Root: []byte{'A'}},
 	}
 	att2 := &pb.AttestationData{
-		TargetEpoch: 1,
-		SourceRoot:  []byte{'B'},
+		Target: &pb.Checkpoint{Epoch: 1},
+		Source: &pb.Checkpoint{Root: []byte{'B'}},
 	}
 	if !blocks.IsSlashableAttestationData(att1, att2) {
 		t.Error("atts should have been slashable")
 	}
-	att1.TargetEpoch = 4
-	att1.SourceEpoch = 2
-	att2.SourceEpoch = 3
+	att1.Target.Epoch = 4
+	att1.Source.Epoch = 2
+	att2.Source.Epoch = 3
 	if !blocks.IsSlashableAttestationData(att1, att2) {
 		t.Error("atts should have been slashable")
-	}
-}
-
-func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
-	slashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
-	registry := []*pb.Validator{}
-	currentSlot := uint64(0)
-
-	beaconState := &pb.BeaconState{
-		Validators: registry,
-		Slot:       currentSlot,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			AttesterSlashings: slashings,
-		},
-	}
-	want := fmt.Sprintf(
-		"number of attester slashings (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxAttesterSlashings+1,
-		params.BeaconConfig().MaxAttesterSlashings,
-	)
-
-	if _, err := blocks.ProcessAttesterSlashings(
-		beaconState,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -691,8 +634,8 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -700,8 +643,8 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 1,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 1},
 					Crosslink: &pb.Crosslink{
 						Shard: 3,
 					},
@@ -725,7 +668,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 
 	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -737,8 +680,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -748,8 +691,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -775,7 +718,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 
 	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -785,23 +728,23 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
 				},
-				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
+				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
 				},
-				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+1),
+				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			},
 		},
 	}
@@ -811,7 +754,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 
 	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -839,8 +782,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			Attestation_1: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 1,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 1},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -849,8 +792,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 			},
 			Attestation_2: &pb.IndexedAttestation{
 				Data: &pb.AttestationData{
-					SourceEpoch: 0,
-					TargetEpoch: 0,
+					Source: &pb.Checkpoint{Epoch: 0},
+					Target: &pb.Checkpoint{Epoch: 0},
 					Crosslink: &pb.Crosslink{
 						Shard: 4,
 					},
@@ -876,7 +819,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	newState, err := blocks.ProcessAttesterSlashings(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	)
 	if err != nil {
@@ -898,35 +841,11 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
-	attestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1)
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-	state := &pb.BeaconState{}
-
-	want := fmt.Sprintf(
-		"number of attestations in block (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxAttestations+1,
-		params.BeaconConfig().MaxAttestations,
-	)
-
-	if _, err := blocks.ProcessBlockAttestations(
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
+func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -955,16 +874,16 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot,
 	)
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
+func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	helpers.ClearActiveIndicesCache()
 	helpers.ClearActiveCountCache()
 	helpers.ClearStartShardCache()
@@ -972,7 +891,8 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
+				Source: &pb.Checkpoint{Epoch: 0},
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -989,31 +909,32 @@ func TestProcessBlockAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
 
 	want := fmt.Sprintf(
 		"expected target epoch %d == %d or %d",
-		attestations[0].Data.TargetEpoch,
+		attestations[0].Data.Target.Epoch,
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
 	)
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
+func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 1,
+				Target: &pb.Checkpoint{Epoch: 0},
+				Source: &pb.Checkpoint{Epoch: 1},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -1042,41 +963,41 @@ func TestProcessBlockAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	want := fmt.Sprintf(
 		"expected source epoch %d, received %d",
 		helpers.CurrentEpoch(beaconState),
-		attestations[0].Data.SourceEpoch,
+		attestations[0].Data.Source.Epoch,
 	)
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.SourceEpoch = helpers.CurrentEpoch(beaconState)
-	block.Body.Attestations[0].Data.SourceRoot = []byte{}
+	block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
+	block.Body.Attestations[0].Data.Source.Root = []byte{}
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
 		beaconState.CurrentJustifiedCheckpoint.Root,
-		attestations[0].Data.SourceRoot,
+		attestations[0].Data.Source.Root,
 	)
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
+func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 1,
+				Source: &pb.Checkpoint{Epoch: 1},
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -1093,6 +1014,7 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousCrosslinks = []*pb.Crosslink{
 		{
@@ -1105,42 +1027,41 @@ func TestProcessBlockAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	want := fmt.Sprintf(
 		"expected source epoch %d, received %d",
 		helpers.PrevEpoch(beaconState),
-		attestations[0].Data.SourceEpoch,
+		attestations[0].Data.Source.Epoch,
 	)
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	block.Body.Attestations[0].Data.SourceEpoch = helpers.PrevEpoch(beaconState)
-	block.Body.Attestations[0].Data.SourceRoot = []byte{}
+	block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
+	block.Body.Attestations[0].Data.Source.Root = []byte{}
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
 		beaconState.PreviousJustifiedCheckpoint.Root,
-		attestations[0].Data.SourceRoot,
+		attestations[0].Data.Source.Root,
 	)
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
+func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 0,
-				SourceRoot:  []byte("hello-world"),
+				Source: &pb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard: 0,
 				},
@@ -1168,18 +1089,18 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := "mismatched parent crosslink root"
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
 	block.Body.Attestations[0].Data.Crosslink.StartEpoch = 0
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -1192,24 +1113,23 @@ func TestProcessBlockAttestations_CrosslinkMismatches(t *testing.T) {
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = encoded[:]
 
 	want = fmt.Sprintf("expected data root %#x == ZERO_HASH", encoded)
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestProcessBlockAttestations_OK(t *testing.T) {
+func TestProcessAttestations_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				TargetEpoch: 0,
-				SourceEpoch: 0,
-				SourceRoot:  []byte("hello-world"),
+				Source: &pb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+				Target: &pb.Checkpoint{Epoch: 0},
 				Crosslink: &pb.Crosslink{
 					Shard:      0,
 					StartEpoch: 0,
@@ -1246,9 +1166,9 @@ func TestProcessBlockAttestations_OK(t *testing.T) {
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
-	if _, err := blocks.ProcessBlockAttestations(
+	if _, err := blocks.ProcessAttestations(
 		beaconState,
-		block,
+		block.Body,
 		false,
 	); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -1307,8 +1227,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	attestation := &pb.Attestation{
 		Signature: []byte("signed"),
 		Data: &pb.AttestationData{
-			SourceEpoch: 0,
-			TargetEpoch: 0,
+			Source: &pb.Checkpoint{Epoch: 0},
+			Target: &pb.Checkpoint{Epoch: 0},
 			Crosslink: &pb.Crosslink{
 				Shard: 3,
 			},
@@ -1337,11 +1257,11 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	indexedAtt1 := &pb.IndexedAttestation{
-		CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxIndicesPerAttestation+5),
+		CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+5),
 		CustodyBit_1Indices: []uint64{},
 	}
 
-	for i := uint64(0); i < params.BeaconConfig().MaxIndicesPerAttestation+5; i++ {
+	for i := uint64(0); i < params.BeaconConfig().MaxValidatorsPerCommittee+5; i++ {
 		indexedAtt1.CustodyBit_0Indices[i] = i
 	}
 
@@ -1355,29 +1275,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: make([]*pb.Deposit, params.BeaconConfig().MaxDeposits+1),
-		},
-	}
-	beaconState := &pb.BeaconState{
-		Eth1Data: &pb.Eth1Data{
-			DepositCount: params.BeaconConfig().MaxDeposits,
-		},
-		Eth1DepositIndex: 0,
-	}
-	want := "exceeds allowed threshold"
-	if _, err := blocks.ProcessValidatorDeposits(
-		beaconState,
-		block,
-		false, /* verifySignatures */
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error: %s, received %v", want, err)
-	}
-}
-
-func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
+func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
 			Pubkey:    []byte{1, 2, 3},
@@ -1412,16 +1310,16 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		},
 	}
 	want := "deposit root did not verify"
-	if _, err := blocks.ProcessValidatorDeposits(
+	if _, err := blocks.ProcessDeposits(
 		beaconState,
-		block,
+		block.Body,
 		false, /* verifySignatures */
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
 
-func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
+func TestProcessDeposits_ProcessCorrectly(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
 			Pubkey:    []byte{1, 2, 3},
@@ -1466,9 +1364,9 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 			BlockHash:   root[:],
 		},
 	}
-	newState, err := blocks.ProcessValidatorDeposits(
+	newState, err := blocks.ProcessDeposits(
 		beaconState,
-		block,
+		block.Body,
 		false, /* verifySignatures */
 	)
 	if err != nil {
@@ -1640,7 +1538,7 @@ func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
+func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
@@ -1663,16 +1561,15 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	want := "non-active validator cannot exit"
 
 	if _, err := blocks.ProcessVoluntaryExits(
-
 		state,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
+func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			Epoch: 10,
@@ -1698,14 +1595,14 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 	if _, err := blocks.ProcessVoluntaryExits(
 
 		state,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestProcessValidatorExits_NotActiveLongEnoughToExit(t *testing.T) {
+func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
@@ -1731,14 +1628,14 @@ func TestProcessValidatorExits_NotActiveLongEnoughToExit(t *testing.T) {
 	if _, err := blocks.ProcessVoluntaryExits(
 
 		state,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
+func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
@@ -1761,7 +1658,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 			VoluntaryExits: exits,
 		},
 	}
-	newState, err := blocks.ProcessVoluntaryExits(state, block, false)
+	newState, err := blocks.ProcessVoluntaryExits(state, block.Body, false)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
@@ -1769,65 +1666,6 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
-	}
-}
-
-func TestProcessBeaconTransfers_ThresholdReached(t *testing.T) {
-	transfers := make([]*pb.Transfer, params.BeaconConfig().MaxTransfers+1)
-	registry := []*pb.Validator{}
-	state := &pb.BeaconState{
-		Validators: registry,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Transfers: transfers,
-		},
-	}
-
-	want := fmt.Sprintf(
-		"number of transfers (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxTransfers+1,
-		params.BeaconConfig().MaxTransfers,
-	)
-
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBeaconTransfers_DuplicateTransfer(t *testing.T) {
-	testConfig := params.BeaconConfig()
-	testConfig.MaxTransfers = 2
-	params.OverrideBeaconConfig(testConfig)
-	transfers := []*pb.Transfer{
-		{
-			Amount: 1,
-		},
-		{
-			Amount: 1,
-		},
-	}
-	registry := []*pb.Validator{}
-	state := &pb.BeaconState{
-		Validators: registry,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Transfers: transfers,
-		},
-	}
-
-	want := "duplicate transfer"
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -1866,7 +1704,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	)
 	if _, err := blocks.ProcessTransfers(
 		state,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -1885,7 +1723,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	)
 	if _, err := blocks.ProcessTransfers(
 		state,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -1903,7 +1741,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	want = "over max transfer"
 	if _, err := blocks.ProcessTransfers(
 		state,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -1927,7 +1765,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	want = "invalid public key"
 	if _, err := blocks.ProcessTransfers(
 		state,
-		block,
+		block.Body,
 		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -1985,7 +1823,7 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 	state.Validators[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
 	newState, err := blocks.ProcessTransfers(
 		state,
-		block,
+		block.Body,
 		false,
 	)
 	if err != nil {
