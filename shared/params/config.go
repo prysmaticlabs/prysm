@@ -5,6 +5,8 @@ package params
 import (
 	"math/big"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -71,12 +73,12 @@ type BeaconChainConfig struct {
 	MaxTransfers         uint64 `yaml:"MAX_TRANSFERS"`          // MaxTransfers defines the maximum number of balance transfers in a block.
 
 	// BLS domain values.
-	DomainBeaconProposer uint64 `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
-	DomainRandao         uint64 `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
-	DomainAttestation    uint64 `yaml:"DOMAIN_ATTESTATION"`     // DomainAttestation defines the BLS signature domain for attestation verification.
-	DomainDeposit        uint64 `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
-	DomainVoluntaryExit  uint64 `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
-	DomainTransfer       uint64 `yaml:"DOMAIN_TRANSFER"`        // DomainTransfer defines the BLS signature domain for transfer verification.
+	DomainBeaconProposer []byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
+	DomainRandao         []byte `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
+	DomainAttestation    []byte `yaml:"DOMAIN_ATTESTATION"`     // DomainAttestation defines the BLS signature domain for attestation verification.
+	DomainDeposit        []byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
+	DomainVoluntaryExit  []byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
+	DomainTransfer       []byte `yaml:"DOMAIN_TRANSFER"`        // DomainTransfer defines the BLS signature domain for transfer verification.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -170,12 +172,12 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxTransfers:         0,
 
 	// BLS domain values.
-	DomainBeaconProposer: 0,
-	DomainRandao:         1,
-	DomainAttestation:    2,
-	DomainDeposit:        3,
-	DomainVoluntaryExit:  4,
-	DomainTransfer:       5,
+	DomainBeaconProposer: bytesutil.Bytes4(0),
+	DomainRandao:         bytesutil.Bytes4(1),
+	DomainAttestation:    bytesutil.Bytes4(2),
+	DomainDeposit:        bytesutil.Bytes4(3),
+	DomainVoluntaryExit:  bytesutil.Bytes4(4),
+	DomainTransfer:       bytesutil.Bytes4(5),
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
@@ -288,13 +290,13 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
 	minimalConfig.MaxTransfers = 0
-	minimalConfig.DomainBeaconProposer = 0
-	minimalConfig.DomainRandao = 1
-	minimalConfig.DomainAttestation = 2
-	minimalConfig.DomainDeposit = 3
-	minimalConfig.DomainVoluntaryExit = 4
-	minimalConfig.DomainTransfer = 5
-	minimalConfig.MinGenesisTime = 1578009600
+	minimalConfig.DomainBeaconProposer = bytesutil.Bytes4(0)
+	minimalConfig.DomainRandao = bytesutil.Bytes4(1)
+	minimalConfig.DomainAttestation = bytesutil.Bytes4(2)
+	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
+	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
+	minimalConfig.DomainTransfer = bytesutil.Bytes4(5)
+	minimalConfig.MinGenesisTime = 0
 
 	return &minimalConfig
 }
