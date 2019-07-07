@@ -69,13 +69,13 @@ message PendingAttestation {
 }
 
 message Attestation {
-  AttestationData data = 1;
   // Bitfield representation of validator indices that have voted exactly
   // the same vote and have been aggregated into this attestation.
   // Spec type: Bitlist[4096]
-  bytes aggregation_bits = 2 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+  AttestationData data = 2;
   // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data. Not used in phase 0.
-  bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"4096\""];
+  bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
   // 96 byte BLS aggregate signature.
   bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
@@ -207,13 +207,6 @@ message BeaconBlockBody {
   repeated VoluntaryExit voluntary_exits = 8 [(gogoproto.moretags) = "ssz-max:\"16\""];
   // At most MAX_TRANSFERS.
   repeated Transfer transfers = 9 [(gogoproto.moretags) = "ssz-max:\"0\""];
-}
-
-message SlashableAttestation {
-  repeated uint64 validator_indices = 1;
-  bytes custody_bits = 2 [(gogoproto.moretags) = "ssz-size:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];;
-  AttestationData data = 3;
-  bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 message DepositData {
