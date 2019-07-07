@@ -16,8 +16,6 @@ const positionWindowSize = int8(4)
 const pivotViewSize = seedSize + roundSize
 const totalSize = seedSize + roundSize + positionWindowSize
 
-var maxShuffleListSize uint64 = 1 << 40
-
 // SplitIndices splits a list into n pieces.
 func SplitIndices(l []uint64, n uint64) [][]uint64 {
 	var divided [][]uint64
@@ -70,10 +68,6 @@ func innerShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffle 
 	if index >= indexCount {
 		return 0, fmt.Errorf("input index %d out of bounds: %d",
 			index, indexCount)
-	}
-	if indexCount > maxShuffleListSize {
-		return 0, fmt.Errorf("list size %d out of bounds",
-			indexCount)
 	}
 	rounds := uint8(params.BeaconConfig().ShuffleRoundCount)
 	round := uint8(0)
@@ -166,10 +160,6 @@ func UnshuffleList(input []uint64, seed [32]byte) ([]uint64, error) {
 func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, error) {
 	if len(input) <= 1 {
 		return input, nil
-	}
-	if uint64(len(input)) > maxShuffleListSize {
-		return nil, fmt.Errorf("list size %d out of bounds",
-			len(input))
 	}
 	rounds := uint8(params.BeaconConfig().ShuffleRoundCount)
 	if rounds == 0 {
