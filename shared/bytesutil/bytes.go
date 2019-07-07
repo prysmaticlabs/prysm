@@ -65,7 +65,7 @@ func Bytes32(x uint64) []byte {
 // from a byte array.
 func FromBytes4(x []byte) uint64 {
 	empty4bytes := make([]byte, 4)
-	return binary.LittleEndian.Uint64(append(x, empty4bytes...))
+	return binary.LittleEndian.Uint64(append(x[:4], empty4bytes...))
 }
 
 // FromBytes8 returns an integer which is stored in the little-endian format(8, 'little')
