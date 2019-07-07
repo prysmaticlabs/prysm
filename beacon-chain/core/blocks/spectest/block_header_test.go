@@ -38,7 +38,7 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 
 			post, err := blocks.ProcessBlockHeader(tt.Pre, tt.Block, true)
 
-			if len(tt.Post.Validators) == 0 {
+			if tt.Post == nil {
 				// Note: This doesn't test anything worthwhile. It essentially tests
 				// that *any* error has occurred, not any specific error.
 				if err == nil {

@@ -38,7 +38,7 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 			postState, err := blocks.ProcessVoluntaryExits(tt.Pre, body, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
-			if len(tt.Post.Validators) == 0 {
+			if tt.Post == nil {
 				if err == nil {
 					t.Fatal("Did not fail when expected")
 				}
