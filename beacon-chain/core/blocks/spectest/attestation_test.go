@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -38,28 +37,14 @@ func runAttestationTest(t *testing.T, filename string) {
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
-			pre := &pb.BeaconState{}
-			err := testutil.ConvertToPb(tt.Pre, pre)
-			if err != nil {
-				t.Fatal(err)
-			}
 
-			att := &pb.Attestation{}
-			if err := testutil.ConvertToPb(tt.Attestation, att); err != nil {
-				t.Fatal(err)
-			}
-
-			block := &pb.BeaconBlock{
-				Body: &pb.BeaconBlockBody{
-					Attestations: []*pb.Attestation{
-						att,
-					},
+			body := &pb.BeaconBlockBody{
+				Attestations: []*pb.Attestation{
+					tt.Attestation,
 				},
 			}
 
-			post, err := blocks.ProcessAttestations(pre, block.Body,
-				true /*verify sig*/)
-
+			post, err := blocks.ProcessAttestations(tt.Pre, body, true /*verify sig*/)
 			if !reflect.ValueOf(tt.Post).IsValid() {
 				// Note: This doesn't test anything worthwhile. It essentially tests
 				// that *any* error has occurred, not any specific error.
@@ -68,10 +53,9 @@ func runAttestationTest(t *testing.T, filename string) {
 				}
 				return
 			}
-
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
-			if len(tt.Post.Validators) == 0 {
+			if tt.Post == nil {
 				if err == nil {
 					t.Fatal("Did not fail when expected")
 				}
@@ -81,12 +65,8 @@ func runAttestationTest(t *testing.T, filename string) {
 				t.Fatal(err)
 			}
 
-			expectedPost := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Post, expectedPost); err != nil {
-				t.Fatal(err)
-			}
-			if !proto.Equal(post, expectedPost) {
-				diff, _ := messagediff.PrettyDiff(post, expectedPost)
+			if !proto.Equal(post, tt.Post) {
+				diff, _ := messagediff.PrettyDiff(post, tt.Post)
 				t.Log(diff)
 				t.Fatal("Post state does not match expected")
 			}

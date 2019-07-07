@@ -10,9 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func runDepositTest(t *testing.T, filename string) {
@@ -37,26 +35,12 @@ func runDepositTest(t *testing.T, filename string) {
 				// TOOD(2857): uncompressed signature format is not supported
 				t.Skip()
 			}
-			preState := &pb.BeaconState{}
-			if err = testutil.ConvertToPb(tt.Pre, preState); err != nil {
-				t.Fatal(err)
-			}
 
-			deposit := &pb.Deposit{}
-			if err = testutil.ConvertToPb(tt.Deposit, deposit); err != nil {
-				t.Fatal(err)
-			}
-
-			expectedPost := &pb.BeaconState{}
-			if err = testutil.ConvertToPb(tt.Post, expectedPost); err != nil {
-				t.Fatal(err)
-			}
-
-			valMap := stateutils.ValidatorIndexMap(preState)
-			post, err := blocks.ProcessDeposit(preState, deposit, valMap, true, true)
+			valMap := stateutils.ValidatorIndexMap(tt.Pre)
+			post, err := blocks.ProcessDeposit(tt.Pre, tt.Deposit, valMap, true, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
-			if len(expectedPost.Validators) == 0 {
+			if len(tt.Post.Validators) == 0 {
 				if err == nil {
 					t.Fatal("Did not fail when expected")
 				}
@@ -66,7 +50,7 @@ func runDepositTest(t *testing.T, filename string) {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(post, expectedPost) {
+			if !reflect.DeepEqual(post, tt.Post) {
 				t.Error("Post state does not match expected")
 			}
 		})

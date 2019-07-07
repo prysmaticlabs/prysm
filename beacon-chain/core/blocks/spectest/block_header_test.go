@@ -9,9 +9,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 // Block header test is actually a full block processing test. Not sure why it
@@ -36,25 +35,10 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
-			pre := &pb.BeaconState{}
-			err := testutil.ConvertToPb(tt.Pre, pre)
-			if err != nil {
-				t.Fatal(err)
-			}
 
-			expectedPost := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Post, expectedPost); err != nil {
-				t.Fatal(err)
-			}
+			post, err := blocks.ProcessBlockHeader(tt.Pre, tt.Block, true)
 
-			block := &pb.BeaconBlock{}
-			if err := testutil.ConvertToPb(tt.Block, block); err != nil {
-				t.Fatal(err)
-			}
-
-			post, err := blocks.ProcessBlockHeader(pre, block, true)
-
-			if len(expectedPost.Validators) == 0 {
+			if len(tt.Post.Validators) == 0 {
 				// Note: This doesn't test anything worthwhile. It essentially tests
 				// that *any* error has occurred, not any specific error.
 				if err == nil {
@@ -66,7 +50,9 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 				t.Fatal(err)
 			}
 
-			if !proto.Equal(post, expectedPost) {
+			if !proto.Equal(post, tt.Post) {
+				diff, _ := messagediff.PrettyDiff(post, tt.Post)
+				t.Log(diff)
 				t.Fatal("Post state does not match expected")
 			}
 		})

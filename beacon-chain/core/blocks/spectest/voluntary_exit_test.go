@@ -2,15 +2,16 @@ package spectest
 
 import (
 	"io/ioutil"
-	"reflect"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runVoluntaryExitTest(t *testing.T, filename string) {
@@ -30,28 +31,14 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
-			pre := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Pre, pre); err != nil {
-				t.Fatal(err)
-			}
+			helpers.ClearAllCaches()
 
-			expectedPost := &pb.BeaconState{}
-			if err = testutil.ConvertToPb(tt.Post, expectedPost); err != nil {
-				t.Fatal(err)
-			}
+			body := &pb.BeaconBlockBody{VoluntaryExits: []*pb.VoluntaryExit{tt.VoluntaryExit}}
 
-			exit := &pb.VoluntaryExit{}
-			if err = testutil.ConvertToPb(tt.VoluntaryExit, exit); err != nil {
-				t.Fatal(err)
-			}
-
-			block := &pb.BeaconBlock{Body: &pb.BeaconBlockBody{VoluntaryExits: []*pb.VoluntaryExit{exit}}}
-
-			var postState *pb.BeaconState
-			postState, err = blocks.ProcessVoluntaryExits(pre, block.Body, true)
+			postState, err := blocks.ProcessVoluntaryExits(tt.Pre, body, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
-			if len(expectedPost.Validators) == 0 {
+			if len(tt.Post.Validators) == 0 {
 				if err == nil {
 					t.Fatal("Did not fail when expected")
 				}
@@ -61,8 +48,10 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(postState, expectedPost) {
-				t.Error("Post state does not match expected")
+			if !proto.Equal(postState, tt.Post) {
+				diff, _ := messagediff.PrettyDiff(postState, tt.Post)
+				t.Log(diff)
+				t.Fatal("Post state does not match expected")
 			}
 		})
 	}
