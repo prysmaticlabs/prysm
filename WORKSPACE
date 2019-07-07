@@ -1102,3 +1102,18 @@ go_repository(
     commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",
     importpath = "gopkg.in/d4l3k/messagediff.v1",
 )
+
+go_repository(
+    name = "com_github_prysmaticlabs_go_bitfield",
+    commit = "66dcdec9762a9f5935d9466b18f4bee852d1b091",
+    importpath = "github.com/prysmaticlabs/go-bitfield",
+)
+
+go_repository(
+    name = "com_github_gogo_protobuf",
+    commit = "c91f1861c28312f505e13bd3e1c90d2088a670c7",
+    importpath = "github.com/gogo/protobuf",
+    # Using fork until https://github.com/gogo/protobuf/pull/582 is merged.
+    remote = "https://github.com/prestonvanloon/protobuf.git",
+    vcs = "git",
+)
