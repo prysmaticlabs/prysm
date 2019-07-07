@@ -37,7 +37,6 @@ func runAttestationTest(t *testing.T, filename string) {
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
-
 			body := &pb.BeaconBlockBody{
 				Attestations: []*pb.Attestation{
 					tt.Attestation,

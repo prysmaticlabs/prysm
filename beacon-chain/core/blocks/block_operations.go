@@ -481,7 +481,6 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	}
 	minInclusionCheck := attestationSlot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot
 	epochInclusionCheck := beaconState.Slot <= attestationSlot+params.BeaconConfig().SlotsPerEpoch
-
 	if !minInclusionCheck {
 		return nil, fmt.Errorf(
 			"attestation slot %d + inclusion delay %d > state slot %d",
@@ -526,13 +525,22 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.CurrentEpoch(beaconState)
-		parentCrosslink = beaconState.CurrentCrosslinks[data.Crosslink.Shard]
+		crosslinkShard := data.Crosslink.Shard
+		if int(crosslinkShard) >= len(beaconState.CurrentCrosslinks) {
+			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
+		}
+
+		parentCrosslink = beaconState.CurrentCrosslinks[crosslinkShard]
 		beaconState.CurrentEpochAttestations = append(beaconState.CurrentEpochAttestations, pendingAtt)
 	} else {
 		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.PrevEpoch(beaconState)
-		parentCrosslink = beaconState.PreviousCrosslinks[data.Crosslink.Shard]
+		crosslinkShard := data.Crosslink.Shard
+		if int(crosslinkShard) >= len(beaconState.PreviousCrosslinks) {
+			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
+		}
+		parentCrosslink = beaconState.PreviousCrosslinks[crosslinkShard]
 		beaconState.PreviousEpochAttestations = append(beaconState.PreviousEpochAttestations, pendingAtt)
 	}
 	if data.Source.Epoch != ffgSourceEpoch {
