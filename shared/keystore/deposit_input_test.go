@@ -51,7 +51,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dom := bytesutil.FromBytes8(params.BeaconConfig().DomainDeposit)
+	dom := bytesutil.FromBytes4(params.BeaconConfig().DomainDeposit)
 	if !sig.Verify(buf, k1.PublicKey, dom) {
 		t.Error("Invalid proof of proofOfPossession signature")
 	}

@@ -32,7 +32,7 @@ func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositData, error) 
 	if err != nil {
 		return nil, err
 	}
-	domain := bytesutil.FromBytes8(params.BeaconConfig().DomainDeposit)
+	domain := bytesutil.FromBytes4(params.BeaconConfig().DomainDeposit)
 	di.Signature = depositKey.SecretKey.Sign(buf, domain).Marshal()
 
 	return di, nil
