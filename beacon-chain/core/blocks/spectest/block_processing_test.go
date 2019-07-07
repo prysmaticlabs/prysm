@@ -51,15 +51,23 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 			stateConfig := state.DefaultConfig()
 			s := tt.Pre // Pre-state
 			for _, b := range tt.Blocks {
-				if tt.Pre, err = state.ExecuteStateTransition(ctx, tt.Pre, b, stateConfig); err != nil {
+				tt.Pre, err = state.ExecuteStateTransition(ctx, tt.Pre, b, stateConfig)
+				if tt.Post == nil {
+					if err == nil {
+						t.Fatal("Transition did not fail despite being invalid")
+					}
+					continue
+				}
+				if err != nil {
 					t.Fatalf("Transition failed with block at slot %d: %v", b.Slot, err)
 				}
 			}
-
-			if !proto.Equal(s, tt.Post) {
-				diff, _ := messagediff.PrettyDiff(s, tt.Post)
-				t.Log(diff)
-				t.Fatal("Post state does not match expected")
+			if tt.Post != nil {
+				if !proto.Equal(s, tt.Post) {
+					diff, _ := messagediff.PrettyDiff(s, tt.Post)
+					t.Log(diff)
+					t.Fatal("Post state does not match expected")
+				}
 			}
 		})
 	}

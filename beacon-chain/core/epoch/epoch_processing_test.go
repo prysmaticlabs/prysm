@@ -593,7 +593,7 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 	}
 }
 
-func TestProcessJustificationFinalization_LessThan2ndEpoch(t *testing.T) {
+func TestProcessJustificationAndFinalization_LessThan2ndEpoch(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch,
 	}
@@ -606,7 +606,7 @@ func TestProcessJustificationFinalization_LessThan2ndEpoch(t *testing.T) {
 	}
 }
 
-func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
+func TestProcessJustificationAndFinalization_CantJustifyFinalize(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
 	state := &pb.BeaconState{
@@ -633,7 +633,7 @@ func TestProcessJustificationFinalization_CantJustifyFinalize(t *testing.T) {
 	}
 }
 
-func TestProcessJustificationFinalization_NoBlockRootCurrentEpoch(t *testing.T) {
+func TestProcessJustificationAndFinalization_NoBlockRootCurrentEpoch(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
@@ -663,7 +663,7 @@ func TestProcessJustificationFinalization_NoBlockRootCurrentEpoch(t *testing.T) 
 	}
 }
 
-func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
+func TestProcessJustificationAndFinalization_JustifyCurrentEpoch(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
@@ -699,16 +699,20 @@ func TestProcessJustificationFinalization_JustifyCurrentEpoch(t *testing.T) {
 		t.Errorf("Wanted justified epoch: %d, got: %d",
 			2, newState.CurrentJustifiedCheckpoint.Epoch)
 	}
+	if newState.PreviousJustifiedCheckpoint.Epoch != 2 {
+		t.Errorf("Wanted previous justified epoch: %d, got: %d",
+			2, newState.PreviousJustifiedCheckpoint.Epoch)
+	}
 	if !bytes.Equal(newState.FinalizedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
 		t.Errorf("Wanted current finalized root: %v, got: %v",
 			params.BeaconConfig().ZeroHash, newState.FinalizedCheckpoint.Root)
 	}
 	if newState.FinalizedCheckpoint.Epoch != 0 {
-		t.Errorf("Wanted finalized epoch: %d, got: %d", 0, newState.FinalizedCheckpoint.Epoch)
+		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpoint.Epoch)
 	}
 }
 
-func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
+func TestProcessJustificationAndFinalization_JustifyPrevEpoch(t *testing.T) {
 	helpers.ClearAllCaches()
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
@@ -740,6 +744,10 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
 			[]byte{byte(128)}, newState.CurrentJustifiedCheckpoint.Root)
 	}
+	if newState.PreviousJustifiedCheckpoint.Epoch != 2 {
+		t.Errorf("Wanted previous justified epoch: %d, got: %d",
+			2, newState.PreviousJustifiedCheckpoint.Epoch)
+	}
 	if newState.CurrentJustifiedCheckpoint.Epoch != 2 {
 		t.Errorf("Wanted justified epoch: %d, got: %d",
 			2, newState.CurrentJustifiedCheckpoint.Epoch)
@@ -749,7 +757,7 @@ func TestProcessJustificationFinalization_JustifyPrevEpoch(t *testing.T) {
 			params.BeaconConfig().ZeroHash, newState.FinalizedCheckpoint.Root)
 	}
 	if newState.FinalizedCheckpoint.Epoch != 0 {
-		t.Errorf("Wanted finalized epoch: %d, got: %d", 0, newState.FinalizedCheckpoint.Epoch)
+		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpoint.Epoch)
 	}
 }
 
@@ -889,7 +897,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 	}
 	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
 				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
 		}
 	}
@@ -938,8 +946,24 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 		}
 		// Since all these validators attested, they shouldn't get penalized.
 		if penalties[i] != 0 {
-			t.Errorf("Wanted penalty balance %d, got %d",
-				0, penalties[i])
+			t.Errorf("Wanted penalty balance 0, got %d", penalties[i])
+		}
+	}
+
+	nonAttestedIndices := []uint64{12, 23, 45, 79}
+	for _, i := range nonAttestedIndices {
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
+		wanted := base
+		// Since all these validators did not attest, they shouldn't get rewarded.
+		if rewards[i] != 0 {
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
+		}
+		// Base penalties for not attesting.
+		if penalties[i] != wanted {
+			t.Errorf("Wanted penalty balance %d, got %d", wanted, penalties[i])
 		}
 	}
 }
@@ -1036,7 +1060,10 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		}
 		// Since no one attested, all the validators should get penalized the same
 		// it's 3 times the penalized amount because source, target and head.
-		base, _ := baseReward(state, i)
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
 		wanted := 3 * base
 		if penalties[i] != wanted {
 			t.Errorf("Wanted penalty balance %d, got %d",
@@ -1079,15 +1106,21 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
-
 	attestedBalance, err := AttestingBalance(state, atts)
-	totalBalance, _ := helpers.TotalActiveBalance(state)
+	if err != nil {
+		t.Error(err)
+	}
+	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
 	for _, i := range attestedIndices {
-		base, _ := baseReward(state, i)
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
 		// Base rewards for getting source right
 		wanted := 3 * (base * attestedBalance / totalBalance)
 		// Base rewards for proposer and attesters working together getting attestation
@@ -1099,8 +1132,107 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		}
 		// Since all these validators attested, they shouldn't get penalized.
 		if penalties[i] != 0 {
-			t.Errorf("Wanted penalty balance %d, got %d",
-				0, penalties[i])
+			t.Errorf("Wanted penalty balance 0, got %d", penalties[i])
+		}
+	}
+
+	nonAttestedIndices := []uint64{12, 23, 45, 79}
+	for _, i := range nonAttestedIndices {
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
+		wanted := 3 * base
+		// Since all these validators did not attest, they shouldn't get rewarded.
+		if rewards[i] != 0 {
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
+		}
+		// Base penalties for not attesting.
+		if penalties[i] != wanted {
+			t.Errorf("Wanted penalty balance %d, got %d", wanted, penalties[i])
+		}
+	}
+}
+
+func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
+	helpers.ClearAllCaches()
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := params.BeaconConfig().DepositsForChainStart / 8
+	state := buildState(e+4, validatorCount)
+	startShard := uint64(960)
+	atts := make([]*pb.PendingAttestation, 3)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &pb.AttestationData{
+				Crosslink: &pb.Crosslink{
+					Shard:    startShard + uint64(i),
+					DataRoot: []byte{'A'},
+				},
+				Target: &pb.Checkpoint{},
+				Source: &pb.Checkpoint{},
+			},
+			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			InclusionDelay:  1,
+		}
+	}
+	state.PreviousEpochAttestations = atts
+	state.FinalizedCheckpoint.Epoch = 0
+	state.CurrentCrosslinks[startShard] = &pb.Crosslink{
+		DataRoot: []byte{'A'},
+	}
+	state.CurrentCrosslinks[startShard+1] = &pb.Crosslink{
+		DataRoot: []byte{'A'},
+	}
+
+	rewards, penalties, err := attestationDelta(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	attestedBalance, err := AttestingBalance(state, atts)
+	if err != nil {
+		t.Error(err)
+	}
+	totalBalance, err := helpers.TotalActiveBalance(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
+	for _, i := range attestedIndices {
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
+		// Base rewards for getting source right
+		wanted := 3 * (base * attestedBalance / totalBalance)
+		// Base rewards for proposer and attesters working together getting attestation
+		// on chain in the fatest manner
+		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
+		wanted += (base - proposerReward) * params.BeaconConfig().MinAttestationInclusionDelay
+		if rewards[i] != wanted {
+			t.Errorf("Wanted reward balance %d, got %d", wanted, rewards[i])
+		}
+		// Since all these validators attested, they shouldn't get penalized.
+		if penalties[i] != 0 {
+			t.Errorf("Wanted penalty balance 0, got %d", penalties[i])
+		}
+	}
+
+	nonAttestedIndices := []uint64{12, 23, 45, 79}
+	for _, i := range nonAttestedIndices {
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
+		wanted := 3 * base
+		// Since all these validators did not attest, they shouldn't get rewarded.
+		if rewards[i] != 0 {
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
+		}
+		// Base penalties for not attesting.
+		if penalties[i] != wanted {
+			t.Errorf("Wanted penalty balance %d, got %d", wanted, penalties[i])
 		}
 	}
 }
@@ -1110,7 +1242,10 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedCheckpoint: &pb.Checkpoint{},
 	}
-	limit, _ := helpers.ValidatorChurnLimit(state)
+	limit, err := helpers.ValidatorChurnLimit(state)
+	if err != nil {
+		t.Error(err)
+	}
 	for i := 0; i < int(limit)+10; i++ {
 		state.Validators = append(state.Validators, &pb.Validator{
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1119,18 +1254,21 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		})
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	newState, _ := ProcessRegistryUpdates(state)
+	newState, err := ProcessRegistryUpdates(state)
+	if err != nil {
+		t.Error(err)
+	}
 	for i, validator := range newState.Validators {
 		if validator.ActivationEligibilityEpoch != currentEpoch {
-			t.Errorf("could not update registry %d, wanted activation eligibility epoch %d got %d",
+			t.Errorf("Could not update registry %d, wanted activation eligibility epoch %d got %d",
 				i, currentEpoch, validator.ActivationEligibilityEpoch)
 		}
 		if i < int(limit) && validator.ActivationEpoch != helpers.DelayedActivationExitEpoch(currentEpoch) {
-			t.Errorf("could not update registry %d, validators failed to activate wanted activation epoch %d got %d",
+			t.Errorf("Could not update registry %d, validators failed to activate: wanted activation epoch %d, got %d",
 				i, helpers.DelayedActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
 		}
 		if i >= int(limit) && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
-			t.Errorf("could not update registry %d, validators should not have been activated wanted activation epoch: %d got %d",
+			t.Errorf("Could not update registry %d, validators should not have been activated, wanted activation epoch: %d, got %d",
 				i, params.BeaconConfig().FarFutureEpoch, validator.ActivationEpoch)
 		}
 	}
@@ -1145,17 +1283,43 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
 				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
 		},
-		Balances: []uint64{
-			params.BeaconConfig().MaxEffectiveBalance,
-			params.BeaconConfig().MaxEffectiveBalance,
+		FinalizedCheckpoint: &pb.Checkpoint{},
+	}
+	newState, err := ProcessRegistryUpdates(state)
+	if err != nil {
+		t.Error(err)
+	}
+	for i, validator := range newState.Validators {
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
+				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
+		}
+	}
+}
+
+func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 0,
+		Validators: []*pb.Validator{
+			{
+				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance: params.BeaconConfig().EjectionBalance - 1,
+			},
+			{
+				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance: params.BeaconConfig().EjectionBalance - 1,
+			},
 		},
 		FinalizedCheckpoint: &pb.Checkpoint{},
 	}
-	newState, _ := ProcessRegistryUpdates(state)
+	newState, err := ProcessRegistryUpdates(state)
+	if err != nil {
+		t.Error(err)
+	}
 	for i, validator := range newState.Validators {
-		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay+1 {
+			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
+				i, params.BeaconConfig().ActivationExitDelay+1, validator.ExitEpoch)
 		}
 	}
 }
@@ -1174,10 +1338,6 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 				ExitEpoch:         exitEpoch,
 				WithdrawableEpoch: exitEpoch + minWithdrawalDelay},
 		},
-		Balances: []uint64{
-			params.BeaconConfig().MaxEffectiveBalance,
-			params.BeaconConfig().MaxEffectiveBalance,
-		},
 		FinalizedCheckpoint: &pb.Checkpoint{},
 	}
 	newState, err := ProcessRegistryUpdates(state)
@@ -1186,7 +1346,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	}
 	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != exitEpoch {
-			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
 				i,
 				exitEpoch,
 				validator.ExitEpoch,
