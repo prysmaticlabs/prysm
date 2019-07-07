@@ -287,7 +287,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
 	}
-	state, err = b.ProcessVolundaryExits(state, body, config.VerifySignatures)
+	state, err = b.ProcessVoluntaryExits(state, body, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
