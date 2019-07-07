@@ -1107,7 +1107,10 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 	}
 
 	attestedBalance, err := AttestingBalance(state, atts)
-	totalBalance, _ := helpers.TotalActiveBalance(state)
+	if err != nil {
+		t.Error(err)
+	}
+	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1187,7 +1190,10 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 	}
 
 	attestedBalance, err := AttestingBalance(state, atts)
-	totalBalance, _ := helpers.TotalActiveBalance(state)
+	if err != nil {
+		t.Error(err)
+	}
+	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1236,7 +1242,10 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedCheckpoint: &pb.Checkpoint{},
 	}
-	limit, _ := helpers.ValidatorChurnLimit(state)
+	limit, err := helpers.ValidatorChurnLimit(state)
+	if err != nil {
+		t.Error(err)
+	}
 	for i := 0; i < int(limit)+10; i++ {
 		state.Validators = append(state.Validators, &pb.Validator{
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1245,7 +1254,10 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		})
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	newState, _ := ProcessRegistryUpdates(state)
+	newState, err := ProcessRegistryUpdates(state)
+	if err != nil {
+		t.Error(err)
+	}
 	for i, validator := range newState.Validators {
 		if validator.ActivationEligibilityEpoch != currentEpoch {
 			t.Errorf("Could not update registry %d, wanted activation eligibility epoch %d got %d",
@@ -1273,7 +1285,10 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 		},
 		FinalizedCheckpoint: &pb.Checkpoint{},
 	}
-	newState, _ := ProcessRegistryUpdates(state)
+	newState, err := ProcessRegistryUpdates(state)
+	if err != nil {
+		t.Error(err)
+	}
 	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
@@ -1297,7 +1312,10 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 		},
 		FinalizedCheckpoint: &pb.Checkpoint{},
 	}
-	newState, _ := ProcessRegistryUpdates(state)
+	newState, err := ProcessRegistryUpdates(state)
+	if err != nil {
+		t.Error(err)
+	}
 	for i, validator := range newState.Validators {
 		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay+1 {
 			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
