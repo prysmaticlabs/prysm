@@ -1,4 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "bazel_skylib",
@@ -44,6 +45,21 @@ http_archive(
     sha256 = "ae72777e383df42f42831413b938f71cbb2fa61637b3246808d75261a2af38a8",
     strip_prefix = "rules_k8s-dda7ab9151cb95f944e59beabaa0d960825ee17c",
     url = "https://github.com/bazelbuild/rules_k8s/archive/dda7ab9151cb95f944e59beabaa0d960825ee17c.tar.gz",
+)
+
+# Override default import in rules_go with special patch until
+# https://github.com/gogo/protobuf/pull/582 is merged.
+git_repository(
+    name = "com_github_gogo_protobuf",
+    commit = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c",  # v1.2.1, as of 2019-03-03
+    patch_args = ["-p1"],
+    patches = [
+        "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
+        "//third_party:com_github_gogo_protobuf-equal.patch",
+    ],
+    remote = "https://github.com/gogo/protobuf",
+    shallow_since = "1550471403 +0200",
+    # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
 load(
@@ -1107,13 +1123,4 @@ go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
     commit = "66dcdec9762a9f5935d9466b18f4bee852d1b091",
     importpath = "github.com/prysmaticlabs/go-bitfield",
-)
-
-go_repository(
-    name = "com_github_gogo_protobuf",
-    commit = "c91f1861c28312f505e13bd3e1c90d2088a670c7",
-    importpath = "github.com/gogo/protobuf",
-    # Using fork until https://github.com/gogo/protobuf/pull/582 is merged.
-    remote = "https://github.com/prestonvanloon/protobuf.git",
-    vcs = "git",
 )
