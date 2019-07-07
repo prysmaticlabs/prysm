@@ -952,7 +952,10 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 
 	nonAttestedIndices := []uint64{12, 23, 45, 79}
 	for _, i := range nonAttestedIndices {
-		base, _ := baseReward(state, i)
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
 		wanted := base
 		// Since all these validators did not attest, they shouldn't get rewarded.
 		if rewards[i] != 0 {
@@ -1057,7 +1060,10 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		}
 		// Since no one attested, all the validators should get penalized the same
 		// it's 3 times the penalized amount because source, target and head.
-		base, _ := baseReward(state, i)
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
 		wanted := 3 * base
 		if penalties[i] != wanted {
 			t.Errorf("Wanted penalty balance %d, got %d",
@@ -1108,7 +1114,10 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 
 	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
 	for _, i := range attestedIndices {
-		base, _ := baseReward(state, i)
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
 		// Base rewards for getting source right
 		wanted := 3 * (base * attestedBalance / totalBalance)
 		// Base rewards for proposer and attesters working together getting attestation
@@ -1126,7 +1135,10 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 
 	nonAttestedIndices := []uint64{12, 23, 45, 79}
 	for _, i := range nonAttestedIndices {
-		base, _ := baseReward(state, i)
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
 		wanted := 3 * base
 		// Since all these validators did not attest, they shouldn't get rewarded.
 		if rewards[i] != 0 {
@@ -1182,7 +1194,10 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 
 	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
 	for _, i := range attestedIndices {
-		base, _ := baseReward(state, i)
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
 		// Base rewards for getting source right
 		wanted := 3 * (base * attestedBalance / totalBalance)
 		// Base rewards for proposer and attesters working together getting attestation
@@ -1200,7 +1215,10 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 
 	nonAttestedIndices := []uint64{12, 23, 45, 79}
 	for _, i := range nonAttestedIndices {
-		base, _ := baseReward(state, i)
+		base, err := baseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
 		wanted := 3 * base
 		// Since all these validators did not attest, they shouldn't get rewarded.
 		if rewards[i] != 0 {
