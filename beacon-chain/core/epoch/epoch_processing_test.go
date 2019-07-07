@@ -708,7 +708,7 @@ func TestProcessJustificationAndFinalization_JustifyCurrentEpoch(t *testing.T) {
 			params.BeaconConfig().ZeroHash, newState.FinalizedCheckpoint.Root)
 	}
 	if newState.FinalizedCheckpoint.Epoch != 0 {
-		t.Errorf("Wanted finalized epoch: %d, got: %d", 0, newState.FinalizedCheckpoint.Epoch)
+		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpoint.Epoch)
 	}
 }
 
@@ -946,21 +946,21 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 		}
 		// Since all these validators attested, they shouldn't get penalized.
 		if penalties[i] != 0 {
-			t.Errorf("Wanted penalty balance %d, got %d",
-				0, penalties[i])
+			t.Errorf("Wanted penalty balance 0, got %d", penalties[i])
 		}
 	}
 
-	nonAttestingIndices := []uint64{12, 23}
-	for _, i := range nonAttestingIndices {
-		// Since all these validators attested, they should get the same rewards.
+	nonAttestedIndices := []uint64{12, 23, 45, 79}
+	for _, i := range nonAttestedIndices {
+		base, _ := baseReward(state, i)
+		wanted := base
+		// Since all these validators did not attest, they shouldn't get rewarded.
 		if rewards[i] != 0 {
-			t.Errorf("Wanted reward balance %d, got %d", 0, rewards[i])
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
 		}
-		want := uint64(50596)
-		if penalties[i] != want {
-			t.Errorf("Wanted penalty balance %d, got %d",
-				want, penalties[i])
+		// Base penalties for not attesting.
+		if penalties[i] != wanted {
+			t.Errorf("Wanted penalty balance %d, got %d", wanted, penalties[i])
 		}
 	}
 }
@@ -1100,13 +1100,13 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
-
 	attestedBalance, err := AttestingBalance(state, atts)
 	totalBalance, _ := helpers.TotalActiveBalance(state)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
 	for _, i := range attestedIndices {
 		base, _ := baseReward(state, i)
 		// Base rewards for getting source right
@@ -1120,8 +1120,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		}
 		// Since all these validators attested, they shouldn't get penalized.
 		if penalties[i] != 0 {
-			t.Errorf("Wanted penalty balance %d, got %d",
-				0, penalties[i])
+			t.Errorf("Wanted penalty balance 0, got %d", penalties[i])
 		}
 	}
 
@@ -1131,8 +1130,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		wanted := 3 * base
 		// Since all these validators did not attest, they shouldn't get rewarded.
 		if rewards[i] != 0 {
-			t.Errorf("Wanted reward balance %d, got %d",
-				0, rewards[i])
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
 		}
 		// Base penalties for not attesting.
 		if penalties[i] != wanted {
@@ -1155,6 +1153,8 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 					Shard:    startShard + uint64(i),
 					DataRoot: []byte{'A'},
 				},
+				Target: &pb.Checkpoint{},
+				Source: &pb.Checkpoint{},
 			},
 			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
 			InclusionDelay:  1,
@@ -1174,13 +1174,13 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
-
 	attestedBalance, err := AttestingBalance(state, atts)
 	totalBalance, _ := helpers.TotalActiveBalance(state)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
 	for _, i := range attestedIndices {
 		base, _ := baseReward(state, i)
 		// Base rewards for getting source right
@@ -1232,15 +1232,15 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	newState, _ := ProcessRegistryUpdates(state)
 	for i, validator := range newState.Validators {
 		if validator.ActivationEligibilityEpoch != currentEpoch {
-			t.Errorf("could not update registry %d, wanted activation eligibility epoch %d got %d",
+			t.Errorf("Could not update registry %d, wanted activation eligibility epoch %d got %d",
 				i, currentEpoch, validator.ActivationEligibilityEpoch)
 		}
 		if i < int(limit) && validator.ActivationEpoch != helpers.DelayedActivationExitEpoch(currentEpoch) {
-			t.Errorf("could not update registry %d, validators failed to activate wanted activation epoch %d got %d",
+			t.Errorf("Could not update registry %d, validators failed to activate: wanted activation epoch %d, got %d",
 				i, helpers.DelayedActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
 		}
 		if i >= int(limit) && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
-			t.Errorf("could not update registry %d, validators should not have been activated wanted activation epoch: %d got %d",
+			t.Errorf("Could not update registry %d, validators should not have been activated, wanted activation epoch: %d, got %d",
 				i, params.BeaconConfig().FarFutureEpoch, validator.ActivationEpoch)
 		}
 	}
