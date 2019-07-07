@@ -50,7 +50,7 @@ func runProposerSlashingTest(t *testing.T, filename string) {
 			block := &pb.BeaconBlock{Body: &pb.BeaconBlockBody{ProposerSlashings: []*pb.ProposerSlashing{proposerSlashing}}}
 
 			var postState *pb.BeaconState
-			postState, err = blocks.ProcessProposerSlashings(pre, block, true)
+			postState, err = blocks.ProcessProposerSlashings(pre, block.Body, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
 			if len(expectedPost.Validators) == 0 {

@@ -50,7 +50,7 @@ func runAttesterSlashingTest(t *testing.T, filename string) {
 			block := &pb.BeaconBlock{Body: &pb.BeaconBlockBody{AttesterSlashings: []*pb.AttesterSlashing{slashing}}}
 
 			var postState *pb.BeaconState
-			postState, err = blocks.ProcessAttesterSlashings(pre, block, true)
+			postState, err = blocks.ProcessAttesterSlashings(pre, block.Body, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
 			if len(expectedPost.Validators) == 0 {

@@ -1510,34 +1510,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
-	exits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits+1)
-	registry := []*pb.Validator{}
-	state := &pb.BeaconState{
-		Validators: registry,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			VoluntaryExits: exits,
-		},
-	}
-
-	want := fmt.Sprintf(
-		"number of exits (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxVoluntaryExits+1,
-		params.BeaconConfig().MaxVoluntaryExits,
-	)
-
-	if _, err := blocks.ProcessVoluntaryExits(
-
-		state,
-		block,
-		false,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{

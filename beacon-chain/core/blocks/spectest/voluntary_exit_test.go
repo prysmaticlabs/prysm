@@ -48,7 +48,7 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 			block := &pb.BeaconBlock{Body: &pb.BeaconBlockBody{VoluntaryExits: []*pb.VoluntaryExit{exit}}}
 
 			var postState *pb.BeaconState
-			postState, err = blocks.ProcessVoluntaryExits(pre, block, true)
+			postState, err = blocks.ProcessVoluntaryExits(pre, block.Body, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
 			if len(expectedPost.Validators) == 0 {

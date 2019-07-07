@@ -57,7 +57,7 @@ func runAttestationTest(t *testing.T, filename string) {
 				},
 			}
 
-			post, err := blocks.ProcessBlockAttestations(pre, block,
+			post, err := blocks.ProcessAttestations(pre, block.Body,
 				true /*verify sig*/)
 
 			if !reflect.ValueOf(tt.Post).IsValid() {

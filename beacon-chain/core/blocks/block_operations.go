@@ -665,7 +665,7 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 //    ):
 //        return False
 //    return True
-func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
+func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
@@ -689,7 +689,7 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 	//        assert bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)
 
 	if verifySignatures {
-		domain := helpers.Domain(beaconState, indexedAtt.Data.TargetEpoch, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(beaconState, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
 		var pubkeys []*bls.PublicKey
 		if len(custodyBit0Indices) > 0 {
 			pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit0Indices[0]].Pubkey)
