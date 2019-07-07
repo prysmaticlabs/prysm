@@ -757,7 +757,7 @@ func TestProcessJustificationAndFinalization_JustifyPrevEpoch(t *testing.T) {
 			params.BeaconConfig().ZeroHash, newState.FinalizedCheckpoint.Root)
 	}
 	if newState.FinalizedCheckpoint.Epoch != 0 {
-		t.Errorf("Wanted finalized epoch: %d, got: %d", 0, newState.FinalizedCheckpoint.Epoch)
+		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpoint.Epoch)
 	}
 }
 
@@ -1194,8 +1194,7 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 		}
 		// Since all these validators attested, they shouldn't get penalized.
 		if penalties[i] != 0 {
-			t.Errorf("Wanted penalty balance %d, got %d",
-				0, penalties[i])
+			t.Errorf("Wanted penalty balance 0, got %d", penalties[i])
 		}
 	}
 
@@ -1205,8 +1204,7 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 		wanted := 3 * base
 		// Since all these validators did not attest, they shouldn't get rewarded.
 		if rewards[i] != 0 {
-			t.Errorf("Wanted reward balance %d, got %d",
-				0, rewards[i])
+			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
 		}
 		// Base penalties for not attesting.
 		if penalties[i] != wanted {
