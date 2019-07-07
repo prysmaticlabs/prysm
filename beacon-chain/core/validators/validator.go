@@ -10,6 +10,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -151,10 +152,12 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 		return nil, fmt.Errorf("could not initiate validator exit %v", err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	state.Validators[slashedIdx].Slashed = true
-	state.Validators[slashedIdx].WithdrawableEpoch = currentEpoch + params.BeaconConfig().EpochsPerSlashingsVector
-	slashedBalance := state.Validators[slashedIdx].EffectiveBalance
-	state.Slashings[currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector] += slashedBalance
+	validator := state.Validators[slashedIdx]
+	validator.Slashed = true
+	maxWithdrawableEpoch := mathutil.Max(validator.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
+	validator.WithdrawableEpoch = maxWithdrawableEpoch
+	state.Slashings[currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector] += validator.EffectiveBalance
+	helpers.DecreaseBalance(state, slashedIdx, validator.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient)
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
@@ -164,11 +167,10 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	if whistleBlowerIdx == 0 {
 		whistleBlowerIdx = proposerIdx
 	}
-	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleblowerRewardQuotient
+	whistleblowerReward := validator.EffectiveBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 	state = helpers.IncreaseBalance(state, proposerIdx, proposerReward)
 	state = helpers.IncreaseBalance(state, whistleBlowerIdx, whistleblowerReward-proposerReward)
-	state = helpers.DecreaseBalance(state, slashedIdx, whistleblowerReward)
 	return state, nil
 }
 

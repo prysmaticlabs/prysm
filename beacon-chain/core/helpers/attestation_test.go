@@ -26,7 +26,7 @@ func TestAttestationDataSlot_OK(t *testing.T) {
 	committeeCount, _ := helpers.CommitteeCount(beaconState, 0)
 	expect := offset / (committeeCount / params.BeaconConfig().SlotsPerEpoch)
 	attSlot, err := helpers.AttestationDataSlot(beaconState, &pb.AttestationData{
-		TargetEpoch: 0,
+		Target: &pb.Checkpoint{Epoch: 0},
 		Crosslink: &pb.Crosslink{
 			Shard: 0,
 		},
@@ -41,7 +41,7 @@ func TestAttestationDataSlot_OK(t *testing.T) {
 
 func TestAttestationDataSlot_ReturnsErrorWithNilState(t *testing.T) {
 	s, err := helpers.AttestationDataSlot(nil /*state*/, &pb.AttestationData{
-		TargetEpoch: 0,
+		Target: &pb.Checkpoint{Epoch: 0},
 		Crosslink: &pb.Crosslink{
 			Shard: 0,
 		},
@@ -72,7 +72,7 @@ func TestAttestationDataSlot_ReturnsErrorWithErroneousTargetEpoch(t *testing.T) 
 		t.Fatal(err)
 	}
 	s, err := helpers.AttestationDataSlot(beaconState, &pb.AttestationData{
-		TargetEpoch: 1<<63 - 1, // Far future epoch
+		Target: &pb.Checkpoint{Epoch: 1<<63 - 1 /* Far future epoch */},
 	})
 	if err == nil {
 		t.Error("Expected an error, but received nil")
@@ -92,7 +92,7 @@ func TestAttestationDataSlot_ReturnsErrorWhenTargetEpochLessThanCurrentEpoch(t *
 		t.Fatal(err)
 	}
 	s, err := helpers.AttestationDataSlot(beaconState, &pb.AttestationData{
-		TargetEpoch: 2,
+		Target: &pb.Checkpoint{Epoch: 2},
 	})
 	if err == nil {
 		t.Error("Expected an error, but received nil")

@@ -75,7 +75,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	for _, srcAtt := range srcAtts {
 		// If the target root matches attestation's target root,
 		// then we know this attestation has correctly voted for target.
-		if bytes.Equal(srcAtt.Data.TargetRoot, targetRoot) {
+		if bytes.Equal(srcAtt.Data.Target.Root, targetRoot) {
 			tgtAtts = append(tgtAtts, srcAtt)
 		}
 
@@ -427,23 +427,17 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	totalAtStart := state.Slashings[(currentEpoch+1)%exitLength]
-	totalAtEnd := state.Slashings[currentEpoch%exitLength]
-	totalPenalties := totalAtEnd - totalAtStart
 
 	// Compute slashing for each validator.
 	for index, validator := range state.Validators {
-		correctEpoch := currentEpoch == validator.WithdrawableEpoch-exitLength/2
+		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
 		if validator.Slashed && correctEpoch {
-			minPenalties := totalPenalties * 3
-			if minPenalties > totalBalance {
-				minPenalties = totalBalance
+			totalSlashing := uint64(0)
+			for _, slashing := range state.Slashings {
+				totalSlashing += slashing
 			}
-			effectiveBal := validator.EffectiveBalance
-			penalty := effectiveBal * minPenalties / totalBalance
-			if penalty < effectiveBal/params.BeaconConfig().MinSlashingPenaltyQuotient {
-				penalty = effectiveBal / params.BeaconConfig().MinSlashingPenaltyQuotient
-			}
+			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
+			penalty := validator.EffectiveBalance * minSlashing / totalBalance
 			state = helpers.DecreaseBalance(state, uint64(index), penalty)
 		}
 	}
@@ -532,10 +526,16 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
+	commRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
+	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get compact committee root %v", err)
+	}
+	state.CompactCommitteesRoots[commRootPosition] = comRoot[:]
+
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	state.Slashings[nextEpoch%slashedExitLength] =
-		state.Slashings[currentEpoch%slashedExitLength]
+	state.Slashings[nextEpoch%slashedExitLength] = 0
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector

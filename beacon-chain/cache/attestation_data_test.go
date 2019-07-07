@@ -33,7 +33,7 @@ func TestAttestationCache_RoundTrip(t *testing.T) {
 	}
 
 	res := &pbp2p.AttestationData{
-		TargetEpoch: 5,
+		Target: &pbp2p.Checkpoint{Epoch: 5},
 	}
 
 	if err = c.Put(ctx, req, res); err != nil {

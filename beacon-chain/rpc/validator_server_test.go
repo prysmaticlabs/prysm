@@ -94,6 +94,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
 	ctx := context.Background()
 	defer internal.TeardownDB(t, db)
+	helpers.ClearAllCaches()
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 8, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)

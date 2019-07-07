@@ -135,6 +135,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 				Crosslink: &pb.Crosslink{
 					Shard: uint64(i),
 				},
+				Source: &pb.Checkpoint{},
+				Target: &pb.Checkpoint{},
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -178,6 +180,8 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 				Crosslink: &pb.Crosslink{
 					Shard: uint64(i) - shardDiff,
 				},
+				Source: &pb.Checkpoint{},
+				Target: &pb.Checkpoint{},
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -224,6 +228,8 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 				Crosslink: &pb.Crosslink{
 					Shard: uint64(i),
 				},
+				Source: &pb.Checkpoint{},
+				Target: &pb.Checkpoint{},
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -268,6 +274,8 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 				Crosslink: &pb.Crosslink{
 					Shard: uint64(i),
 				},
+				Source: &pb.Checkpoint{},
+				Target: &pb.Checkpoint{},
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
