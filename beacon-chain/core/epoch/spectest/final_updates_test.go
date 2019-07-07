@@ -47,8 +47,8 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 			}
 
 			if !reflect.DeepEqual(postState, expectedPostState) {
-				t.Log(postState)
-				t.Log(expectedPostState)
+				t.Log(postState.ActiveIndexRoots)
+				t.Log(expectedPostState.ActiveIndexRoots)
 				t.Error("Did not get expected state")
 				//diff, _ := messagediff.PrettyDiff(s, tt.Post)
 				//t.Log(diff)
