@@ -1641,6 +1641,42 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	}
 }
 
+func TestProcessBeaconTransfers_NotEnoughSenderBalance(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
+	state := &pb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+	}
+	transfers := []*pb.Transfer{
+		{
+			Fee:    params.BeaconConfig().MaxEffectiveBalance,
+			Amount: params.BeaconConfig().MaxEffectiveBalance,
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: transfers,
+		},
+	}
+	want := fmt.Sprintf(
+		"expected sender balance %d >= %d",
+		balances[0],
+		transfers[0].Fee+transfers[0].Amount,
+	)
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block.Body,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
 func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	testConfig := params.BeaconConfig()
 	testConfig.MaxTransfers = 1
@@ -1703,6 +1739,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 
 	state.Validators[0].WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
 	state.Validators[0].ActivationEligibilityEpoch = 0
+	state.Balances[0] = params.BeaconConfig().MinDepositAmount + params.BeaconConfig().MaxEffectiveBalance
 	block.Body.Transfers = []*pb.Transfer{
 		{
 			Fee:    params.BeaconConfig().MinDepositAmount,

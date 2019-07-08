@@ -32,10 +32,11 @@ import (
 //        process_deposit(state, deposit)
 //
 //    # Process genesis activations
-//    for validator in state.validator_registry:
-//        if validator.effective_balance >= MAX_EFFECTIVE_BALANCE:
-//            validator.activation_eligibility_epoch = GENESIS_EPOCH
-//            validator.activation_epoch = GENESIS_EPOCH
+//    for index, validator in enumerate(state.validators):
+//	        if state.balances[index] >= MAX_EFFECTIVE_BALANCE:
+//	        balance = state.balances[index]
+//	        validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
+//	        if validator.effective_balance == MAX_EFFECTIVE_BALANCE:
 //
 //    genesis_active_index_root = hash_tree_root(get_active_validator_indices(state, GENESIS_EPOCH))
 //    for index in range(LATEST_ACTIVE_INDEX_ROOTS_LENGTH):
@@ -140,6 +141,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			return nil, fmt.Errorf("could not process validator deposit %d: %v", i, err)
 		}
 	}
+
 	for i := 0; i < len(state.Validators); i++ {
 		if state.Validators[i].EffectiveBalance >=
 			params.BeaconConfig().MaxEffectiveBalance {
