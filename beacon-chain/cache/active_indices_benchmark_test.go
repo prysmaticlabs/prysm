@@ -1,8 +1,8 @@
-package cache
+package cache_test
 
 import (
 	"testing"
-
+	"strconv"
 )
 
 
@@ -15,7 +15,7 @@ func createAInfos(count int) []*ActiveIndicesByEpoch {
     for i := 0; i < count; i++ {
 		aInfo := &ActiveIndicesByEpoch{
 			Epoch:         999,
-			ActiveIndices: []uint64{1, 2, 3, 4, 5},
+			ActiveIndices: []uint64{i, 2, 3, 4, 5},
 		}
 		aInfos = append(aInfos, aInfo)
 	}
@@ -26,12 +26,14 @@ func createAInfos(count int) []*ActiveIndicesByEpoch {
 
 func BenchmarkActiveIndicesKeyFn_OK(b *testing.B) {
 	var err error
+	var key string
+
 	
 	b.Run("16K", func(b *testing.B) {
-		//b.N = RunAmount
+		b.N = 100
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			key, err = activeIndicesKeyFn(aInfos16K[i])
+			key, err = ActiveIndicesKeyFn(aInfos16K[i])
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -42,12 +44,15 @@ func BenchmarkActiveIndicesKeyFn_OK(b *testing.B) {
 		}
 	})
 	b.Run("300K", func(b *testing.B) {
-		b.N = 10
+		b.N = 1000
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-		     _, err = activeIndicesKeyFn(aInfos300K[i])
+		    key, err = ActiveIndicesKeyFn(aInfos300K[i])
 			if err != nil {
 				b.Fatal(err)
+			}
+			if key != strconv.Itoa(int(aInfos16K[i].Epoch)) {
+				b.Errorf("Incorrect hash key: %s, expected %s", key, strconv.Itoa(int(aInfo.Epoch)))
 			}
 		}
 	})
@@ -73,12 +78,3 @@ func BenchmarkActiveIndicesKeyFn_OK(b *testing.B) {
 // func BenchmarkActiveIndices_MaxSize(b *testing.B) {
 
 // }
-
-
-
-
-
-
-
-
-

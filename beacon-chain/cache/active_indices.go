@@ -42,7 +42,7 @@ type ActiveIndicesCache struct {
 }
 
 // activeIndicesKeyFn takes the epoch as the key for the active indices of a given epoch.
-func activeIndicesKeyFn(obj interface{}) (string, error) {
+func ActiveIndicesKeyFn(obj interface{}) (string, error) {
 	aInfo, ok := obj.(*ActiveIndicesByEpoch)
 	if !ok {
 		return "", ErrNotActiveIndicesInfo
