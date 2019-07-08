@@ -2,7 +2,6 @@
 package helpers
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-bitfield"
