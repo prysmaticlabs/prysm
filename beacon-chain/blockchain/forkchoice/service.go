@@ -2,8 +2,10 @@ package forkchoice
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -76,4 +78,22 @@ func (s *Store) GensisStore(state *pb.BeaconState) error {
 	}
 
 	return nil
+}
+
+// Ancestor to be filled
+//
+// Spec pseudocode definition:
+//   def get_ancestor(store: Store, root: Hash, slot: Slot) -> Hash:
+//    block = store.blocks[root]
+//    assert block.slot >= slot
+//    return root if block.slot == slot else get_ancestor(store, block.parent_root, slot)
+func (s *Store) Ancestor(root []byte, slot uint64) error {
+	b, err := s.db.Block(bytesutil.ToBytes32(root))
+	if err != nil {
+		return fmt.Errorf("could not retrieve block: %v", err)
+	}
+
+	if b.Slot < slot {
+		return fmt.Errorf("ancestor slot exceeds ")
+	}
 }
