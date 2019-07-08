@@ -709,13 +709,13 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 // to repeat the same calculation for every validator versus just doing it once.
 //
 // Spec pseudocode definition:
-//  def get_attestation_deltas(state: BeaconState) -> Tuple[List[Gwei], List[Gwei]]:
+//  def get_attestation_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequence[Gwei]]:
 //    previous_epoch = get_previous_epoch(state)
 //    total_balance = get_total_active_balance(state)
-//    rewards = [0 for _ in range(len(state.validator_registry))]
-//    penalties = [0 for _ in range(len(state.validator_registry))]
+//    rewards = [Gwei(0) for _ in range(len(state.validators))]
+//    penalties = [Gwei(0) for _ in range(len(state.validators))]
 //    eligible_validator_indices = [
-//        index for index, v in enumerate(state.validator_registry)
+//        ValidatorIndex(index) for index, v in enumerate(state.validators)
 //        if is_active_validator(v, previous_epoch) or (v.slashed and previous_epoch + 1 < v.withdrawable_epoch)
 //    ]
 //
@@ -725,7 +725,7 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 //    matching_head_attestations = get_matching_head_attestations(state, previous_epoch)
 //    for attestations in (matching_source_attestations, matching_target_attestations, matching_head_attestations):
 //        unslashed_attesting_indices = get_unslashed_attesting_indices(state, attestations)
-//        attesting_balance = get_attesting_balance(state, attestations)
+//        attesting_balance = get_total_balance(state, unslashed_attesting_indices)
 //        for index in eligible_validator_indices:
 //            if index in unslashed_attesting_indices:
 //                rewards[index] += get_base_reward(state, index) * attesting_balance // total_balance
@@ -734,20 +734,31 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 //
 //    # Proposer and inclusion delay micro-rewards
 //    for index in get_unslashed_attesting_indices(state, matching_source_attestations):
+//        index = ValidatorIndex(index)
 //        attestation = min([
-//            a for a in attestations if index in get_attesting_indices(state, a.data, a.aggregation_bitfield)
+//            a for a in matching_source_attestations
+//            if index in get_attesting_indices(state, a.data, a.aggregation_bits)
 //        ], key=lambda a: a.inclusion_delay)
-//        rewards[attestation.proposer_index] += get_base_reward(state, index) // PROPOSER_REWARD_QUOTIENT
-//        rewards[index] += get_base_reward(state, index) * MIN_ATTESTATION_INCLUSION_DELAY // attestation.inclusion_delay
+//        proposer_reward = Gwei(get_base_reward(state, index) // PROPOSER_REWARD_QUOTIENT)
+//        rewards[attestation.proposer_index] += proposer_reward
+//        max_attester_reward = get_base_reward(state, index) - proposer_reward
+//        rewards[index] += Gwei(
+//            max_attester_reward
+//            * (SLOTS_PER_EPOCH + MIN_ATTESTATION_INCLUSION_DELAY - attestation.inclusion_delay)
+//            // SLOTS_PER_EPOCH
+//        )
 //
 //    # Inactivity penalty
 //    finality_delay = previous_epoch - state.finalized_checkpoint.epoch
 //    if finality_delay > MIN_EPOCHS_TO_INACTIVITY_PENALTY:
 //        matching_target_attesting_indices = get_unslashed_attesting_indices(state, matching_target_attestations)
 //        for index in eligible_validator_indices:
-//            penalties[index] += BASE_REWARDS_PER_EPOCH * get_base_reward(state, index)
+//            index = ValidatorIndex(index)
+//            penalties[index] += Gwei(BASE_REWARDS_PER_EPOCH * get_base_reward(state, index))
 //            if index not in matching_target_attesting_indices:
-//                penalties[index] += state.validator_registry[index].effective_balance * finality_delay // INACTIVITY_PENALTY_QUOTIENT
+//                penalties[index] += Gwei(
+//                    state.validators[index].effective_balance * finality_delay // INACTIVITY_PENALTY_QUOTIENT
+//                )
 //
 //    return rewards, penalties
 func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
@@ -834,15 +845,17 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	}
 
 	for i, a := range attestersVotedSoruce {
-		base, err := baseReward(state, i)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get base reward: %v", err)
-		}
-		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
-		maxAttesterReward := base - proposerReward
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-		attesterFactor := slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay
-		rewards[i] += maxAttesterReward * attesterFactor / slotsPerEpoch
+
+		baseReward, err := baseReward(state, i)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get proposer reward: %v", err)
+		}
+		proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
+		rewards[a.ProposerIndex] += proposerReward
+		attesterReward := baseReward - proposerReward
+		attesterRewardFactor := (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
+		rewards[i] += attesterReward * attesterRewardFactor
 	}
 
 	// Apply penalties for quadratic leaks.
