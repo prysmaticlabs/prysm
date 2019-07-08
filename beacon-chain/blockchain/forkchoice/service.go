@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -89,7 +90,7 @@ func (s *Store) GensisStore(state *pb.BeaconState) error {
 func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 	b, err := s.db.Block(bytesutil.ToBytes32(root))
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve block: %v", err)
+		return nil, fmt.Errorf("could not get ancestor block: %v", err)
 	}
 
 	if b.Slot < slot {
@@ -115,5 +116,20 @@ func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 //            and get_ancestor(store, store.latest_messages[i].root, store.blocks[root].slot) == root)
 //    ))
 func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
-	lastJustifiedState, err := s.db.Checkpoint(s.justifiedCheckpt)
+	lastJustifiedState, err := s.db.CheckpointState(s.ctx, s.justifiedCheckpt)
+	if err != nil {
+		return 0, fmt.Errorf("could not get checkpoint state: %v", err)
+	}
+	lastJustifiedEpoch := helpers.CurrentEpoch(lastJustifiedState)
+	activeIndices, err := helpers.ActiveValidatorIndices(lastJustifiedState, lastJustifiedEpoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not get active indices for last checkpoint state: %v", err)
+	}
+
+	balances := uint64(0)
+
+	for _, i := range activeIndices{
+
+	}
 }
+
