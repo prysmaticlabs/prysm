@@ -153,7 +153,7 @@ func ProcessBlockHeader(
 			return nil, fmt.Errorf("could not sign root for header: %v", err)
 		}
 		if !sig.Verify(root[:], pub, domain) {
-			return nil, fmt.Errorf("proposer slashing signature did not verify")
+			return nil, fmt.Errorf("block signature did not verify")
 		}
 	}
 	return beaconState, nil
@@ -264,6 +264,9 @@ func ProcessProposerSlashings(
 ) (*pb.BeaconState, error) {
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
+		if int(slashing.ProposerIndex) >= len(beaconState.Validators) {
+			return nil, fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
+		}
 		proposer := beaconState.Validators[slashing.ProposerIndex]
 		if err = verifyProposerSlashing(beaconState, proposer, slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing %d: %v", idx, err)

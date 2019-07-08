@@ -48,7 +48,10 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 			helpers.ClearAllCaches()
 			blocks.ClearEth1DataVoteCache()
 
-			stateConfig := state.DefaultConfig()
+			stateConfig := &state.TransitionConfig{
+				VerifySignatures: true,
+			}
+
 			s := tt.Pre // Pre-state
 			for _, b := range tt.Blocks {
 				tt.Pre, err = state.ExecuteStateTransition(ctx, tt.Pre, b, stateConfig)
