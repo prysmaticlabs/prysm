@@ -13,8 +13,8 @@ message BeaconState {
 
   // History [2001-3000]
   BeaconBlockHeader latest_block_header = 2001;
-  repeated bytes block_roots = 2002 [(gogoproto.moretags) = "ssz-size:\"8192, 32\""];
-  repeated bytes state_roots = 2003 [(gogoproto.moretags) = "ssz-size:\"8192, 32\""];
+  repeated bytes block_roots = 2002 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
+  repeated bytes state_roots = 2003 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
   repeated bytes historical_roots = 2004 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"16777216\""];
 
   // Eth1 [3001-4000]

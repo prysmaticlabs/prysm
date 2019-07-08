@@ -287,30 +287,6 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 }
 
-func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}, Target: &pb.Checkpoint{}}
-
-	if _, err := AttestingIndices(state, attestationData, bitfield.Bitlist{}); err == nil {
-		t.Error("attestation participants should have failed with incorrect bitfield")
-	}
-}
-
 func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
