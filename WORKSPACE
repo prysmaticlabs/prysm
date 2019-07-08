@@ -41,9 +41,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "ae72777e383df42f42831413b938f71cbb2fa61637b3246808d75261a2af38a8",
-    strip_prefix = "rules_k8s-dda7ab9151cb95f944e59beabaa0d960825ee17c",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/dda7ab9151cb95f944e59beabaa0d960825ee17c.tar.gz",
+    sha256 = "f37af27b3825dbaa811bcf4c3fcab581437fc0bd777e86468f19604ca2e99c6b",
+    strip_prefix = "rules_k8s-60571086ea6e10b1ddd2512d5c0fd32d01fa5701",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/60571086ea6e10b1ddd2512d5c0fd32d01fa5701.tar.gz",
 )
 
 load(
@@ -124,9 +124,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "4a8384320fba401cbf21fef177aa113ed8fe35952ace98e00b796cac87ae7868",
-    strip_prefix = "repo-infra-df02ded38f9506e5bbcbf21702034b4fef815f2f",
-    url = "https://github.com/kubernetes/repo-infra/archive/df02ded38f9506e5bbcbf21702034b4fef815f2f.tar.gz",
+    sha256 = "dd02a62c2a458295f561e280411b04d2efbd97e4954986a401a9a1334cc32cc3",
+    strip_prefix = "repo-infra-1b2ddaf3fb8775a5d0f4e28085cf846f915977a8",
+    url = "https://github.com/kubernetes/repo-infra/archive/1b2ddaf3fb8775a5d0f4e28085cf846f915977a8.tar.gz",
 )
 
 http_archive(
