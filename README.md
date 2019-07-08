@@ -52,13 +52,12 @@ This process will also install any related dependencies.
 
 ### Build via Bazel
 
-1. Ensure you are running the most recent version of Bazel by issuing the command:
+1. Open a terminal window. Ensure you are running the most recent version of Bazel by issuing the command:
 ```
 bazel version
 ```
 2. Clone this repository and enter the directory:
 ```
-sudo apt-get install git
 git clone https://github.com/prysmaticlabs/prysm
 cd prysm
 ```
@@ -87,10 +86,10 @@ docker run -v /tmp/prysm-data:/data -p 4000:4000 \
 1) You will need to share the local drive you wish to mount to to container (e.g. C:).
     1. Enter Docker settings (right click the tray icon)
     2. Click 'Shared Drives'
-    3. Select Drive to share
+    3. Select a drive to share
     4. Click 'Apply'
 
-2) You will next need to create a directory named /tmp/prysm-data/ within your selected shared Drive. This folder will be used as a local data directory for Beacon Node chain data as well as account and keystore information required by the validator. Docker will **not** create this directory if it does not exist already. For the purposes of these instructions, it is assumed that C: is your prior-selected shared Drive.
+2) You will next need to create a directory named ```/tmp/prysm-data/``` within your selected shared Drive. This folder will be used as a local data directory for Beacon Node chain data as well as account and keystore information required by the validator. Docker will **not** create this directory if it does not exist already. For the purposes of these instructions, it is assumed that ```C:``` is your prior-selected shared Drive.
 
 4) To run the beacon node, issue the following command:
 ```
@@ -109,17 +108,17 @@ This will sync up the Beacon Node with the latest head block in the network.
 
 ## Staking ETH: Running a Validator Client
 
-Once your beacon node is up, the chain will be waiting for you to deposit 3.2 Goerli ETH into the Validator Deposit Contract to activate your validator (discussed in the section below). First though, you will need to create a *validator client* to connect to this node in order to stake and participate. Each validator represents 3.2 Goerli ETH being staked in the system,  and it is possible to spin up as many as you desire in order to have more at stake in the network.
+Once your beacon node is up, the chain will be waiting for you to deposit 3.2 Goerli ETH into the Validator Deposit Contract to activate your validator (discussed in the section below). First though, you will need to create a *validator client* to connect to this node in order to stake and participate. Each validator represents 3.2 Goerli ETH being staked in the system,  and it is possible to spin up as many as you desire in order to have more stake in the network.
 
 ### Activating Your Validator: Depositing 3.2 Goerli ETH 
 
 Using your validator deposit data from the previous step, follow the instructions found on https://alpha.prylabs.net/participate to make a deposit.
 
-It will take a while for the nodes in the network to process your deposit, but once your node is active, the validator will begin doing its responsibility. In your validator client, you will be able to frequently see your validator balance as it goes up over time. Note tha, should your node ever go offline for a long period, you'll start gradually losing your deposit until you are removed from the system. 
+It will take a while for the nodes in the network to process your deposit, but once your node is active, the validator will begin doing its responsibility. In your validator client, you will be able to frequently see your validator balance as it goes up over time. Note that, should your node ever go offline for a long period, you'll start gradually losing your deposit until you are removed from the system. 
 
 ### Starting the validator with Bazel
 
-Open another terminal window. Enter your Prysm directory and run the validator by issuing the following command:
+1. Open another terminal window. Enter your Prysm directory and run the validator by issuing the following command:
 ```
 cd prysm
 bazel run //validator
@@ -133,7 +132,7 @@ bazel run //validator
 bazel test //...
 ```
 
-**To run our linter**, make sure you have [golangci-lint](https://https://github.com/golangci/golangci-lint) installed and then run:
+**To run our linter**, make sure you have [golangci-lint](https://https://github.com/golangci/golangci-lint) installed and then issue the command:
 ```
 golangci-lint run
 ```
