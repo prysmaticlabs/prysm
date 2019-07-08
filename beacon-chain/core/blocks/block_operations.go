@@ -871,8 +871,8 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 //    """
 //    Process ``Transfer`` operation.
 //    """
-//    # Verify the amount and fee are not individually too big (for anti-overflow purposes)
-//    assert state.balances[transfer.sender] >= max(transfer.amount, transfer.fee)
+//    # Verify the balance the covers amount and fee (with overflow protection)
+//	  assert state.balances[transfer.sender] >= max(transfer.amount + transfer.fee, transfer.amount, transfer.fee)
 //    # A transfer is valid in only one slot
 //    assert state.slot == transfer.slot
 //    # Sender must satisfy at least one of the following conditions in the parenthesis:
@@ -942,9 +942,12 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	if transfer.Amount > maxVal {
 		maxVal = transfer.Amount
 	}
+	if transfer.Amount+transfer.Fee > maxVal {
+		maxVal = transfer.Amount + transfer.Fee
+	}
 	sender := beaconState.Validators[transfer.Sender]
 	senderBalance := beaconState.Balances[transfer.Sender]
-	// Verify the amount and fee are not individually too big (for anti-overflow purposes).
+	// Verify the balance the covers amount and fee (with overflow protection).
 	if senderBalance < maxVal {
 		return fmt.Errorf("expected sender balance %d >= %d", senderBalance, maxVal)
 	}
