@@ -93,6 +93,12 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.Validators) != depositsForChainStart {
 		t.Error("Validators was not correctly initialized")
 	}
+	if newState.Validators[0].ActivationEpoch != 0 {
+		t.Error("Validators was not correctly initialized")
+	}
+	if newState.Validators[0].ActivationEligibilityEpoch != 0 {
+		t.Error("Validators was not correctly initialized")
+	}
 	if len(newState.Balances) != depositsForChainStart {
 		t.Error("Balances was not correctly initialized")
 	}
@@ -100,6 +106,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	// Randomness and committees fields checks.
 	if len(newState.RandaoMixes) != latestRandaoMixesLength {
 		t.Error("Length of RandaoMixes was not correctly initialized")
+	}
+	if !bytes.Equal(newState.RandaoMixes[0], make([]byte, 32)) {
+		t.Error("RandaoMixes was not correctly initialized")
 	}
 
 	// Finality fields checks.
@@ -133,7 +142,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("PreviousEpochAttestations was not correctly initialized")
 	}
 
-	activeValidators, _ := helpers.ActiveValidatorIndices(newState, 0)
+	activeValidators, err := helpers.ActiveValidatorIndices(newState, 0)
+	if err != nil {
+		t.Error(err)
+	}
 	indicesBytes := []byte{}
 	for _, val := range activeValidators {
 		buf := make([]byte, 8)
@@ -153,7 +165,20 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 			newState.ActiveIndexRoots[0],
 		)
 	}
-	// deposit root checks.
+
+	zeroHash := params.BeaconConfig().ZeroHash[:]
+	// History root checks.
+	if !bytes.Equal(newState.StateRoots[0], zeroHash) {
+		t.Error("StateRoots was not correctly initialized")
+	}
+	if !bytes.Equal(newState.ActiveIndexRoots[0], zeroHash) {
+		t.Error("ActiveIndexRoots was not correctly initialized")
+	}
+	if !bytes.Equal(newState.BlockRoots[0], zeroHash) {
+		t.Error("BlockRoots was not correctly initialized")
+	}
+
+	// Deposit root checks.
 	if !bytes.Equal(newState.Eth1Data.DepositRoot, eth1Data.DepositRoot) {
 		t.Error("Eth1Data DepositRoot was not correctly initialized")
 	}
@@ -165,8 +190,14 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	state1, _ := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
-	state2, _ := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
+	state1, err := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
+	if err != nil {
+		t.Error(err)
+	}
+	state2, err := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
+	if err != nil {
+		t.Error(err)
+	}
 
 	root1, err1 := hashutil.HashProto(state1)
 	root2, err2 := hashutil.HashProto(state2)
@@ -182,7 +213,10 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	helpers.ClearAllCaches()
-	s, _ := state.GenesisBeaconState(nil, 0, nil)
+	s, err := state.GenesisBeaconState(nil, 0, nil)
+	if err != nil {
+		t.Error(err)
+	}
 	want, got := len(s.BlockRoots), int(params.BeaconConfig().HistoricalRootsLimit)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)

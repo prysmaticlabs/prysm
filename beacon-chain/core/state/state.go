@@ -65,9 +65,14 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		}
 	}
 
-	latestBlockRoots := make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	latestBlockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(latestBlockRoots); i++ {
 		latestBlockRoots[i] = zeroHash
+	}
+
+	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := 0; i < len(stateRoots); i++ {
+		stateRoots[i] = zeroHash
 	}
 
 	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
@@ -115,6 +120,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		ActiveIndexRoots:          latestActiveIndexRoots,
 		CompactCommitteesRoots:    compactRoots,
 		BlockRoots:                latestBlockRoots,
+		StateRoots:                stateRoots,
 		Slashings:                 latestSlashedExitBalances,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
@@ -167,9 +173,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 
 	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
-		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
-
 		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
+		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
 	}
 	return state, nil
 }
