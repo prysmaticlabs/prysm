@@ -298,3 +298,10 @@ message CompactCommittee {
   // The list of the validator indices in the committee.
   repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-size:\"4096\""];
 }
+
+message LatestMessage {
+  // The epoch of when the latest message was voted.
+  uint64 epoch = 1;
+  // The root of the latest message votes.
+  bytes root = 2;
+}

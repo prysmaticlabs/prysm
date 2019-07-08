@@ -23,6 +23,7 @@ var (
 	histStateBucket         = []byte("historical-state-bucket")
 	chainInfoBucket         = []byte("chain-info")
 	validatorBucket         = []byte("validator")
+	checkpointBucket         = []byte("checkpoint")
 
 	mainChainHeightKey      = []byte("chain-height")
 	canonicalHeadKey        = []byte("canonical-head")
