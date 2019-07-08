@@ -19,7 +19,7 @@ message BeaconState {
 
   // Eth1 [3001-4000]
   Eth1Data eth1_data = 3001;
-  repeated Eth1Data eth1_data_votes = 3002 [(gogoproto.moretags) = "ssz-max:\"16\""];
+  repeated Eth1Data eth1_data_votes = 3002 [(gogoproto.moretags) = "ssz-max:\"1024\""];
   uint64 eth1_deposit_index = 3003;
 
   // Registry [4001-5000]
@@ -28,16 +28,16 @@ message BeaconState {
 
   // Shuffling [5001-6000]
   uint64 start_shard = 5001;
-  repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
-  repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
-  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
+  repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
+  repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
+  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
 
   // Slashings [6001-7000]
   repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz:\"size=8192\""];
 
   // Attestations [7001-8000]
-  repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"1024\""];
-  repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"1024\""];
+  repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"8192\""];
+  repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"8192\""];
 
   // Crosslinks [8001-9000]
   repeated Crosslink previous_crosslinks = 8001 [(gogoproto.moretags) = "ssz-size:\"1024\""];
