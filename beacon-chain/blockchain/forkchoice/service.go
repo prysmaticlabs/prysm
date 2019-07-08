@@ -2,7 +2,6 @@ package forkchoice
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -70,10 +69,10 @@ func (s *Store) GensisStore(state *pb.BeaconState) error {
 	if err := s.db.SaveState(s.ctx, state); err != nil {
 		return fmt.Errorf("could not save genesis state: %v", err)
 	}
-	if err := s.db.SaveCheckpoint(s.ctx, s.justifiedCheckpt); err != nil {
+	if err := s.db.SaveCheckpointState(s.ctx, s.justifiedCheckpt, state); err != nil {
 		return fmt.Errorf("could not save justified checkpt: %v", err)
 	}
-	if err := s.db.SaveCheckpoint(s.ctx, s.finalizedCheckpt); err != nil {
+	if err := s.db.SaveCheckpointState(s.ctx, s.finalizedCheckpt, state); err != nil {
 		return fmt.Errorf("could not save finalized checkpt: %v", err)
 	}
 
@@ -87,13 +86,34 @@ func (s *Store) GensisStore(state *pb.BeaconState) error {
 //    block = store.blocks[root]
 //    assert block.slot >= slot
 //    return root if block.slot == slot else get_ancestor(store, block.parent_root, slot)
-func (s *Store) Ancestor(root []byte, slot uint64) error {
+func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 	b, err := s.db.Block(bytesutil.ToBytes32(root))
 	if err != nil {
-		return fmt.Errorf("could not retrieve block: %v", err)
+		return nil, fmt.Errorf("could not retrieve block: %v", err)
 	}
 
 	if b.Slot < slot {
-		return fmt.Errorf("ancestor slot exceeds ")
+		return nil, fmt.Errorf("ancestor slot %d reacched below wanted slot %d", b.Slot, slot)
 	}
+
+	if b.Slot == slot {
+		return root, nil
+	}
+
+	return s.Ancestor(b.ParentRoot, slot)
+}
+
+// LatestAttestingBalance to be filled
+//
+// Spec pseudocode definition:
+//   def get_latest_attesting_balance(store: Store, root: Hash) -> Gwei:
+//    state = store.checkpoint_states[store.justified_checkpoint]
+//    active_indices = get_active_validator_indices(state, get_current_epoch(state))
+//    return Gwei(sum(
+//        state.validators[i].effective_balance for i in active_indices
+//        if (i in store.latest_messages
+//            and get_ancestor(store, store.latest_messages[i].root, store.blocks[root].slot) == root)
+//    ))
+func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
+	lastJustifiedState, err := s.db.Checkpoint(s.justifiedCheckpt)
 }

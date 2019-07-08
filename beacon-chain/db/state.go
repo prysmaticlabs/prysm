@@ -493,3 +493,60 @@ func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
 		return nil
 	})
 }
+
+// SaveCheckpointState saves the check pointed state by using check point as key.
+func (db *BeaconDB) SaveCheckpointState(ctx context.Context, checkpt *pb.Checkpoint, beaconState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveCheckpointState")
+	defer span.End()
+
+	ctx, lockSpan := trace.StartSpan(ctx, "BeaconDB.stateLock.Lock")
+	db.stateLock.Lock()
+	defer db.stateLock.Unlock()
+	lockSpan.End()
+
+	key, err := hashutil.HashProto(checkpt)
+	if err != nil {
+		return err
+	}
+
+	enc, err := proto.Marshal(beaconState)
+	if err != nil {
+		return err
+	}
+
+	return db.update(func(tx *bolt.Tx) error {
+		a := tx.Bucket(checkpointBucket)
+		return a.Put(key[:], enc)
+	})
+}
+
+// CheckpointState gets the check pointed state check point as key.
+func (db *BeaconDB) CheckpointState(ctx context.Context, checkpt *pb.Checkpoint) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckpointState")
+	defer span.End()
+
+	ctx, lockSpan := trace.StartSpan(ctx, "BeaconDB.stateLock.Lock")
+	db.stateLock.Lock()
+	defer db.stateLock.Unlock()
+	lockSpan.End()
+
+	key, err := hashutil.HashProto(checkpt)
+	if err != nil {
+		return nil, err
+	}
+
+	var s *pb.BeaconState
+	err = db.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(checkpointBucket)
+
+		enc := bucket.Get(key[:])
+		if enc == nil {
+			return nil
+		}
+
+		s, err = createState(enc)
+		return err
+	})
+
+	return s, err
+}
