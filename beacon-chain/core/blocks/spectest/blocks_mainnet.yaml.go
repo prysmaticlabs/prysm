@@ -14,9 +14,9 @@ type BlocksMainnet struct {
 	Runner        string   `json:"runner"`
 	Handler       string   `json:"handler"`
 	TestCases     []struct {
-		Description string `json:"description"`
-		Pre         *pb.BeaconState
-		Blocks      []*pb.BeaconBlock
-		Post        *pb.BeaconState
+		Description string            `json:"description"`
+		Pre         *pb.BeaconState   `json:"pre"`
+		Blocks      []*pb.BeaconBlock `json:"blocks"`
+		Post        *pb.BeaconState   `json:"post"`
 	} `json:"test_cases"`
 }
