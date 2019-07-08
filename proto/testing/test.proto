@@ -8,7 +8,6 @@ message TestMessage {
   string foo = 1;
 }
 
-
 // Used in shared/p2p/feed_example_test.go
 message Puzzle {
   string challenge = 1;
