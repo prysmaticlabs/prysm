@@ -1097,3 +1097,9 @@ go_repository(
     commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
     importpath = "github.com/koron/go-ssdp",
 )
+
+go_repository(
+    name = "com_github_libp2p_go_eventbus",
+    commit = "4afad1f6206cb9222914f2ec6ab9d0b414705c54",
+    importpath = "github.com/libp2p/go-eventbus",
+)
