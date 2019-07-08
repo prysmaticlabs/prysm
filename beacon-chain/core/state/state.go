@@ -44,16 +44,16 @@ import (
 //
 //    return state
 func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
-	latestRandaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(latestRandaoMixes); i++ {
-		latestRandaoMixes[i] = make([]byte, 32)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 
-	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(latestActiveIndexRoots); i++ {
-		latestActiveIndexRoots[i] = zeroHash
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(activeIndexRoots); i++ {
+		activeIndexRoots[i] = zeroHash
 	}
 
 	compactRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
@@ -65,9 +65,10 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		}
 	}
 
-	latestBlockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	for i := 0; i < len(latestBlockRoots); i++ {
-		latestBlockRoots[i] = zeroHash
+	// Purposely set as HISTORICAL_ROOTS_LIMIT as we determined it is more clear.
+	blockRoots := make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = zeroHash
 	}
 
 	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
@@ -75,7 +76,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		stateRoots[i] = zeroHash
 	}
 
-	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
+	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
 	if eth1Data == nil {
 		eth1Data = &pb.Eth1Data{}
@@ -97,7 +98,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		Balances:   []uint64{},
 
 		// Randomness and committees.
-		RandaoMixes: latestRandaoMixes,
+		RandaoMixes: randaoMixes,
 
 		// Finality.
 		PreviousJustifiedCheckpoint: &pb.Checkpoint{
@@ -117,11 +118,11 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		// Recent state.
 		CurrentCrosslinks:         crosslinks,
 		PreviousCrosslinks:        crosslinks,
-		ActiveIndexRoots:          latestActiveIndexRoots,
+		ActiveIndexRoots:          activeIndexRoots,
 		CompactCommitteesRoots:    compactRoots,
-		BlockRoots:                latestBlockRoots,
+		BlockRoots:                blockRoots,
 		StateRoots:                stateRoots,
-		Slashings:                 latestSlashedExitBalances,
+		Slashings:                 slashings,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 
