@@ -3,14 +3,13 @@ package helpers
 
 import (
 	"errors"
-	"fmt"
 
+	"fmt"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -157,12 +156,12 @@ func ComputeCommittee(
 //    """
 //    committee = get_crosslink_committee(state, data.target.epoch, data.crosslink.shard)
 //    return set(index for i, index in enumerate(committee) if bits[i])
-func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield []byte) ([]uint64, error) {
+func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bf bitfield.Bitfield) ([]uint64, error) {
 	committee, err := CrosslinkCommittee(state, data.Target.Epoch, data.Crosslink.Shard)
 	if err != nil {
 		return nil, fmt.Errorf("could not get committee: %v", err)
 	}
-	if isValidated, err := VerifyBitfield(bitfield, len(committee)); !isValidated || err != nil {
+	if isValidated, err := VerifyBitfield(bf, uint64(len(committee))); !isValidated || err != nil {
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +172,7 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 	indicesSet := make(map[uint64]bool)
 	for i, idx := range committee {
 		if !indicesSet[idx] {
-			if mathutil.CeilDiv8(i) <= len(bitfield) && bitutil.BitfieldBit(bitfield, i) == 0x1 {
+			if bf.BitAt(uint64(i)) {
 				indices = append(indices, idx)
 			}
 		}
@@ -183,35 +182,12 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 }
 
 // VerifyBitfield validates a bitfield with a given committee size.
-//
-// Spec pseudocode definition:
-//   def verify_bitfield(bitfield: bytes, committee_size: int) -> bool:
-//     """
-//     Verify ``bitfield`` against the ``committee_size``.
-//     """
-//     if len(bitfield) != (committee_size + 7) // 8:
-//         return False
-//     # Check `bitfield` is padded with zero bits only
-//     for i in range(committee_size, len(bitfield) * 8):
-//         if get_bitfield_bit(bitfield, i) == 0b1:
-//             return False
-//     return True
-func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
-	if len(bitfield) != mathutil.CeilDiv8(committeeSize) {
+func VerifyBitfield(bf bitfield.Bitfield, committeeSize uint64) (bool, error) {
+	if bf.Len() != committeeSize {
 		return false, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
-			mathutil.CeilDiv8(committeeSize),
-			len(bitfield))
-	}
-	bitLength := len(bitfield) << 3
-	for i := committeeSize; i < bitLength; i++ {
-		set, err := bitutil.CheckBit(bitfield, i)
-		if err != nil {
-			return false, err
-		}
-		if set {
-			return false, nil
-		}
+			committeeSize,
+			bf.Len())
 	}
 	return true, nil
 }
@@ -394,7 +370,7 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 	if committee == nil {
 		return false, fmt.Errorf("no committee exist for shard in the attestation")
 	}
-	return VerifyBitfield(att.AggregationBits, len(committee))
+	return VerifyBitfield(att.AggregationBits, uint64(len(committee)))
 }
 
 // CompactCommitteesRoot returns the index root of a given epoch.

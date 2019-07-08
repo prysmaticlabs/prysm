@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1135,8 +1136,8 @@ func TestProcessAttestations_OK(t *testing.T) {
 					StartEpoch: 0,
 				},
 			},
-			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-			CustodyBits:     []byte{},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 		},
 	}
 	block := &pb.BeaconBlock{
@@ -1199,26 +1200,26 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	tests := []struct {
-		aggregationBitfield      []byte
-		custodyBitfield          []byte
+		aggregationBitfield      bitfield.Bitlist
+		custodyBitfield          bitfield.Bitlist
 		wantedCustodyBit0Indices []uint64
 		wantedCustodyBit1Indices []uint64
 	}{
 		{
-			aggregationBitfield:      []byte{0x03},
-			custodyBitfield:          []byte{0x01},
+			aggregationBitfield:      bitfield.Bitlist{0x07},
+			custodyBitfield:          bitfield.Bitlist{0x05},
 			wantedCustodyBit0Indices: []uint64{71},
 			wantedCustodyBit1Indices: []uint64{127},
 		},
 		{
-			aggregationBitfield:      []byte{0x03},
-			custodyBitfield:          []byte{0x02},
+			aggregationBitfield:      bitfield.Bitlist{0x07},
+			custodyBitfield:          bitfield.Bitlist{0x06},
 			wantedCustodyBit0Indices: []uint64{127},
 			wantedCustodyBit1Indices: []uint64{71},
 		},
 		{
-			aggregationBitfield:      []byte{0x03},
-			custodyBitfield:          []byte{0x03},
+			aggregationBitfield:      bitfield.Bitlist{0x07},
+			custodyBitfield:          bitfield.Bitlist{0x07},
 			wantedCustodyBit0Indices: []uint64{},
 			wantedCustodyBit1Indices: []uint64{127, 71},
 		},

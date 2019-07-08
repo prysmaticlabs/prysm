@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/go-bitfield"
 	"strings"
 	"testing"
 
@@ -261,8 +262,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				EndEpoch: 64,
 			},
 		},
-		AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-		CustodyBits:     []byte{},
+		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	exits := []*pb.VoluntaryExit{
