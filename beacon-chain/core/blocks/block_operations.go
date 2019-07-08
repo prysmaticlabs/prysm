@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"reflect"
+	"sort"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -358,6 +360,9 @@ func ProcessAttesterSlashings(
 			return nil, fmt.Errorf("could not verify attester slashing #%d: %v", idx, err)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
+		sort.SliceStable(slashableIndices, func(i, j int) bool {
+			return slashableIndices[i] < slashableIndices[j]
+		})
 		currentEpoch := helpers.CurrentEpoch(beaconState)
 		var err error
 		var slashedAny bool
@@ -629,6 +634,13 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 			cb0i = append(cb0i, idx)
 		}
 	}
+	sort.Slice(cb0i, func(i, j int) bool {
+		return cb0i[i] < cb0i[j]
+	})
+
+	sort.Slice(cb1i, func(i, j int) bool {
+		return cb1i[i] < cb1i[j]
+	})
 	inAtt := &pb.IndexedAttestation{
 		Data:                attestation.Data,
 		Signature:           attestation.Signature,
@@ -695,9 +707,25 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.Indexe
 		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
 	}
 
-	// TODO: Verify sorted!
-	//        # Verify indices are sorted
-	//        assert bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)
+	copiedBit0Indices := make([]uint64, len(custodyBit0Indices))
+	copy(copiedBit0Indices, custodyBit0Indices)
+
+	sort.SliceStable(copiedBit0Indices, func(i, j int) bool {
+		return copiedBit0Indices[i] < copiedBit0Indices[j]
+	})
+	if !reflect.DeepEqual(copiedBit0Indices, custodyBit0Indices) {
+		return fmt.Errorf("custody Bit0 indices are not sorted, wanted %v but got %v", copiedBit0Indices, custodyBit0Indices)
+	}
+
+	copiedBit1Indices := make([]uint64, len(custodyBit1Indices))
+	copy(copiedBit1Indices, custodyBit1Indices)
+
+	sort.SliceStable(copiedBit1Indices, func(i, j int) bool {
+		return copiedBit1Indices[i] < copiedBit1Indices[j]
+	})
+	if !reflect.DeepEqual(copiedBit1Indices, custodyBit1Indices) {
+		return fmt.Errorf("custody Bit1 indices are not sorted, wanted %v but got %v", copiedBit1Indices, custodyBit1Indices)
+	}
 
 	if verifySignatures {
 		domain := helpers.Domain(beaconState, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
