@@ -218,7 +218,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "d69c889ad97b02883e04164c6acf77a7381634c2",  # v0.1.1
+    commit = "e69d17141ca58ba6afbf13098e90c9377938e590",  # v0.2.0
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -255,7 +255,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "99831444e78c8f23c9335c17d8f7c700ba25ca14",  # v0.1.0
+    commit = "4a42085d76199475c2014c4557895d42d2ff85d9",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -267,7 +267,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peerstore",
-    commit = "4353646945045d89f77d0b362cb5e5533cbd117e",  # v0.1.0
+    commit = "c11298943ef400535dac08ec6cbeff747cbe7e99",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-peerstore",
 )
 
@@ -430,7 +430,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_maddr_filter",
-    commit = "e3cdd802c04babcbec2c4711721d105cfe822cd3",  # v0.0.4
+    commit = "4d5679194bce9c87a81d3b9948a4b5edd5ddc094",  # v0.0.5
     importpath = "github.com/libp2p/go-maddr-filter",
 )
 
@@ -574,7 +574,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
-    commit = "faf05082a8ce97f46ab18c0455e141b28bcf0318",  # v0.1.1
+    commit = "a50d1c7d55c7bbc52879616e7e0c8cdf38747c1a",  # v0.1.3
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
 
@@ -710,7 +710,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "31765355df17ef818381169dc36180c84c119928",  # v0.1.0
+    commit = "874e3d3fa068272afc6006b29c51ec8529b1b5ea",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -1046,7 +1046,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "8f222f4b5a872d9af86f74f2ec0982c7356adce6",  # v0.0.3
+    commit = "786c4f4e0f0af96fb69223268da4d0bf123841d8",  # v0.0.6
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
@@ -1096,4 +1096,10 @@ go_repository(
     name = "com_github_koron_go_ssdp",
     commit = "4a0ed625a78b6858dc8d3a55fb7728968b712122",
     importpath = "github.com/koron/go-ssdp",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_eventbus",
+    commit = "4afad1f6206cb9222914f2ec6ab9d0b414705c54",
+    importpath = "github.com/libp2p/go-eventbus",
 )
