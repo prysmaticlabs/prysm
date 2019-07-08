@@ -34,7 +34,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 	}
 
 	for _, testCase := range s.TestCases {
-		if !isEmpty(testCase.Attestation.Value) {
+		if testCase.Attestation.Value != nil {
 			p := &pb.Attestation{}
 			if err := testutil.ConvertToPb(testCase.Attestation.Value, p); err != nil {
 				t.Fatal(err)
@@ -47,7 +47,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected attestation %#x, received %#x", testCase.Attestation.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.AttestationData.Value) {
+		if testCase.AttestationData.Value != nil {
 			p := &pb.AttestationData{}
 			if err := testutil.ConvertToPb(testCase.AttestationData.Value, p); err != nil {
 				t.Fatal(err)
@@ -60,7 +60,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected attestation data %#x, received %#x", testCase.AttestationData.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.AttestationDataAndCustodyBit.Value) {
+		if testCase.AttestationDataAndCustodyBit.Value != nil {
 			p := &pb.AttestationDataAndCustodyBit{}
 			if err := testutil.ConvertToPb(testCase.AttestationDataAndCustodyBit.Value, p); err != nil {
 				t.Fatal(err)
@@ -73,7 +73,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected attestation data and custody bit %#x, received %#x", testCase.AttestationDataAndCustodyBit.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.AttesterSlashing.Value) {
+		if testCase.AttesterSlashing.Value != nil {
 			p := &pb.AttesterSlashing{}
 			if err := testutil.ConvertToPb(testCase.AttesterSlashing.Value, p); err != nil {
 				t.Fatal(err)
@@ -86,7 +86,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected attester slashing bit %#x, received %#x", testCase.AttesterSlashing.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.BeaconBlock.Value) {
+		if testCase.BeaconBlock.Value != nil {
 			p := &pb.BeaconBlock{}
 			if err := testutil.ConvertToPb(testCase.BeaconBlock.Value, p); err != nil {
 				t.Fatal(err)
@@ -99,7 +99,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected beacon block %#x, received %#x", testCase.BeaconBlock.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.BeaconBlockBody.Value) {
+		if testCase.BeaconBlockBody.Value != nil {
 			p := &pb.BeaconBlockBody{}
 			if err := testutil.ConvertToPb(testCase.BeaconBlockBody.Value, p); err != nil {
 				t.Fatal(err)
@@ -112,7 +112,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected beacon block body %#x, received %#x", testCase.BeaconBlockBody.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.BeaconBlockHeader.Value) {
+		if testCase.BeaconBlockHeader.Value != nil {
 			p := &pb.BeaconBlockHeader{}
 			if err := testutil.ConvertToPb(testCase.BeaconBlockHeader.Value, p); err != nil {
 				t.Fatal(err)
@@ -125,7 +125,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected beacon block header %#x, received %#x", testCase.BeaconBlockHeader.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.BeaconState.Value) {
+		if testCase.BeaconState.Value != nil {
 			p := &pb.BeaconState{}
 			if err := testutil.ConvertToPb(testCase.BeaconState.Value, p); err != nil {
 				t.Fatal(err)
@@ -138,7 +138,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected beacon state %#x, received %#x", testCase.BeaconState.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.Crosslink.Value) {
+		if testCase.Crosslink.Value != nil {
 			c := &pb.Crosslink{}
 			if err := testutil.ConvertToPb(testCase.Crosslink.Value, c); err != nil {
 				t.Fatal(err)
@@ -151,7 +151,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected crosslink %#x, received %#x", testCase.Crosslink.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.Deposit.Value) {
+		if testCase.Deposit.Value != nil {
 			p := &pb.Deposit{}
 			if err := testutil.ConvertToPb(testCase.Deposit.Value, p); err != nil {
 				t.Fatal(err)
@@ -164,7 +164,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected deposit root %#x, received %#x", testCase.Deposit.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.DepositData.Value) {
+		if testCase.DepositData.Value != nil {
 			p := &pb.DepositData{}
 			if err := testutil.ConvertToPb(testCase.DepositData.Value, p); err != nil {
 				t.Fatal(err)
@@ -177,7 +177,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected deposit data %#x, received %#x", testCase.DepositData.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.Eth1Data.Value) {
+		if testCase.Eth1Data.Value != nil {
 			p := &pb.Eth1Data{}
 			if err := testutil.ConvertToPb(testCase.Eth1Data.Value, p); err != nil {
 				t.Fatal(err)
@@ -190,7 +190,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected eth1 data %#x, received %#x", testCase.Eth1Data.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.Fork.Value) {
+		if testCase.Fork.Value != nil {
 			p := &pb.Fork{}
 			if err := testutil.ConvertToPb(testCase.Fork.Value, p); err != nil {
 				t.Fatal(err)
@@ -203,7 +203,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected fork %#x, received %#x", testCase.Fork.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.HistoricalBatch.Value) {
+		if testCase.HistoricalBatch.Value != nil {
 			p := &pb.HistoricalBatch{}
 			if err := testutil.ConvertToPb(testCase.HistoricalBatch.Value, p); err != nil {
 				t.Fatal(err)
@@ -216,7 +216,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected historical batch %#x, received %#x", testCase.HistoricalBatch.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.IndexedAttestation.Value) {
+		if testCase.IndexedAttestation.Value != nil {
 			p := &pb.IndexedAttestation{}
 			if err := testutil.ConvertToPb(testCase.IndexedAttestation.Value, p); err != nil {
 				t.Fatal(err)
@@ -229,7 +229,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected indexed attestation %#x, received %#x", testCase.IndexedAttestation.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.PendingAttestation.Value) {
+		if testCase.PendingAttestation.Value != nil {
 			p := &pb.PendingAttestation{}
 			if err := testutil.ConvertToPb(testCase.PendingAttestation.Value, p); err != nil {
 				t.Fatal(err)
@@ -242,7 +242,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected pending attestation %#x, received %#x", testCase.PendingAttestation.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.ProposerSlashing.Value) {
+		if testCase.ProposerSlashing.Value != nil {
 			p := &pb.ProposerSlashing{}
 			if err := testutil.ConvertToPb(testCase.ProposerSlashing.Value, p); err != nil {
 				t.Fatal(err)
@@ -255,7 +255,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected proposer slashing %#x, received %#x", testCase.ProposerSlashing.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.Transfer.Value) {
+		if testCase.Transfer.Value != nil {
 			p := &pb.Transfer{}
 			if err := testutil.ConvertToPb(testCase.Transfer.Value, p); err != nil {
 				t.Fatal(err)
@@ -268,7 +268,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected trasnfer %#x, received %#x", testCase.Transfer.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.Validator.Value) {
+		if testCase.Validator.Value != nil {
 			p := &pb.Validator{}
 			if err := testutil.ConvertToPb(testCase.Validator.Value, p); err != nil {
 				t.Fatal(err)
@@ -281,7 +281,7 @@ func TestMainnetRandomYaml(t *testing.T) {
 				t.Errorf("Expected trasnfer %#x, received %#x", testCase.Validator.Root, root[:])
 			}
 		}
-		if !isEmpty(testCase.VoluntaryExit.Value) {
+		if testCase.VoluntaryExit.Value != nil {
 			p := &pb.VoluntaryExit{}
 			if err := testutil.ConvertToPb(testCase.VoluntaryExit.Value, p); err != nil {
 				t.Fatal(err)

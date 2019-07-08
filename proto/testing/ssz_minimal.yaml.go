@@ -31,10 +31,7 @@ type SszMinimalTest struct {
 			Root       []byte `json:"root" ssz:"size=32"`
 		} `json:"AttestationDataAndCustodyBit,omitempty"`
 		AttesterSlashing struct {
-			Value struct {
-				Attestation1 *pb.AttesterSlashing `json:"attestation_1"`
-				Attestation2 *pb.AttesterSlashing `json:"attestation_2"`
-			} `json:"value"`
+			Value *pb.AttesterSlashing `json:"value"`
 			Serialized []byte `json:"serialized"`
 			Root       []byte `json:"root" ssz:"size=32"`
 		} `json:"AttesterSlashing,omitempty"`
