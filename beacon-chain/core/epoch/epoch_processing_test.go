@@ -1402,8 +1402,7 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(state.Balances)
-	wanted := uint64(31999797616)
+	wanted := uint64(31999949392)
 	if state.Balances[0] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[0])
