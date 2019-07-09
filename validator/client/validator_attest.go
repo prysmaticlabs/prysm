@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -84,14 +85,30 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
 
-	// TODO(#1366): Use BLS to generate an aggregate signature.
-	sig := []byte("signed")
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
+	if err != nil {
+		log.WithError(err).Error("Failed to get domain data from beacon node")
+		return
+	}
+	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
+		Data: data,
+		// Default is false until phase 1 where proof of custody gets implemented.
+		CustodyBit: false,
+	}
+	root, err := ssz.SigningRoot(attDataAndCustodyBit)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"validator": truncatedPk,
+		}).Error("Failed to sign attestation data and custody bit")
+		return
+	}
+	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
 
 	log.WithFields(logrus.Fields{
 		"shard":     data.Crosslink.Shard,
 		"slot":      slot,
 		"validator": truncatedPk,
-	}).Info("Attesting to beacon chain head...")
+	}).Info("Attesting to beacon chain head")
 
 	attestation := &pbp2p.Attestation{
 		Data:            data,
