@@ -44,9 +44,8 @@ func (w *Web3Service) isValidGenesisState(chainStartDepositCount uint64, current
 
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
-func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
-	// (#2861): A No-Op until this PR is implemented
-	return 0, nil
+func (w *Web3Service) ETH2GenesisTime() uint64 {
+	return w.eth2GenesisTime
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -58,7 +57,6 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 		if !w.chainStarted {
 			triggered := w.isValidGenesisState(uint64(len(w.chainStartDeposits)), 0)
 			if triggered {
-				//TODO: get block time by hash
 				timeStamp := uint64(w.blockTime.Unix())
 				w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
 				w.ProcessChainStart(uint64(w.eth2GenesisTime))
