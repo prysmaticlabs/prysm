@@ -193,7 +193,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "9840134bdfbbf9bd5c84dc7483660e6f169b7617",
+    commit = "16d5ea9ff7bfbdf67353d2380fe7fa487056e003",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1121,6 +1121,6 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "cd890717bc502a748147a74326e011b8319fcfe5",
+    commit = "d2859ca5b9187125ce7f3694a4f7e18564724217",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
