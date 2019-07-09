@@ -213,30 +213,31 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 // current and previous epoch.
 //
 // Spec pseudocode definition:
-//   def get_committee_assignment(
-//        state: BeaconState,
-//        epoch: Epoch,
-//        validator_index: ValidatorIndex) -> Tuple[List[ValidatorIndex], Shard, Slot]:
+//   def get_committee_assignment(state: BeaconState,
+//                             epoch: Epoch,
+//                             validator_index: ValidatorIndex) -> Optional[Tuple[Sequence[ValidatorIndex], Shard, Slot]]:
 //    """
 //    Return the committee assignment in the ``epoch`` for ``validator_index``.
 //    ``assignment`` returned is a tuple of the following form:
 //        * ``assignment[0]`` is the list of validators in the committee
 //        * ``assignment[1]`` is the shard to which the committee is assigned
 //        * ``assignment[2]`` is the slot at which the committee is assigned
+//    Return None if no assignment.
 //    """
 //    next_epoch = get_current_epoch(state) + 1
 //    assert epoch <= next_epoch
 //
-//    committees_per_slot = get_epoch_committee_count(state, epoch) // SLOTS_PER_EPOCH
-//    epoch_start_slot = get_epoch_start_slot(epoch)
-//    for slot in range(epoch_start_slot, epoch_start_slot + SLOTS_PER_EPOCH)
+//    committees_per_slot = get_committee_count(state, epoch) // SLOTS_PER_EPOCH
+//    start_slot = compute_start_slot_of_epoch(epoch)
+//    for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH):
 //        offset = committees_per_slot * (slot % SLOTS_PER_EPOCH)
-//        slot_start_shard = (get_epoch_start_shard(state, epoch) + offset) % SHARD_COUNT
+//        slot_start_shard = (get_start_shard(state, epoch) + offset) % SHARD_COUNT
 //        for i in range(committees_per_slot):
-//            shard = (slot_start_shard + i) % SHARD_COUNT
+//            shard = Shard((slot_start_shard + i) % SHARD_COUNT)
 //            committee = get_crosslink_committee(state, epoch, shard)
 //            if validator_index in committee:
-//                return committee, shard, slot
+//                return committee, shard, Slot(slot)
+//    return None
 func CommitteeAssignment(
 	state *pb.BeaconState,
 	epoch uint64,
