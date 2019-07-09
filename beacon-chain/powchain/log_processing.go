@@ -58,6 +58,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 			timeStamp := uint64(w.blockTime.Unix())
 			triggered := w.isValidGenesisState(uint64(len(w.chainStartDeposits)), timeStamp)
 			if triggered {
+				// genesisTime will be set to the first second of the day, two days after it was triggered.
 				w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
 				w.ProcessChainStart(uint64(w.eth2GenesisTime))
 			}
