@@ -12,21 +12,21 @@ import (
 )
 
 type Store struct {
-	ctx context.Context
-	cancel              context.CancelFunc
-	time uint64
+	ctx              context.Context
+	cancel           context.CancelFunc
+	time             uint64
 	justifiedCheckpt *pb.Checkpoint
 	finalizedCheckpt *pb.Checkpoint
-	db         *db.BeaconDB
+	db               *db.BeaconDB
 }
 
 func NewForkChoiceService(ctx context.Context, db *db.BeaconDB) *Store {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &Store{
-		ctx: ctx,
+		ctx:    ctx,
 		cancel: cancel,
-		db: db,
+		db:     db,
 	}
 }
 
@@ -128,8 +128,7 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 
 	balances := uint64(0)
 
-	for _, i := range activeIndices{
+	for _, i := range activeIndices {
 
 	}
 }
-

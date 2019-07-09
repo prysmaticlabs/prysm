@@ -2,13 +2,13 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"encoding/binary"
+	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/boltdb/bolt"
-	"go.opencensus.io/trace"
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"go.opencensus.io/trace"
 )
 
 // SaveLatestMessage puts the validator's latest message record into the beacon chain db.
@@ -18,12 +18,12 @@ func (db *BeaconDB) SaveLatestMessage(ctx context.Context, index uint64, attesta
 
 	b := make([]byte, 64)
 	binary.LittleEndian.PutUint64(b, uint64(index))
-	
+
 	encodedAtt, err := proto.Marshal(attestation)
 	if err != nil {
 		return err
 	}
-	
+
 	return db.batch(func(tx *bolt.Tx) error {
 		l := tx.Bucket(latestMessageBucket)
 		return l.Put(b, encodedAtt)
@@ -36,7 +36,7 @@ func (db *BeaconDB) LatestMessage(index uint64) (*pb.LatestMessage, error) {
 
 	b := make([]byte, 64)
 	binary.LittleEndian.PutUint64(b, uint64(index))
-	
+
 	err := db.view(func(tx *bolt.Tx) error {
 		l := tx.Bucket(latestMessageBucket)
 
