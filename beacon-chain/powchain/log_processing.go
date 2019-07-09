@@ -55,9 +55,9 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
 		if !w.chainStarted {
-			triggered := w.isValidGenesisState(uint64(len(w.chainStartDeposits)), 0)
+			timeStamp := uint64(w.blockTime.Unix())
+			triggered := w.isValidGenesisState(uint64(len(w.chainStartDeposits)), timeStamp)
 			if triggered {
-				timeStamp := uint64(w.blockTime.Unix())
 				w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
 				w.ProcessChainStart(uint64(w.eth2GenesisTime))
 			}
