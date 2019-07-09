@@ -47,5 +47,5 @@ func AttestationDataSlot(state *pb.BeaconState, data *pb.AttestationData) (uint6
 	offset := (data.Crosslink.Shard + params.BeaconConfig().ShardCount -
 		epochStartShardNumber) % params.BeaconConfig().ShardCount
 
-	return StartSlot(data.Target.Epoch) + (offset / committeeCount / params.BeaconConfig().SlotsPerEpoch), nil
+	return StartSlot(data.Target.Epoch) + (offset / (committeeCount / params.BeaconConfig().SlotsPerEpoch)), nil
 }
