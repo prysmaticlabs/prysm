@@ -199,7 +199,7 @@ func (w *Web3Service) ChainStartETH1Data() *pb.Eth1Data {
 // the deposit contract received so far are valid enough
 // to kick start the beacon chain.
 func (w *Web3Service) HasChainStarted() bool {
-	return false
+	return w.chainStarted
 }
 
 // Status is service health checks. Return nil or error.

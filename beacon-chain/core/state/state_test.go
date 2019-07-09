@@ -2,18 +2,17 @@ package state_test
 
 import (
 	"bytes"
-	"encoding/binary"
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func init() {
@@ -134,13 +133,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	activeValidators, _ := helpers.ActiveValidatorIndices(newState, 0)
-	indicesBytes := []byte{}
-	for _, val := range activeValidators {
-		buf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(buf, val)
-		indicesBytes = append(indicesBytes, buf...)
+	genesisActiveIndexRoot, err := ssz.HashTreeRoot(activeValidators)
+	if err != nil {
+		t.Errorf("could not hash tree root: %v", err)
 	}
-	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
