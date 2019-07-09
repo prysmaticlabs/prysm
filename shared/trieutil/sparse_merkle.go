@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // MerkleTrie implements a sparse, general purpose Merkle trie to be used
@@ -74,30 +73,6 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	return &MerkleTrie{branches: branches, originalItems: items, treeDepth: depth}, nil
 }
 
-// IsValidMerkleBranch checks if leaf at index verifies against the Merkle root and branch.
-//  def is_valid_merkle_branch(leaf: Hash, branch: Sequence[Hash], depth: uint64, index: uint64, root: Hash) -> bool:
-//     """
-//     Check if ``leaf`` at ``index`` verifies against the Merkle ``root`` and ``branch``.
-//     """
-//     value = leaf
-//     for i in range(depth):
-//         if index // (2**i) % 2:
-//             value = hash(branch[i] + value)
-//         else:
-//             value = hash(value + branch[i])
-//     return value == root
-func IsValidMerkleBranch(leaf []byte, branch [][]byte, depth uint64, index uint64, root []byte) bool {
-	value := leaf
-	for i := uint64(0); i < depth; i++ {
-		if index/mathutil.PowerOf2(i)%2 == 0 {
-			value = parentHash(branch[i], value)
-		} else {
-			value = parentHash(value, branch[i])
-		}
-	}
-	return bytes.Equal(root, value)
-}
-
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
 func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
 	node := item
@@ -148,36 +123,6 @@ func (m *MerkleTrie) Root() [32]byte {
 // Items returns the original items passed in when creating the Merkle trie.
 func (m *MerkleTrie) Items() [][]byte {
 	return m.originalItems
-}
-
-// MerkleProofNew obtains a Merkle proof for an item at a given
-// index in the Merkle trie up to the root of the trie.
-// Spec Definition:
-//  def get_merkle_proof(tree, item_index):
-//     proof = []
-//     for i in range(32):
-//         subindex = (item_index // 2**i) ^ 1
-//         proof.append(tree[i][subindex] if subindex < len(tree[i]) else zerohashes[i])
-// 	return proof
-func (m *MerkleTrie) MerkleProofNew(merkleIndex uint64) [][]byte {
-	proof := [][]byte{}
-	zeroHashes := [][32]byte{}
-	zeroHashes = append(zeroHashes, [32]byte{})
-
-	for layer := 1; layer < 100; layer++ {
-		toHash := append(zeroHashes[layer-1][:], zeroHashes[layer-1][:]...)
-		z := hashutil.Hash(toHash)
-		zeroHashes = append(zeroHashes, z)
-	}
-	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
-		subIndex := (merkleIndex / mathutil.PowerOf2(i)) ^ 1
-		toAdd := zeroHashes[i][:]
-		if subIndex < uint64(len(m.branches[i])) {
-			toAdd = m.branches[i][subIndex]
-		}
-		proof = append(proof, toAdd)
-	}
-	return proof
 }
 
 // MerkleProof obtains a Merkle proof for an item at a given
