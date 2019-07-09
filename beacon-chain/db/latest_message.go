@@ -53,6 +53,23 @@ func (db *BeaconDB) LatestMessage(index uint64) (*pb.LatestMessage, error) {
 	return msg, err
 }
 
+// HasLatestMessage checks if the validator has the last message stored.
+func (db *BeaconDB) HasLatestMessage(index uint64) bool {
+	b := make([]byte, 64)
+	binary.LittleEndian.PutUint64(b, uint64(index))
+
+	exists := false
+	if err := db.view(func(tx *bolt.Tx) error {
+		l := tx.Bucket(latestMessageBucket)
+		exists = l.Get(b) != nil
+		return nil
+	}); err != nil {
+		return false
+	}
+
+	return exists
+}
+
 func createLatestMessage(enc []byte) (*pb.LatestMessage, error) {
 	l := &pb.LatestMessage{}
 	if err := proto.Unmarshal(enc, l); err != nil {
