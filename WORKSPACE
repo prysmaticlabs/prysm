@@ -193,13 +193,9 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "16d5ea9ff7bfbdf67353d2380fe7fa487056e003",
+    commit = "f36c537ad04c056caa1a40a62a29e874672e4b8a",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
-
-load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
-
-go_ssz_dependencies()
 
 go_repository(
     name = "com_github_urfave_cli",
@@ -1124,3 +1120,7 @@ go_repository(
     commit = "ec88cc4d1d143cad98308da54b73d0cdb04254eb",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
+
+load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
+
+go_ssz_dependencies()
