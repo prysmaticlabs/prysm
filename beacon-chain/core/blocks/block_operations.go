@@ -769,11 +769,12 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 		if err != nil {
 			return fmt.Errorf("could not tree hash deposit data: %v", err)
 		}
-		if ok := trieutil.VerifyMerkleProof(
-			receiptRoot,
+		if ok := trieutil.IsValidMerkleBranch(
 			leaf[:],
-			int(beaconState.Eth1DepositIndex),
 			deposit.Proof,
+			params.BeaconConfig().DepositContractTreeDepth+1,
+			beaconState.Eth1DepositIndex,
+			receiptRoot,
 		); !ok {
 			return fmt.Errorf(
 				"deposit merkle branch of deposit root did not verify for root: %#x",

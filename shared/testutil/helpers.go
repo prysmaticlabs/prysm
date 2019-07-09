@@ -2,7 +2,7 @@ package testutil
 
 import (
 	"crypto/rand"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/go-ssz"
 	"strconv"
 	"testing"
 
@@ -50,23 +50,20 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 func GenerateDepositProof(t testing.TB, deposits []*pb.Deposit) ([]*pb.Deposit, [32]byte) {
 	encodedDeposits := make([][]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
-		hashedDeposit, err := hashutil.DepositHash(deposits[i].Data)
+		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
 		if err != nil {
 			t.Fatalf("could not tree hash deposit data: %v", err)
 		}
 		encodedDeposits[i] = hashedDeposit[:]
 	}
 
-	depositTrie, err := trieutil.GenerateTrieFromItems(encodedDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems(encodedDeposits, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	if err != nil {
 		t.Fatalf("Could not generate deposit trie: %v", err)
 	}
 
 	for i := range deposits {
-		proof, err := depositTrie.MerkleProof(int(i))
-		if err != nil {
-			t.Fatalf("Could not generate proof: %v", err)
-		}
+		proof := depositTrie.MerkleProofNew(uint64(i))
 		deposits[i].Proof = proof
 	}
 	root := depositTrie.Root()
