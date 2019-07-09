@@ -45,7 +45,7 @@ message BeaconState {
 
   // Finality [9001-10000]
   // Spec type [4]Bitvector which means this would be a fixed size of 4 bits.
-  bytes justification_bits = 9001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+  bytes justification_bits = 9001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
   Checkpoint previous_justified_checkpoint = 9002;
   Checkpoint current_justified_checkpoint = 9003;
   Checkpoint finalized_checkpoint = 9004;
