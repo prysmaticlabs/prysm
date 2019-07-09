@@ -5,7 +5,7 @@ package testing
 
 import pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 
-type SszMinimalTest struct {
+type SszProtobufTest struct {
 	Title         string   `json:"title"`
 	Summary       string   `json:"summary"`
 	ForksTimeline string   `json:"forks_timeline"`
