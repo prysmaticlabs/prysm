@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -142,6 +143,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Target:    &pb.Checkpoint{Epoch: 0},
 			Crosslink: &pb.Crosslink{},
 		},
+		AggregationBits: bitfield.NewBitlist(0),
+		CustodyBits:     bitfield.NewBitlist(0),
 	}
 	epoch := helpers.CurrentEpoch(beaconState)
 	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
@@ -261,8 +264,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				EndEpoch: 64,
 			},
 		},
-		AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-		CustodyBits:     []byte{},
+		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	exits := []*pb.VoluntaryExit{
@@ -333,42 +336,11 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 	}
 }
 
-func TestProcessEpoch_CantGetAttsBalancePrevEpoch(t *testing.T) {
-	helpers.ClearAllCaches()
-
-	epoch := uint64(1)
-
-	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}, Target: &pb.Checkpoint{}}, AggregationBits: []byte{1}}}
-	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:                make([][]byte, 128),
-		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		PreviousEpochAttestations: atts})
-	if !strings.Contains(err.Error(), "could not get attesting balance prev epoch") {
-		t.Fatal("Did not receive wanted error")
-	}
-}
-
-func TestProcessEpoch_CantGetAttsBalanceCurrentEpoch(t *testing.T) {
-	epoch := uint64(1)
-
-	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}, Target: &pb.Checkpoint{}}, AggregationBits: []byte{1}}}
-	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:               make([][]byte, 128),
-		RandaoMixes:              make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations: atts})
-	if !strings.Contains(err.Error(), "could not get attesting balance current epoch") {
-		t.Fatal("Did not receive wanted error")
-	}
-}
-
 func TestProcessEpoch_CanProcess(t *testing.T) {
+	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 961}, Target: &pb.Checkpoint{}}}}
+	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Crosslink: &pb.Crosslink{Shard: 0}, Target: &pb.Checkpoint{}}}}
 	var crosslinks []*pb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.Crosslink{
@@ -377,15 +349,17 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 		})
 	}
 	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                     epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:               make([][]byte, 128),
-		Slashings:                []uint64{0, 1e9, 1e9},
-		RandaoMixes:              make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CompactCommitteesRoots:   make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentCrosslinks:        crosslinks,
-		CurrentEpochAttestations: atts,
-		FinalizedCheckpoint:      &pb.Checkpoint{},
+		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		BlockRoots:                 make([][]byte, 128),
+		Slashings:                  []uint64{0, 1e9, 1e9},
+		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CurrentCrosslinks:          crosslinks,
+		CurrentEpochAttestations:   atts,
+		FinalizedCheckpoint:        &pb.Checkpoint{},
+		JustificationBits:          bitfield.Bitvector4{0x00},
+		CurrentJustifiedCheckpoint: &pb.Checkpoint{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -647,9 +621,9 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 					DataRoot:   params.BeaconConfig().ZeroHash[:],
 				},
 			},
-			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
-				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0},
-			CustodyBits: []byte{},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
+				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			CustodyBits: bitfield.NewBitlist(0),
 		}
 	}
 
