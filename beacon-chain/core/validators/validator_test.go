@@ -7,36 +7,28 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestHasVoted_OK(t *testing.T) {
-	// Setting bit field to 11111111.
+	// Setting bitlist to 11111111.
 	pendingAttestation := &pb.Attestation{
-		AggregationBits: []byte{255},
+		AggregationBits: []byte{0xFF, 0x01},
 	}
 
-	for i := 0; i < len(pendingAttestation.AggregationBits); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBits, i)
-		if err != nil {
-			t.Errorf("checking bit failed at index: %d with : %v", i, err)
-		}
-		if !voted {
+	for i := uint64(0); i < pendingAttestation.AggregationBits.Len(); i++ {
+		if !pendingAttestation.AggregationBits.BitAt(i) {
 			t.Error("validator voted but received didn't vote")
 		}
 	}
 
-	// Setting bit field to 10101000.
+	// Setting bit field to 10101010.
 	pendingAttestation = &pb.Attestation{
-		AggregationBits: []byte{84},
+		AggregationBits: []byte{0xAA, 0x1},
 	}
 
-	for i := 0; i < len(pendingAttestation.AggregationBits); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBits, i)
-		if err != nil {
-			t.Errorf("checking bit failed at index: %d : %v", i, err)
-		}
+	for i := uint64(0); i < pendingAttestation.AggregationBits.Len(); i++ {
+		voted := pendingAttestation.AggregationBits.BitAt(i)
 		if i%2 == 0 && voted {
 			t.Error("validator didn't vote but received voted")
 		}

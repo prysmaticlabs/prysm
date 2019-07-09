@@ -161,14 +161,6 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 //      if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //          state.finalized_checkpoint = old_current_justified_checkpoint
 func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (*pb.BeaconState, error) {
-	// Justification bits are expected to be of type [4]BitVector. A BitVector
-	// is a fixed length array of bits. In go, we'll represent this as a byte
-	// array with a single byte. Since this BitVector is limited to 4 bits the
-	// maximum value is 0b1111 or 0x0F for the byte.
-	if len(state.JustificationBits) != 1 {
-		return nil, errors.New("state justification bits is not exactly 1 byte")
-	}
-
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint
@@ -181,8 +173,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 
 	// Process justifications
 	state.PreviousJustifiedCheckpoint = state.CurrentJustifiedCheckpoint
-	state.JustificationBits[0] <<= 1
-	state.JustificationBits[0] &= 0x0F // Mask with 0b1111. This eliminates the first left most 4 bits.
+	state.JustificationBits.Shift(1)
 
 	// Note: the spec refers to the bit index position starting at 1 instead of starting at zero.
 	// We will use that paradigm here for consistency with the godoc spec definition.
@@ -195,7 +186,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 				prevEpoch, err)
 		}
 		state.CurrentJustifiedCheckpoint = &pb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}
-		state.JustificationBits[0] |= 0x02 // Flip second bit to 1.
+		state.JustificationBits.SetBitAt(1, true)
 	}
 
 	// If 2/3 or more of the total balance attested in the current epoch.
@@ -206,29 +197,29 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 				prevEpoch, err)
 		}
 		state.CurrentJustifiedCheckpoint = &pb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}
-		state.JustificationBits[0] |= 0x01 // Flip first bit to 1.
+		state.JustificationBits.SetBitAt(0, true)
 	}
 
 	// Process finalization according to ETH2.0 specifications.
-	// Note: the context is missing in spec on why this is the way it is.
+	justification := state.JustificationBits.Bytes()
 
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
-	if state.JustificationBits[0] == 0x0E && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {
+	if bytes.Equal(justification, []byte{0x0E}) && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {
 		state.FinalizedCheckpoint = oldPrevJustifiedCheckpoint
 	}
 
 	// 2nd/3rd (0b0110) most recent epochs are justified, the 2nd using the 3rd as source.
-	if state.JustificationBits[0] == 0x06 && (oldPrevJustifiedCheckpoint.Epoch+2) == currentEpoch {
+	if bytes.Equal(justification, []byte{0x06}) && (oldPrevJustifiedCheckpoint.Epoch+2) == currentEpoch {
 		state.FinalizedCheckpoint = oldPrevJustifiedCheckpoint
 	}
 
 	// 1st/2nd/3rd (0b0111) most recent epochs are justified, the 1st using the 3rd as source.
-	if state.JustificationBits[0] == 0x07 && (oldCurrJustifiedCheckpoint.Epoch+2) == currentEpoch {
+	if bytes.Equal(justification, []byte{0x07}) && (oldCurrJustifiedCheckpoint.Epoch+2) == currentEpoch {
 		state.FinalizedCheckpoint = oldCurrJustifiedCheckpoint
 	}
 
 	// The 1st/2nd (0b0011) most recent epochs are justified, the 1st using the 2nd as source
-	if state.JustificationBits[0] == 0x03 && (oldCurrJustifiedCheckpoint.Epoch+1) == currentEpoch {
+	if bytes.Equal(justification, []byte{0x03}) && (oldCurrJustifiedCheckpoint.Epoch+1) == currentEpoch {
 		state.FinalizedCheckpoint = oldCurrJustifiedCheckpoint
 	}
 

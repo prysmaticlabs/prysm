@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -74,17 +74,16 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 
 	// Find the index in committee to be used for
 	// the aggregation bitfield
-	var indexInCommittee int
+	var indexInCommittee uint64
 	for i, vIndex := range assignment.Committee {
 		if vIndex == validatorIndexRes.Index {
-			indexInCommittee = i
+			indexInCommittee = uint64(i)
 			break
 		}
 	}
-	aggregationBitfield, err := bitutil.SetBitfield(indexInCommittee, len(assignment.Committee))
-	if err != nil {
-		log.Errorf("Could not set bitfield: %v", err)
-	}
+
+	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
+	aggregationBitfield.SetBitAt(indexInCommittee, true)
 
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
 	if err != nil {
