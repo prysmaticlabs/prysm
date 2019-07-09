@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
@@ -55,7 +56,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
-		AggregationBits: []byte{0x01},
+		AggregationBits: bitfield.Bitlist{0x03},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
@@ -125,7 +126,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		AggregationBits: []byte{0x80},
+		AggregationBits: bitfield.Bitlist{0x80, 0x01},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
@@ -245,7 +246,7 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		AggregationBits: []byte{0xC0},
+		AggregationBits: bitfield.Bitlist{0xC0, 0x01},
 		Data: &pb.AttestationData{
 			Crosslink: &pb.Crosslink{
 				Shard: 1,
@@ -301,7 +302,7 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	service.poolLimit = 9
 	for i := 0; i < 10; i++ {
 		attestation := &pb.Attestation{
-			AggregationBits: []byte{0x80},
+			AggregationBits: bitfield.Bitlist{0x80},
 			Data: &pb.AttestationData{
 				Target: &pb.Checkpoint{Epoch: 2},
 				Source: &pb.Checkpoint{},
@@ -352,7 +353,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	attestations := make([]*pb.Attestation, 0)
 	for i := 0; i < 10; i++ {
 		attestations = append(attestations, &pb.Attestation{
-			AggregationBits: []byte{0x80},
+			AggregationBits: bitfield.Bitlist{0x80, 0x01},
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard: 1,

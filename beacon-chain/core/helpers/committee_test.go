@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"github.com/prysmaticlabs/go-bitfield"
 	"reflect"
 	"testing"
 
@@ -241,26 +242,26 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	tests := []struct {
 		attestationSlot uint64
 		stateSlot       uint64
-		bitfield        []byte
+		bitfield        bitfield.Bitlist
 		wanted          []uint64
 	}{
 		{
 			attestationSlot: 3,
 			stateSlot:       5,
-			bitfield:        []byte{0x03},
-			wanted:          []uint64{127, 71},
+			bitfield:        bitfield.Bitlist{0x07},
+			wanted:          []uint64{219, 476},
 		},
 		{
 			attestationSlot: 2,
 			stateSlot:       10,
-			bitfield:        []byte{0x0, 0x01},
-			wanted:          []uint64{5},
+			bitfield:        bitfield.Bitlist{0x05},
+			wanted:          []uint64{123},
 		},
 		{
 			attestationSlot: 11,
 			stateSlot:       10,
-			bitfield:        []byte{0x03},
-			wanted:          []uint64{102, 68},
+			bitfield:        bitfield.Bitlist{0x07},
+			wanted:          []uint64{880, 757},
 		},
 	}
 
@@ -287,30 +288,6 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 }
 
-func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}, Target: &pb.Checkpoint{}}
-
-	if _, err := AttestingIndices(state, attestationData, []byte{}); err == nil {
-		t.Error("attestation participants should have failed with incorrect bitfield")
-	}
-}
-
 func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
@@ -331,9 +308,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}, Target: &pb.Checkpoint{}}
 
-	var zeroByte [16]byte
-
-	indices, err := AttestingIndices(state, attestationData, zeroByte[:])
+	indices, err := AttestingIndices(state, attestationData, bitfield.NewBitlist(128))
 	if err != nil {
 		t.Fatalf("attesting indices failed: %v", err)
 	}
@@ -344,10 +319,10 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 }
 
 func TestVerifyBitfield_OK(t *testing.T) {
-	bitfield := []byte{0xFF}
-	committeeSize := 8
+	bf := bitfield.Bitlist{0xFF, 0x01}
+	committeeSize := uint64(8)
 
-	isValidated, err := VerifyBitfield(bitfield, committeeSize)
+	isValidated, err := VerifyBitfield(bf, committeeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,21 +331,9 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x80}
-	committeeSize = 9
-
-	isValidated, err = VerifyBitfield(bitfield, committeeSize)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if isValidated {
-		t.Error("bitfield is validated when it was supposed to be")
-	}
-
-	bitfield = []byte{0xff, 0x03}
+	bf = bitfield.Bitlist{0xFF, 0x07}
 	committeeSize = 10
-	isValidated, err = VerifyBitfield(bitfield, committeeSize)
+	isValidated, err = VerifyBitfield(bf, committeeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -632,7 +595,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}{
 		{
 			attestation: &pb.Attestation{
-				AggregationBits: []byte{0x01},
+				AggregationBits: bitfield.Bitlist{0x05},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
@@ -645,7 +608,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		{
 
 			attestation: &pb.Attestation{
-				AggregationBits: []byte{0x02},
+				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 10,
@@ -657,7 +620,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBits: []byte{0x02},
+				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
@@ -669,7 +632,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBits: []byte{0xFF, 0xC0},
+				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
@@ -682,7 +645,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBits: []byte{0xFF},
+				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
@@ -695,7 +658,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for i, tt := range tests {
 		ClearAllCaches()
 		state.Slot = tt.stateSlot
 		verified, err := VerifyAttestationBitfield(state, tt.attestation)
@@ -712,7 +675,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 			continue
 		}
 		if err != nil {
-			t.Errorf("Failed to verify bitfield: %v", err)
+			t.Errorf("%d Failed to verify bitfield: %v", i, err)
 			continue
 		}
 		if !verified {
