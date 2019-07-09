@@ -7,11 +7,10 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestSlotProcessingMainnet(t *testing.T) {
@@ -35,33 +34,15 @@ func TestSlotProcessingMainnet(t *testing.T) {
 
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
-			preState := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Pre, preState); err != nil {
-				t.Fatal(err)
-			}
-
-			var postState *pb.BeaconState
-
-			postState, err = state.ProcessSlots(context.Background(), preState, preState.Slot+tt.Slots)
+			postState, err := state.ProcessSlots(context.Background(), tt.Pre, tt.Pre.Slot+tt.Slots)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			expectedPostState := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Post, expectedPostState); err != nil {
-				t.Fatal(err)
-			}
-
-			expected, err := ssz.HashTreeRoot(expectedPostState)
-			if err != nil {
-				t.Fatal(err)
-			}
-			received, err := ssz.HashTreeRoot(postState)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if expected != received {
-				t.Fatal("post state does not match")
+			if !proto.Equal(postState, tt.Post) {
+				diff, _ := messagediff.PrettyDiff(postState, tt.Post)
+				t.Log(diff)
+				t.Fatal("Post state does not match expected")
 			}
 		})
 	}

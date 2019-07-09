@@ -1507,7 +1507,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	}
 }
 
-func TestProcessVolundaryExits_ValidatorNotActive(t *testing.T) {
+func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
@@ -1529,7 +1529,7 @@ func TestProcessVolundaryExits_ValidatorNotActive(t *testing.T) {
 
 	want := "non-active validator cannot exit"
 
-	if _, err := blocks.ProcessVolundaryExits(
+	if _, err := blocks.ProcessVoluntaryExits(
 		state,
 		block.Body,
 		false,
@@ -1538,7 +1538,7 @@ func TestProcessVolundaryExits_ValidatorNotActive(t *testing.T) {
 	}
 }
 
-func TestProcessVolundaryExits_InvalidExitEpoch(t *testing.T) {
+func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			Epoch: 10,
@@ -1561,7 +1561,7 @@ func TestProcessVolundaryExits_InvalidExitEpoch(t *testing.T) {
 
 	want := "expected current epoch >= exit epoch"
 
-	if _, err := blocks.ProcessVolundaryExits(
+	if _, err := blocks.ProcessVoluntaryExits(
 
 		state,
 		block.Body,
@@ -1571,7 +1571,7 @@ func TestProcessVolundaryExits_InvalidExitEpoch(t *testing.T) {
 	}
 }
 
-func TestProcessVolundaryExits_NotActiveLongEnoughToExit(t *testing.T) {
+func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
@@ -1594,7 +1594,7 @@ func TestProcessVolundaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 	}
 
 	want := "validator has not been active long enough to exit"
-	if _, err := blocks.ProcessVolundaryExits(
+	if _, err := blocks.ProcessVoluntaryExits(
 
 		state,
 		block.Body,
@@ -1604,7 +1604,7 @@ func TestProcessVolundaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 	}
 }
 
-func TestProcessVolundaryExits_AppliesCorrectStatus(t *testing.T) {
+func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
@@ -1627,7 +1627,7 @@ func TestProcessVolundaryExits_AppliesCorrectStatus(t *testing.T) {
 			VoluntaryExits: exits,
 		},
 	}
-	newState, err := blocks.ProcessVolundaryExits(state, block.Body, false)
+	newState, err := blocks.ProcessVoluntaryExits(state, block.Body, false)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
@@ -1635,6 +1635,42 @@ func TestProcessVolundaryExits_AppliesCorrectStatus(t *testing.T) {
 	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
+	}
+}
+
+func TestProcessBeaconTransfers_NotEnoughSenderBalance(t *testing.T) {
+	registry := []*pb.Validator{
+		{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
+	state := &pb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+	}
+	transfers := []*pb.Transfer{
+		{
+			Fee:    params.BeaconConfig().MaxEffectiveBalance,
+			Amount: params.BeaconConfig().MaxEffectiveBalance,
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Transfers: transfers,
+		},
+	}
+	want := fmt.Sprintf(
+		"expected sender balance %d >= %d",
+		balances[0],
+		transfers[0].Fee+transfers[0].Amount,
+	)
+	if _, err := blocks.ProcessTransfers(
+		state,
+		block.Body,
+		false,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -1700,6 +1736,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 
 	state.Validators[0].WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
 	state.Validators[0].ActivationEligibilityEpoch = 0
+	state.Balances[0] = params.BeaconConfig().MinDepositAmount + params.BeaconConfig().MaxEffectiveBalance
 	block.Body.Transfers = []*pb.Transfer{
 		{
 			Fee:    params.BeaconConfig().MinDepositAmount,

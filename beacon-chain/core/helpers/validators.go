@@ -229,7 +229,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return bls_domain(domain_type, fork_version)
-func Domain(state *pb.BeaconState, epoch uint64, domainType uint64) uint64 {
+func Domain(state *pb.BeaconState, epoch uint64, domainType []byte) uint64 {
 	var forkVersion []byte
 	if epoch < state.Fork.Epoch {
 		forkVersion = state.Fork.PreviousVersion
