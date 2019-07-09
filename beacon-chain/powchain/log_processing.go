@@ -25,6 +25,7 @@ var (
 // isValidGenesisState gets called whenever there's a deposit event,
 // it checks whether there's enough effective balance to trigger and
 // if the minimum genesis time arrived already.
+//
 // Spec pseudocode definition:
 //  def is_valid_genesis_state(state: BeaconState) -> bool:
 //     if state.genesis_time < MIN_GENESIS_TIME:
@@ -154,16 +155,8 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 	chainStartCount.Inc()
-
-	// w.chainStartETH1Data = &pb.Eth1Data{
-	// 	BlockHash:   depositLog.BlockHash[:],
-	// 	DepositRoot: chainStartDepositRoot[:],
-	// }
-
 	w.chainStarted = true
-	//w.depositRoot = chainStartDepositRoot[:]
 	chainStartTime := time.Unix(int64(genesisTime), 0)
-
 	depHashes, err := w.ChainStartDepositHashes()
 	if err != nil {
 		log.Errorf("Generating chainstart deposit hashes failed: %v", err)

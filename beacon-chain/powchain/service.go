@@ -90,7 +90,6 @@ type Web3Service struct {
 	depositTrie             *trieutil.MerkleTrie
 	chainStartDeposits      []*pb.Deposit
 	chainStarted            bool
-	chainStartETH1Data      *pb.Eth1Data
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
