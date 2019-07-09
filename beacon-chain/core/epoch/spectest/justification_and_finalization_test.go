@@ -89,8 +89,6 @@ func runJustificationAndFinalizationTests(t *testing.T, filename string) {
 
 			if !reflect.DeepEqual(postState, expectedPostState) {
 				t.Error("Did not get expected state")
-				//diff, _ := messagediff.PrettyDiff(s, tt.Post)
-				//t.Log(diff)
 			}
 		})
 	}
