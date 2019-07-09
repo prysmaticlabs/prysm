@@ -119,7 +119,6 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	}
 	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
 
-	state.StateRoots[state.Slot%params.BeaconConfig().HistoricalRootsLimit] = prevStateRoot[:]
 	zeroHash := params.BeaconConfig().ZeroHash
 	// Cache latest block header state root.
 	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
@@ -130,7 +129,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 		return nil, fmt.Errorf("could not determine prev block root: %v", err)
 	}
 	// Cache the block root.
-	state.BlockRoots[state.Slot%params.BeaconConfig().HistoricalRootsLimit] = prevBlockRoot[:]
+	state.BlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot[:]
 	return state, nil
 }
 
@@ -255,15 +254,10 @@ func ProcessOperations(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
 	defer span.End()
 
-	maxDeposits := params.BeaconConfig().MaxDeposits
-	if state.Eth1Data.DepositCount-state.Eth1DepositIndex < maxDeposits {
-		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
+	if err := verifyOperationLengths(state, body); err != nil {
+		return nil, fmt.Errorf("could not verify operation lengths: %v", err)
 	}
-	// Verify outstanding deposits are processed up to max number of deposits
-	if len(body.Deposits) != int(maxDeposits) {
-		return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
-			maxDeposits, len(body.Deposits))
-	}
+
 	// Verify that there are no duplicate transfers
 	transferSet := make(map[[32]byte]bool)
 	for _, transfer := range body.Transfers {
@@ -279,11 +273,11 @@ func ProcessOperations(
 
 	state, err := b.ProcessProposerSlashings(state, body, config.VerifySignatures)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
+		return nil, fmt.Errorf("could not process block proposer slashings: %v", err)
 	}
 	state, err = b.ProcessAttesterSlashings(state, body, config.VerifySignatures)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
+		return nil, fmt.Errorf("could not process block attester slashings: %v", err)
 	}
 	state, err = b.ProcessAttestations(state, body, config.VerifySignatures)
 	if err != nil {
@@ -293,7 +287,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
 	}
-	state, err = b.ProcessVolundaryExits(state, body, config.VerifySignatures)
+	state, err = b.ProcessVoluntaryExits(state, body, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
@@ -303,6 +297,60 @@ func ProcessOperations(
 	}
 
 	return state, nil
+}
+
+func verifyOperationLengths(state *pb.BeaconState, body *pb.BeaconBlockBody) error {
+	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
+		return fmt.Errorf(
+			"number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
+			len(body.ProposerSlashings),
+			params.BeaconConfig().MaxProposerSlashings,
+		)
+	}
+
+	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
+		return fmt.Errorf(
+			"number of attester slashings (%d) in block body exceeds allowed threshold of %d",
+			len(body.AttesterSlashings),
+			params.BeaconConfig().MaxAttesterSlashings,
+		)
+	}
+
+	if uint64(len(body.Attestations)) > params.BeaconConfig().MaxAttestations {
+		return fmt.Errorf(
+			"number of attestations (%d) in block body exceeds allowed threshold of %d",
+			len(body.Attestations),
+			params.BeaconConfig().MaxAttestations,
+		)
+	}
+
+	if uint64(len(body.VoluntaryExits)) > params.BeaconConfig().MaxVoluntaryExits {
+		return fmt.Errorf(
+			"number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
+			len(body.VoluntaryExits),
+			params.BeaconConfig().MaxVoluntaryExits,
+		)
+	}
+
+	if uint64(len(body.Transfers)) > params.BeaconConfig().MaxTransfers {
+		return fmt.Errorf(
+			"number of transfers (%d) in block body exceeds allowed threshold of %d",
+			len(body.Transfers),
+			params.BeaconConfig().MaxTransfers,
+		)
+	}
+
+	maxDeposits := params.BeaconConfig().MaxDeposits
+	if state.Eth1Data.DepositCount-state.Eth1DepositIndex < maxDeposits {
+		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
+	}
+	// Verify outstanding deposits are processed up to max number of deposits
+	if len(body.Deposits) != int(maxDeposits) {
+		return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
+			maxDeposits, len(body.Deposits))
+	}
+
+	return nil
 }
 
 // CanProcessEpoch checks the eligibility to process epoch.

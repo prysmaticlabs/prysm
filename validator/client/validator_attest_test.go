@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -77,10 +78,14 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		BeaconBlockRoot: []byte{},
-		TargetRoot:      []byte{},
-		SourceRoot:      []byte{},
+		Target:          &pbp2p.Checkpoint{},
+		Source:          &pbp2p.Checkpoint{},
 		Crosslink:       &pbp2p.Crosslink{},
 	}, nil)
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch2
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 	m.attesterClient.EXPECT().SubmitAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
@@ -114,11 +119,15 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		BeaconBlockRoot: []byte("A"),
-		TargetRoot:      []byte("B"),
-		SourceRoot:      []byte("C"),
+		Target:          &pbp2p.Checkpoint{Root: []byte("B")},
+		Source:          &pbp2p.Checkpoint{Root: []byte("C"), Epoch: 3},
 		Crosslink:       &pbp2p.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
-		SourceEpoch:     3,
 	}, nil)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	var generatedAttestation *pbp2p.Attestation
 	m.attesterClient.EXPECT().SubmitAttestation(
@@ -130,23 +139,34 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
-	// Validator index is at index 4 in the mocked committee defined in this test.
 	expectedAttestation := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
 			BeaconBlockRoot: []byte("A"),
-			TargetRoot:      []byte("B"),
-			SourceRoot:      []byte("C"),
+			Target:          &pbp2p.Checkpoint{Root: []byte("B")},
+			Source:          &pbp2p.Checkpoint{Root: []byte("C"), Epoch: 3},
 			Crosslink:       &pbp2p.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
-			SourceEpoch:     3,
 		},
 		CustodyBits: make([]byte, (len(committee)+7)/8),
-		Signature:   []byte("signed"),
 	}
-	aggregationBitfield, err := bitutil.SetBitfield(4, len(committee))
+	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
+	aggregationBitfield.SetBitAt(4, true)
+
+	expectedAttestation.AggregationBits = aggregationBitfield
+
+	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
+		Data: expectedAttestation.Data,
+		CustodyBit: false,
+	}
+	root, err := ssz.SigningRoot(attDataAndCustodyBit)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedAttestation.AggregationBits = aggregationBitfield
+
+	k := hex.EncodeToString(validatorKey.PublicKey.Marshal())
+	sig := validator.keys[k].SecretKey.Sign(root[:], 0).Marshal()
+	expectedAttestation.Signature = sig
+
+
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
@@ -208,10 +228,9 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		BeaconBlockRoot: []byte("A"),
-		TargetRoot:      []byte("B"),
-		SourceRoot:      []byte("C"),
+		Target:          &pbp2p.Checkpoint{Root: []byte("B")},
+		Source:          &pbp2p.Checkpoint{Root: []byte("C"), Epoch: 3},
 		Crosslink:       &pbp2p.Crosslink{DataRoot: []byte{'D'}},
-		SourceEpoch:     3,
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
@@ -224,6 +243,11 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	m.attesterClient.EXPECT().SubmitAttestation(
 		gomock.Any(), // ctx
@@ -255,12 +279,15 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		TargetRoot:      []byte("B"),
-		SourceRoot:      []byte("C"),
-		Crosslink:       &pbp2p.Crosslink{DataRoot: []byte{'D'}},
-		SourceEpoch:     3,
+		Target:    &pbp2p.Checkpoint{Root: []byte("B")},
+		Source:    &pbp2p.Checkpoint{Root: []byte("C"), Epoch: 3},
+		Crosslink: &pbp2p.Crosslink{DataRoot: []byte{'D'}},
 	}, nil)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	var generatedAttestation *pbp2p.Attestation
 	m.attesterClient.EXPECT().SubmitAttestation(

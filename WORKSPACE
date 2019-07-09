@@ -1,4 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "bazel_skylib",
@@ -41,9 +42,24 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "ae72777e383df42f42831413b938f71cbb2fa61637b3246808d75261a2af38a8",
-    strip_prefix = "rules_k8s-dda7ab9151cb95f944e59beabaa0d960825ee17c",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/dda7ab9151cb95f944e59beabaa0d960825ee17c.tar.gz",
+    sha256 = "f37af27b3825dbaa811bcf4c3fcab581437fc0bd777e86468f19604ca2e99c6b",
+    strip_prefix = "rules_k8s-60571086ea6e10b1ddd2512d5c0fd32d01fa5701",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/60571086ea6e10b1ddd2512d5c0fd32d01fa5701.tar.gz",
+)
+
+# Override default import in rules_go with special patch until
+# https://github.com/gogo/protobuf/pull/582 is merged.
+git_repository(
+    name = "com_github_gogo_protobuf",
+    commit = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c",  # v1.2.1, as of 2019-03-03
+    patch_args = ["-p1"],
+    patches = [
+        "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
+        "//third_party:com_github_gogo_protobuf-equal.patch",
+    ],
+    remote = "https://github.com/gogo/protobuf",
+    shallow_since = "1550471403 +0200",
+    # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
 load(
@@ -124,9 +140,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "4a8384320fba401cbf21fef177aa113ed8fe35952ace98e00b796cac87ae7868",
-    strip_prefix = "repo-infra-df02ded38f9506e5bbcbf21702034b4fef815f2f",
-    url = "https://github.com/kubernetes/repo-infra/archive/df02ded38f9506e5bbcbf21702034b4fef815f2f.tar.gz",
+    sha256 = "dd02a62c2a458295f561e280411b04d2efbd97e4954986a401a9a1334cc32cc3",
+    strip_prefix = "repo-infra-1b2ddaf3fb8775a5d0f4e28085cf846f915977a8",
+    url = "https://github.com/kubernetes/repo-infra/archive/1b2ddaf3fb8775a5d0f4e28085cf846f915977a8.tar.gz",
 )
 
 http_archive(
@@ -140,10 +156,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "5e787c3ac2f2b75a3eda82d903d118e960e5440aada0a484c5669bd2c57058bc",
-    # TODO: Update the fork repo with the image on the next tag.
-    #url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.7.1/base64_encoded_archive.tar.gz",
-    url = "https://prysmaticlabs.com/uploads/base64_encoded_archive.tar.gz",
+    sha256 = "4be3a1a065abd46534b5b67d77be76de6ce6dbed27bffe8fcf1b3b6f4a11d9d5",
+    url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.8.0/base64_encoded_archive.tar.gz",
 )
 
 http_archive(
@@ -179,13 +193,9 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "65835a5f002109998995206338ca888e41503525",
+    commit = "f36c537ad04c056caa1a40a62a29e874672e4b8a",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
-
-load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
-
-go_ssz_dependencies()
 
 go_repository(
     name = "com_github_urfave_cli",
@@ -219,7 +229,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "d69c889ad97b02883e04164c6acf77a7381634c2",  # v0.1.1
+    commit = "e69d17141ca58ba6afbf13098e90c9377938e590",  # v0.2.0
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -256,7 +266,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "99831444e78c8f23c9335c17d8f7c700ba25ca14",  # v0.1.0
+    commit = "4a42085d76199475c2014c4557895d42d2ff85d9",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -268,7 +278,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peerstore",
-    commit = "4353646945045d89f77d0b362cb5e5533cbd117e",  # v0.1.0
+    commit = "c11298943ef400535dac08ec6cbeff747cbe7e99",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-peerstore",
 )
 
@@ -431,7 +441,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_maddr_filter",
-    commit = "e3cdd802c04babcbec2c4711721d105cfe822cd3",  # v0.0.4
+    commit = "4d5679194bce9c87a81d3b9948a4b5edd5ddc094",  # v0.0.5
     importpath = "github.com/libp2p/go-maddr-filter",
 )
 
@@ -575,7 +585,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
-    commit = "faf05082a8ce97f46ab18c0455e141b28bcf0318",  # v0.1.1
+    commit = "a50d1c7d55c7bbc52879616e7e0c8cdf38747c1a",  # v0.1.3
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
 
@@ -711,7 +721,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "31765355df17ef818381169dc36180c84c119928",  # v0.1.0
+    commit = "874e3d3fa068272afc6006b29c51ec8529b1b5ea",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -896,7 +906,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "457ea5c15ccf3b87db582c450e80101989da35f7",  # v0.40.0
+    commit = "cf81fad90a1a1de334c4fc27e23eb9a4224b627a",  # v0.41.0
     importpath = "cloud.google.com/go",
 )
 
@@ -1047,7 +1057,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "8f222f4b5a872d9af86f74f2ec0982c7356adce6",  # v0.0.3
+    commit = "786c4f4e0f0af96fb69223268da4d0bf123841d8",  # v0.0.6
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
@@ -1100,7 +1110,23 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_libp2p_go_eventbus",
+    commit = "4afad1f6206cb9222914f2ec6ab9d0b414705c54",
+    importpath = "github.com/libp2p/go-eventbus",
+)
+
+go_repository(
     name = "in_gopkg_d4l3k_messagediff_v1",
     commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",
     importpath = "gopkg.in/d4l3k/messagediff.v1",
 )
+
+go_repository(
+    name = "com_github_prysmaticlabs_go_bitfield",
+    commit = "ec88cc4d1d143cad98308da54b73d0cdb04254eb",
+    importpath = "github.com/prysmaticlabs/go-bitfield",
+)
+
+load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
+
+go_ssz_dependencies()

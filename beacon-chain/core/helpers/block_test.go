@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -87,30 +86,21 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			slot:      1000,
-			stateSlot: 500,
-			expectedErr: fmt.Sprintf("slot %d is not within range %d to %d",
-				1000,
-				0,
-				500),
+			slot:        1000,
+			stateSlot:   500,
+			expectedErr: "slot out of bounds",
 		},
 		{
-			slot:      3000,
-			stateSlot: 3000,
-			expectedErr: fmt.Sprintf("slot %d is not within range %d to %d",
-				3000,
-				0,
-				3000),
+			slot:        3000,
+			stateSlot:   3000,
+			expectedErr: "slot out of bounds",
 		},
 		{
 			// Edge case where stateSlot is over slots per historical root and
 			// slot is not within (stateSlot - HistoricalRootsLimit, statSlot]
-			slot:      1,
-			stateSlot: params.BeaconConfig().HistoricalRootsLimit + 2,
-			expectedErr: fmt.Sprintf("slot %d is not within range %d to %d",
-				1,
-				2,
-				params.BeaconConfig().HistoricalRootsLimit+2),
+			slot:        1,
+			stateSlot:   params.BeaconConfig().HistoricalRootsLimit + 2,
+			expectedErr: "slot out of bounds",
 		},
 	}
 	for _, tt := range tests {

@@ -7,82 +7,34 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestHasVoted_OK(t *testing.T) {
-	// Setting bit field to 11111111.
+	// Setting bitlist to 11111111.
 	pendingAttestation := &pb.Attestation{
-		AggregationBits: []byte{255},
+		AggregationBits: []byte{0xFF, 0x01},
 	}
 
-	for i := 0; i < len(pendingAttestation.AggregationBits); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBits, i)
-		if err != nil {
-			t.Errorf("checking bit failed at index: %d with : %v", i, err)
-		}
-		if !voted {
+	for i := uint64(0); i < pendingAttestation.AggregationBits.Len(); i++ {
+		if !pendingAttestation.AggregationBits.BitAt(i) {
 			t.Error("validator voted but received didn't vote")
 		}
 	}
 
-	// Setting bit field to 10101000.
+	// Setting bit field to 10101010.
 	pendingAttestation = &pb.Attestation{
-		AggregationBits: []byte{84},
+		AggregationBits: []byte{0xAA, 0x1},
 	}
 
-	for i := 0; i < len(pendingAttestation.AggregationBits); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBits, i)
-		if err != nil {
-			t.Errorf("checking bit failed at index: %d : %v", i, err)
-		}
+	for i := uint64(0); i < pendingAttestation.AggregationBits.Len(); i++ {
+		voted := pendingAttestation.AggregationBits.BitAt(i)
 		if i%2 == 0 && voted {
 			t.Error("validator didn't vote but received voted")
 		}
 		if i%2 == 1 && !voted {
 			t.Error("validator voted but received didn't vote")
 		}
-	}
-}
-
-func TestActivateValidatorGenesis_OK(t *testing.T) {
-	state := &pb.BeaconState{
-		Validators: []*pb.Validator{
-			{Pubkey: []byte{'A'}},
-		},
-	}
-	newState, err := ActivateValidator(state, 0, true)
-	if err != nil {
-		t.Fatalf("could not execute activateValidator:%v", err)
-	}
-	if newState.Validators[0].ActivationEpoch != 0 {
-		t.Errorf("Wanted activation epoch = genesis epoch, got %d",
-			newState.Validators[0].ActivationEpoch)
-	}
-	if newState.Validators[0].ActivationEligibilityEpoch != 0 {
-		t.Errorf("Wanted activation eligibility epoch = genesis epoch, got %d",
-			newState.Validators[0].ActivationEligibilityEpoch)
-	}
-}
-
-func TestActivateValidator_OK(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 100, // epoch 2
-		Validators: []*pb.Validator{
-			{Pubkey: []byte{'A'}},
-		},
-	}
-	newState, err := ActivateValidator(state, 0, false)
-	if err != nil {
-		t.Fatalf("could not execute activateValidator:%v", err)
-	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	wantedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	if newState.Validators[0].ActivationEpoch != wantedEpoch {
-		t.Errorf("Wanted activation slot = %d, got %d",
-			wantedEpoch,
-			newState.Validators[0].ActivationEpoch)
 	}
 }
 
@@ -228,7 +180,7 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Could not get proposer %v", err)
 	}
 
-	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowingRewardQuotient
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
 	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
 
 	if state.Balances[proposer] != params.BeaconConfig().MaxEffectiveBalance+proposerReward {
@@ -239,8 +191,9 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Did not get expected balance for whistleblower %d", state.Balances[whistleIdx])
 	}
 
-	if state.Balances[slashedIdx] != params.BeaconConfig().MaxEffectiveBalance-whistleblowerReward {
-		t.Errorf("Did not get expected balance for slashed validator %d", state.Balances[slashedIdx])
+	if state.Balances[slashedIdx] != params.BeaconConfig().MaxEffectiveBalance-(state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient) {
+		t.Errorf("Did not get expected balance for slashed validator, wanted %d but got %d",
+			state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient, state.Balances[slashedIdx])
 	}
 
 }

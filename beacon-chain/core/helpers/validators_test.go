@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -25,6 +26,118 @@ func TestIsActiveValidator_OK(t *testing.T) {
 			t.Errorf("IsActiveValidator(%d) = %v, want = %v",
 				test.a, IsActiveValidator(validator, test.a), test.b)
 		}
+	}
+}
+
+func TestIsSlashableValidator_Active(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	activeValidator := &pb.Validator{
+		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+	}
+
+	slashableValidator := IsSlashableValidator(activeValidator, 0)
+	if !slashableValidator {
+		t.Errorf("Expected active validator to be slashable, received false")
+	}
+}
+
+func TestIsSlashableValidator_BeforeWithdrawable(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	beforeWithdrawableValidator := &pb.Validator{
+		WithdrawableEpoch: 5,
+	}
+
+	slashableValidator := IsSlashableValidator(beforeWithdrawableValidator, 3)
+	if !slashableValidator {
+		t.Errorf("Expected before withdrawable validator to be slashable, received false")
+	}
+}
+
+func TestIsSlashableValidator_Inactive(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	inactiveValidator := &pb.Validator{
+		ActivationEpoch:   5,
+		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+	}
+
+	slashableValidator := IsSlashableValidator(inactiveValidator, 2)
+	if slashableValidator {
+		t.Errorf("Expected inactive validator to not be slashable, received true")
+	}
+}
+
+func TestIsSlashableValidator_AfterWithdrawable(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	afterWithdrawableValidator := &pb.Validator{
+		WithdrawableEpoch: 3,
+	}
+
+	slashableValidator := IsSlashableValidator(afterWithdrawableValidator, 3)
+	if slashableValidator {
+		t.Errorf("Expected after withdrawable validator to not be slashable, received true")
+	}
+}
+
+func TestIsSlashableValidator_SlashedWithdrawalble(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+	slashedValidator := &pb.Validator{
+		Slashed:           true,
+		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+		WithdrawableEpoch: 1,
+	}
+
+	slashableValidator := IsSlashableValidator(slashedValidator, 2)
+	if slashableValidator {
+		t.Errorf("Expected slashable validator to not be slashable, received true")
+	}
+}
+
+func TestIsSlashableValidator_Slashed(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	slashedValidator2 := &pb.Validator{
+		Slashed:           true,
+		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+	}
+
+	slashableValidator := IsSlashableValidator(slashedValidator2, 2)
+	if slashableValidator {
+		t.Errorf("Expected slashable validator to not be slashable, received true")
+	}
+}
+
+func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	slashedValidator2 := &pb.Validator{
+		Slashed:           true,
+		ActivationEpoch:   4,
+		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+	}
+
+	slashableValidator := IsSlashableValidator(slashedValidator2, 2)
+	if slashableValidator {
+		t.Errorf("Expected slashable validator to not be slashable, received true")
 	}
 }
 
@@ -140,12 +253,12 @@ func TestChurnLimit_OK(t *testing.T) {
 			RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 			ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		}
-		resultChurn, err := ChurnLimit(beaconState)
+		resultChurn, err := ValidatorChurnLimit(beaconState)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if resultChurn != test.wantedChurn {
-			t.Errorf("ChurnLimit(%d) = %d, want = %d",
+			t.Errorf("ValidatorChurnLimit(%d) = %d, want = %d",
 				test.validatorCount, resultChurn, test.wantedChurn)
 		}
 	}
@@ -171,8 +284,8 @@ func TestDomain_OK(t *testing.T) {
 		{epoch: 3, domainType: 5, version: 216172782113783813},
 	}
 	for _, tt := range tests {
-		if Domain(state, tt.epoch, tt.domainType) != tt.version {
-			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state, tt.epoch, tt.domainType))
+		if Domain(state, tt.epoch, bytesutil.Bytes4(tt.domainType)) != tt.version {
+			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state, tt.epoch, bytesutil.Bytes4(tt.domainType)))
 		}
 	}
 }

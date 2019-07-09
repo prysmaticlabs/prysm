@@ -243,11 +243,9 @@ func ProcessProposerSlashings(
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	registry := beaconState.Validators
-
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
-		proposer := registry[slashing.ProposerIndex]
+		proposer := beaconState.Validators[slashing.ProposerIndex]
 		if err = verifyProposerSlashing(beaconState, proposer, slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing %d: %v", idx, err)
 		}
@@ -314,7 +312,6 @@ func ProcessAttesterSlashings(
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-
 	for idx, slashing := range body.AttesterSlashings {
 		if err := verifyAttesterSlashing(slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attester slashing #%d: %v", idx, err)
@@ -360,18 +357,19 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 // IsSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
 //
 // Spec pseudocode definition:
-//   return (
-//   # Double vote
-//   (data_1 != data_2 and data_1.target_epoch == data_2.target_epoch) or
-//   # Surround vote
-//   (data_1.source_epoch < data_2.source_epoch and data_2.target_epoch < data_1.target_epoch)
-//   )
+//   def is_slashable_attestation_data(data_1: AttestationData, data_2: AttestationData) -> bool:
+//    """
+//    Check if ``data_1`` and ``data_2`` are slashable according to Casper FFG rules.
+//    """
+//    return (
+//        # Double vote
+//        (data_1 != data_2 and data_1.target.epoch == data_2.target.epoch) or
+//        # Surround vote
+//        (data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch)
+//    )
 func IsSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
-	// Inner attestation data structures for the votes should not be equal,
-	// as that would mean both votes are the same and therefore no slashing
-	// should occur.
-	isDoubleVote := !proto.Equal(data1, data2) && data1.TargetEpoch == data2.TargetEpoch
-	isSurroundVote := data1.SourceEpoch < data2.SourceEpoch && data2.TargetEpoch < data1.TargetEpoch
+	isDoubleVote := !proto.Equal(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
+	isSurroundVote := data1.Source.Epoch < data2.Source.Epoch && data2.Target.Epoch < data1.Target.Epoch
 	return isDoubleVote || isSurroundVote
 }
 
@@ -391,10 +389,8 @@ func ProcessAttestations(
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	atts := body.Attestations
-
 	var err error
-	for idx, attestation := range atts {
+	for idx, attestation := range body.Attestations {
 		beaconState, err = ProcessAttestation(beaconState, attestation, verifySignatures)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
@@ -475,10 +471,10 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 		ProposerIndex:   proposerIndex,
 	}
 
-	if !(data.TargetEpoch == helpers.PrevEpoch(beaconState) || data.TargetEpoch == helpers.CurrentEpoch(beaconState)) {
+	if !(data.Target.Epoch == helpers.PrevEpoch(beaconState) || data.Target.Epoch == helpers.CurrentEpoch(beaconState)) {
 		return nil, fmt.Errorf(
 			"expected target epoch %d == %d or %d",
-			data.TargetEpoch,
+			data.Target.Epoch,
 			helpers.PrevEpoch(beaconState),
 			helpers.CurrentEpoch(beaconState),
 		)
@@ -488,7 +484,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	var ffgSourceRoot []byte
 	var ffgTargetEpoch uint64
 	var parentCrosslink *pb.Crosslink
-	if data.TargetEpoch == helpers.CurrentEpoch(beaconState) {
+	if data.Target.Epoch == helpers.CurrentEpoch(beaconState) {
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.CurrentEpoch(beaconState)
@@ -501,18 +497,18 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 		parentCrosslink = beaconState.PreviousCrosslinks[data.Crosslink.Shard]
 		beaconState.PreviousEpochAttestations = append(beaconState.PreviousEpochAttestations, pendingAtt)
 	}
-	if data.SourceEpoch != ffgSourceEpoch {
-		return nil, fmt.Errorf("expected source epoch %d, received %d", ffgSourceEpoch, data.SourceEpoch)
+	if data.Source.Epoch != ffgSourceEpoch {
+		return nil, fmt.Errorf("expected source epoch %d, received %d", ffgSourceEpoch, data.Source.Epoch)
 	}
-	if !bytes.Equal(data.SourceRoot, ffgSourceRoot) {
-		return nil, fmt.Errorf("expected source root %#x, received %#x", ffgSourceRoot, data.SourceRoot)
+	if !bytes.Equal(data.Source.Root, ffgSourceRoot) {
+		return nil, fmt.Errorf("expected source root %#x, received %#x", ffgSourceRoot, data.Source.Root)
 	}
-	if data.TargetEpoch != ffgTargetEpoch {
-		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.TargetEpoch)
+	if data.Target.Epoch != ffgTargetEpoch {
+		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.Target.Epoch)
 	}
 	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
-	if data.TargetEpoch < endEpoch {
-		endEpoch = data.TargetEpoch
+	if data.Target.Epoch < endEpoch {
+		endEpoch = data.Target.Epoch
 	}
 	if data.Crosslink.StartEpoch != parentCrosslink.EndEpoch {
 		return nil, fmt.Errorf("expected crosslink start epoch %d, received %d",
@@ -570,7 +566,10 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 	if err != nil {
 		return nil, fmt.Errorf("could not get attesting indices: %v", err)
 	}
-	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
+	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
+	if err != nil {
+		return nil, err
+	}
 	if !sliceutil.SubsetUint64(cb1i, attIndices) {
 		return nil, fmt.Errorf("%v is not a subset of %v", cb1i, attIndices)
 	}
@@ -597,34 +596,40 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 // WIP - signing is not implemented until BLS is integrated into Prysm.
 //
 // Spec pseudocode definition:
-//  def verify_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+//  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
 //    """
-//    Verify validity of ``indexed_attestation`` fields.
+//    Verify validity of ``indexed_attestation``.
 //    """
-//    custody_bit_0_indices = indexed_attestation.custody_bit_0_indices
-//    custody_bit_1_indices = indexed_attestation.custody_bit_1_indices
+//    bit_0_indices = indexed_attestation.custody_bit_0_indices
+//    bit_1_indices = indexed_attestation.custody_bit_1_indices
 //
-//    # Ensure no duplicate indices across custody bits
-//    assert len(set(custody_bit_0_indices).intersection(set(custody_bit_1_indices))) == 0
-//
-//    if len(custody_bit_1_indices) > 0:  # [TO BE REMOVED IN PHASE 1]
+//    # Verify no index has custody bit equal to 1 [to be removed in phase 1]
+//    if not len(bit_1_indices) == 0:
 //        return False
-//
-//    if not (1 <= len(custody_bit_0_indices) + len(custody_bit_1_indices) <= MAX_INDICES_PER_ATTESTATION):
+//    # Verify max number of indices
+//    if not len(bit_0_indices) + len(bit_1_indices) <= MAX_VALIDATORS_PER_COMMITTEE:
 //        return False
-//
-//    return bls_verify_multiple(
+//    # Verify index sets are disjoint
+//    if not len(set(bit_0_indices).intersection(bit_1_indices)) == 0:
+//        return False
+//    # Verify indices are sorted
+//    if not (bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)):
+//        return False
+//    # Verify aggregate signature
+//    if not bls_verify_multiple(
 //        pubkeys=[
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_indices]),
-//            bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_indices]),
+//            bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_0_indices]),
+//            bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_1_indices]),
 //        ],
 //        message_hashes=[
 //            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
 //            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
 //        ],
 //        signature=indexed_attestation.signature,
-//        domain=get_domain(state, DOMAIN_ATTESTATION, slot_to_epoch(indexed_attestation.data.slot)),
-//    )
+//        domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target.epoch),
+//    ):
+//        return False
+//    return True
 func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
@@ -634,7 +639,7 @@ func VerifyIndexedAttestation(indexedAtt *pb.IndexedAttestation, verifySignature
 		return fmt.Errorf("expected no bit 1 indices, received %v", len(custodyBit1Indices))
 	}
 
-	maxIndices := params.BeaconConfig().MaxIndicesPerAttestation
+	maxIndices := params.BeaconConfig().MaxValidatorsPerCommittee
 	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
 	if maxIndices < totalIndicesLength || totalIndicesLength < 1 {
 		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)
@@ -783,7 +788,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 	return nil
 }
 
-// ProcessVolundaryExits is one of the operations performed
+// ProcessVoluntaryExits is one of the operations performed
 // on each processed beacon block to determine which validators
 // should exit the state's validator registry.
 //
@@ -806,7 +811,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 //    # Initiate exit
 //    initiate_validator_exit(state, exit.validator_index)
-func ProcessVolundaryExits(
+func ProcessVoluntaryExits(
 	beaconState *pb.BeaconState,
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
@@ -866,14 +871,17 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 //    """
 //    Process ``Transfer`` operation.
 //    """
-//    # Verify the amount and fee are not individually too big (for anti-overflow purposes)
-//    assert state.balances[transfer.sender] >= max(transfer.amount, transfer.fee)
+//    # Verify the balance the covers amount and fee (with overflow protection)
+//	  assert state.balances[transfer.sender] >= max(transfer.amount + transfer.fee, transfer.amount, transfer.fee)
 //    # A transfer is valid in only one slot
 //    assert state.slot == transfer.slot
-//    # Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE
+//    # Sender must satisfy at least one of the following conditions in the parenthesis:
 //    assert (
+//		  # * Has not been activated
 //        state.validator_registry[transfer.sender].activation_eligibility_epoch == FAR_FUTURE_EPOCH or
+//        # * Is withdrawable
 //        get_current_epoch(state) >= state.validator_registry[transfer.sender].withdrawable_epoch or
+//        # * Balance after transfer is more than the effective balance threshold
 //        transfer.amount + transfer.fee + MAX_EFFECTIVE_BALANCE <= state.balances[transfer.sender]
 //    )
 //    # Verify that the pubkey is valid
@@ -934,9 +942,12 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	if transfer.Amount > maxVal {
 		maxVal = transfer.Amount
 	}
+	if transfer.Amount+transfer.Fee > maxVal {
+		maxVal = transfer.Amount + transfer.Fee
+	}
 	sender := beaconState.Validators[transfer.Sender]
 	senderBalance := beaconState.Balances[transfer.Sender]
-	// Verify the amount and fee are not individually too big (for anti-overflow purposes).
+	// Verify the balance the covers amount and fee (with overflow protection).
 	if senderBalance < maxVal {
 		return fmt.Errorf("expected sender balance %d >= %d", senderBalance, maxVal)
 	}

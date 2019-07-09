@@ -221,7 +221,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	chainStarted, err := vs.powChainService.HasChainStartLogOccurred()
+	chainStarted, err := vs.powChainService.HasChainStarted()
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	if err != nil {
 		return false, nil, err
 	}
-	chainStarted, err := vs.powChainService.HasChainStartLogOccurred()
+	chainStarted, err := vs.powChainService.HasChainStarted()
 	if err != nil {
 		return false, nil, err
 	}
@@ -461,7 +461,7 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	dv := helpers.Domain(state, request.Epoch, params.BeaconConfig().DomainRandao)
+	dv := helpers.Domain(state, request.Epoch, request.Domain)
 	return &pb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil

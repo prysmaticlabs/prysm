@@ -94,6 +94,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
 	ctx := context.Background()
 	defer internal.TeardownDB(t, db)
+	helpers.ClearAllCaches()
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 8, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
@@ -424,7 +425,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
-	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawalDelay
+	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*pbp2p.Validator{{
@@ -985,7 +986,7 @@ func BenchmarkAssignment(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < validatorCount/params.BeaconConfig().TargetCommitteeSize; i++ {
-		if _, err := helpers.CrosslinkCommitteeAtEpoch(state, 0, i); err != nil {
+		if _, err := helpers.CrosslinkCommittee(state, 0, i); err != nil {
 			b.Fatal(err)
 		}
 	}
