@@ -1,9 +1,7 @@
 package spectest
 
 import (
-	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -16,41 +14,43 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-// This is a subset of state.ProcessEpoch.
-//func processJustificationAndFinalizationWrapper(state *pb.BeaconState) (*pb.BeaconState, error) {
-//	helpers.ClearAllCaches()
-//
-//	// This process mutates the state, so we'll make a copy in order to print debug before/after.
-//	state = proto.Clone(state).(*pb.BeaconState)
-//
-//	prevEpochAtts, err := epoch.MatchAttestations(state, helpers.PrevEpoch(state))
-//	if err != nil {
-//		return nil, fmt.Errorf("could not get target atts prev epoch %d: %v",
-//			helpers.PrevEpoch(state), err)
-//	}
-//	currentEpochAtts, err := epoch.MatchAttestations(state, helpers.CurrentEpoch(state))
-//	if err != nil {
-//		return nil, fmt.Errorf("could not get target atts current epoch %d: %v",
-//			helpers.CurrentEpoch(state), err)
-//	}
-//	prevEpochAttestedBalance, err := epoch.AttestingBalance(state, prevEpochAtts.Target)
-//	if err != nil {
-//		return nil, fmt.Errorf("could not get attesting balance prev epoch: %v", err)
-//	}
-//	currentEpochAttestedBalance, err := epoch.AttestingBalance(state, currentEpochAtts.Target)
-//	if err != nil {
-//		return nil, fmt.Errorf("could not get attesting balance current epoch: %v", err)
-//	}
-//
-//	state, err = epoch.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
-//	if err != nil {
-//		return nil, fmt.Errorf("could not process justification: %v", err)
-//	}
-//
-//	return state, nil
-//}
+// This is a subset of state.ProcessEpoch. The spec test defines input data for
+// `justification_and_finalization` only.
+func processJustificationAndFinalizationWrapper(state *pb.BeaconState) (*pb.BeaconState, error) {
+	helpers.ClearAllCaches()
+
+	// This process mutates the state, so we'll make a copy in order to print debug before/after.
+	state = proto.Clone(state).(*pb.BeaconState)
+
+	prevEpochAtts, err := epoch.MatchAttestations(state, helpers.PrevEpoch(state))
+	if err != nil {
+		return nil, fmt.Errorf("could not get target atts prev epoch %d: %v",
+			helpers.PrevEpoch(state), err)
+	}
+	currentEpochAtts, err := epoch.MatchAttestations(state, helpers.CurrentEpoch(state))
+	if err != nil {
+		return nil, fmt.Errorf("could not get target atts current epoch %d: %v",
+			helpers.CurrentEpoch(state), err)
+	}
+	prevEpochAttestedBalance, err := epoch.AttestingBalance(state, prevEpochAtts.Target)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attesting balance prev epoch: %v", err)
+	}
+	currentEpochAttestedBalance, err := epoch.AttestingBalance(state, currentEpochAtts.Target)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attesting balance current epoch: %v", err)
+	}
+
+	state, err = epoch.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
+	if err != nil {
+		return nil, fmt.Errorf("could not process justification: %v", err)
+	}
+
+	return state, nil
+}
 
 func runJustificationAndFinalizationTests(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
@@ -74,10 +74,7 @@ func runJustificationAndFinalizationTests(t *testing.T, filename string) {
 				t.Fatal(err)
 			}
 
-			postState, err := state.ProcessSlot(context.Background(), preState)
-
-			//var postState *pb.BeaconState
-			//postState, err = processJustificationAndFinalizationWrapper(preState)
+			postState, err := processJustificationAndFinalizationWrapper(preState)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -92,6 +89,8 @@ func runJustificationAndFinalizationTests(t *testing.T, filename string) {
 			}
 
 			if !reflect.DeepEqual(postState, expectedPostState) {
+				diff, _ := messagediff.PrettyDiff(postState, expectedPostState)
+				t.Log(diff)
 				t.Error("Did not get expected state")
 			}
 		})
