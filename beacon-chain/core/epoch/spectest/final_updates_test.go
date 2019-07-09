@@ -11,6 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runFinalUpdatesTests(t *testing.T, filename string) {
@@ -47,11 +48,9 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 			}
 
 			if !reflect.DeepEqual(postState, expectedPostState) {
-				t.Log(postState.ActiveIndexRoots)
-				t.Log(expectedPostState.ActiveIndexRoots)
 				t.Error("Did not get expected state")
-				//diff, _ := messagediff.PrettyDiff(s, tt.Post)
-				//t.Log(diff)
+				diff, _ := messagediff.PrettyDiff(s, tt.Post)
+				t.Log(diff)
 			}
 		})
 	}
