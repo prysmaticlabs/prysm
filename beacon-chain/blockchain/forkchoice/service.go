@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 type Store struct {
@@ -137,7 +137,7 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 		if s.db.HasLatestMessage(i) {
 			msg, err := s.db.LatestMessage(i)
 			if err != nil {
-				return 0, fmt.Errorf("could not get validator %d's latest msg: %v",i, err)
+				return 0, fmt.Errorf("could not get validator %d's latest msg: %v", i, err)
 			}
 			wantedRoot, err := s.Ancestor(msg.Root, wantedBlk.Slot)
 			if err != nil {
