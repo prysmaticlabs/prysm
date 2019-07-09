@@ -3,11 +3,11 @@ package epoch
 import (
 	"bytes"
 	"fmt"
-	"github.com/prysmaticlabs/go-bitfield"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
