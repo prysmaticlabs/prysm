@@ -9,21 +9,14 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
+	sszspectest "github.com/prysmaticlabs/go-ssz/spectests"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 )
 
 func TestYamlStatic(t *testing.T) {
 	topPath := "/eth2_spec_tests/tests/ssz_static/core/"
 	yamlFileNames := []string{
-		"ssz_minimal_lengthy.yaml",
-		"ssz_minimal_max.yaml",
-		"ssz_minimal_nil.yaml",
-		"ssz_minimal_one.yaml",
-		"ssz_minimal_random.yaml",
-		"ssz_minimal_random_chaos.yaml",
-		"ssz_minimal_zero.yaml",
 		"ssz_mainnet_random.yaml",
 	}
 
@@ -37,7 +30,7 @@ func TestYamlStatic(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not load file %v", err)
 		}
-		s := &SszProtobufTest{}
+		s := &sszspectest.SszMainnetTest{}
 		if err := yaml.Unmarshal(file, s); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
@@ -45,9 +38,9 @@ func TestYamlStatic(t *testing.T) {
 	}
 }
 
-func runTestCases(t *testing.T, s *SszProtobufTest) {
+func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 	for _, testCase := range s.TestCases {
-		if testCase.Attestation.Value != nil {
+		if !testutil.IsEmpty(testCase.Attestation.Value) {
 			p := &pb.Attestation{}
 			if err := testutil.ConvertToPb(testCase.Attestation.Value, p); err != nil {
 				t.Fatal(err)
@@ -60,7 +53,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected attestation %#x, received %#x", testCase.Attestation.Root, root[:])
 			}
 		}
-		if testCase.AttestationData.Value != nil {
+		if !testutil.IsEmpty(testCase.AttestationData.Value) {
 			p := &pb.AttestationData{}
 			if err := testutil.ConvertToPb(testCase.AttestationData.Value, p); err != nil {
 				t.Fatal(err)
@@ -73,7 +66,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected attestation data %#x, received %#x", testCase.AttestationData.Root, root[:])
 			}
 		}
-		if testCase.AttestationDataAndCustodyBit.Value != nil {
+		if !testutil.IsEmpty(testCase.AttestationDataAndCustodyBit.Value) {
 			p := &pb.AttestationDataAndCustodyBit{}
 			if err := testutil.ConvertToPb(testCase.AttestationDataAndCustodyBit.Value, p); err != nil {
 				t.Fatal(err)
@@ -86,7 +79,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected attestation data and custody bit %#x, received %#x", testCase.AttestationDataAndCustodyBit.Root, root[:])
 			}
 		}
-		if testCase.AttesterSlashing.Value != nil {
+		if !testutil.IsEmpty(testCase.AttesterSlashing.Value) {
 			p := &pb.AttesterSlashing{}
 			if err := testutil.ConvertToPb(testCase.AttesterSlashing.Value, p); err != nil {
 				t.Fatal(err)
@@ -99,7 +92,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected attester slashing bit %#x, received %#x", testCase.AttesterSlashing.Root, root[:])
 			}
 		}
-		if testCase.BeaconBlock.Value != nil {
+		if !testutil.IsEmpty(testCase.BeaconBlock.Value) {
 			p := &pb.BeaconBlock{}
 			if err := testutil.ConvertToPb(testCase.BeaconBlock.Value, p); err != nil {
 				t.Fatal(err)
@@ -112,7 +105,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected beacon block %#x, received %#x", testCase.BeaconBlock.Root, root[:])
 			}
 		}
-		if testCase.BeaconBlockBody.Value != nil {
+		if !testutil.IsEmpty(testCase.BeaconBlockBody.Value) {
 			p := &pb.BeaconBlockBody{}
 			if err := testutil.ConvertToPb(testCase.BeaconBlockBody.Value, p); err != nil {
 				t.Fatal(err)
@@ -125,7 +118,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected beacon block body %#x, received %#x", testCase.BeaconBlockBody.Root, root[:])
 			}
 		}
-		if testCase.BeaconBlockHeader.Value != nil {
+		if !testutil.IsEmpty(testCase.BeaconBlockHeader.Value) {
 			p := &pb.BeaconBlockHeader{}
 			if err := testutil.ConvertToPb(testCase.BeaconBlockHeader.Value, p); err != nil {
 				t.Fatal(err)
@@ -138,7 +131,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected beacon block header %#x, received %#x", testCase.BeaconBlockHeader.Root, root[:])
 			}
 		}
-		if testCase.BeaconState.Value != nil {
+		if !testutil.IsEmpty(testCase.BeaconState.Value) {
 			p := &pb.BeaconState{}
 			if err := testutil.ConvertToPb(testCase.BeaconState.Value, p); err != nil {
 				t.Fatal(err)
@@ -151,7 +144,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected beacon state %#x, received %#x", testCase.BeaconState.Root, root[:])
 			}
 		}
-		if testCase.Crosslink.Value != nil {
+		if !testutil.IsEmpty(testCase.Crosslink.Value) {
 			c := &pb.Crosslink{}
 			if err := testutil.ConvertToPb(testCase.Crosslink.Value, c); err != nil {
 				t.Fatal(err)
@@ -164,7 +157,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected crosslink %#x, received %#x", testCase.Crosslink.Root, root[:])
 			}
 		}
-		if testCase.Deposit.Value != nil {
+		if !testutil.IsEmpty(testCase.Deposit.Value) {
 			p := &pb.Deposit{}
 			if err := testutil.ConvertToPb(testCase.Deposit.Value, p); err != nil {
 				t.Fatal(err)
@@ -177,7 +170,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected deposit root %#x, received %#x", testCase.Deposit.Root, root[:])
 			}
 		}
-		if testCase.DepositData.Value != nil {
+		if !testutil.IsEmpty(testCase.DepositData.Value) {
 			p := &pb.DepositData{}
 			if err := testutil.ConvertToPb(testCase.DepositData.Value, p); err != nil {
 				t.Fatal(err)
@@ -190,7 +183,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected deposit data %#x, received %#x", testCase.DepositData.Root, root[:])
 			}
 		}
-		if testCase.Eth1Data.Value != nil {
+		if !testutil.IsEmpty(testCase.Eth1Data.Value) {
 			p := &pb.Eth1Data{}
 			if err := testutil.ConvertToPb(testCase.Eth1Data.Value, p); err != nil {
 				t.Fatal(err)
@@ -203,7 +196,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected eth1 data %#x, received %#x", testCase.Eth1Data.Root, root[:])
 			}
 		}
-		if testCase.Fork.Value != nil {
+		if !testutil.IsEmpty(testCase.Fork.Value) {
 			p := &pb.Fork{}
 			if err := testutil.ConvertToPb(testCase.Fork.Value, p); err != nil {
 				t.Fatal(err)
@@ -216,7 +209,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected fork %#x, received %#x", testCase.Fork.Root, root[:])
 			}
 		}
-		if testCase.HistoricalBatch.Value != nil {
+		if !testutil.IsEmpty(testCase.HistoricalBatch.Value) {
 			p := &pb.HistoricalBatch{}
 			if err := testutil.ConvertToPb(testCase.HistoricalBatch.Value, p); err != nil {
 				t.Fatal(err)
@@ -229,7 +222,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected historical batch %#x, received %#x", testCase.HistoricalBatch.Root, root[:])
 			}
 		}
-		if testCase.IndexedAttestation.Value != nil {
+		if !testutil.IsEmpty(testCase.IndexedAttestation.Value) {
 			p := &pb.IndexedAttestation{}
 			if err := testutil.ConvertToPb(testCase.IndexedAttestation.Value, p); err != nil {
 				t.Fatal(err)
@@ -242,7 +235,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected indexed attestation %#x, received %#x", testCase.IndexedAttestation.Root, root[:])
 			}
 		}
-		if testCase.PendingAttestation.Value != nil {
+		if !testutil.IsEmpty(testCase.PendingAttestation.Value) {
 			p := &pb.PendingAttestation{}
 			if err := testutil.ConvertToPb(testCase.PendingAttestation.Value, p); err != nil {
 				t.Fatal(err)
@@ -255,7 +248,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected pending attestation %#x, received %#x", testCase.PendingAttestation.Root, root[:])
 			}
 		}
-		if testCase.ProposerSlashing.Value != nil {
+		if !testutil.IsEmpty(testCase.ProposerSlashing.Value) {
 			p := &pb.ProposerSlashing{}
 			if err := testutil.ConvertToPb(testCase.ProposerSlashing.Value, p); err != nil {
 				t.Fatal(err)
@@ -268,7 +261,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected proposer slashing %#x, received %#x", testCase.ProposerSlashing.Root, root[:])
 			}
 		}
-		if testCase.Transfer.Value != nil {
+		if !testutil.IsEmpty(testCase.Transfer.Value) {
 			p := &pb.Transfer{}
 			if err := testutil.ConvertToPb(testCase.Transfer.Value, p); err != nil {
 				t.Fatal(err)
@@ -281,7 +274,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected trasnfer %#x, received %#x", testCase.Transfer.Root, root[:])
 			}
 		}
-		if testCase.Validator.Value != nil {
+		if !testutil.IsEmpty(testCase.Validator.Value) {
 			p := &pb.Validator{}
 			if err := testutil.ConvertToPb(testCase.Validator.Value, p); err != nil {
 				t.Fatal(err)
@@ -294,7 +287,7 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected trasnfer %#x, received %#x", testCase.Validator.Root, root[:])
 			}
 		}
-		if testCase.VoluntaryExit.Value != nil {
+		if !testutil.IsEmpty(testCase.VoluntaryExit.Value) {
 			p := &pb.VoluntaryExit{}
 			if err := testutil.ConvertToPb(testCase.VoluntaryExit.Value, p); err != nil {
 				t.Fatal(err)

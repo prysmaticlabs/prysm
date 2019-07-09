@@ -54,9 +54,9 @@ func sszTagSizes(i interface{}, fName string) ([]int, error) {
 	if !exists {
 		return nil, errors.New("wanted field does not exist")
 	}
-	tag, exists := field.Tag.Lookup("ssz")
+	tag, exists := field.Tag.Lookup("ssz-size")
 	if !exists {
-		return nil, errors.New("wanted field does not contain ssz tag")
+		return nil, errors.New("wanted field does not contain ssz-size tag")
 	}
 	start := strings.IndexRune(tag, '=')
 	items := strings.Split(tag[start+1:], ",")
