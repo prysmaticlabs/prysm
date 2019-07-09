@@ -138,19 +138,19 @@ func runTestCases(t *testing.T, s *SszProtobufTest) {
 				t.Errorf("Expected beacon block header %#x, received %#x", testCase.BeaconBlockHeader.Root, root[:])
 			}
 		}
-		//if testCase.BeaconState.Value != nil {
-		//	p := &pb.BeaconState{}
-		//	if err := testutil.ConvertToPb(testCase.BeaconState.Value, p); err != nil {
-		//		t.Fatal(err)
-		//	}
-		//	root, err := ssz.HashTreeRoot(p)
-		//	if err != nil {
-		//		t.Fatal(err)
-		//	}
-		//	if !bytes.Equal(root[:], testCase.BeaconState.Root) {
-		//		t.Errorf("Expected beacon state %#x, received %#x", testCase.BeaconState.Root, root[:])
-		//	}
-		//}
+		if testCase.BeaconState.Value != nil {
+			p := &pb.BeaconState{}
+			if err := testutil.ConvertToPb(testCase.BeaconState.Value, p); err != nil {
+				t.Fatal(err)
+			}
+			root, err := ssz.HashTreeRoot(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(root[:], testCase.BeaconState.Root) {
+				t.Errorf("Expected beacon state %#x, received %#x", testCase.BeaconState.Root, root[:])
+			}
+		}
 		if testCase.Crosslink.Value != nil {
 			c := &pb.Crosslink{}
 			if err := testutil.ConvertToPb(testCase.Crosslink.Value, c); err != nil {
