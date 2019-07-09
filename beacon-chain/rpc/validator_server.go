@@ -455,7 +455,7 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	dv := helpers.Domain(state, request.Epoch, params.BeaconConfig().DomainRandao)
+	dv := helpers.Domain(state, request.Epoch, request.Domain)
 	return &pb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil

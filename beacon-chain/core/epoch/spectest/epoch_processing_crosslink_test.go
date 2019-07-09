@@ -18,7 +18,7 @@ func runCrosslinkProcessingTests(t *testing.T, filename string) {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	s := &CrosslinksTest{}
+	s := &EpochProcessingTest{}
 	if err := yaml.Unmarshal(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
