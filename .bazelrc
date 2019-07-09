@@ -1,3 +1,5 @@
 # Print warnings for tests with inappropriate test size or timeout.
 test --test_verbose_timeout_warnings
 
+# Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
+build --host_force_python=PY2
