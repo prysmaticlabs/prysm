@@ -249,8 +249,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 				StartEpoch: 0,
 			},
 		},
-		AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-		CustodyBits:     []byte{0x00, 0x00, 0x00, 0x00},
+		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	var exits []*pb.VoluntaryExit
@@ -302,7 +302,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	want := "could not process validator exits"
+	want := "number of voluntary exits (17) in block body exceeds allowed threshold of 16"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
