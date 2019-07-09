@@ -150,3 +150,28 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 	}
 	return balances, nil
 }
+
+// Head to be filled
+//
+// Spec pseudocode definition:
+//   def get_head(store: Store) -> Hash:
+//    # Execute the LMD-GHOST fork choice
+//    head = store.justified_checkpoint.root
+//    justified_slot = compute_start_slot_of_epoch(store.justified_checkpoint.epoch)
+//    while True:
+//        children = [
+//            root for root in store.blocks.keys()
+//            if store.blocks[root].parent_root == head and store.blocks[root].slot > justified_slot
+//        ]
+//        if len(children) == 0:
+//            return head
+//        # Sort by latest attesting balance with ties broken lexicographically
+//        head = max(children, key=lambda root: (get_latest_attesting_balance(store, root), root))
+func (s *Store) Head() ([]byte, error) {
+	head := s.justifiedCheckpt.Root
+	justifiedSlot := helpers.StartSlot(s.justifiedCheckpt.Epoch)
+
+	for {
+
+	}
+}
