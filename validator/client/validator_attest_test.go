@@ -154,7 +154,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	expectedAttestation.AggregationBits = aggregationBitfield
 
 	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
-		Data: expectedAttestation.Data,
+		Data:       expectedAttestation.Data,
 		CustodyBit: false,
 	}
 	root, err := ssz.SigningRoot(attDataAndCustodyBit)
@@ -165,7 +165,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	k := hex.EncodeToString(validatorKey.PublicKey.Marshal())
 	sig := validator.keys[k].SecretKey.Sign(root[:], 0).Marshal()
 	expectedAttestation.Signature = sig
-
 
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
