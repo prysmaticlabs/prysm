@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/big"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -418,10 +419,10 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
 		if validator.Slashed && correctEpoch {
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
-			fmt.Println(minSlashing, totalBalance)
-			fmt.Println(float64(validator.EffectiveBalance), float64(minSlashing), float64(totalBalance))
-			penalty := float64(validator.EffectiveBalance) * float64(minSlashing) / float64(totalBalance)
-			state = helpers.DecreaseBalance(state, uint64(index), uint64(penalty))
+			penalty := big.NewInt(int64(validator.EffectiveBalance))
+			penalty.Mul(penalty, big.NewInt(int64(minSlashing)))
+			penalty.Div(penalty, big.NewInt(int64(totalBalance)))
+			state = helpers.DecreaseBalance(state, uint64(index), penalty.Uint64())
 		}
 	}
 	return state, err

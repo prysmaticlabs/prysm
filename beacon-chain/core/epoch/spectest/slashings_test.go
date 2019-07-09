@@ -1,6 +1,7 @@
 package spectest
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -28,6 +29,7 @@ func runSlashingsTests(t *testing.T, filename string) {
 
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
+			helpers.ClearAllCaches()
 			postState, err := epoch.ProcessSlashings(tt.Pre)
 			if err != nil {
 				t.Fatal(err)
