@@ -11,8 +11,10 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // GenesisBeaconState gets called when DepositsForChainStart count of
@@ -140,17 +142,22 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 
 	// Process initial deposits.
 	validatorMap := make(map[[32]byte]int)
-	leaves := []*pb.DepositData{}
+	leaves := [][]byte{}
 	for _, deposit := range deposits {
-		leaves = append(leaves, deposit.Data)
-	}
-	for idx, deposit := range deposits {
-		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
-		dr, err := ssz.HashTreeRoot(leaves[:idx+1])
+		hash, err := hashutil.DepositHash(deposit.Data)
 		if err != nil {
-			return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
+			return nil, err
 		}
-		state.Eth1Data.DepositRoot = dr[:]
+		leaves = append(leaves, hash[:])
+	}
+	trie, err := trieutil.GenerateTrieFromItems(leaves, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		return nil, err
+	}
+	depositRoot := trie.Root()
+	for _, deposit := range deposits {
+		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
+		state.Eth1Data.DepositRoot = depositRoot[:]
 		state, err = b.ProcessDeposit(
 			state,
 			deposit,
