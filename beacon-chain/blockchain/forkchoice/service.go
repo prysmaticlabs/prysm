@@ -1,6 +1,7 @@
 package forkchoice
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/prysmaticlabs/go-ssz"
@@ -126,9 +127,26 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 		return 0, fmt.Errorf("could not get active indices for last checkpoint state: %v", err)
 	}
 
+	wantedBlk, err := s.db.Block(bytesutil.ToBytes32(root))
+	if err != nil {
+		return 0, fmt.Errorf("could not get slot for an ancestor block: %v", err)
+	}
 	balances := uint64(0)
 
 	for _, i := range activeIndices {
-
+		if s.db.HasLatestMessage(i) {
+			msg, err := s.db.LatestMessage(i)
+			if err != nil {
+				return 0, fmt.Errorf("could not get validator %d's latest msg: %v",i, err)
+			}
+			wantedRoot, err := s.Ancestor(msg.Root, wantedBlk.Slot)
+			if err != nil {
+				return 0, fmt.Errorf("could not get ancestor root for slot %d: %v", wantedBlk.Slot, err)
+			}
+			if bytes.Equal(wantedRoot, root) {
+				balances += lastJustifiedState.Validators[i].EffectiveBalance
+			}
+		}
 	}
+	return balances, nil
 }
