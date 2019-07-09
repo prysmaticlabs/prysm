@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	messagediff "gopkg.in/d4l3k/messagediff.v1"
 )
 
 func init() {
@@ -1221,7 +1222,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x07},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{127, 71},
+			wantedCustodyBit1Indices: []uint64{71, 127},
 		},
 	}
 
@@ -1251,7 +1252,9 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}
 		if !reflect.DeepEqual(wanted, ia) {
-			t.Errorf("convert attestation to indexed attestation didn't result as wanted: %v got: %v", wanted, ia)
+			diff, _ := messagediff.PrettyDiff(ia, wanted)
+			t.Log(diff)
+			t.Error("convert attestation to indexed attestation didn't result as wanted")
 		}
 	}
 }
