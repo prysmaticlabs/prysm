@@ -135,9 +135,9 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return compute_domain(domain_type, fork_version)
-func Domain(domainType uint64, forkVersion []byte) uint64 {
+func Domain(domainType []byte, forkVersion []byte) uint64 {
 	b := []byte{}
-	b = append(b, bytesutil.Bytes4(domainType)...)
+	b = append(b, domainType[:4]...)
 	b = append(b, forkVersion[:4]...)
 	return bytesutil.FromBytes8(b)
 }

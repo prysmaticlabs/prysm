@@ -2,7 +2,6 @@
 package helpers
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -161,12 +160,6 @@ func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bitfield 
 	committee, err := CrosslinkCommittee(state, data.Target.Epoch, data.Crosslink.Shard)
 	if err != nil {
 		return nil, fmt.Errorf("could not get committee: %v", err)
-	}
-	if isValidated, err := VerifyBitfield(bitfield, len(committee)); !isValidated || err != nil {
-		if err != nil {
-			return nil, err
-		}
-		return nil, errors.New("bitfield is unable to be verified")
 	}
 
 	indices := make([]uint64, 0, len(committee))
