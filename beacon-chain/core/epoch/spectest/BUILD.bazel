@@ -12,9 +12,10 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "epoch_processing_crosslink_test.go",
-        "epoch_processing_registry_test.go",
+        "crosslink_test.go",
         "justification_and_finalization_test.go",
+        "registry_test.go",
+        "slashings_test.go",
     ],
     data = [
         "@eth2_spec_tests//:test_data",

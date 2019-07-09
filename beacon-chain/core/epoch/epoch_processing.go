@@ -391,21 +391,12 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 // ProcessSlashings processes the slashed validators during epoch processing,
 //
 //  def process_slashings(state: BeaconState) -> None:
-//    current_epoch = get_current_epoch(state)
+//    epoch = get_current_epoch(state)
 //    total_balance = get_total_active_balance(state)
-//
-//    # Compute slashed balances in the current epoch
-//    total_at_start = state.latest_slashed_balances[(current_epoch + 1) % LATEST_SLASHED_EXIT_LENGTH]
-//    total_at_end = state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
-//    total_penalties = total_at_end - total_at_start
-//
-//    for index, validator in enumerate(state.validator_registry):
-//        if validator.slashed and current_epoch == validator.withdrawable_epoch - LATEST_SLASHED_EXIT_LENGTH // 2:
-//            penalty = max(
-//                validator.effective_balance * min(total_penalties * 3, total_balance) // total_balance,
-//                validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT
-//            )
-//            decrease_balance(state, index, penalty)
+//    for index, validator in enumerate(state.validators):
+//        if validator.slashed and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
+//            penalty = validator.effective_balance * min(sum(state.slashings) * 3, total_balance) // total_balance
+//            decrease_balance(state, ValidatorIndex(index), penalty)
 func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
@@ -416,17 +407,21 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 
+	// Compute the sum of state slashings
+	totalSlashing := uint64(0)
+	for _, slashing := range state.Slashings {
+		totalSlashing += slashing
+	}
+
 	// Compute slashing for each validator.
 	for index, validator := range state.Validators {
 		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
 		if validator.Slashed && correctEpoch {
-			totalSlashing := uint64(0)
-			for _, slashing := range state.Slashings {
-				totalSlashing += slashing
-			}
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
-			penalty := validator.EffectiveBalance * minSlashing / totalBalance
-			state = helpers.DecreaseBalance(state, uint64(index), penalty)
+			fmt.Println(minSlashing, totalBalance)
+			fmt.Println(float64(validator.EffectiveBalance), float64(minSlashing), float64(totalBalance))
+			penalty := float64(validator.EffectiveBalance) * float64(minSlashing) / float64(totalBalance)
+			state = helpers.DecreaseBalance(state, uint64(index), uint64(penalty))
 		}
 	}
 	return state, err
