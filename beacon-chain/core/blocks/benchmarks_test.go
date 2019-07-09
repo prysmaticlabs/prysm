@@ -8,12 +8,12 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -129,7 +129,7 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cleanStates[i].Slot = params.BeaconConfig().SlotsPerEpoch * 2048
-		_, err := blocks.ProcessVolundaryExits(cleanStates[i], block.Body, false)
+		_, err := blocks.ProcessVoluntaryExits(cleanStates[i], block.Body, false)
 		if err != nil {
 			b.Fatalf("run %d, %v", i, err)
 		}
@@ -243,12 +243,12 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 		panic(err)
 	}
 
-	committeesPerEpoch, err := helpers.EpochCommitteeCount(bState, currentEpoch)
+	committeesPerEpoch, err := helpers.CommitteeCount(bState, currentEpoch)
 	if err != nil {
 		panic(err)
 	}
 
-	committeeSize := int(math.Ceil(float64(validatorCount) / float64(committeesPerEpoch)))
+	committeeSize := uint64(math.Ceil(float64(validatorCount) / float64(committeesPerEpoch)))
 
 	proposerSlashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings; i++ {
@@ -274,19 +274,27 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 			EndEpoch: i,
 		}
 		attData1 := &pb.AttestationData{
-			Crosslink:   crosslink,
-			TargetEpoch: i,
-			SourceEpoch: i + 1,
+			Crosslink: crosslink,
+			Source: &pb.Checkpoint{
+				Epoch: i + 1,
+			},
+			Target: &pb.Checkpoint{
+				Epoch: i,
+			},
 		}
 		attData2 := &pb.AttestationData{
-			Crosslink:   crosslink,
-			TargetEpoch: i,
-			SourceEpoch: i,
+			Crosslink: crosslink,
+			Source: &pb.Checkpoint{
+				Epoch: i,
+			},
+			Target: &pb.Checkpoint{
+				Epoch: i,
+			},
 		}
-		aggregationBits, err := bitutil.SetBitfield(int(i), committeeSize)
-		if err != nil {
-			panic(err)
-		}
+
+		aggregationBits := bitfield.NewBitlist(committeeSize)
+		aggregationBits.SetBitAt(i, true)
+
 		att1 := &pb.Attestation{
 			Data:            attData1,
 			AggregationBits: aggregationBits,
@@ -331,19 +339,22 @@ func createFullBlock(bState *pb.BeaconState, previousDeposits []*pb.Deposit) (*p
 		}
 		crosslink.ParentRoot = crosslinkParentRoot[:]
 
-		aggregationBitfield, err := bitutil.SetBitfield(int(i), committeeSize)
-		if err != nil {
-			panic(err)
-		}
-		custodyBitfield := bitutil.FillBitfield(committeeSize)
+		aggregationBitfield := bitfield.NewBitlist(committeeSize)
+		aggregationBitfield.SetBitAt(params.BeaconConfig().MaxAttestations+i, true)
+		custodyBitfield := bitfield.NewBitlist(committeeSize)
+
 		att1 := &pb.Attestation{
 			Data: &pb.AttestationData{
-				Crosslink:       crosslink,
-				SourceEpoch:     helpers.PrevEpoch(bState),
-				TargetEpoch:     currentEpoch,
+				Crosslink: crosslink,
+				Source: &pb.Checkpoint{
+					Epoch: helpers.PrevEpoch(bState),
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+				Target: &pb.Checkpoint{
+					Epoch: currentEpoch,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
 				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
-				SourceRoot:      params.BeaconConfig().ZeroHash[:],
-				TargetRoot:      params.BeaconConfig().ZeroHash[:],
 			},
 			AggregationBits: aggregationBitfield,
 			CustodyBits:     custodyBitfield,

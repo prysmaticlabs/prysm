@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -14,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -278,7 +278,7 @@ func createFullState() *pb.BeaconState {
 		}
 	}
 
-	prevCommitteeCount, err := helpers.EpochCommitteeCount(bState, prevEpoch)
+	prevCommitteeCount, err := helpers.CommitteeCount(bState, prevEpoch)
 	if err != nil {
 		panic(err)
 	}
@@ -286,8 +286,8 @@ func createFullState() *pb.BeaconState {
 	if err != nil {
 		panic(err)
 	}
-	prevCommitteeSize := int(prevValidatorCount / prevCommitteeCount)
 
+	prevCommitteeSize := prevValidatorCount / prevCommitteeCount
 	attestationsPerEpoch := slotsPerEpoch * params.BeaconConfig().MaxAttestations
 
 	prevRoot, err := helpers.BlockRoot(bState, prevEpoch)
@@ -297,10 +297,8 @@ func createFullState() *pb.BeaconState {
 
 	var prevAttestations []*pb.PendingAttestation
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
-		aggregationBits, err := bitutil.SetBitfield(int(i)%prevCommitteeSize, prevCommitteeSize)
-		if err != nil {
-			panic(err)
-		}
+		aggregationBits := bitfield.NewBitlist(prevCommitteeSize)
+		aggregationBits.SetBitAt(i%prevCommitteeSize, true)
 
 		crosslink := &pb.Crosslink{
 			Shard:      i % params.BeaconConfig().ShardCount,
@@ -310,12 +308,16 @@ func createFullState() *pb.BeaconState {
 
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Crosslink:       crosslink,
-				SourceEpoch:     prevEpoch - 1,
-				TargetEpoch:     prevEpoch,
+				Crosslink: crosslink,
+				Source: &pb.Checkpoint{
+					Epoch: prevEpoch - 1,
+					Root:  prevRoot,
+				},
+				Target: &pb.Checkpoint{
+					Epoch: prevEpoch,
+					Root:  prevRoot,
+				},
 				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
-				SourceRoot:      prevRoot,
-				TargetRoot:      prevRoot,
 			},
 			AggregationBits: aggregationBits,
 			InclusionDelay:  params.BeaconConfig().MinAttestationInclusionDelay,
@@ -336,7 +338,7 @@ func createFullState() *pb.BeaconState {
 	}
 	bState.PreviousEpochAttestations = prevAttestations
 
-	curCommitteeCount, err := helpers.EpochCommitteeCount(bState, currentEpoch)
+	curCommitteeCount, err := helpers.CommitteeCount(bState, currentEpoch)
 	if err != nil {
 		panic(err)
 	}
@@ -344,7 +346,7 @@ func createFullState() *pb.BeaconState {
 	if err != nil {
 		panic(err)
 	}
-	curCommitteeSize := int(curValidatorCount / curCommitteeCount)
+	curCommitteeSize := curValidatorCount / curCommitteeCount
 
 	var currentAttestations []*pb.PendingAttestation
 	currentRoot, err := helpers.BlockRoot(bState, currentEpoch)
@@ -352,10 +354,8 @@ func createFullState() *pb.BeaconState {
 		panic(err)
 	}
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
-		aggregationBits, err := bitutil.SetBitfield(int(i)%curCommitteeSize, curCommitteeSize)
-		if err != nil {
-			panic(err)
-		}
+		aggregationBits := bitfield.NewBitlist(curCommitteeSize)
+		aggregationBits.SetBitAt(i%curCommitteeSize, true)
 
 		crosslink := &pb.Crosslink{
 			Shard:      i % params.BeaconConfig().ShardCount,
@@ -365,12 +365,17 @@ func createFullState() *pb.BeaconState {
 
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Crosslink:       crosslink,
-				SourceEpoch:     currentEpoch - 1,
-				TargetEpoch:     currentEpoch,
+				Crosslink: crosslink,
+
+				Source: &pb.Checkpoint{
+					Epoch: currentEpoch - 1,
+					Root:  currentRoot,
+				},
+				Target: &pb.Checkpoint{
+					Epoch: currentEpoch,
+					Root:  currentRoot,
+				},
 				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
-				SourceRoot:      currentRoot,
-				TargetRoot:      currentRoot,
 			},
 			AggregationBits: aggregationBits,
 			InclusionDelay:  params.BeaconConfig().MinAttestationInclusionDelay,
