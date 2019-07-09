@@ -3,35 +3,49 @@ package testing
 import (
 	"bytes"
 	"io/ioutil"
+	"path"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+
 )
 
-func TestMainnetRandomYaml(t *testing.T) {
-	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/ssz_static/core/ssz_mainnet_random.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	file, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		t.Fatalf("Could not load file %v", err)
-	}
-
-	s := &SszMinimalTest{}
-	if err := yaml.Unmarshal(file, s); err != nil {
-		t.Fatalf("Failed to unmarshal: %v", err)
+func TestYamlStatic(t *testing.T) {
+	topPath := "/eth2_spec_tests/tests/ssz_static/core/"
+	yamlFileNames := []string{
+		"ssz_minimal_lengthy.yaml",
+		"ssz_minimal_max.yaml",
+		"ssz_minimal_nil.yaml",
+		"ssz_minimal_one.yaml",
+		"ssz_minimal_random.yaml",
+		"ssz_minimal_random_chaos.yaml",
+		"ssz_minimal_zero.yaml",
+		"ssz_mainnet_random.yaml",
 	}
 
-	if err := spectest.SetConfig(s.Config); err != nil {
-		t.Fatal(err)
+	for _, f := range yamlFileNames {
+		fullPath := path.Join(topPath, f)
+		filepath, err := bazel.Runfile(fullPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		file, err := ioutil.ReadFile(filepath)
+		if err != nil {
+			t.Fatalf("Could not load file %v", err)
+		}
+		s := &SszProtobufTest{}
+		if err := yaml.Unmarshal(file, s); err != nil {
+			t.Fatalf("Failed to unmarshal: %v", err)
+		}
+		runTestCases(t, s)
 	}
+}
 
+func runTestCases(t *testing.T, s *SszProtobufTest) {
 	for _, testCase := range s.TestCases {
 		if testCase.Attestation.Value != nil {
 			p := &pb.Attestation{}
