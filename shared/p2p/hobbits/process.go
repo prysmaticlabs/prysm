@@ -24,6 +24,7 @@ func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Con
 			log.Trace("there was an error processing an RPC hobbits msg ") // TODO DELETE
 			return errors.Wrap(err, "error processing an RPC hobbits message")
 		}
+		return nil
 	case encoding.GOSSIP:
 		log.Trace("beginning to process the GOSSIP message...")
 
@@ -35,7 +36,7 @@ func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Con
 		return nil
 	}
 
-	return errors.New("protocol unsupported")
+	return errors.New(fmt.Sprintf("protocol unsupported %v", message.Protocol))
 }
 
 func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
@@ -59,6 +60,7 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 			Header:   message.Header,
 			Body:     responseBody,
 		}
+		log.Trace(responseMessage)
 
 		err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
 		if err != nil {

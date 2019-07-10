@@ -63,9 +63,13 @@ func (h *HobbitsNode) Listen() error {
 	log.Trace("hobbits node is listening")
 
 	err := h.Server.Listen(func(conn net.Conn, message encoding.Message) {
-		h.processHobbitsMessage(HobbitsMessage(message), conn)
-
-		log.Trace("a message has been received")
+		err := h.processHobbitsMessage(HobbitsMessage(message), conn)
+		if err != nil {
+			log.Error(err)
+			_ = conn.Close()
+		} else {
+			log.Trace("a message has been received")
+		}
 	})
 
 	if err != nil {
