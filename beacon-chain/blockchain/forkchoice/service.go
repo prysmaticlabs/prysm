@@ -249,6 +249,7 @@ func (s *Store) OnTick(t uint64) {
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
 func (s *Store) OnBlock(b *pb.BeaconBlock) error {
+	// TODO: Implement HistoryStateFromBlkRoot
 	preState, err := s.db.HistoricalStateFromSlot(s.ctx, b.Slot, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return fmt.Errorf("could not get pre state for slot %d: %v", b.Slot, err)
@@ -313,6 +314,74 @@ func (s *Store) OnBlock(b *pb.BeaconBlock) error {
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.finalizedCheckpt.Epoch = postState.FinalizedCheckpoint.Epoch
 	}
+
+	return nil
+}
+
+// OnAttestation to be filled
+//
+// Spec pseudocode definition:
+//   def on_attestation(store: Store, attestation: Attestation) -> None:
+//    target = attestation.data.target
+//
+//    # Cannot calculate the current shuffling if have not seen the target
+//    assert target.root in store.blocks
+//
+//    # Attestations cannot be from future epochs. If they are, delay consideration until the epoch arrives
+//    base_state = store.block_states[target.root].copy()
+//    assert store.time >= base_state.genesis_time + compute_start_slot_of_epoch(target.epoch) * SECONDS_PER_SLOT
+//
+//    # Store target checkpoint state if not yet seen
+//    if target not in store.checkpoint_states:
+//        process_slots(base_state, compute_start_slot_of_epoch(target.epoch))
+//        store.checkpoint_states[target] = base_state
+//    target_state = store.checkpoint_states[target]
+//
+//    # Attestations can only affect the fork choice of subsequent slots.
+//    # Delay consideration in the fork choice until their slot is in the past.
+//    attestation_slot = get_attestation_data_slot(target_state, attestation.data)
+//    assert store.time >= (attestation_slot + 1) * SECONDS_PER_SLOT
+//
+//    # Get state at the `target` to validate attestation and calculate the committees
+//    indexed_attestation = get_indexed_attestation(target_state, attestation)
+//    assert is_valid_indexed_attestation(target_state, indexed_attestation)
+//
+//    # Update latest messages
+//    for i in indexed_attestation.custody_bit_0_indices + indexed_attestation.custody_bit_1_indices:
+//        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
+//            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
+func (s *Store) OnAttestation(a *pb.Attestation) error {
+	tgt := a.Data.Target
+
+	// Verify beacon node has seen the target block before.
+	if !s.db.HasBlock(bytesutil.ToBytes32(tgt.Root)) {
+		return fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
+	}
+
+	// Verify attestations cannot be from future epochs.
+	// If they are, delay consideration until the epoch arrives.
+	// TODO: Implement HistoryStateFromBlkRoot
+	tgtSlot := helpers.StartSlot(tgt.Epoch)
+	baseState, err := s.db.HistoricalStateFromSlot(s.ctx, tgtSlot, bytesutil.ToBytes32(tgt.Root))
+	if err != nil {
+		return fmt.Errorf("could not get pre state for slot %d: %v", tgtSlot, err)
+	}
+	if baseState == nil {
+		return fmt.Errorf("pre state of slot %d does not exist: %v", tgtSlot, err)
+	}
+
+	aSlot, err := helpers.AttestationDataSlot(baseState, a.Data)
+	if err != nil {
+		return fmt.Errorf("could not get attestation slot: %v", err)
+	}
+	// TODO: Figure out why plus one
+	slotTime := baseState.GenesisTime + (aSlot + 1) * params.BeaconConfig().SecondsPerSlot
+	if slotTime > s.time {
+		return fmt.Errorf("could not process attestation from the future, %d > %d", slotTime, s.time)
+	}
+
+	// Store target checkpoint state if not yet seen.
+
 
 	return nil
 }

@@ -550,3 +550,23 @@ func (db *BeaconDB) CheckpointState(ctx context.Context, checkpt *pb.Checkpoint)
 
 	return s, err
 }
+
+// HasCheckpoint checks if a state of the corresponded check point exists in db.
+func (db *BeaconDB) HasCheckpoint(checkpt *pb.Checkpoint) (bool, error) {
+	b, err := hashutil.HashProto(checkpt)
+	if err != nil {
+		return false, err
+	}
+
+	exists := false
+	if err := db.view(func(tx *bolt.Tx) error {
+		l := tx.Bucket(checkpointBucket)
+		exists = l.Get(b[:]) != nil
+		return nil
+	}); err != nil {
+		return false, nil
+	}
+
+	return exists, nil
+}
+
