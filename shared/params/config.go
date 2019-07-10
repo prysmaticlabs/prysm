@@ -35,7 +35,7 @@ type BeaconChainConfig struct {
 
 	// Initial value constants.
 	BLSWithdrawalPrefixByte byte     `yaml:"BLS_WITHDRAWAL_PREFIX_BYTE"` // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
-	ZeroHash                [32]byte // ZeroHash is an alias for sha256().digest().
+	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
 	MinAttestationInclusionDelay     uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY"`     // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
@@ -134,7 +134,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Initial value constants.
 	BLSWithdrawalPrefixByte: byte(0),
-	ZeroHash:                [32]byte{0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55},
+	ZeroHash:                [32]byte{},
 
 	// Time parameter constants.
 	MinAttestationInclusionDelay:     1,
