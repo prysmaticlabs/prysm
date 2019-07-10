@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -710,16 +709,57 @@ func TestCompactCommitteesRoot_OK(t *testing.T) {
 	}
 }
 
-func TestCompressValidator_OK(t *testing.T) {
-	validator := &pb.Validator{
-		EffectiveBalance: 32e9,
-		Slashed:          true,
+func TestCompressValidator(t *testing.T) {
+	tests := []struct {
+		validator *pb.Validator
+		idx       uint64
+		want      uint64
+	}{
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 32e9,
+				Slashed:          true,
+			},
+			idx:  128,
+			want: 8421408, // (128 << 16) + (1 << 15) + (32e9 / (2**0 * 10**9))
+		},
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 32e9,
+				Slashed:          false,
+			},
+			idx:  128,
+			want: 8388640, // (128 << 16) + (0 << 15) + (32e9 / (2**0 * 10**9))
+		},
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 33e9,
+				Slashed:          false,
+			},
+			idx:  128,
+			want: 8388641, // (128 << 16) + (0 << 15) + (33e9 / (2**0 * 10**9))
+		},
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 33e9,
+				Slashed:          false,
+			},
+			idx:  129,
+			want: 8454177, // (129 << 16) + (0 << 15) + (33e9 / (2**0 * 10**9))
+		},
 	}
-	compactVal := compressValidator(validator, 128)
-	// Expected Value in Bits: 0000000000000000000000000000000000000000100000010000000000100000
-	expectedVal := mathutil.PowerOf2(5) + mathutil.PowerOf2(16) + mathutil.PowerOf2(23)
-	if expectedVal != compactVal {
-		t.Errorf("Unexpected Compressed value received %d", compactVal)
+
+	for _, tt := range tests {
+		got := compressValidator(tt.validator, tt.idx)
+		if got != tt.want {
+			t.Errorf(
+				"compressValidator({%v}, %d) = %d, wanted %d",
+				tt.validator,
+				tt.idx,
+				got,
+				tt.want,
+			)
+		}
 	}
 }
 
