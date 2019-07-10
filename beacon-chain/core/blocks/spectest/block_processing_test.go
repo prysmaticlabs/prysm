@@ -52,9 +52,10 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 
 			stateConfig := &state.TransitionConfig{
 				VerifySignatures: true,
+				VerifyStateRoot:  true,
 			}
 
-			s := tt.Pre // Pre-state
+			s := tt.Pre
 			for _, b := range tt.Blocks {
 				tt.Pre, err = state.ExecuteStateTransition(ctx, tt.Pre, b, stateConfig)
 				if tt.Post == nil {
