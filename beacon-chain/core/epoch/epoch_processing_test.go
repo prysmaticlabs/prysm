@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -31,7 +32,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 					Shard: uint64(i),
 				},
 			},
-			AggregationBits: []byte{0xC0, 0xC0},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0x01},
 		}
 	}
 
@@ -73,31 +74,6 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	}
 }
 
-func TestUnslashedAttestingIndices_CantGetIndicesBitfieldError(t *testing.T) {
-	atts := make([]*pb.PendingAttestation, 2)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
-			Data: &pb.AttestationData{Source: &pb.Checkpoint{},
-				Target: &pb.Checkpoint{Epoch: 0},
-				Crosslink: &pb.Crosslink{
-					Shard: uint64(i),
-				},
-			},
-			AggregationBits: []byte{0xff},
-		}
-	}
-
-	state := &pb.BeaconState{
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-	const wantedErr = "could not get attester indices: wanted participants bitfield length 2, got: 1"
-	if _, err := unslashedAttestingIndices(state, atts); !strings.Contains(err.Error(), wantedErr) {
-		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
-	}
-}
-
 func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	helpers.ClearAllCaches()
 
@@ -112,8 +88,8 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 				Target: &pb.Checkpoint{},
 				Source: &pb.Checkpoint{},
 			},
-			AggregationBits: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
 		}
 	}
 
@@ -142,34 +118,6 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	wanted := 256 * params.BeaconConfig().MaxEffectiveBalance
 	if balance != wanted {
 		t.Errorf("wanted balance: %d, got: %d", wanted, balance)
-	}
-}
-
-func TestAttestingBalance_CantGetIndicesBitfieldError(t *testing.T) {
-	helpers.ClearAllCaches()
-
-	atts := make([]*pb.PendingAttestation, 2)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
-			Data: &pb.AttestationData{
-				Source: &pb.Checkpoint{},
-				Target: &pb.Checkpoint{Epoch: 0},
-				Crosslink: &pb.Crosslink{
-					Shard: uint64(i),
-				},
-			},
-			AggregationBits: []byte{0xFF},
-		}
-	}
-
-	state := &pb.BeaconState{
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-	const wantedErr = "could not get attester indices: wanted participants bitfield length 0, got: 1"
-	if _, err := AttestingBalance(state, atts); !strings.Contains(err.Error(), wantedErr) {
-		t.Errorf("wanted: %v, got: %v", wantedErr, err.Error())
 	}
 }
 
@@ -539,7 +487,7 @@ func TestProcessCrosslinks_SuccessfulUpdate(t *testing.T) {
 				},
 				Target: &pb.Checkpoint{Epoch: 0},
 			},
-			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 		})
 	}
 	state := &pb.BeaconState{
@@ -590,19 +538,6 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 			t.Errorf("baseReward(%d) = %d, want = %d",
 				tt.a, c, tt.c)
 		}
-	}
-}
-
-func TestProcessJustificationAndFinalization_LessThan2ndEpoch(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().SlotsPerEpoch,
-	}
-	newState, err := ProcessJustificationAndFinalization(state, 0, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(state, newState) {
-		t.Error("Did not get the original state")
 	}
 }
 
@@ -681,7 +616,7 @@ func TestProcessJustificationAndFinalization_JustifyCurrentEpoch(t *testing.T) {
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 		FinalizedCheckpoint: &pb.Checkpoint{},
-		JustificationBits:   []byte{0x03}, // 0b0011
+		JustificationBits:   bitfield.Bitvector4{0x03}, // 0b0011
 		Validators:          []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:          blockRoots,
@@ -699,9 +634,9 @@ func TestProcessJustificationAndFinalization_JustifyCurrentEpoch(t *testing.T) {
 		t.Errorf("Wanted justified epoch: %d, got: %d",
 			2, newState.CurrentJustifiedCheckpoint.Epoch)
 	}
-	if newState.PreviousJustifiedCheckpoint.Epoch != 2 {
+	if newState.PreviousJustifiedCheckpoint.Epoch != 0 {
 		t.Errorf("Wanted previous justified epoch: %d, got: %d",
-			2, newState.PreviousJustifiedCheckpoint.Epoch)
+			0, newState.PreviousJustifiedCheckpoint.Epoch)
 	}
 	if !bytes.Equal(newState.FinalizedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
 		t.Errorf("Wanted current finalized root: %v, got: %v",
@@ -730,7 +665,7 @@ func TestProcessJustificationAndFinalization_JustifyPrevEpoch(t *testing.T) {
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-		JustificationBits: []byte{0x03}, // 0b0011
+		JustificationBits: bitfield.Bitvector4{0x03}, // 0b0011
 		Validators:        []*pb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:          []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:        blockRoots, FinalizedCheckpoint: &pb.Checkpoint{},
@@ -744,9 +679,9 @@ func TestProcessJustificationAndFinalization_JustifyPrevEpoch(t *testing.T) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
 			[]byte{byte(128)}, newState.CurrentJustifiedCheckpoint.Root)
 	}
-	if newState.PreviousJustifiedCheckpoint.Epoch != 2 {
+	if newState.PreviousJustifiedCheckpoint.Epoch != 0 {
 		t.Errorf("Wanted previous justified epoch: %d, got: %d",
-			2, newState.PreviousJustifiedCheckpoint.Epoch)
+			0, newState.PreviousJustifiedCheckpoint.Epoch)
 	}
 	if newState.CurrentJustifiedCheckpoint.Epoch != 2 {
 		t.Errorf("Wanted justified epoch: %d, got: %d",
@@ -921,7 +856,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 				Source: &pb.Checkpoint{},
 			},
 			InclusionDelay:  uint64(i + 100),
-			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 		}
 	}
 	state.PreviousEpochAttestations = atts
@@ -1016,7 +951,7 @@ func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
 				Source: &pb.Checkpoint{},
 			},
 			InclusionDelay:  uint64(i + 100),
-			AggregationBits: []byte{0xff},
+			AggregationBits: bitfield.Bitlist{0xFF, 0x01},
 		}
 	}
 	state.PreviousEpochAttestations = atts
@@ -1045,7 +980,7 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 				Source: &pb.Checkpoint{},
 			},
 			InclusionDelay:  uint64(i + 100),
-			AggregationBits: []byte{0xC0},
+			AggregationBits: bitfield.Bitlist{0xC0, 0x01},
 		}
 	}
 
@@ -1089,7 +1024,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 				Target: &pb.Checkpoint{},
 				Source: &pb.Checkpoint{},
 			},
-			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
 		}
 	}
@@ -1171,7 +1106,7 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 				Target: &pb.Checkpoint{},
 				Source: &pb.Checkpoint{},
 			},
-			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
 		}
 	}
@@ -1383,7 +1318,7 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 				Target: &pb.Checkpoint{},
 				Source: &pb.Checkpoint{},
 			},
-			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
 		}
 	}
