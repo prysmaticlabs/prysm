@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"gopkg.in/d4l3k/messagediff.v1"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -26,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func init() {
