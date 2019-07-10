@@ -156,9 +156,9 @@ buildifier_dependencies()
 
 http_archive(
     name = "com_github_prysmaticlabs_go_ssz",
-    sha256 = "f6fd5d623a988337810b956ddaf612dce771d9d0f9256934c8f4b1379f1cb2f6",
-    strip_prefix = "go-ssz-2e84733edbac32aca6d47feafc4441e43b10047f",
-    url = "https://github.com/prysmaticlabs/go-ssz/archive/2e84733edbac32aca6d47feafc4441e43b10047f.tar.gz",
+    sha256 = "12536002b4047a0a2a983e1990243a04b5988e5e69409b047ef2248049f20321",
+    strip_prefix = "go-ssz-08374e459d08fc6abeb43011a206ad54602e71b6",
+    url = "https://github.com/prysmaticlabs/go-ssz/archive/08374e459d08fc6abeb43011a206ad54602e71b6.tar.gz",
 )
 
 load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
