@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"gopkg.in/d4l3k/messagediff.v1"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -308,18 +309,19 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
-	var zeroHash [32]byte
 	var zeroSig [96]byte
 	nsh := newState.LatestBlockHeader
 	expected := &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: latestBlockSignedRoot[:],
 		BodyRoot:   bodyRoot[:],
-		StateRoot:  zeroHash[:],
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		Signature:  zeroSig[:],
 	}
 	if !proto.Equal(nsh, expected) {
-		t.Errorf("Expected %v, received %vk9k", expected, nsh)
+		diff, _ := messagediff.PrettyDiff(nsh, expected)
+		t.Log(diff)
+		t.Error("Mismatched state")
 	}
 }
 
@@ -342,7 +344,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
+	epochSignature := privKeys[proposerIdx+1].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: epochSignature.Marshal(),
