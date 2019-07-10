@@ -3,12 +3,12 @@ package testing
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
 	sszspectest "github.com/prysmaticlabs/go-ssz/spectests"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // Regression tests for investigating discrepancies between ssz signing root of
