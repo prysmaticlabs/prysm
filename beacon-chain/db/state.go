@@ -569,4 +569,3 @@ func (db *BeaconDB) HasCheckpoint(checkpt *pb.Checkpoint) (bool, error) {
 
 	return exists, nil
 }
-

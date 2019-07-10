@@ -5,11 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -261,7 +261,7 @@ func (s *Store) OnBlock(b *pb.BeaconBlock) error {
 	}
 
 	// Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
-	slotTime := preState.GenesisTime + b.Slot * params.BeaconConfig().SecondsPerSlot
+	slotTime := preState.GenesisTime + b.Slot*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
 		return fmt.Errorf("could not process block from the future, %d > %d", slotTime, s.time)
 	}
@@ -371,11 +371,10 @@ func (s *Store) OnAttestation(a *pb.Attestation) error {
 	if baseState == nil {
 		return fmt.Errorf("pre state of slot %d does not exist: %v", tgtSlot, err)
 	}
-	slotTime := baseState.GenesisTime + tgtSlot * params.BeaconConfig().SecondsPerSlot
+	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
 		return fmt.Errorf("could not process attestation from the future, %d > %d", slotTime, s.time)
 	}
-
 
 	// Store target checkpoint state if not yet seen.
 	exists, err := s.db.HasCheckpoint(tgt)
@@ -383,7 +382,7 @@ func (s *Store) OnAttestation(a *pb.Attestation) error {
 		return fmt.Errorf("could not get check point state: %v", err)
 	}
 	if !exists {
-		baseState, err = state.ProcessSlots(s.ctx, baseState, tgtSlot);
+		baseState, err = state.ProcessSlots(s.ctx, baseState, tgtSlot)
 		if err != nil {
 			return fmt.Errorf("could not process slots up to %d", tgtSlot, err)
 		}
@@ -398,7 +397,7 @@ func (s *Store) OnAttestation(a *pb.Attestation) error {
 	if err != nil {
 		return fmt.Errorf("could not get attestation slot: %v", err)
 	}
-	slotTime = baseState.GenesisTime + (aSlot + 1) * params.BeaconConfig().SecondsPerSlot
+	slotTime = baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
 		return fmt.Errorf("could not process attestation for fork choice, %d > %d", slotTime, s.time)
 	}
@@ -407,7 +406,7 @@ func (s *Store) OnAttestation(a *pb.Attestation) error {
 	// TODO: Implement get_indexed_attestation
 	indexedAtt := &pb.IndexedAttestation{}
 	if err := blocks.VerifyIndexedAttestation(indexedAtt, true); err != nil {
-		 return errors.New("could not verify indexed attestation")
+		return errors.New("could not verify indexed attestation")
 	}
 
 	// Update every validator's latest message.
@@ -420,7 +419,7 @@ func (s *Store) OnAttestation(a *pb.Attestation) error {
 		if s.db.HasLatestMessage(i) || tgt.Epoch > msg.Epoch {
 			if err := s.db.SaveLatestMessage(s.ctx, i, &pb.LatestMessage{
 				Epoch: tgt.Epoch,
-				Root: a.Data.BeaconBlockRoot,
+				Root:  a.Data.BeaconBlockRoot,
 			}); err != nil {
 				return fmt.Errorf("could not save latest msg for validator %d: %v", i, err)
 			}

@@ -24,7 +24,7 @@ var (
 	chainInfoBucket         = []byte("chain-info")
 	validatorBucket         = []byte("validator")
 	latestMessageBucket     = []byte("latest-message")
-	checkpointBucket     = []byte("checkpoint")
+	checkpointBucket        = []byte("checkpoint")
 
 	mainChainHeightKey      = []byte("chain-height")
 	canonicalHeadKey        = []byte("canonical-head")

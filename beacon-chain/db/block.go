@@ -130,7 +130,7 @@ func (db *BeaconDB) MarkEvilBlockHash(root [32]byte) {
 }
 
 // SaveBlock accepts a block and writes it to disk.
-func (db *BeaconDB)SaveBlock(block *pb.BeaconBlock) error {
+func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
