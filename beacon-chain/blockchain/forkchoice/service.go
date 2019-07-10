@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 type Store struct {
@@ -172,6 +174,38 @@ func (s *Store) Head() ([]byte, error) {
 	justifiedSlot := helpers.StartSlot(s.justifiedCheckpt.Epoch)
 
 	for {
+		// TODO: To be implemented, stubbing children and roots
+		children := [][]byte{{}}
+		roots := [][]byte{{}}
 
+		for _, r := range roots {
+			b, err := s.db.Block(bytesutil.ToBytes32(r))
+			if err != nil {
+				return nil, fmt.Errorf("could not get block: %v", err)
+			}
+			if bytes.Equal(b.ParentRoot, head) && b.Slot > justifiedSlot {
+				children = append(children, r)
+			}
+		}
+
+		if len(children) == 0 {
+			return head, nil
+		}
+
+		head := children[0]
+		highest, err := s.LatestAttestingBalance(head)
+		if err != nil {
+			return nil, fmt.Errorf("could not get latest balance: %v", err)
+		}
+		for _, child := range children[1:] {
+			balance, err := s.LatestAttestingBalance(child)
+			if err != nil {
+				return nil, fmt.Errorf("could not get latest balance: %v", err)
+			}
+			if balance > highest {
+				head = child
+			}
+		}
 	}
 }
+
