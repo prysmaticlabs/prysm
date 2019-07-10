@@ -620,7 +620,10 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 	if err != nil {
 		return nil, fmt.Errorf("could not get attesting indices: %v", err)
 	}
-	cb1i, _ := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
+	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
+	if err != nil {
+		return nil, err
+	}
 	if !sliceutil.SubsetUint64(cb1i, attIndices) {
 		return nil, fmt.Errorf("%v is not a subset of %v", cb1i, attIndices)
 	}
@@ -723,7 +726,7 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.Indexe
 	sort.SliceStable(copiedBit1Indices, func(i, j int) bool {
 		return copiedBit1Indices[i] < copiedBit1Indices[j]
 	})
-	if !reflect.DeepEqual(copiedBit1Indices, custodyBit1Indices) {
+	if len(custodyBit1Indices) > 0 && !reflect.DeepEqual(copiedBit1Indices, custodyBit1Indices) {
 		return fmt.Errorf("custody Bit1 indices are not sorted, wanted %v but got %v", copiedBit1Indices, custodyBit1Indices)
 	}
 

@@ -17,7 +17,7 @@ func runRegisteryProcessingTests(t *testing.T, filename string) {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	s := &RegistryUpdatesMinimal{}
+	s := &EpochProcessingTest{}
 	if err := yaml.Unmarshal(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}

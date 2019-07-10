@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func init() {
@@ -307,18 +309,19 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
-	var zeroHash [32]byte
 	var zeroSig [96]byte
 	nsh := newState.LatestBlockHeader
 	expected := &pb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: latestBlockSignedRoot[:],
 		BodyRoot:   bodyRoot[:],
-		StateRoot:  zeroHash[:],
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		Signature:  zeroSig[:],
 	}
 	if !proto.Equal(nsh, expected) {
-		t.Errorf("Expected %v, received %vk9k", expected, nsh)
+		diff, _ := messagediff.PrettyDiff(nsh, expected)
+		t.Log(diff)
+		t.Error("Mismatched state")
 	}
 }
 
@@ -341,7 +344,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
+	epochSignature := privKeys[proposerIdx+1].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: epochSignature.Marshal(),
@@ -1135,8 +1138,8 @@ func TestProcessAttestations_OK(t *testing.T) {
 					StartEpoch: 0,
 				},
 			},
-			AggregationBits: []byte{0xC0, 0xC0, 0xC0, 0xC0},
-			CustodyBits:     []byte{0x00, 0x00, 0x00, 0x00},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 		},
 	}
 	block := &pb.BeaconBlock{
@@ -1199,28 +1202,28 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	tests := []struct {
-		aggregationBitfield      []byte
-		custodyBitfield          []byte
+		aggregationBitfield      bitfield.Bitlist
+		custodyBitfield          bitfield.Bitlist
 		wantedCustodyBit0Indices []uint64
 		wantedCustodyBit1Indices []uint64
 	}{
 		{
-			aggregationBitfield:      []byte{0x03},
-			custodyBitfield:          []byte{0x01},
+			aggregationBitfield:      bitfield.Bitlist{0x07},
+			custodyBitfield:          bitfield.Bitlist{0x05},
 			wantedCustodyBit0Indices: []uint64{71},
 			wantedCustodyBit1Indices: []uint64{127},
 		},
 		{
-			aggregationBitfield:      []byte{0x03},
-			custodyBitfield:          []byte{0x02},
+			aggregationBitfield:      bitfield.Bitlist{0x07},
+			custodyBitfield:          bitfield.Bitlist{0x06},
 			wantedCustodyBit0Indices: []uint64{127},
 			wantedCustodyBit1Indices: []uint64{71},
 		},
 		{
-			aggregationBitfield:      []byte{0x03},
-			custodyBitfield:          []byte{0x03},
+			aggregationBitfield:      bitfield.Bitlist{0x07},
+			custodyBitfield:          bitfield.Bitlist{0x07},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{127, 71},
+			wantedCustodyBit1Indices: []uint64{71, 127},
 		},
 	}
 
@@ -1250,7 +1253,9 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}
 		if !reflect.DeepEqual(wanted, ia) {
-			t.Errorf("convert attestation to indexed attestation didn't result as wanted: %v got: %v", wanted, ia)
+			diff, _ := messagediff.PrettyDiff(ia, wanted)
+			t.Log(diff)
+			t.Error("convert attestation to indexed attestation didn't result as wanted")
 		}
 	}
 }

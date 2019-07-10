@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "checkbit.go",
         "helpers.go",
+        "is_empty.go",
         "json_to_pb_converter.go",
         "log.go",
         "tempdir.go",
