@@ -209,3 +209,11 @@ func (s *Store) Head() ([]byte, error) {
 	}
 }
 
+// OnTick to be filled
+//
+// Spec pseudocode definition:
+//   def on_tick(store: Store, time: uint64) -> None:
+//    store.time = time
+func (s *Store) OnTick(t uint64) {
+	s.time = t
+}
