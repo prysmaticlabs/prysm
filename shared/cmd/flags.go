@@ -134,4 +134,9 @@ var (
 		Name:  "enable-upnp",
 		Usage: "Enable the service (Beacon chain or Validator) to use UPnP when possibe.",
 	}
+
+	Hobbits = cli.BoolFlag{
+		Name: "hobbits",
+		Usage: "Toggles a Hobbits node.",
+	}
 )

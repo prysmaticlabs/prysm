@@ -16,6 +16,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["rewards_penalties_test.go"],
     embed = [":go_default_library"],
     deps = [

@@ -50,6 +50,7 @@ var appFlags = []cli.Flag{
 	cmd.ClearDB,
 	cmd.LogFormat,
 	cmd.MaxGoroutines,
+	cmd.Hobbits,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,

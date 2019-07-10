@@ -26,6 +26,7 @@ go_library(
         "//shared/featureconfig:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/p2p/adapter/metric:go_default_library",
+        "//shared/p2p/hobbits:go_default_library",
         "//shared/params:go_default_library",
         "//shared/prometheus:go_default_library",
         "//shared/tracing:go_default_library",
@@ -41,6 +42,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["node_test.go"],
     embed = [":go_default_library"],
     deps = [

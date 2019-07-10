@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/p2p/hobbits"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -191,7 +191,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
-	beaconp2p, err := configureP2P(ctx)
+	beaconp2p, err := configureP2P(ctx, b.db)
 	if err != nil {
 		return fmt.Errorf("could not register p2p service: %v", err)
 	}
@@ -212,7 +212,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	if err := b.services.FetchService(&attsService); err != nil {
 		return err
 	}
-	var p2pService *p2p.Server
+	var p2pService *hobbits.HobbitsNode
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerOperationService() error {
-	var p2pService *p2p.Server
+	var p2pService *hobbits.HobbitsNode
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
@@ -307,7 +307,7 @@ func (b *BeaconNode) registerSyncService(_ *cli.Context) error {
 		return err
 	}
 
-	var p2pService *p2p.Server
+	var p2pService *hobbits.HobbitsNode
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
@@ -346,7 +346,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var p2pService *p2p.Server
+	var p2pService *hobbits.HobbitsNode
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}

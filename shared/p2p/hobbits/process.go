@@ -1,10 +1,12 @@
 package hobbits
 
 import (
+	"context"
+	"fmt"
 	"net"
 	"reflect"
 
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/context"
+	log "github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/renaynay/go-hobbits/encoding"
 	"gopkg.in/mgo.v2/bson"
@@ -15,13 +17,17 @@ import (
 func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Conn) error {
 	switch message.Protocol {
 	case encoding.RPC:
+		log.Trace("beginning to process the RPC message...")
+
 		err := h.processRPC(message, conn)
 		if err != nil {
+			log.Trace("there was an error processing an RPC hobbits msg ") // TODO DELETE
 			return errors.Wrap(err, "error processing an RPC hobbits message")
 		}
-
 		return nil
 	case encoding.GOSSIP:
+		log.Trace("beginning to process the GOSSIP message...")
+
 		err := h.processGossip(message)
 		if err != nil {
 			return errors.Wrap(err, "error processing a GOSSIP hobbits message")
@@ -30,18 +36,21 @@ func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Con
 		return nil
 	}
 
-	return errors.New("protocol unsupported")
+	return errors.New(fmt.Sprintf("protocol unsupported %v", message.Protocol))
 }
 
 func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 	method, err := h.parseMethodID(message.Header)
 	if err != nil {
+		log.Trace("method id could not be parsed from message header")
 		return errors.Wrap(err, "could not parse method_id: ")
 	}
 
 	switch method {
 	case HELLO:
-		response := h.rpcHello(message)
+		log.Trace("HELLO received")
+
+		response := h.rpcHello()
 
 		responseBody, err := bson.Marshal(response)
 
@@ -51,11 +60,15 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 			Header:   message.Header,
 			Body:     responseBody,
 		}
+		log.Trace(responseMessage)
 
 		err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
 		if err != nil {
+			log.Trace("error sending a HELLO back") // TODO delete
 			return errors.Wrap(err, "error sending hobbits message: ")
 		}
+
+		log.Trace("sending HELLO...?")
 	case GOODBYE:
 		err := h.removePeer(conn)
 		if err != nil {
@@ -81,26 +94,34 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 	return nil
 }
 
-func (h *HobbitsNode) rpcHello(message HobbitsMessage) Hello {
+func (h *HobbitsNode) rpcHello() Hello { // TODO: this is garbage
 	var response Hello
 
 	response.NodeID = h.NodeId
 
-	response.BestRoot = h.DB.HeadStateRoot()
+	//response.BestRoot = h.DB.HeadStateRoot()
+	response.BestRoot = [32]byte{}
 
-	headState, err := h.DB.HeadState(context.Background())
-	if err != nil {
-		response.BestSlot = 0
-	}
+	//headState, err := h.DB.HeadState(context.Background())
+	//if err != nil {
+	//	response.BestSlot = 0
+	//}
+	//if headState == nil {
+	//	response.BestSlot = 0
+	//}
 
-	response.BestSlot = headState.Slot // best slot
+	response.BestSlot = 0
 
 	finalizedState, err := h.DB.FinalizedState()
 	if err != nil {
 		finalizedState = nil
 	}
-
-	response.LatestFinalizedEpoch = finalizedState.Slot / 64 // finalized epoch
+	if finalizedState == nil {
+		response.LatestFinalizedEpoch = 0
+	}
+	if finalizedState != nil {
+		response.LatestFinalizedEpoch = finalizedState.Slot / 64 // finalized epoch
+	}
 
 	hashedFinalizedState, err := hashutil.HashProto(finalizedState) // finalized root
 	if err != nil {
@@ -130,21 +151,30 @@ func (h *HobbitsNode) removePeer(peer net.Conn) error {
 }
 
 func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
+	log.Trace("processing GOSSIP message")
+
 	_, err := h.parseTopic(message)
 	if err != nil {
 		return errors.Wrap(err, "error parsing topic: ")
 	}
 
-	err = h.Broadcast(message)
-	if err != nil {
-		return errors.Wrap(err, "error broadcasting: ")
-	}
+	h.Broadcast(context.Background(), nil)
 
 	return nil
 }
 
 func (h *HobbitsNode) parseMethodID(header []byte) (RPCMethod, error) {
-	return RPCMethod(0), nil
+	fmt.Println("parsing method ID from header...") // TODO delete
+
+	unmarshaledHeader := &RPCHeader{}
+
+	err := bson.Unmarshal(header, unmarshaledHeader)
+	if err != nil {
+		fmt.Println("could not unmarshal the header of the message: ") // TODO delete
+		return RPCMethod(0), errors.Wrap(err, "could not unmarshal the header of the message: ")
+	}
+
+	return RPCMethod(unmarshaledHeader.MethodID), nil
 }
 
 // parseTopic takes care of parsing the topic and updating the node's feeds

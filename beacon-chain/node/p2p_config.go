@@ -3,12 +3,16 @@ package node
 import (
 	"strings"
 
+
+	"github.com/sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	p2p "github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric"
+	"github.com/prysmaticlabs/prysm/shared/p2p/hobbits"
 	"github.com/urfave/cli"
 )
 
@@ -29,7 +33,7 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_ATTESTATION_RESPONSE:                &pb.AttestationResponse{},
 }
 
-func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
+func configureP2P(ctx *cli.Context, db *db.BeaconDB) (p2p.P2pComposite, error) {
 	contractAddress := ctx.GlobalString(utils.DepositContractFlag.Name)
 	if contractAddress == "" {
 		var err error
@@ -42,6 +46,19 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 	for _, entry := range ctx.GlobalStringSlice(cmd.StaticPeers.Name) {
 		peers := strings.Split(entry, ",")
 		staticPeers = append(staticPeers, peers...)
+	}
+
+	if ctx.GlobalBool(cmd.Hobbits.Name) {
+		s := hobbits.Hobbits(ctx.GlobalString(cmd.P2PHost.Name), ctx.GlobalInt(cmd.P2PPort.Name), staticPeers, db)
+
+		logrus.Debug("")
+		logrus.Trace("constructed a hobbits node...")
+
+		s.Start()
+
+		logrus.Trace("called start on hobbits node...")
+
+		return s, nil
 	}
 
 	s, err := p2p.NewServer(&p2p.ServerConfig{

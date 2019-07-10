@@ -5,8 +5,17 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/event"
 )
+
+type P2pComposite interface {
+	Broadcaster
+	Subscriber
+	ReputationManager
+	Sender
+	shared.Service
+}
 
 // Broadcaster represents a subset of the p2p.Server. This interface is useful
 // for testing or when the calling code only needs access to the broadcast
