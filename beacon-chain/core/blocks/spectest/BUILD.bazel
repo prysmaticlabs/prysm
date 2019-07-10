@@ -31,6 +31,7 @@ go_test(
         "@eth2_spec_tests//:test_data",
     ],
     embed = [":go_default_library"],
+    shard_count = 4,
     tags = ["spectest"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
