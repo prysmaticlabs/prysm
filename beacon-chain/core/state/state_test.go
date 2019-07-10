@@ -34,10 +34,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	genesisForkVersion := params.BeaconConfig().GenesisForkVersion
 
-	if params.BeaconConfig().ZeroHash != [32]byte{} {
-		t.Error("ZeroHash should be all 0s for these tests to pass")
-	}
-
 	if params.BeaconConfig().EpochsPerHistoricalVector != 65536 {
 		t.Error("EpochsPerHistoricalVector should be 8192 for these tests to pass")
 	}
