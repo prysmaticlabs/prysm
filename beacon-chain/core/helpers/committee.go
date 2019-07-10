@@ -372,7 +372,7 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 // Spec pseudocode definition:
 //   def get_compact_committees_root(state: BeaconState, epoch: Epoch) -> Hash:
 //    """
-//    Return the compact committee root for the current epoch.
+//    Return the compact committee root at ``epoch``.
 //    """
 //    committees = [CompactCommittee() for _ in range(SHARD_COUNT)]
 //    start_shard = get_epoch_start_shard(state, epoch)
@@ -415,22 +415,26 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 
 		}
 	}
-	return ssz.HashTreeRoot(compactCommList)
+
+	return ssz.HashTreeRootWithCapacity(compactCommList, params.BeaconConfig().ShardCount)
 }
 
-// compressValidator compacts all the validator data such as validator index,slashing info and balance
+// compressValidator compacts all the validator data such as validator index, slashing info and balance
 // into a single uint64 field.
+//
+// Spec reference:
+//   # `index` (top 6 bytes) + `slashed` (16th bit) + `compact_balance` (bottom 15 bits)
+//   compact_validator = uint64((index << 16) + (validator.slashed << 15) + compact_balance)
 func compressValidator(validator *pb.Validator, idx uint64) uint64 {
 	compactBalance := validator.EffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// index (top 6 bytes) + slashed (16th bit) + compact_balance (bottom 15 bits)
-	compactIndice := idx << 16
+	compactIndex := idx << 16
 	var slashedBit uint64
 	if validator.Slashed {
-		slashedBit = 1 << 16
+		slashedBit = 1 << 15
 	}
-	// clear out the top 49 most Significant Bits and set it to zero
-	compactBalance <<= 49
-	compactBalance >>= 49
-	compactValidator := compactIndice | uint64(slashedBit|compactBalance)
+	// Clear all bits except last 15.
+	compactBalance &= 0x7FFF // 0b01111111 0b11111111
+	compactValidator := compactIndex | uint64(slashedBit|compactBalance)
 	return compactValidator
 }
