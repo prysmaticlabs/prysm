@@ -217,3 +217,102 @@ func (s *Store) Head() ([]byte, error) {
 func (s *Store) OnTick(t uint64) {
 	s.time = t
 }
+
+// OnBlock to be filled
+//
+// Spec pseudocode definition:
+//   def on_block(store: Store, block: BeaconBlock) -> None:
+//    # Make a copy of the state to avoid mutability issues
+//    assert block.parent_root in store.block_states
+//    pre_state = store.block_states[block.parent_root].copy()
+//    # Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
+//    assert store.time >= pre_state.genesis_time + block.slot * SECONDS_PER_SLOT
+//    # Add new block to the store
+//    store.blocks[signing_root(block)] = block
+//    # Check block is a descendant of the finalized block
+//    assert (
+//        get_ancestor(store, signing_root(block), store.blocks[store.finalized_checkpoint.root].slot) ==
+//        store.finalized_checkpoint.root
+//    )
+//    # Check that block is later than the finalized epoch slot
+//    assert block.slot > compute_start_slot_of_epoch(store.finalized_checkpoint.epoch)
+//    # Check the block is valid and compute the post-state
+//    state = state_transition(pre_state, block)
+//    # Add new state for this block to the store
+//    store.block_states[signing_root(block)] = state
+//
+//    # Update justified checkpoint
+//    if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
+//        store.justified_checkpoint = state.current_justified_checkpoint
+//
+//    # Update finalized checkpoint
+//    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
+//        store.finalized_checkpoint = state.finalized_checkpoint
+func (s *Store) OnBlock(b *pb.BeaconBlock) error {
+	preState, err := s.db.HistoricalStateFromSlot(s.ctx, b.Slot, bytesutil.ToBytes32(b.ParentRoot))
+	if err != nil {
+		return fmt.Errorf("could not get pre state for slot %d: %v", b.Slot, err)
+	}
+	if preState == nil {
+		return fmt.Errorf("pre state of slot %d does not exist: %v", b.Slot, err)
+	}
+
+	// Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
+	slotTime := preState.GenesisTime + b.Slot * params.BeaconConfig().SecondsPerSlot
+	if slotTime > s.time {
+		return fmt.Errorf("could not process block from the future, %d > %d", slotTime, s.time)
+	}
+
+	// TODO: Why would you save the block here?
+	if err := s.db.SaveBlock(b); err != nil {
+		return fmt.Errorf("could not save block from slot %d: %v", b.Slot, err)
+	}
+
+	// Verify block is a descendent of a finalized block.
+	finalizedBlk, err := s.db.Block(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	if err != nil {
+		return fmt.Errorf("could not get finalized block: %v", err)
+	}
+	root, err := ssz.SigningRoot(b)
+	if err != nil {
+		return fmt.Errorf("could not get sign root of block %d: %v", b.Slot, err)
+	}
+	bFinalizedRoot, err := s.Ancestor(root[:], finalizedBlk.Slot)
+	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
+		return fmt.Errorf("block from slot %d is not a descendent of the current finalized block", b.Slot)
+	}
+
+	// Verify block is later than the finalized epoch slot.
+	finalizedSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+	if finalizedSlot >= b.Slot {
+		return fmt.Errorf("block is equal or earlier than finalized block, %d < %d", b.Slot, finalizedSlot)
+	}
+
+	// Apply new state transition for the block to the store.
+	postState, err := state.ExecuteStateTransition(
+		s.ctx,
+		preState,
+		b,
+		state.DefaultConfig(),
+	)
+	if err != nil {
+		return fmt.Errorf("could not execute state transition: %v", err)
+	}
+
+	// TODO: Need to save state based on block root as key, not state root
+	if err := s.db.SaveState(s.ctx, postState); err != nil {
+		return fmt.Errorf("could not save state: %v", err)
+	}
+
+	// Update justified check point.
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+		s.justifiedCheckpt.Epoch = postState.CurrentJustifiedCheckpoint.Epoch
+	}
+
+	// Update finalized check point.
+	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+		s.finalizedCheckpt.Epoch = postState.FinalizedCheckpoint.Epoch
+	}
+
+	return nil
+}
