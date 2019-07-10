@@ -65,7 +65,6 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		}
 	}
 
-	// Purposely set as HISTORICAL_ROOTS_LIMIT as we determined it is more clear.
 	blockRoots := make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash
