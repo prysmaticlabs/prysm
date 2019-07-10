@@ -21,6 +21,7 @@ func TestBlockHeaderSigningRoot(t *testing.T) {
 		expectedRoot [32]byte
 	}{
 		{
+			// Arbitrary example, validated by running in python.
 			//header = spec.BeaconBlockHeader(
 			//	slot = uint64(0),
 			//	parent_root = Bytes32(bytes.fromhex('0000000000000000000000000000000000000000000000000000000000000000')),
