@@ -1,9 +1,10 @@
 package helpers
 
 import (
-	"github.com/prysmaticlabs/go-bitfield"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/go-bitfield"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

@@ -14,6 +14,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const mainnetShardCount = 1024
+
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
 var startShardCache = cache.NewStartShardCache()
 
@@ -388,35 +390,69 @@ func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (boo
 //    return hash_tree_root(Vector[CompactCommittee, SHARD_COUNT](committees))
 func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 	shardCount := params.BeaconConfig().ShardCount
-	compactCommList := make([]*pb.CompactCommittee, shardCount)
-	for i := range compactCommList {
-		compactCommList[i] = &pb.CompactCommittee{}
-	}
-	comCount, err := CommitteeCount(state, epoch)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	startShard, err := StartShard(state, epoch)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	for i := uint64(0); i < comCount; i++ {
-		shard := (startShard + i) % shardCount
-		crossComm, err := CrosslinkCommittee(state, epoch, shard)
+	switch shardCount {
+	case 1024:
+		compactCommArray := [1024]*pb.CompactCommittee{}
+		for i := range compactCommArray {
+			compactCommArray[i] = &pb.CompactCommittee{}
+		}
+		comCount, err := CommitteeCount(state, epoch)
 		if err != nil {
 			return [32]byte{}, err
 		}
-
-		for _, indice := range crossComm {
-			validator := state.Validators[indice]
-			compactCommList[shard].Pubkeys = append(compactCommList[shard].Pubkeys, validator.Pubkey)
-			compactValidator := compressValidator(validator, indice)
-			compactCommList[shard].CompactValidators = append(compactCommList[shard].CompactValidators, compactValidator)
-
+		startShard, err := StartShard(state, epoch)
+		if err != nil {
+			return [32]byte{}, err
 		}
+		for i := uint64(0); i < comCount; i++ {
+			shard := (startShard + i) % shardCount
+			crossComm, err := CrosslinkCommittee(state, epoch, shard)
+			if err != nil {
+				return [32]byte{}, err
+			}
+
+			for _, index := range crossComm {
+				validator := state.Validators[index]
+				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.Pubkey)
+				compactValidator := compressValidator(validator, index)
+				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
+
+			}
+		}
+		return ssz.HashTreeRoot(compactCommArray)
+	case 8:
+		compactCommArray := [8]*pb.CompactCommittee{}
+		for i := range compactCommArray {
+			compactCommArray[i] = &pb.CompactCommittee{}
+		}
+		comCount, err := CommitteeCount(state, epoch)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		startShard, err := StartShard(state, epoch)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		for i := uint64(0); i < comCount; i++ {
+			shard := (startShard + i) % shardCount
+			crossComm, err := CrosslinkCommittee(state, epoch, shard)
+			if err != nil {
+				return [32]byte{}, err
+			}
+
+			for _, index := range crossComm {
+				validator := state.Validators[index]
+				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.Pubkey)
+				compactValidator := compressValidator(validator, index)
+				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
+
+			}
+		}
+		return ssz.HashTreeRoot(compactCommArray)
+	default:
+		return [32]byte{}, fmt.Errorf("expected minimal or mainnet config shard count, received %d", shardCount)
 	}
 
-	return ssz.HashTreeRootWithCapacity(compactCommList, params.BeaconConfig().ShardCount)
 }
 
 // compressValidator compacts all the validator data such as validator index, slashing info and balance
