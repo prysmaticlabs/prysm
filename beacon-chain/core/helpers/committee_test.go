@@ -1,13 +1,12 @@
 package helpers
 
 import (
-	"github.com/prysmaticlabs/go-bitfield"
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -223,7 +222,8 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	committeeSize := uint64(16)
+	validators := make([]*pb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -248,19 +248,19 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{127, 71},
+			wanted:          []uint64{219, 476},
 		},
 		{
 			attestationSlot: 2,
 			stateSlot:       10,
 			bitfield:        bitfield.Bitlist{0x05},
-			wanted:          []uint64{85},
+			wanted:          []uint64{123},
 		},
 		{
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{102, 68},
+			wanted:          []uint64{880, 757},
 		},
 	}
 
@@ -511,7 +511,7 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 	}
 }
 
-func TestEpochStartShard_MixedActivationValidatorRegistry(t *testing.T) {
+func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	tests := []struct {
 		validatorCount uint64
@@ -710,16 +710,57 @@ func TestCompactCommitteesRoot_OK(t *testing.T) {
 	}
 }
 
-func TestCompressValidator_OK(t *testing.T) {
-	validator := &pb.Validator{
-		EffectiveBalance: 32e9,
-		Slashed:          true,
+func TestCompressValidator(t *testing.T) {
+	tests := []struct {
+		validator *pb.Validator
+		idx       uint64
+		want      uint64
+	}{
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 32e9,
+				Slashed:          true,
+			},
+			idx:  128,
+			want: 8421408, // (128 << 16) + (1 << 15) + (32e9 / (2**0 * 10**9))
+		},
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 32e9,
+				Slashed:          false,
+			},
+			idx:  128,
+			want: 8388640, // (128 << 16) + (0 << 15) + (32e9 / (2**0 * 10**9))
+		},
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 33e9,
+				Slashed:          false,
+			},
+			idx:  128,
+			want: 8388641, // (128 << 16) + (0 << 15) + (33e9 / (2**0 * 10**9))
+		},
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 33e9,
+				Slashed:          false,
+			},
+			idx:  129,
+			want: 8454177, // (129 << 16) + (0 << 15) + (33e9 / (2**0 * 10**9))
+		},
 	}
-	compactVal := compressValidator(validator, 128)
-	// Expected Value in Bits: 0000000000000000000000000000000000000000100000010000000000100000
-	expectedVal := mathutil.PowerOf2(5) + mathutil.PowerOf2(16) + mathutil.PowerOf2(23)
-	if expectedVal != compactVal {
-		t.Errorf("Unexpected Compressed value received %d", compactVal)
+
+	for _, tt := range tests {
+		got := compressValidator(tt.validator, tt.idx)
+		if got != tt.want {
+			t.Errorf(
+				"compressValidator({%v}, %d) = %d, wanted %d",
+				tt.validator,
+				tt.idx,
+				got,
+				tt.want,
+			)
+		}
 	}
 }
 
