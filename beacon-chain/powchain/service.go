@@ -16,10 +16,14 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -96,6 +100,8 @@ type Web3Service struct {
 	runError                error
 	lastRequestedBlock      *big.Int
 	chainStartETH1Data      *pb.Eth1Data
+	activeValidatorCount    uint64
+	depositedPubkeys        map[[48]byte]uint64
 	eth2GenesisTime         uint64
 }
 
@@ -155,6 +161,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &pb.Eth1Data{},
+		depositedPubkeys:        make(map[[48]byte]uint64),
 	}, nil
 }
 
@@ -302,6 +309,37 @@ func (w *Web3Service) handleDelayTicker() {
 	if err := w.requestBatchedLogs(); err != nil {
 		w.runError = err
 		log.Error(err)
+	}
+}
+
+// determineActiveValidator determines if the
+func (w *Web3Service) determineActiveValidator(deposit *pb.Deposit) {
+	pubkey := bytesutil.ToBytes48(deposit.Data.Pubkey)
+	dummyState := &pb.BeaconState{}
+	valMap := stateutils.ValidatorIndexMap(dummyState)
+	if _, err := blocks.ProcessDeposit(dummyState, deposit, valMap, true, true); err != nil {
+		log.Errorf("Invalid Deposit %v", err)
+		return
+	}
+	balance := dummyState.Balances[0]
+	val, ok := w.depositedPubkeys[pubkey]
+	if !ok {
+		w.depositedPubkeys[pubkey] = balance
+		balanceMin := mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+		if balanceMin == params.BeaconConfig().MaxEffectiveBalance {
+			w.activeValidatorCount++
+		}
+		return
+	}
+	newBal := val + balance
+	w.depositedPubkeys[pubkey] = newBal
+
+	// exit if the validator is already an active validator previously
+	if val >= params.BeaconConfig().MaxEffectiveBalance {
+		return
+	}
+	if newBal >= params.BeaconConfig().MaxEffectiveBalance {
+		w.activeValidatorCount++
 	}
 }
 

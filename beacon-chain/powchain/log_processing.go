@@ -56,11 +56,15 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
 		if !w.chainStarted {
-			timeStamp := uint64(w.blockTime.Unix())
-			triggered := w.isValidGenesisState(uint64(len(w.chainStartDeposits)), timeStamp)
+			blk, err := w.blockFetcher.BlockByHash(w.ctx, depositLog.BlockHash)
+			if err != nil {
+				log.Errorf("Could not get eth1 block %v", err)
+				return
+			}
+			timeStamp := blk.Time()
+			triggered := w.isValidGenesisState(w.activeValidatorCount, timeStamp)
 			if triggered {
-				// genesisTime will be set to the first second of the day, two days after it was triggered.
-				w.eth2GenesisTime = timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay + 2*params.BeaconConfig().SecondsPerDay
+				w.setGenesisTime(timeStamp)
 				w.ProcessChainStart(uint64(w.eth2GenesisTime))
 			}
 		}
@@ -119,6 +123,8 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		Data:  depositData,
 		Proof: proof,
 	}
+
+	w.determineActiveValidator(deposit)
 
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted && validData {
@@ -179,6 +185,12 @@ func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 		"ChainStartTime": chainStartTime,
 	}).Info("Minimum number of validators reached for beacon-chain to start")
 	w.chainStartFeed.Send(chainStartTime)
+}
+
+func (w *Web3Service) setGenesisTime(timeStamp uint64) {
+	timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay
+	// genesisTime will be set to the first second of the day, two days after it was triggered.
+	w.eth2GenesisTime = timeStampRdDown + 2*params.BeaconConfig().SecondsPerDay
 }
 
 // processPastLogs processes all the past logs from the deposit contract and
