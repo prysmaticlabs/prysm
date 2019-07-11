@@ -14,6 +14,9 @@ import (
 )
 
 var currentEpochSeed = cache.NewSeedCache()
+
+// ErrInvalidStateLatestActiveIndexRoots is returned when the state active
+// index root count does not match the expected EpochsPerHistoricalVector.
 var ErrInvalidStateLatestActiveIndexRoots = errors.New("state does not have correct number of latest active index roots")
 
 // Seed returns the randao seed used for shuffling of a given epoch.
