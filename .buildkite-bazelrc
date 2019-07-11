@@ -2,8 +2,7 @@
 # across machines, developers, and workspaces.
 # 
 # This config is loaded from https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/latest.bazelrc
-build:remote-cache --remote_cache=remotebuildexecution.googleapis.com
-build:remote-cache --tls_enabled=true
+build:remote-cache --remote_cache=grpcs://remotebuildexecution.googleapis.com
 build:remote-cache --remote_timeout=3600
 build:remote-cache --auth_enabled=true
 build:remote-cache --spawn_strategy=standalone
