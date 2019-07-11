@@ -418,6 +418,8 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for index, validator := range state.Validators {
 		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
 		if validator.Slashed && correctEpoch {
+			// Note: penality calculation overflows as uint64 so we must use big.Int.
+			// See: https://github.com/ethereum/eth2.0-specs/issues/1284
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
 			penalty := big.NewInt(int64(validator.EffectiveBalance))
 			penalty.Mul(penalty, big.NewInt(int64(minSlashing)))
