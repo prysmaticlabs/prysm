@@ -279,7 +279,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.EpochsPerHistoricalVector = 64
 	minimalConfig.EpochsPerSlashingsVector = 64
-	minimalConfig.HistoricalRootsLimit = 16777216
+	minimalConfig.HistoricalRootsLimit = 64
 	minimalConfig.ValidatorRegistryLimit = 1099511627776
 	minimalConfig.BaseRewardFactor = 64
 	minimalConfig.WhistleBlowerRewardQuotient = 512

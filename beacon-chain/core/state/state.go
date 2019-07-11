@@ -101,8 +101,6 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			Epoch:           0,
 		},
 
-		LatestBlockHeader: &pb.BeaconBlockHeader{},
-
 		// Validator registry fields.
 		Validators: []*pb.Validator{},
 		Balances:   []uint64{},
