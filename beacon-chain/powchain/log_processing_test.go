@@ -55,11 +55,9 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	copy(sig[:], []byte("testing"))
 	copy(withdrawalCreds[:], []byte("testing"))
 
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
-		Signature:             sig[:],
-		WithdrawalCredentials: withdrawalCreds[:],
-	}
+	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
+
+	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
