@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"github.com/prysmaticlabs/go-bitfield"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -154,7 +154,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	expectedAttestation.AggregationBits = aggregationBitfield
 
 	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
-		Data: expectedAttestation.Data,
+		Data:       expectedAttestation.Data,
 		CustodyBit: false,
 	}
 	root, err := ssz.SigningRoot(attDataAndCustodyBit)
@@ -165,7 +165,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	k := hex.EncodeToString(validatorKey.PublicKey.Marshal())
 	sig := validator.keys[k].SecretKey.Sign(root[:], 0).Marshal()
 	expectedAttestation.Signature = sig
-
 
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)

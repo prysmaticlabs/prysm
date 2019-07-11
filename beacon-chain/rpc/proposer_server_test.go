@@ -166,6 +166,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 					Target: &pbp2p.Checkpoint{},
 				},
 					AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+					CustodyBits:     []byte{0x00, 0x00, 0x00, 0x00},
 				},
 			},
 		},
