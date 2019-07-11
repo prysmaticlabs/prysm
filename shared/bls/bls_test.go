@@ -51,3 +51,15 @@ func TestVerifyAggregate(t *testing.T) {
 		t.Error("Signature did not verify")
 	}
 }
+
+func TestVerifyAggregate_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
+	var pubkeys []*bls.PublicKey
+	sigs := make([]*bls.Signature, 0, 100)
+	msg := []byte("hello")
+
+	aggSig := bls.AggregateSignatures(sigs)
+	if aggSig.VerifyAggregate(pubkeys, msg, 0 /*domain*/) != false {
+		t.Error("Expected VerifyAggregate to return false with empty input " +
+			"of public keys.")
+	}
+}

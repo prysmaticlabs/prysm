@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -38,12 +38,12 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	genesisRoot, err := hashutil.HashProto(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block root: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 
-		stateRoot, err := hashutil.HashProto(tt.state)
+		stateRoot, err := ssz.HashTreeRoot(tt.state)
 		if err != nil {
 			t.Fatalf("Could not tree hash state: %v", err)
 		}
@@ -1511,7 +1511,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
-	var validatorRegistry []*pb.Validator
+	var Validators []*pb.Validator
 	var validatorBalances []uint64
 	var privKeys []*bls.SecretKey
 	for i := uint64(0); i < 64; i++ {
@@ -1520,7 +1520,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 			t.Fatal(err)
 		}
 		privKeys = append(privKeys, priv)
-		validatorRegistry = append(validatorRegistry,
+		Validators = append(Validators,
 			&pb.Validator{
 				Pubkey:    priv.PublicKey().Marshal(),
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1543,7 +1543,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		CurrentCrosslinks: crosslinks,
-		Validators:        validatorRegistry,
+		Validators:        Validators,
 		Balances:          validatorBalances,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
