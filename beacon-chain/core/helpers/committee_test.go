@@ -1,10 +1,10 @@
 package helpers
 
 import (
-	"github.com/prysmaticlabs/go-bitfield"
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -222,7 +222,8 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	committeeSize := uint64(16)
+	validators := make([]*pb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -247,19 +248,19 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{127, 71},
+			wanted:          []uint64{219, 476},
 		},
 		{
 			attestationSlot: 2,
 			stateSlot:       10,
 			bitfield:        bitfield.Bitlist{0x05},
-			wanted:          []uint64{85},
+			wanted:          []uint64{123},
 		},
 		{
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{102, 68},
+			wanted:          []uint64{880, 757},
 		},
 	}
 
@@ -510,7 +511,7 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 	}
 }
 
-func TestEpochStartShard_MixedActivationValidatorRegistry(t *testing.T) {
+func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	tests := []struct {
 		validatorCount uint64
