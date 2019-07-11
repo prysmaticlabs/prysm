@@ -10,7 +10,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "small",
+    size = "medium",
     srcs = [
         "crosslink_test.go",
         "justification_and_finalization_test.go",

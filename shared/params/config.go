@@ -264,7 +264,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 	minimalConfig.SecondsPerSlot = 6
-	minimalConfig.MinAttestationInclusionDelay = 2
+	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.ActivationExitDelay = 4
@@ -296,7 +296,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
 	minimalConfig.DomainTransfer = bytesutil.Bytes4(5)
-	minimalConfig.MinGenesisTime = 0
+	minimalConfig.MinGenesisTime = 1578009600
 
 	return &minimalConfig
 }
