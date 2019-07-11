@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
@@ -82,7 +81,7 @@ func (a *Service) Stop() error {
 }
 
 // Status always returns nil.
-// TODO(1201): Add service health checks.
+// TODO(#1201): Add service health checks.
 func (a *Service) Status() error {
 	return nil
 }
@@ -240,30 +239,23 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 		"lengthOfCommittees": len(committee),
 	}).Debug("Updating latest attestation")
 
-	// The participation bitfield from attestation is represented in bytes,
-	// here we multiply by 8 to get an accurate validator count in bits.
-	bitfield := attestation.AggregationBits
-	totalBits := len(bitfield) * 8
-
 	// Check each bit of participation bitfield to find out which
 	// attester has submitted new attestation.
 	// This is has O(n) run time and could be optimized down the line.
-	for i := 0; i < totalBits; i++ {
-		bitSet, err := bitutil.CheckBit(bitfield, i)
-		if err != nil {
-			return err
-		}
-		if !bitSet {
+	for i := uint64(0); i < attestation.AggregationBits.Len(); i++ {
+		if !attestation.AggregationBits.BitAt(i) {
 			continue
 		}
 
-		if i >= len(committee) {
-			log.Debugf("bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
+		if i >= uint64(len(committee)) {
+			// This should never happen.
+			log.Warnf("bitfield points to an invalid index in the committee: bitfield %08b", attestation.AggregationBits)
 			return nil
 		}
 
 		if int(committee[i]) >= len(beaconState.Validators) {
-			log.Debugf("index doesn't exist in validator registry: index %d", committee[i])
+			// This should never happen.
+			log.Warnf("index doesn't exist in validator registry: index %d", committee[i])
 			return nil
 		}
 

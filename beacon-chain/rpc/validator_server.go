@@ -95,7 +95,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, fmt.Errorf("could not get head: %v", err)
 	}
-	validatorRegistry, err := vs.beaconDB.Validators(ctx)
+	Validators, err := vs.beaconDB.Validators(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -120,7 +120,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                       balance,
 		AverageActiveValidatorBalance: avgBalance,
-		TotalValidators:               uint64(len(validatorRegistry)),
+		TotalValidators:               uint64(len(Validators)),
 		TotalActiveValidators:         uint64(activeCount),
 	}, nil
 }
@@ -461,7 +461,7 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	dv := helpers.Domain(state, request.Epoch, params.BeaconConfig().DomainRandao)
+	dv := helpers.Domain(state, request.Epoch, request.Domain)
 	return &pb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil

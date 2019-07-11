@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	"fmt"
+	"errors"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -18,21 +18,10 @@ import (
 //    assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
 //    return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
 func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	earliestSlot := uint64(0)
-	if state.Slot > params.BeaconConfig().HistoricalRootsLimit {
-		earliestSlot = state.Slot - params.BeaconConfig().HistoricalRootsLimit
+	if !(slot < state.Slot && state.Slot <= slot+params.BeaconConfig().HistoricalRootsLimit) {
+		return []byte{}, errors.New("slot out of bounds")
 	}
-	if slot < earliestSlot || slot >= state.Slot {
-		return []byte{}, fmt.Errorf("slot %d is not within range %d to %d",
-			slot,
-			earliestSlot,
-			state.Slot,
-		)
-	}
-	rootWanted := state.BlockRoots[slot%params.BeaconConfig().HistoricalRootsLimit]
-	blkRoot := make([]byte, len(rootWanted))
-	copy(blkRoot, rootWanted)
-	return blkRoot, nil
+	return state.BlockRoots[slot%params.BeaconConfig().HistoricalRootsLimit], nil
 }
 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.

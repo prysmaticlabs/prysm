@@ -32,7 +32,7 @@ message BeaconState {
   repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
 
   // Slashings [6001-7000]
-  repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz:\"size=8192\""];
+  repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"8192\""];
 
   // Attestations [7001-8000]
   repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"8192\""];
@@ -44,7 +44,7 @@ message BeaconState {
 
   // Finality [9001-10000]
   // Spec type [4]Bitvector which means this would be a fixed size of 4 bits.
-  bytes justification_bits = 9001 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
+  bytes justification_bits = 9001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
   Checkpoint previous_justified_checkpoint = 9002;
   Checkpoint current_justified_checkpoint = 9003;
   Checkpoint finalized_checkpoint = 9004;
@@ -295,5 +295,5 @@ message CompactCommittee {
   // The list of the validator public keys in the committee.
   repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz-size:\"?,48\" ssz-max:\"4096\""];
   // The list of the validator indices in the committee.
-  repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-size:\"4096\""];
+  repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-max:\"4096\""];
 }

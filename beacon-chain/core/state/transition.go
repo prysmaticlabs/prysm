@@ -85,7 +85,7 @@ func ExecuteStateTransition(
 		if err != nil {
 			return nil, fmt.Errorf("could not tree hash processed state: %v", err)
 		}
-		if bytes.Equal(postStateRoot[:], block.StateRoot) {
+		if !bytes.Equal(postStateRoot[:], block.StateRoot) {
 			return nil, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
 				postStateRoot[:], block.StateRoot)
 		}
@@ -185,7 +185,7 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeader(state, block)
+	state, err := b.ProcessBlockHeader(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block header: %v", err)
 	}

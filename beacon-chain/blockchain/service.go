@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -19,7 +20,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -144,7 +144,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
 
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
