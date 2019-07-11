@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -65,69 +66,82 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 		err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
 		if err != nil {
 			log.Trace("error sending a HELLO back") // TODO delete
-			return errors.Wrap(err, "error sending hobbits message: ")
+			return errors.Wrap(err, "error sending HELLO: ")
 		}
 
-		log.Trace("sending HELLO...?")
+		log.Trace("sending HELLO...")
+		return nil
 	case GOODBYE:
 		err := h.removePeer(conn)
 		if err != nil {
 			return errors.Wrap(err, "error handling GOODBYE: ")
 		}
+
+		log.Trace("GOODBYE successful")
+		return nil
 	case GET_STATUS:
-		// TODO: retrieve data and call h.Send
+
+		// does something with the status of the other node
+		responseBody := Status{
+			UserAgent: []byte(fmt.Sprintf("prysm node %d", h.NodeId)),
+			Timestamp: uint64(time.Now().Unix()),
+		}
+
+		body, err := bson.Marshal(responseBody)
+		if err != nil {
+			return errors.Wrap(err, "error marshaling response body: ")
+		}
+
+		responseMessage := HobbitsMessage{
+			Version: message.Version,
+			Protocol: message.Protocol,
+			Header: message.Header,
+			Body: body,
+		}
+
+		err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
+		if err != nil {
+			return errors.Wrap(err, "error sending GET_STATUS: ")
+		}
 	case GET_BLOCK_HEADERS:
 
-		// TODO: retrieve data and call h.Send
 	case BLOCK_HEADERS:
-		// TODO: call Broadcast?
+		// log this?
 	case GET_BLOCK_BODIES:
-		// TODO: how will this work if batchedBeaconBlockRequest uses finalizedRoot and CanonicalRoot?
 	case BLOCK_BODIES:
-		// TODO: call Broadcast?
 	case GET_ATTESTATION:
-		// TODO: retrieve data and call h.Send
 	case ATTESTATION:
-		// TODO: retrieve data and call h.Send
 	}
 
 	return nil
 }
 
-func (h *HobbitsNode) rpcHello() Hello { // TODO: this is garbage
+func (h *HobbitsNode) rpcHello() Hello {
 	var response Hello
 
 	response.NodeID = h.NodeId
+	response.BestRoot = h.DB.HeadStateRoot()
 
-	//response.BestRoot = h.DB.HeadStateRoot()
-	response.BestRoot = [32]byte{}
-
-	//headState, err := h.DB.HeadState(context.Background())
-	//if err != nil {
-	//	response.BestSlot = 0
-	//}
-	//if headState == nil {
-	//	response.BestSlot = 0
-	//}
-
-	response.BestSlot = 0
+	headState, err := h.DB.HeadState(context.Background())
+	if err != nil {
+		log.Printf("error getting HeadState data from db: %s", err.Error())
+	} else {
+		response.BestSlot = headState.Slot // best slot
+	}
 
 	finalizedState, err := h.DB.FinalizedState()
 	if err != nil {
-		finalizedState = nil
-	}
-	if finalizedState == nil {
-		response.LatestFinalizedEpoch = 0
-	}
-	if finalizedState != nil {
+		log.Printf("error getting FinalizedState data from db: %s", err.Error())
+	} else {
 		response.LatestFinalizedEpoch = finalizedState.Slot / 64 // finalized epoch
-	}
 
-	hashedFinalizedState, err := hashutil.HashProto(finalizedState) // finalized root
-	if err != nil {
-		response.LatestFinalizedRoot = [32]byte{}
+		hashedFinalizedState, err := hashutil.HashProto(finalizedState) // finalized root
+		if err != nil {
+			log.Printf("error hashing FinalizedState: %s", err.Error())
+		} else {
+			response.LatestFinalizedRoot = hashedFinalizedState
+		}
 	}
-	response.LatestFinalizedRoot = hashedFinalizedState
 
 	return response
 }
@@ -141,11 +155,25 @@ func (h *HobbitsNode) removePeer(peer net.Conn) error {
 		}
 	}
 	if index == 0 {
-		return errors.New("error removing peer from node's static peers")
+		return errors.New("error removing peer from node's open connections")
+	}
+	h.PeerConns = append(h.PeerConns[:index], h.PeerConns[index+1:]...)
+	err := peer.Close()
+	if err != nil {
+		return errors.Wrap(err, "error closing connection on peer")
 	}
 
-	h.PeerConns = append(h.PeerConns[:index], h.PeerConns[index+1:]...) // TODO: is there a better way to delete
-	// TODO: an element from an array by its value?
+	index = 0
+
+	for i, p := range h.StaticPeers {
+		if reflect.DeepEqual(peer.RemoteAddr().String(), p) {
+			index = i
+		}
+	}
+	if index == 0 {
+		return errors.New("error removing peer from node's static peers")
+	}
+	h.StaticPeers = append(h.StaticPeers[:index], h.StaticPeers[index+1:]...)
 
 	return nil
 }
