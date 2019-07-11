@@ -312,12 +312,11 @@ func (w *Web3Service) handleDelayTicker() {
 	}
 }
 
-// determineActiveValidator determines if the
+// determineActiveValidator determines if the validator that deposited is a valid active
+// validator.
 func (w *Web3Service) determineActiveValidator(eth1Data *pb.Eth1Data, deposit *pb.Deposit) {
 	pubkey := bytesutil.ToBytes48(deposit.Data.Pubkey)
-	dummyState := &pb.BeaconState{}
-	dummyState.Eth1Data = eth1Data
-	dummyState.Eth1DepositIndex = eth1Data.DepositCount - 1
+	dummyState := createDummyState(eth1Data)
 
 	valMap := stateutils.ValidatorIndexMap(dummyState)
 	if _, err := blocks.ProcessDeposit(dummyState, deposit, valMap, true, true); err != nil {
@@ -400,4 +399,16 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			w.handleDelayTicker()
 		}
 	}
+}
+
+func createDummyState(eth1Data *pb.Eth1Data) *pb.BeaconState {
+	dummyState := &pb.BeaconState{}
+	dummyState.Eth1Data = eth1Data
+	dummyState.Eth1DepositIndex = eth1Data.DepositCount - 1
+	dummyState.Fork = &pb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		Epoch:           0,
+	}
+	return dummyState
 }

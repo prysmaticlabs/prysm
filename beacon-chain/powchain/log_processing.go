@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,27 +22,6 @@ import (
 var (
 	depositEventSignature = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
 )
-
-// isValidGenesisState gets called whenever there's a deposit event,
-// it checks whether there's enough effective balance to trigger and
-// if the minimum genesis time arrived already.
-//
-// Spec pseudocode definition:
-//  def is_valid_genesis_state(state: BeaconState) -> bool:
-//     if state.genesis_time < MIN_GENESIS_TIME:
-//         return False
-//     if len(get_active_validator_indices(state, GENESIS_EPOCH)) < MIN_GENESIS_ACTIVE_VALIDATOR_COUNT:
-//         return False
-//     return True
-func (w *Web3Service) isValidGenesisState(chainStartDepositCount uint64, currentTime uint64) bool {
-	if currentTime < params.BeaconConfig().MinGenesisTime {
-		return false
-	}
-	if chainStartDepositCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
-		return false
-	}
-	return true
-}
 
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
@@ -62,7 +42,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 				return
 			}
 			timeStamp := blk.Time()
-			triggered := w.isValidGenesisState(w.activeValidatorCount, timeStamp)
+			triggered := state.IsValidGenesisState(w.activeValidatorCount, timeStamp)
 			if triggered {
 				w.setGenesisTime(timeStamp)
 				w.ProcessChainStart(uint64(w.eth2GenesisTime))

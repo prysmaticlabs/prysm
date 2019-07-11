@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -19,6 +20,13 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		pubkey := []byte{}
+		var sig [96]byte
+		var withdrawalCreds [32]byte
+		copy(withdrawalCreds[:], []byte("testing"))
+		depositData := &pb.DepositData{
+			Amount:                params.BeaconConfig().MaxEffectiveBalance,
+			WithdrawalCredentials: withdrawalCreds[:],
+		}
 		if generateKeys {
 			priv, err := bls.RandKey(rand.Reader)
 			if err != nil {
@@ -26,21 +34,24 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			}
 			privKeys[i] = priv
 			pubkey = priv.PublicKey().Marshal()
+			depositData.Pubkey = pubkey
+			domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
+			root, err := ssz.SigningRoot(depositData)
+			if err != nil {
+				t.Fatalf("could not get signing root of deposit data %v", err)
+			}
+			marshalledSig := priv.Sign(root[:], domain).Marshal()
+			copy(sig[:], marshalledSig)
+			depositData.Signature = sig[:]
 		} else {
 			privKeys = []*bls.SecretKey{}
 			pubkey = make([]byte, params.BeaconConfig().BLSPubkeyLength)
 			copy(pubkey[:], []byte(strconv.FormatUint(uint64(i), 10)))
+			copy(sig[:], []byte("testing"))
+			depositData.Pubkey = pubkey
+			depositData.Signature = sig[:]
 		}
-		var sig [96]byte
-		copy(sig[:], []byte("testing"))
-		var withdrawalCreds [32]byte
-		copy(withdrawalCreds[:], []byte("testing"))
-		depositData := &pb.DepositData{
-			Pubkey:                pubkey,
-			Amount:                params.BeaconConfig().MaxEffectiveBalance,
-			WithdrawalCredentials: withdrawalCreds[:],
-			Signature:             sig[:],
-		}
+
 		deposits[i] = &pb.Deposit{
 			Data: depositData,
 		}
