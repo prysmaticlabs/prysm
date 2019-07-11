@@ -12,6 +12,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/state/stateutils:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//contracts/deposit-contract:go_default_library",
@@ -50,6 +51,7 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
