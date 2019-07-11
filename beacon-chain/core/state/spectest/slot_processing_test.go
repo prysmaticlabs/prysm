@@ -42,6 +42,7 @@ func TestSlotProcessingMainnet(t *testing.T) {
 			if !proto.Equal(postState, tt.Post) {
 				diff, _ := messagediff.PrettyDiff(postState, tt.Post)
 				t.Log(diff)
+				_ = diff
 				t.Fatal("Post state does not match expected")
 			}
 		})
