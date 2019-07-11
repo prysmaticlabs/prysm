@@ -47,16 +47,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	}
 
 	testAcc.Backend.Commit()
-
-	var pubkey [48]byte
-	var withdrawalCreds [32]byte
-	var sig [96]byte
-	copy(pubkey[:], []byte("testing"))
-	copy(sig[:], []byte("testing"))
-	copy(withdrawalCreds[:], []byte("testing"))
-
 	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
-
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
