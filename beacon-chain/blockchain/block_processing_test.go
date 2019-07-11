@@ -9,11 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -498,7 +497,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
@@ -521,7 +520,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
-		h, err := ssz.HashTreeRoot(pd.Data)
+		h, err := hashutil.DepositHash(pd.Data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -674,7 +673,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
@@ -714,7 +713,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		stateRoot, err = hashutil.HashProto(computedState)
+		stateRoot, err = ssz.HashTreeRoot(computedState)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -745,7 +744,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stateRoot, err = hashutil.HashProto(beaconState)
+	stateRoot, err = ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -777,7 +776,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stateRoot, err = hashutil.HashProto(computedState)
+	stateRoot, err = ssz.HashTreeRoot(computedState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -855,7 +854,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 
 	beaconState.Slot = 10
 
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}

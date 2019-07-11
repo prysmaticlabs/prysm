@@ -146,7 +146,7 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx uint64) (*pb.BeaconState, error) {
 	state, err := InitiateValidatorExit(state, slashedIdx)
 	if err != nil {
-		return nil, fmt.Errorf("could not initiate validator exit %v", err)
+		return nil, fmt.Errorf("could not initiate validator %d exit: %v", slashedIdx, err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	validator := state.Validators[slashedIdx]

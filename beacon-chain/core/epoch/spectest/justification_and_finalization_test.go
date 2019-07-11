@@ -100,7 +100,7 @@ func runJustificationAndFinalizationTests(t *testing.T, filename string) {
 const justificationAndFinalizationPrefix = "eth2_spec_tests/tests/epoch_processing/justification_and_finalization/"
 
 func TestJustificationAndFinalizationMinimal(t *testing.T) {
-	// TODO: Verify with ETH2 spec test.
+	// TODO(#2891): Verify with ETH2 spec test.
 	t.Skip("The input data fails preconditions for matching attestations in the state for the current epoch.")
 	filepath, err := bazel.Runfile(justificationAndFinalizationPrefix + "justification_and_finalization_minimal.yaml")
 	if err != nil {

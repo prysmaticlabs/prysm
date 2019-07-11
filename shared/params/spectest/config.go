@@ -1,6 +1,7 @@
 package spectest
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,6 +18,8 @@ func SetConfig(config string) error {
 		newConfig := params.MainnetConfig()
 		params.OverrideBeaconConfig(newConfig)
 		return nil
+	case "":
+		return errors.New("no config provided")
 	default:
 		return fmt.Errorf("did not receive a valid config, instead received this %s", config)
 	}

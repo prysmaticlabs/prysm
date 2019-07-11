@@ -9,6 +9,7 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -32,12 +33,12 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			pubkey = make([]byte, params.BeaconConfig().BLSPubkeyLength)
 			copy(pubkey[:], []byte(strconv.FormatUint(uint64(i), 10)))
 		}
-		var sig [96]byte
+		emptySig := make([]byte, 96)
 		depositData := &pb.DepositData{
 			Pubkey:                pubkey,
 			Amount:                params.BeaconConfig().MaxEffectiveBalance,
 			WithdrawalCredentials: []byte{1},
-			Signature:             sig[:],
+			Signature:             emptySig,
 		}
 		deposits[i] = &pb.Deposit{
 			Data: depositData,

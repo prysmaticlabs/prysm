@@ -166,7 +166,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			eth1DataExists,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not process validator deposit: %v", err)
+			return nil, fmt.Errorf("could not process validator deposit %d: %v", i, err)
 		}
 	}
 	// Process genesis activations
