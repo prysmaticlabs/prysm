@@ -529,7 +529,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.RandaoMixes[nextEpoch%randaoMixLength] = mix
 
 	// Set historical root accumulator.
-	epochsPerHistoricalRoot := params.BeaconConfig().HistoricalRootsLimit / params.BeaconConfig().SlotsPerEpoch
+	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
 	if nextEpoch%epochsPerHistoricalRoot == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots,
@@ -544,7 +544,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Rotate current and previous epoch attestations.
 	state.PreviousEpochAttestations = state.CurrentEpochAttestations
-	state.CurrentEpochAttestations = make([]*pb.PendingAttestation, 0, 0)
+	state.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	return state, nil
 }

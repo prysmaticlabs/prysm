@@ -1,7 +1,6 @@
 package spectest
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -9,6 +8,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -49,11 +49,14 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 				t.Fatal(err)
 			}
 
+			if expectedPostState.CurrentEpochAttestations == nil {
+				expectedPostState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+			}
+
 			if !reflect.DeepEqual(postState, expectedPostState) {
 				t.Error("Did not get expected state")
-				diff, _ := messagediff.PrettyDiff(s, tt.Post)
-				//t.Log(diff)
-				_ = diff
+				diff, _ := messagediff.PrettyDiff(expectedPostState, postState)
+				t.Log(diff)
 			}
 		})
 	}
