@@ -54,16 +54,16 @@ import (
 //         state.compact_committees_roots[index] = committee_root
 //     return state
 func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
-	latestRandaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(latestRandaoMixes); i++ {
-		latestRandaoMixes[i] = make([]byte, 32)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 
-	latestActiveIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(latestActiveIndexRoots); i++ {
-		latestActiveIndexRoots[i] = zeroHash
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(activeIndexRoots); i++ {
+		activeIndexRoots[i] = zeroHash
 	}
 
 	compactRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
@@ -75,12 +75,17 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		}
 	}
 
-	latestBlockRoots := make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
-	for i := 0; i < len(latestBlockRoots); i++ {
-		latestBlockRoots[i] = zeroHash
+	blockRoots := make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = zeroHash
 	}
 
-	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
+	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := 0; i < len(stateRoots); i++ {
+		stateRoots[i] = zeroHash
+	}
+
+	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
 	if eth1Data == nil {
 		eth1Data = &pb.Eth1Data{}
@@ -102,7 +107,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		Balances:   []uint64{},
 
 		// Randomness and committees.
-		RandaoMixes: latestRandaoMixes,
+		RandaoMixes: randaoMixes,
 
 		// Finality.
 		PreviousJustifiedCheckpoint: &pb.Checkpoint{
@@ -122,10 +127,11 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		// Recent state.
 		CurrentCrosslinks:         crosslinks,
 		PreviousCrosslinks:        crosslinks,
-		ActiveIndexRoots:          latestActiveIndexRoots,
+		ActiveIndexRoots:          activeIndexRoots,
 		CompactCommitteesRoots:    compactRoots,
-		BlockRoots:                latestBlockRoots,
-		Slashings:                 latestSlashedExitBalances,
+		BlockRoots:                blockRoots,
+		StateRoots:                stateRoots,
+		Slashings:                 slashings,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 
@@ -203,9 +209,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		return nil, fmt.Errorf("could not get compact committee root %v", err)
 	}
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
-		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
-
 		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
+		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
 	}
 	return state, nil
 }
