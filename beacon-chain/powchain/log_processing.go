@@ -145,7 +145,6 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 // ProcessChainStart processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
-	chainStartCount.Inc()
 	w.chainStarted = true
 	chainStartTime := time.Unix(int64(genesisTime), 0)
 	depHashes, err := w.ChainStartDepositHashes()

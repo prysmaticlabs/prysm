@@ -132,6 +132,6 @@ var (
 	// EnableUPnPFlag specifies if UPnP should be enabled or not. The default value is false.
 	EnableUPnPFlag = cli.BoolFlag{
 		Name:  "enable-upnp",
-		Usage: "Enable the service (Beacon chain or Validator) to use UPnP when possibe.",
+		Usage: "Enable the service (Beacon chain or Validator) to use UPnP when possible.",
 	}
 )

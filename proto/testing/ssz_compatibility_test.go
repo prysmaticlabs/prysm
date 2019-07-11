@@ -50,7 +50,14 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(root[:], testCase.Attestation.Root) {
-				t.Errorf("Expected attestation %#x, received %#x", testCase.Attestation.Root, root[:])
+				t.Errorf("Expected attestation root %#x, received %#x", testCase.Attestation.Root, root[:])
+			}
+			root, err = ssz.SigningRoot(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(root[:], testCase.Attestation.SigningRoot) {
+				t.Errorf("Expected attestation signing root data %#x, received %#x", testCase.AttestationData.Root, root[:])
 			}
 		}
 		if !testutil.IsEmpty(testCase.AttestationData.Value) {
@@ -102,7 +109,14 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(root[:], testCase.BeaconBlock.Root) {
-				t.Errorf("Expected beacon block %#x, received %#x", testCase.BeaconBlock.Root, root[:])
+				t.Errorf("Expected beacon block root %#x, received %#x", testCase.BeaconBlock.Root, root[:])
+			}
+			root, err = ssz.SigningRoot(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(root[:], testCase.BeaconBlock.SigningRoot) {
+				t.Errorf("Expected beacon block signing root %#x, received %#x", testCase.BeaconBlock.Root, root[:])
 			}
 		}
 		if !testutil.IsEmpty(testCase.BeaconBlockBody.Value) {
@@ -128,7 +142,14 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(root[:], testCase.BeaconBlockHeader.Root) {
-				t.Errorf("Expected beacon block header %#x, received %#x", testCase.BeaconBlockHeader.Root, root[:])
+				t.Errorf("Expected beacon block header root %#x, received %#x", testCase.BeaconBlockHeader.Root, root[:])
+			}
+			root, err = ssz.SigningRoot(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(root[:], testCase.BeaconBlockHeader.SigningRoot) {
+				t.Errorf("Expected beacon block header signing root %#x, received %#x", testCase.BeaconBlock.Root, root[:])
 			}
 		}
 		if !testutil.IsEmpty(testCase.BeaconState.Value) {
@@ -180,7 +201,14 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(root[:], testCase.DepositData.Root) {
-				t.Errorf("Expected deposit data %#x, received %#x", testCase.DepositData.Root, root[:])
+				t.Errorf("Expected deposit data root %#x, received %#x", testCase.DepositData.Root, root[:])
+			}
+			root, err = ssz.SigningRoot(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(root[:], testCase.DepositData.SigningRoot) {
+				t.Errorf("Expected deposit data signing root %#x, received %#x", testCase.BeaconBlock.Root, root[:])
 			}
 		}
 		if !testutil.IsEmpty(testCase.Eth1Data.Value) {
@@ -232,7 +260,14 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(root[:], testCase.IndexedAttestation.Root) {
-				t.Errorf("Expected indexed attestation %#x, received %#x", testCase.IndexedAttestation.Root, root[:])
+				t.Errorf("Expected indexed attestation root %#x, received %#x", testCase.IndexedAttestation.Root, root[:])
+			}
+			root, err = ssz.SigningRoot(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(root[:], testCase.IndexedAttestation.SigningRoot) {
+				t.Errorf("Expected indexed attestation signing root %#x, received %#x", testCase.BeaconBlock.Root, root[:])
 			}
 		}
 		if !testutil.IsEmpty(testCase.PendingAttestation.Value) {
@@ -271,7 +306,14 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(root[:], testCase.Transfer.Root) {
-				t.Errorf("Expected trasnfer %#x, received %#x", testCase.Transfer.Root, root[:])
+				t.Errorf("Expected trasnfer root %#x, received %#x", testCase.Transfer.Root, root[:])
+			}
+			root, err = ssz.SigningRoot(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(root[:], testCase.Transfer.SigningRoot) {
+				t.Errorf("Expected transfer signing root %#x, received %#x", testCase.BeaconBlock.Root, root[:])
 			}
 		}
 		if !testutil.IsEmpty(testCase.Validator.Value) {
@@ -284,7 +326,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(root[:], testCase.Validator.Root) {
-				t.Errorf("Expected trasnfer %#x, received %#x", testCase.Validator.Root, root[:])
+				t.Errorf("Expected validator %#x, received %#x", testCase.Validator.Root, root[:])
 			}
 		}
 		if !testutil.IsEmpty(testCase.VoluntaryExit.Value) {
@@ -297,7 +339,14 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(root[:], testCase.VoluntaryExit.Root) {
-				t.Errorf("Expected voluntary exit %#x, received %#x", testCase.VoluntaryExit.Root, root[:])
+				t.Errorf("Expected voluntary exit root %#x, received %#x", testCase.VoluntaryExit.Root, root[:])
+			}
+			root, err = ssz.SigningRoot(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(root[:], testCase.VoluntaryExit.SigningRoot) {
+				t.Errorf("Expected voluntary exit signing root %#x, received %#x", testCase.BeaconBlock.Root, root[:])
 			}
 		}
 	}
