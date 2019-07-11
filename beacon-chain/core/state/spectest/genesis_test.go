@@ -1,6 +1,7 @@
 package spectest
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"io/ioutil"
 	"testing"
 
@@ -72,18 +73,14 @@ func TestGenesisValidityMinimal(t *testing.T) {
 
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
-			eth1Data := &pb.Eth1Data{
-				BlockHash: tt.Eth1BlockHash,
-			}
-			genesisState, err := state.GenesisBeaconState(tt.Deposits, tt.Eth1Timestamp, eth1Data)
+			genesisState := tt.Genesis
+			validatorCount, err := helpers.ActiveValidatorCount(genesisState, 0)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("Could not get active validator count: %v", err)
 			}
-
-			if !proto.Equal(genesisState, tt.State) {
-				diff, _ := messagediff.PrettyDiff(genesisState, tt.State)
-				t.Log(diff)
-				t.Fatal("Genesis state does not match expected")
+			isValid := state.IsValidGenesisState(validatorCount, genesisState.GenesisTime)
+			if isValid != tt.IsValid {
+				t.Fatal("Genesis state does not have expected validity.")
 			}
 		})
 	}
