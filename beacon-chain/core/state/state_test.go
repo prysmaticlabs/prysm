@@ -171,7 +171,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !bytes.Equal(newState.StateRoots[0], zeroHash) {
 		t.Error("StateRoots was not correctly initialized")
 	}
-	if !bytes.Equal(newState.ActiveIndexRoots[0], zeroHash) {
+	if bytes.Equal(newState.ActiveIndexRoots[0], zeroHash) || bytes.Equal(newState.ActiveIndexRoots[0], []byte{}) {
 		t.Error("ActiveIndexRoots was not correctly initialized")
 	}
 	if !bytes.Equal(newState.BlockRoots[0], zeroHash) {
