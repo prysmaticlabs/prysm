@@ -105,15 +105,34 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 			return errors.Wrap(err, "error sending GET_STATUS: ")
 		}
 	case GET_BLOCK_HEADERS:
+		var request BlockRequest
 
-		// TODO can't access private funcs in regular_sync
+		err := bson.Unmarshal(message.Body, request)
+		if err != nil {
+			return errors.Wrap(err, "could not unmarshal block header RPC request: ")
+		}
+
+		block, err := h.DB.Block(request.StartRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not get block header: ")
+		}
+
 	case BLOCK_HEADERS:
 		// log this?
 	case GET_BLOCK_BODIES:
-		var response
+		var request BlockRequest
+
+		err := bson.Unmarshal(message.Body, request)
+		if err != nil {
+			return errors.Wrap(err, "could not unmarshal block body RPC request: ")
+		}
+
+		// uses response to get the block bodies? how tf
 
 	case BLOCK_BODIES:
+		// log this somehow?
 	case GET_ATTESTATION:
+
 	case ATTESTATION:
 	}
 
