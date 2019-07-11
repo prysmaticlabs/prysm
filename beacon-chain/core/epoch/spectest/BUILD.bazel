@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "epoch_processing_test.yaml.go",
-        "registry_updates.yaml.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/spectest",
     visibility = ["//beacon-chain:__subpackages__"],
