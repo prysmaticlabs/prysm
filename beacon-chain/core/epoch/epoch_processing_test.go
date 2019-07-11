@@ -3,10 +3,11 @@ package epoch
 import (
 	"bytes"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"

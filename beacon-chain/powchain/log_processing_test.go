@@ -40,6 +40,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB:        &db.BeaconDB{},
+		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)

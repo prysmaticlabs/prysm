@@ -124,8 +124,6 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		Proof: proof,
 	}
 
-	w.determineActiveValidator(deposit)
-
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted && validData {
 		var pubkey = fmt.Sprintf("#%x", depositData.Pubkey)
@@ -134,6 +132,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		} else {
 			w.beaconDB.MarkPubkeyForChainstart(w.ctx, pubkey)
 		}
+
 	}
 
 	// We always store all historical deposits in the DB.
@@ -141,6 +140,12 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
+		root := w.depositTrie.Root()
+		eth1Data := &pb.Eth1Data{
+			DepositRoot:  root[:],
+			DepositCount: uint64(len(w.chainStartDeposits)),
+		}
+		w.determineActiveValidator(eth1Data, deposit)
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 	}

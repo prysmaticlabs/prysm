@@ -313,9 +313,12 @@ func (w *Web3Service) handleDelayTicker() {
 }
 
 // determineActiveValidator determines if the
-func (w *Web3Service) determineActiveValidator(deposit *pb.Deposit) {
+func (w *Web3Service) determineActiveValidator(eth1Data *pb.Eth1Data, deposit *pb.Deposit) {
 	pubkey := bytesutil.ToBytes48(deposit.Data.Pubkey)
 	dummyState := &pb.BeaconState{}
+	dummyState.Eth1Data = eth1Data
+	dummyState.Eth1DepositIndex = eth1Data.DepositCount - 1
+
 	valMap := stateutils.ValidatorIndexMap(dummyState)
 	if _, err := blocks.ProcessDeposit(dummyState, deposit, valMap, true, true); err != nil {
 		log.Errorf("Invalid Deposit %v", err)
