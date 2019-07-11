@@ -15,7 +15,7 @@ func TestSaveAndRetrieveLatestMessage(t *testing.T) {
 	validator := uint64(1)
 	wanted := &pb.LatestMessage{
 		Epoch: 100,
-		Root: []byte{'A'},
+		Root:  []byte{'A'},
 	}
 
 	if err := db.SaveLatestMessage(context.Background(), validator, wanted); err != nil {

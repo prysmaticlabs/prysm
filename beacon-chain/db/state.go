@@ -181,7 +181,7 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 			return err
 		}
 
-		if err := db.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
+		if err := db.ls(ctx, beaconState, blockRoot); err != nil {
 			return err
 		}
 	}
