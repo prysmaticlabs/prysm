@@ -95,6 +95,7 @@ type Web3Service struct {
 	isRunning               bool
 	runError                error
 	lastRequestedBlock      *big.Int
+	chainStartETH1Data      *pb.Eth1Data
 	eth2GenesisTime         uint64
 }
 
