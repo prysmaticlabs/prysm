@@ -14,8 +14,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const mainnetShardCount = 1024
-
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
 var startShardCache = cache.NewStartShardCache()
 
