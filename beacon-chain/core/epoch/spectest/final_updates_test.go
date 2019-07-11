@@ -1,6 +1,7 @@
 package spectest
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -31,6 +32,7 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 
 	for _, tt := range s.TestCases[0:1] {
 		t.Run(tt.Description, func(t *testing.T) {
+			helpers.ClearAllCaches()
 			preState := &pb.BeaconState{}
 			if err := testutil.ConvertToPb(tt.Pre, preState); err != nil {
 				t.Fatal(err)
@@ -50,7 +52,8 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 			if !reflect.DeepEqual(postState, expectedPostState) {
 				t.Error("Did not get expected state")
 				diff, _ := messagediff.PrettyDiff(s, tt.Post)
-				t.Log(diff)
+				//t.Log(diff)
+				_ = diff
 			}
 		})
 	}
