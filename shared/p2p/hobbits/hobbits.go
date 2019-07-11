@@ -63,6 +63,14 @@ type Status struct {
 	Timestamp uint64 `bson:"timestamp"`
 }
 
+type BlockRequest struct {
+	StartRoot [32]byte `bson:"start_root"`
+	StartSlot uint64 `bson:"start_slot"`
+	Max uint64 `bson:"max"`
+	Skip uint64 `bson:"skip"`
+	Direction uint8 `bson:"direction"`
+}
+
 // Hobbits toggles a HobbitsNode and requires a host, port and list of peers to which it tries to connect.
 func Hobbits(host string, port int, peers []string, db *db.BeaconDB) *HobbitsNode {
 	node := NewHobbitsNode(host, port, peers, db)

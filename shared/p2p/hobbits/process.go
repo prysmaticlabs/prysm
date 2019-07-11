@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/bazel-prysm/proto/beacon/p2p/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/renaynay/go-hobbits/encoding"
@@ -105,9 +106,12 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 		}
 	case GET_BLOCK_HEADERS:
 
+		// TODO can't access private funcs in regular_sync
 	case BLOCK_HEADERS:
 		// log this?
 	case GET_BLOCK_BODIES:
+		var response
+
 	case BLOCK_BODIES:
 	case GET_ATTESTATION:
 	case ATTESTATION:
