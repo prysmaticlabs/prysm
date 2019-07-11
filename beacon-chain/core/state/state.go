@@ -11,10 +11,8 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // GenesisBeaconState gets called when DepositsForChainStart count of
@@ -71,7 +69,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(crosslinks); i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Shard: uint64(i),
+			ParentRoot: make([]byte, 32),
+			DataRoot:   make([]byte, 32),
 		}
 	}
 
@@ -102,6 +101,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			Epoch:           0,
 		},
 
+		LatestBlockHeader: &pb.BeaconBlockHeader{},
+
 		// Validator registry fields.
 		Validators: []*pb.Validator{},
 		Balances:   []uint64{},
@@ -125,19 +126,16 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		},
 
 		// Recent state.
-		CurrentCrosslinks:         crosslinks,
-		PreviousCrosslinks:        crosslinks,
-		ActiveIndexRoots:          activeIndexRoots,
-		CompactCommitteesRoots:    compactRoots,
-		BlockRoots:                blockRoots,
-		StateRoots:                stateRoots,
-		Slashings:                 slashings,
-		CurrentEpochAttestations:  []*pb.PendingAttestation{},
-		PreviousEpochAttestations: []*pb.PendingAttestation{},
+		CurrentCrosslinks:      crosslinks,
+		PreviousCrosslinks:     crosslinks,
+		ActiveIndexRoots:       activeIndexRoots,
+		CompactCommitteesRoots: compactRoots,
+		BlockRoots:             blockRoots,
+		StateRoots:             stateRoots,
+		Slashings:              slashings,
 
 		// Eth1 data.
 		Eth1Data:         eth1Data,
-		Eth1DataVotes:    []*pb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
 
@@ -146,32 +144,22 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
 	}
 
-	// Process initial deposits.
-	validatorMap := make(map[[32]byte]int)
-	leaves := [][]byte{}
-	for _, deposit := range deposits {
-		hash, err := hashutil.DepositHash(deposit.Data)
-		if err != nil {
-			return nil, err
-		}
-		leaves = append(leaves, hash[:])
-	}
-	var trie *trieutil.MerkleTrie
-	if len(leaves) > 0 {
-		trie, err = trieutil.GenerateTrieFromItems(leaves, int(params.BeaconConfig().DepositContractTreeDepth))
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		trie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-		if err != nil {
-			return nil, err
-		}
+	state.LatestBlockHeader = &pb.BeaconBlockHeader{
+		BodyRoot: bodyRoot[:],
 	}
 
-	depositRoot := trie.Root()
+	// Process initial deposits.
+	validatorMap := make(map[[32]byte]int)
+	dataLeaves := make([]*pb.DepositData, len(deposits))
+	for i := range deposits {
+		dataLeaves[i] = deposits[i].Data
+	}
 	for i, deposit := range deposits {
 		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
+		depositRoot, err := ssz.HashTreeRootWithCapacity(dataLeaves[:i+1], 1<<params.BeaconConfig().DepositContractTreeDepth)
+		if err != nil {
+			return nil, fmt.Errorf("could not hash tree root deposit data list: %v", err)
+		}
 		state.Eth1Data.DepositRoot = depositRoot[:]
 		state, err = b.ProcessDeposit(
 			state,
@@ -200,7 +188,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	genesisActiveIndexRoot, err := ssz.HashTreeRoot(activeIndices)
+	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v", err)
 	}

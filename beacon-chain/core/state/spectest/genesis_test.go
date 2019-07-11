@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"testing"
 
-	"gopkg.in/d4l3k/messagediff.v1"
-
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
@@ -33,6 +31,7 @@ func runGenesisInitializationTest(t *testing.T, filename string) {
 	if err := spectest.SetConfig(s.Config); err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println(params.BeaconConfig().HistoricalRootsLimit)
 
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
@@ -52,24 +51,31 @@ func runGenesisInitializationTest(t *testing.T, filename string) {
 				DepositCount: uint64(len(deposits)),
 				BlockHash:    tt.Eth1BlockHash,
 			}
-			fmt.Println(eth1Data)
 
 			expectedGenesisState := &pb.BeaconState{}
 			if err := testutil.ConvertToPb(tt.State, expectedGenesisState); err != nil {
 				t.Fatal(err)
 			}
-			fmt.Println(expectedGenesisState.Eth1Data)
 
 			genesisState, err := state.GenesisBeaconState(deposits, tt.Eth1Timestamp, eth1Data)
 			if err != nil {
 				t.Fatal(err)
 			}
 
+			rval := reflect.ValueOf(genesisState).Elem()
+			otherVal := reflect.ValueOf(expectedGenesisState).Elem()
+			for i := 0; i < rval.Type().NumField(); i++ {
+				fmt.Println(rval.Type().Field(i).Name)
+				if !reflect.DeepEqual(rval.Field(i).Interface(), otherVal.Field(i).Interface()) {
+					fmt.Println("Did not get expected genesis state")
+				}
+			}
+
 			if !reflect.DeepEqual(genesisState, expectedGenesisState) {
 				t.Error("Did not get expected genesis state")
-				diff, _ := messagediff.PrettyDiff(expectedGenesisState, genesisState)
+				// diff, _ := messagediff.PrettyDiff(expectedGenesisState, genesisState)
 				// t.Log(diff)
-				_ = diff
+				// _ = diff
 			}
 		})
 	}
