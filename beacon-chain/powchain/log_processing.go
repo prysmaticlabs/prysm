@@ -42,6 +42,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 				return
 			}
 			timeStamp := blk.Time()
+			log.Printf("timestamp %d and val count %d", timeStamp, w.activeValidatorCount)
 			triggered := state.IsValidGenesisState(w.activeValidatorCount, timeStamp)
 			if triggered {
 				w.setGenesisTime(timeStamp)

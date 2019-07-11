@@ -13,6 +13,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -73,7 +74,12 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
-	testutil.AssertLogsDoNotContain(t, hook, "Could not decode deposit input")
+	testutil.AssertLogsDoNotContain(t, hook, "could not deserialize validator public key")
+	testutil.AssertLogsDoNotContain(t, hook, "could not convert bytes to signature")
+	testutil.AssertLogsDoNotContain(t, hook, "could not sign root for deposit data")
+	testutil.AssertLogsDoNotContain(t, hook, "deposit signature did not verify")
+	testutil.AssertLogsDoNotContain(t, hook, "could not tree hash deposit data")
+	testutil.AssertLogsDoNotContain(t, hook, "deposit merkle branch of deposit root did not verify for root")
 	testutil.AssertLogsContain(t, hook, "Deposit registered from deposit contract")
 
 	hook.Reset()
@@ -226,7 +232,6 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 }
 
 func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
-	t.Skip()
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	if err != nil {
@@ -240,31 +245,26 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB:        &db.BeaconDB{},
+		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
+	bConfig := params.MinimalSpecConfig()
+	bConfig.MinGenesisTime = 0
+	params.OverrideBeaconConfig(bConfig)
+
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	var pubkey [48]byte
-	var withdrawalCreds [32]byte
-	var sig [96]byte
-	copy(pubkey[:], []byte("pubkey"))
-	copy(sig[:], []byte("sig"))
-	copy(withdrawalCreds[:], []byte("withdrawCreds"))
-
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
-		Signature:             sig[:],
-		WithdrawalCredentials: withdrawalCreds[:],
-	}
+	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
+	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
-	// 8 Validators are used as size required for beacon-chain to start. This number
+	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
@@ -287,34 +287,19 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	genesisTimeChan := make(chan time.Time, 1)
-	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
-	defer sub.Unsubscribe()
-
 	for _, log := range logs {
 		web3Service.ProcessLog(log)
 	}
 
-	cachedDeposits := web3Service.ChainStartDeposits()
-	if len(cachedDeposits) != depositsReqForChainStart {
-		t.Errorf(
-			"Did not cache the chain start deposits correctly, received %d, wanted %d",
-			len(cachedDeposits),
-			depositsReqForChainStart,
-		)
+	if web3Service.chainStarted {
+		t.Error("Genesis has been triggered despite being 8 duplicate keys")
 	}
 
-	<-genesisTimeChan
-	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
-	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
-	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
-	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
-
+	testutil.AssertLogsDoNotContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
 	hook.Reset()
 }
 
-func TestProcessETH2GenesisLog_8UniquePubkeys(t *testing.T) {
-	t.Skip()
+func TestProcessETH2GenesisLog(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	if err != nil {
@@ -328,33 +313,25 @@ func TestProcessETH2GenesisLog_8UniquePubkeys(t *testing.T) {
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB:        &db.BeaconDB{},
+		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	bConfig := params.MinimalSpecConfig()
+	bConfig.MinGenesisTime = 0
+	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	// 8 Validators are used as size required for beacon-chain to start. This number
+	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsReqForChainStart), true)
+
+	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
-		var pubkey [48]byte
-		binary.LittleEndian.PutUint64(pubkey[:], uint64(i))
-
-		var withdrawalCreds [32]byte
-		var sig [96]byte
-		copy(pubkey[:], []byte("pubkey"))
-		copy(sig[:], []byte("sig"))
-		copy(withdrawalCreds[:], []byte("withdrawCreds"))
-
-		data := &pb.DepositData{
-			Pubkey:                pubkey[:],
-			Signature:             sig[:],
-			WithdrawalCredentials: withdrawalCreds[:],
-		}
-
+		data := deposits[i].Data
 		testAcc.TxOpts.Value = contracts.Amount32Eth()
 		testAcc.TxOpts.GasLimit = 1000000
 		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
@@ -399,87 +376,4 @@ func TestProcessETH2GenesisLog_8UniquePubkeys(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
 
 	hook.Reset()
-}
-
-func TestETH1DataGenesis_OK(t *testing.T) {
-	t.Skip()
-	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
-		DepositContract: testAcc.ContractAddr,
-		Reader:          &goodReader{},
-		Logger:          testAcc.Backend,
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	testAcc.Backend.Commit()
-
-	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
-
-	var pubkey [48]byte
-	var withdrawalCreds [32]byte
-	var sig [96]byte
-	copy(pubkey[:], []byte("pubkey"))
-	copy(sig[:], []byte("sig"))
-	copy(withdrawalCreds[:], []byte("withdrawCreds"))
-
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
-		Signature:             sig[:],
-		WithdrawalCredentials: withdrawalCreds[:],
-	}
-
-	testAcc.TxOpts.Value = contracts.Amount32Eth()
-	testAcc.TxOpts.GasLimit = 1000000
-
-	ok := web3Service.HasChainStarted()
-	if ok {
-		t.Error("Expected chain start log to not have occurred")
-	}
-
-	// 8 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the deposit contract as the number required for the testnet.
-	for i := 0; i < depositsReqForChainStart; i++ {
-		testAcc.TxOpts.Value = contracts.Amount32Eth()
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
-			t.Fatalf("Could not deposit to deposit contract %v", err)
-		}
-		testAcc.Backend.Commit()
-	}
-	ok = web3Service.HasChainStarted()
-	if !ok {
-		t.Error("Expected chain start log to have occurred")
-	}
-
-	// We add in another 8 deposits after chainstart.
-	for i := 0; i < depositsReqForChainStart; i++ {
-		testAcc.TxOpts.Value = contracts.Amount32Eth()
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
-			t.Fatalf("Could not deposit to deposit contract %v", err)
-		}
-		testAcc.Backend.Commit()
-	}
-
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			web3Service.depositContractAddress,
-		},
-	}
-
-	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
-	if err != nil {
-		t.Fatalf("Unable to retrieve logs %v", err)
-	}
-
-	for _, log := range logs {
-		web3Service.ProcessLog(log)
-	}
 }
