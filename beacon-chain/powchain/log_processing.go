@@ -4,15 +4,18 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,9 +25,8 @@ var (
 
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
-func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
-	// (#2861): A No-Op until this PR is implemented
-	return 0, nil
+func (w *Web3Service) ETH2GenesisTime() uint64 {
+	return w.eth2GenesisTime
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -33,6 +35,19 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
+		if !w.chainStarted {
+			blk, err := w.blockFetcher.BlockByHash(w.ctx, depositLog.BlockHash)
+			if err != nil {
+				log.Errorf("Could not get eth1 block %v", err)
+				return
+			}
+			timeStamp := blk.Time()
+			triggered := state.IsValidGenesisState(w.activeValidatorCount, timeStamp)
+			if triggered {
+				w.setGenesisTime(timeStamp)
+				w.ProcessChainStart(uint64(w.eth2GenesisTime))
+			}
+		}
 		return
 	}
 	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
@@ -97,6 +112,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		} else {
 			w.beaconDB.MarkPubkeyForChainstart(w.ctx, pubkey)
 		}
+
 	}
 
 	// We always store all historical deposits in the DB.
@@ -104,6 +120,12 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
+		root := w.depositTrie.Root()
+		eth1Data := &pb.Eth1Data{
+			DepositRoot:  root[:],
+			DepositCount: uint64(len(w.chainStartDeposits)),
+		}
+		w.determineActiveValidator(eth1Data, deposit)
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 	}
@@ -118,6 +140,41 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
+}
+
+// ProcessChainStart processes the log which had been received from
+// the ETH1.0 chain by trying to determine when to start the beacon chain.
+func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
+	w.chainStarted = true
+	chainStartTime := time.Unix(int64(genesisTime), 0)
+	depHashes, err := w.ChainStartDepositHashes()
+	if err != nil {
+		log.Errorf("Generating chainstart deposit hashes failed: %v", err)
+		return
+	}
+
+	// We then update the in-memory deposit trie from the chain start
+	// deposits at this point, as this trie will be later needed for
+	// incoming, post-chain start deposits.
+	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(
+		depHashes,
+		int(params.BeaconConfig().DepositContractTreeDepth),
+	)
+	if err != nil {
+		log.Fatalf("Unable to generate deposit trie from ChainStart deposits: %v", err)
+	}
+	w.depositTrie = sparseMerkleTrie
+
+	log.WithFields(logrus.Fields{
+		"ChainStartTime": chainStartTime,
+	}).Info("Minimum number of validators reached for beacon-chain to start")
+	w.chainStartFeed.Send(chainStartTime)
+}
+
+func (w *Web3Service) setGenesisTime(timeStamp uint64) {
+	timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay
+	// genesisTime will be set to the first second of the day, two days after it was triggered.
+	w.eth2GenesisTime = timeStampRdDown + 2*params.BeaconConfig().SecondsPerDay
 }
 
 // processPastLogs processes all the past logs from the deposit contract and
