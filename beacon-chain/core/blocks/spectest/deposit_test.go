@@ -32,7 +32,7 @@ func runDepositTest(t *testing.T, filename string) {
 		helpers.ClearAllCaches()
 		t.Run(tt.Description, func(t *testing.T) {
 			if tt.Description == "invalid_sig_new_deposit" {
-				// TOOD(2857): uncompressed signature format is not supported
+				// TODO(#2857): uncompressed signature format is not supported
 				t.Skip()
 			}
 
