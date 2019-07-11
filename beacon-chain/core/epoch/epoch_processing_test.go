@@ -3,6 +3,7 @@ package epoch
 import (
 	"bytes"
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	"reflect"
 	"strings"
 	"testing"
@@ -714,24 +715,92 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 }
 
 func TestProcessSlashings_SlashedLess(t *testing.T) {
-	helpers.ClearAllCaches()
-	s := &pb.BeaconState{
-		Slot: 0,
-		Validators: []*pb.Validator{
-			{Slashed: true,
-				WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
-				EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance},
-			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
-		Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		Slashings: []uint64{0, 1e9},
+
+	tests := []struct {
+		state *pb.BeaconState
+		want  uint64
+	}{
+		{
+			state: &pb.BeaconState{
+				Validators: []*pb.Validator{
+					{Slashed: true,
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance},
+					{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
+				Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
+				Slashings: []uint64{0, 1e9},
+			},
+			// penality   = validator.effective_balance * min(sum(state.slashings) * 3, total_balance) // total_balance
+			// 3000000000 = (32 * 1e9)                 * min(sum([0, 1e9])        * 3, (32 * 1e9)   ) // (32 * 1e9)
+			want: uint64(29000000000), // 32 * 1e9 - 3000000000
+		},
+		{
+			state: &pb.BeaconState{
+				Validators: []*pb.Validator{
+					{Slashed: true,
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance},
+					{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+				},
+				Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
+				Slashings: []uint64{0, 1e9},
+			},
+			// penality   = validator.effective_balance * min(sum(state.slashings) * 3, total_balance)   // total_balance
+			// 1500000000 = (32 * 1e9)                 * min(sum([0, 1e9])        * 3, ((32 * 1e9) * 2)) // ((32 * 1e9) * 2)
+			want: uint64(30500000000), // 32 * 1e9 - 1500000000
+		},
+		{
+			state: &pb.BeaconState{
+				Validators: []*pb.Validator{
+					{Slashed: true,
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance},
+					{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+				},
+				Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
+				Slashings: []uint64{0, 2 * 1e9},
+			},
+			// penality   = validator.effective_balance * min(sum(state.slashings) * 3, total_balance)   // total_balance
+			// 3000000000 = (32 * 1e9)                 * min(sum([0, 2*1e9])       * 3, ((32 * 1e9) * 2)) // ((32 * 1e9) * 2)
+			want: uint64(29000000000), // 32 * 1e9 - 3000000000
+		},
+		{
+			state: &pb.BeaconState{
+				Validators: []*pb.Validator{
+					{Slashed: true,
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance - 100000},
+					{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
+				Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
+				Slashings: []uint64{0, 1e9},
+			},
+			// penality   = validator.effective_balance * min(sum(state.slashings) * 3, total_balance) // total_balance
+			// 2999990625 = ((32 * 1e9) - 100000)       * min(sum([0, 1e9])        * 3, (32 * 1e9)   ) // (32 * 1e9)
+			want: uint64(29000009375), // 32 * 1e9 - 2999990625
+		},
 	}
-	newState, err := ProcessSlashings(s)
-	if err != nil {
-		t.Fatal(err)
-	}
-	wanted := uint64(31882303762)
-	if newState.Balances[0] != wanted {
-		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[0])
+
+	for i, tt := range tests {
+		t.Run(string(i), func(t *testing.T) {
+			helpers.ClearAllCaches()
+
+			original := proto.Clone(tt.state)
+			newState, err := ProcessSlashings(tt.state)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if newState.Balances[0] != tt.want {
+				t.Errorf(
+					"ProcessSlashings({%v}) = newState; newState.Balances[0] = %d; wanted %d",
+					original,
+					newState.Balances[0],
+					tt.want,
+				)
+			}
+		})
 	}
 }
 
