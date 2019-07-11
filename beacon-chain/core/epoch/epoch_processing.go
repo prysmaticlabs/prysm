@@ -435,35 +435,33 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 // Spec pseudocode definition:
 //  def process_final_updates(state: BeaconState) -> None:
 //    current_epoch = get_current_epoch(state)
-//    next_epoch = current_epoch + 1
+//    next_epoch = Epoch(current_epoch + 1)
 //    # Reset eth1 data votes
 //    if (state.slot + 1) % SLOTS_PER_ETH1_VOTING_PERIOD == 0:
 //        state.eth1_data_votes = []
 //    # Update effective balances with hysteresis
-//    for index, validator in enumerate(state.validator_registry):
+//    for index, validator in enumerate(state.validators):
 //        balance = state.balances[index]
 //        HALF_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // 2
 //        if balance < validator.effective_balance or validator.effective_balance + 3 * HALF_INCREMENT < balance:
 //            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
 //    # Update start shard
-//    state.latest_start_shard = (state.latest_start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT
+//    state.start_shard = Shard((state.start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT)
 //    # Set active index root
-//    index_root_position = (next_epoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH
-//    state.latest_active_index_roots[index_root_position] = hash_tree_root(
-//        get_active_validator_indices(state, next_epoch + ACTIVATION_EXIT_DELAY)
-//    )
-//    # Set total slashed balances
-//    state.latest_slashed_balances[next_epoch % LATEST_SLASHED_EXIT_LENGTH] = (
-//        state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
-//    )
+//    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
+//    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
+//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
+//    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
+//    # Set committees root
+//    committee_root_position = next_epoch % EPOCHS_PER_HISTORICAL_VECTOR
+//    state.compact_committees_roots[committee_root_position] = get_compact_committees_root(state, next_epoch)
+//    # Reset slashings
+//    state.slashings[next_epoch % EPOCHS_PER_SLASHINGS_VECTOR] = Gwei(0)
 //    # Set randao mix
-//    state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] = get_randao_mix(state, current_epoch)
+//    state.randao_mixes[next_epoch % EPOCHS_PER_HISTORICAL_VECTOR] = get_randao_mix(state, current_epoch)
 //    # Set historical root accumulator
 //    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
-//        historical_batch = HistoricalBatch(
-//            block_roots=state.latest_block_roots,
-//            state_roots=state.latest_state_roots,
-//        )
+//        historical_batch = HistoricalBatch(block_roots=state.block_roots, state_roots=state.state_roots)
 //        state.historical_roots.append(hash_tree_root(historical_batch))
 //    # Rotate current/previous epoch attestations
 //    state.previous_epoch_attestations = state.current_epoch_attestations
@@ -498,6 +496,10 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		params.BeaconConfig().ShardCount
 
 	// Set active index root.
+	//    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
+	//    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
+	//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
+	//    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
 	activationDelay := params.BeaconConfig().ActivationExitDelay
 	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
 	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)

@@ -2,7 +2,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["epoch_processing_test.yaml.go"],
+    srcs = [
+        "epoch_processing_test.yaml.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/spectest",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = ["//proto/beacon/p2p/v1:go_default_library"],
@@ -13,6 +15,7 @@ go_test(
     size = "medium",
     srcs = [
         "crosslink_test.go",
+        "final_updates_test.go",
         "justification_and_finalization_test.go",
         "registry_test.go",
         "slashings_test.go",
