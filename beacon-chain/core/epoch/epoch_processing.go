@@ -350,7 +350,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		if isActive && belowEjectionBalance {
 			state, err = validators.InitiateValidatorExit(state, uint64(idx))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not initiate exit for validator %d: %v", idx, err)
 			}
 		}
 	}
@@ -506,13 +506,13 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get active indices: %v", err)
 	}
-	idxRoot, err := ssz.HashTreeRoot(activeIndices)
+	idxRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, uint64(1099511627776))
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash active indices: %v", err)
 	}
 	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
-	commRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
+	commRootPosition := nextEpoch % params.BeaconConfig().EpochsPerHistoricalVector
 	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get compact committee root %v", err)

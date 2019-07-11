@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func init() {
@@ -88,7 +89,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 		Signature:  wrongBlockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block)
+	_, err = blocks.ProcessBlockHeader(state, block, false)
 	want := "verify signature failed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -142,7 +143,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block)
+	_, err = blocks.ProcessBlockHeader(state, block, false)
 	want := "is different then block slot"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -191,7 +192,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block)
+	_, err = blocks.ProcessBlockHeader(state, block, false)
 	want := "does not match"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -244,7 +245,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block)
+	_, err = blocks.ProcessBlockHeader(state, block, false)
 	want := "was previously slashed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -304,7 +305,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
 	}
-	newState, err := blocks.ProcessBlockHeader(state, block)
+	newState, err := blocks.ProcessBlockHeader(state, block, false)
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
@@ -1221,7 +1222,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x07},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{127, 71},
+			wantedCustodyBit1Indices: []uint64{71, 127},
 		},
 	}
 
@@ -1251,7 +1252,9 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}
 		if !reflect.DeepEqual(wanted, ia) {
-			t.Errorf("convert attestation to indexed attestation didn't result as wanted: %v got: %v", wanted, ia)
+			diff, _ := messagediff.PrettyDiff(ia, wanted)
+			t.Log(diff)
+			t.Error("convert attestation to indexed attestation didn't result as wanted")
 		}
 	}
 }
@@ -1268,6 +1271,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 
 	want := "over max number of allowed indices"
 	if err := blocks.VerifyIndexedAttestation(
+		&pb.BeaconState{},
 		indexedAtt1,
 		false,
 	); !strings.Contains(err.Error(), want) {
@@ -1278,7 +1282,8 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
-			Pubkey: []byte{1, 2, 3},
+			Pubkey:    []byte{1, 2, 3},
+			Signature: make([]byte, 96),
 		},
 	}
 	leaf, err := ssz.HashTreeRoot(deposit.Data)
@@ -1321,11 +1326,12 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 func TestProcessDeposits_ProcessCorrectly(t *testing.T) {
 	deposit := &pb.Deposit{
 		Data: &pb.DepositData{
-			Pubkey: []byte{1, 2, 3},
-			Amount: params.BeaconConfig().MaxEffectiveBalance,
+			Pubkey:    []byte{1, 2, 3},
+			Amount:    params.BeaconConfig().MaxEffectiveBalance,
+			Signature: make([]byte, 96),
 		},
 	}
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	leaf, err := hashutil.DepositHash(deposit.Data)
 	if err != nil {
 		t.Fatal(err)
 	}
