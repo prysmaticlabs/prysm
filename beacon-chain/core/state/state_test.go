@@ -63,7 +63,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	genesisTime := uint64(99999)
 	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart), false)
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
-
 	newState, err := state.GenesisBeaconState(
 		deposits,
 		genesisTime,
@@ -76,9 +75,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	// Misc fields checks.
 	if newState.Slot != 0 {
 		t.Error("Slot was not correctly initialized")
-	}
-	if newState.GenesisTime != genesisTime {
-		t.Error("GenesisTime was not correctly initialized")
 	}
 	if !reflect.DeepEqual(*newState.Fork, pb.Fork{
 		PreviousVersion: genesisForkVersion,
