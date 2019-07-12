@@ -760,6 +760,9 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 
 	// Verify passing in roots of B4 and B1 give us the canonical lists.
 	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root4[:])
+	if err != nil {
+		t.Fatal(err)
+	}
 	wantList := []*pb.BeaconBlock{block2, block4}
 	if !reflect.DeepEqual(list, wantList) {
 		t.Error("Did not retrieve the correct canonical lists")
@@ -784,6 +787,9 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 
 	// Verify passing in roots of B1 and B1 give us the canonical lists which should be an empty list.
 	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root1[:])
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(list) != 0 {
 		t.Error("Did not retrieve the correct canonical lists")
 	}
