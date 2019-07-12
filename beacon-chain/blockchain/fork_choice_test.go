@@ -1294,6 +1294,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
 	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.CurrentJustifiedCheckpoint.Epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
@@ -1372,6 +1376,9 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	gState.FinalizedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
 	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.FinalizedCheckpoint.Epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
