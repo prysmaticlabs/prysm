@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "block_cache.go",
         "block_reader.go",
+        "deposit.go",
         "log_processing.go",
         "service.go",
     ],
@@ -40,6 +41,7 @@ go_test(
     srcs = [
         "block_cache_test.go",
         "block_reader_test.go",
+        "deposit_test.go",
         "log_processing_test.go",
         "service_test.go",
     ],
