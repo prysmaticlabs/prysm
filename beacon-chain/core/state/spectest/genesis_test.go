@@ -1,9 +1,7 @@
 package spectest
 
 import (
-	"fmt"
 	"io/ioutil"
-	"reflect"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -18,6 +16,7 @@ import (
 )
 
 func TestGenesisInitializationMinimal(t *testing.T) {
+	t.Skip("Tests will fail with mainnet config - awaiting mainnet tests from the researchers")
 	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/genesis/initialization/genesis_initialization_minimal.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -60,19 +59,8 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 			}
 
 			if !proto.Equal(genesisState, tt.State) {
-				rval := reflect.ValueOf(genesisState).Elem()
-				otherVal := reflect.ValueOf(tt.State).Elem()
-				for i := 0; i < rval.Type().NumField(); i++ {
-					fmt.Println(rval.Type().Field(i).Name)
-					if !reflect.DeepEqual(rval.Field(i).Interface(), otherVal.Field(i).Interface()) {
-						fmt.Printf("--Did not get expected %v\n--Received: %v\n", rval.Type().Field(i).Name, otherVal.Field(i).Interface())
-					} else {
-						fmt.Println("--Matched")
-					}
-				}
 				t.Error("States are not equal")
 			}
-
 		})
 	}
 }
@@ -98,6 +86,7 @@ func TestGenesisValidityMinimal(t *testing.T) {
 
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
+			helpers.ClearAllCaches()
 			genesisState := tt.Genesis
 			validatorCount, err := helpers.ActiveValidatorCount(genesisState, 0)
 			if err != nil {
