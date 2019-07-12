@@ -13,12 +13,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -340,7 +340,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve chain head: %v", err)
 		return err
 	}
-	headBlkRoot, err := ssz.HashTreeRoot(head)
+	headBlkRoot, err := blockutil.BlockSigningRoot(head)
 	if err != nil {
 		log.Errorf("Could not hash chain head: %v", err)
 	}
@@ -349,7 +349,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve finalized block: %v", err)
 		return err
 	}
-	finalizedBlkRoot, err := ssz.HashTreeRoot(finalizedBlk)
+	finalizedBlkRoot, err := blockutil.BlockSigningRoot(finalizedBlk)
 	if err != nil {
 		log.Errorf("Could not hash finalized block: %v", err)
 	}

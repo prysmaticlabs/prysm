@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -166,7 +166,7 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 			Eth1Data: &pb.Eth1Data{},
 		},
 	}
-	roots[0], err = ssz.HashTreeRoot(blocks[0])
+	roots[0], err = blockutil.BlockSigningRoot(blocks[0])
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -178,7 +178,7 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 			Eth1Data: &pb.Eth1Data{},
 		},
 	}
-	roots[1], err = ssz.HashTreeRoot(blocks[1])
+	roots[1], err = blockutil.BlockSigningRoot(blocks[1])
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -190,7 +190,7 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 			Eth1Data: &pb.Eth1Data{},
 		},
 	}
-	roots[2], err = ssz.HashTreeRoot(blocks[2])
+	roots[2], err = blockutil.BlockSigningRoot(blocks[2])
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -202,7 +202,7 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 			Eth1Data: &pb.Eth1Data{},
 		},
 	}
-	roots[3], err = ssz.HashTreeRoot(blocks[3])
+	roots[3], err = blockutil.BlockSigningRoot(blocks[3])
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -214,7 +214,7 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 			Eth1Data: &pb.Eth1Data{},
 		},
 	}
-	roots[4], err = ssz.HashTreeRoot(blocks[4])
+	roots[4], err = blockutil.BlockSigningRoot(blocks[4])
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -226,7 +226,7 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 			Eth1Data: &pb.Eth1Data{},
 		},
 	}
-	roots[5], err = ssz.HashTreeRoot(blocks[5])
+	roots[5], err = blockutil.BlockSigningRoot(blocks[5])
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
