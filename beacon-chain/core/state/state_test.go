@@ -77,9 +77,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if newState.Slot != 0 {
 		t.Error("Slot was not correctly initialized")
 	}
-	if newState.GenesisTime != genesisTime {
-		t.Error("GenesisTime was not correctly initialized")
-	}
 	if !reflect.DeepEqual(*newState.Fork, pb.Fork{
 		PreviousVersion: genesisForkVersion,
 		CurrentVersion:  genesisForkVersion,

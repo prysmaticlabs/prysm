@@ -157,7 +157,6 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		BodyRoot:   bodyRoot[:],
 		Signature:  params.BeaconConfig().EmptySignature[:],
 	}
-	fmt.Printf("--Received: %v\n", state.LatestBlockHeader)
 
 	// Process initial deposits.
 	validatorMap := make(map[[32]byte]int)
