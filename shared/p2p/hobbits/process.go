@@ -112,19 +112,58 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 			return errors.Wrap(err, "could not unmarshal block header RPC request: ")
 		}
 
-		block, err := h.DB.Block(request.StartRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not get block header: ")
-		}
+		var index int
+
 
 	case BLOCK_HEADERS:
 		// log this?
-	case GET_BLOCK_BODIES:
+	case GET_BLOCK_BODIES: // TODO: this is so messed up
 		var request BlockRequest
 
 		err := bson.Unmarshal(message.Body, request)
 		if err != nil {
 			return errors.Wrap(err, "could not unmarshal block body RPC request: ")
+		}
+
+		var index int
+
+		switch request.Direction {
+		case 0x00:
+			index := -1
+		case 0x01:
+			index  := 1
+		default:
+			index := 1
+		}
+
+		var store []byte
+
+		for i := 0; i < int(request.Max); i = i+index {
+			request.StartRoot
+
+			block, err := h.DB.Block(request.StartRoot)
+			if err != nil {
+				return errors.Wrap(err, "could not get block header: ")
+			}
+		}
+
+		block, err := h.DB.Block(request.StartRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not get block header: ")
+		}
+
+		marshaledBody, err := bson.Marshal(block.GetBody())
+		if err != nil {
+			return errors.Wrap(err, "could not marshal block body: ")
+		}
+
+		store = append(store, marshaledBody...)
+
+
+
+		block, err := h.DB.Block(request.StartRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not get block header: ")
 		}
 
 		// uses response to get the block bodies? how tf
