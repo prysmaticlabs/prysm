@@ -16,10 +16,14 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -86,12 +90,15 @@ type Web3Service struct {
 	depositTrie             *trieutil.MerkleTrie
 	chainStartDeposits      []*pb.Deposit
 	chainStarted            bool
-	chainStartETH1Data      *pb.Eth1Data
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
 	lastRequestedBlock      *big.Int
+	chainStartETH1Data      *pb.Eth1Data
+	activeValidatorCount    uint64
+	depositedPubkeys        map[[48]byte]uint64
+	eth2GenesisTime         uint64
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -150,6 +157,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &pb.Eth1Data{},
+		depositedPubkeys:        make(map[[48]byte]uint64),
 	}, nil
 }
 
@@ -193,8 +201,8 @@ func (w *Web3Service) ChainStartETH1Data() *pb.Eth1Data {
 // HasChainStarted returns whether the deposits from
 // the deposit contract received so far are valid enough
 // to kick start the beacon chain.
-func (w *Web3Service) HasChainStarted() (bool, error) {
-	return false, nil
+func (w *Web3Service) HasChainStarted() bool {
+	return w.chainStarted
 }
 
 // Status is service health checks. Return nil or error.
@@ -300,6 +308,39 @@ func (w *Web3Service) handleDelayTicker() {
 	}
 }
 
+// determineActiveValidator determines if the validator that deposited is a valid active
+// validator.
+func (w *Web3Service) determineActiveValidator(eth1Data *pb.Eth1Data, deposit *pb.Deposit) {
+	pubkey := bytesutil.ToBytes48(deposit.Data.Pubkey)
+	dummyState := createDummyState(eth1Data)
+
+	valMap := stateutils.ValidatorIndexMap(dummyState)
+	if _, err := blocks.ProcessDeposit(dummyState, deposit, valMap, true, true); err != nil {
+		log.Errorf("Invalid Deposit %v", err)
+		return
+	}
+	balance := dummyState.Balances[0]
+	val, ok := w.depositedPubkeys[pubkey]
+	if !ok {
+		w.depositedPubkeys[pubkey] = balance
+		balanceMin := mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+		if balanceMin == params.BeaconConfig().MaxEffectiveBalance {
+			w.activeValidatorCount++
+		}
+		return
+	}
+	newBal := val + balance
+	w.depositedPubkeys[pubkey] = newBal
+
+	// exit if the validator is already an active validator previously
+	if val >= params.BeaconConfig().MaxEffectiveBalance {
+		return
+	}
+	if newBal >= params.BeaconConfig().MaxEffectiveBalance {
+		w.activeValidatorCount++
+	}
+}
+
 // run subscribes to all the services for the ETH1.0 chain.
 func (w *Web3Service) run(done <-chan struct{}) {
 	w.isRunning = true
@@ -354,4 +395,16 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			w.handleDelayTicker()
 		}
 	}
+}
+
+func createDummyState(eth1Data *pb.Eth1Data) *pb.BeaconState {
+	dummyState := &pb.BeaconState{}
+	dummyState.Eth1Data = eth1Data
+	dummyState.Eth1DepositIndex = eth1Data.DepositCount - 1
+	dummyState.Fork = &pb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		Epoch:           0,
+	}
+	return dummyState
 }

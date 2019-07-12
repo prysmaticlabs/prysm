@@ -91,7 +91,7 @@ func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*get
 	}, nil
 }
 
-var depositsReqForChainStart = 8
+var depositsReqForChainStart = 64
 
 func TestNewWeb3Service_OK(t *testing.T) {
 	endpoint := "http://127.0.0.1"
