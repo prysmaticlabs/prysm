@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"go.opencensus.io/trace"
 )
 
@@ -286,7 +285,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.UpdateChainHead")
 	defer span.End()
 
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("unable to determine block signing root: %v", err)
 	}
