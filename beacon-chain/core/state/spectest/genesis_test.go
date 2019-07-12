@@ -105,7 +105,13 @@ func TestGenesisValidityMinimal(t *testing.T) {
 			}
 			isValid := state.IsValidGenesisState(validatorCount, genesisState.GenesisTime)
 			if isValid != tt.IsValid {
-				t.Fatal("Genesis state does not have expected validity")
+				t.Fatalf(
+					"Genesis state does not have expected validity. Expected to be valid: %d, %d. %t %t",
+					tt.Genesis.GenesisTime,
+					validatorCount,
+					isValid,
+					tt.IsValid,
+				)
 			}
 		})
 	}
