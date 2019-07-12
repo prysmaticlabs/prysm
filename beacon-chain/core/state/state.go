@@ -93,12 +93,10 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		eth1Data = &pb.Eth1Data{}
 	}
 
-	secondsPerDay := params.BeaconConfig().SecondsPerDay
-
 	state := &pb.BeaconState{
 		// Misc fields.
 		Slot:        0,
-		GenesisTime: genesisTime - genesisTime%secondsPerDay + 2*secondsPerDay,
+		GenesisTime: genesisTime,
 
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
