@@ -63,7 +63,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	genesisTime := uint64(99999)
 	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart), false)
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
-
 	newState, err := state.GenesisBeaconState(
 		deposits,
 		genesisTime,
