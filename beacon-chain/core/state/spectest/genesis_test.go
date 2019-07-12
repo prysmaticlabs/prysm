@@ -65,7 +65,7 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 				for i := 0; i < rval.Type().NumField(); i++ {
 					fmt.Println(rval.Type().Field(i).Name)
 					if !reflect.DeepEqual(rval.Field(i).Interface(), otherVal.Field(i).Interface()) {
-						fmt.Printf("--Did not get expected %v\n", rval.Type().Field(i).Name)
+						fmt.Printf("--Did not get expected %v\n--Received: %v\n", rval.Type().Field(i).Name, otherVal.Field(i).Interface())
 					} else {
 						fmt.Println("--Matched")
 					}

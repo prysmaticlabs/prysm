@@ -52,7 +52,7 @@ import (
 //         state.active_index_roots[index] = active_index_root
 //         state.compact_committees_roots[index] = committee_root
 //     return state
-func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
+func GenesisBeaconState(deposits []*pb.Deposit, eth1Timestamp uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = make([]byte, 32)
@@ -75,7 +75,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		}
 	}
 
-	blockRoots := make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash
 	}
@@ -90,6 +90,9 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if eth1Data == nil {
 		eth1Data = &pb.Eth1Data{}
 	}
+
+	secondsPerDay := params.BeaconConfig().SecondsPerDay
+	genesisTime := eth1Timestamp - eth1Timestamp%secondsPerDay + 2*secondsPerDay
 
 	state := &pb.BeaconState{
 		// Misc fields.
@@ -125,27 +128,36 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		},
 
 		// Recent state.
-		CurrentCrosslinks:      crosslinks,
-		PreviousCrosslinks:     crosslinks,
-		ActiveIndexRoots:       activeIndexRoots,
-		CompactCommitteesRoots: compactRoots,
-		BlockRoots:             blockRoots,
-		StateRoots:             stateRoots,
-		Slashings:              slashings,
+		CurrentCrosslinks:         crosslinks,
+		PreviousCrosslinks:        crosslinks,
+		ActiveIndexRoots:          activeIndexRoots,
+		CompactCommitteesRoots:    compactRoots,
+		HistoricalRoots:           [][]byte{},
+		BlockRoots:                blockRoots,
+		StateRoots:                stateRoots,
+		Slashings:                 slashings,
+		CurrentEpochAttestations:  []*pb.PendingAttestation{},
+		PreviousEpochAttestations: []*pb.PendingAttestation{},
 
 		// Eth1 data.
 		Eth1Data:         eth1Data,
+		Eth1DataVotes:    []*pb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
 
-	bodyRoot, err := ssz.HashTreeRoot(&pb.BeaconBlockBody{})
+	emptyBeaconBlockBody := &pb.BeaconBlockBody{}
+	bodyRoot, err := ssz.HashTreeRoot(emptyBeaconBlockBody)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
 	}
 
 	state.LatestBlockHeader = &pb.BeaconBlockHeader{
-		BodyRoot: bodyRoot[:],
+		ParentRoot: zeroHash,
+		StateRoot:  zeroHash,
+		BodyRoot:   bodyRoot[:],
+		Signature:  params.BeaconConfig().EmptySignature[:],
 	}
+	fmt.Printf("--Received: %v\n", state.LatestBlockHeader)
 
 	// Process initial deposits.
 	validatorMap := make(map[[32]byte]int)
