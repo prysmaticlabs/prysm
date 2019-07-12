@@ -30,7 +30,6 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/params/spectest:go_default_library",
-        "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
