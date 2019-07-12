@@ -1,17 +1,16 @@
 package spectest
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"io/ioutil"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestGenesisInitializationMinimal(t *testing.T) {
@@ -44,8 +43,8 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 			}
 
 			if !proto.Equal(genesisState, tt.State) {
-				diff, _ := messagediff.PrettyDiff(genesisState, tt.State)
-				t.Log(diff)
+				// diff, _ := messagediff.PrettyDiff(genesisState, tt.State)
+				// t.Log(diff)
 				t.Fatal("Genesis state does not match expected")
 			}
 		})
