@@ -11,8 +11,10 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // GenesisBeaconState gets called when DepositsForChainStart count of
@@ -52,7 +54,7 @@ import (
 //         state.active_index_roots[index] = active_index_root
 //         state.compact_committees_roots[index] = committee_root
 //     return state
-func GenesisBeaconState(deposits []*pb.Deposit, eth1Timestamp uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
+func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = make([]byte, 32)
@@ -145,8 +147,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, eth1Timestamp uint64, eth1Data *
 		Eth1DepositIndex: 0,
 	}
 
-	emptyBeaconBlockBody := &pb.BeaconBlockBody{}
-	bodyRoot, err := ssz.HashTreeRoot(emptyBeaconBlockBody)
+	bodyRoot, err := ssz.HashTreeRoot(&pb.BeaconBlockBody{})
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
 	}
@@ -161,16 +162,30 @@ func GenesisBeaconState(deposits []*pb.Deposit, eth1Timestamp uint64, eth1Data *
 
 	// Process initial deposits.
 	validatorMap := make(map[[32]byte]int)
-	dataLeaves := make([]*pb.DepositData, len(deposits))
-	for i := range deposits {
-		dataLeaves[i] = deposits[i].Data
+	leaves := [][]byte{}
+	for _, deposit := range deposits {
+		hash, err := hashutil.DepositHash(deposit.Data)
+		if err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, hash[:])
 	}
+	var trie *trieutil.MerkleTrie
+	if len(leaves) > 0 {
+		trie, err = trieutil.GenerateTrieFromItems(leaves, int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		trie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	depositRoot := trie.Root()
 	for i, deposit := range deposits {
 		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
-		depositRoot, err := ssz.HashTreeRootWithCapacity(dataLeaves[:i+1], 1<<params.BeaconConfig().DepositContractTreeDepth)
-		if err != nil {
-			return nil, fmt.Errorf("could not hash tree root deposit data list: %v", err)
-		}
 		state.Eth1Data.DepositRoot = depositRoot[:]
 		state, err = b.ProcessDeposit(
 			state,
@@ -199,7 +214,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, eth1Timestamp uint64, eth1Data *
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, params.BeaconConfig().ValidatorRegistryLimit)
+	genesisActiveIndexRoot, err := ssz.HashTreeRoot(activeIndices)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v", err)
 	}
