@@ -136,7 +136,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	for i := 0; i < validatorsLimit; i++ {
 		registry = append(registry, &pb.Validator{
 			Pubkey:           []byte(strconv.Itoa(i)),
-			ActivationEpoch:  0,ff
+			ActivationEpoch:  0,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		})
