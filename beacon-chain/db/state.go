@@ -15,7 +15,6 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
@@ -44,7 +43,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	stateHash := hashutil.Hash(stateEnc)
 	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
-	blockRoot, _ := blockutil.BlockSigningRoot(genesisBlock)
+	blockRoot, _ := ssz.HashTreeRoot(genesisBlock)
 	// #nosec G104
 	blockEnc, _ := proto.Marshal(genesisBlock)
 	zeroBinary := encodeSlotNumberRoot(0, blockRoot)

@@ -7,11 +7,11 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -168,7 +168,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
-	h, err := blockutil.BlockSigningRoot(blks[0])
+	h, err := ssz.HashTreeRoot(blks[0])
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
@@ -194,7 +194,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Block unable to be saved %v", err)
 		}
 
-		hash, err := blockutil.BlockSigningRoot(block)
+		hash, err := ssz.HashTreeRoot(block)
 		if err != nil {
 			t.Fatalf("Could not hash block %v", err)
 		}

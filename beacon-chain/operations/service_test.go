@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -328,7 +328,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	if err := s.beaconDB.UpdateChainHead(context.Background(), cb1, &pb.BeaconState{}); err != nil {
 		t.Fatal(err)
 	}
-	r1, err := blockutil.BlockSigningRoot(cb1)
+	r1, err := ssz.HashTreeRoot(cb1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -374,7 +374,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}
-	r1, err := blockutil.BlockSigningRoot(cb1)
+	r1, err := ssz.HashTreeRoot(cb1)
 	if err != nil {
 		t.Fatal(err)
 	}

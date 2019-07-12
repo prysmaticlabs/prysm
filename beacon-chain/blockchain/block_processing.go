@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -71,7 +70,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.HashTreeRoot(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon block")
 	}
@@ -160,7 +159,7 @@ func (c *ChainService) VerifyBlockValidity(
 // peers via p2p. Blocks which have already been saved are not processed again via p2p, which is why
 // the order of operations is important in this function to prevent infinite p2p loops.
 func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.BeaconBlock) error {
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.HashTreeRoot(block)
 	if err != nil {
 		return fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
@@ -239,7 +238,7 @@ func (c *ChainService) AdvanceState(
 			"slotsSinceGenesis", newState.Slot,
 		).Info("Block transition successfully processed")
 
-		blockRoot, err := blockutil.BlockSigningRoot(block)
+		blockRoot, err := ssz.HashTreeRoot(block)
 		if err != nil {
 			return nil, err
 		}

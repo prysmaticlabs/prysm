@@ -13,7 +13,6 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -205,7 +204,7 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not process block operation: %v", err)
 	}
 
-	r, err := blockutil.BlockSigningRoot(block)
+	r, err := ssz.HashTreeRoot(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}

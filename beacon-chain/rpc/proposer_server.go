@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -42,7 +42,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
 
-	parentRoot, err := blockutil.BlockSigningRoot(parent)
+	parentRoot, err := ssz.HashTreeRoot(parent)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block signing root: %v", err)
 	}
@@ -99,7 +99,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
-	root, err := blockutil.BlockSigningRoot(blk)
+	root, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
