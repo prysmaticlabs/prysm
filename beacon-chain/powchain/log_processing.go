@@ -125,7 +125,10 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 			DepositRoot:  root[:],
 			DepositCount: uint64(len(w.chainStartDeposits)),
 		}
-		w.determineActiveValidator(eth1Data, deposit)
+		if err := w.processDeposit(eth1Data, deposit); err != nil {
+			log.Errorf("invalid deposit processed %v", err)
+			validData = false
+		}
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 	}
