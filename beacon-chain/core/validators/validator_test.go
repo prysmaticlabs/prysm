@@ -131,7 +131,6 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 
 func TestSlashValidator_OK(t *testing.T) {
 	registry := make([]*pb.Validator, 0)
-	indices := make([]uint64, 0)
 	balances := make([]uint64, 0)
 	validatorsLimit := 100
 	for i := 0; i < validatorsLimit; i++ {
@@ -141,7 +140,6 @@ func TestSlashValidator_OK(t *testing.T) {
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		})
-		indices = append(indices, uint64(i))
 		balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
 	}
 

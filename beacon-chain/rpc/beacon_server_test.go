@@ -21,7 +21,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -277,18 +276,12 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 				}},
 		},
 	}
-	depsData := [][]byte{}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
 	for _, dp := range deps {
 		db.InsertDeposit(context.Background(), dp.Deposit, big.NewInt(0), dp.Index, depositTrie.Root())
-		depHash, err := hashutil.DepositHash(dp.Deposit.Data)
-		if err != nil {
-			t.Errorf("Could not hash deposit")
-		}
-		depsData = append(depsData, depHash[:])
 	}
 	depositRoot := depositTrie.Root()
 	beaconState := &pbp2p.BeaconState{
