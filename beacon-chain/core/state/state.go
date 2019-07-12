@@ -19,6 +19,7 @@ import (
 
 // GenesisBeaconState gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
+// TODO(#2307): Update the comments here.
 //
 // Spec pseudocode definition:
 //  def initialize_beacon_state_from_eth1(eth1_block_hash: Hash,
@@ -71,11 +72,12 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(crosslinks); i++ {
 		crosslinks[i] = &pb.Crosslink{
-			Shard: uint64(i),
+			ParentRoot: make([]byte, 32),
+			DataRoot:   make([]byte, 32),
 		}
 	}
 
-	blockRoots := make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash
 	}
@@ -129,6 +131,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		PreviousCrosslinks:        crosslinks,
 		ActiveIndexRoots:          activeIndexRoots,
 		CompactCommitteesRoots:    compactRoots,
+		HistoricalRoots:           [][]byte{},
 		BlockRoots:                blockRoots,
 		StateRoots:                stateRoots,
 		Slashings:                 slashings,
@@ -144,6 +147,13 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	bodyRoot, err := ssz.HashTreeRoot(&pb.BeaconBlockBody{})
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
+	}
+
+	state.LatestBlockHeader = &pb.BeaconBlockHeader{
+		ParentRoot: zeroHash,
+		StateRoot:  zeroHash,
+		BodyRoot:   bodyRoot[:],
+		Signature:  params.BeaconConfig().EmptySignature[:],
 	}
 
 	// Process initial deposits.

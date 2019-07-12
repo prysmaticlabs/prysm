@@ -17,7 +17,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -73,7 +72,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		Slot: 1,
 	}
 
-	parentRoot, err := blockutil.BlockSigningRoot(parentBlock)
+	parentRoot, err := ssz.SigningRoot(parentBlock)
 	if err != nil {
 		t.Fatalf("Unable to tree hash block %v", err)
 	}
@@ -131,7 +130,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
-	parentRoot, err := blockutil.BlockSigningRoot(genesis)
+	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,7 +301,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		},
 	}
 
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,7 +367,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	}
 
 	beaconState.Slot++
-	parentRoot, err := blockutil.BlockSigningRoot(genesisBlock)
+	parentRoot, err := ssz.SigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +431,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	}
 
 	beaconState.Slot++
-	parentRoot, err := blockutil.BlockSigningRoot(genesis)
+	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -543,7 +542,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parentRoot, err := blockutil.BlockSigningRoot(genesis)
+	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -569,7 +568,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	initBlockStateRoot(t, block, chainService)
 
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
 	}
@@ -686,7 +685,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 	genesisSlot := uint64(0)
 
-	parentRoot, err := blockutil.BlockSigningRoot(genesisBlock)
+	parentRoot, err := ssz.SigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -723,7 +722,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err = db.UpdateChainHead(ctx, block, computedState); err != nil {
 			t.Fatal(err)
 		}
-		parentRoot, err = blockutil.BlockSigningRoot(block)
+		parentRoot, err = ssz.SigningRoot(block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -735,7 +734,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parentRoot, err = blockutil.BlockSigningRoot(commonAncestor)
+	parentRoot, err = ssz.SigningRoot(commonAncestor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -765,7 +764,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 			RandaoReveal: randaoReveal,
 		},
 	}
-	rootF, _ := blockutil.BlockSigningRoot(blockF)
+	rootF, _ := ssz.SigningRoot(blockF)
 	if err := db.SaveHistoricalState(ctx, beaconState, rootF); err != nil {
 		t.Fatal(err)
 	}
@@ -785,7 +784,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parentRoot, err = blockutil.BlockSigningRoot(blockF)
+	parentRoot, err = ssz.SigningRoot(blockF)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -861,7 +860,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("cannot save block: %v", err)
 	}
-	parentRoot, err := blockutil.BlockSigningRoot(genesis)
+	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("unable to get root of canonical head: %v", err)
 	}

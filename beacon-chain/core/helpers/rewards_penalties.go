@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var totalBalanceCache = cache.NewTotalBalanceCache()
 var totalActiveBalanceCache = cache.NewActiveBalanceCache()
 
 // TotalBalance returns the total amount at stake in Gwei
