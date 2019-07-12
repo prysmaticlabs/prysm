@@ -1,15 +1,19 @@
 package spectest
 
 import (
+	"fmt"
 	"io/ioutil"
+	"reflect"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
 
@@ -34,19 +38,41 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
-			eth1Data := &pb.Eth1Data{
-				BlockHash: tt.Eth1BlockHash,
+			helpers.ClearAllCaches()
+			deposits := tt.Deposits
+			dataLeaves := make([]*pb.DepositData, len(deposits))
+			for i := range deposits {
+				dataLeaves[i] = deposits[i].Data
 			}
-			genesisState, err := state.GenesisBeaconState(tt.Deposits, tt.Eth1Timestamp, eth1Data)
+			depositRoot, err := ssz.HashTreeRootWithCapacity(dataLeaves, 1<<params.BeaconConfig().DepositContractTreeDepth)
+			if err != nil {
+				t.Fatal(err)
+			}
+			eth1Data := &pb.Eth1Data{
+				DepositRoot:  depositRoot[:],
+				DepositCount: uint64(len(deposits)),
+				BlockHash:    tt.Eth1BlockHash,
+			}
+
+			genesisState, err := state.GenesisBeaconState(deposits, tt.Eth1Timestamp, eth1Data)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			if !proto.Equal(genesisState, tt.State) {
-				// diff, _ := messagediff.PrettyDiff(genesisState, tt.State)
-				// t.Log(diff)
-				t.Fatal("Genesis state does not match expected")
+				rval := reflect.ValueOf(genesisState).Elem()
+				otherVal := reflect.ValueOf(tt.State).Elem()
+				for i := 0; i < rval.Type().NumField(); i++ {
+					fmt.Println(rval.Type().Field(i).Name)
+					if !reflect.DeepEqual(rval.Field(i).Interface(), otherVal.Field(i).Interface()) {
+						fmt.Printf("--Did not get expected %v\n", rval.Type().Field(i).Name)
+					} else {
+						fmt.Println("--Matched")
+					}
+				}
+				t.Error("States are not equal")
 			}
+
 		})
 	}
 }
@@ -79,7 +105,7 @@ func TestGenesisValidityMinimal(t *testing.T) {
 			}
 			isValid := state.IsValidGenesisState(validatorCount, genesisState.GenesisTime)
 			if isValid != tt.IsValid {
-				t.Fatal("Genesis state does not have expected validity.")
+				t.Fatal("Genesis state does not have expected validity")
 			}
 		})
 	}
