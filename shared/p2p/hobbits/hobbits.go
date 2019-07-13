@@ -13,7 +13,7 @@ import (
 )
 
 type HobbitsNode struct {
-	sync.Mutex
+	Mutex       *sync.Mutex
 	NodeId      string
 	Host        string
 	Port        int
@@ -26,7 +26,7 @@ type HobbitsNode struct {
 
 type HobbitsMessage encoding.Message
 
-var topicMapping map[reflect.Type]string // TODO: initialize with a const?
+var topicMapping map[reflect.Type]string // TODO: initialize with a const? How TF do I use this??
 
 type RPCMethod uint8
 
@@ -65,10 +65,10 @@ type Status struct {
 
 type BlockRequest struct {
 	StartRoot [32]byte `bson:"start_root"`
-	StartSlot uint64 `bson:"start_slot"`
-	Max uint64 `bson:"max"`
-	Skip uint64 `bson:"skip"`
-	Direction uint8 `bson:"direction"`
+	StartSlot uint64   `bson:"start_slot"`
+	Max       uint64   `bson:"max"`
+	Skip      uint64   `bson:"skip"`
+	Direction uint8    `bson:"direction"`
 }
 
 // Hobbits toggles a HobbitsNode and requires a host, port and list of peers to which it tries to connect.

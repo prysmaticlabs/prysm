@@ -7,7 +7,8 @@ import (
 	"reflect"
 	"time"
 
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/bazel-prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	log "github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/renaynay/go-hobbits/encoding"
@@ -41,7 +42,7 @@ func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Con
 	return errors.New(fmt.Sprintf("protocol unsupported %v", message.Protocol))
 }
 
-func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
+func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error { // TODO all of this needs to be put into funcs bc this function is getting disgusting.
 	method, err := h.parseMethodID(message.Header)
 	if err != nil {
 		log.Trace("method id could not be parsed from message header")
@@ -114,59 +115,19 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error {
 
 		var index int
 
-
 	case BLOCK_HEADERS:
 		// log this?
 	case GET_BLOCK_BODIES: // TODO: this is so messed up
-		var request BlockRequest
+		var requestBody BlockRequest
 
-		err := bson.Unmarshal(message.Body, request)
+		err := bson.Unmarshal(message.Body, requestBody)
 		if err != nil {
 			return errors.Wrap(err, "could not unmarshal block body RPC request: ")
 		}
 
-		var index int
+		var request p2p.Message
+		request.Data = requestBody
 
-		switch request.Direction {
-		case 0x00:
-			index := -1
-		case 0x01:
-			index  := 1
-		default:
-			index := 1
-		}
-
-		var store []byte
-
-		for i := 0; i < int(request.Max); i = i+index {
-			request.StartRoot
-
-			block, err := h.DB.Block(request.StartRoot)
-			if err != nil {
-				return errors.Wrap(err, "could not get block header: ")
-			}
-		}
-
-		block, err := h.DB.Block(request.StartRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not get block header: ")
-		}
-
-		marshaledBody, err := bson.Marshal(block.GetBody())
-		if err != nil {
-			return errors.Wrap(err, "could not marshal block body: ")
-		}
-
-		store = append(store, marshaledBody...)
-
-
-
-		block, err := h.DB.Block(request.StartRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not get block header: ")
-		}
-
-		// uses response to get the block bodies? how tf
 
 	case BLOCK_BODIES:
 		// log this somehow?

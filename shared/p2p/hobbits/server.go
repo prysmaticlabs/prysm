@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"time"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
@@ -30,6 +31,7 @@ func NewHobbitsNode(host string, port int, peers []string, db *db.BeaconDB) Hobb
 		DB:          db,
 	}
 }
+
 
 func (h *HobbitsNode)  OpenConns() error {
 	for _, p := range h.StaticPeers {
@@ -114,3 +116,15 @@ func (h *HobbitsNode) Stop() error {
 }
 // Service conforms to the p2p composite interface
 type Service shared.Service
+
+func (h *HobbitsNode) Feed(msg proto.Message) p2p.Feed {
+	//t := messageType(msg)
+	//
+	//h.mutex.Lock()
+	//defer h.mutex.Unlock()
+	//if s.feeds[t] == nil {
+	//	s.feeds[t] = new(event.Feed)
+	//}
+	//
+	//return s.feeds[t]
+}
