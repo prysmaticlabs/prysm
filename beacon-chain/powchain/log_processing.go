@@ -149,6 +149,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 	w.chainStarted = true
+
 	chainStartTime := time.Unix(int64(genesisTime), 0)
 	depHashes, err := w.ChainStartDepositHashes()
 	if err != nil {
@@ -166,6 +167,15 @@ func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 	if err != nil {
 		log.Fatalf("Unable to generate deposit trie from ChainStart deposits: %v", err)
 	}
+
+	for i := range w.chainStartDeposits {
+		proof, err := sparseMerkleTrie.MerkleProof(i)
+		if err != nil {
+			log.Errorf("Unable to generate deposit proof %v", err)
+		}
+		w.chainStartDeposits[i].Proof = proof
+	}
+
 	w.depositTrie = sparseMerkleTrie
 
 	log.WithFields(logrus.Fields{
