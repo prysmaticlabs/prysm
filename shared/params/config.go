@@ -83,7 +83,6 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	DepositsForChainStart     uint64        // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 	SyncPollingInterval       int64         // SyncPollingInterval queries network nodes for sync status.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
@@ -183,7 +182,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
-	DepositsForChainStart:     16384,
 	LogBlockDelay:             2,
 	BLSPubkeyLength:           96,
 	DefaultBufferSize:         10000,
@@ -230,7 +228,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.ShardCount = 1
 	demoConfig.MinAttestationInclusionDelay = 1
 	demoConfig.TargetCommitteeSize = 1
-	demoConfig.DepositsForChainStart = 8
+	demoConfig.MinGenesisActiveValidatorCount = 8
 	demoConfig.SlotsPerEpoch = 8
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
