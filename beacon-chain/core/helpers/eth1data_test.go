@@ -81,43 +81,10 @@ func TestCountVote_BreakTiesByHeight(t *testing.T) {
 	vm := EmptyVoteHierarchyMap()
 	ed1 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
 	ed2 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 101, BlockHash: []byte{10}}
-
-	vm, err := CountVote(vm, ed2, big.NewInt(0))
-	if err != nil {
-		t.Fatal("fail to add deposit to map")
-	}
-	vm, err = CountVote(vm, ed1, big.NewInt(10))
-	if err != nil {
-		t.Fatal("fail to add deposit to map")
-	}
-
-	if !reflect.DeepEqual(ed1, vm.BestVote) {
-		t.Errorf(
-			"Expected best vote to be %v, got %v",
-			ed1,
-			vm.BestVote,
-		)
-	}
-
-	if vm.bestVoteHeight.Cmp(big.NewInt(10)) != 0 {
-		t.Errorf(
-			"Expected best vote height to be %v, got %v",
-			big.NewInt(10),
-			vm.bestVoteHeight,
-		)
-	}
-}
-
-func TestCountVote_BreakTiesByHeightKeepPrior(t *testing.T) {
-	vm := EmptyVoteHierarchyMap()
-	ed1 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
-	ed2 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 101, BlockHash: []byte{10}}
-
 	vm, err := CountVote(vm, ed1, big.NewInt(10))
 	if err != nil {
 		t.Fatal("fail to add deposit to map")
 	}
-
 	vm, err = CountVote(vm, ed2, big.NewInt(0))
 	if err != nil {
 		t.Fatal("fail to add deposit to map")
