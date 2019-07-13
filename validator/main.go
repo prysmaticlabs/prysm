@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	_ "go.uber.org/automaxprocs"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -153,6 +154,7 @@ contract in order to activate the validator client`,
 		debug.CPUProfileFlag,
 		debug.TraceFlag,
 		cmd.LogFileName,
+		cmd.EnableUPnPFlag,
 	}
 
 	app.Flags = append(app.Flags, featureconfig.ValidatorFlags...)

@@ -60,7 +60,7 @@ func TestProposeBlock_DomainDataFailed(t *testing.T) {
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 1, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
-	testutil.AssertLogsContain(t, hook, "Failed to get domain data from beacon node's state")
+	testutil.AssertLogsContain(t, hook, "Failed to get domain data from beacon node")
 }
 
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
@@ -97,6 +97,11 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 		gomock.Any(),
 	).Return(&pbp2p.BeaconBlock{Body: &pbp2p.BeaconBlockBody{}}, nil /*err*/)
 
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
+
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
@@ -119,6 +124,11 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&pbp2p.BeaconBlock{Body: &pbp2p.BeaconBlockBody{}}, nil /*err*/)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx

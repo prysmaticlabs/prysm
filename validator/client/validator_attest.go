@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -36,12 +37,12 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
 	pubKey := v.keys[pk].PublicKey.Marshal()
-	var assignment *pb.CommitteeAssignmentResponse_CommitteeAssignment
+	var assignment *pb.AssignmentResponse_ValidatorAssignment
 	if v.assignments == nil {
 		log.Errorf("No assignments for validators")
 		return
 	}
-	for _, assign := range v.assignments.Assignment {
+	for _, assign := range v.assignments.ValidatorAssignment {
 		if bytes.Equal(pubKey, assign.PublicKey) {
 			assignment = assign
 			break
@@ -73,32 +74,47 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 
 	// Find the index in committee to be used for
 	// the aggregation bitfield
-	var indexInCommittee int
+	var indexInCommittee uint64
 	for i, vIndex := range assignment.Committee {
 		if vIndex == validatorIndexRes.Index {
-			indexInCommittee = i
+			indexInCommittee = uint64(i)
 			break
 		}
 	}
-	aggregationBitfield, err := bitutil.SetBitfield(indexInCommittee, len(assignment.Committee))
-	if err != nil {
-		log.Errorf("Could not set bitfield: %v", err)
-	}
 
-	// TODO(#1366): Use BLS to generate an aggregate signature.
-	sig := []byte("signed")
+	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
+	aggregationBitfield.SetBitAt(indexInCommittee, true)
+
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
+	if err != nil {
+		log.WithError(err).Error("Failed to get domain data from beacon node")
+		return
+	}
+	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
+		Data: data,
+		// Default is false until phase 1 where proof of custody gets implemented.
+		CustodyBit: false,
+	}
+	root, err := ssz.SigningRoot(attDataAndCustodyBit)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"validator": truncatedPk,
+		}).Error("Failed to sign attestation data and custody bit")
+		return
+	}
+	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
 
 	log.WithFields(logrus.Fields{
 		"shard":     data.Crosslink.Shard,
 		"slot":      slot,
 		"validator": truncatedPk,
-	}).Info("Attesting to beacon chain head...")
+	}).Info("Attesting to beacon chain head")
 
 	attestation := &pbp2p.Attestation{
-		Data:                data,
-		CustodyBitfield:     custodyBitfield,
-		AggregationBitfield: aggregationBitfield,
-		Signature:           sig,
+		Data:            data,
+		CustodyBits:     custodyBitfield,
+		AggregationBits: aggregationBitfield,
+		Signature:       sig,
 	}
 
 	attResp, err := v.attesterClient.SubmitAttestation(ctx, attestation)
@@ -110,8 +126,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	log.WithFields(logrus.Fields{
 		"headRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot)),
 		"shard":       data.Crosslink.Shard,
-		"sourceEpoch": data.SourceEpoch,
-		"targetEpoch": data.TargetEpoch,
+		"sourceEpoch": data.Source.Epoch,
+		"targetEpoch": data.Target.Epoch,
 		"validator":   truncatedPk,
 	}).Info("Attested latest head")
 
@@ -120,8 +136,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.Root)),
 		trace.Int64Attribute("shard", int64(data.Crosslink.Shard)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
-		trace.Int64Attribute("justifiedEpoch", int64(data.SourceEpoch)),
-		trace.Int64Attribute("targetEpoch", int64(data.TargetEpoch)),
+		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
+		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
 }

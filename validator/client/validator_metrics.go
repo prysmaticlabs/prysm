@@ -26,7 +26,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	if epoch == 0 {
-		v.prevBalance = params.BeaconConfig().MaxDepositAmount
+		v.prevBalance = params.BeaconConfig().MaxEffectiveBalance
 	}
 	var totalPrevBalance uint64
 	reported := false

@@ -5,10 +5,12 @@ go_library(
     srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/params",
     visibility = ["//visibility:public"],
+    deps = ["//shared/bytesutil:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["config_test.go"],
     embed = [":go_default_library"],
 )

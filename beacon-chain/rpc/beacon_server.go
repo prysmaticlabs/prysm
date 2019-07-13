@@ -4,17 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -38,10 +36,8 @@ type BeaconServer struct {
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
 func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconService_WaitForChainStartServer) error {
-	ok, err := bs.powChainService.HasChainStartLogOccurred()
-	if err != nil {
-		return fmt.Errorf("could not determine if ChainStart log has occurred: %v", err)
-	}
+	ok := bs.powChainService.HasChainStarted()
+	genesisTime := bs.powChainService.ETH2GenesisTime()
 
 	if ok {
 		genesisTime, err := bs.powChainService.ETH2GenesisTime()
@@ -119,7 +115,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		if err != nil {
 			return nil, err
 		}
-		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		blockRoot, err := ssz.SigningRoot(kid)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +130,8 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	}, nil
 }
 
-// BlockTreeBySlots returns the current tree of saved blocks and their votes starting from the justified state.
+// BlockTreeBySlots returns the current tree of saved blocks and their
+// votes starting from the justified state.
 func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockSlotRequest) (*pb.BlockTreeResponse, error) {
 	justifiedState, err := bs.beaconDB.JustifiedState()
 	if err != nil {
@@ -182,7 +179,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 		if err != nil {
 			return nil, err
 		}
-		blockRoot, err := hashutil.HashBeaconBlock(kid)
+		blockRoot, err := ssz.SigningRoot(kid)
 		if err != nil {
 			return nil, err
 		}
@@ -196,10 +193,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 				return nil, err
 			}
 
-			totalVotes, err := helpers.TotalBalance(hState, activeValidatorIndices)
-			if err != nil {
-				return nil, err
-			}
+			totalVotes := helpers.TotalBalance(hState, activeValidatorIndices)
 
 			tree = append(tree, &pb.BlockTreeResponse_TreeNode{
 				BlockRoot:         blockRoot[:],
@@ -214,51 +208,12 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 	}, nil
 }
 
-// TODO(#2307): Refactor for v0.6.
-// nolint
-func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pbp2p.Eth1Data, error) {
-	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
-	}
-	// Fetch all historical deposits up to an ancestor height.
-	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
-	depositHashes := [][]byte{}
-	// If there are less than or equal to len(ChainStartDeposits) historical deposits, then we just fetch the default
-	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
-	chainStartDeposits, err := bs.powChainService.ChainStartDepositHashes()
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve chainstart deposit hashes %v", err)
-	}
-	if len(allDeposits) <= len(chainStartDeposits) {
-		depositHashes = chainStartDeposits
-	} else {
-		for i := range allDeposits {
-			hash, err := hashutil.DepositHash(allDeposits[i].Data)
-			if err != nil {
-				return nil, err
-			}
-			depositHashes = append(depositHashes, hash[:])
-		}
-	}
-	depositTrie, err := trieutil.GenerateTrieFromItems(depositHashes, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
-	}
-	depositRoot := depositTrie.Root()
-	return &pbp2p.Eth1Data{
-		DepositRoot: depositRoot[:],
-		BlockRoot:   blockHash[:],
-	}, nil
-}
-
-func constructMerkleProof(trie *trieutil.MerkleTrie, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
-	proof, err := trie.MerkleProof(int(deposit.Index))
+func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
+	proof, err := trie.MerkleProof(index)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"could not generate merkle proof for deposit at index %d: %v",
-			deposit.Index,
+			index,
 			err,
 		)
 	}

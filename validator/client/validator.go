@@ -21,7 +21,7 @@ import (
 type validator struct {
 	genesisTime          uint64
 	ticker               *slotutil.SlotTicker
-	assignments          *pb.CommitteeAssignmentResponse
+	assignments          *pb.AssignmentResponse
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
 	beaconClient         pb.BeaconServiceClient
@@ -200,7 +200,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		return nil
 	}
 
-	req := &pb.CommitteeAssignmentsRequest{
+	req := &pb.AssignmentRequest{
 		EpochStart: slot / params.BeaconConfig().SlotsPerEpoch,
 		PublicKeys: v.pubkeys,
 	}
@@ -215,7 +215,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	v.assignments = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		for _, assignment := range v.assignments.Assignment {
+		for _, assignment := range v.assignments.ValidatorAssignment {
 			var proposerSlot uint64
 			var attesterSlot uint64
 			assignmentKey := hex.EncodeToString(assignment.PublicKey)
@@ -246,7 +246,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 
 	log.WithFields(logrus.Fields{
-		"assignments": len(v.assignments.Assignment),
+		"assignments": len(v.assignments.ValidatorAssignment),
 	}).Info("Updated validator assignments")
 
 	return nil
@@ -257,8 +257,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
 	rolesAt := make(map[string]pb.ValidatorRole)
-	log.Infof("Assingments: %v", v.assignments.Assignment)
-	for _, assignment := range v.assignments.Assignment {
+	for _, assignment := range v.assignments.ValidatorAssignment {
 		var role pb.ValidatorRole
 		if assignment == nil {
 			role = pb.ValidatorRole_UNKNOWN

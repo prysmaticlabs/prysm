@@ -7,6 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -65,7 +66,9 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 func (ms *mockChainService) AdvanceState(
 	ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
+	return &pb.BeaconState{
+		FinalizedCheckpoint: &pb.Checkpoint{},
+	}, nil
 }
 
 func (ms *mockChainService) VerifyBlockValidity(
@@ -144,7 +147,6 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 	chainHead := &pb.ChainHeadResponse{}
 
 	ss.processBatchedBlocks(msg, chainHead)
-
 }
 
 func TestProcessingBlocks_SkippedSlots(t *testing.T) {
@@ -166,7 +168,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
-	h, err := hashutil.HashBeaconBlock(blks[0])
+	h, err := ssz.SigningRoot(blks[0])
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
@@ -192,7 +194,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Block unable to be saved %v", err)
 		}
 
-		hash, err := hashutil.HashBeaconBlock(block)
+		hash, err := ssz.SigningRoot(block)
 		if err != nil {
 			t.Fatalf("Could not hash block %v", err)
 		}

@@ -37,7 +37,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	finalizedBlockRoot, err := ssz.TreeHash(finalizedState.LatestBlockHeader)
+	finalizedBlockRoot, err := ssz.HashTreeRoot(finalizedState.LatestBlockHeader)
 	if err != nil {
 		log.Errorf("Could not hash finalized block %v", err)
 		return nil
@@ -67,7 +67,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockRoot))
+	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.Eth1Data.BlockHash))
 	if err != nil {
 		log.Errorf("Unable to get powchain block %v", err)
 	}
@@ -77,7 +77,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	s.db.PrunePendingDeposits(ctx, finalizedState.DepositIndex)
+	s.db.PrunePendingDeposits(ctx, int(finalizedState.Eth1DepositIndex))
 
 	if err := s.db.UpdateChainHead(ctx, blockWithNoBody, finalizedState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)

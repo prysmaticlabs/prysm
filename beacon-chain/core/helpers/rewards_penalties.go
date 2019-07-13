@@ -8,49 +8,40 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var totalBalanceCache = cache.NewTotalBalanceCache()
 var totalActiveBalanceCache = cache.NewActiveBalanceCache()
 
 // TotalBalance returns the total amount at stake in Gwei
 // of input validators.
 //
 // Spec pseudocode definition:
-//   def get_total_balance(state: BeaconState, indices: List[ValidatorIndex]) -> Gwei:
+//   def get_total_balance(state: BeaconState, indices: Set[ValidatorIndex]) -> Gwei:
 //    """
 //    Return the combined effective balance of the ``indices``. (1 Gwei minimum to avoid divisions by zero.)
 //    """
-//    return max(sum([state.validator_registry[index].effective_balance for index in indices]), 1)
-func TotalBalance(state *pb.BeaconState, indices []uint64) (uint64, error) {
-	epoch := CurrentEpoch(state)
-	total, err := totalBalanceCache.TotalBalanceInEpoch(epoch)
-	if err != nil {
-		return 0, fmt.Errorf("could not retrieve total balance from cache: %v", err)
-	}
-	if total != params.BeaconConfig().FarFutureEpoch {
-		return total, nil
-	}
-
-	total = 0
+//    return Gwei(max(sum([state.validators[index].effective_balance for index in indices]), 1))
+func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
+	total := uint64(0)
 	for _, idx := range indices {
-		total += state.ValidatorRegistry[idx].EffectiveBalance
-	}
-
-	if err := totalBalanceCache.AddTotalBalance(&cache.TotalBalanceByEpoch{
-		Epoch:        epoch,
-		TotalBalance: total,
-	}); err != nil {
-		return 0, fmt.Errorf("could not save total balance for cache: %v", err)
+		total += state.Validators[idx].EffectiveBalance
 	}
 
 	// Return 1 Gwei minimum to avoid divisions by zero
 	if total == 0 {
-		return 1, nil
+		return 1
 	}
-	return total, nil
+
+	return total
 }
 
 // TotalActiveBalance returns the total amount at stake in Gwei
 // of active validators.
+//
+// Spec pseudocode definition:
+//   def get_total_active_balance(state: BeaconState) -> Gwei:
+//    """
+//    Return the combined effective balance of the active validators.
+//    """
+//    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
 func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
 	epoch := CurrentEpoch(state)
 	total, err := totalActiveBalanceCache.ActiveBalanceInEpoch(epoch)
@@ -62,9 +53,9 @@ func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
 	}
 
 	total = 0
-	for i, v := range state.ValidatorRegistry {
+	for i, v := range state.Validators {
 		if IsActiveValidator(v, epoch) {
-			total += state.ValidatorRegistry[i].EffectiveBalance
+			total += state.Validators[i].EffectiveBalance
 		}
 	}
 
@@ -82,7 +73,7 @@ func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
 // Spec pseudocode definition:
 //  def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
 //    """
-//    Increase validator balance by ``delta``.
+//    Increase the validator balance at index ``index`` by ``delta``.
 //    """
 //    state.balances[index] += delta
 func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
@@ -95,7 +86,7 @@ func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.Beacon
 // Spec pseudocode definition:
 //  def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
 //    """
-//    Decrease validator balance by ``delta`` with underflow protection.
+//    Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
 //    """
 //    state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
 func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {

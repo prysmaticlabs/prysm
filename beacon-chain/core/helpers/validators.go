@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -53,11 +54,11 @@ func IsSlashableValidator(validator *pb.Validator, epoch uint64) bool {
 // need the active validator indices for some specific reason.
 //
 // Spec pseudocode definition:
-//  def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> List[ValidatorIndex]:
+//  def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
 //    """
-//    Get active validator indices at ``epoch``.
+//    Return the sequence of active validator indices at ``epoch``.
 //    """
-//    return [i for i, v in enumerate(state.validator_registry) if is_active_validator(v, epoch)]
+//    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 	indices, err := activeIndicesCache.ActiveIndicesInEpoch(epoch)
 	if err != nil {
@@ -67,7 +68,7 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		return indices, nil
 	}
 
-	for i, v := range state.ValidatorRegistry {
+	for i, v := range state.Validators {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
@@ -95,7 +96,7 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	}
 
 	count = 0
-	for _, v := range state.ValidatorRegistry {
+	for _, v := range state.Validators {
 		if IsActiveValidator(v, epoch) {
 			count++
 		}
@@ -115,33 +116,35 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 // the validator is eligible for activation and exit.
 //
 // Spec pseudocode definition:
-//  def get_delayed_activation_exit_epoch(epoch: Epoch) -> Epoch:
+//  def compute_activation_exit_epoch(epoch: Epoch) -> Epoch:
 //    """
-//    Return the epoch at which an activation or exit triggered in ``epoch`` takes effect.
+//    Return the epoch during which validator activations and exits initiated in ``epoch`` take effect.
 //    """
-//    return epoch + 1 + ACTIVATION_EXIT_DELAY
+//    return Epoch(epoch + 1 + ACTIVATION_EXIT_DELAY)
 func DelayedActivationExitEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }
 
-// ChurnLimit returns the number of validators that are allowed to
+// ValidatorChurnLimit returns the number of validators that are allowed to
 // enter and exit validator pool for an epoch.
 //
 // Spec pseudocode definition:
-//   def get_churn_limit(state: BeaconState) -> int:
-//    return max(
-//        MIN_PER_EPOCH_CHURN_LIMIT,
-//        len(get_active_validator_indices(state, get_current_epoch(state))) // CHURN_LIMIT_QUOTIENT
-//    )
-func ChurnLimit(state *pb.BeaconState) (uint64, error) {
+//   def get_validator_churn_limit(state: BeaconState) -> uint64:
+//    """
+//    Return the validator churn limit for the current epoch.
+//    """
+//    active_validator_indices = get_active_validator_indices(state, get_current_epoch(state))
+//    return max(MIN_PER_EPOCH_CHURN_LIMIT, len(active_validator_indices) // CHURN_LIMIT_QUOTIENT)
+func ValidatorChurnLimit(state *pb.BeaconState) (uint64, error) {
 	validatorCount, err := ActiveValidatorCount(state, CurrentEpoch(state))
 	if err != nil {
 		return 0, fmt.Errorf("could not get validator count: %v", err)
 	}
-	if validatorCount/params.BeaconConfig().ChurnLimitQuotient > params.BeaconConfig().MinPerEpochChurnLimit {
-		return validatorCount / params.BeaconConfig().ChurnLimitQuotient, nil
+	churnLimit := validatorCount / params.BeaconConfig().ChurnLimitQuotient
+	if churnLimit < params.BeaconConfig().MinPerEpochChurnLimit {
+		churnLimit = params.BeaconConfig().MinPerEpochChurnLimit
 	}
-	return params.BeaconConfig().MinPerEpochChurnLimit, nil
+	return churnLimit, nil
 }
 
 // BeaconProposerIndex returns proposer index of a current slot.
@@ -149,27 +152,27 @@ func ChurnLimit(state *pb.BeaconState) (uint64, error) {
 // Spec pseudocode definition:
 //  def get_beacon_proposer_index(state: BeaconState) -> ValidatorIndex:
 //    """
-//    Return the current beacon proposer index.
+//    Return the beacon proposer index at the current slot.
 //    """
 //    epoch = get_current_epoch(state)
-//    committees_per_slot = get_epoch_committee_count(state, epoch) // SLOTS_PER_EPOCH
+//    committees_per_slot = get_committee_count(state, epoch) // SLOTS_PER_EPOCH
 //    offset = committees_per_slot * (state.slot % SLOTS_PER_EPOCH)
-//    shard = (get_epoch_start_shard(state, epoch) + offset) % SHARD_COUNT
+//    shard = Shard((get_start_shard(state, epoch) + offset) % SHARD_COUNT)
 //    first_committee = get_crosslink_committee(state, epoch, shard)
 //    MAX_RANDOM_BYTE = 2**8 - 1
-//    seed = generate_seed(state, epoch)
+//    seed = get_seed(state, epoch)
 //    i = 0
 //    while True:
 //        candidate_index = first_committee[(epoch + i) % len(first_committee)]
 //        random_byte = hash(seed + int_to_bytes(i // 32, length=8))[i % 32]
-//        effective_balance = state.validator_registry[candidate_index].effective_balance
+//        effective_balance = state.validators[candidate_index].effective_balance
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
-//            return candidate_index
+//            return ValidatorIndex(candidate_index)
 //        i += 1
 func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	// Calculate the offset for slot and shard
 	e := CurrentEpoch(state)
-	committeeCount, err := EpochCommitteeCount(state, e)
+	committeeCount, err := CommitteeCount(state, e)
 	if err != nil {
 		return 0, err
 	}
@@ -178,7 +181,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 
 	// Calculate which shards get assigned given the epoch start shard
 	// and the offset
-	startShard, err := EpochStartShard(state, e)
+	startShard, err := StartShard(state, e)
 	if err != nil {
 		return 0, fmt.Errorf("could not get start shard: %v", err)
 	}
@@ -186,7 +189,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 
 	// Use the first committee of the given slot and shard
 	// to select proposer
-	firstCommittee, err := CrosslinkCommitteeAtEpoch(state, e, shard)
+	firstCommittee, err := CrosslinkCommittee(state, e, shard)
 	if err != nil {
 		return 0, fmt.Errorf("could not get first committee: %v", err)
 	}
@@ -196,7 +199,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 
 	// Use the generated seed to select proposer from the first committee
 	maxRandomByte := uint64(1<<8 - 1)
-	seed, err := GenerateSeed(state, e)
+	seed, err := Seed(state, e)
 	if err != nil {
 		return 0, fmt.Errorf("could not generate seed: %v", err)
 	}
@@ -207,37 +210,31 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		candidateIndex := firstCommittee[(e+i)%uint64(len(firstCommittee))]
 		b := append(seed[:], bytesutil.Bytes8(i)...)
 		randomByte := hashutil.Hash(b)[i%32]
-		effectiveBal := state.ValidatorRegistry[candidateIndex].EffectiveBalance
+		effectiveBal := state.Validators[candidateIndex].EffectiveBalance
 		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
 			return candidateIndex, nil
 		}
 	}
 }
 
-// DomainVersion returns the domain version for BLS private key to sign and verify.
+// Domain returns the domain version for BLS private key to sign and verify.
 //
 // Spec pseudocode definition:
 //  def get_domain(state: BeaconState,
 //               domain_type: int,
-//               message_epoch: int=None) -> int:
+//               message_epoch: Epoch=None) -> int:
 //    """
 //    Return the signature domain (fork version concatenated with domain type) of a message.
 //    """
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
-//    return bytes_to_int(fork_version + int_to_bytes(domain_type, length=4))
-func DomainVersion(state *pb.BeaconState, epoch uint64, domainType uint64) uint64 {
-	if epoch == 0 {
-		epoch = CurrentEpoch(state)
-	}
+//    return bls_domain(domain_type, fork_version)
+func Domain(state *pb.BeaconState, epoch uint64, domainType []byte) uint64 {
 	var forkVersion []byte
 	if epoch < state.Fork.Epoch {
 		forkVersion = state.Fork.PreviousVersion
 	} else {
 		forkVersion = state.Fork.CurrentVersion
 	}
-	by := []byte{}
-	by = append(by, forkVersion[:4]...)
-	by = append(by, bytesutil.Bytes4(domainType)...)
-	return bytesutil.FromBytes8(by)
+	return bls.Domain(domainType, forkVersion)
 }

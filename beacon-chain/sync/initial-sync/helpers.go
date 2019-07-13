@@ -7,10 +7,9 @@ import (
 	"runtime/debug"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -25,17 +24,12 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
+	if block.Slot < helpers.StartSlot(beaconState.FinalizedCheckpoint.Epoch) {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer
 	// attestations.
 	return nil
-}
-
-func (s *InitialSync) doesParentExist(block *pb.BeaconBlock) bool {
-	parentHash := bytesutil.ToBytes32(block.ParentRoot)
-	return s.db.HasBlock(parentHash)
 }
 
 // safelyHandleMessage will recover and log any panic that occurs from the

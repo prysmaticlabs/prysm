@@ -48,7 +48,7 @@ func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.At
 	}
 	return []*pb.Attestation{
 		{
-			AggregationBitfield: []byte{0xC0},
+			AggregationBits: []byte{0xC0},
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard:    params.BeaconConfig().SlotsPerEpoch,
@@ -57,7 +57,7 @@ func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.At
 			},
 		},
 		{
-			AggregationBitfield: []byte{0xC1},
+			AggregationBits: []byte{0xC1},
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard:    params.BeaconConfig().SlotsPerEpoch,
@@ -66,7 +66,7 @@ func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.At
 			},
 		},
 		{
-			AggregationBitfield: []byte{0xC2},
+			AggregationBits: []byte{0xC2},
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard:    params.BeaconConfig().SlotsPerEpoch,
@@ -171,7 +171,6 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not listen to port in Start()")
 
 	rpcService.Stop()
-
 }
 
 func TestStatus_CredentialError(t *testing.T) {

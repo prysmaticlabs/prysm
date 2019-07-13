@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -18,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -95,7 +95,7 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
-		c.finalizedEpoch = beaconState.FinalizedEpoch
+		c.finalizedEpoch = beaconState.FinalizedCheckpoint.Epoch
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
 		if c.web3Service == nil {
@@ -115,12 +115,11 @@ func (c *ChainService) Start() {
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSub event.Subscription) {
 	initialDeposits := c.web3Service.ChainStartDeposits()
-
 	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data())
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
-	c.finalizedEpoch = beaconState.FinalizedEpoch
+	c.finalizedEpoch = beaconState.FinalizedCheckpoint.Epoch
 	c.stateInitializedFeed.Send(genesisTime)
 	chainStartSub.Unsubscribe()
 }
@@ -128,8 +127,7 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 // initializes the state and genesis block of the beacon chain to persistent storage
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
-func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
-	eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
+func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit, eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
 	defer span.End()
 	log.Info("ChainStart time reached, starting the beacon chain!")
@@ -143,12 +141,12 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
 
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
-	genBlockRoot, err := hashutil.HashBeaconBlock(genBlock)
+	genBlockRoot, err := ssz.SigningRoot(genBlock)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon block: %v", err)
 	}
@@ -218,7 +216,7 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("could not retrieve chain head: %v", err)
 	}
 
-	root, err := hashutil.HashBeaconBlock(head)
+	root, err := ssz.SigningRoot(head)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
 	}

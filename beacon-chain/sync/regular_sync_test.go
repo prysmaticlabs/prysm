@@ -11,6 +11,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -207,7 +208,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
+	parentRoot, err := ssz.SigningRoot(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
@@ -218,7 +219,7 @@ func TestProcessBlock_OK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{1, 2, 3, 4, 5},
-				BlockRoot:   []byte{6, 7, 8, 9, 10},
+				BlockHash:   []byte{6, 7, 8, 9, 10},
 			},
 		},
 	}
@@ -285,7 +286,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
+	parentRoot, err := ssz.SigningRoot(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
@@ -296,7 +297,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{1, 2, 3, 4, 5},
-				BlockRoot:   []byte{6, 7, 8, 9, 10},
+				BlockHash:   []byte{6, 7, 8, 9, 10},
 			},
 		},
 	}
@@ -325,7 +326,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
 				DepositRoot: []byte{11, 12, 13, 14, 15},
-				BlockRoot:   []byte{16, 17, 18, 19, 20},
+				BlockHash:   []byte{16, 17, 18, 19, 20},
 			},
 		},
 	}
@@ -396,7 +397,10 @@ func TestReceiveAttestation_OK(t *testing.T) {
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard: 1,
-				}},
+				},
+				Source: &pb.Checkpoint{},
+				Target: &pb.Checkpoint{},
+			},
 		},
 	}
 
@@ -447,7 +451,10 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 			Data: &pb.AttestationData{
 				Crosslink: &pb.Crosslink{
 					Shard: 900,
-				}},
+				},
+				Source: &pb.Checkpoint{},
+				Target: &pb.Checkpoint{},
+			},
 		},
 	}
 
@@ -529,7 +536,7 @@ func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &pb.Attestation{
-		AggregationBitfield: []byte{'A', 'B', 'C'},
+		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	hash, err := hashutil.HashProto(att)
 	if err != nil {
@@ -571,7 +578,7 @@ func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &pb.Attestation{
-		AggregationBitfield: []byte{'A', 'B', 'C'},
+		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	hash, err := hashutil.HashProto(att)
 	if err != nil {
@@ -609,7 +616,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &pb.Attestation{
-		AggregationBitfield: []byte{'A', 'B', 'C'},
+		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	attRoot, err := hashutil.HashProto(att)
 	if err != nil {
@@ -680,6 +687,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
+	helpers.ClearAllCaches()
 
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
@@ -728,7 +736,7 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	//    /- B3
 	//	 B1  - B2 - B4
 	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
-	root1, err := hashutil.HashBeaconBlock(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -736,7 +744,7 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block2 := &pb.BeaconBlock{Slot: 2, ParentRoot: root1[:]}
-	root2, _ := hashutil.HashBeaconBlock(block2)
+	root2, _ := ssz.SigningRoot(block2)
 	if err = ss.db.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
@@ -745,13 +753,16 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block4 := &pb.BeaconBlock{Slot: 4, ParentRoot: root2[:]}
-	root4, _ := hashutil.HashBeaconBlock(block4)
+	root4, _ := ssz.SigningRoot(block4)
 	if err = ss.db.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 
 	// Verify passing in roots of B4 and B1 give us the canonical lists.
 	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root4[:])
+	if err != nil {
+		t.Fatal(err)
+	}
 	wantList := []*pb.BeaconBlock{block2, block4}
 	if !reflect.DeepEqual(list, wantList) {
 		t.Error("Did not retrieve the correct canonical lists")
@@ -766,7 +777,7 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 	// Construct the following chain:
 	//	 B1 (finalized and head)
 	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
-	root1, err := hashutil.HashBeaconBlock(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -776,6 +787,9 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 
 	// Verify passing in roots of B1 and B1 give us the canonical lists which should be an empty list.
 	list, err := ss.respondBatchedBlocks(context.Background(), root1[:], root1[:])
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(list) != 0 {
 		t.Error("Did not retrieve the correct canonical lists")
 	}
@@ -798,7 +812,7 @@ func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
 	ss := setupService(db)
 
 	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'B'}}
-	root1, err := hashutil.HashBeaconBlock(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}

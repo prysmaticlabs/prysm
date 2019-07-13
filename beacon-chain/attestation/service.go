@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
@@ -82,7 +81,7 @@ func (a *Service) Stop() error {
 }
 
 // Status always returns nil.
-// TODO(1201): Add service health checks.
+// TODO(#1201): Add service health checks.
 func (a *Service) Status() error {
 	return nil
 }
@@ -101,10 +100,10 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
 func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
-	if index >= uint64(len(beaconState.ValidatorRegistry)) {
+	if index >= uint64(len(beaconState.Validators)) {
 		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
-	validator := beaconState.ValidatorRegistry[index]
+	validator := beaconState.Validators[index]
 
 	pubKey := bytesutil.ToBytes48(validator.Pubkey)
 	a.store.RLock()
@@ -225,7 +224,7 @@ func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestatio
 func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
 
-	committee, err := helpers.CrosslinkCommitteeAtEpoch(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Crosslink.Shard)
+	committee, err := helpers.CrosslinkCommittee(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Crosslink.Shard)
 	if err != nil {
 		return err
 	}
@@ -240,36 +239,29 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 		"lengthOfCommittees": len(committee),
 	}).Debug("Updating latest attestation")
 
-	// The participation bitfield from attestation is represented in bytes,
-	// here we multiply by 8 to get an accurate validator count in bits.
-	bitfield := attestation.AggregationBitfield
-	totalBits := len(bitfield) * 8
-
 	// Check each bit of participation bitfield to find out which
 	// attester has submitted new attestation.
 	// This is has O(n) run time and could be optimized down the line.
-	for i := 0; i < totalBits; i++ {
-		bitSet, err := bitutil.CheckBit(bitfield, i)
-		if err != nil {
-			return err
-		}
-		if !bitSet {
+	for i := uint64(0); i < attestation.AggregationBits.Len(); i++ {
+		if !attestation.AggregationBits.BitAt(i) {
 			continue
 		}
 
-		if i >= len(committee) {
-			log.Debugf("bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
+		if i >= uint64(len(committee)) {
+			// This should never happen.
+			log.Warnf("bitfield points to an invalid index in the committee: bitfield %08b", attestation.AggregationBits)
 			return nil
 		}
 
-		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
-			log.Debugf("index doesn't exist in validator registry: index %d", committee[i])
+		if int(committee[i]) >= len(beaconState.Validators) {
+			// This should never happen.
+			log.Warnf("index doesn't exist in validator registry: index %d", committee[i])
 			return nil
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
-		pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[committee[i]].Pubkey)
+		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].Pubkey)
 		newAttestationSlot := slot
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
@@ -284,7 +276,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 			log.WithFields(
 				logrus.Fields{
 					"attestationSlot": slot,
-					"sourceEpoch":     attestation.Data.SourceEpoch,
+					"sourceEpoch":     attestation.Data.Source.Epoch,
 				},
 			).Debug("Attestation store updated")
 

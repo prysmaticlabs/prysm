@@ -1,6 +1,8 @@
 package helpers
 
-import "github.com/prysmaticlabs/prysm/beacon-chain/cache"
+import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+)
 
 // ClearShuffledValidatorCache clears the shuffled indices cache from scratch.
 func ClearShuffledValidatorCache() {
@@ -10,11 +12,6 @@ func ClearShuffledValidatorCache() {
 // ClearStartShardCache clears the start shard cache from scratch.
 func ClearStartShardCache() {
 	startShardCache = cache.NewStartShardCache()
-}
-
-// ClearTotalBalanceCache restarts the total validator balance cache from scratch.
-func ClearTotalBalanceCache() {
-	totalBalanceCache = cache.NewTotalBalanceCache()
 }
 
 // ClearTotalActiveBalanceCache restarts the total active validator balance cache from scratch.
@@ -49,6 +46,5 @@ func ClearAllCaches() {
 	ClearStartShardCache()
 	ClearShuffledValidatorCache()
 	ClearTotalActiveBalanceCache()
-	ClearTotalBalanceCache()
 	ClearCurrentEpochSeed()
 }

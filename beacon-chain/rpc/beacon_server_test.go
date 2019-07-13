@@ -11,15 +11,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -27,17 +26,19 @@ import (
 )
 
 var closedContext = "context closed"
+var mockSig [96]byte
+var mockCreds [32]byte
 
 type faultyPOWChainService struct {
 	chainStartFeed *event.Feed
 	hashesByHeight map[int][]byte
 }
 
-func (f *faultyPOWChainService) HasChainStartLogOccurred() (bool, error) {
-	return false, nil
+func (f *faultyPOWChainService) HasChainStarted() bool {
+	return false
 }
-func (f *faultyPOWChainService) ETH2GenesisTime() (uint64, error) {
-	return 0, nil
+func (f *faultyPOWChainService) ETH2GenesisTime() uint64 {
+	return 0
 }
 
 func (f *faultyPOWChainService) ChainStartFeed() *event.Feed {
@@ -86,12 +87,12 @@ type mockPOWChainService struct {
 	blockTimeByHeight map[int]uint64
 }
 
-func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, error) {
-	return true, nil
+func (m *mockPOWChainService) HasChainStarted() bool {
+	return true
 }
 
-func (m *mockPOWChainService) ETH2GenesisTime() (uint64, error) {
-	return uint64(time.Unix(0, 0).Unix()), nil
+func (m *mockPOWChainService) ETH2GenesisTime() uint64 {
+	return uint64(time.Unix(0, 0).Unix())
 }
 func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 	return m.chainStartFeed
@@ -235,12 +236,12 @@ func TestBlockTree_OK(t *testing.T) {
 		validators = append(validators, &pbp2p.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch})
 	}
 	justifiedState := &pbp2p.BeaconState{
-		Slot:              0,
-		Balances:          make([]uint64, 11),
-		ValidatorRegistry: validators,
+		Slot:       0,
+		Balances:   make([]uint64, 11),
+		Validators: validators,
 	}
 	for i := 0; i < len(justifiedState.Balances); i++ {
-		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
+		justifiedState.Balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
@@ -251,19 +252,19 @@ func TestBlockTree_OK(t *testing.T) {
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
+	justifiedRoot, _ := ssz.SigningRoot(justifiedBlock)
 
-	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
+	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
 	b1 := &pbp2p.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 		StateRoot:  []byte{0x1},
 	}
-	b1Root, _ := hashutil.HashBeaconBlock(b1)
+	b1Root, _ := ssz.SigningRoot(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              3,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       3,
+		Validators: validators,
+		Balances:   balances,
 	}, b1Root); err != nil {
 		t.Fatal(err)
 	}
@@ -272,11 +273,11 @@ func TestBlockTree_OK(t *testing.T) {
 		ParentRoot: justifiedRoot[:],
 		StateRoot:  []byte{0x2},
 	}
-	b2Root, _ := hashutil.HashBeaconBlock(b2)
+	b2Root, _ := ssz.SigningRoot(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              3,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       3,
+		Validators: validators,
+		Balances:   balances,
 	}, b2Root); err != nil {
 		t.Fatal(err)
 	}
@@ -285,11 +286,11 @@ func TestBlockTree_OK(t *testing.T) {
 		ParentRoot: justifiedRoot[:],
 		StateRoot:  []byte{0x3},
 	}
-	b3Root, _ := hashutil.HashBeaconBlock(b3)
+	b3Root, _ := ssz.SigningRoot(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              3,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       3,
+		Validators: validators,
+		Balances:   balances,
 	}, b3Root); err != nil {
 		t.Fatal(err)
 	}
@@ -298,11 +299,11 @@ func TestBlockTree_OK(t *testing.T) {
 		ParentRoot: b1Root[:],
 		StateRoot:  []byte{0x4},
 	}
-	b4Root, _ := hashutil.HashBeaconBlock(b4)
+	b4Root, _ := ssz.SigningRoot(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              4,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       4,
+		Validators: validators,
+		Balances:   balances,
 	}, b4Root); err != nil {
 		t.Fatal(err)
 	}
@@ -311,11 +312,11 @@ func TestBlockTree_OK(t *testing.T) {
 		ParentRoot: b3Root[:],
 		StateRoot:  []byte{0x5},
 	}
-	b5Root, _ := hashutil.HashBeaconBlock(b5)
+	b5Root, _ := ssz.SigningRoot(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              5,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       5,
+		Validators: validators,
+		Balances:   balances,
 	}, b5Root); err != nil {
 		t.Fatal(err)
 	}
@@ -388,28 +389,28 @@ func TestBlockTree_OK(t *testing.T) {
 	tree := []*pb.BlockTreeResponse_TreeNode{
 		{
 			Block:             b1,
-			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b2,
-			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b3,
-			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b4,
-			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b5,
-			ParticipatedVotes: 1 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 1 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 	}
 	for _, node := range tree {
@@ -437,13 +438,8 @@ func TestBlockTree_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sort.Slice(resp.Tree, func(i, j int) bool {
-		return string(resp.Tree[i].Block.StateRoot) < string(resp.Tree[j].Block.StateRoot)
-	})
-	for i := range resp.Tree {
-		if !proto.Equal(resp.Tree[i].Block, tree[i].Block) {
-			t.Errorf("Expected %v, received %v", tree[i].Block, resp.Tree[i].Block)
-		}
+	if len(resp.Tree) != 4 {
+		t.Errorf("Wanted len %d, received %d", 4, len(resp.Tree))
 	}
 }
 
@@ -461,7 +457,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		Balances: make([]uint64, 11),
 	}
 	for i := 0; i < len(justifiedState.Balances); i++ {
-		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
+		justifiedState.Balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
@@ -472,18 +468,18 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
+	justifiedRoot, _ := ssz.SigningRoot(justifiedBlock)
 	validators := []*pbp2p.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
-	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
+	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
 	b1 := &pbp2p.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b1Root, _ := hashutil.HashBeaconBlock(b1)
+	b1Root, _ := ssz.SigningRoot(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              3,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       3,
+		Validators: validators,
+		Balances:   balances,
 	}, b1Root); err != nil {
 		t.Fatal(err)
 	}
@@ -491,11 +487,11 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b2Root, _ := hashutil.HashBeaconBlock(b2)
+	b2Root, _ := ssz.SigningRoot(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              3,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       3,
+		Validators: validators,
+		Balances:   balances,
 	}, b2Root); err != nil {
 		t.Fatal(err)
 	}
@@ -503,11 +499,11 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b3Root, _ := hashutil.HashBeaconBlock(b3)
+	b3Root, _ := ssz.SigningRoot(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              3,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       3,
+		Validators: validators,
+		Balances:   balances,
 	}, b3Root); err != nil {
 		t.Fatal(err)
 	}
@@ -515,11 +511,11 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		Slot:       4,
 		ParentRoot: b1Root[:],
 	}
-	b4Root, _ := hashutil.HashBeaconBlock(b4)
+	b4Root, _ := ssz.SigningRoot(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              4,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       4,
+		Validators: validators,
+		Balances:   balances,
 	}, b4Root); err != nil {
 		t.Fatal(err)
 	}
@@ -527,11 +523,11 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		Slot:       5,
 		ParentRoot: b3Root[:],
 	}
-	b5Root, _ := hashutil.HashBeaconBlock(b5)
+	b5Root, _ := ssz.SigningRoot(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              5,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       5,
+		Validators: validators,
+		Balances:   balances,
 	}, b5Root); err != nil {
 		t.Fatal(err)
 	}
@@ -604,28 +600,28 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	tree := []*pb.BlockTreeResponse_TreeNode{
 		{
 			Block:             b1,
-			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b2,
-			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b3,
-			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b4,
-			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b5,
-			ParticipatedVotes: 1 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 1 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 	}
 	for _, node := range tree {
@@ -670,13 +666,13 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		Balances: make([]uint64, 11),
 	}
 	for i := 0; i < len(justifiedState.Balances); i++ {
-		justifiedState.Balances[i] = params.BeaconConfig().MaxDepositAmount
+		justifiedState.Balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 	var validators []*pbp2p.Validator
 	for i := 0; i < 11; i++ {
-		validators = append(validators, &pbp2p.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxDepositAmount})
+		validators = append(validators, &pbp2p.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance})
 	}
-	justifiedState.ValidatorRegistry = validators
+	justifiedState.Validators = validators
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
 	}
@@ -686,17 +682,17 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	justifiedRoot, _ := hashutil.HashBeaconBlock(justifiedBlock)
-	balances := []uint64{params.BeaconConfig().MaxDepositAmount}
+	justifiedRoot, _ := ssz.SigningRoot(justifiedBlock)
+	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
 	b1 := &pbp2p.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b1Root, _ := hashutil.HashBeaconBlock(b1)
+	b1Root, _ := ssz.SigningRoot(b1)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              3,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       3,
+		Validators: validators,
+		Balances:   balances,
 	}, b1Root); err != nil {
 		t.Fatal(err)
 	}
@@ -704,11 +700,11 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b2Root, _ := hashutil.HashBeaconBlock(b2)
+	b2Root, _ := ssz.SigningRoot(b2)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              3,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       3,
+		Validators: validators,
+		Balances:   balances,
 	}, b2Root); err != nil {
 		t.Fatal(err)
 	}
@@ -716,11 +712,11 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
-	b3Root, _ := hashutil.HashBeaconBlock(b3)
+	b3Root, _ := ssz.SigningRoot(b3)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              3,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       3,
+		Validators: validators,
+		Balances:   balances,
 	}, b3Root); err != nil {
 		t.Fatal(err)
 	}
@@ -728,11 +724,11 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		Slot:       4,
 		ParentRoot: b1Root[:],
 	}
-	b4Root, _ := hashutil.HashBeaconBlock(b4)
+	b4Root, _ := ssz.SigningRoot(b4)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              4,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       4,
+		Validators: validators,
+		Balances:   balances,
 	}, b4Root); err != nil {
 		t.Fatal(err)
 	}
@@ -740,11 +736,11 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		Slot:       5,
 		ParentRoot: b3Root[:],
 	}
-	b5Root, _ := hashutil.HashBeaconBlock(b5)
+	b5Root, _ := ssz.SigningRoot(b5)
 	if err := db.SaveHistoricalState(ctx, &pbp2p.BeaconState{
-		Slot:              5,
-		ValidatorRegistry: validators,
-		Balances:          balances,
+		Slot:       5,
+		Validators: validators,
+		Balances:   balances,
 	}, b5Root); err != nil {
 		t.Fatal(err)
 	}
@@ -817,28 +813,28 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	tree := []*pb.BlockTreeResponse_TreeNode{
 		{
 			Block:             b1,
-			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b2,
-			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b3,
-			ParticipatedVotes: 2 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 2 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b4,
-			ParticipatedVotes: 3 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 3 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 		{
 			Block:             b5,
-			ParticipatedVotes: 1 * params.BeaconConfig().MaxDepositAmount,
-			TotalVotes:        params.BeaconConfig().MaxDepositAmount,
+			ParticipatedVotes: 1 * params.BeaconConfig().MaxEffectiveBalance,
+			TotalVotes:        params.BeaconConfig().MaxEffectiveBalance,
 		},
 	}
 	for _, node := range tree {

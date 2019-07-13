@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -35,9 +36,9 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 			}
 		}
 		s := &pb.BeaconState{
-			ValidatorRegistry: vals,
+			Validators: vals,
 		}
-		count, err := EpochCommitteeCount(s, 1)
+		count, err := CommitteeCount(s, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -64,9 +65,9 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 		}
 	}
 	s := &pb.BeaconState{
-		ValidatorRegistry: vals,
+		Validators: vals,
 	}
-	count, err := EpochCommitteeCount(s, 1)
+	count, err := CommitteeCount(s, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +78,7 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(productionConfig)
 }
 
-func TestShardDelta_OK(t *testing.T) {
+func TestShardDelta_Ok(t *testing.T) {
 	minShardDelta := params.BeaconConfig().ShardCount -
 		params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
 	tests := []struct {
@@ -98,7 +99,7 @@ func TestShardDelta_OK(t *testing.T) {
 			}
 		}
 		s := &pb.BeaconState{
-			ValidatorRegistry: vals,
+			Validators: vals,
 		}
 		delta, err := ShardDelta(s, 1)
 		if err != nil {
@@ -124,10 +125,10 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		Slot:                   200,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		Slot:             200,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -135,7 +136,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,10 +184,10 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		Slot:                   200,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		Slot:             200,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -194,7 +195,7 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +222,8 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	committeeSize := uint64(16)
+	validators := make([]*pb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -229,9 +231,9 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	attestationData := &pb.AttestationData{}
@@ -239,26 +241,26 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	tests := []struct {
 		attestationSlot uint64
 		stateSlot       uint64
-		bitfield        []byte
+		bitfield        bitfield.Bitlist
 		wanted          []uint64
 	}{
 		{
 			attestationSlot: 3,
 			stateSlot:       5,
-			bitfield:        []byte{0x03},
-			wanted:          []uint64{127, 71},
+			bitfield:        bitfield.Bitlist{0x07},
+			wanted:          []uint64{219, 476},
 		},
 		{
 			attestationSlot: 2,
 			stateSlot:       10,
-			bitfield:        []byte{0x01},
-			wanted:          []uint64{85, 103},
+			bitfield:        bitfield.Bitlist{0x05},
+			wanted:          []uint64{123},
 		},
 		{
 			attestationSlot: 11,
 			stateSlot:       10,
-			bitfield:        []byte{0x03},
-			wanted:          []uint64{102, 68},
+			bitfield:        bitfield.Bitlist{0x07},
+			wanted:          []uint64{880, 757},
 		},
 	}
 
@@ -268,7 +270,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		attestationData.Crosslink = &pb.Crosslink{
 			Shard: tt.attestationSlot,
 		}
-		attestationData.TargetEpoch = 0
+		attestationData.Target = &pb.Checkpoint{Epoch: 0}
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
 		if err != nil {
@@ -285,10 +287,11 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 }
 
-func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
+func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
+	ClearAllCaches()
 
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
@@ -298,22 +301,27 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}}
+	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}, Target: &pb.Checkpoint{}}
 
-	if _, err := AttestingIndices(state, attestationData, []byte{}); err == nil {
-		t.Error("attestation participants should have failed with incorrect bitfield")
+	indices, err := AttestingIndices(state, attestationData, bitfield.NewBitlist(128))
+	if err != nil {
+		t.Fatalf("attesting indices failed: %v", err)
+	}
+
+	if len(indices) != 0 {
+		t.Errorf("Attesting indices are non-zero despite an empty bitfield being provided; Size %d", len(indices))
 	}
 }
 
 func TestVerifyBitfield_OK(t *testing.T) {
-	bitfield := []byte{0xFF}
-	committeeSize := 8
+	bf := bitfield.Bitlist{0xFF, 0x01}
+	committeeSize := uint64(8)
 
-	isValidated, err := VerifyBitfield(bitfield, committeeSize)
+	isValidated, err := VerifyBitfield(bf, committeeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -322,21 +330,9 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x80}
-	committeeSize = 9
-
-	isValidated, err = VerifyBitfield(bitfield, committeeSize)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if isValidated {
-		t.Error("bitfield is validated when it was supposed to be")
-	}
-
-	bitfield = []byte{0xff, 0x03}
+	bf = bitfield.Bitlist{0xFF, 0x07}
 	committeeSize = 10
-	isValidated, err = VerifyBitfield(bitfield, committeeSize)
+	isValidated, err = VerifyBitfield(bf, committeeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -355,10 +351,10 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 		}
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		Slot:                   params.BeaconConfig().SlotsPerEpoch,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		Slot:             params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	tests := []struct {
@@ -425,9 +421,9 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 
 func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Slot:             params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	index := uint64(10000)
 	_, _, _, _, err := CommitteeAssignment(state, 1, index)
@@ -440,7 +436,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	}
 }
 
-func TestShardDelta_Ok(t *testing.T) {
+func TestShardDelta_OK(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	min := params.BeaconConfig().ShardCount - params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
 	tests := []struct {
@@ -462,7 +458,7 @@ func TestShardDelta_Ok(t *testing.T) {
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
 		}
-		state := &pb.BeaconState{ValidatorRegistry: validators}
+		state := &pb.BeaconState{Validators: validators}
 		delta, err := ShardDelta(state, 0)
 		if err != nil {
 			t.Fatal(err)
@@ -475,7 +471,7 @@ func TestShardDelta_Ok(t *testing.T) {
 }
 
 func TestEpochStartShard_EpochOutOfBound(t *testing.T) {
-	_, err := EpochStartShard(&pb.BeaconState{}, 2)
+	_, err := StartShard(&pb.BeaconState{}, 2)
 	want := "epoch 2 can't be greater than 1"
 	if err.Error() != want {
 		t.Fatalf("Did not generate correct error. Want: %s, got: %s",
@@ -504,8 +500,8 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
 		}
-		state := &pb.BeaconState{ValidatorRegistry: validators, LatestStartShard: 100, Slot: 500}
-		startShard, err := EpochStartShard(state, 0)
+		state := &pb.BeaconState{Validators: validators, StartShard: 100, Slot: 500}
+		startShard, err := StartShard(state, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -515,13 +511,68 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 	}
 }
 
+func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	tests := []struct {
+		validatorCount uint64
+		startShard     uint64
+	}{
+		{0 * validatorsPerEpoch, 960},
+		{1 * validatorsPerEpoch, 960},
+		{2 * validatorsPerEpoch, 960},
+		{3 * validatorsPerEpoch, 960},
+		{4 * validatorsPerEpoch, 896},
+	}
+	for _, test := range tests {
+		ClearAllCaches()
+		vs := make([]*pb.Validator, test.validatorCount)
+		// Build validator list with the following ratio:
+		// 10% activated in epoch 0
+		// 20% activated in epoch 1
+		// 40% activated in epoch 2
+		// 30% activated in epoch 3
+		// The validator set is broken up in buckets like this such that the
+		// shard delta between epochs will be different and we can test the
+		// inner logic of determining the start shard.
+		for i := uint64(1); i <= test.validatorCount; i++ {
+			// Determine activation bucket
+			bkt := i % 10
+			activationEpoch := uint64(0) // zeroth epoch 10%
+			if bkt > 2 && bkt <= 4 {     // first epoch 20%
+				activationEpoch = 1
+			} else if bkt > 4 && bkt <= 7 { // second epoch 40%
+				activationEpoch = 2
+			} else { // Remaining 30% in the third epoch.
+				activationEpoch = 3
+			}
+
+			vs[i-1] = &pb.Validator{
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+				ActivationEpoch: activationEpoch,
+			}
+		}
+		s := &pb.BeaconState{
+			Validators: vs,
+			Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
+		}
+		startShard, err := StartShard(s, 2 /*epoch*/)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if test.startShard != startShard {
+			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
+		}
+
+	}
+}
+
 func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
-	activeRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
+	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -530,9 +581,9 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestActiveIndexRoots: activeRoots,
-		LatestRandaoMixes:      activeRoots,
+		Validators:       validators,
+		ActiveIndexRoots: activeRoots,
+		RandaoMixes:      activeRoots,
 	}
 
 	tests := []struct {
@@ -543,11 +594,12 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}{
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0x01},
+				AggregationBits: bitfield.Bitlist{0x05},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot: 5,
@@ -555,33 +607,36 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		{
 
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0x02},
+				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 10,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot: 10,
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0x02},
+				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot: 20,
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0xFF, 0xC0},
+				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 5,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot:   5,
@@ -589,11 +644,12 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 		{
 			attestation: &pb.Attestation{
-				AggregationBitfield: []byte{0xFF},
+				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
 				Data: &pb.AttestationData{
 					Crosslink: &pb.Crosslink{
 						Shard: 20,
 					},
+					Target: &pb.Checkpoint{},
 				},
 			},
 			stateSlot:           20,
@@ -601,7 +657,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for i, tt := range tests {
 		ClearAllCaches()
 		state.Slot = tt.stateSlot
 		verified, err := VerifyAttestationBitfield(state, tt.attestation)
@@ -618,11 +674,92 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 			continue
 		}
 		if err != nil {
-			t.Errorf("Failed to verify bitfield: %v", err)
+			t.Errorf("%d Failed to verify bitfield: %v", i, err)
 			continue
 		}
 		if !verified {
-			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBitfield)
+			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBits)
+		}
+	}
+}
+
+func TestCompactCommitteesRoot_OK(t *testing.T) {
+	ClearAllCaches()
+	// Create 10 committees
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*pb.Validator, validatorCount)
+	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		activeRoots[i] = []byte{'A'}
+	}
+
+	state := &pb.BeaconState{
+		Slot:             196,
+		Validators:       validators,
+		ActiveIndexRoots: activeRoots,
+		RandaoMixes:      activeRoots,
+	}
+
+	_, err := CompactCommitteesRoot(state, 1)
+	if err != nil {
+		t.Fatalf("Could not get compact root %v", err)
+	}
+}
+
+func TestCompressValidator(t *testing.T) {
+	tests := []struct {
+		validator *pb.Validator
+		idx       uint64
+		want      uint64
+	}{
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 32e9,
+				Slashed:          true,
+			},
+			idx:  128,
+			want: 8421408, // (128 << 16) + (1 << 15) + (32e9 / (2**0 * 10**9))
+		},
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 32e9,
+				Slashed:          false,
+			},
+			idx:  128,
+			want: 8388640, // (128 << 16) + (0 << 15) + (32e9 / (2**0 * 10**9))
+		},
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 33e9,
+				Slashed:          false,
+			},
+			idx:  128,
+			want: 8388641, // (128 << 16) + (0 << 15) + (33e9 / (2**0 * 10**9))
+		},
+		{
+			validator: &pb.Validator{
+				EffectiveBalance: 33e9,
+				Slashed:          false,
+			},
+			idx:  129,
+			want: 8454177, // (129 << 16) + (0 << 15) + (33e9 / (2**0 * 10**9))
+		},
+	}
+
+	for _, tt := range tests {
+		got := compressValidator(tt.validator, tt.idx)
+		if got != tt.want {
+			t.Errorf(
+				"compressValidator({%v}, %d) = %d, wanted %d",
+				tt.validator,
+				tt.idx,
+				got,
+				tt.want,
+			)
 		}
 	}
 }
@@ -636,9 +773,9 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -646,7 +783,7 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -675,9 +812,9 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -685,7 +822,7 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -714,9 +851,9 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -724,7 +861,7 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -754,9 +891,9 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -764,7 +901,7 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -794,9 +931,9 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry:      validators,
-		LatestRandaoMixes:      make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		LatestActiveIndexRoots: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -804,7 +941,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := GenerateSeed(state, epoch)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		b.Fatal(err)
 	}

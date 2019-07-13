@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -14,20 +15,21 @@ import (
 
 var currentEpochSeed = cache.NewSeedCache()
 
-// GenerateSeed generates the randao seed of a given epoch.
+// ErrInvalidStateLatestActiveIndexRoots is returned when the state active
+// index root count does not match the expected EpochsPerHistoricalVector.
+var ErrInvalidStateLatestActiveIndexRoots = errors.New("state does not have correct number of latest active index roots")
+
+// Seed returns the randao seed used for shuffling of a given epoch.
 //
 // Spec pseudocode definition:
-//  def generate_seed(state: BeaconState,
-//     epoch: Epoch) -> Bytes32:
-//     """
-//     Generate a seed for the given ``epoch``.
-//     """
-//     return hash(
-//     get_randao_mix(state, epoch + LATEST_RANDAO_MIXES_LENGTH - MIN_SEED_LOOKAHEAD) +
-//     get_active_index_root(state, epoch) +
-//     int_to_bytes32(epoch)
-// )
-func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
+//  def get_seed(state: BeaconState, epoch: Epoch) -> Hash:
+//    """
+//    Return the seed at ``epoch``.
+//    """
+//    mix = get_randao_mix(state, Epoch(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD))  # Avoid underflow
+//    active_index_root = state.active_index_roots[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
+//    return hash(mix + active_index_root + int_to_bytes(epoch, length=32))
+func Seed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 	seed, err := currentEpochSeed.SeedInEpoch(epoch)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not retrieve total balance from cache: %v", err)
@@ -36,9 +38,14 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 		return bytesutil.ToBytes32(seed), nil
 	}
 
-	lookAheadEpoch := epoch + params.BeaconConfig().LatestRandaoMixesLength -
+	lookAheadEpoch := epoch + params.BeaconConfig().EpochsPerHistoricalVector -
 		params.BeaconConfig().MinSeedLookahead
 
+	// Check that the state has the correct latest active index roots or
+	// randao mix may panic for index out of bounds.
+	if uint64(len(state.ActiveIndexRoots)) != params.BeaconConfig().EpochsPerHistoricalVector {
+		return [32]byte{}, ErrInvalidStateLatestActiveIndexRoots
+	}
 	randaoMix := RandaoMix(state, lookAheadEpoch)
 
 	indexRoot := ActiveIndexRoot(state, epoch)
@@ -70,22 +77,26 @@ func GenerateSeed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 //    """
 //    return state.latest_active_index_roots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
-	return state.LatestActiveIndexRoots[epoch%params.BeaconConfig().LatestActiveIndexRootsLength]
+	newRootLength := len(state.ActiveIndexRoots[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+	newRoot := make([]byte, newRootLength)
+	copy(newRoot, state.ActiveIndexRoots[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+	return newRoot
 }
 
 // RandaoMix returns the randao mix (xor'ed seed)
 // of a given slot. It is used to shuffle validators.
 //
 // Spec pseudocode definition:
-//   def get_randao_mix(state: BeaconState,
-//                   epoch: Epoch) -> Bytes32:
+//   def get_randao_mix(state: BeaconState, epoch: Epoch) -> Hash:
 //    """
 //    Return the randao mix at a recent ``epoch``.
-//    ``epoch`` expected to be between (current_epoch - LATEST_RANDAO_MIXES_LENGTH, current_epoch].
 //    """
-//    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
+//    return state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
-	return state.LatestRandaoMixes[epoch%params.BeaconConfig().LatestRandaoMixesLength]
+	newMixLength := len(state.RandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+	newMix := make([]byte, newMixLength)
+	copy(newMix, state.RandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+	return newMix
 }
 
 // CreateRandaoReveal generates a epoch signature using the beacon proposer priv key.
@@ -97,7 +108,7 @@ func CreateRandaoReveal(beaconState *pb.BeaconState, epoch uint64, privKeys []*b
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := DomainVersion(beaconState, epoch, params.BeaconConfig().DomainRandao)
+	domain := Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal(), nil

@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -12,11 +11,11 @@ import (
 func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	s := &pb.BeaconState{
-		LatestBlockRoots: blockRoots,
+		BlockRoots: blockRoots,
 	}
 
 	tests := []struct {
@@ -47,6 +46,11 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 			stateSlot:    3000,
 			expectedRoot: []byte{57},
 		},
+		{
+			slot:         0,
+			stateSlot:    params.BeaconConfig().HistoricalRootsLimit,
+			expectedRoot: []byte{0},
+		},
 	}
 	for _, tt := range tests {
 		s.Slot = tt.stateSlot
@@ -69,11 +73,11 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
-		LatestBlockRoots: blockRoots,
+		BlockRoots: blockRoots,
 	}
 
 	tests := []struct {
@@ -82,22 +86,29 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			slot:      1000,
-			stateSlot: 500,
-			expectedErr: fmt.Sprintf("slot %d is not within range %d to %d",
-				1000,
-				0,
-				500),
+			slot:        1000,
+			stateSlot:   500,
+			expectedErr: "slot out of bounds",
 		},
 		{
-			slot:        129,
-			stateSlot:   400,
-			expectedErr: "slot 129 is not within range 272 to 399",
+			slot:        3000,
+			stateSlot:   3000,
+			expectedErr: "slot out of bounds",
+		},
+		{
+			// Edge case where stateSlot is over slots per historical root and
+			// slot is not within (stateSlot - HistoricalRootsLimit, statSlot]
+			slot:        1,
+			stateSlot:   params.BeaconConfig().HistoricalRootsLimit + 2,
+			expectedErr: "slot out of bounds",
 		},
 	}
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 		_, err := BlockRootAtSlot(state, tt.slot)
+		if err == nil {
+			t.Errorf("Expected error %s, got nil", tt.expectedErr)
+		}
 		if err != nil && err.Error() != tt.expectedErr {
 			t.Errorf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
 		}

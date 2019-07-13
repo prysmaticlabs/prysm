@@ -112,7 +112,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
 	}
-	headBlockRoot, err := hashutil.HashBeaconBlock(headBlock)
+	headRoot, err := ssz.SigningRoot(headBlock)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon block: %v", err)
 	}
@@ -131,7 +131,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	epochStartSlot := helpers.StartSlot(targetEpoch)
 	targetRoot := make([]byte, 32)
 	if epochStartSlot == headState.Slot {
-		targetRoot = headBlockRoot[:]
+		targetRoot = headRoot[:]
 	} else {
 		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
@@ -145,17 +145,18 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	if endEpoch > targetEpoch {
 		endEpoch = targetEpoch
 	}
-	crosslinkRoot, err := ssz.TreeHash(headState.CurrentCrosslinks[req.Shard])
+	crosslinkRoot, err := ssz.HashTreeRoot(headState.CurrentCrosslinks[req.Shard])
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash crosslink for shard %d: %v",
 			req.Shard, err)
 	}
 	res = &pbp2p.AttestationData{
-		BeaconBlockRoot: headBlockRoot[:],
-		SourceEpoch:     headState.CurrentJustifiedEpoch,
-		SourceRoot:      headState.CurrentJustifiedRoot,
-		TargetEpoch:     targetEpoch,
-		TargetRoot:      targetRoot,
+		BeaconBlockRoot: headRoot[:],
+		Source:          headState.CurrentJustifiedCheckpoint,
+		Target: &pbp2p.Checkpoint{
+			Epoch: targetEpoch,
+			Root:  targetRoot,
+		},
 		Crosslink: &pbp2p.Crosslink{
 			Shard:      req.Shard,
 			StartEpoch: startEpoch,

@@ -65,7 +65,7 @@ service ValidatorService {
   rpc DomainData(DomainRequest) returns (DomainResponse);
   rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse);
   rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
-  rpc CommitteeAssignment(CommitteeAssignmentsRequest) returns (CommitteeAssignmentResponse);
+  rpc CommitteeAssignment(AssignmentRequest) returns (AssignmentResponse);
   rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
   rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
   rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
@@ -144,14 +144,14 @@ message ValidatorIndexResponse {
   uint64 index = 1;
 }
 
-message CommitteeAssignmentsRequest {
+message AssignmentRequest {
   uint64 epoch_start = 1;
   repeated bytes public_keys = 2;
 }
 
-message CommitteeAssignmentResponse {
-  repeated CommitteeAssignment assignment = 1;
-  message CommitteeAssignment {
+message AssignmentResponse {
+  repeated ValidatorAssignment validator_assignment = 1;
+  message ValidatorAssignment {
     repeated uint64 committee = 1;
     uint64 shard = 2;
     uint64 slot = 3;
@@ -171,6 +171,7 @@ message ValidatorStatusResponse {
 
 message DomainRequest {
   uint64 epoch = 1;
+  bytes domain = 2;
 }
 
 message DomainResponse {

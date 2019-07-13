@@ -75,6 +75,7 @@ type ServerConfig struct {
 	MaxPeers               int
 	DepositContractAddress string
 	WhitelistCIDR          string
+	EnableUPnP             bool
 }
 
 // NewServer creates a new p2p server instance.
@@ -216,6 +217,8 @@ func (s *Server) Start() {
 		}
 
 		peersToWatch = append(peersToWatch, s.bootstrapNode, s.relayNodeAddr)
+
+		log.Infof("Listening on %s", s.host.Addrs())
 	}
 
 	for _, staticPeer := range s.staticPeers {

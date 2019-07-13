@@ -2,15 +2,14 @@ package powchain
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,23 +20,13 @@ import (
 )
 
 var (
-	depositEventSignature    = []byte("Deposit(bytes,bytes,bytes,bytes,bytes)")
-	chainStartEventSignature = []byte("Eth2Genesis(bytes32,bytes,bytes)")
+	depositEventSignature = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
 )
-
-// HasChainStartLogOccurred queries all logs in the deposit contract to verify
-// if ChainStart has occurred.
-func (w *Web3Service) HasChainStartLogOccurred() (bool, error) {
-	return w.depositContractCaller.ChainStarted(&bind.CallOpts{})
-}
 
 // ETH2GenesisTime retrieves the genesis time of the beacon chain
 // from the deposit contract.
-func (w *Web3Service) ETH2GenesisTime() (uint64, error) {
-	if w.genesisTime != time.Unix(0, 0) {
-		return uint64(w.genesisTime.Unix()), nil
-	}
-	return 0, errors.New("chain hasn't started yet")
+func (w *Web3Service) ETH2GenesisTime() uint64 {
+	return w.eth2GenesisTime
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -46,10 +35,19 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
-		return
-	}
-	if depositLog.Topics[0] == hashutil.HashKeccak256(chainStartEventSignature) && !w.chainStarted {
-		w.ProcessChainStartLog(depositLog)
+		if !w.chainStarted {
+			blk, err := w.blockFetcher.BlockByHash(w.ctx, depositLog.BlockHash)
+			if err != nil {
+				log.Errorf("Could not get eth1 block %v", err)
+				return
+			}
+			timeStamp := blk.Time()
+			triggered := state.IsValidGenesisState(w.activeValidatorCount, timeStamp)
+			if triggered {
+				w.setGenesisTime(timeStamp)
+				w.ProcessChainStart(uint64(w.eth2GenesisTime))
+			}
+		}
 		return
 	}
 	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
@@ -104,7 +102,6 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	deposit := &pb.Deposit{
 		Data:  depositData,
-		Index: index,
 		Proof: proof,
 	}
 
@@ -116,15 +113,22 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		} else {
 			w.beaconDB.MarkPubkeyForChainstart(w.ctx, pubkey)
 		}
+
 	}
 
 	// We always store all historical deposits in the DB.
-	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
+	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
+		root := w.depositTrie.Root()
+		eth1Data := &pb.Eth1Data{
+			DepositRoot:  root[:],
+			DepositCount: uint64(len(w.chainStartDeposits)),
+		}
+		w.determineActiveValidator(eth1Data, deposit)
 	} else {
-		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
+		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -139,33 +143,11 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 }
 
-// ProcessChainStartLog processes the log which had been received from
+// ProcessChainStart processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
-func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
-	chainStartCount.Inc()
-	chainStartDepositRoot, _, timestampData, err := contracts.UnpackChainStartLogData(depositLog.Data)
-	if err != nil {
-		log.Errorf("Unable to unpack ChainStart log data %v", err)
-		return
-	}
-
-	w.chainStartETH1Data = &pb.Eth1Data{
-		BlockRoot:   depositLog.BlockHash[:],
-		DepositRoot: chainStartDepositRoot[:],
-	}
-
-	timestampBoundary := binary.LittleEndian.Uint64(timestampData)
+func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 	w.chainStarted = true
-	w.depositRoot = chainStartDepositRoot[:]
-
-	_, err = w.blockFetcher.BlockByNumber(w.ctx, big.NewInt(int64(depositLog.BlockNumber)))
-	if err != nil {
-		log.Errorf("could not retrieve block %v", err)
-		return
-	}
-	chainStartTime := time.Unix(int64(timestampBoundary), 0)
-	w.genesisTime = chainStartTime
-
+	chainStartTime := time.Unix(int64(genesisTime), 0)
 	depHashes, err := w.ChainStartDepositHashes()
 	if err != nil {
 		log.Errorf("Generating chainstart deposit hashes failed: %v", err)
@@ -188,6 +170,12 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 		"ChainStartTime": chainStartTime,
 	}).Info("Minimum number of validators reached for beacon-chain to start")
 	w.chainStartFeed.Send(chainStartTime)
+}
+
+func (w *Web3Service) setGenesisTime(timeStamp uint64) {
+	timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay
+	// genesisTime will be set to the first second of the day, two days after it was triggered.
+	w.eth2GenesisTime = timeStampRdDown + 2*params.BeaconConfig().SecondsPerDay
 }
 
 // processPastLogs processes all the past logs from the deposit contract and
@@ -213,8 +201,9 @@ func (w *Web3Service) processPastLogs() error {
 	if err != nil {
 		return fmt.Errorf("could not get head state: %v", err)
 	}
-	if currentState != nil && currentState.DepositIndex > 0 {
-		w.beaconDB.PrunePendingDeposits(w.ctx, currentState.DepositIndex)
+
+	if currentState != nil && currentState.Eth1DepositIndex > 0 {
+		w.beaconDB.PrunePendingDeposits(w.ctx, int(currentState.Eth1DepositIndex))
 	}
 
 	return nil

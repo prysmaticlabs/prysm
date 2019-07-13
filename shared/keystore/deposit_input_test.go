@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -46,12 +47,12 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	// Verify that the proof of possession is a signed copy of the input data.
 	proofOfPossessionInputPb := proto.Clone(result).(*pb.DepositData)
 	proofOfPossessionInputPb.Signature = nil
-	buf := new(bytes.Buffer)
-	if err := ssz.Encode(buf, proofOfPossessionInputPb); err != nil {
+	buf, err := ssz.Marshal(proofOfPossessionInputPb)
+	if err != nil {
 		t.Fatal(err)
 	}
-
-	if !sig.Verify(buf.Bytes(), k1.PublicKey, params.BeaconConfig().DomainDeposit) {
+	dom := bytesutil.FromBytes4(params.BeaconConfig().DomainDeposit)
+	if !sig.Verify(buf, k1.PublicKey, dom) {
 		t.Error("Invalid proof of proofOfPossession signature")
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -339,7 +340,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve chain head: %v", err)
 		return err
 	}
-	headBlkRoot, err := hashutil.HashBeaconBlock(head)
+	headBlkRoot, err := ssz.SigningRoot(head)
 	if err != nil {
 		log.Errorf("Could not hash chain head: %v", err)
 	}
@@ -348,7 +349,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve finalized block: %v", err)
 		return err
 	}
-	finalizedBlkRoot, err := hashutil.HashBeaconBlock(finalizedBlk)
+	finalizedBlkRoot, err := ssz.SigningRoot(finalizedBlk)
 	if err != nil {
 		log.Errorf("Could not hash finalized block: %v", err)
 	}
@@ -399,7 +400,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 	log.WithFields(logrus.Fields{
 		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRoot)),
-		"justifiedEpoch": attestation.Data.SourceEpoch,
+		"justifiedEpoch": attestation.Data.Source.Epoch,
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.

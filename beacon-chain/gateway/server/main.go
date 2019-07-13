@@ -9,6 +9,7 @@ import (
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/sirupsen/logrus"
+	_ "go.uber.org/automaxprocs"
 )
 
 var (

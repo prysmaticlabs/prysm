@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -239,7 +239,7 @@ func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool
 	if canonicalBlk == nil {
 		return false, nil
 	}
-	canonicalRoot, err := hashutil.HashBeaconBlock(canonicalBlk)
+	canonicalRoot, err := ssz.SigningRoot(canonicalBlk)
 	if err != nil {
 		return false, fmt.Errorf("could not hash block: %v", err)
 	}

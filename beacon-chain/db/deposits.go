@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"math/big"
 	"sort"
 
@@ -22,19 +23,24 @@ var (
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int) {
+func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int, index int, depositRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
 		log.WithFields(logrus.Fields{
-			"block":   blockNum,
-			"deposit": d,
+			"block":        blockNum,
+			"deposit":      d,
+			"index":        index,
+			"deposit root": hex.EncodeToString(depositRoot[:]),
 		}).Debug("Ignoring nil deposit insertion")
 		return
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum})
+	// keep the slice sorted on insertion in order to avoid costly sorting on retrival.
+	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Index >= index })
+	newDeposits := append([]*DepositContainer{{Deposit: d, block: blockNum, depositRoot: depositRoot, Index: index}}, db.deposits[heightIdx:]...)
+	db.deposits = append(db.deposits[:heightIdx], newDeposits...)
 	historicalDepositsCount.Inc()
 }
 
@@ -68,18 +74,33 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
 
-	var deposits []*pb.Deposit
+	var depositCntrs []*DepositContainer
 	for _, ctnr := range db.deposits {
 		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
-			deposits = append(deposits, ctnr.deposit)
+			depositCntrs = append(depositCntrs, ctnr)
 		}
 	}
-	// Sort the deposits by Merkle index.
-	sort.SliceStable(deposits, func(i, j int) bool {
-		return deposits[i].Index < deposits[j].Index
-	})
+
+	var deposits []*pb.Deposit
+	for _, dep := range depositCntrs {
+		deposits = append(deposits, dep.Deposit)
+	}
 
 	return deposits
+}
+
+// DepositsNumberAndRootAtHeight returns number of deposits made prior to blockheight and the
+// root that corresponds to the latest deposit at that blockheight.
+func (db *BeaconDB) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositsNumberAndRootAtHeight")
+	defer span.End()
+	db.depositsLock.RLock()
+	defer db.depositsLock.RUnlock()
+	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].block.Cmp(blockHeight) > 0 })
+	if heightIdx == 0 {
+		return 0, [32]byte{}
+	}
+	return uint64(heightIdx), db.deposits[heightIdx-1].depositRoot
 }
 
 // DepositByPubkey looks through historical deposits and finds one which contains
@@ -93,8 +114,8 @@ func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Dep
 	var deposit *pb.Deposit
 	var blockNum *big.Int
 	for _, ctnr := range db.deposits {
-		if bytes.Equal(ctnr.deposit.Data.Pubkey, pubKey[:48]) {
-			deposit = ctnr.deposit
+		if bytes.Equal(ctnr.Deposit.Data.Pubkey, pubKey) {
+			deposit = ctnr.Deposit
 			blockNum = ctnr.block
 			break
 		}
