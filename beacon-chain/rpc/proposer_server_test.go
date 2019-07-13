@@ -40,7 +40,7 @@ func TestProposeBlock_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	numDeposits := params.BeaconConfig().DepositsForChainStart
+	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
@@ -80,7 +80,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
@@ -122,7 +122,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	validators := make([]*pbp2p.Validator, params.BeaconConfig().DepositsForChainStart/8)
+	validators := make([]*pbp2p.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pbp2p.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -278,7 +278,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		beaconDB:         db,
 	}
 
-	validators := make([]*pbp2p.Validator, params.BeaconConfig().DepositsForChainStart/8)
+	validators := make([]*pbp2p.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pbp2p.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,

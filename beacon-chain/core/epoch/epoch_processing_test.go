@@ -20,6 +20,11 @@ func init() {
 		EnableCrosslinks: true,
 	})
 	helpers.ClearShuffledValidatorCache()
+
+	// TODO(2312): remove this and use the mainnet count.
+	c := params.BeaconConfig()
+	c.MinGenesisActiveValidatorCount = 16384
+	params.OverrideBeaconConfig(c)
 }
 
 func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
@@ -38,7 +43,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	}
 
 	// Generate validators and state for the 2 attestations.
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/16)
+	validators := make([]*pb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -95,8 +100,8 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	}
 
 	// Generate validators with balances and state for the 2 attestations.
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	balances := make([]uint64, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -456,8 +461,8 @@ func TestProcessCrosslinks_SuccessfulUpdate(t *testing.T) {
 	gs := uint64(0) // genesis slot
 	ge := uint64(0) // genesis epoch
 
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/8)
-	balances := make([]uint64, params.BeaconConfig().DepositsForChainStart/8)
+	validators := make([]*pb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
+	balances := make([]uint64, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -911,7 +916,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	helpers.ClearShuffledValidatorCache()
-	state := buildState(e+2, params.BeaconConfig().DepositsForChainStart/8)
+	state := buildState(e+2, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
@@ -1034,7 +1039,7 @@ func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
 
 func TestAttestationDelta_NoOneAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
-	validatorCount := params.BeaconConfig().DepositsForChainStart / 32
+	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 32
 	state := buildState(e+2, validatorCount)
 	//startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 2)
@@ -1079,7 +1084,7 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 func TestAttestationDelta_SomeAttested(t *testing.T) {
 	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
-	validatorCount := params.BeaconConfig().DepositsForChainStart / 8
+	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 8
 	state := buildState(e+2, validatorCount)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 3)
@@ -1161,7 +1166,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
-	validatorCount := params.BeaconConfig().DepositsForChainStart / 8
+	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 8
 	state := buildState(e+4, validatorCount)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 3)
@@ -1373,7 +1378,7 @@ func TestProcessRewardsAndPenalties_GenesisEpoch(t *testing.T) {
 func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
-	validatorCount := params.BeaconConfig().DepositsForChainStart / 8
+	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 8
 	state := buildState(e+2, validatorCount)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 3)

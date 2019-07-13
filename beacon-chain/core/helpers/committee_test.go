@@ -293,7 +293,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 	ClearAllCaches()
 
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,

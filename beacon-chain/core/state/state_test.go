@@ -19,6 +19,11 @@ func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		CacheTreeHash: false,
 	})
+
+	// TODO(2312): remove this and use the mainnet count.
+	c := params.BeaconConfig()
+	c.MinGenesisActiveValidatorCount = 16384
+	params.OverrideBeaconConfig(c)
 }
 
 func TestGenesisBeaconState_OK(t *testing.T) {
@@ -51,10 +56,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("HistoricalRootsLimit should be 8192 for these tests to pass")
 	}
 
-	if params.BeaconConfig().DepositsForChainStart != 16384 {
-		t.Error("DepositsForChainStart should be 16384 for these tests to pass")
+	if params.BeaconConfig().MinGenesisActiveValidatorCount != 16384 {
+		t.Error("MinGenesisActiveValidatorCount should be 16384 for these tests to pass")
 	}
-	depositsForChainStart := int(params.BeaconConfig().DepositsForChainStart)
+	depositsForChainStart := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	if params.BeaconConfig().EpochsPerSlashingsVector != 8192 {
 		t.Error("EpochsPerSlashingsVector should be 8192 for these tests to pass")
