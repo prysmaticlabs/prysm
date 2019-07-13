@@ -35,12 +35,6 @@ http_archive(
 )
 
 http_archive(
-    name = "build_bazel_rules_nodejs",
-    sha256 = "1db950bbd27fb2581866e307c0130983471d4c3cd49c46063a2503ca7b6770a4",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.29.0/rules_nodejs-0.29.0.tar.gz"],
-)
-
-http_archive(
     name = "io_bazel_rules_k8s",
     sha256 = "f37af27b3825dbaa811bcf4c3fcab581437fc0bd777e86468f19604ca2e99c6b",
     strip_prefix = "rules_k8s-60571086ea6e10b1ddd2512d5c0fd32d01fa5701",
@@ -68,16 +62,6 @@ load(
 )
 
 container_repositories()
-
-load("@build_bazel_rules_nodejs//:defs.bzl", "node_repositories", "yarn_install")
-
-node_repositories()
-
-yarn_install(
-    name = "npm",
-    package_json = "//:package.json",
-    yarn_lock = "//:yarn.lock",
-)
 
 # This requires rules_docker to be fully instantiated before it is pulled in.
 load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults", "k8s_repositories")
