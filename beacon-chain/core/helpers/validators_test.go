@@ -9,6 +9,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func init() {
+	// TODO(2312): remove this and use the mainnet count.
+	c := params.BeaconConfig()
+	c.MinGenesisActiveValidatorCount = 16384
+	params.OverrideBeaconConfig(c)
+}
+
 func TestIsActiveValidator_OK(t *testing.T) {
 	tests := []struct {
 		a uint64
@@ -148,7 +155,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart/8)
+	validators := make([]*pb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,

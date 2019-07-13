@@ -90,7 +90,7 @@ func main() {
 		},
 		cli.Int64Flag{
 			Name:        "chainStart",
-			Value:       params.ContractConfig().DepositsForChainStart.Int64(),
+			Value:       params.ContractConfig().MinGenesisActiveValidatorCount.Int64(),
 			Usage:       "Number of validators required for chain start",
 			Destination: &depositsForChainStart,
 		},

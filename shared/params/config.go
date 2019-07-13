@@ -96,13 +96,6 @@ type BeaconChainConfig struct {
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 }
 
-// DepositContractConfig contains the deposits for
-type DepositContractConfig struct {
-	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
-	MaxEffectiveBalance   *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
-}
-
 // ShardChainConfig contains configs for node to participate in shard chains.
 type ShardChainConfig struct {
 	ChunkSize         uint64 // ChunkSize defines the size of each chunk in bytes.
@@ -202,9 +195,9 @@ var defaultShardConfig = &ShardChainConfig{
 }
 
 var defaultDepositContractConfig = &DepositContractConfig{
-	DepositsForChainStart: big.NewInt(16384),
-	MinDepositAmount:      big.NewInt(1e9),
-	MaxEffectiveBalance:   big.NewInt(32e9),
+	MinGenesisActiveValidatorCount: big.NewInt(16384),
+	MinDepositAmount:               big.NewInt(1e9),
+	MaxEffectiveBalance:            big.NewInt(32e9),
 }
 
 var beaconConfig = defaultBeaconConfig
@@ -309,15 +302,6 @@ func ShardConfig() *ShardChainConfig {
 // ContractConfig retrieves the deposit contract config
 func ContractConfig() *DepositContractConfig {
 	return contractConfig
-}
-
-// DemoContractConfig uses the argument provided to initialize a fresh config.
-func DemoContractConfig(depositsReq *big.Int, minDeposit *big.Int, maxDeposit *big.Int) *DepositContractConfig {
-	return &DepositContractConfig{
-		DepositsForChainStart: depositsReq,
-		MinDepositAmount:      minDeposit,
-		MaxEffectiveBalance:   maxDeposit,
-	}
 }
 
 // UseDemoBeaconConfig for beacon chain services.
