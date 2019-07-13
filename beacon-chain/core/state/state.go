@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-// GenesisBeaconState gets called when DepositsForChainStart count of
+// GenesisBeaconState gets called when MinGenesisActiveValidatorCount count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
 // TODO(#2307): Update the comments here.
 //

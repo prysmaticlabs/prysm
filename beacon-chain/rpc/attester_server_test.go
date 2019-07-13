@@ -42,7 +42,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	validators := make([]*pbp2p.Validator, params.BeaconConfig().DepositsForChainStart/16)
+	validators := make([]*pbp2p.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pbp2p.Validator{
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
