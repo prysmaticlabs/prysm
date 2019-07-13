@@ -885,8 +885,24 @@ func ProcessDeposit(
 			}
 			root, err := ssz.SigningRoot(deposit.Data)
 			if err != nil {
-				return nil, fmt.Errorf("could not sign root for deposit data: %v", err)
+				return nil, fmt.Errorf("could not determine signing root for deposit data: %v", err)
 			}
+
+			fmt.Printf(
+				`domain=%d
+root=%#x
+deposit.Data.Signature=%#x
+deposit.Data.Pubkey=%#x
+deposit.Data.WithdrawalCredentials=%#x
+deposit.Data.Amount=%d
+`,
+				domain,
+				root,
+				deposit.Data.Signature,
+				deposit.Data.Pubkey,
+				deposit.Data.WithdrawalCredentials,
+				deposit.Data.Amount)
+
 			if !sig.Verify(root[:], pub, domain) {
 				return nil, fmt.Errorf("deposit signature did not verify")
 			}
