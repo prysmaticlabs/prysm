@@ -33,7 +33,7 @@ func runDepositTest(t *testing.T, filename string) {
 		t.Run(tt.Description, func(t *testing.T) {
 			if tt.Description == "invalid_sig_new_deposit" {
 				// TODO(#2857): uncompressed signature format is not supported
-				t.Skip()
+				t.Skip("Uncompressed BLS signature format is not supported")
 			}
 
 			valMap := stateutils.ValidatorIndexMap(tt.Pre)
