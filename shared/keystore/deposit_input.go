@@ -25,7 +25,6 @@ import (
 func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositData, error) {
 	var pubkey [48]byte
 	var withdrawalCreds [32]byte
-	var sig [96]byte
 	copy(pubkey[:], depositKey.PublicKey.Marshal())
 	copy(withdrawalCreds[:], withdrawalCredentialsHash(withdrawalKey))
 	di := &pb.DepositData{

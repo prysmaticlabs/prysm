@@ -231,10 +231,11 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.MinAttestationInclusionDelay = 1
 	demoConfig.TargetCommitteeSize = 1
 	demoConfig.DepositsForChainStart = 8
+	demoConfig.MinGenesisActiveValidatorCount = 8
 	demoConfig.SlotsPerEpoch = 8
 	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
-	demoConfig.EjectionBalance = 3.175 * 1e9
+	demoConfig.MaxEffectiveBalance = 3.2 * 1e6
+	demoConfig.EjectionBalance = 3.175 * 1e6
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.SlotsPerEth1VotingPeriod = 1
