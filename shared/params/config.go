@@ -96,6 +96,13 @@ type BeaconChainConfig struct {
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 }
 
+// DepositContractConfig contains the deposits for
+type DepositContractConfig struct {
+	MinGenesisActiveValidatorCount *big.Int // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
+	MinDepositAmount               *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
+	MaxEffectiveBalance            *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
+}
+
 // ShardChainConfig contains configs for node to participate in shard chains.
 type ShardChainConfig struct {
 	ChunkSize         uint64 // ChunkSize defines the size of each chunk in bytes.
