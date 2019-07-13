@@ -26,7 +26,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
@@ -49,7 +49,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 	}
 
 	if err := web3Service.processDeposit(eth1Data, deposits[0]); err != nil {
-		t.Fatalf("could not process deposit %v", err)
+		t.Fatalf("Could not process deposit %v", err)
 	}
 
 	if web3Service.activeValidatorCount != 1 {
@@ -67,7 +67,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 1, false)
@@ -93,7 +93,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 
 	err = web3Service.processDeposit(eth1Data, deposits[0])
 	if err == nil {
-		t.Fatal("no errors, when an error was expected")
+		t.Fatal("No errors, when an error was expected")
 	}
 
 	want := "deposit merkle branch of deposit root did not verify for root"
@@ -114,7 +114,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 1, false)
@@ -138,7 +138,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 
 	err = web3Service.processDeposit(eth1Data, deposits[0])
 	if err == nil {
-		t.Fatal("no errors, when an error was expected")
+		t.Fatal("No errors, when an error was expected")
 	}
 
 	want := "could not deserialize validator public key"
@@ -159,7 +159,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
@@ -186,7 +186,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 
 	err = web3Service.processDeposit(eth1Data, deposits[0])
 	if err == nil {
-		t.Fatal("no errors, when an error was expected")
+		t.Fatal("No errors, when an error was expected")
 	}
 
 	want := "could not convert bytes to signature"
@@ -207,7 +207,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	deposits, keys := testutil.SetupInitialDeposits(t, 1, true)
@@ -233,7 +233,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 	err = web3Service.processDeposit(eth1Data, deposits[0])
 	if err == nil {
-		t.Fatal("no errors, when an error was expected")
+		t.Fatal("No errors, when an error was expected")
 	}
 
 	want := "deposit signature did not verify"
@@ -254,7 +254,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	deposits, keys := testutil.SetupInitialDeposits(t, 1, true)
@@ -288,7 +288,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	// deposit till 31e9
 	for i := 0; i < int(factor-1); i++ {
 		if err := web3Service.processDeposit(eth1Data, deposits[0]); err != nil {
-			t.Fatalf("could not process deposit %v", err)
+			t.Fatalf("Could not process deposit %v", err)
 		}
 
 		if web3Service.activeValidatorCount == 1 {
@@ -307,7 +307,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	deposits, keys := testutil.SetupInitialDeposits(t, 10, true)
@@ -337,7 +337,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	for i, k := range keys {
 		eth1Data.DepositCount = uint64(i + 1)
 		if err := web3Service.processDeposit(eth1Data, deposits[i]); err != nil {
-			t.Fatalf("could not process deposit %v", err)
+			t.Fatalf("Could not process deposit %v", err)
 		}
 
 		if web3Service.activeValidatorCount != uint64(i+1) {

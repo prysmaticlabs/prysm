@@ -126,7 +126,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 			DepositCount: uint64(len(w.chainStartDeposits)),
 		}
 		if err := w.processDeposit(eth1Data, deposit); err != nil {
-			log.Errorf("invalid deposit processed %v", err)
+			log.Errorf("Invalid deposit processed: %v", err)
 			validData = false
 		}
 	} else {
