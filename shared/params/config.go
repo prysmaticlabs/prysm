@@ -225,7 +225,7 @@ func MainnetConfig() *BeaconChainConfig {
 // DemoBeaconConfig retrieves the demo beacon chain config.
 func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := *defaultBeaconConfig
-	demoConfig.ShardCount = 1
+	demoConfig.ShardCount = 8
 	demoConfig.MinAttestationInclusionDelay = 1
 	demoConfig.TargetCommitteeSize = 1
 	demoConfig.MinGenesisActiveValidatorCount = 8
