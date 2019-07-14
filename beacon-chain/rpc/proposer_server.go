@@ -43,10 +43,14 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
 
+	logrus.Info("get Parent")
+
 	parentRoot, err := ssz.SigningRoot(parent)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block signing root: %v", err)
 	}
+
+	logrus.Info("get Parent root")
 
 	// Construct block body
 	// Pack ETH1 deposits which have not been included in the beacon chain
@@ -55,17 +59,23 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get ETH1 data: %v", err)
 	}
 
+	logrus.Info("get eth1data")
+
 	// Pack ETH1 deposits which have not been included in the beacon chain.
 	deposits, err := ps.deposits(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get eth1 deposits: %v", err)
 	}
 
+	logrus.Info("get deposits")
+
 	// Pack aggregated attestations which have not been included in the beacon chain.
 	attestations, err := ps.attestations(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get pending attestations: %v", err)
 	}
+
+	logrus.Info("get attestations")
 
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
@@ -93,6 +103,8 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		}
 		blk.StateRoot = stateRoot
 	}
+
+	logrus.Info("compute root")
 
 	return blk, nil
 }
@@ -203,7 +215,7 @@ func (ps *ProposerServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error)
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	currentHeight := ps.powChainService.LatestBlockHeight()
-	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.Eth1Data.DepositRoot)
+	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
 	if stateLatestEth1Hash == [32]byte{} {
 		return ps.defaultEth1DataResponse(ctx, currentHeight)
 	}
