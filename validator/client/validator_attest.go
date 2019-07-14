@@ -95,7 +95,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		// Default is false until phase 1 where proof of custody gets implemented.
 		CustodyBit: false,
 	}
-	root, err := ssz.SigningRoot(attDataAndCustodyBit)
+	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"validator": truncatedPk,
