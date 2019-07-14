@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
@@ -149,4 +151,19 @@ func (h *HobbitsNode) parseTopic(message HobbitsMessage) (string, error) {
 	// TODO: checks against topicMapping?
 	// TODO: somehow updates h.Feeds?
 	return header.topic, nil
+}
+
+func (h *HobbitsNode) Feed(msg proto.Message) p2p.Feed {
+	// figure out the message type and return the proper feed that it has to go to
+
+
+	//t := messageType(msg)
+	//
+	//h.mutex.Lock()
+	//defer h.mutex.Unlock()
+	//if s.feeds[t] == nil {
+	//	s.feeds[t] = new(event.Feed)
+	//}
+	//
+	//return s.feeds[t]
 }

@@ -13,7 +13,7 @@ import (
 )
 
 type HobbitsNode struct {
-	Mutex       *sync.Mutex
+	sync.Mutex
 	NodeId      string
 	Host        string
 	Port        int

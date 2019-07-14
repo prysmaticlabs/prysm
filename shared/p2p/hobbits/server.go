@@ -8,9 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"time"
-	"sync"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -18,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
+	log "github.com/sirupsen/logrus"
 )
 
 func NewHobbitsNode(host string, port int, peers []string, db *db.BeaconDB) HobbitsNode {
@@ -117,14 +116,4 @@ func (h *HobbitsNode) Stop() error {
 // Service conforms to the p2p composite interface
 type Service shared.Service
 
-func (h *HobbitsNode) Feed(msg proto.Message) p2p.Feed {
-	//t := messageType(msg)
-	//
-	//h.mutex.Lock()
-	//defer h.mutex.Unlock()
-	//if s.feeds[t] == nil {
-	//	s.feeds[t] = new(event.Feed)
-	//}
-	//
-	//return s.feeds[t]
-}
+
