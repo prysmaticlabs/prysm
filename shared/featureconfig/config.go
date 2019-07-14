@@ -34,6 +34,7 @@ type FeatureFlagConfig struct {
 	EnableCommitteesCache         bool // EnableCommitteesCache for state transition.
 	CacheTreeHash                 bool // CacheTreeHash determent whether tree hashes will be cached.
 	EnableExcessDeposits          bool // EnableExcessDeposits in validator balances.
+	NoGenesisDelay                bool // NoGenesisDelay when processing a chain start genesis event.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -82,6 +83,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(DisableGossipSubFlag.Name) {
 		log.Info("Disabled gossipsub, using floodsub")
 		cfg.DisableGossipSub = true
+	}
+	if ctx.GlobalBool(NoGenesisDelayFlag.Name) {
+		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
+		cfg.NoGenesisDelay = true
 	}
 	InitFeatureConfig(cfg)
 }

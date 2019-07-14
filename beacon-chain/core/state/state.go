@@ -187,7 +187,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			state,
 			deposit,
 			validatorMap,
-			false,
+			true,
 			eth1DataExists,
 		)
 		if err != nil {

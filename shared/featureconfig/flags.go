@@ -56,6 +56,11 @@ var (
 		Name:  "enables-excess-deposit",
 		Usage: "Enables balances more than max deposit amount for a validator",
 	}
+	// NoGenesisDelay
+	NoGenesisDelayFlag = cli.BoolFlag{
+		Name:  "no-genesis-delay",
+		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -73,4 +78,5 @@ var BeaconChainFlags = []cli.Flag{
 	DisableGossipSubFlag,
 	CacheTreeHashFlag,
 	EnableExcessDepositsFlag,
+	NoGenesisDelayFlag,
 }
