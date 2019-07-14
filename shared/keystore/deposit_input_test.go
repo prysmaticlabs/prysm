@@ -5,21 +5,12 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		CacheTreeHash: false,
-	})
-}
 
 func TestDepositInput_GeneratesPb(t *testing.T) {
 	k1, err := keystore.NewKey(rand.Reader)
@@ -31,7 +22,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := keystore.DepositInput(k1, k2)
+	result, err := keystore.DepositInput(k1, k2, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,15 +35,13 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Verify that the proof of possession is a signed copy of the input data.
-	proofOfPossessionInputPb := proto.Clone(result).(*pb.DepositData)
-	proofOfPossessionInputPb.Signature = nil
-	buf, err := ssz.Marshal(proofOfPossessionInputPb)
+	sr, err := ssz.SigningRoot(result)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	dom := bytesutil.FromBytes4(params.BeaconConfig().DomainDeposit)
-	if !sig.Verify(buf, k1.PublicKey, dom) {
-		t.Error("Invalid proof of proofOfPossession signature")
+	if !sig.Verify(sr[:], k1.PublicKey, dom) {
+		t.Error("Invalid proof of deposit input signature")
 	}
 }

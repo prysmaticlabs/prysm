@@ -83,7 +83,6 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	DepositsForChainStart     uint64        // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 	SyncPollingInterval       int64         // SyncPollingInterval queries network nodes for sync status.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
@@ -99,9 +98,9 @@ type BeaconChainConfig struct {
 
 // DepositContractConfig contains the deposits for
 type DepositContractConfig struct {
-	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
-	MaxEffectiveBalance   *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
+	MinGenesisActiveValidatorCount *big.Int // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
+	MinDepositAmount               *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
+	MaxEffectiveBalance            *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -183,7 +182,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
-	DepositsForChainStart:     16384,
 	LogBlockDelay:             2,
 	BLSPubkeyLength:           48,
 	DefaultBufferSize:         10000,
@@ -204,9 +202,9 @@ var defaultShardConfig = &ShardChainConfig{
 }
 
 var defaultDepositContractConfig = &DepositContractConfig{
-	DepositsForChainStart: big.NewInt(16384),
-	MinDepositAmount:      big.NewInt(1e9),
-	MaxEffectiveBalance:   big.NewInt(32e9),
+	MinGenesisActiveValidatorCount: big.NewInt(16384),
+	MinDepositAmount:               big.NewInt(1e9),
+	MaxEffectiveBalance:            big.NewInt(32e9),
 }
 
 var beaconConfig = defaultBeaconConfig
@@ -227,7 +225,7 @@ func MainnetConfig() *BeaconChainConfig {
 // DemoBeaconConfig retrieves the demo beacon chain config.
 func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := *defaultBeaconConfig
-	demoConfig.ShardCount = 1
+	demoConfig.ShardCount = 8
 	demoConfig.MinAttestationInclusionDelay = 1
 	demoConfig.TargetCommitteeSize = 1
 	demoConfig.DepositsForChainStart = 8
@@ -312,15 +310,6 @@ func ShardConfig() *ShardChainConfig {
 // ContractConfig retrieves the deposit contract config
 func ContractConfig() *DepositContractConfig {
 	return contractConfig
-}
-
-// DemoContractConfig uses the argument provided to initialize a fresh config.
-func DemoContractConfig(depositsReq *big.Int, minDeposit *big.Int, maxDeposit *big.Int) *DepositContractConfig {
-	return &DepositContractConfig{
-		DepositsForChainStart: depositsReq,
-		MinDepositAmount:      minDeposit,
-		MaxEffectiveBalance:   maxDeposit,
-	}
 }
 
 // UseDemoBeaconConfig for beacon chain services.

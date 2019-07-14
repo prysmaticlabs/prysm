@@ -239,7 +239,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount/8, false)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -359,7 +359,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart/8, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount/8, false)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -576,7 +576,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
-	validatorCount := params.BeaconConfig().DepositsForChainStart * 4
+	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
 	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
 	validators := make([]*pb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
@@ -647,7 +647,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	testConfig := params.BeaconConfig()
 	testConfig.MaxTransfers = 1
 
-	validatorCount := params.BeaconConfig().DepositsForChainStart * 4
+	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
 	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
 	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {

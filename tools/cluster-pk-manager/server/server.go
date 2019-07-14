@@ -141,7 +141,7 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 
 		// Make the validator deposit
 		// NOTE: This uses the validator key as the withdrawal key
-		di, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/)
+		di, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/, new(big.Int).Div(s.depositAmount, big.NewInt(1e9)).Uint64())
 		if err != nil {
 			return nil, err
 		}

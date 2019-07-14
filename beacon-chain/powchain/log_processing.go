@@ -13,6 +13,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -126,7 +127,10 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 			DepositRoot:  root[:],
 			DepositCount: uint64(len(w.chainStartDeposits)),
 		}
-		w.determineActiveValidator(eth1Data, deposit)
+		if err := w.processDeposit(eth1Data, deposit); err != nil {
+			log.Errorf("Invalid deposit processed: %v", err)
+			validData = false
+		}
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 	}
@@ -147,6 +151,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 	w.chainStarted = true
+
 	chainStartTime := time.Unix(int64(genesisTime), 0)
 	depHashes, err := w.ChainStartDepositHashes()
 	if err != nil {
@@ -164,6 +169,15 @@ func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 	if err != nil {
 		log.Fatalf("Unable to generate deposit trie from ChainStart deposits: %v", err)
 	}
+
+	for i := range w.chainStartDeposits {
+		proof, err := sparseMerkleTrie.MerkleProof(i)
+		if err != nil {
+			log.Errorf("Unable to generate deposit proof %v", err)
+		}
+		w.chainStartDeposits[i].Proof = proof
+	}
+
 	w.depositTrie = sparseMerkleTrie
 
 	log.WithFields(logrus.Fields{
@@ -173,9 +187,13 @@ func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 }
 
 func (w *Web3Service) setGenesisTime(timeStamp uint64) {
-	timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay
-	// genesisTime will be set to the first second of the day, two days after it was triggered.
-	w.eth2GenesisTime = timeStampRdDown + 2*params.BeaconConfig().SecondsPerDay
+	if featureconfig.FeatureConfig().NoGenesisDelay {
+		w.eth2GenesisTime = uint64(time.Unix(int64(timeStamp), 0).Add(30 * time.Second).Unix())
+	} else {
+		timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay
+		// genesisTime will be set to the first second of the day, two days after it was triggered.
+		w.eth2GenesisTime = timeStampRdDown + 2*params.BeaconConfig().SecondsPerDay
+	}
 }
 
 // processPastLogs processes all the past logs from the deposit contract and

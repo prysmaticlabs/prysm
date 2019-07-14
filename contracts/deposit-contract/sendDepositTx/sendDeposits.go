@@ -147,6 +147,7 @@ func main() {
 		}
 
 		client := ethclient.NewClient(rpcClient)
+		depositAmountInGwei := uint64(depositAmount)
 		depositAmount = depositAmount * 1e9
 
 		// User inputs private key, sign tx with private key
@@ -203,7 +204,7 @@ func main() {
 		}
 
 		for _, validatorKey := range validatorKeys {
-			data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey)
+			data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
 			if err != nil {
 				log.Errorf("Could not generate deposit input data: %v", err)
 				continue

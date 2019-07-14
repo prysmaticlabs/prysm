@@ -157,7 +157,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		Data:       expectedAttestation.Data,
 		CustodyBit: false,
 	}
-	root, err := ssz.SigningRoot(attDataAndCustodyBit)
+	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 	if err != nil {
 		t.Fatal(err)
 	}
