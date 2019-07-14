@@ -8,7 +8,6 @@ import (
 	"github.com/renaynay/go-hobbits/encoding"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
-
 	"github.com/pkg/errors"
 )
 

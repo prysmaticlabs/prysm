@@ -176,7 +176,6 @@ func (h *HobbitsNode) blockBodies(message HobbitsMessage, conn net.Conn) error {
 	//var request p2p.Message
 	//request.Data = requestBody
 
-
 	return nil
 }
 
