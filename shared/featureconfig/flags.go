@@ -56,7 +56,7 @@ var (
 		Name:  "enables-excess-deposit",
 		Usage: "Enables balances more than max deposit amount for a validator",
 	}
-	// NoGenesisDelay
+	// NoGenesisDelayFlag disables the standard genesis delay.
 	NoGenesisDelayFlag = cli.BoolFlag{
 		Name:  "no-genesis-delay",
 		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
