@@ -3,7 +3,6 @@ package powchain
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"math/big"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
