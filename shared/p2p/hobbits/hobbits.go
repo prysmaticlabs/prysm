@@ -42,35 +42,6 @@ const (
 	ATTESTATION      // TODO: define in the spec what this means
 )
 
-type RPCHeader struct {
-	MethodID uint8 `bson:"method_id"`
-}
-
-type Hello struct {
-	NodeID               string   `bson:"node_id"`
-	LatestFinalizedRoot  [32]byte `bson:"latest_finalized_root"`
-	LatestFinalizedEpoch uint64   `bson:"latest_finalized_epoch"`
-	BestRoot             [32]byte `bson:"best_root"`
-	BestSlot             uint64   `bson:"best_slot"`
-}
-
-type GossipHeader struct {
-	topic string `bson:"topic"`
-}
-
-type Status struct {
-	UserAgent []byte `bson:"user_agent"`
-	Timestamp uint64 `bson:"timestamp"`
-}
-
-type BlockRequest struct {
-	StartRoot [32]byte `bson:"start_root"`
-	StartSlot uint64   `bson:"start_slot"`
-	Max       uint64   `bson:"max"`
-	Skip      uint64   `bson:"skip"`
-	Direction uint8    `bson:"direction"`
-}
-
 // Hobbits toggles a HobbitsNode and requires a host, port and list of peers to which it tries to connect.
 func Hobbits(host string, port int, peers []string, db *db.BeaconDB) *HobbitsNode {
 	node := NewHobbitsNode(host, port, peers, db)

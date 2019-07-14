@@ -4,14 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"reflect"
-	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
-	log "github.com/sirupsen/logrus"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/renaynay/go-hobbits/encoding"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/pkg/errors"
@@ -53,25 +48,11 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error { 
 	case HELLO:
 		log.Trace("HELLO received")
 
-		response := h.rpcHello()
-
-		responseBody, err := bson.Marshal(response)
-
-		responseMessage := HobbitsMessage{
-			Version:  message.Version,
-			Protocol: message.Protocol,
-			Header:   message.Header,
-			Body:     responseBody,
-		}
-		log.Trace(responseMessage)
-
-		err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
+		err := h.sendHello(message, conn)
 		if err != nil {
-			log.Trace("error sending a HELLO back") // TODO delete
-			return errors.Wrap(err, "error sending HELLO: ")
+			return errors.Wrap(err, "could not send HELLO response: ")
 		}
 
-		log.Trace("sending HELLO...")
 		return nil
 	case GOODBYE:
 		err := h.removePeer(conn)
@@ -83,120 +64,49 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error { 
 		return nil
 	case GET_STATUS:
 
-		// does something with the status of the other node
-		responseBody := Status{
-			UserAgent: []byte(fmt.Sprintf("prysm node %d", h.NodeId)),
-			Timestamp: uint64(time.Now().Unix()),
-		}
-
-		body, err := bson.Marshal(responseBody)
+		err := h.status(message, conn)
 		if err != nil {
-			return errors.Wrap(err, "error marshaling response body: ")
+			return errors.Wrap(err, "could not get status: ")
 		}
 
-		responseMessage := HobbitsMessage{
-			Version: message.Version,
-			Protocol: message.Protocol,
-			Header: message.Header,
-			Body: body,
-		}
-
-		err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
-		if err != nil {
-			return errors.Wrap(err, "error sending GET_STATUS: ")
-		}
+		return nil
 	case GET_BLOCK_HEADERS:
-		var request BlockRequest
-
-		err := bson.Unmarshal(message.Body, request)
+		err := h.blockHeaders(message, conn)
 		if err != nil {
-			return errors.Wrap(err, "could not unmarshal block header RPC request: ")
+			return errors.Wrap(err, "could not retrieve block headers: ")
 		}
 
-		var index int
-
+		return nil
 	case BLOCK_HEADERS:
+		//TODO
 		// log this?
+
+		return nil
 	case GET_BLOCK_BODIES: // TODO: this is so messed up
-		var requestBody BlockRequest
-
-		err := bson.Unmarshal(message.Body, requestBody)
+		err := h.blockBodies(message, conn)
 		if err != nil {
-			return errors.Wrap(err, "could not unmarshal block body RPC request: ")
+			return errors.Wrap(err, "could not retrieve block bodies: ")
 		}
 
-		var request p2p.Message
-		request.Data = requestBody
-
-
+		return nil
 	case BLOCK_BODIES:
+		//TODO
 		// log this somehow?
+
+		return nil
 	case GET_ATTESTATION:
-
-	case ATTESTATION:
-	}
-
-	return nil
-}
-
-func (h *HobbitsNode) rpcHello() Hello {
-	var response Hello
-
-	response.NodeID = h.NodeId
-	response.BestRoot = h.DB.HeadStateRoot()
-
-	headState, err := h.DB.HeadState(context.Background())
-	if err != nil {
-		log.Printf("error getting HeadState data from db: %s", err.Error())
-	} else {
-		response.BestSlot = headState.Slot // best slot
-	}
-
-	finalizedState, err := h.DB.FinalizedState()
-	if err != nil {
-		log.Printf("error getting FinalizedState data from db: %s", err.Error())
-	} else {
-		response.LatestFinalizedEpoch = finalizedState.Slot / 64 // finalized epoch
-
-		hashedFinalizedState, err := hashutil.HashProto(finalizedState) // finalized root
+		err := h.attestation(message, conn)
 		if err != nil {
-			log.Printf("error hashing FinalizedState: %s", err.Error())
-		} else {
-			response.LatestFinalizedRoot = hashedFinalizedState
+			return errors.Wrap(err, "could not retrieve attestation: ")
 		}
-	}
 
-	return response
-}
+		return nil
+	case ATTESTATION:
+		//TODO
+		// log this somehow?
 
-func (h *HobbitsNode) removePeer(peer net.Conn) error {
-	index := 0
-
-	for i, p := range h.PeerConns {
-		if reflect.DeepEqual(peer, p) {
-			index = i
-		}
+		return nil
 	}
-	if index == 0 {
-		return errors.New("error removing peer from node's open connections")
-	}
-	h.PeerConns = append(h.PeerConns[:index], h.PeerConns[index+1:]...)
-	err := peer.Close()
-	if err != nil {
-		return errors.Wrap(err, "error closing connection on peer")
-	}
-
-	index = 0
-
-	for i, p := range h.StaticPeers {
-		if reflect.DeepEqual(peer.RemoteAddr().String(), p) {
-			index = i
-		}
-	}
-	if index == 0 {
-		return errors.New("error removing peer from node's static peers")
-	}
-	h.StaticPeers = append(h.StaticPeers[:index], h.StaticPeers[index+1:]...)
 
 	return nil
 }
