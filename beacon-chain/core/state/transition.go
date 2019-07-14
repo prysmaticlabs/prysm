@@ -146,9 +146,12 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 //    ]
 func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
 	if state.Slot > slot {
-		return nil, fmt.Errorf("expected state.slot %d < block.slot %d", state.Slot, slot)
+		return nil, fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
 	}
 	for state.Slot < slot {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		state, err := ProcessSlot(ctx, state)
 		if err != nil {
 			return nil, fmt.Errorf("could not process slot: %v", err)
