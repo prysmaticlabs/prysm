@@ -80,22 +80,27 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
+	emptySig := make([]byte, 96)
+
 	blk := &pbp2p.BeaconBlock{
 		Slot:       req.Slot,
 		ParentRoot: parentRoot[:],
 		StateRoot:  stateRoot,
 		Body: &pbp2p.BeaconBlockBody{
-			Eth1Data:     eth1Data,
-			Deposits:     deposits,
-			Attestations: attestations,
-			// TODO(2766): Implement rest of the retrievals for beacon block operations
-			ProposerSlashings: nil,
-			AttesterSlashings: nil,
-			VoluntaryExits:    nil,
+			Eth1Data:          eth1Data,
+			Deposits:          deposits,
+			Attestations:      attestations,
+			RandaoReveal:      req.RandaoReveal,
+			Transfers:         []*pbp2p.Transfer{},
+			ProposerSlashings: []*pbp2p.ProposerSlashing{},
+			AttesterSlashings: []*pbp2p.AttesterSlashing{},
+			VoluntaryExits:    []*pbp2p.VoluntaryExit{},
+			Graffiti:          []byte{},
 		},
+		Signature: emptySig,
 	}
 
-	if !featureconfig.FeatureConfig().EnableComputeStateRoot {
+	if featureconfig.FeatureConfig().EnableComputeStateRoot {
 		// Compute state root with the newly constructed block.
 		stateRoot, err = ps.computeStateRoot(ctx, blk)
 		if err != nil {
@@ -265,7 +270,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.Bea
 		return nil, fmt.Errorf("could not execute state transition for state root %v", err)
 	}
 
-	root, err := hashutil.HashProto(s)
+	root, err := ssz.HashTreeRoot(s)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon state: %v", err)
 	}
@@ -361,10 +366,10 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
 	// Fetch all historical deposits up to an ancestor height.
-	depositsTillHeight, depositRoot := ps.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
-	if depositsTillHeight == 0 {
+	_, depositRoot := ps.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
+	/*if depositsTillHeight == 0 {
 		return nil, errors.New("could not fetch ETH1_FOLLOW_DISTANCE deposits")
-	}
+	} */
 	return &pbp2p.Eth1Data{
 		DepositRoot: depositRoot[:],
 		BlockHash:   blockHash[:],

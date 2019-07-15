@@ -37,9 +37,17 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
 		if !w.chainStarted {
+			if depositLog.BlockHash == [32]byte{} {
+				log.Error("Got empty blockhash from powchain service")
+				return
+			}
 			blk, err := w.blockFetcher.BlockByHash(w.ctx, depositLog.BlockHash)
 			if err != nil {
 				log.Errorf("Could not get eth1 block %v", err)
+				return
+			}
+			if blk == nil {
+				log.Errorf("Got empty block from powchain service %v", err)
 				return
 			}
 			timeStamp := blk.Time()
