@@ -1173,3 +1173,27 @@ go_repository(
     commit = "9d24e82272b4f38b78bc8cff74fa936d31ccd8ef",
     importpath = "golang.org/x/time",
 )
+
+go_repository(
+    name = "com_github_gregjones_httpcache",
+    commit = "901d90724c7919163f472a9812253fb26761123d",
+    importpath = "github.com/gregjones/httpcache",
+)
+
+go_repository(
+    name = "com_github_peterbourgon_diskv",
+    commit = "0be1b92a6df0e4f5cb0a5d15fb7f643d0ad93ce6",
+    importpath = "github.com/peterbourgon/diskv",
+)
+
+go_repository(
+    name = "com_github_googleapis_gnostic",
+    commit = "25d8b0b6698593f520d9d8dc5a88e6b16ca9ecc0",
+    importpath = "github.com/googleapis/gnostic",
+)
+
+go_repository(
+    name = "com_github_google_btree",
+    commit = "20236160a414454a9c64b6c8829381c6f4bddcaa",
+    importpath = "github.com/google/btree",
+)
