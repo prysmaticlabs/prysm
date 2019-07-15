@@ -42,7 +42,7 @@ func runSlashingsTests(t *testing.T, filename string) {
 	}
 }
 
-const slashingsPrefix = "eth2_spec_tests/tests/epoch_processing/slashings/"
+const slashingsPrefix = "tests/epoch_processing/slashings/"
 
 func TestSlashingsMinimal(t *testing.T) {
 	filepath, err := bazel.Runfile(slashingsPrefix + "slashings_minimal.yaml")

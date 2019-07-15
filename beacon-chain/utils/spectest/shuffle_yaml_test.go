@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
 
-const shufflePrefix = "eth2_spec_tests/tests/shuffling/core/"
+const shufflePrefix = "tests/shuffling/core/"
 
 func TestShufflingMinimal(t *testing.T) {
 	helpers.ClearAllCaches()

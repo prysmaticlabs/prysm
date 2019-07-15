@@ -43,7 +43,7 @@ go_test(
         "total_balance_test.go",
     ],
     embed = [":go_default_library"],
-    race = "on",
+    race = "off",
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",

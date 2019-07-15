@@ -59,7 +59,7 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 	}
 }
 
-var blkHeaderPrefix = "eth2_spec_tests/tests/operations/block_header/"
+var blkHeaderPrefix = "tests/operations/block_header/"
 
 func TestBlockHeaderMinimal(t *testing.T) {
 	filepath, err := bazel.Runfile(blkHeaderPrefix + "block_header_minimal.yaml")

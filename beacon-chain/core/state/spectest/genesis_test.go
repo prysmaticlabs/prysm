@@ -17,7 +17,7 @@ import (
 
 func TestGenesisInitializationMinimal(t *testing.T) {
 	t.Skip("Tests will fail with mainnet config - awaiting mainnet tests from the researchers")
-	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/genesis/initialization/genesis_initialization_minimal.yaml")
+	filepath, err := bazel.Runfile("tests/genesis/initialization/genesis_initialization_minimal.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 }
 
 func TestGenesisValidityMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/genesis/validity/genesis_validity_minimal.yaml")
+	filepath, err := bazel.Runfile("tests/genesis/validity/genesis_validity_minimal.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}

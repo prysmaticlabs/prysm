@@ -15,7 +15,7 @@ import (
 )
 
 func TestYamlStatic(t *testing.T) {
-	topPath := "/eth2_spec_tests/tests/ssz_static/core/"
+	topPath := "tests/ssz_static/core/"
 	yamlFileNames := []string{
 		"ssz_mainnet_random.yaml",
 	}

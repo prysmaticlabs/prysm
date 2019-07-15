@@ -40,7 +40,7 @@ func runRegisteryProcessingTests(t *testing.T, filename string) {
 	}
 }
 
-const registryUpdatesPrefix = "eth2_spec_tests/tests/epoch_processing/registry_updates/"
+const registryUpdatesPrefix = "tests/epoch_processing/registry_updates/"
 
 func TestRegistryProcessingMinimal(t *testing.T) {
 	filepath, err := bazel.Runfile(registryUpdatesPrefix + "registry_updates_minimal.yaml")
