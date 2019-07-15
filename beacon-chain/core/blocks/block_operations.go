@@ -26,17 +26,6 @@ import (
 
 var eth1DataCache = cache.NewEth1DataVoteCache()
 
-// VerifyProposerSignature uses BLS signature verification to ensure
-// the correct proposer created an incoming beacon block during state
-// transition processing.
-//
-// WIP - this is stubbed out until BLS is integrated into Prysm.
-func VerifyProposerSignature(
-	_ *pb.BeaconBlock,
-) error {
-	return nil
-}
-
 // ProcessEth1DataInBlock is an operation performed on each
 // beacon block to ensure the ETH1 data votes are processed
 // into the beacon state.
@@ -103,6 +92,7 @@ func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
+	enableLogging bool,
 ) (*pb.BeaconState, error) {
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
@@ -141,24 +131,45 @@ func ProcessBlockHeader(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 	if verifySignatures {
-		pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
-		if err != nil {
-			return nil, fmt.Errorf("could not deserialize proposer public key: %v", err)
-		}
-		domain := helpers.Domain(beaconState, helpers.SlotToEpoch(block.Slot), params.BeaconConfig().DomainBeaconProposer)
-		sig, err := bls.SignatureFromBytes(block.Signature)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert bytes to signature: %v", err)
-		}
-		root, err := ssz.SigningRoot(block)
-		if err != nil {
-			return nil, fmt.Errorf("could not sign root for header: %v", err)
-		}
-		if !sig.Verify(root[:], pub, domain) {
-			return nil, fmt.Errorf("block signature did not verify")
+		if err := verifyProposerSignature(beaconState, block, idx, enableLogging); err != nil {
+			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
 		}
 	}
 	return beaconState, nil
+}
+
+// verifyProposerSignature uses BLS signature verification to ensure
+// the correct proposer created an incoming beacon block during state
+// transition processing.
+//
+// Spec pseudocode definition:
+//   assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
+func verifyProposerSignature(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64, enableLogging bool) error {
+	proposer := beaconState.Validators[proposerIdx]
+	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
+	if err != nil {
+		return fmt.Errorf("could not deserialize proposer public key: %v", err)
+	}
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		return fmt.Errorf("could not get signing root of header: %v", err)
+	}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	sig, err := bls.SignatureFromBytes(block.Signature)
+	if err != nil {
+		return fmt.Errorf("could not deserialize proposer signature: %v", err)
+	}
+	if enableLogging {
+		log.WithFields(logrus.Fields{
+			"slot":          block.Slot,
+			"proposerIndex": proposerIdx,
+		}).Info("Verifying proposer signature")
+	}
+	if !sig.Verify(signingRoot[:], pub, domain) {
+		return fmt.Errorf("proposer signature did not verify")
+	}
+	return nil
 }
 
 // ProcessRandao checks the block proposer's

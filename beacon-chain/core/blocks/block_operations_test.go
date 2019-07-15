@@ -78,7 +78,6 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
 	}
-	wrongBlockSig := priv2.Sign([]byte("hello"), dt)
 	validators[5896].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
 		Slot: 0,
@@ -86,10 +85,15 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
 		ParentRoot: lbhsr[:],
-		Signature:  wrongBlockSig.Marshal(),
 	}
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Failed to get signing root of block: %v", err)
+	}
+	blockSig := priv2.Sign(signingRoot[:], dt)
+	block.Signature = blockSig.Marshal()[:]
 
-	_, err = blocks.ProcessBlockHeader(state, block, false)
+	_, err = blocks.ProcessBlockHeader(state, block, true, false)
 	want := "verify signature failed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -143,7 +147,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block, false)
+	_, err = blocks.ProcessBlockHeader(state, block, false, false)
 	want := "is different then block slot"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -192,7 +196,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block, false)
+	_, err = blocks.ProcessBlockHeader(state, block, false, false)
 	want := "does not match"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -245,7 +249,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block, false)
+	_, err = blocks.ProcessBlockHeader(state, block, false, false)
 	want := "was previously slashed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -291,7 +295,6 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate private key got: %v", err)
 	}
-	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[6033].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
 		Slot: 0,
@@ -299,13 +302,18 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
 		ParentRoot: latestBlockSignedRoot[:],
-		Signature:  blockSig.Marshal(),
 	}
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Failed to get signing root of block: %v", err)
+	}
+	blockSig := priv.Sign(signingRoot[:], dt)
+	block.Signature = blockSig.Marshal()[:]
 	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
 	}
-	newState, err := blocks.ProcessBlockHeader(state, block, false)
+	newState, err := blocks.ProcessBlockHeader(state, block, true, false)
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
