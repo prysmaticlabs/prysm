@@ -173,7 +173,7 @@ func (h *HobbitsNode) blockHeadersRequest(id peer.ID, message HobbitsMessage) er
 	return nil
 }
 
-func (h *HobbitsNode) blockBodiesRequest(id peer.ID, message HobbitsMessage) error {
+func (h *HobbitsNode) blockBodiesRequest(id peer.ID, message HobbitsMessage) error { // TODO start slot is deprecated so what to do..
 	var requestBody BlockBodiesRequest
 	err := bson.Unmarshal(message.Body, requestBody)
 	if err != nil {
@@ -183,21 +183,11 @@ func (h *HobbitsNode) blockBodiesRequest(id peer.ID, message HobbitsMessage) err
 	var bbr pb.BatchedBeaconBlockRequest
 	bbr.StartSlot = requestBody.StartSlot
 
-	// Todo: BBR in Send() needs to be replaced with a P2P.Message
-	h.Feed(&bbr).Send(bbr)
-
-	//var msg proto.Message
-	//msg.
-
-	//var requestBody BlockRequest
-	//
-	//err := bson.Unmarshal(message.Body, requestBody)
-	//if err != nil {
-	//	return errors.Wrap(err, "could not unmarshal block body RPC request: ")
-	//}
-	//
-	//var request p2p.Message
-	//request.Data = requestBody
+	h.Feed(&bbr).Send(p2p.Message{
+		Ctx: context.Background(),
+		Data: &bbr,
+		Peer: id,
+	})
 
 	return nil
 }
