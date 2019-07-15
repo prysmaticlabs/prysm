@@ -37,12 +37,16 @@ type Status struct {
 	Timestamp uint64 `bson:"timestamp"`
 }
 
-type BlockRequest struct {
+type BlockBodiesRequest struct {
 	StartRoot [32]byte `bson:"start_root"`
 	StartSlot uint64   `bson:"start_slot"`
 	Max       uint64   `bson:"max"`
 	Skip      uint64   `bson:"skip"`
 	Direction uint8    `bson:"direction"`
+}
+
+type BlockBodiesResponse struct {
+	Bodies []*pb.BeaconBlock `bson:"bodies"`
 }
 
 type AttestationRequest struct {
@@ -170,7 +174,7 @@ func (h *HobbitsNode) blockHeadersRequest(id peer.ID, message HobbitsMessage) er
 }
 
 func (h *HobbitsNode) blockBodiesRequest(id peer.ID, message HobbitsMessage) error {
-	var requestBody BlockRequest
+	var requestBody BlockBodiesRequest
 	err := bson.Unmarshal(message.Body, requestBody)
 	if err != nil {
 		return errors.Wrap(err, "could not unmarshal body of GET_BLOCK_BODY request")
@@ -196,6 +200,31 @@ func (h *HobbitsNode) blockBodiesRequest(id peer.ID, message HobbitsMessage) err
 	//request.Data = requestBody
 
 	return nil
+}
+
+func (h *HobbitsNode) blockBodiesResponse(msg proto.Message) (HobbitsMessage, error) {
+	blockBodies := BlockBodiesResponse{
+		Bodies: msg.(*pb.BatchedBeaconBlockResponse).BatchedBlocks,
+	}
+	body, err := bson.Marshal(blockBodies)
+	if err != nil {
+		return HobbitsMessage{}, errors.Wrap(err, "error marshaling body for BLOCK_BODIES response")
+	}
+
+	head := RPCHeader{
+		MethodID: 0x0D,
+	}
+	header, err := bson.Marshal(head)
+	if err != nil {
+		return HobbitsMessage{}, errors.Wrap(err, "error marshaling header for BLOCK_BODIES response")
+	}
+
+	return HobbitsMessage{
+		Version: uint32(3),
+		Protocol: encoding.RPC,
+		Header: header,
+		Body: body,
+	}, nil
 }
 
 func (h *HobbitsNode) attestationRequest(id peer.ID, message HobbitsMessage) error {
