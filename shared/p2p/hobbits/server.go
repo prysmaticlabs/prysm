@@ -103,7 +103,15 @@ func (h *HobbitsNode) Send(ctx context.Context, msg proto.Message, peer peer.ID)
 
 	switch msg.(type) { // investigate the MSG type
 	case *pb.BatchedBeaconBlockResponse:
-		hobMsg, err := h.beacon
+		hobMsg, err := h.blockBodiesResponse(msg)
+		if err != nil {
+			return errors.Wrap(err, "error building BLOCK_BODIES response")
+		}
+
+		err = h.Server.SendMessage(h.PeerConns[peer], encoding.Message(hobMsg))
+		if err != nil {
+			return errors.Wrap(err, "error sending BLOCK_BODIES response")
+		}
 	case *pb.AttestationResponse:
 		hobMsg, err := h.attestationResponse(msg)
 		if err != nil {
@@ -112,13 +120,9 @@ func (h *HobbitsNode) Send(ctx context.Context, msg proto.Message, peer peer.ID)
 
 		err = h.Server.SendMessage(h.PeerConns[peer], encoding.Message(hobMsg))
 		if err != nil {
-			return errors.Wrap(err, "error sending response")
+			return errors.Wrap(err, "error sending ATTESTATION response")
 		}
 	}
-
-
-	// build a correct hobbits message for said msg type
-	// send hobbits message to peer
 
 	return nil
 }
