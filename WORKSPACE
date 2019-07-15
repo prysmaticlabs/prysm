@@ -554,7 +554,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "8dd112bcdc25174059e45e07517d9fc663123347",
+    commit = "4def268fd1a49955bfb3dda92fe3db4f924f2285",
     importpath = "golang.org/x/crypto",
 )
 
@@ -823,6 +823,7 @@ go_repository(
 
 go_repository(
     name = "io_k8s_client_go",
+    build_extra_args = ["-exclude=vendor"],
     commit = "8abb21031259350aad0799bb42ba213ee8bb3399",
     importpath = "k8s.io/client-go",
 )
@@ -1165,4 +1166,10 @@ go_repository(
     name = "com_github_golang_glog",
     commit = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     importpath = "github.com/golang/glog",
+)
+
+go_repository(
+    name = "org_golang_x_time",
+    commit = "9d24e82272b4f38b78bc8cff74fa936d31ccd8ef",
+    importpath = "golang.org/x/time",
 )
