@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -137,6 +138,16 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
+	// Advance state with empty transitions if the head state slot is farther
+	// than 1 epoch away from the request.
+	if req.EpochStart > 1 && helpers.SlotToEpoch(s.Slot) < req.EpochStart-1 {
+		slotsToAdvance := helpers.StartSlot(req.EpochStart-1) - s.Slot
+		s, err = state.ProcessSlots(ctx, s, slotsToAdvance)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	validatorIndexMap := stateutils.ValidatorIndexMap(s)
 	var assignments []*pb.AssignmentResponse_ValidatorAssignment
 
@@ -191,7 +202,7 @@ func (vs *ValidatorServer) assignment(
 	}
 
 	committee, shard, slot, isProposer, err :=
-		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx))
+		helpers.CommitteeAssignment(beaconState, helpers.SlotToEpoch(epochStart), uint64(idx))
 	if err != nil {
 		return nil, err
 	}
