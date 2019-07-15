@@ -60,7 +60,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
-		log.Errorf("Could not unpack log %v", err)
+		log.Errorf("Could not unpack log: %v", err)
 		return
 	}
 	// If we have already seen this Merkle index, skip processing the log.
