@@ -219,8 +219,27 @@ func (h *HobbitsNode) attestationRequest(id peer.ID, message HobbitsMessage) err
 	return nil
 }
 
-func (h *HobbitsNode) attestationResponse(msg proto.Message) HobbitsMessage {
+func (h *HobbitsNode) attestationResponse(msg proto.Message) (HobbitsMessage, error) {
 	response := AttestationResponse{
-		Attestation: ,
+		Attestation: *msg.(*pb.AttestationResponse).Attestation,
 	}
+	body, err := bson.Marshal(response)
+	if err != nil {
+		return HobbitsMessage{}, errors.Wrap(err, "error marshaling body for ATTESTATION response")
+	}
+
+	head := RPCHeader{
+		MethodID: 0x0F,
+	}
+	header, err := bson.Marshal(head)
+	if err != nil {
+		return HobbitsMessage{}, errors.Wrap(err, "error marshaling header for ATTESTATION response")
+	}
+
+	return HobbitsMessage{
+		Version: uint32(3),
+		Protocol: encoding.RPC,
+		Header: header,
+		Body: body,
+	}, nil
 }
