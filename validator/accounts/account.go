@@ -61,6 +61,8 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return err
 	}
+	sig := validatorKey.SecretKey.Sign([]byte("hello world"), params.BeaconConfig().DomainDeposit)
+	fmt.Printf("%#x\n", sig)
 	validatorKeyFile = validatorKeyFile + hex.EncodeToString(validatorKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(validatorKeyFile, validatorKey, password); err != nil {
 		return fmt.Errorf("unable to store key %v", err)
