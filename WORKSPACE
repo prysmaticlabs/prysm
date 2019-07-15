@@ -44,6 +44,13 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_k8s/archive/60571086ea6e10b1ddd2512d5c0fd32d01fa5701.tar.gz",
 )
 
+git_repository(
+    name = "graknlabs_bazel_distribution",
+    commit = "999242406de52ef7844dc388710345c126ad2d4e",
+    # Update this after https://github.com/graknlabs/bazel-distribution/pull/168.
+    remote = "https://github.com/prestonvanloon/bazel-distribution",
+)
+
 # Override default import in rules_go with special patch until
 # https://github.com/gogo/protobuf/pull/582 is merged.
 git_repository(
@@ -178,7 +185,7 @@ protobuf_deps()
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "099afb3fd89784f9e3e594b7c2ed11335ca02a9b",
+    commit = "981f27aaf9bdce45391d0cd8bb522df514e0b566",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -511,7 +518,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "a34e9553db1e492c9a76e60db2296ae7e5fbb772",
+    commit = "fae7ac547cb717d141c433a2a173315e216b64c4",
     importpath = "golang.org/x/sys",
 )
 
