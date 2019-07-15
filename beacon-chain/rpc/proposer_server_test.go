@@ -95,7 +95,10 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-	parentRoot, _ := ssz.SigningRoot(genesis)
+	parentRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
 
 	proposerServer := &ProposerServer{
 		chainService:    mockChain,
