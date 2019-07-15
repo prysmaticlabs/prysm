@@ -25,8 +25,8 @@ func NewHobbitsNode(host string, port int, peers []string, db *db.BeaconDB) Hobb
 		Host:        host,
 		Port:        port,
 		StaticPeers: peers,
-		PeerConns:   []net.Conn{},
-		feeds:       map[reflect.Type]p2p.Feed{},
+		PeerConns:   make(map[peer.ID]net.Conn),
+		feeds:       make(map[reflect.Type]p2p.Feed),
 		DB:          db,
 	}
 }
@@ -51,7 +51,7 @@ func (h *HobbitsNode)  OpenConns() error {
 
 			h.Lock()
 
-			h.PeerConns = append(h.PeerConns, conn)
+			h.PeerConns[peer.ID(p)] = conn
 
 			h.Unlock()
 		}(p)
@@ -63,20 +63,23 @@ func (h *HobbitsNode)  OpenConns() error {
 func (h *HobbitsNode) Listen() error {
 	log.Trace("hobbits node is listening")
 
-	err := h.Server.Listen(func(conn net.Conn, message encoding.Message) {
-		err := h.processHobbitsMessage(HobbitsMessage(message), conn)
+	return h.Server.Listen(func(conn net.Conn, message encoding.Message) {
+		id := peer.ID(conn.RemoteAddr().String())
+		_, ok := h.PeerConns[id]
+		if !ok {
+			h.PeerConns[id] = conn
+		}
+
+		err := h.processHobbitsMessage(id, HobbitsMessage(message))
 		if err != nil {
 			log.Error(err)
 			_ = conn.Close()
-		} else {
-			log.Trace("a message has been received")
+			delete(h.PeerConns, id)
+			return
 		}
-	})
 
-	if err != nil {
-		return err
-	}
-	return nil
+		log.Trace("a message has been received")
+	})
 }
 
 func (h *HobbitsNode) Broadcast(ctx context.Context, message proto.Message) {
@@ -94,6 +97,13 @@ func (h *HobbitsNode) Broadcast(ctx context.Context, message proto.Message) {
 
 // Send conforms to the p2p composite interface.
 func (h *HobbitsNode) Send(ctx context.Context, msg proto.Message, peer peer.ID) error {
+	conn := h.PeerConns[peer]  // get the conn for the peer
+
+	t := messageTopic(msg) // investigate the MSG type
+
+	// build a correct hobbits message for said msg type
+	// send hobbits message to peer
+
 	return nil
 }
 

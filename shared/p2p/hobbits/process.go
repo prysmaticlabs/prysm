@@ -3,22 +3,24 @@ package hobbits
 import (
 	"context"
 	"fmt"
-	"net"
+	"reflect"
 
 	"github.com/gogo/protobuf/proto"
+	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
-	"github.com/pkg/errors"
 )
 
-func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Conn) error {
+func (h *HobbitsNode) processHobbitsMessage(id peer.ID, message HobbitsMessage) error {
 	switch message.Protocol {
 	case encoding.RPC:
 		log.Trace("beginning to process the RPC message...")
 
-		err := h.processRPC(message, conn)
+		err := h.processRPC(id, message)
 		if err != nil {
 			log.Trace("there was an error processing an RPC hobbits msg ") // TODO DELETE
 			return errors.Wrap(err, "error processing an RPC hobbits message")
@@ -38,43 +40,43 @@ func (h *HobbitsNode) processHobbitsMessage(message HobbitsMessage, conn net.Con
 	return errors.New(fmt.Sprintf("protocol unsupported %v", message.Protocol))
 }
 
-func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error { // TODO all of this needs to be put into funcs bc this function is getting disgusting.
+func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // TODO all of this needs to be put into funcs bc this function is getting disgusting.
 	method, err := h.parseMethodID(message.Header)
 	if err != nil {
 		log.Trace("method id could not be parsed from message header")
-		return errors.Wrap(err, "could not parse method_id: ")
+		return errors.Wrap(err, "could not parse method_id")
 	}
 
 	switch method {
 	case HELLO:
 		log.Trace("HELLO received")
 
-		err := h.sendHello(message, conn)
+		err := h.sendHello(id, message)
 		if err != nil {
-			return errors.Wrap(err, "could not send HELLO response: ")
+			return errors.Wrap(err, "could not send HELLO response")
 		}
 
 		return nil
 	case GOODBYE:
-		err := h.removePeer(conn)
+		err := h.removePeer(id)
 		if err != nil {
-			return errors.Wrap(err, "error handling GOODBYE: ")
+			return errors.Wrap(err, "error handling GOODBYE")
 		}
 
 		log.Trace("GOODBYE successful")
 		return nil
 	case GET_STATUS:
 
-		err := h.status(message, conn)
+		err := h.status(id, message)
 		if err != nil {
-			return errors.Wrap(err, "could not get status: ")
+			return errors.Wrap(err, "could not get status")
 		}
 
 		return nil
 	case GET_BLOCK_HEADERS:
-		err := h.blockHeaders(message, conn)
+		err := h.blockHeaders(id, message)
 		if err != nil {
-			return errors.Wrap(err, "could not retrieve block headers: ")
+			return errors.Wrap(err, "could not retrieve block headers")
 		}
 
 		return nil
@@ -84,9 +86,9 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error { 
 
 		return nil
 	case GET_BLOCK_BODIES: // TODO: this is so messed up
-		err := h.blockBodies(message, conn)
+		err := h.blockBodies(id, message)
 		if err != nil {
-			return errors.Wrap(err, "could not retrieve block bodies: ")
+			return errors.Wrap(err, "could not retrieve block bodies")
 		}
 
 		return nil
@@ -96,9 +98,9 @@ func (h *HobbitsNode) processRPC(message HobbitsMessage, conn net.Conn) error { 
 
 		return nil
 	case GET_ATTESTATION:
-		err := h.attestation(message, conn)
+		err := h.attestation(id, message)
 		if err != nil {
-			return errors.Wrap(err, "could not retrieve attestation: ")
+			return errors.Wrap(err, "could not retrieve attestation")
 		}
 
 		return nil
@@ -117,7 +119,7 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 
 	_, err := h.parseTopic(message)
 	if err != nil {
-		return errors.Wrap(err, "error parsing topic: ")
+		return errors.Wrap(err, "error parsing topic")
 	}
 
 	h.Broadcast(context.Background(), nil)
@@ -132,8 +134,8 @@ func (h *HobbitsNode) parseMethodID(header []byte) (RPCMethod, error) {
 
 	err := bson.Unmarshal(header, unmarshaledHeader)
 	if err != nil {
-		fmt.Println("could not unmarshal the header of the message: ") // TODO delete
-		return RPCMethod(0), errors.Wrap(err, "could not unmarshal the header of the message: ")
+		fmt.Println("could not unmarshal the header of the message") // TODO delete
+		return RPCMethod(0), errors.Wrap(err, "could not unmarshal the header of the message")
 	}
 
 	return RPCMethod(unmarshaledHeader.MethodID), nil
@@ -145,7 +147,7 @@ func (h *HobbitsNode) parseTopic(message HobbitsMessage) (string, error) {
 
 	err := bson.Unmarshal(message.Header, header)
 	if err != nil {
-		return "", errors.Wrap(err, "error unmarshaling gossip message header: ")
+		return "", errors.Wrap(err, "error unmarshaling gossip message header")
 	}
 
 	// TODO: checks against topicMapping?
@@ -154,16 +156,18 @@ func (h *HobbitsNode) parseTopic(message HobbitsMessage) (string, error) {
 }
 
 func (h *HobbitsNode) Feed(msg proto.Message) p2p.Feed {
-	// figure out the message type and return the proper feed that it has to go to
+	t := messageTopic(msg)
 
+	h.Lock()
+	defer h.Unlock()
 
-	//t := messageType(msg)
-	//
-	//h.mutex.Lock()
-	//defer h.mutex.Unlock()
-	//if s.feeds[t] == nil {
-	//	s.feeds[t] = new(event.Feed)
-	//}
-	//
-	//return s.feeds[t]
+	if h.feeds[t] == nil {
+		h.feeds[t] = new(event.Feed)
+	}
+
+	return h.feeds[t]
+}
+
+func messageTopic(msg proto.Message) reflect.Type {
+	return reflect.ValueOf(msg).Elem().Type()
 }

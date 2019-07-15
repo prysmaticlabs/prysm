@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
@@ -18,7 +19,7 @@ type HobbitsNode struct {
 	Host        string
 	Port        int
 	StaticPeers []string
-	PeerConns   []net.Conn
+	PeerConns   map[peer.ID]net.Conn
 	feeds       map[reflect.Type]p2p.Feed
 	Server      *tcp.Server
 	DB          *db.BeaconDB

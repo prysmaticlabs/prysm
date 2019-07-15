@@ -3,12 +3,13 @@ package hobbits
 import (
 	"context"
 	"fmt"
-	"net"
-	"reflect"
 	"time"
 
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/pkg/errors"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
@@ -43,7 +44,11 @@ type BlockRequest struct {
 	Direction uint8    `bson:"direction"`
 }
 
-func (h *HobbitsNode) status(message HobbitsMessage, conn net.Conn) error {
+type GetAttestation struct {
+	Signature []byte `bson:"signature"`
+}
+
+func (h *HobbitsNode) status(id peer.ID, message HobbitsMessage) error {
 	// does something with the status of the other node
 	responseBody := Status{
 		UserAgent: []byte(fmt.Sprintf("prysm node %d", h.NodeId)),
@@ -52,7 +57,7 @@ func (h *HobbitsNode) status(message HobbitsMessage, conn net.Conn) error {
 
 	body, err := bson.Marshal(responseBody)
 	if err != nil {
-		return errors.Wrap(err, "error marshaling response body: ")
+		return errors.Wrap(err, "error marshaling response body")
 	}
 
 	responseMessage := HobbitsMessage{
@@ -62,15 +67,15 @@ func (h *HobbitsNode) status(message HobbitsMessage, conn net.Conn) error {
 		Body:     body,
 	}
 
-	err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
+	err = h.Server.SendMessage(h.PeerConns[id], encoding.Message(responseMessage))
 	if err != nil {
-		return errors.Wrap(err, "error sending GET_STATUS: ")
+		return errors.Wrap(err, "error sending GET_STATUS")
 	}
 
 	return nil
 }
 
-func (h *HobbitsNode) sendHello(message HobbitsMessage, conn net.Conn) error {
+func (h *HobbitsNode) sendHello(id peer.ID, message HobbitsMessage) error {
 	response := h.rpcHello()
 
 	responseBody, err := bson.Marshal(response)
@@ -83,10 +88,10 @@ func (h *HobbitsNode) sendHello(message HobbitsMessage, conn net.Conn) error {
 	}
 	log.Trace(responseMessage)
 
-	err = h.Server.SendMessage(conn, encoding.Message(responseMessage))
+	err = h.Server.SendMessage(h.PeerConns[id], encoding.Message(responseMessage))
 	if err != nil {
 		log.Trace("error sending a HELLO back") // TODO delete
-		return errors.Wrap(err, "error sending HELLO: ")
+		return errors.Wrap(err, "error sending HELLO")
 	}
 
 	log.Trace("sending HELLO...")
@@ -123,39 +128,33 @@ func (h *HobbitsNode) rpcHello() Hello {
 	return response
 }
 
-func (h *HobbitsNode) removePeer(peer net.Conn) error {
-	index := 0
+func (h *HobbitsNode) removePeer(id peer.ID) error {
+	peer := h.PeerConns[id]
+	delete(h.PeerConns, id)
 
-	for i, p := range h.PeerConns {
-		if reflect.DeepEqual(peer, p) {
-			index = i
-		}
-	}
-	if index == 0 {
-		return errors.New("error removing peer from node's open connections")
-	}
-	h.PeerConns = append(h.PeerConns[:index], h.PeerConns[index+1:]...)
 	err := peer.Close()
 	if err != nil {
 		return errors.Wrap(err, "error closing connection on peer")
 	}
-
-	index = 0
-
-	for i, p := range h.StaticPeers {
-		if reflect.DeepEqual(peer.RemoteAddr().String(), p) {
-			index = i
-		}
-	}
-	if index == 0 {
-		return errors.New("error removing peer from node's static peers")
-	}
-	h.StaticPeers = append(h.StaticPeers[:index], h.StaticPeers[index+1:]...)
-
+	//
+	//index = 0
+	//
+	//for i, p := range h.StaticPeers {
+	//	if reflect.DeepEqual(peer.RemoteAddr().String(), p) {
+	//		index = i
+	//	}
+	//}
+	//if index == 0 {
+	//	return errors.New("error removing peer from node's static peers")
+	//}
+	//h.StaticPeers = append(h.StaticPeers[:index], h.StaticPeers[index+1:]...)
+	//
 	return nil
 }
 
-func (h *HobbitsNode) blockHeaders(message HobbitsMessage, conn net.Conn) error {
+func (h *HobbitsNode) blockHeaders(id peer.ID, message HobbitsMessage) error {
+
+
 	// var request BlockRequest // TODO: might not need BlockRequest struct, just unmarshal into protobuf
 	//err := bson.Unmarshal(message.Body, request)
 	//if err != nil {
@@ -165,7 +164,22 @@ func (h *HobbitsNode) blockHeaders(message HobbitsMessage, conn net.Conn) error 
 	return nil
 }
 
-func (h *HobbitsNode) blockBodies(message HobbitsMessage, conn net.Conn) error {
+func (h *HobbitsNode) blockBodies(id peer.ID, message HobbitsMessage) error {
+	var requestBody BlockRequest
+	err := bson.Unmarshal(message.Body, requestBody)
+	if err != nil {
+		return errors.Wrap(err, "could not unmarshal body of GET_BLOCK_BODY request")
+	}
+
+	var bbr ethereum_beacon_p2p_v1.BatchedBeaconBlockRequest
+	bbr.StartSlot = requestBody.StartSlot
+
+	// Todo: BBR in Send() needs to be replaced with a P2P.Message
+	h.Feed(&bbr).Send(bbr)
+
+	//var msg proto.Message
+	//msg.
+
 	//var requestBody BlockRequest
 	//
 	//err := bson.Unmarshal(message.Body, requestBody)
@@ -179,7 +193,23 @@ func (h *HobbitsNode) blockBodies(message HobbitsMessage, conn net.Conn) error {
 	return nil
 }
 
-func (h *HobbitsNode) attestation(message HobbitsMessage, conn net.Conn) error {
+func (h *HobbitsNode) attestation(id peer.ID, message HobbitsMessage) error {
+	var requestBody GetAttestation
+
+	err := bson.Unmarshal(message.Body, requestBody)
+	if err != nil {
+		return errors.Wrap(err, "error unmarshaling body of GET_ATTESTATION request")
+	}
+
+	ar := &ethereum_beacon_p2p_v1.AttestationRequest{
+		Hash: requestBody.Signature,
+	}
+
+	h.Feed(ar).Send(p2p.Message{
+		Ctx: context.Background(),
+		Data: ar,
+		Peer: id,
+	})
 
 	return nil
 }
