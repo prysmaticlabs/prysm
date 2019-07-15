@@ -179,8 +179,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 
 	depositRoot := trie.Root()
+	state.Eth1Data.DepositRoot = depositRoot[:]
 	for i, deposit := range deposits {
-		state.Eth1Data.DepositRoot = depositRoot[:]
 		state, err = b.ProcessDeposit(
 			state,
 			deposit,

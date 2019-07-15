@@ -352,7 +352,6 @@ func (vs *ValidatorServer) validatorStatus(
 	}
 
 	if depositBlockSlot == 0 {
-		log.Error("3")
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,

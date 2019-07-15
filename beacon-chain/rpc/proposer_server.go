@@ -43,14 +43,10 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
 
-	logrus.Info("get Parent")
-
 	parentRoot, err := ssz.SigningRoot(parent)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block signing root: %v", err)
 	}
-
-	logrus.Info("get Parent root")
 
 	// Construct block body
 	// Pack ETH1 deposits which have not been included in the beacon chain
@@ -59,23 +55,17 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get ETH1 data: %v", err)
 	}
 
-	logrus.Info("get eth1data")
-
 	// Pack ETH1 deposits which have not been included in the beacon chain.
 	deposits, err := ps.deposits(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get eth1 deposits: %v", err)
 	}
 
-	logrus.Info("get deposits")
-
 	// Pack aggregated attestations which have not been included in the beacon chain.
 	attestations, err := ps.attestations(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get pending attestations: %v", err)
 	}
-
-	logrus.Info("get attestations")
 
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
@@ -109,8 +99,6 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		}
 		blk.StateRoot = stateRoot
 	}
-
-	logrus.Info("compute root")
 
 	return blk, nil
 }
@@ -367,10 +355,14 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
 	// Fetch all historical deposits up to an ancestor height.
-	_, depositRoot := ps.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
-	/*if depositsTillHeight == 0 {
-		return nil, errors.New("could not fetch ETH1_FOLLOW_DISTANCE deposits")
-	} */
+	depositsTillHeight, depositRoot := ps.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
+	if depositsTillHeight == 0 {
+		trie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			return nil, fmt.Errorf("could not get new trie %v", err)
+		}
+		depositRoot = trie.Root()
+	}
 	return &pbp2p.Eth1Data{
 		DepositRoot: depositRoot[:],
 		BlockHash:   blockHash[:],

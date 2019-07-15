@@ -97,8 +97,10 @@ func (db *BeaconDB) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeig
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
 	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].block.Cmp(blockHeight) > 0 })
+	// send the deposit root of the empty trie, if eth1follow distance is greater than the time of the earliest
+	// deposit.
 	if heightIdx == 0 {
-		return 0, db.deposits[0].depositRoot
+		return 0, [32]byte{}
 	}
 	return uint64(heightIdx), db.deposits[heightIdx-1].depositRoot
 }
