@@ -87,10 +87,11 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		ParentRoot: parentRoot[:],
 		StateRoot:  stateRoot,
 		Body: &pbp2p.BeaconBlockBody{
-			Eth1Data:          eth1Data,
-			Deposits:          deposits,
-			Attestations:      attestations,
-			RandaoReveal:      req.RandaoReveal,
+			Eth1Data:     eth1Data,
+			Deposits:     deposits,
+			Attestations: attestations,
+			RandaoReveal: req.RandaoReveal,
+			// TODO(2766): Implement rest of the retrievals for beacon block operations
 			Transfers:         []*pbp2p.Transfer{},
 			ProposerSlashings: []*pbp2p.ProposerSlashing{},
 			AttesterSlashings: []*pbp2p.AttesterSlashing{},
