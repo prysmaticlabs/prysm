@@ -16,18 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
-
-func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableComputeStateRoot: true,
-	})
-}
 
 func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
