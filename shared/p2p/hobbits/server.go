@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -99,7 +100,13 @@ func (h *HobbitsNode) Broadcast(ctx context.Context, message proto.Message) {
 func (h *HobbitsNode) Send(ctx context.Context, msg proto.Message, peer peer.ID) error {
 	conn := h.PeerConns[peer]  // get the conn for the peer
 
-	t := messageTopic(msg) // investigate the MSG type
+	switch msg.(type) { // investigate the MSG type
+	case *pb.BatchedBeaconBlockResponse:
+
+	case *pb.AttestationResponse:
+
+	}
+
 
 	// build a correct hobbits message for said msg type
 	// send hobbits message to peer
