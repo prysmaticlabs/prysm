@@ -75,25 +75,27 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	mockChain := &mockChainService{}
 
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
-	beaconState.LatestBlockHeader = &pbp2p.BeaconBlockHeader{
-		StateRoot: []byte{},
+
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	if err != nil {
+		t.Fatalf("Could not hash genesis state: %v", err)
 	}
-	beaconState.Slot = 10
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
 
 	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
+
+	parentRoot, _ := ssz.SigningRoot(genesis)
 
 	proposerServer := &ProposerServer{
 		chainService:    mockChain,
@@ -102,7 +104,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 
 	req := &pbp2p.BeaconBlock{
-		ParentRoot: nil,
+		ParentRoot: parentRoot[:],
 		Slot:       11,
 		Body: &pbp2p.BeaconBlockBody{
 			RandaoReveal:      nil,
@@ -112,7 +114,10 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		},
 	}
 
-	_, _ = proposerServer.computeStateRoot(context.Background(), req)
+	_, err = proposerServer.computeStateRoot(context.Background(), req)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {

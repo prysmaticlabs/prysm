@@ -347,7 +347,7 @@ func verifyOperationLengths(state *pb.BeaconState, body *pb.BeaconBlockBody) err
 		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
 	}
 	// Verify outstanding deposits are processed up to max number of deposits
-	if len(body.Deposits) != int(maxDeposits) {
+	if len(body.Deposits) >= int(maxDeposits) {
 		return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
 			maxDeposits, len(body.Deposits))
 	}

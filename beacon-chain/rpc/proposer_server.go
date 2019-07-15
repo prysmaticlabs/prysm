@@ -101,7 +101,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		Signature: emptySig,
 	}
 
-	if featureconfig.FeatureConfig().EnableComputeStateRoot {
+	if !featureconfig.FeatureConfig().EnableComputeStateRoot {
 		// Compute state root with the newly constructed block.
 		stateRoot, err = ps.computeStateRoot(ctx, blk)
 		if err != nil {
@@ -268,7 +268,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.Bea
 		state.DefaultConfig(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition for state root %v", err)
+		return nil, fmt.Errorf("could not execute state transition for state: %v at slot %d", err, beaconState.Slot)
 	}
 
 	root, err := ssz.HashTreeRoot(s)
