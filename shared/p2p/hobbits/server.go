@@ -84,7 +84,7 @@ func (h *HobbitsNode) Listen() error {
 	})
 }
 
-func (h *HobbitsNode) Broadcast(ctx context.Context, message proto.Message) {
+func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) {
 
 	//
 	//for _, peer := range h.PeerConns {
@@ -97,43 +97,41 @@ func (h *HobbitsNode) Broadcast(ctx context.Context, message proto.Message) {
 	//}
 }
 
-// Send conforms to the p2p composite interface.
+// Send builds and sends a message to a Hobbits peer
+// It conforms to the p2p composite interface
 func (h *HobbitsNode) Send(ctx context.Context, msg proto.Message, peer peer.ID) error {
-	conn := h.PeerConns[peer]  // get the conn for the peer
+	var function func(msg proto.Message) (HobbitsMessage, error)
 
 	switch msg.(type) { // investigate the MSG type
 	case *pb.BatchedBeaconBlockResponse:
-		hobMsg, err := h.blockBodiesResponse(msg)
-		if err != nil {
-			return errors.Wrap(err, "error building BLOCK_BODIES response")
-		}
-
-		err = h.Server.SendMessage(h.PeerConns[peer], encoding.Message(hobMsg))
-		if err != nil {
-			return errors.Wrap(err, "error sending BLOCK_BODIES response")
-		}
+		function = h.blockBodiesResponse
 	case *pb.AttestationResponse:
-		hobMsg, err := h.attestationResponse(msg)
-		if err != nil {
-			return errors.Wrap(err, "error building ATTESTATION response")
-		}
+		function = h.attestationResponse
+	default:
+		return fmt.Errorf("unknown message type %s, could not handle response", reflect.TypeOf(msg).String())
+	}
 
-		err = h.Server.SendMessage(h.PeerConns[peer], encoding.Message(hobMsg))
-		if err != nil {
-			return errors.Wrap(err, "error sending ATTESTATION response")
-		}
+	hobMsg, err := function(msg)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error building %s response", reflect.TypeOf(msg).String()))
+	}
+
+	err = h.Server.SendMessage(h.PeerConns[peer], encoding.Message(hobMsg))
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error sending %s response", reflect.TypeOf(msg).String()))
 	}
 
 	return nil
 }
 
 // ReputationManager conforms to the p2p composite interface
+// Outside the scope of the Hobbits protocol
 func (h *HobbitsNode) Reputation(peer peer.ID, val int) {
 }
 
 // Subscriber conforms to the p2p composite interface
 func (h *HobbitsNode) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
-	return nil
+	return h.Feed(msg).Subscribe(channel)
 }
 
 func (h *HobbitsNode) Status() error {
