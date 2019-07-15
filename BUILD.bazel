@@ -9,7 +9,7 @@ load("//tools:binary_targets.bzl", "binary_targets", "determine_targets")
 prefix = "github.com/prysmaticlabs/prysm"
 
 exports_files([
-    "LICENSE",
+    "LICENSE.md",
 ])
 
 # gazelle:prefix github.com/prysmaticlabs/prysm
