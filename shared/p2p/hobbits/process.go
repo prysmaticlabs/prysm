@@ -74,7 +74,7 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 
 		return nil
 	case GET_BLOCK_HEADERS:
-		err := h.blockHeaders(id, message)
+		err := h.blockHeadersRequest(id, message)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve block headers")
 		}
@@ -86,7 +86,7 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 
 		return nil
 	case GET_BLOCK_BODIES: // TODO: this is so messed up
-		err := h.blockBodies(id, message)
+		err := h.blockBodiesRequest(id, message)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve block bodies")
 		}
@@ -98,9 +98,9 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 
 		return nil
 	case GET_ATTESTATION:
-		err := h.attestation(id, message)
+		err := h.attestationRequest(id, message)
 		if err != nil {
-			return errors.Wrap(err, "could not retrieve attestation")
+			return errors.Wrap(err, "could not retrieve attestationRequest")
 		}
 
 		return nil

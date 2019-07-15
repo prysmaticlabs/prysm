@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/pkg/errors"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
@@ -44,8 +45,12 @@ type BlockRequest struct {
 	Direction uint8    `bson:"direction"`
 }
 
-type GetAttestation struct {
+type AttestationRequest struct {
 	Signature []byte `bson:"signature"`
+}
+
+type AttestationResponse struct {
+	Attestation pb.Attestation `bson:"attestation"`
 }
 
 func (h *HobbitsNode) status(id peer.ID, message HobbitsMessage) error {
@@ -152,7 +157,7 @@ func (h *HobbitsNode) removePeer(id peer.ID) error {
 	return nil
 }
 
-func (h *HobbitsNode) blockHeaders(id peer.ID, message HobbitsMessage) error {
+func (h *HobbitsNode) blockHeadersRequest(id peer.ID, message HobbitsMessage) error {
 
 
 	// var request BlockRequest // TODO: might not need BlockRequest struct, just unmarshal into protobuf
@@ -164,14 +169,14 @@ func (h *HobbitsNode) blockHeaders(id peer.ID, message HobbitsMessage) error {
 	return nil
 }
 
-func (h *HobbitsNode) blockBodies(id peer.ID, message HobbitsMessage) error {
+func (h *HobbitsNode) blockBodiesRequest(id peer.ID, message HobbitsMessage) error {
 	var requestBody BlockRequest
 	err := bson.Unmarshal(message.Body, requestBody)
 	if err != nil {
 		return errors.Wrap(err, "could not unmarshal body of GET_BLOCK_BODY request")
 	}
 
-	var bbr ethereum_beacon_p2p_v1.BatchedBeaconBlockRequest
+	var bbr pb.BatchedBeaconBlockRequest
 	bbr.StartSlot = requestBody.StartSlot
 
 	// Todo: BBR in Send() needs to be replaced with a P2P.Message
@@ -193,15 +198,15 @@ func (h *HobbitsNode) blockBodies(id peer.ID, message HobbitsMessage) error {
 	return nil
 }
 
-func (h *HobbitsNode) attestation(id peer.ID, message HobbitsMessage) error {
-	var requestBody GetAttestation
+func (h *HobbitsNode) attestationRequest(id peer.ID, message HobbitsMessage) error {
+	var requestBody AttestationRequest
 
 	err := bson.Unmarshal(message.Body, requestBody)
 	if err != nil {
 		return errors.Wrap(err, "error unmarshaling body of GET_ATTESTATION request")
 	}
 
-	ar := &ethereum_beacon_p2p_v1.AttestationRequest{
+	ar := &pb.AttestationRequest{
 		Hash: requestBody.Signature,
 	}
 
@@ -212,4 +217,10 @@ func (h *HobbitsNode) attestation(id peer.ID, message HobbitsMessage) error {
 	})
 
 	return nil
+}
+
+func (h *HobbitsNode) attestationResponse(msg proto.Message) HobbitsMessage {
+	response := AttestationResponse{
+		Attestation: ,
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -102,7 +103,12 @@ func (h *HobbitsNode) Send(ctx context.Context, msg proto.Message, peer peer.ID)
 
 	switch msg.(type) { // investigate the MSG type
 	case *pb.BatchedBeaconBlockResponse:
+		hobMsg := h.attestationResponse(msg)
 
+		err := h.Server.SendMessage(h.PeerConns[peer], encoding.Message(hobMsg))
+		if err != nil {
+			return errors.Wrap(err, "error sending response")
+		}
 	case *pb.AttestationResponse:
 
 	}
