@@ -15,7 +15,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -91,14 +90,12 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		Signature: emptySig,
 	}
 
-	if !featureconfig.FeatureConfig().EnableComputeStateRoot {
-		// Compute state root with the newly constructed block.
-		stateRoot, err = ps.computeStateRoot(ctx, blk)
-		if err != nil {
-			return nil, fmt.Errorf("could not get compute state root: %v", err)
-		}
-		blk.StateRoot = stateRoot
+	// Compute state root with the newly constructed block.
+	stateRoot, err = ps.computeStateRoot(ctx, blk)
+	if err != nil {
+		return nil, fmt.Errorf("could not get compute state root: %v", err)
 	}
+	blk.StateRoot = stateRoot
 
 	return blk, nil
 }
