@@ -103,7 +103,7 @@ func ExecuteStateTransition(
 //    state.state_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_state_root
 //
 //    # Cache latest block header state root
-//    if state.latest_block_header.state_root == ZERO_HASH:
+//    if state.latest_block_header.state_root == Bytes32():
 //        state.latest_block_header.state_root = previous_state_root
 //
 //    # Cache block root
