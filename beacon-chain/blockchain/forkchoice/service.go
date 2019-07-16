@@ -251,8 +251,7 @@ func (s *Store) OnTick(t uint64) {
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
 func (s *Store) OnBlock(b *pb.BeaconBlock) error {
-	// TODO: Implement HistoryStateFromBlkRoot
-	preState, err := s.db.HistoricalStateFromSlot(s.ctx, b.Slot, bytesutil.ToBytes32(b.ParentRoot))
+	preState, err := s.db.ForkChoiceState(s.ctx, b.ParentRoot)
 	if err != nil {
 		return fmt.Errorf("could not get pre state for slot %d: %v", b.Slot, err)
 	}
@@ -302,8 +301,7 @@ func (s *Store) OnBlock(b *pb.BeaconBlock) error {
 		return fmt.Errorf("could not execute state transition: %v", err)
 	}
 
-	// TODO: Need to save state based on block root as key, not state root
-	if err := s.db.SaveState(s.ctx, postState); err != nil {
+	if err := s.db.SaveForkChoiceState(s.ctx, postState, root[:]); err != nil {
 		return fmt.Errorf("could not save state: %v", err)
 	}
 
@@ -362,9 +360,8 @@ func (s *Store) OnAttestation(a *pb.Attestation) error {
 
 	// Verify Attestations cannot be from future epochs.
 	// If they are, delay consideration until the epoch arrives
-	// TODO: Implement HistoryStateFromBlkRoot
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
-	baseState, err := s.db.HistoricalStateFromSlot(s.ctx, tgtSlot, bytesutil.ToBytes32(tgt.Root))
+	baseState, err := s.db.ForkChoiceState(s.ctx, tgt.Root)
 	if err != nil {
 		return fmt.Errorf("could not get pre state for slot %d: %v", tgtSlot, err)
 	}
