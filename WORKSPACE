@@ -43,9 +43,8 @@ http_archive(
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "999242406de52ef7844dc388710345c126ad2d4e",
-    # Update this after https://github.com/graknlabs/bazel-distribution/pull/168.
-    remote = "https://github.com/prestonvanloon/bazel-distribution",
+    commit = "c42bfd10984635f0d76e3f2d2f55a7ea7ad3c62f",
+    remote = "https://github.com/graknlabs/bazel-distribution",
 )
 
 # Override default import in rules_go with special patch until
