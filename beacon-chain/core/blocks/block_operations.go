@@ -266,7 +266,6 @@ func ProcessRandao(
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
 	body *pb.BeaconBlockBody,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
@@ -274,7 +273,7 @@ func ProcessProposerSlashings(
 			return nil, fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
 		}
 		proposer := beaconState.Validators[slashing.ProposerIndex]
-		if err = verifyProposerSlashing(beaconState, proposer, slashing, verifySignatures); err != nil {
+		if err = verifyProposerSlashing(beaconState, proposer, slashing); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing %d: %v", idx, err)
 		}
 		beaconState, err = v.SlashValidator(
@@ -292,7 +291,6 @@ func verifyProposerSlashing(
 	beaconState *pb.BeaconState,
 	proposer *pb.Validator,
 	slashing *pb.ProposerSlashing,
-	verifySignatures bool,
 ) error {
 	headerEpoch1 := helpers.SlotToEpoch(slashing.Header_1.Slot)
 	headerEpoch2 := helpers.SlotToEpoch(slashing.Header_2.Slot)
@@ -305,17 +303,13 @@ func verifyProposerSlashing(
 	if !helpers.IsSlashableValidator(proposer, helpers.CurrentEpoch(beaconState)) {
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.Pubkey)
 	}
-
-	if verifySignatures {
-		// Using headerEpoch1 here because both of the headers should have the same epoch.
-		domain := helpers.Domain(beaconState, headerEpoch1, params.BeaconConfig().DomainBeaconProposer)
-		headers := append([]*pb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
-		for _, header := range headers {
-			if err := verifySigningRoot(header, proposer.Pubkey, header.Signature, domain); err != nil {
-				return fmt.Errorf("could not verify beacon block header: %v", err)
-			}
+	// Using headerEpoch1 here because both of the headers should have the same epoch.
+	domain := helpers.Domain(beaconState, headerEpoch1, params.BeaconConfig().DomainBeaconProposer)
+	headers := append([]*pb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
+	for _, header := range headers {
+		if err := verifySigningRoot(header, proposer.Pubkey, header.Signature, domain); err != nil {
+			return fmt.Errorf("could not verify beacon block header: %v", err)
 		}
-		return nil
 	}
 	return nil
 }

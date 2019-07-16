@@ -468,7 +468,6 @@ func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -500,10 +499,8 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	}
 	want := "expected slashing headers to differ"
 	if _, err := blocks.ProcessProposerSlashings(
-
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -550,7 +547,6 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -575,39 +571,68 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	slashings := []*pb.ProposerSlashing{
-		{
-			ProposerIndex: 1,
-			Header_1: &pb.BeaconBlockHeader{
-				Slot:      0,
-				Signature: []byte("A"),
-			},
-			Header_2: &pb.BeaconBlockHeader{
-				Slot:      0,
-				Signature: []byte("B"),
-			},
-		},
-	}
 	currentSlot := uint64(0)
 	beaconState := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             currentSlot,
-		Balances:         validatorBalances,
+		Validators: validators,
+		Slot:       currentSlot,
+		Balances:   validatorBalances,
+		Fork: &pb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
 		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
+
+	domain := helpers.Domain(
+		beaconState,
+		helpers.CurrentEpoch(beaconState),
+		params.BeaconConfig().DomainBeaconProposer,
+	)
+	privKey, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("Could not generate random private key: %v", err)
+	}
+
+	header1 := &pb.BeaconBlockHeader{
+		Slot:      0,
+		StateRoot: []byte("A"),
+	}
+	signingRoot, err := ssz.SigningRoot(header1)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	header1.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+
+	header2 := &pb.BeaconBlockHeader{
+		Slot:      0,
+		StateRoot: []byte("B"),
+	}
+	signingRoot, err = ssz.SigningRoot(header2)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	header2.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+
+	slashings := []*pb.ProposerSlashing{
+		{
+			ProposerIndex: 1,
+			Header_1:      header1,
+			Header_2:      header2,
+		},
+	}
+
+	beaconState.Validators[1].Pubkey = privKey.PublicKey().Marshal()[:]
+
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 		},
 	}
 
-	newState, err := blocks.ProcessProposerSlashings(
-		beaconState,
-		block.Body,
-		false,
-	)
+	newState, err := blocks.ProcessProposerSlashings(beaconState, block.Body)
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
