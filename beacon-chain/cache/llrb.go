@@ -19,6 +19,7 @@ package cache
 
 import (
 	"errors"
+	"math"
 )
 
 // Tree is a Left-Leaning Red-Black (LLRB) implementation of 2-3 trees
@@ -33,6 +34,9 @@ type Node struct {
 	Black       bool  // If set, the color of the link (incoming from the parent) is black
 	// In the LLRB, new nodes are always red, hence the zero-value for node
 }
+
+
+type ItemIterator func(i Item) bool
 
 type Item interface {
 	Less(than Item) bool
@@ -463,3 +467,110 @@ func fixUp(h *Node) *Node {
 
 	return h
 }
+
+// AscendGreaterOrEqual will call iterator once for each element greater or equal to
+// pivot in ascending order. It will stop whenever the iterator returns false.
+func (t *LLRB) AscendGreaterOrEqual(pivot Item, iterator ItemIterator) {
+	t.ascendGreaterOrEqual(t.root, pivot, iterator)
+}
+
+
+
+func (t *LLRB) ascendGreaterOrEqual(h *Node, pivot Item, iterator ItemIterator) bool {
+	if h == nil {
+		return true
+	}
+	if !less(h.Item, pivot) {
+		if !t.ascendGreaterOrEqual(h.Left, pivot, iterator) {
+			return false
+		}
+		if !iterator(h.Item) {
+			return false
+		}
+	}
+	return t.ascendGreaterOrEqual(h.Right, pivot, iterator)
+}
+
+
+func (t *LLRB) AscendRange(greaterOrEqual, lessThan Item, iterator ItemIterator) {
+	t.ascendRange(t.root, greaterOrEqual, lessThan, iterator)
+}
+
+
+func (t *LLRB) ascendRange(h *Node, inf, sup Item, iterator ItemIterator) bool {
+	if h == nil {
+		return true
+	}
+	if !less(h.Item, sup) {
+		return t.ascendRange(h.Left, inf, sup, iterator)
+	}
+	if less(h.Item, inf) {
+		return t.ascendRange(h.Right, inf, sup, iterator)
+	}
+
+	if !t.ascendRange(h.Left, inf, sup, iterator) {
+		return false
+	}
+	if !iterator(h.Item) {
+		return false
+	}
+	return t.ascendRange(h.Right, inf, sup, iterator)
+}
+
+// HeightStats returns the average and standard deviation of the height
+// of elements in the tree
+
+
+
+
+func (t *LLRB) HeightStats() (avg, stddev float64) {
+	av := &avgVar{}
+	heightStats(t.root, 0, av)
+	return av.GetAvg(), av.GetStdDev()
+}
+
+func heightStats(h *Node, d int, av *avgVar) {
+	if h == nil {
+		return
+	}
+	av.Add(float64(d))
+	if h.Left != nil {
+		heightStats(h.Left, d+1, av)
+	}
+	if h.Right != nil {
+		heightStats(h.Right, d+1, av)
+	}
+}
+
+
+// avgVar maintains the average and variance of a stream of numbers
+// in a space-efficient manner.
+type avgVar struct {
+	count      int64
+	sum, sumsq float64
+}
+
+func (av *avgVar) Init() {
+	av.count = 0
+	av.sum = 0.0
+	av.sumsq = 0.0
+}
+
+func (av *avgVar) Add(sample float64) {
+	av.count++
+	av.sum += sample
+	av.sumsq += sample * sample
+}
+
+func (av *avgVar) GetCount() int64 { return av.count }
+
+func (av *avgVar) GetAvg() float64 { return av.sum / float64(av.count) }
+
+func (av *avgVar) GetTotal() float64 { return av.sum }
+
+func (av *avgVar) GetVar() float64 {
+	a := av.GetAvg()
+	return av.sumsq/float64(av.count) - a*a
+}
+
+func (av *avgVar) GetStdDev() float64 { return math.Sqrt(av.GetVar()) }
