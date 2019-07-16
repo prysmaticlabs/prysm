@@ -25,6 +25,7 @@ var (
 	validatorBucket         = []byte("validator")
 	latestMessageBucket     = []byte("latest-message")
 	checkpointBucket        = []byte("checkpoint")
+	forkChoiceStateBucket   = []byte("forkchoice-state-bucket")
 
 	mainChainHeightKey      = []byte("chain-height")
 	canonicalHeadKey        = []byte("canonical-head")
