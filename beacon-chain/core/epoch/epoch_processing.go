@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/big"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -122,119 +123,107 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 //
 // Spec pseudocode definition:
-//  def process_justification_and_finalization(state: BeaconState) -> None:
-//    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
-//        return
+//   def process_justification_and_finalization(state: BeaconState) -> None:
+//      if get_current_epoch(state) <= GENESIS_EPOCH + 1:
+//          return
 //
-//    previous_epoch = get_previous_epoch(state)
-//    current_epoch = get_current_epoch(state)
-//    old_previous_justified_epoch = state.previous_justified_epoch
-//    old_current_justified_epoch = state.current_justified_epoch
+//      previous_epoch = get_previous_epoch(state)
+//      current_epoch = get_current_epoch(state)
+//      old_previous_justified_checkpoint = state.previous_justified_checkpoint
+//      old_current_justified_checkpoint = state.current_justified_checkpoint
 //
-//    # Process justifications
-//    state.previous_justified_epoch = state.current_justified_epoch
-//    state.previous_justified_root = state.current_justified_root
-//    state.justification_bitfield = (state.justification_bitfield << 1) % 2**64
-//    previous_epoch_matching_target_balance = get_attesting_balance(state, get_matching_target_attestations(state, previous_epoch))
-//    if previous_epoch_matching_target_balance * 3 >= get_total_active_balance(state) * 2:
-//        state.current_justified_epoch = previous_epoch
-//        state.current_justified_root = get_block_root(state, state.current_justified_epoch)
-//        state.justification_bitfield |= (1 << 1)
-//    current_epoch_matching_target_balance = get_attesting_balance(state, get_matching_target_attestations(state, current_epoch))
-//    if current_epoch_matching_target_balance * 3 >= get_total_active_balance(state) * 2:
-//        state.current_justified_epoch = current_epoch
-//        state.current_justified_root = get_block_root(state, state.current_justified_epoch)
-//        state.justification_bitfield |= (1 << 0)
+//      # Process justifications
+//      state.previous_justified_checkpoint = state.current_justified_checkpoint
+//      state.justification_bits[1:] = state.justification_bits[:-1]
+//      state.justification_bits[0] = 0b0
+//      matching_target_attestations = get_matching_target_attestations(state, previous_epoch)  # Previous epoch
+//      if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+//          state.current_justified_checkpoint = Checkpoint(epoch=previous_epoch,
+//                                                          root=get_block_root(state, previous_epoch))
+//          state.justification_bits[1] = 0b1
+//      matching_target_attestations = get_matching_target_attestations(state, current_epoch)  # Current epoch
+//      if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+//          state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
+//                                                          root=get_block_root(state, current_epoch))
+//          state.justification_bits[0] = 0b1
 //
-//    # Process finalizations
-//    bitfield = state.justification_bitfield
-//    # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
-//    if (bitfield >> 1) % 8 == 0b111 and old_previous_justified_epoch - 3 == current_epoch:
-//        state.finalized_epoch = old_previous_justified_epoch
-//        state.finalized_root = get_block_root(state, state.finalized_epoch)
-//    # The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
-//    if (bitfield >> 1) % 4 == 0b11 and old_previous_justified_epoch - 2 == current_epoch:
-//        state.finalized_epoch = old_previous_justified_epoch
-//        state.finalized_root = get_block_root(state, state.finalized_epoch)
-//    # The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
-//    if (bitfield >> 0) % 8 == 0b111 and old_current_justified_epoch - 2 == current_epoch:
-//        state.finalized_epoch = old_current_justified_epoch
-//        state.finalized_root = get_block_root(state, state.finalized_epoch)
-//    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
-//    if (bitfield >> 0) % 4 == 0b11 and old_current_justified_epoch - 1 == current_epoch:
-//        state.finalized_epoch = old_current_justified_epoch
-//        state.finalized_root = get_block_root(state, state.finalized_epoch)
-func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (
-	*pb.BeaconState, error) {
-	// There's no reason to process justification until the 3rd epoch.
-	currentEpoch := helpers.CurrentEpoch(state)
-	if currentEpoch <= 1 {
-		return state, nil
-	}
-
+//      # Process finalizations
+//      bits = state.justification_bits
+//      # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+//      if all(bits[1:4]) and old_previous_justified_checkpoint.epoch + 3 == current_epoch:
+//          state.finalized_checkpoint = old_previous_justified_checkpoint
+//      # The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
+//      if all(bits[1:3]) and old_previous_justified_checkpoint.epoch + 2 == current_epoch:
+//          state.finalized_checkpoint = old_previous_justified_checkpoint
+//      # The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+//      if all(bits[0:3]) and old_current_justified_checkpoint.epoch + 2 == current_epoch:
+//          state.finalized_checkpoint = old_current_justified_checkpoint
+//      # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+//      if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
+//          state.finalized_checkpoint = old_current_justified_checkpoint
+func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (*pb.BeaconState, error) {
 	prevEpoch := helpers.PrevEpoch(state)
+	currentEpoch := helpers.CurrentEpoch(state)
+	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint
+	oldCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint
+
 	totalBal, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not get total balance: %v", err)
 	}
 
-	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint
-	oldCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint
+	// Process justifications
 	state.PreviousJustifiedCheckpoint = state.CurrentJustifiedCheckpoint
-	// Process justification.
-	if len(state.JustificationBits) != 1 {
-		return nil, errors.New("state justification bits is not exactly 1 byte")
-	}
-	// Note that the justification bits are type [4]BitVector. This means that
-	// the maximum value is 0b1111 for a uint8 field.
-	state.JustificationBits[0] <<= 1
-	state.JustificationBits[0] &= 0x0F // mask with 0b1111. This eliminates the first left most 4 bits.
+	state.JustificationBits.Shift(1)
+
+	// Note: the spec refers to the bit index position starting at 1 instead of starting at zero.
+	// We will use that paradigm here for consistency with the godoc spec definition.
+
+	// If 2/3 or more of total balance attested in the previous epoch.
 	if 3*prevAttestedBal >= 2*totalBal {
-		state.CurrentJustifiedCheckpoint.Epoch = prevEpoch
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block root for previous epoch %d: %v",
 				prevEpoch, err)
 		}
-		state.CurrentJustifiedCheckpoint.Root = blockRoot
-		state.JustificationBits[0] |= 2
+		state.CurrentJustifiedCheckpoint = &pb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}
+		state.JustificationBits.SetBitAt(1, true)
 	}
+
+	// If 2/3 or more of the total balance attested in the current epoch.
 	if 3*currAttestedBal >= 2*totalBal {
-		state.CurrentJustifiedCheckpoint.Epoch = currentEpoch
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block root for current epoch %d: %v",
 				prevEpoch, err)
 		}
-		state.CurrentJustifiedCheckpoint.Root = blockRoot
-		state.JustificationBits[0] |= 1
+		state.CurrentJustifiedCheckpoint = &pb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}
+		state.JustificationBits.SetBitAt(0, true)
 	}
-	// Process finalization.
-	bitfield := state.JustificationBits[0]
-	// When the 2nd, 3rd and 4th most recent epochs are all justified,
-	// 2nd epoch can finalize the 4th epoch as a source.
-	if oldPrevJustifiedCheckpoint.Epoch+3 == currentEpoch && (bitfield>>1)%8 == 7 {
-		state.FinalizedCheckpoint.Epoch = oldPrevJustifiedCheckpoint.Epoch
-		state.FinalizedCheckpoint.Root = oldPrevJustifiedCheckpoint.Root
+
+	// Process finalization according to ETH2.0 specifications.
+	justification := state.JustificationBits.Bytes()
+
+	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
+	if bytes.Equal(justification, []byte{0x0E}) && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {
+		state.FinalizedCheckpoint = oldPrevJustifiedCheckpoint
 	}
-	// when 2nd and 3rd most recent epochs are all justified,
-	// 2nd epoch can finalize 3rd as a source.
-	if oldPrevJustifiedCheckpoint.Epoch+2 == currentEpoch && (bitfield>>1)%4 == 3 {
-		state.FinalizedCheckpoint.Epoch = oldPrevJustifiedCheckpoint.Epoch
-		state.FinalizedCheckpoint.Root = oldPrevJustifiedCheckpoint.Root
+
+	// 2nd/3rd (0b0110) most recent epochs are justified, the 2nd using the 3rd as source.
+	if bytes.Equal(justification, []byte{0x06}) && (oldPrevJustifiedCheckpoint.Epoch+2) == currentEpoch {
+		state.FinalizedCheckpoint = oldPrevJustifiedCheckpoint
 	}
-	// when 1st, 2nd and 3rd most recent epochs are all justified,
-	// 1st epoch can finalize 3rd as a source.
-	if oldCurrJustifiedCheckpoint.Epoch+2 == currentEpoch && (bitfield>>0)%8 == 7 {
-		state.FinalizedCheckpoint.Epoch = oldCurrJustifiedCheckpoint.Epoch
-		state.FinalizedCheckpoint.Root = oldCurrJustifiedCheckpoint.Root
+
+	// 1st/2nd/3rd (0b0111) most recent epochs are justified, the 1st using the 3rd as source.
+	if bytes.Equal(justification, []byte{0x07}) && (oldCurrJustifiedCheckpoint.Epoch+2) == currentEpoch {
+		state.FinalizedCheckpoint = oldCurrJustifiedCheckpoint
 	}
-	// when 1st, 2nd most recent epochs are all justified,
-	// 1st epoch can finalize 2nd as a source.
-	if oldCurrJustifiedCheckpoint.Epoch+1 == currentEpoch && (bitfield>>0)%4 == 3 {
-		state.FinalizedCheckpoint.Epoch = oldCurrJustifiedCheckpoint.Epoch
-		state.FinalizedCheckpoint.Root = oldCurrJustifiedCheckpoint.Root
+
+	// The 1st/2nd (0b0011) most recent epochs are justified, the 1st using the 2nd as source
+	if bytes.Equal(justification, []byte{0x03}) && (oldCurrJustifiedCheckpoint.Epoch+1) == currentEpoch {
+		state.FinalizedCheckpoint = oldCurrJustifiedCheckpoint
 	}
+
 	return state, nil
 }
 
@@ -362,7 +351,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		if isActive && belowEjectionBalance {
 			state, err = validators.InitiateValidatorExit(state, uint64(idx))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not initiate exit for validator %d: %v", idx, err)
 			}
 		}
 	}
@@ -403,21 +392,12 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 // ProcessSlashings processes the slashed validators during epoch processing,
 //
 //  def process_slashings(state: BeaconState) -> None:
-//    current_epoch = get_current_epoch(state)
+//    epoch = get_current_epoch(state)
 //    total_balance = get_total_active_balance(state)
-//
-//    # Compute slashed balances in the current epoch
-//    total_at_start = state.latest_slashed_balances[(current_epoch + 1) % LATEST_SLASHED_EXIT_LENGTH]
-//    total_at_end = state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
-//    total_penalties = total_at_end - total_at_start
-//
-//    for index, validator in enumerate(state.validator_registry):
-//        if validator.slashed and current_epoch == validator.withdrawable_epoch - LATEST_SLASHED_EXIT_LENGTH // 2:
-//            penalty = max(
-//                validator.effective_balance * min(total_penalties * 3, total_balance) // total_balance,
-//                validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT
-//            )
-//            decrease_balance(state, index, penalty)
+//    for index, validator in enumerate(state.validators):
+//        if validator.slashed and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
+//            penalty = validator.effective_balance * min(sum(state.slashings) * 3, total_balance) // total_balance
+//            decrease_balance(state, ValidatorIndex(index), penalty)
 func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
@@ -428,17 +408,23 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 
+	// Compute the sum of state slashings
+	totalSlashing := uint64(0)
+	for _, slashing := range state.Slashings {
+		totalSlashing += slashing
+	}
+
 	// Compute slashing for each validator.
 	for index, validator := range state.Validators {
 		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
 		if validator.Slashed && correctEpoch {
-			totalSlashing := uint64(0)
-			for _, slashing := range state.Slashings {
-				totalSlashing += slashing
-			}
+			// Note: penality calculation overflows as uint64 so we must use big.Int.
+			// See: https://github.com/ethereum/eth2.0-specs/issues/1284
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
-			penalty := validator.EffectiveBalance * minSlashing / totalBalance
-			state = helpers.DecreaseBalance(state, uint64(index), penalty)
+			penalty := big.NewInt(int64(validator.EffectiveBalance))
+			penalty.Mul(penalty, big.NewInt(int64(minSlashing)))
+			penalty.Div(penalty, big.NewInt(int64(totalBalance)))
+			state = helpers.DecreaseBalance(state, uint64(index), penalty.Uint64())
 		}
 	}
 	return state, err
@@ -449,35 +435,33 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 // Spec pseudocode definition:
 //  def process_final_updates(state: BeaconState) -> None:
 //    current_epoch = get_current_epoch(state)
-//    next_epoch = current_epoch + 1
+//    next_epoch = Epoch(current_epoch + 1)
 //    # Reset eth1 data votes
 //    if (state.slot + 1) % SLOTS_PER_ETH1_VOTING_PERIOD == 0:
 //        state.eth1_data_votes = []
 //    # Update effective balances with hysteresis
-//    for index, validator in enumerate(state.validator_registry):
+//    for index, validator in enumerate(state.validators):
 //        balance = state.balances[index]
 //        HALF_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // 2
 //        if balance < validator.effective_balance or validator.effective_balance + 3 * HALF_INCREMENT < balance:
 //            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
 //    # Update start shard
-//    state.latest_start_shard = (state.latest_start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT
+//    state.start_shard = Shard((state.start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT)
 //    # Set active index root
-//    index_root_position = (next_epoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH
-//    state.latest_active_index_roots[index_root_position] = hash_tree_root(
-//        get_active_validator_indices(state, next_epoch + ACTIVATION_EXIT_DELAY)
-//    )
-//    # Set total slashed balances
-//    state.latest_slashed_balances[next_epoch % LATEST_SLASHED_EXIT_LENGTH] = (
-//        state.latest_slashed_balances[current_epoch % LATEST_SLASHED_EXIT_LENGTH]
-//    )
+//    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
+//    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
+//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
+//    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
+//    # Set committees root
+//    committee_root_position = next_epoch % EPOCHS_PER_HISTORICAL_VECTOR
+//    state.compact_committees_roots[committee_root_position] = get_compact_committees_root(state, next_epoch)
+//    # Reset slashings
+//    state.slashings[next_epoch % EPOCHS_PER_SLASHINGS_VECTOR] = Gwei(0)
 //    # Set randao mix
-//    state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] = get_randao_mix(state, current_epoch)
+//    state.randao_mixes[next_epoch % EPOCHS_PER_HISTORICAL_VECTOR] = get_randao_mix(state, current_epoch)
 //    # Set historical root accumulator
 //    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
-//        historical_batch = HistoricalBatch(
-//            block_roots=state.latest_block_roots,
-//            state_roots=state.latest_state_roots,
-//        )
+//        historical_batch = HistoricalBatch(block_roots=state.block_roots, state_roots=state.state_roots)
 //        state.historical_roots.append(hash_tree_root(historical_batch))
 //    # Rotate current/previous epoch attestations
 //    state.previous_epoch_attestations = state.current_epoch_attestations
@@ -512,19 +496,23 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		params.BeaconConfig().ShardCount
 
 	// Set active index root.
+	//    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
+	//    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
+	//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
+	//    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
 	activationDelay := params.BeaconConfig().ActivationExitDelay
 	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
 	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active indices: %v", err)
 	}
-	idxRoot, err := ssz.HashTreeRoot(activeIndices)
+	idxRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, uint64(1099511627776))
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash active indices: %v", err)
 	}
 	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
-	commRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
+	commRootPosition := nextEpoch % params.BeaconConfig().EpochsPerHistoricalVector
 	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get compact committee root %v", err)
@@ -541,7 +529,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state.RandaoMixes[nextEpoch%randaoMixLength] = mix
 
 	// Set historical root accumulator.
-	epochsPerHistoricalRoot := params.BeaconConfig().HistoricalRootsLimit / params.BeaconConfig().SlotsPerEpoch
+	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
 	if nextEpoch%epochsPerHistoricalRoot == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots,
@@ -556,7 +544,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Rotate current and previous epoch attestations.
 	state.PreviousEpochAttestations = state.CurrentEpochAttestations
-	state.CurrentEpochAttestations = make([]*pb.PendingAttestation, 0, 0)
+	state.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	return state, nil
 }
@@ -659,7 +647,6 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 
 	winnerCrosslink = candidateCrosslinks[0]
 	for _, c := range candidateCrosslinks {
-		crosslinkAtts := crosslinkAtts[:0]
 		crosslinkAtts = attsForCrosslink(c, shardAtts)
 		attestingBalance, err := AttestingBalance(state, crosslinkAtts)
 		if err != nil {

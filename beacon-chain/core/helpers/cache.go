@@ -14,11 +14,6 @@ func ClearStartShardCache() {
 	startShardCache = cache.NewStartShardCache()
 }
 
-// ClearTotalBalanceCache restarts the total validator balance cache from scratch.
-func ClearTotalBalanceCache() {
-	totalBalanceCache = cache.NewTotalBalanceCache()
-}
-
 // ClearTotalActiveBalanceCache restarts the total active validator balance cache from scratch.
 func ClearTotalActiveBalanceCache() {
 	totalActiveBalanceCache = cache.NewActiveBalanceCache()
@@ -51,6 +46,5 @@ func ClearAllCaches() {
 	ClearStartShardCache()
 	ClearShuffledValidatorCache()
 	ClearTotalActiveBalanceCache()
-	ClearTotalBalanceCache()
 	ClearCurrentEpochSeed()
 }

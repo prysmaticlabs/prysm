@@ -8,16 +8,17 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
 
-func runRegisteryProcessingTests(t *testing.T, filename string) {
+func runSlashingsTests(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	s := &RegistryUpdatesMinimal{}
+	s := &EpochProcessingTest{}
 	if err := yaml.Unmarshal(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
@@ -28,7 +29,8 @@ func runRegisteryProcessingTests(t *testing.T, filename string) {
 
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
-			postState, err := epoch.ProcessRegistryUpdates(tt.Pre)
+			helpers.ClearAllCaches()
+			postState, err := epoch.ProcessSlashings(tt.Pre)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -40,20 +42,20 @@ func runRegisteryProcessingTests(t *testing.T, filename string) {
 	}
 }
 
-const registryUpdatesPrefix = "eth2_spec_tests/tests/epoch_processing/registry_updates/"
+const slashingsPrefix = "eth2_spec_tests/tests/epoch_processing/slashings/"
 
-func TestRegistryProcessingMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(registryUpdatesPrefix + "registry_updates_minimal.yaml")
+func TestSlashingsMinimal(t *testing.T) {
+	filepath, err := bazel.Runfile(slashingsPrefix + "slashings_minimal.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	runRegisteryProcessingTests(t, filepath)
+	runSlashingsTests(t, filepath)
 }
 
-func TestRegistryProcessingMainnet(t *testing.T) {
-	filepath, err := bazel.Runfile(registryUpdatesPrefix + "registry_updates_mainnet.yaml")
+func TestSlashingsMainnet(t *testing.T) {
+	filepath, err := bazel.Runfile(slashingsPrefix + "slashings_mainnet.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	runRegisteryProcessingTests(t, filepath)
+	runSlashingsTests(t, filepath)
 }

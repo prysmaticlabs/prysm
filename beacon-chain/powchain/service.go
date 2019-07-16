@@ -32,10 +32,6 @@ var (
 		Name: "powchain_valid_deposits_received",
 		Help: "The number of valid deposits received in the deposit contract",
 	})
-	chainStartCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_chainstart_logs",
-		Help: "The number of chainstart logs received from the deposit contract",
-	})
 	blockNumberGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "powchain_block_number",
 		Help: "The current block number in the proof-of-work chain",
@@ -90,12 +86,15 @@ type Web3Service struct {
 	depositTrie             *trieutil.MerkleTrie
 	chainStartDeposits      []*pb.Deposit
 	chainStarted            bool
-	chainStartETH1Data      *pb.Eth1Data
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
 	lastRequestedBlock      *big.Int
+	chainStartETH1Data      *pb.Eth1Data
+	activeValidatorCount    uint64
+	depositedPubkeys        map[[48]byte]uint64
+	eth2GenesisTime         uint64
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -154,6 +153,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &pb.Eth1Data{},
+		depositedPubkeys:        make(map[[48]byte]uint64),
 	}, nil
 }
 
@@ -197,8 +197,8 @@ func (w *Web3Service) ChainStartETH1Data() *pb.Eth1Data {
 // HasChainStarted returns whether the deposits from
 // the deposit contract received so far are valid enough
 // to kick start the beacon chain.
-func (w *Web3Service) HasChainStarted() (bool, error) {
-	return false, nil
+func (w *Web3Service) HasChainStarted() bool {
+	return w.chainStarted
 }
 
 // Status is service health checks. Return nil or error.

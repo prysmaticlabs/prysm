@@ -10,8 +10,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"go.opencensus.io/trace"
 )
 
@@ -134,7 +134,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
-	signingRoot, err := blockutil.BlockSigningRoot(block)
+	signingRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash header: %v", err)
 	}
@@ -171,7 +171,7 @@ func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
-	signingRoot, err := blockutil.BlockSigningRoot(block)
+	signingRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
@@ -285,7 +285,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.UpdateChainHead")
 	defer span.End()
 
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("unable to determine block signing root: %v", err)
 	}

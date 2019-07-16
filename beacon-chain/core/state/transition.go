@@ -13,7 +13,6 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -85,7 +84,7 @@ func ExecuteStateTransition(
 		if err != nil {
 			return nil, fmt.Errorf("could not tree hash processed state: %v", err)
 		}
-		if bytes.Equal(postStateRoot[:], block.StateRoot) {
+		if !bytes.Equal(postStateRoot[:], block.StateRoot) {
 			return nil, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
 				postStateRoot[:], block.StateRoot)
 		}
@@ -147,9 +146,12 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 //    ]
 func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
 	if state.Slot > slot {
-		return nil, fmt.Errorf("expected state.slot %d < block.slot %d", state.Slot, slot)
+		return nil, fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
 	}
 	for state.Slot < slot {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		state, err := ProcessSlot(ctx, state)
 		if err != nil {
 			return nil, fmt.Errorf("could not process slot: %v", err)
@@ -185,7 +187,7 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeader(state, block)
+	state, err := b.ProcessBlockHeader(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block header: %v", err)
 	}
@@ -205,7 +207,7 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not process block operation: %v", err)
 	}
 
-	r, err := blockutil.BlockSigningRoot(block)
+	r, err := ssz.SigningRoot(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}

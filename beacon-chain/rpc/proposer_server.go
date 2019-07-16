@@ -1,18 +1,19 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math/big"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -42,7 +43,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
 
-	parentRoot, err := blockutil.BlockSigningRoot(parent)
+	parentRoot, err := ssz.SigningRoot(parent)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block signing root: %v", err)
 	}
@@ -99,7 +100,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
-	root, err := blockutil.BlockSigningRoot(blk)
+	root, err := ssz.SigningRoot(blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
@@ -196,21 +197,52 @@ func (ps *ProposerServer) attestations(ctx context.Context) ([]*pbp2p.Attestatio
 // state.latest_eth1_data is updated, and validator deposits up to this root can be processed.
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
-//
-// TODO(#2307): Refactor for v0.6.
 func (ps *ProposerServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error) {
-	return nil, nil
+	beaconState, err := ps.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	currentHeight := ps.powChainService.LatestBlockHeight()
+	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.Eth1Data.DepositRoot)
+	if stateLatestEth1Hash == [32]byte{} {
+		return ps.defaultEth1DataResponse(ctx, currentHeight)
+	}
+	// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
+	// in the canonical eth1.0 chain.
+	_, stateLatestEth1Height, err := ps.powChainService.BlockExists(ctx, stateLatestEth1Hash)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify block with hash exists in Eth1 chain: %#x: %v", stateLatestEth1Hash, err)
+	}
+	dataVotes := []*pbp2p.Eth1Data{}
+	votesMap := helpers.EmptyVoteHierarchyMap()
+	depositCount, depositRootAtHeight := ps.beaconDB.DepositsNumberAndRootAtHeight(ctx, currentHeight)
+	for _, vote := range beaconState.Eth1DataVotes {
+		validVote, blockHeight, err := ps.validateVote(ctx, currentHeight, depositCount, depositRootAtHeight, stateLatestEth1Height, vote)
+
+		if err != nil {
+			return nil, err
+		}
+		if validVote {
+			dataVotes = append(dataVotes, vote)
+			votesMap, err = helpers.CountVote(votesMap, vote, blockHeight)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	if len(dataVotes) == 0 {
+		return ps.defaultEth1DataResponse(ctx, currentHeight)
+	}
+	return votesMap.BestVote, nil
 }
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.BeaconBlock) ([]byte, error) {
-
 	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
-
 	s, err := state.ExecuteStateTransition(
 		ctx,
 		beaconState,
@@ -225,9 +257,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.Bea
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon state: %v", err)
 	}
-
 	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state hash")
-
 	return root[:], nil
 }
 
@@ -305,4 +335,56 @@ func (ps *ProposerServer) deposits(ctx context.Context) ([]*pbp2p.Deposit, error
 		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
 	return pendingDeposits, nil
+}
+
+// in case no vote for new eth1data vote considered best vote we
+// default into returning the latest deposit root and the block
+// hash of eth1 block hash that is FOLLOW_DISTANCE back from its
+// latest block.
+func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*pbp2p.Eth1Data, error) {
+	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
+	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
+	blockHash, err := ps.powChainService.BlockHashByHeight(ctx, ancestorHeight)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
+	}
+	// Fetch all historical deposits up to an ancestor height.
+	depositsTillHeight, depositRoot := ps.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
+	if depositsTillHeight == 0 {
+		return nil, errors.New("could not fetch ETH1_FOLLOW_DISTANCE deposits")
+	}
+	return &pbp2p.Eth1Data{
+		DepositRoot: depositRoot[:],
+		BlockHash:   blockHash[:],
+	}, nil
+}
+
+func (ps *ProposerServer) validateVote(
+	ctx context.Context,
+	currentHeight *big.Int,
+	depositCount uint64,
+	depositRootAtHeight [32]byte,
+	stateLatestEth1Height *big.Int,
+	vote *pbp2p.Eth1Data,
+) (bool, *big.Int, error) {
+	if ctx.Err() != nil {
+		return false, nil, ctx.Err()
+	}
+	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
+	eth1Hash := bytesutil.ToBytes32(vote.BlockHash)
+	// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
+	blockExists, blockHeight, err := ps.powChainService.BlockExists(ctx, eth1Hash)
+	if err != nil {
+		log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
+			Warn("Could not verify block with hash in ETH1 chain")
+		return false, nil, nil
+	}
+	if !blockExists {
+		return false, nil, nil
+	}
+	isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
+	isAheadStateEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
+	correctDepositCount := depositCount == vote.DepositCount
+	correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
+	return blockExists && isBehindFollowDistance && isAheadStateEth1Data && correctDepositCount && correctDepositRoot, blockHeight, nil
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -95,7 +96,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, fmt.Errorf("could not get head: %v", err)
 	}
-	validatorRegistry, err := vs.beaconDB.Validators(ctx)
+	Validators, err := vs.beaconDB.Validators(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -120,7 +121,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                       balance,
 		AverageActiveValidatorBalance: avgBalance,
-		TotalValidators:               uint64(len(validatorRegistry)),
+		TotalValidators:               uint64(len(Validators)),
 		TotalActiveValidators:         uint64(activeCount),
 	}, nil
 }
@@ -135,6 +136,16 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 	s, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+
+	// Advance state with empty transitions if the head state slot is farther
+	// than 1 epoch away from the request.
+	if req.EpochStart > 1 && helpers.SlotToEpoch(s.Slot) < req.EpochStart-1 {
+		slotsToAdvance := helpers.StartSlot(req.EpochStart-1) - s.Slot
+		s, err = state.ProcessSlots(ctx, s, slotsToAdvance)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	validatorIndexMap := stateutils.ValidatorIndexMap(s)
@@ -191,7 +202,7 @@ func (vs *ValidatorServer) assignment(
 	}
 
 	committee, shard, slot, isProposer, err :=
-		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx))
+		helpers.CommitteeAssignment(beaconState, helpers.SlotToEpoch(epochStart), uint64(idx))
 	if err != nil {
 		return nil, err
 	}
@@ -221,10 +232,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	chainStarted, err := vs.powChainService.HasChainStarted()
-	if err != nil {
-		return nil, err
-	}
+	chainStarted := vs.powChainService.HasChainStarted()
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
@@ -241,10 +249,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	if err != nil {
 		return false, nil, err
 	}
-	chainStarted, err := vs.powChainService.HasChainStarted()
-	if err != nil {
-		return false, nil, err
-	}
+	chainStarted := vs.powChainService.HasChainStarted()
 
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
@@ -461,7 +466,7 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	dv := helpers.Domain(state, request.Epoch, params.BeaconConfig().DomainRandao)
+	dv := helpers.Domain(state, request.Epoch, request.Domain)
 	return &pb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil

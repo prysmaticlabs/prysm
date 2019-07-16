@@ -2,24 +2,28 @@ package state_test
 
 import (
 	"bytes"
-	"encoding/binary"
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func init() {
 	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
 		CacheTreeHash: false,
 	})
+
+	// TODO(2312): remove this and use the mainnet count.
+	c := params.BeaconConfig()
+	c.MinGenesisActiveValidatorCount = 16384
+	params.OverrideBeaconConfig(c)
 }
 
 func TestGenesisBeaconState_OK(t *testing.T) {
@@ -52,10 +56,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("HistoricalRootsLimit should be 8192 for these tests to pass")
 	}
 
-	if params.BeaconConfig().DepositsForChainStart != 16384 {
-		t.Error("DepositsForChainStart should be 16384 for these tests to pass")
+	if params.BeaconConfig().MinGenesisActiveValidatorCount != 16384 {
+		t.Error("MinGenesisActiveValidatorCount should be 16384 for these tests to pass")
 	}
-	depositsForChainStart := int(params.BeaconConfig().DepositsForChainStart)
+	depositsForChainStart := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	if params.BeaconConfig().EpochsPerSlashingsVector != 8192 {
 		t.Error("EpochsPerSlashingsVector should be 8192 for these tests to pass")
@@ -64,7 +68,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	genesisTime := uint64(99999)
 	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart), false)
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
-
 	newState, err := state.GenesisBeaconState(
 		deposits,
 		genesisTime,
@@ -78,9 +81,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if newState.Slot != 0 {
 		t.Error("Slot was not correctly initialized")
 	}
-	if newState.GenesisTime != genesisTime {
-		t.Error("GenesisTime was not correctly initialized")
-	}
 	if !reflect.DeepEqual(*newState.Fork, pb.Fork{
 		PreviousVersion: genesisForkVersion,
 		CurrentVersion:  genesisForkVersion,
@@ -93,6 +93,12 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.Validators) != depositsForChainStart {
 		t.Error("Validators was not correctly initialized")
 	}
+	if newState.Validators[0].ActivationEpoch != 0 {
+		t.Error("Validators was not correctly initialized")
+	}
+	if newState.Validators[0].ActivationEligibilityEpoch != 0 {
+		t.Error("Validators was not correctly initialized")
+	}
 	if len(newState.Balances) != depositsForChainStart {
 		t.Error("Balances was not correctly initialized")
 	}
@@ -100,6 +106,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	// Randomness and committees fields checks.
 	if len(newState.RandaoMixes) != latestRandaoMixesLength {
 		t.Error("Length of RandaoMixes was not correctly initialized")
+	}
+	if !bytes.Equal(newState.RandaoMixes[0], make([]byte, 32)) {
+		t.Error("RandaoMixes was not correctly initialized")
 	}
 
 	// Finality fields checks.
@@ -134,18 +143,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	activeValidators, _ := helpers.ActiveValidatorIndices(newState, 0)
-	indicesBytes := []byte{}
-	for _, val := range activeValidators {
-		buf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(buf, val)
-		indicesBytes = append(indicesBytes, buf...)
-	}
-	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
-	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
-		t.Errorf(
-			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.ActiveIndexRoots[0],
-		)
+	genesisActiveIndexRoot, err := ssz.HashTreeRoot(activeValidators)
+	if err != nil {
+		t.Errorf("could not hash tree root: %v", err)
 	}
 	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
@@ -153,7 +153,26 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 			newState.ActiveIndexRoots[0],
 		)
 	}
-	// deposit root checks.
+	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
+		t.Errorf(
+			"Expected index roots to be the tree hash root of active validator indices, received %#x",
+			newState.ActiveIndexRoots[0],
+		)
+	}
+
+	zeroHash := params.BeaconConfig().ZeroHash[:]
+	// History root checks.
+	if !bytes.Equal(newState.StateRoots[0], zeroHash) {
+		t.Error("StateRoots was not correctly initialized")
+	}
+	if bytes.Equal(newState.ActiveIndexRoots[0], zeroHash) || bytes.Equal(newState.ActiveIndexRoots[0], []byte{}) {
+		t.Error("ActiveIndexRoots was not correctly initialized")
+	}
+	if !bytes.Equal(newState.BlockRoots[0], zeroHash) {
+		t.Error("BlockRoots was not correctly initialized")
+	}
+
+	// Deposit root checks.
 	if !bytes.Equal(newState.Eth1Data.DepositRoot, eth1Data.DepositRoot) {
 		t.Error("Eth1Data DepositRoot was not correctly initialized")
 	}
@@ -165,8 +184,14 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	state1, _ := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
-	state2, _ := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
+	state1, err := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
+	if err != nil {
+		t.Error(err)
+	}
+	state2, err := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
+	if err != nil {
+		t.Error(err)
+	}
 
 	root1, err1 := hashutil.HashProto(state1)
 	root2, err2 := hashutil.HashProto(state2)
@@ -182,7 +207,10 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	helpers.ClearAllCaches()
-	s, _ := state.GenesisBeaconState(nil, 0, nil)
+	s, err := state.GenesisBeaconState(nil, 0, nil)
+	if err != nil {
+		t.Error(err)
+	}
 	want, got := len(s.BlockRoots), int(params.BeaconConfig().HistoricalRootsLimit)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)

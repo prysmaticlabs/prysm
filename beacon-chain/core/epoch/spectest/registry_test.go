@@ -8,17 +8,16 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
 
-func runCrosslinkProcessingTests(t *testing.T, filename string) {
+func runRegisteryProcessingTests(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	s := &CrosslinksTest{}
+	s := &EpochProcessingTest{}
 	if err := yaml.Unmarshal(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
@@ -29,8 +28,7 @@ func runCrosslinkProcessingTests(t *testing.T, filename string) {
 
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
-
-			postState, err := epoch.ProcessCrosslinks(tt.Pre)
+			postState, err := epoch.ProcessRegistryUpdates(tt.Pre)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -42,21 +40,20 @@ func runCrosslinkProcessingTests(t *testing.T, filename string) {
 	}
 }
 
-const crosslinkPrefix = "eth2_spec_tests/tests/epoch_processing/crosslinks/"
+const registryUpdatesPrefix = "eth2_spec_tests/tests/epoch_processing/registry_updates/"
 
-func TestCrosslinksProcessingMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(crosslinkPrefix + "crosslinks_minimal.yaml")
+func TestRegistryProcessingMinimal(t *testing.T) {
+	filepath, err := bazel.Runfile(registryUpdatesPrefix + "registry_updates_minimal.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	runCrosslinkProcessingTests(t, filepath)
+	runRegisteryProcessingTests(t, filepath)
 }
 
-func TestCrosslinksProcessingMainnet(t *testing.T) {
-	helpers.ClearAllCaches()
-	filepath, err := bazel.Runfile(crosslinkPrefix + "crosslinks_mainnet.yaml")
+func TestRegistryProcessingMainnet(t *testing.T) {
+	filepath, err := bazel.Runfile(registryUpdatesPrefix + "registry_updates_mainnet.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	runCrosslinkProcessingTests(t, filepath)
+	runRegisteryProcessingTests(t, filepath)
 }

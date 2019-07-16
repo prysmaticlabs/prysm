@@ -70,7 +70,7 @@ func NewValidatorAccount(directory string, password string) error {
 		validatorKeyFile,
 	).Info("Keystore generated for validator signatures at path")
 
-	data, err := keystore.DepositInput(validatorKey, shardWithdrawalKey)
+	data, err := keystore.DepositInput(validatorKey, shardWithdrawalKey, params.BeaconConfig().MaxEffectiveBalance)
 	if err != nil {
 		return fmt.Errorf("unable to generate deposit data: %v", err)
 	}

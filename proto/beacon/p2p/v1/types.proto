@@ -13,13 +13,13 @@ message BeaconState {
 
   // History [2001-3000]
   BeaconBlockHeader latest_block_header = 2001;
-  repeated bytes block_roots = 2002 [(gogoproto.moretags) = "ssz-size:\"8192, 32\""];
-  repeated bytes state_roots = 2003 [(gogoproto.moretags) = "ssz-size:\"8192, 32\""];
+  repeated bytes block_roots = 2002 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
+  repeated bytes state_roots = 2003 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
   repeated bytes historical_roots = 2004 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"16777216\""];
 
   // Eth1 [3001-4000]
   Eth1Data eth1_data = 3001;
-  repeated Eth1Data eth1_data_votes = 3002 [(gogoproto.moretags) = "ssz-max:\"16\""];
+  repeated Eth1Data eth1_data_votes = 3002 [(gogoproto.moretags) = "ssz-max:\"1024\""];
   uint64 eth1_deposit_index = 3003;
 
   // Registry [4001-5000]
@@ -28,16 +28,16 @@ message BeaconState {
 
   // Shuffling [5001-6000]
   uint64 start_shard = 5001;
-  repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
-  repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
-  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
+  repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
+  repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
+  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
 
   // Slashings [6001-7000]
-  repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz:\"size=8192\""];
+  repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"8192\""];
 
   // Attestations [7001-8000]
-  repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"1024\""];
-  repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"1024\""];
+  repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"8192\""];
+  repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"8192\""];
 
   // Crosslinks [8001-9000]
   repeated Crosslink previous_crosslinks = 8001 [(gogoproto.moretags) = "ssz-size:\"1024\""];
@@ -45,7 +45,7 @@ message BeaconState {
 
   // Finality [9001-10000]
   // Spec type [4]Bitvector which means this would be a fixed size of 4 bits.
-  bytes justification_bits = 9001 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
+  bytes justification_bits = 9001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
   Checkpoint previous_justified_checkpoint = 9002;
   Checkpoint current_justified_checkpoint = 9003;
   Checkpoint finalized_checkpoint = 9004;
@@ -296,7 +296,7 @@ message CompactCommittee {
   // The list of the validator public keys in the committee.
   repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz-size:\"?,48\" ssz-max:\"4096\""];
   // The list of the validator indices in the committee.
-  repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-size:\"4096\""];
+  repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-max:\"4096\""];
 }
 
 message LatestMessage {

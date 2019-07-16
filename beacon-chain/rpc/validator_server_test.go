@@ -132,7 +132,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().DepositsForChainStart, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount, false)
 	state, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -164,7 +164,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depChainStart := params.BeaconConfig().DepositsForChainStart / 16
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 
 	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart, false)
 	state, err := state.GenesisBeaconState(deposits, 0, nil)
@@ -243,7 +243,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depChainStart := params.BeaconConfig().DepositsForChainStart / 16
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart, false)
 	state, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
@@ -940,7 +940,7 @@ func BenchmarkAssignment(b *testing.B) {
 	if err := db.SaveBlock(genesis); err != nil {
 		b.Fatalf("Could not save genesis block: %v", err)
 	}
-	validatorCount := params.BeaconConfig().DepositsForChainStart * 4
+	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
 	state, err := genesisState(validatorCount)
 	if err != nil {
 		b.Fatalf("Could not setup genesis state: %v", err)

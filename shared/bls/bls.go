@@ -103,6 +103,9 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
+	if len(pubKeys) == 0 {
+		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
+	}
 	var keys []*g1.PublicKey
 	for _, v := range pubKeys {
 		keys = append(keys, v.val)

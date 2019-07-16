@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -38,12 +37,12 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
 		t.Fatal(err)
 	}
-	root, err := blockutil.BlockSigningRoot(head)
+	root, err := ssz.SigningRoot(head)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	validators := make([]*pbp2p.Validator, params.BeaconConfig().DepositsForChainStart/16)
+	validators := make([]*pbp2p.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pbp2p.Validator{
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -92,15 +91,15 @@ func TestRequestAttestation_OK(t *testing.T) {
 	justifiedBlock := &pbp2p.BeaconBlock{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 	}
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedRoot, err := blockutil.BlockSigningRoot(justifiedBlock)
+	justifiedRoot, err := ssz.SigningRoot(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for justified block: %v", err)
 	}
-	targetRoot, err := blockutil.BlockSigningRoot(targetBlock)
+	targetRoot, err := ssz.SigningRoot(targetBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for target block: %v", err)
 	}
@@ -209,15 +208,15 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	justifiedBlock := &pbp2p.BeaconBlock{
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2, // Imagine two skip block
 	}
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedBlockRoot, err := blockutil.BlockSigningRoot(justifiedBlock)
+	justifiedBlockRoot, err := ssz.SigningRoot(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
-	epochBoundaryRoot, err := blockutil.BlockSigningRoot(epochBoundaryBlock)
+	epochBoundaryRoot, err := ssz.SigningRoot(epochBoundaryBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}

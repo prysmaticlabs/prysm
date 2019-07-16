@@ -12,13 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -153,7 +153,7 @@ var _ = p2p.Broadcaster(&mockBroadcaster{})
 
 func createPreChainStartDeposit(pk []byte) *pb.Deposit {
 	balance := params.BeaconConfig().MaxEffectiveBalance
-	depositData := &pb.DepositData{Pubkey: pk, Amount: balance}
+	depositData := &pb.DepositData{Pubkey: pk, Amount: balance, Signature: make([]byte, 96)}
 
 	return &pb.Deposit{
 		Data: depositData,
@@ -165,7 +165,7 @@ func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *pb.BeaconBloc
 	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
-	parentHash, err := blockutil.BlockSigningRoot(genesis)
+	parentHash, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("unable to get tree hash root of canonical head: %v", err)
 	}

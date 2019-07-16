@@ -44,7 +44,7 @@ container_push(
     image = ":image",
     registry = "gcr.io",
     repository = "prysmaticlabs/prysm/ssz-server",
-    tag = "latest",
+    tag = "{DOCKER_TAG}",
     tags = ["manual"],
     visibility = ["//visibility:private"],
 )

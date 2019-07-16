@@ -400,9 +400,12 @@ func (s *Store) OnAttestation(a *pb.Attestation) error {
 	}
 
 	// Use the target state to to validate attestation and calculate the committees.
-	// TODO: Implement get_indexed_attestation
-	indexedAtt := &pb.IndexedAttestation{}
-	if err := blocks.VerifyIndexedAttestation(indexedAtt, true); err != nil {
+	indexedAtt, err := blocks.ConvertToIndexed(baseState, a)
+	if err != nil {
+		return fmt.Errorf("could not convert attestation to indexed attestation: %v", err)
+	}
+
+	if err := blocks.VerifyIndexedAttestation(baseState, indexedAtt, true); err != nil {
 		return errors.New("could not verify indexed attestation")
 	}
 

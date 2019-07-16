@@ -16,6 +16,7 @@ type BeaconChainConfig struct {
 	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
 	JustificationBitsLength  uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`   // JustificationBitsLength defines the length in bytes of the justification bits.
+	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
 
 	// Misc constants.
 	ShardCount                     uint64 `yaml:"SHARD_COUNT"`                        // ShardCount is the number of shard chains in Ethereum 2.0.
@@ -55,7 +56,7 @@ type BeaconChainConfig struct {
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
 	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
 	HistoricalRootsLimit      uint64 `yaml:"HISTORICAL_ROOTS_LIMIT"`       // HistoricalRootsLimit the define max historical roots can be saved in state before roll over.
-	ValidatorsLimit           uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT"`     // ValidatorsLimit defines the upper bound of validators can participate in eth2.
+	ValidatorRegistryLimit    uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT"`     // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor            uint64 `yaml:"BASE_REWARD_FACTOR"`            // BaseRewardFactor is used to calculate validator per-slot interest rate.
@@ -82,7 +83,6 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	DepositsForChainStart     uint64        // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 	SyncPollingInterval       int64         // SyncPollingInterval queries network nodes for sync status.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
@@ -98,9 +98,9 @@ type BeaconChainConfig struct {
 
 // DepositContractConfig contains the deposits for
 type DepositContractConfig struct {
-	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
-	MaxEffectiveBalance   *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
+	MinGenesisActiveValidatorCount *big.Int // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
+	MinDepositAmount               *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
+	MaxEffectiveBalance            *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -115,6 +115,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	BaseRewardsPerEpoch:      5,
 	DepositContractTreeDepth: 32,
 	JustificationBitsLength:  4,
+	SecondsPerDay:            86400,
 
 	// Misc constant.
 	ShardCount:                     1024,
@@ -154,7 +155,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EpochsPerHistoricalVector: 65536,
 	EpochsPerSlashingsVector:  8192,
 	HistoricalRootsLimit:      8192,
-	ValidatorsLimit:           1099511627776,
+	ValidatorRegistryLimit:    1099511627776,
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor:            64,
@@ -181,9 +182,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
-	DepositsForChainStart:     16384,
 	LogBlockDelay:             2,
-	BLSPubkeyLength:           96,
+	BLSPubkeyLength:           48,
 	DefaultBufferSize:         10000,
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
@@ -202,9 +202,9 @@ var defaultShardConfig = &ShardChainConfig{
 }
 
 var defaultDepositContractConfig = &DepositContractConfig{
-	DepositsForChainStart: big.NewInt(16384),
-	MinDepositAmount:      big.NewInt(1e9),
-	MaxEffectiveBalance:   big.NewInt(32e9),
+	MinGenesisActiveValidatorCount: big.NewInt(16384),
+	MinDepositAmount:               big.NewInt(1e9),
+	MaxEffectiveBalance:            big.NewInt(32e9),
 }
 
 var beaconConfig = defaultBeaconConfig
@@ -223,26 +223,20 @@ func MainnetConfig() *BeaconChainConfig {
 }
 
 // DemoBeaconConfig retrieves the demo beacon chain config.
+// Notable changes from minimal config:
+//   - Max effective balance is 3.2 ETH
+//   - Ejection threshold is 3.175 ETH
+//   - Genesis threshold is disabled (minimum date to start the chain)
 func DemoBeaconConfig() *BeaconChainConfig {
-	demoConfig := *defaultBeaconConfig
-	demoConfig.ShardCount = 1
-	demoConfig.MinAttestationInclusionDelay = 1
-	demoConfig.TargetCommitteeSize = 1
-	demoConfig.DepositsForChainStart = 8
-	demoConfig.SlotsPerEpoch = 8
+	demoConfig := MinimalSpecConfig()
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
+	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.EjectionBalance = 3.175 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
-	demoConfig.Eth1FollowDistance = 5
-	demoConfig.SlotsPerEth1VotingPeriod = 1
-	demoConfig.EpochsPerHistoricalVector = 5 * demoConfig.SlotsPerEpoch
-	demoConfig.EpochsPerSlashingsVector = 5 * demoConfig.SlotsPerEpoch
-	demoConfig.HistoricalRootsLimit = 5 * demoConfig.SlotsPerEpoch
-	demoConfig.SlotsPerHistoricalRoot = 5 * demoConfig.SlotsPerEpoch
 	demoConfig.MinGenesisTime = 0
 
-	return &demoConfig
+	return demoConfig
 }
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
@@ -264,7 +258,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 	minimalConfig.SecondsPerSlot = 6
-	minimalConfig.MinAttestationInclusionDelay = 2
+	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.ActivationExitDelay = 4
@@ -278,7 +272,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.EpochsPerHistoricalVector = 64
 	minimalConfig.EpochsPerSlashingsVector = 64
 	minimalConfig.HistoricalRootsLimit = 16777216
-	minimalConfig.ValidatorsLimit = 1099511627776
+	minimalConfig.ValidatorRegistryLimit = 1099511627776
 	minimalConfig.BaseRewardFactor = 64
 	minimalConfig.WhistleBlowerRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
@@ -296,7 +290,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
 	minimalConfig.DomainTransfer = bytesutil.Bytes4(5)
-	minimalConfig.MinGenesisTime = 0
+	minimalConfig.MinGenesisTime = 1578009600
 
 	return &minimalConfig
 }
@@ -309,15 +303,6 @@ func ShardConfig() *ShardChainConfig {
 // ContractConfig retrieves the deposit contract config
 func ContractConfig() *DepositContractConfig {
 	return contractConfig
-}
-
-// DemoContractConfig uses the argument provided to initialize a fresh config.
-func DemoContractConfig(depositsReq *big.Int, minDeposit *big.Int, maxDeposit *big.Int) *DepositContractConfig {
-	return &DepositContractConfig{
-		DepositsForChainStart: depositsReq,
-		MinDepositAmount:      minDeposit,
-		MaxEffectiveBalance:   maxDeposit,
-	}
 }
 
 // UseDemoBeaconConfig for beacon chain services.

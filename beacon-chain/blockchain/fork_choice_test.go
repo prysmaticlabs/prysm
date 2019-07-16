@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -17,10 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -38,12 +37,12 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	genesisRoot, err := hashutil.HashProto(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block root: %v", err)
 	}
@@ -104,7 +103,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 
-		stateRoot, err := hashutil.HashProto(tt.state)
+		stateRoot, err := ssz.HashTreeRoot(tt.state)
 		if err != nil {
 			t.Fatalf("Could not tree hash state: %v", err)
 		}
@@ -113,7 +112,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			StateRoot:  stateRoot[:],
 			ParentRoot: genesisRoot[:],
 		}
-		blockRoot, err := blockutil.BlockSigningRoot(block)
+		blockRoot, err := ssz.SigningRoot(block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -147,7 +146,7 @@ func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead); err != nil {
 		t.Fatal(err)
 	}
-	headRoot, err := blockutil.BlockSigningRoot(potentialHead)
+	headRoot, err := ssz.SigningRoot(potentialHead)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +170,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
-	genesisRoot, err := blockutil.BlockSigningRoot(genesisBlock)
+	genesisRoot, err := ssz.SigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +182,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 		Slot:       5,
 		ParentRoot: genesisRoot[:],
 	}
-	headRoot1, err := blockutil.BlockSigningRoot(potentialHead)
+	headRoot1, err := ssz.SigningRoot(potentialHead)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +191,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 		Slot:       6,
 		ParentRoot: genesisRoot[:],
 	}
-	headRoot2, err := blockutil.BlockSigningRoot(potentialHead2)
+	headRoot2, err := ssz.SigningRoot(potentialHead2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +245,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatalf("could not save block: %v", err)
 	}
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatalf("could not hash block: %v", err)
 	}
@@ -298,7 +297,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
-	root1, err := blockutil.BlockSigningRoot(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -313,7 +312,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
-	root2, err := blockutil.BlockSigningRoot(block2)
+	root2, err := ssz.SigningRoot(block2)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -368,7 +367,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
-	root1, err := blockutil.BlockSigningRoot(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -443,7 +442,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
-	root1, err := blockutil.BlockSigningRoot(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -458,7 +457,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		Slot:       5,
 		ParentRoot: root1[:],
 	}
-	root2, err := blockutil.BlockSigningRoot(block5)
+	root2, err := ssz.SigningRoot(block5)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -513,7 +512,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
-	root1, err := blockutil.BlockSigningRoot(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -528,7 +527,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
-	block2Root, err := blockutil.BlockSigningRoot(block2)
+	block2Root, err := ssz.SigningRoot(block2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -587,7 +586,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
-	root1, err := blockutil.BlockSigningRoot(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -602,7 +601,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
-	root2, err := blockutil.BlockSigningRoot(block2)
+	root2, err := ssz.SigningRoot(block2)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -617,7 +616,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		Slot:       3,
 		ParentRoot: root1[:],
 	}
-	root3, err := blockutil.BlockSigningRoot(block3)
+	root3, err := ssz.SigningRoot(block3)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -632,7 +631,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		Slot:       4,
 		ParentRoot: root1[:],
 	}
-	root4, err := blockutil.BlockSigningRoot(block4)
+	root4, err := ssz.SigningRoot(block4)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -694,7 +693,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
-	root1, err := blockutil.BlockSigningRoot(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -705,7 +704,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
-	root2, err := blockutil.BlockSigningRoot(block2)
+	root2, err := ssz.SigningRoot(block2)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -716,7 +715,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 		Slot:       3,
 		ParentRoot: root2[:],
 	}
-	_, err = blockutil.BlockSigningRoot(block3)
+	_, err = ssz.SigningRoot(block3)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -727,7 +726,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 		Slot:       4,
 		ParentRoot: root1[:],
 	}
-	root4, err := blockutil.BlockSigningRoot(block4)
+	root4, err := ssz.SigningRoot(block4)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -738,7 +737,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 		Slot:       5,
 		ParentRoot: root4[:],
 	}
-	_, err = blockutil.BlockSigningRoot(block5)
+	_, err = ssz.SigningRoot(block5)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -792,7 +791,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
-	root1, err := blockutil.BlockSigningRoot(block1)
+	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -807,7 +806,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
-	root2, err := blockutil.BlockSigningRoot(block2)
+	root2, err := ssz.SigningRoot(block2)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -822,7 +821,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		Slot:       3,
 		ParentRoot: root1[:],
 	}
-	root3, err := blockutil.BlockSigningRoot(block3)
+	root3, err := ssz.SigningRoot(block3)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -837,7 +836,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		Slot:       4,
 		ParentRoot: root2[:],
 	}
-	root4, err := blockutil.BlockSigningRoot(block4)
+	root4, err := ssz.SigningRoot(block4)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -852,7 +851,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		Slot:       5,
 		ParentRoot: root3[:],
 	}
-	root5, err := blockutil.BlockSigningRoot(block5)
+	root5, err := ssz.SigningRoot(block5)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -867,7 +866,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		Slot:       6,
 		ParentRoot: root4[:],
 	}
-	root6, err := blockutil.BlockSigningRoot(block6)
+	root6, err := ssz.SigningRoot(block6)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
@@ -932,7 +931,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 		Slot:       0,
 		ParentRoot: []byte{},
 	}
-	root, err := blockutil.BlockSigningRoot(genesis)
+	root, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		b.Fatalf("Could not hash block: %v", err)
 	}
@@ -955,13 +954,13 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 		if err = chainService.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
-		root, err = blockutil.BlockSigningRoot(block)
+		root, err = ssz.SigningRoot(block)
 		if err != nil {
 			b.Fatalf("Could not hash block: %v", err)
 		}
 	}
 
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1013,7 +1012,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 		Slot:       0,
 		ParentRoot: []byte{},
 	}
-	root, err := blockutil.BlockSigningRoot(genesis)
+	root, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		b.Fatalf("Could not hash block: %v", err)
 	}
@@ -1036,13 +1035,13 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 		if err = chainService.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
-		root, err = blockutil.BlockSigningRoot(block)
+		root, err = ssz.SigningRoot(block)
 		if err != nil {
 			b.Fatalf("Could not hash block: %v", err)
 		}
 	}
 
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1092,7 +1091,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 		Slot:       0,
 		ParentRoot: []byte{},
 	}
-	root, err := blockutil.BlockSigningRoot(genesis)
+	root, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		b.Fatalf("Could not hash block: %v", err)
 	}
@@ -1115,13 +1114,13 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 		if err = chainService.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
-		root, err = blockutil.BlockSigningRoot(block)
+		root, err = ssz.SigningRoot(block)
 		if err != nil {
 			b.Fatalf("Could not hash block: %v", err)
 		}
 	}
 
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1171,7 +1170,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 		Slot:       0,
 		ParentRoot: []byte{},
 	}
-	root, err := blockutil.BlockSigningRoot(genesis)
+	root, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		b.Fatalf("Could not hash block: %v", err)
 	}
@@ -1194,13 +1193,13 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 		if err = chainService.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
-		root, err = blockutil.BlockSigningRoot(block)
+		root, err = ssz.SigningRoot(block)
 		if err != nil {
 			b.Fatalf("Could not hash block: %v", err)
 		}
 	}
 
-	blockRoot, err := blockutil.BlockSigningRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1295,6 +1294,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
 	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.CurrentJustifiedCheckpoint.Epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
@@ -1373,6 +1376,9 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	gState.FinalizedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
 	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.FinalizedCheckpoint.Epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
@@ -1511,7 +1517,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
-	var validatorRegistry []*pb.Validator
+	var Validators []*pb.Validator
 	var validatorBalances []uint64
 	var privKeys []*bls.SecretKey
 	for i := uint64(0); i < 64; i++ {
@@ -1520,7 +1526,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 			t.Fatal(err)
 		}
 		privKeys = append(privKeys, priv)
-		validatorRegistry = append(validatorRegistry,
+		Validators = append(Validators,
 			&pb.Validator{
 				Pubkey:    priv.PublicKey().Marshal(),
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1528,7 +1534,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxEffectiveBalance)
 	}
 	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
-	gBlockRoot, err := blockutil.BlockSigningRoot(gBlock)
+	gBlockRoot, err := ssz.SigningRoot(gBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1543,7 +1549,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		CurrentCrosslinks: crosslinks,
-		Validators:        validatorRegistry,
+		Validators:        Validators,
 		Balances:          validatorBalances,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -1562,7 +1568,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
-	genesisRoot, err := blockutil.BlockSigningRoot(genesisBlock)
+	genesisRoot, err := ssz.SigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1574,7 +1580,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 		Slot:       5,
 		ParentRoot: genesisRoot[:],
 	}
-	pHeadHash, err := blockutil.BlockSigningRoot(potentialHead)
+	pHeadHash, err := ssz.SigningRoot(potentialHead)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1582,7 +1588,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 		Slot:       6,
 		ParentRoot: genesisRoot[:],
 	}
-	pHeadHash2, err := blockutil.BlockSigningRoot(potentialHead2)
+	pHeadHash2, err := ssz.SigningRoot(potentialHead2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1614,7 +1620,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	}
 
 	// Verify block ancestor was correctly cached.
-	h, _ := blockutil.BlockSigningRoot(potentialHead)
+	h, _ := ssz.SigningRoot(potentialHead)
 	cachedInfo, err := blkAncestorCache.AncestorBySlot(h[:], genesisBlock.Slot)
 	if err != nil {
 		t.Fatal(err)
@@ -1629,7 +1635,7 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
-	genesisRoot, err := blockutil.BlockSigningRoot(genesisBlock)
+	genesisRoot, err := ssz.SigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1641,12 +1647,12 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 		Slot:       5,
 		ParentRoot: genesisRoot[:],
 	}
-	pHeadHash, _ := blockutil.BlockSigningRoot(potentialHead)
+	pHeadHash, _ := ssz.SigningRoot(potentialHead)
 	potentialHead2 := &pb.BeaconBlock{
 		Slot:       6,
 		ParentRoot: genesisRoot[:],
 	}
-	pHeadHash2, _ := blockutil.BlockSigningRoot(potentialHead2)
+	pHeadHash2, _ := ssz.SigningRoot(potentialHead2)
 
 	// We store these potential heads in the DB.
 	if err := beaconDB.SaveBlock(potentialHead); err != nil {
