@@ -655,12 +655,11 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 }
 
 // VerifyIndexedAttestation determines the validity of an indexed attestation.
-// WIP - signing is not implemented until BLS is integrated into Prysm.
 //
 // Spec pseudocode definition:
 //  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
 //    """
-//    Verify validity of ``indexed_attestation``.
+//    Check if ``indexed_attestation`` has valid indices and signature.
 //    """
 //    bit_0_indices = indexed_attestation.custody_bit_0_indices
 //    bit_1_indices = indexed_attestation.custody_bit_1_indices

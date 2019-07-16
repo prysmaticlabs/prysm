@@ -18,7 +18,7 @@ var totalActiveBalanceCache = cache.NewActiveBalanceCache()
 //    """
 //    Return the combined effective balance of the ``indices``. (1 Gwei minimum to avoid divisions by zero.)
 //    """
-//    return Gwei(max(sum([state.validators[index].effective_balance for index in indices]), 1))
+//    return Gwei(max(1, sum([state.validators[index].effective_balance for index in indices])))
 func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
 	total := uint64(0)
 	for _, idx := range indices {
