@@ -182,7 +182,7 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeader(state, block, config.VerifySignatures, config.Logging)
+	state, err := b.ProcessBlockHeader(state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block header: %v", err)
 	}

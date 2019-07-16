@@ -89,7 +89,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	blockSig := priv2.Sign(signingRoot[:], dt)
 	block.Signature = blockSig.Marshal()[:]
 
-	_, err = blocks.ProcessBlockHeader(state, block, true, false)
+	_, err = blocks.ProcessBlockHeader(state, block, true)
 	want := "verify signature failed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -143,7 +143,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block, false, false)
+	_, err = blocks.ProcessBlockHeader(state, block, false)
 	want := "is different then block slot"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -192,7 +192,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block, false, false)
+	_, err = blocks.ProcessBlockHeader(state, block, false)
 	want := "does not match"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -245,7 +245,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block, false, false)
+	_, err = blocks.ProcessBlockHeader(state, block, false)
 	want := "was previously slashed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -309,7 +309,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
 	}
-	newState, err := blocks.ProcessBlockHeader(state, block, true, false)
+	newState, err := blocks.ProcessBlockHeader(state, block, true)
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}

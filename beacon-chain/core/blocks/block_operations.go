@@ -107,7 +107,6 @@ func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
-	enableLogging bool,
 ) (*pb.BeaconState, error) {
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
@@ -146,7 +145,7 @@ func ProcessBlockHeader(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 	if verifySignatures {
-		if err := verifyProposerSignature(beaconState, block, idx, enableLogging); err != nil {
+		if err := verifyProposerSignature(beaconState, block, idx); err != nil {
 			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
 		}
 	}
@@ -159,7 +158,7 @@ func ProcessBlockHeader(
 //
 // Spec pseudocode definition:
 //   assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
-func verifyProposerSignature(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64, enableLogging bool) error {
+func verifyProposerSignature(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64) error {
 	proposer := beaconState.Validators[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
 	if err != nil {
@@ -174,12 +173,6 @@ func verifyProposerSignature(beaconState *pb.BeaconState, block *pb.BeaconBlock,
 	sig, err := bls.SignatureFromBytes(block.Signature)
 	if err != nil {
 		return fmt.Errorf("could not deserialize proposer signature: %v", err)
-	}
-	if enableLogging {
-		log.WithFields(logrus.Fields{
-			"slot":          block.Slot,
-			"proposerIndex": proposerIdx,
-		}).Info("Verifying proposer signature")
 	}
 	if !sig.Verify(signingRoot[:], pub, domain) {
 		return fmt.Errorf("proposer signature did not verify")
