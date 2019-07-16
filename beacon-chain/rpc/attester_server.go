@@ -122,7 +122,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch head state: %v", err)
 	}
-	headState, err = state.ProcessSlots(ctx, headState, headBlock.Slot)
+	headState, err = state.ProcessSlots(ctx, headState, headBlock.Slot, false)
 	if err != nil {
 		return nil, fmt.Errorf("could not process slot: %v", err)
 	}

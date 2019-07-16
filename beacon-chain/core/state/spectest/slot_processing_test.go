@@ -34,7 +34,7 @@ func TestSlotProcessingMainnet(t *testing.T) {
 
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
-			postState, err := state.ProcessSlots(context.Background(), tt.Pre, tt.Pre.Slot+tt.Slots)
+			postState, err := state.ProcessSlots(context.Background(), tt.Pre, tt.Pre.Slot+tt.Slots, false)
 			if err != nil {
 				t.Fatal(err)
 			}

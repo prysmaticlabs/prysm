@@ -15,6 +15,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -66,7 +67,7 @@ func ExecuteStateTransition(
 	var err error
 
 	// Execute per slots transition.
-	state, err = ProcessSlots(ctx, state, block.Slot)
+	state, err = ProcessSlots(ctx, state, block.Slot, config.Logging)
 	if err != nil {
 		return nil, fmt.Errorf("could not process slot: %v", err)
 	}
@@ -144,7 +145,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 //            process_epoch(state)
 //        state.slot += 1
 //    ]
-func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64, logging bool) (*pb.BeaconState, error) {
 	if state.Slot > slot {
 		return nil, fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
 	}
@@ -157,7 +158,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, fmt.Errorf("could not process slot: %v", err)
 		}
 		if CanProcessEpoch(state) {
-			state, err = ProcessEpoch(ctx, state)
+			state, err = ProcessEpoch(ctx, state, logging)
 			if err != nil {
 				return nil, fmt.Errorf("could not process epoch: %v", err)
 			}
@@ -342,12 +343,9 @@ func verifyOperationLengths(state *pb.BeaconState, body *pb.BeaconBlockBody) err
 		)
 	}
 
-	maxDeposits := params.BeaconConfig().MaxDeposits
-	if state.Eth1Data.DepositCount-state.Eth1DepositIndex < maxDeposits {
-		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
-	}
+	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, state.Eth1Data.DepositCount-state.Eth1DepositIndex)
 	// Verify outstanding deposits are processed up to max number of deposits
-	if len(body.Deposits) > int(maxDeposits) {
+	if len(body.Deposits) != int(maxDeposits) {
 		return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
 			maxDeposits, len(body.Deposits))
 	}
@@ -379,7 +377,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 //    process_slashings(state)
 //    process_final_updates(state)
 //    # @after_process_final_updates
-func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+func ProcessEpoch(ctx context.Context, state *pb.BeaconState, logging bool) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 
@@ -432,5 +430,34 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, fmt.Errorf("could not process final updates: %v", err)
 	}
 
+	logEpochData(state, logging, currentEpochAttestedBalance, prevEpochAttestedBalance)
+
 	return state, nil
+}
+
+func logEpochData(beaconState *pb.BeaconState, logging bool,
+	currentAttestedBal uint64, previousAttestedBal uint64) {
+
+	if logging {
+		log.WithField("currentEpochAttestations", len(beaconState.CurrentEpochAttestations)).Info("Number of current epoch attestations")
+		log.WithField("attestedBalance", currentAttestedBal).Debug("Current epoch balance")
+		log.WithField("prevEpochAttestations", len(beaconState.PreviousEpochAttestations)).Info("Number of previous epoch attestations")
+		log.WithField("attestedBalance", previousAttestedBal).Debug("Previous epoch attester balance")
+		log.WithField(
+			"previousJustifiedEpoch", beaconState.PreviousJustifiedCheckpoint.Epoch,
+		).Info("Previous justified epoch")
+		log.WithField(
+			"justifiedEpoch", beaconState.CurrentJustifiedCheckpoint.Epoch,
+		).Info("Justified epoch")
+		log.WithField(
+			"finalizedEpoch", beaconState.FinalizedCheckpoint.Epoch,
+		).Info("Finalized epoch")
+		log.WithField(
+			"Deposit Index", beaconState.Eth1DepositIndex,
+		).Info("ETH1 Deposit Index")
+		log.WithField(
+			"numValidators", len(beaconState.Validators),
+		).Info("Validator registry length")
+
+	}
 }

@@ -61,7 +61,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	attestations, err := ps.attestations(ctx)
+	attestations, err := ps.attestations(ctx, req.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get pending attestations: %v", err)
 	}
@@ -133,7 +133,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 // proposed blocks when performing their responsibility. If desired, callers can choose to filter pending
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
-func (ps *ProposerServer) attestations(ctx context.Context) ([]*pbp2p.Attestation, error) {
+func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*pbp2p.Attestation, error) {
 	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
@@ -142,7 +142,7 @@ func (ps *ProposerServer) attestations(ctx context.Context) ([]*pbp2p.Attestatio
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attest ations from operations service: %v", err)
 	}
-	beaconState.Slot++
+	beaconState.Slot = expectedSlot
 
 	var attsReadyForInclusion []*pbp2p.Attestation
 	for _, att := range atts {
@@ -150,7 +150,8 @@ func (ps *ProposerServer) attestations(ctx context.Context) ([]*pbp2p.Attestatio
 		if err != nil {
 			return nil, fmt.Errorf("could not get attestation slot: %v", err)
 		}
-		if slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
+		if slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot &&
+			beaconState.Slot <= slot+params.BeaconConfig().SlotsPerEpoch {
 			attsReadyForInclusion = append(attsReadyForInclusion, att)
 		}
 	}

@@ -192,7 +192,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
-	atts, err := proposerServer.attestations(context.Background())
+	atts, err := proposerServer.attestations(context.Background(), stateSlot)
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}
@@ -319,7 +319,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
-	atts, err := proposerServer.attestations(context.Background())
+	atts, err := proposerServer.attestations(context.Background(), currentSlot+params.BeaconConfig().MinAttestationInclusionDelay)
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}

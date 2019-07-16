@@ -142,7 +142,7 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 	// than 1 epoch away from the request.
 	if req.EpochStart > 1 && helpers.SlotToEpoch(s.Slot) < req.EpochStart-1 {
 		slotsToAdvance := helpers.StartSlot(req.EpochStart-1) - s.Slot
-		s, err = state.ProcessSlots(ctx, s, slotsToAdvance)
+		s, err = state.ProcessSlots(ctx, s, slotsToAdvance, false)
 		if err != nil {
 			return nil, err
 		}

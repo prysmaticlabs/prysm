@@ -502,7 +502,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
 	atts := []*pb.PendingAttestation{{Data: &pb.AttestationData{Target: &pb.Checkpoint{Epoch: 1}}}}
-	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{CurrentEpochAttestations: atts})
+	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{CurrentEpochAttestations: atts}, false)
 	if !strings.Contains(err.Error(), "could not get target atts prev epoch") {
 		t.Fatal("Did not receive wanted error")
 	}
@@ -517,7 +517,7 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 		BlockRoots:               make([][]byte, 128),
 		RandaoMixes:              make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations: atts})
+		CurrentEpochAttestations: atts}, false)
 	if !strings.Contains(err.Error(), "could not get target atts current epoch") {
 		t.Fatal("Did not receive wanted error")
 	}
@@ -547,7 +547,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 		FinalizedCheckpoint:        &pb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &pb.Checkpoint{},
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -567,7 +567,7 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 	config := state.DefaultConfig()
 	config.Logging = true
 
-	state.ProcessEpoch(context.Background(), newState)
+	state.ProcessEpoch(context.Background(), newState, false)
 }
 
 func BenchmarkProcessEpoch65536Validators(b *testing.B) {
@@ -634,7 +634,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, err := state.ProcessEpoch(context.Background(), s)
+		_, err := state.ProcessEpoch(context.Background(), s, false)
 		if err != nil {
 			b.Fatal(err)
 		}
