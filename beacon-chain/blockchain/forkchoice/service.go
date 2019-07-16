@@ -75,10 +75,10 @@ func (s *Store) GensisStore(state *pb.BeaconState) error {
 	if err := s.db.SaveState(s.ctx, state); err != nil {
 		return fmt.Errorf("could not save genesis state: %v", err)
 	}
-	if err := s.db.SaveCheckpointState(s.ctx, s.justifiedCheckpt, state); err != nil {
+	if err := s.db.SaveCheckpointState(s.ctx, state, s.justifiedCheckpt); err != nil {
 		return fmt.Errorf("could not save justified checkpt: %v", err)
 	}
-	if err := s.db.SaveCheckpointState(s.ctx, s.finalizedCheckpt, state); err != nil {
+	if err := s.db.SaveCheckpointState(s.ctx, state, s.finalizedCheckpt); err != nil {
 		return fmt.Errorf("could not save finalized checkpt: %v", err)
 	}
 
@@ -386,7 +386,7 @@ func (s *Store) OnAttestation(a *pb.Attestation) error {
 		if err != nil {
 			return fmt.Errorf("could not process slots up to %d", tgtSlot, err)
 		}
-		if err := s.db.SaveCheckpointState(s.ctx, tgt, baseState); err != nil {
+		if err := s.db.SaveCheckpointState(s.ctx, baseState, tgt); err != nil {
 			return fmt.Errorf("could not save check point state: %v", err)
 		}
 	}

@@ -90,7 +90,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,
 			histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket,
-			latestMessageBucket, checkpointBucket)
+			latestMessageBucket, checkpointBucket, forkChoiceStateBucket)
 	}); err != nil {
 		return nil, err
 	}
