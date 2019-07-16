@@ -38,8 +38,8 @@ func Seed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 		return bytesutil.ToBytes32(seed), nil
 	}
 
-	// See https://github.com/ethereum/eth2.0-specs/pull/1296 for the
-	// rationale on why we offset has to look down by 1.
+	// See https://github.com/ethereum/eth2.0-specs/pull/1296 for
+	// rationale on why offset has to look down by 1.
 	lookAheadEpoch := epoch + params.BeaconConfig().EpochsPerHistoricalVector -
 		params.BeaconConfig().MinSeedLookahead - 1
 
