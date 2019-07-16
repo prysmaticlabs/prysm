@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -396,7 +395,9 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    total_balance = get_total_active_balance(state)
 //    for index, validator in enumerate(state.validators):
 //        if validator.slashed and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
-//            penalty = validator.effective_balance * min(sum(state.slashings) * 3, total_balance) // total_balance
+//            increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
+//			  penalty_numerator = validator.effective_balance // increment * min(sum(state.slashings) * 3, total_balance)
+//            penalty = penalty_numerator // total_balance * increment
 //            decrease_balance(state, ValidatorIndex(index), penalty)
 func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -418,13 +419,11 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for index, validator := range state.Validators {
 		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
 		if validator.Slashed && correctEpoch {
-			// Note: penality calculation overflows as uint64 so we must use big.Int.
-			// See: https://github.com/ethereum/eth2.0-specs/issues/1284
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
-			penalty := big.NewInt(int64(validator.EffectiveBalance))
-			penalty.Mul(penalty, big.NewInt(int64(minSlashing)))
-			penalty.Div(penalty, big.NewInt(int64(totalBalance)))
-			state = helpers.DecreaseBalance(state, uint64(index), penalty.Uint64())
+			increment := params.BeaconConfig().EffectiveBalanceIncrement
+			penaltyNumerator := validator.EffectiveBalance / increment * minSlashing
+			penalty := penaltyNumerator / totalBalance * increment
+			state = helpers.DecreaseBalance(state, uint64(index), penalty)
 		}
 	}
 	return state, err
