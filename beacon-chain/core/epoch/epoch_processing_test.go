@@ -735,8 +735,13 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 				Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 				Slashings: []uint64{0, 1e9},
 			},
-			// penality   = validator.effective_balance * min(sum(state.slashings) * 3, total_balance) // total_balance
-			// 3000000000 = (32 * 1e9)                 * min(sum([0, 1e9])        * 3, (32 * 1e9)   ) // (32 * 1e9)
+			// expected_penalty = (
+			// 	state.validators[0].effective_balance // spec.EFFECTIVE_BALANCE_INCREMENT
+			// 	* (3 * total_penalties)
+			// 	// total_balance
+			// 	* spec.EFFECTIVE_BALANCE_INCREMENT
+			// )
+			// 3000000000 = (32 * 1e9)/(1 * 1e9)*(3*1e9)/ (32*1e9) * (1 * 1e9)
 			want: uint64(29000000000), // 32 * 1e9 - 3000000000
 		},
 		{
@@ -751,9 +756,9 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 				Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 				Slashings: []uint64{0, 1e9},
 			},
-			// penality   = validator.effective_balance * min(sum(state.slashings) * 3, total_balance)   // total_balance
-			// 1500000000 = (32 * 1e9)                 * min(sum([0, 1e9])        * 3, ((32 * 1e9) * 2)) // ((32 * 1e9) * 2)
-			want: uint64(30500000000), // 32 * 1e9 - 1500000000
+			// penalty    = validator balance / increment * (3*total_penalties) / total_balance * increment
+			// 1000000000 = (32 * 1e9)        / (1 * 1e9) * (3*1e9)             / (64*1e9)      * (1 * 1e9)
+			want: uint64(31000000000), // 32 * 1e9 - 1000000000
 		},
 		{
 			state: &pb.BeaconState{
@@ -767,8 +772,8 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 				Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 				Slashings: []uint64{0, 2 * 1e9},
 			},
-			// penality   = validator.effective_balance * min(sum(state.slashings) * 3, total_balance)   // total_balance
-			// 3000000000 = (32 * 1e9)                 * min(sum([0, 2*1e9])       * 3, ((32 * 1e9) * 2)) // ((32 * 1e9) * 2)
+			// penalty    = validator balance / increment * (3*total_penalties) / total_balance * increment
+			// 3000000000 = (32 * 1e9)        / (1 * 1e9) * (3*2e9)             / (64*1e9)      * (1 * 1e9)
 			want: uint64(29000000000), // 32 * 1e9 - 3000000000
 		},
 		{
@@ -781,9 +786,9 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 				Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 				Slashings: []uint64{0, 1e9},
 			},
-			// penality   = validator.effective_balance * min(sum(state.slashings) * 3, total_balance) // total_balance
-			// 2999990625 = ((32 * 1e9) - 100000)       * min(sum([0, 1e9])        * 3, (32 * 1e9)   ) // (32 * 1e9)
-			want: uint64(29000009375), // 32 * 1e9 - 2999990625
+			// penalty    = validator balance           / increment * (3*total_penalties) / total_balance        * increment
+			// 2000000000 = (32  * 1e9 - 100000)        / (1 * 1e9) * (3*1e9)             / (32*1e9)             * (1 * 1e9)
+			want: uint64(30000000000), // 32 * 1e9 - 2000000000
 		},
 	}
 
