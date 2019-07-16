@@ -194,6 +194,7 @@ func (q *Querier) run() {
 				q.chainHeadResponses[msg.Peer] = response
 			}
 			if response.CanonicalSlot > q.currentHeadSlot {
+				q.bestPeer = msg.Peer
 				q.currentHeadSlot = response.CanonicalSlot
 				q.currentStateRoot = response.CanonicalStateRootHash32
 				q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
