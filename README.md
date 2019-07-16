@@ -1,150 +1,144 @@
-# Prysmatic Labs Ethereum Serenity Implementation
+# Prysm: Ethereum 'Serenity' 2.0 Go Implementation
 
 [![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg?branch=master)](https://buildkite.com/prysmatic-labs/prysm)
-
-This is the main repository for the Go implementation of the Ethereum 2.0 Serenity [Prysmatic Labs](https://prysmaticlabs.com).
-
-Before you begin, check out our [official documentation portal](https://prysmaticlabs.gitbook.io/prysm/) and join our active chat room on Discord or Gitter below:
-
 [![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/KSA7rPr)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-Also, read our [Roadmap Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/docs/ROADMAP.md). This doc provides a background on the milestones we aim for the project to achieve.
+This is the Core repository for Prysm, [Prysmatic Labs](https://prysmaticlabs.com)' [Go](https://golang.org/) implementation of the Ethereum protocol 2.0 (Serenity).
 
+### Need assistance?
+A more detailed set of installation and usage instructions as well as explanations of each component are available on our [official documentation portal](https://prysmaticlabs.gitbook.io/prysm/). If you still have questions, feel free to stop by either our [Discord](https://discord.gg/KSA7rPr) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) and a member of the team or our community will be happy to assist you.
+
+**Interested in what's next?** Be sure to read our [Roadmap Reference Implementation](https://github.com/prysmaticlabs/prysm/blob/master/docs/ROADMAP.md) document. This page outlines the basics of sharding as well as the various short-term milestones that we hope to achieve over the coming year.
+
+### Come join the testnet!
+Participation is now open to the public in our testnet release for Ethereum 2.0 phase 0. Visit [prylabs.net](https://prylabs.net) for more information on the project itself or to sign  up as a validator on the network.
 
 # Table of Contents
 
-- [Join Our Testnet](#join-our-testnet)
+- [Dependencies](#dependencies)
 - [Installation](#installation)
-    - [Run Via Docker](#run-via-docker-recommended)
-    - [Run Via Bazel](#run-via-bazel)
-  - [Prysm Main Components](#prysm-main-components)
-    - [Running an Ethereum 2.0 Beacon Node](#running-an-ethereum-20-beacon-node)
-    - [Staking ETH: Running a Validator Client](#staking-eth-running-a-validator-client)
--   [Testing](#testing)
+    - [Build Via Docker](#build-via-docker)
+    - [Build Via Bazel](#build-via-bazel)
+- [Running an Ethereum 2.0 Beacon Node](#running-an-ethereum-20-beacon-node)
+- [Staking ETH: Running a Validator Client](#staking-eth-running-a-validator-client)
+-   [Testing Prysm](#testing-prysm)
 -   [Contributing](#contributing)
 -   [License](#license)
 
-# Join Our Testnet
+## Dependencies
+Prysm can be installed either with Docker **(recommended method)** or using our build tool, Bazel. The below instructions include sections for performing both.
 
-You can now participate in our public testnet release for Ethereum 2.0 phase 0. Visit [prylabs.net](https://prylabs.net) 💎 to participate!
+**For Docker installations:**
+  - The latest release of [Docker](https://docs.docker.com/install/)
 
-# Installing Prysm
+**For Bazel installations:**
+  - The latest release of [Bazel](https://docs.bazel.build/versions/master/install.html)
+  - A modern GNU/Linux operating system
 
-### Installation Options
-You can either choose to run our system via:
-- Our latest [release](https://github.com/prysmaticlabs/prysm/releases) **(Easiest)**
-- Using Docker **(Recommended)**
-- Using Our Build Tool, Bazel
+## Installation
 
-### Fetching via Docker (Recommended)
-Docker is a convenient way to run Prysm, as all you need to do is fetch the latest images:
-
+### Build via Docker
+1. Ensure you are running the most recent version of Docker by issuing the command:
+```
+docker -v
+```
+2.  To pull the Prysm images from the server, issue the following commands:
 ```
 docker pull gcr.io/prysmaticlabs/prysm/validator:latest
 docker pull gcr.io/prysmaticlabs/prysm/beacon-chain:latest
 ```
+This process will also install any related dependencies.
 
-### Build Via Bazel
-First, clone our repository:
+### Build via Bazel
 
-```
-sudo apt-get install git
-git clone https://github.com/prysmaticlabs/prysm
-cd prysm
-```
-
-Download the Bazel build tool by Google here: https://docs.bazel.build/versions/master/install-ubuntu.html
-
-And ensure it works by typing:
-
+1. Open a terminal window. Ensure you are running the most recent version of Bazel by issuing the command:
 ```
 bazel version
 ```
-
-Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build prysm. Then, build both parts of our system: a beacon chain node implementation, and a validator client:
-
+2. Clone this repository and enter the directory:
+```
+git clone https://github.com/prysmaticlabs/prysm
+cd prysm
+```
+3. Build both the beacon chain node implementation and the validator client:
 ```
 bazel build //beacon-chain:beacon-chain
 bazel build //validator:validator
 ```
+Bazel will automatically pull and install any dependencies as well, including Go and necessary compilers.
 
-# Prysm Main Components
-Prysm ships with two important components: a beacon node and a validator client. The beacon node is the server that performs the heavy lifting of Ethereum 2.0., A validator client is another piece of software that securely connects to the beacon node and allows you to stake 3.2 Goerli ETH in order to secure the network. You'll be mostly interacting with the validator client to manage your stake.
-Another critical component of Ethereum 2.0 is the Validator Deposit Contract, which is a smart contract deployed on the Ethereum 1.0 chain which can be used for current holders of ETH to do a one-way transfer into Ethereum 2.0.
+## Running an Ethereum 2.0 Beacon Node
+To understand the role that both the beacon node and validator play in Prysm, see [this section of our documentation](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/basic-architecture-overview).
 
-### Running an Ethereum 2.0 Beacon Node
-<b>With Docker</b>
+### Running via Docker
 
-Docker on Linux/Mac: 
+**Docker on Linux/Mac:**
+1. To start your beacon node, issue the following command:
 ```
 docker run -v /tmp/prysm-data:/data -p 4000:4000 \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data
   --clear-db
 ```
-Docker on Windows:
+**Docker on Windows:**
 
-1) You will need to share the local drive you wish to mount to to container (e.g. C:)
-    1. Enter Docker settings (right click tray icon)
-    2. Click Shared Drives
-    3. Select Drive to share
-    4. Click Apply
-    
-2) You will next need to create a folder in the drive to use as your data directory (Docker will not create this if it does not exist). For the purposes of these instructions, C: is shared, and we created the /tmp/prysm-data/ directory within. This path must be used for the local data directory for chain data for the Beacon Node, and when creating an account and keystore for the validator, and when running the validator.
+1) You will need to share the local drive you wish to mount to to container (e.g. C:).
+    1. Enter Docker settings (right click the tray icon)
+    2. Click 'Shared Drives'
+    3. Select a drive to share
+    4. Click 'Apply'
 
-3) Run the beacon node (Docker CLI in Windows seems to have trouble ingesting with escapes and new lines, so keep it on one line):
+2) You will next need to create a directory named ```/tmp/prysm-data/``` within your selected shared Drive. This folder will be used as a local data directory for Beacon Node chain data as well as account and keystore information required by the validator. Docker will **not** create this directory if it does not exist already. For the purposes of these instructions, it is assumed that ```C:``` is your prior-selected shared Drive.
+
+4) To run the beacon node, issue the following command:
 ```
 docker run -it -v c:/tmp/prysm-data:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
 ```
-<b>With Bazel</b>
 
-To start your beacon node with bazel:
+### Running via Bazel
+
+1) To start your Beacon Node with Bazel, issue the following command:
 ```
 bazel run //beacon-chain -- --clear-db --datadir=/tmp/prysm-data
 ```
 
-This will sync you up with the latest head block in the network, and then you'll have a ready beacon node.
-The chain will then be waiting for you to deposit 3.2 Goerli ETH into the Validator Deposit Contract before your validator can become active! Now, you'll need to create a validator client to connect to this node and stake 3.2 Goerli ETH to participate as a validator in Ethereum 2.0's Proof of Stake system.
+This will sync up the Beacon Node with the latest head block in the network.
 
-### Staking ETH: Running a Validator Client
-Once your beacon node is up, you'll need to attach a validator client as a separate process. Each validator represents 3.2 Goerli ETH being staked in the system, so you can spin up as many as you want to have more at stake in the network
 
-**Activating Your Validator: Depositing 3.2 Goerli ETH**
+## Staking ETH: Running a Validator Client
 
-Using your validator deposit data from the previous step, use the instructions in https://alpha.prylabs.net/participate to deposit.
+Once your beacon node is up, the chain will be waiting for you to deposit 3.2 Goerli ETH into the Validator Deposit Contract to activate your validator (discussed in the section below). First though, you will need to create a *validator client* to connect to this node in order to stake and participate. Each validator represents 3.2 Goerli ETH being staked in the system,  and it is possible to spin up as many as you desire in order to have more stake in the network.
 
-It'll take a while for the nodes in the network to process your deposit, but once you're active, your validator will begin doing its responsibility! In your validator client, you'll be able to frequently see your validator balance as it goes up. If you ever go offline for a while, you'll start gradually losing your deposit until you get kicked out of the system. Congratulations, you are now running Ethereum 2.0 Phase 0 :).
+### Activating Your Validator: Depositing 3.2 Goerli ETH 
 
-<b>With bazel</b>
+Using your validator deposit data from the previous step, follow the instructions found on https://alpha.prylabs.net/participate to make a deposit.
 
-Open another terminal window
+It will take a while for the nodes in the network to process your deposit, but once your node is active, the validator will begin doing its responsibility. In your validator client, you will be able to frequently see your validator balance as it goes up over time. Note that, should your node ever go offline for a long period, you'll start gradually losing your deposit until you are removed from the system. 
 
+### Starting the validator with Bazel
+
+1. Open another terminal window. Enter your Prysm directory and run the validator by issuing the following command:
 ```
 cd prysm
 bazel run //validator
 ```
+**Congratulations, you are now running Ethereum 2.0 Phase 0!**
 
-# Testing
+## Testing Prysm
 
-To run the unit tests of our system do:
-
+**To run the unit tests of our system**, issue the command:
 ```
 bazel test //...
 ```
 
-To run our linter, make sure you have [golangci-lint](https://https://github.com/golangci/golangci-lint) installed and then run:
-
+**To run our linter**, make sure you have [golangci-lint](https://https://github.com/golangci/golangci-lint) installed and then issue the command:
 ```
 golangci-lint run
 ```
 
-# Contributing
-
+## Contributing
 We have put all of our contribution guidelines into [CONTRIBUTING.md](https://github.com/prysmaticlabs/prysm/blob/master/CONTRIBUTING.md)! Check it out to get started.
 
-![nyancat](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBSus2ozk_HuGdHMHKWjb1W5CmwwoxmYIjIBmERE1u-WeONpJJXg)
-
-# License
-
+## License
 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)

@@ -167,6 +167,40 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 	hook.Reset()
 }
 
+func TestQuerier_BestPeerAssignment(t *testing.T) {
+	hook := logTest.NewGlobal()
+	cfg := &QuerierConfig{
+		P2P:                &mockP2P{},
+		ResponseBufferSize: 100,
+		PowChain:           &afterGenesisPowChain{},
+	}
+	sq := NewQuerierService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		sq.run()
+		exitRoutine <- true
+	}()
+
+	response := &pb.ChainHeadResponse{
+		CanonicalSlot:            1,
+		CanonicalStateRootHash32: []byte{'a', 'b'},
+	}
+
+	msg := p2p.Message{
+		Data: response,
+		Peer: "TestQuerier_BestPeerAssignment",
+	}
+
+	sq.responseBuf <- msg
+
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "level=info msg=\"Peer with highest canonical head\" peerID=HupjP1BPtXeX766WHAeYyATx9MJ3RFe5MZCwC3UEw")
+
+	close(exitRoutine)
+	hook.Reset()
+}
+
 func TestSyncedInGenesis(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
