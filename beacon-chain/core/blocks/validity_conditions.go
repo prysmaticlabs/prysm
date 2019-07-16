@@ -10,10 +10,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
-
-var log = logrus.WithField("prefix", "core/blocks")
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
 func IsValidBlock(
@@ -61,11 +58,6 @@ func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 	validTimeThreshold := genesisTime.Add(secondsPerSlot)
 	now := clock.Now()
 	isValid := now.After(validTimeThreshold)
-	if !isValid {
-		log.WithFields(logrus.Fields{
-			"localTime":           now,
-			"genesisPlusSlotTime": validTimeThreshold,
-		}).Info("Waiting for slot to be valid")
-	}
+
 	return isValid
 }

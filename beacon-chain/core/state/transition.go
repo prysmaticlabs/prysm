@@ -13,14 +13,10 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
-var log = logrus.WithField("prefix", "core/state")
 
 // TransitionConfig defines important configuration options
 // for executing a state transition, which can have logging and signature
@@ -28,14 +24,12 @@ var log = logrus.WithField("prefix", "core/state")
 type TransitionConfig struct {
 	VerifySignatures bool
 	VerifyStateRoot  bool
-	Logging          bool
 }
 
 // DefaultConfig option for executing state transitions.
 func DefaultConfig() *TransitionConfig {
 	return &TransitionConfig{
 		VerifySignatures: false,
-		Logging:          false,
 	}
 }
 
@@ -192,7 +186,7 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not process block header: %v", err)
 	}
 
-	state, err = b.ProcessRandao(state, block.Body, config.VerifySignatures, config.Logging)
+	state, err = b.ProcessRandao(state, block.Body, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process randao: %v", err)
 	}
@@ -207,22 +201,6 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not process block operation: %v", err)
 	}
 
-	r, err := ssz.SigningRoot(block)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
-	}
-
-	if config.Logging {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Verified block slot == state slot")
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Verified and processed block RANDAO")
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(r[:]))).Debugf("Processed ETH1 data")
-		log.WithField(
-			"attestationsInBlock", len(block.Body.Attestations),
-		).Info("Block attestations")
-		log.WithField(
-			"depositsInBlock", len(block.Body.Deposits),
-		).Info("Block deposits")
-	}
 	return state, nil
 }
 

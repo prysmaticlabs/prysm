@@ -564,8 +564,6 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		RandaoMixes:      make([][]byte, params.BeaconConfig().SlotsPerEpoch),
 	}
-	config := state.DefaultConfig()
-	config.Logging = true
 
 	state.ProcessEpoch(context.Background(), newState)
 }
@@ -697,7 +695,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	c := &state.TransitionConfig{
 		VerifySignatures: true,
-		Logging:          false, // We enable logging in this state transition call.
 	}
 
 	// Set up proposer slashing object for block
