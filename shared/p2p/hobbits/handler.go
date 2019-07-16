@@ -202,7 +202,7 @@ func (h *HobbitsNode) blockBodiesResponse(msg proto.Message) (HobbitsMessage, er
 	}
 
 	head := RPCHeader{
-		MethodID: 0x0D,
+		MethodID: uint16(13),
 	}
 	header, err := bson.Marshal(head)
 	if err != nil {
@@ -248,7 +248,7 @@ func (h *HobbitsNode) attestationResponse(msg proto.Message) (HobbitsMessage, er
 	}
 
 	head := RPCHeader{
-		MethodID: 0x0F,
+		MethodID: uint16(15),
 	}
 	header, err := bson.Marshal(head)
 	if err != nil {

@@ -29,7 +29,7 @@ type HobbitsMessage encoding.Message
 
 var topicMapping map[reflect.Type]string // TODO: initialize with a const? How TF do I use this??
 
-type RPCMethod uint8
+type RPCMethod uint16
 
 const (
 	HELLO RPCMethod = iota
