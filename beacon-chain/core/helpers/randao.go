@@ -26,7 +26,7 @@ var ErrInvalidStateLatestActiveIndexRoots = errors.New("state does not have corr
 //    """
 //    Return the seed at ``epoch``.
 //    """
-//    mix = get_randao_mix(state, Epoch(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD))  # Avoid underflow
+//    mix = get_randao_mix(state, Epoch(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1)) #Avoid underflow
 //    active_index_root = state.active_index_roots[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
 //    return hash(mix + active_index_root + int_to_bytes(epoch, length=32))
 func Seed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
@@ -38,8 +38,10 @@ func Seed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 		return bytesutil.ToBytes32(seed), nil
 	}
 
+	// See https://github.com/ethereum/eth2.0-specs/pull/1296 for the
+	// rationale on why we offset has to look down by 1.
 	lookAheadEpoch := epoch + params.BeaconConfig().EpochsPerHistoricalVector -
-		params.BeaconConfig().MinSeedLookahead
+		params.BeaconConfig().MinSeedLookahead - 1
 
 	// Check that the state has the correct latest active index roots or
 	// randao mix may panic for index out of bounds.
