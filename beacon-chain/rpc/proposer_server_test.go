@@ -65,6 +65,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
+	helpers.ClearAllCaches()
 
 	mockChain := &mockChainService{}
 
@@ -101,7 +102,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	req := &pbp2p.BeaconBlock{
 		ParentRoot: parentRoot[:],
-		Slot:       11,
+		Slot:       8,
 		Body: &pbp2p.BeaconBlockBody{
 			RandaoReveal:      nil,
 			ProposerSlashings: nil,
@@ -319,7 +320,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
-	atts, err := proposerServer.attestations(context.Background(), currentSlot+params.BeaconConfig().MinAttestationInclusionDelay)
+	atts, err := proposerServer.attestations(context.Background(), currentSlot+params.BeaconConfig().MinAttestationInclusionDelay+1)
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}
@@ -900,7 +901,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		powChainService: &mockPOWChainService{
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
 			hashesByHeight: map[int][]byte{
-				0: beaconState.Eth1Data.DepositRoot,
+				0: beaconState.Eth1Data.BlockHash,
 				// adding some not relevant blocks heights to test that search works
 				1: {1},
 				2: beaconState.Eth1DataVotes[0].BlockHash,

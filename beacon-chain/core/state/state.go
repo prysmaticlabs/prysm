@@ -92,6 +92,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		eth1Data = &pb.Eth1Data{}
 	}
 
+	eth1Data.DepositCount = uint64(len(deposits))
+
 	state := &pb.BeaconState{
 		// Misc fields.
 		Slot:        0,
@@ -185,8 +187,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 			state,
 			deposit,
 			validatorMap,
-			false,
-			false,
+			false, /* verify signature */
+			false, /* verify tree */
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit %d: %v", i, err)
