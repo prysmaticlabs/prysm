@@ -17,7 +17,8 @@ import (
 )
 
 type RPCHeader struct {
-	MethodID uint8 `bson:"method_id"`
+	MethodID uint16 `bson:"method_id"`
+	Id       uint64 `bson:"id"`
 }
 
 type Hello struct {
@@ -50,7 +51,7 @@ type BlockBodiesResponse struct {
 }
 
 type AttestationRequest struct {
-	Signature []byte `bson:"signature"`
+	Hash []byte `bson:"hash"`
 }
 
 type AttestationResponse struct {
@@ -163,7 +164,6 @@ func (h *HobbitsNode) removePeer(id peer.ID) error {
 
 func (h *HobbitsNode) blockHeadersRequest(id peer.ID, message HobbitsMessage) error {
 
-
 	// var request BlockRequest // TODO: might not need BlockRequest struct, just unmarshal into protobuf
 	//err := bson.Unmarshal(message.Body, request)
 	//if err != nil {
@@ -184,7 +184,7 @@ func (h *HobbitsNode) blockBodiesRequest(id peer.ID, message HobbitsMessage) err
 	bbr.StartSlot = requestBody.StartSlot
 
 	h.Feed(&bbr).Send(p2p.Message{
-		Ctx: context.Background(),
+		Ctx:  context.Background(),
 		Data: &bbr,
 		Peer: id,
 	})
@@ -210,10 +210,10 @@ func (h *HobbitsNode) blockBodiesResponse(msg proto.Message) (HobbitsMessage, er
 	}
 
 	return HobbitsMessage{
-		Version: uint32(3),
+		Version:  uint32(3),
 		Protocol: encoding.RPC,
-		Header: header,
-		Body: body,
+		Header:   header,
+		Body:     body,
 	}, nil
 }
 
@@ -226,11 +226,11 @@ func (h *HobbitsNode) attestationRequest(id peer.ID, message HobbitsMessage) err
 	}
 
 	ar := &pb.AttestationRequest{
-		Hash: requestBody.Signature,
+		Hash: requestBody.Hash,
 	}
 
 	h.Feed(ar).Send(p2p.Message{
-		Ctx: context.Background(),
+		Ctx:  context.Background(),
 		Data: ar,
 		Peer: id,
 	})
@@ -256,9 +256,9 @@ func (h *HobbitsNode) attestationResponse(msg proto.Message) (HobbitsMessage, er
 	}
 
 	return HobbitsMessage{
-		Version: uint32(3),
+		Version:  uint32(3),
 		Protocol: encoding.RPC,
-		Header: header,
-		Body: body,
+		Header:   header,
+		Body:     body,
 	}, nil
 }
