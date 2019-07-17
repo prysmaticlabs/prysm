@@ -272,7 +272,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
-	state, err = b.ProcessTransfers(state, body, config.VerifySignatures)
+	state, err = b.ProcessTransfers(state, body)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block transfers: %v", err)
 	}

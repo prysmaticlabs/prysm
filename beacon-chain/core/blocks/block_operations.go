@@ -1028,12 +1028,11 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 func ProcessTransfers(
 	beaconState *pb.BeaconState,
 	body *pb.BeaconBlockBody,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	transfers := body.Transfers
 
 	for idx, transfer := range transfers {
-		if err := verifyTransfer(beaconState, transfer, verifySignatures); err != nil {
+		if err := verifyTransfer(beaconState, transfer); err != nil {
 			return nil, fmt.Errorf("could not verify transfer %d: %v", idx, err)
 		}
 		// Process the transfer between accounts.
@@ -1064,7 +1063,7 @@ func ProcessTransfers(
 	return beaconState, nil
 }
 
-func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySignatures bool) error {
+func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer) error {
 	if transfer.Sender > uint64(len(beaconState.Validators)) {
 		return errors.New("transfer sender index out of bounds in validator registry")
 	}
@@ -1107,11 +1106,9 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 	if !bytes.Equal(sender.WithdrawalCredentials, buf) {
 		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
 	}
-	if verifySignatures {
-		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainTransfer)
-		if err := verifySigningRoot(transfer, transfer.Pubkey, transfer.Signature, domain); err != nil {
-			return fmt.Errorf("could not verify voluntary exit signature: %v", err)
-		}
+	domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainTransfer)
+	if err := verifySigningRoot(transfer, transfer.Pubkey, transfer.Signature, domain); err != nil {
+		return fmt.Errorf("could not verify transfer signature: %v", err)
 	}
 	return nil
 }
