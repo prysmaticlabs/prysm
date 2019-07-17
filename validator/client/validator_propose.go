@@ -80,7 +80,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	)
 
 	log.WithFields(logrus.Fields{
-		"pubKey":       tpk,
+		"pubKey":          tpk,
 		"slot":            b.Slot,
 		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRoot),
 		"numAttestations": len(b.Body.Attestations),
