@@ -210,9 +210,9 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	genesisActiveIndexRoot, err := ssz.HashTreeRoot(activeIndices)
+	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash tree root: %v", err)
+		return nil, fmt.Errorf("could not hash tree root active indices: %v", err)
 	}
 	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
 	if err != nil {
