@@ -16,18 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
-
-func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableComputeStateRoot: true,
-	})
-}
 
 func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
@@ -72,27 +65,33 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
+	helpers.ClearAllCaches()
 
 	mockChain := &mockChainService{}
-
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
-	beaconState.LatestBlockHeader = &pbp2p.BeaconBlockHeader{
-		StateRoot: []byte{},
+
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	if err != nil {
+		t.Fatalf("Could not hash genesis state: %v", err)
 	}
-	beaconState.Slot = 10
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
 
 	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	parentRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
 	}
 
 	proposerServer := &ProposerServer{
@@ -102,8 +101,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 
 	req := &pbp2p.BeaconBlock{
-		ParentRoot: nil,
-		Slot:       11,
+		ParentRoot: parentRoot[:],
+		Slot:       8,
 		Body: &pbp2p.BeaconBlockBody{
 			RandaoReveal:      nil,
 			ProposerSlashings: nil,
@@ -112,7 +111,10 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		},
 	}
 
-	_, _ = proposerServer.computeStateRoot(context.Background(), req)
+	_, err = proposerServer.computeStateRoot(context.Background(), req)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
@@ -191,7 +193,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
-	atts, err := proposerServer.attestations(context.Background())
+	atts, err := proposerServer.attestations(context.Background(), stateSlot)
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}
@@ -318,7 +320,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
-	atts, err := proposerServer.attestations(context.Background())
+	atts, err := proposerServer.attestations(context.Background(), currentSlot+params.BeaconConfig().MinAttestationInclusionDelay+1)
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}
@@ -899,7 +901,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		powChainService: &mockPOWChainService{
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
 			hashesByHeight: map[int][]byte{
-				0: beaconState.Eth1Data.DepositRoot,
+				0: beaconState.Eth1Data.BlockHash,
 				// adding some not relevant blocks heights to test that search works
 				1: {1},
 				2: beaconState.Eth1DataVotes[0].BlockHash,

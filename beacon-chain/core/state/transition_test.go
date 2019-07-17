@@ -123,7 +123,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	blkDeposits := make([]*pb.Deposit, 16)
+	blkDeposits := make([]*pb.Deposit, 0)
 	block := &pb.BeaconBlock{
 		ParentRoot: parentRoot[:],
 		Slot:       0,
@@ -227,7 +227,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 				DepositRoot: []byte{2},
 				BlockHash:   []byte{3},
 			},
-			Deposits: make([]*pb.Deposit, 16),
+			Deposits: make([]*pb.Deposit, 0),
 		},
 	}
 	want := "could not process block attestations"
@@ -473,7 +473,6 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-	beaconState.Eth1DepositIndex = 0
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
