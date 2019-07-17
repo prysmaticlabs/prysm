@@ -67,7 +67,7 @@ func ExecuteStateTransition(
 	var err error
 
 	// Execute per slots transition.
-	state, err = ProcessSlots(ctx, state, block.Slot, config.Logging)
+	state, err = ProcessSlots(ctx, state, block.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not process slot: %v", err)
 	}
@@ -145,7 +145,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 //            process_epoch(state)
 //        state.slot += 1
 //    ]
-func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64, logging bool) (*pb.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
 	if state.Slot > slot {
 		return nil, fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
 	}
@@ -158,7 +158,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64, loggi
 			return nil, fmt.Errorf("could not process slot: %v", err)
 		}
 		if CanProcessEpoch(state) {
-			state, err = ProcessEpoch(ctx, state, logging)
+			state, err = ProcessEpoch(ctx, state)
 			if err != nil {
 				return nil, fmt.Errorf("could not process epoch: %v", err)
 			}
@@ -377,7 +377,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 //    process_slashings(state)
 //    process_final_updates(state)
 //    # @after_process_final_updates
-func ProcessEpoch(ctx context.Context, state *pb.BeaconState, logging bool) (*pb.BeaconState, error) {
+func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 
@@ -429,35 +429,5 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, logging bool) (*pb
 	if err != nil {
 		return nil, fmt.Errorf("could not process final updates: %v", err)
 	}
-
-	logEpochData(state, logging, currentEpochAttestedBalance, prevEpochAttestedBalance)
-
 	return state, nil
-}
-
-func logEpochData(beaconState *pb.BeaconState, logging bool,
-	currentAttestedBal uint64, previousAttestedBal uint64) {
-
-	if logging {
-		log.WithField("currentEpochAttestations", len(beaconState.CurrentEpochAttestations)).Info("Number of current epoch attestations")
-		log.WithField("attestedBalance", currentAttestedBal).Debug("Current epoch balance")
-		log.WithField("prevEpochAttestations", len(beaconState.PreviousEpochAttestations)).Info("Number of previous epoch attestations")
-		log.WithField("attestedBalance", previousAttestedBal).Debug("Previous epoch attester balance")
-		log.WithField(
-			"previousJustifiedEpoch", beaconState.PreviousJustifiedCheckpoint.Epoch,
-		).Info("Previous justified epoch")
-		log.WithField(
-			"justifiedEpoch", beaconState.CurrentJustifiedCheckpoint.Epoch,
-		).Info("Justified epoch")
-		log.WithField(
-			"finalizedEpoch", beaconState.FinalizedCheckpoint.Epoch,
-		).Info("Finalized epoch")
-		log.WithField(
-			"Deposit Index", beaconState.Eth1DepositIndex,
-		).Info("ETH1 Deposit Index")
-		log.WithField(
-			"numValidators", len(beaconState.Validators),
-		).Info("Validator registry length")
-
-	}
 }
