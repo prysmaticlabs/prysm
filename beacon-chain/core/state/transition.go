@@ -15,6 +15,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -342,10 +343,7 @@ func verifyOperationLengths(state *pb.BeaconState, body *pb.BeaconBlockBody) err
 		)
 	}
 
-	maxDeposits := params.BeaconConfig().MaxDeposits
-	if state.Eth1Data.DepositCount-state.Eth1DepositIndex < maxDeposits {
-		maxDeposits = state.Eth1Data.DepositCount - state.Eth1DepositIndex
-	}
+	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, state.Eth1Data.DepositCount-state.Eth1DepositIndex)
 	// Verify outstanding deposits are processed up to max number of deposits
 	if len(body.Deposits) != int(maxDeposits) {
 		return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
@@ -431,6 +429,5 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	if err != nil {
 		return nil, fmt.Errorf("could not process final updates: %v", err)
 	}
-
 	return state, nil
 }
