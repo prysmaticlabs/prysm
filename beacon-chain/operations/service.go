@@ -247,7 +247,7 @@ func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool
 }
 
 // removeOperations removes the processed operations from operation pool and DB.
-func (s *Service) removeOperations() error {
+func (s *Service) removeOperations() {
 	incomingBlockSub := s.incomingProcessedBlockFeed.Subscribe(s.incomingProcessedBlock)
 	defer incomingBlockSub.Unsubscribe()
 
