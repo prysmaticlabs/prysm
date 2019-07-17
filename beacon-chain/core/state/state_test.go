@@ -143,7 +143,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	activeValidators, _ := helpers.ActiveValidatorIndices(newState, 0)
-	genesisActiveIndexRoot, err := ssz.HashTreeRoot(activeValidators)
+	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeValidators, params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
 		t.Errorf("could not hash tree root: %v", err)
 	}

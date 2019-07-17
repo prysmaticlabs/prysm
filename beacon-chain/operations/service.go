@@ -247,14 +247,9 @@ func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool
 }
 
 // removeOperations removes the processed operations from operation pool and DB.
-func (s *Service) removeOperations() error {
+func (s *Service) removeOperations() {
 	incomingBlockSub := s.incomingProcessedBlockFeed.Subscribe(s.incomingProcessedBlock)
 	defer incomingBlockSub.Unsubscribe()
-
-	state, err := s.beaconDB.HeadState(s.ctx)
-	if err != nil {
-		return fmt.Errorf("could not retrieve attestations from DB")
-	}
 
 	for {
 		select {
@@ -270,11 +265,16 @@ func (s *Service) removeOperations() error {
 			// Removes the pending attestations received from processed block body in DB.
 			if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
 				log.Errorf("Could not remove processed attestations from DB: %v", err)
-				return nil
+				continue
+			}
+			state, err := s.beaconDB.HeadState(s.ctx)
+			if err != nil {
+				log.Errorf("could not retrieve attestations from DB")
+				continue
 			}
 			if err := s.removeEpochOldAttestations(state); err != nil {
 				log.Errorf("Could not remove old attestations from DB at slot %d: %v", block.Slot, err)
-				return nil
+				continue
 			}
 		}
 	}

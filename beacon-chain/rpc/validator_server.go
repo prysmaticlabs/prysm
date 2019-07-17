@@ -140,8 +140,8 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 
 	// Advance state with empty transitions if the head state slot is farther
 	// than 1 epoch away from the request.
-	if req.EpochStart > 1 && helpers.SlotToEpoch(s.Slot) < req.EpochStart-1 {
-		slotsToAdvance := helpers.StartSlot(req.EpochStart-1) - s.Slot
+	if req.EpochStart > 1 && s.Slot < helpers.StartSlot(req.EpochStart-1) {
+		slotsToAdvance := helpers.StartSlot(req.EpochStart - 1)
 		s, err = state.ProcessSlots(ctx, s, slotsToAdvance)
 		if err != nil {
 			return nil, err
@@ -202,7 +202,7 @@ func (vs *ValidatorServer) assignment(
 	}
 
 	committee, shard, slot, isProposer, err :=
-		helpers.CommitteeAssignment(beaconState, helpers.SlotToEpoch(epochStart), uint64(idx))
+		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx))
 	if err != nil {
 		return nil, err
 	}

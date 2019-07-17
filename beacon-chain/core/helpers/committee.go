@@ -324,10 +324,12 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 
 	currentEpoch := CurrentEpoch(state)
 	checkEpoch := currentEpoch + 1
+
 	if epoch > checkEpoch {
 		return 0, fmt.Errorf("epoch %d can't be greater than %d",
 			epoch, checkEpoch)
 	}
+
 	delta, err := ShardDelta(state, currentEpoch)
 	if err != nil {
 		return 0, fmt.Errorf("could not get shard delta: %v", err)

@@ -2,13 +2,11 @@ package blocks
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
@@ -19,23 +17,8 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 		t.Error("genesis block missing ParentHash field")
 	}
 
-	if !reflect.DeepEqual(b1.Body.Attestations, []*pb.Attestation{}) {
-		t.Errorf("genesis block should have 0 attestations")
-	}
-
-	if !bytes.Equal(b1.Body.RandaoReveal, params.BeaconConfig().ZeroHash[:]) {
-		t.Error("genesis block missing RandaoReveal field")
-	}
-
 	if !bytes.Equal(b1.StateRoot, stateHash) {
 		t.Error("genesis block StateRootHash32 isn't initialized correctly")
-	}
-	expectedEth1 := &pb.Eth1Data{
-		DepositRoot: params.BeaconConfig().ZeroHash[:],
-		BlockHash:   params.BeaconConfig().ZeroHash[:],
-	}
-	if !proto.Equal(b1.Body.Eth1Data, expectedEth1) {
-		t.Error("genesis block Eth1Data isn't initialized correctly")
 	}
 }
 
