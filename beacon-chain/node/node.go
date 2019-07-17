@@ -286,7 +286,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		Logger:          powClient,
 		HTTPLogger:      httpClient,
 		BlockFetcher:    httpClient,
-		ContractBackend: powClient,
+		ContractBackend: httpClient,
 		BeaconDB:        b.db,
 	}
 	web3Service, err := powchain.NewWeb3Service(ctx, cfg)
