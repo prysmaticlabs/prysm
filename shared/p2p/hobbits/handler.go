@@ -30,7 +30,11 @@ type Hello struct {
 }
 
 type GossipHeader struct {
-	topic string `bson:"topic"`
+	MethodID uint16 `bson:"method_id"`
+	Topic string `bson:"topic"`
+	Timestamp uint64 `bson:"timestamp"`
+	MessageHash [32]byte `bson:"message_hash"`
+	Hash [32]byte `bson:"hash"`
 }
 
 type Status struct {

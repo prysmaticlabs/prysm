@@ -117,12 +117,20 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	log.Trace("processing GOSSIP message")
 
+	header := GossipHeader{}
+
+	err := bson.Unmarshal(message.Header, header)
+	if err != nil {
+		return errors.Wrap(err, "error unmarshaling gossip message header")
+	}
+
+	if !h.received(header) {
+		return errors.New("GOSSIP message is duplicate, aborting process")
+	}
+
 	// TODO: parse message hash so that it doesn't process already-gossiped messages
 
-	_, err := h.parseTopic(message)
-	if err != nil {
-		return errors.Wrap(err, "error parsing topic")
-	}
+	topic := h.parseTopic(header)
 
 	// TODO, does the node log this shit?
 	//  maybe the message hash for feedback purposes?
@@ -132,6 +140,10 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	h.Broadcast(context.Background(), nil) // TODO: marshal into proto.Message
 
 	return nil
+}
+
+func (h *HobbitsNode) received(header GossipHeader) bool {
+	if val, ok :=
 }
 
 func (h *HobbitsNode) parseMethodID(header []byte) (RPCMethod, error) {
@@ -149,15 +161,8 @@ func (h *HobbitsNode) parseMethodID(header []byte) (RPCMethod, error) {
 }
 
 // parseTopic takes care of parsing the topic and updating the node's feeds
-func (h *HobbitsNode) parseTopic(message HobbitsMessage) (string, error) {
-	header := new(GossipHeader)
-
-	err := bson.Unmarshal(message.Header, header)
-	if err != nil {
-		return "", errors.Wrap(err, "error unmarshaling gossip message header")
-	}
-
-	return header.topic, nil
+func (h *HobbitsNode) parseTopic(header GossipHeader) string {
+	return header.Topic
 }
 
 func (h *HobbitsNode) Feed(msg proto.Message) p2p.Feed {
