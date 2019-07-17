@@ -344,7 +344,7 @@ func verifyOperationLengths(state *pb.BeaconState, body *pb.BeaconBlockBody) err
 	}
 
 	if state.Eth1DepositIndex > state.Eth1Data.DepositCount {
-		return fmt.Errorf("deposit index in the state is %d which is greater than the latest eth1data's deposit count of %d", state.Eth1DepositIndex, state.Eth1Data.DepositCount)
+		return fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex, state.Eth1Data.DepositCount)
 	}
 	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, state.Eth1Data.DepositCount-state.Eth1DepositIndex)
 	// Verify outstanding deposits are processed up to max number of deposits
