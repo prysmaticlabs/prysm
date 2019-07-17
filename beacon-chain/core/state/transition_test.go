@@ -352,9 +352,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	want := "number of voluntary exits (17) in block body exceeds allowed threshold of 16"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); err == nil {
+		t.Error("Expected err, received nil")
 	}
 }
 

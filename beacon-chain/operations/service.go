@@ -247,7 +247,7 @@ func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool
 }
 
 // removeOperations removes the processed operations from operation pool and DB.
-func (s *Service) removeOperations() error {
+func (s *Service) removeOperations() {
 	incomingBlockSub := s.incomingProcessedBlockFeed.Subscribe(s.incomingProcessedBlock)
 	defer incomingBlockSub.Unsubscribe()
 
@@ -255,10 +255,8 @@ func (s *Service) removeOperations() error {
 		select {
 		case <-incomingBlockSub.Err():
 			log.Debug("Subscriber closed, exiting goroutine")
-			return nil
 		case <-s.ctx.Done():
 			log.Debug("operations service context closed, exiting remove goroutine")
-			return nil
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
 			handler.SafelyHandleMessage(s.ctx, s.handleProcessedBlock, block)
