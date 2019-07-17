@@ -61,6 +61,7 @@ type powChainService interface {
 	DepositTrie() *trieutil.MerkleTrie
 	ChainStartDepositHashes() ([][]byte, error)
 	ChainStartDeposits() []*pbp2p.Deposit
+	ChainStartETH1Data() *pbp2p.Eth1Data
 }
 
 type syncService interface {
