@@ -354,7 +354,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 		},
 	}
 
-	want := "block randao reveal signature did not verify"
+	want := "block randao: signature did not verify"
 	if _, err := blocks.ProcessRandao(
 		beaconState,
 		block.Body,
