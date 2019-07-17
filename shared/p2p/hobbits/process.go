@@ -86,7 +86,7 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 
 		return nil
 	case GET_BLOCK_BODIES: // TODO: this is so messed up
-		err := h.blockBodiesRequest(id, message)
+		err := h.blockBodyRequest(id, message)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve block bodies")
 		}

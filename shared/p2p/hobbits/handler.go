@@ -39,7 +39,7 @@ type Status struct {
 }
 
 type BlockBodiesRequest struct {
-	StartRoot [32]byte `bson:"start_root"`
+	StartRoot []byte `bson:"start_root"`
 	StartSlot uint64   `bson:"start_slot"`
 	Max       uint64   `bson:"max"`
 	Skip      uint64   `bson:"skip"`
@@ -173,15 +173,16 @@ func (h *HobbitsNode) blockHeadersRequest(id peer.ID, message HobbitsMessage) er
 	return nil
 }
 
-func (h *HobbitsNode) blockBodiesRequest(id peer.ID, message HobbitsMessage) error { // TODO start slot is deprecated so what to do..
+func (h *HobbitsNode) blockBodyRequest(id peer.ID, message HobbitsMessage) error { // TODO start slot is deprecated so what to do..
 	var requestBody BlockBodiesRequest
 	err := bson.Unmarshal(message.Body, requestBody)
 	if err != nil {
 		return errors.Wrap(err, "could not unmarshal body of GET_BLOCK_BODY request")
 	}
 
-	var bbr pb.BatchedBeaconBlockRequest
-	bbr.StartSlot = requestBody.StartSlot
+	bbr := pb.BeaconBlockRequest{
+		Hash: requestBody.StartRoot,
+	}
 
 	h.Feed(&bbr).Send(p2p.Message{
 		Ctx:  context.Background(),

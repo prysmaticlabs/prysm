@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "handler.go",
         "hobbits.go",
         "process.go",
         "server.go",
@@ -11,6 +12,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/db:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//shared:go_default_library",
         "//shared/event:go_default_library",
         "//shared/hashutil:go_default_library",
