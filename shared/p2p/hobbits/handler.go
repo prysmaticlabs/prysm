@@ -168,16 +168,10 @@ func (h *HobbitsNode) removePeer(id peer.ID) error {
 
 func (h *HobbitsNode) blockHeadersRequest(id peer.ID, message HobbitsMessage) error {
 
-	// var request BlockRequest // TODO: might not need BlockRequest struct, just unmarshal into protobuf
-	//err := bson.Unmarshal(message.Body, request)
-	//if err != nil {
-	//	return errors.Wrap(err, "could not unmarshal block header RPC request: ")
-	//}
-
 	return nil
 }
 
-func (h *HobbitsNode) blockBodyRequest(id peer.ID, message HobbitsMessage) error { // TODO start slot is deprecated so what to do..
+func (h *HobbitsNode) blockBodyRequest(id peer.ID, message HobbitsMessage) error {
 	var requestBody BlockBodiesRequest
 	err := bson.Unmarshal(message.Body, requestBody)
 	if err != nil {

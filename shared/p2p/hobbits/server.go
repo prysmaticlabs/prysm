@@ -84,17 +84,15 @@ func (h *HobbitsNode) Listen() error {
 	})
 }
 
-func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) {
+func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) { // TODO this is all messaged up
+	for _, peer := range h.PeerConns {
+		err := h.Server.SendMessage(peer, encoding.Message())
+		if err != nil {
+			return errors.Wrap(err, "error broadcasting: ")
+		}
 
-	//
-	//for _, peer := range h.PeerConns {
-	//	err := h.Server.SendMessage(peer, encoding.Message(message))
-	//	if err != nil {
-	//		return errors.Wrap(err, "error broadcasting: ")
-	//	}
-	//
-	//	peer.Close() // TODO: do I wanna be closing the conns?
-	//}
+		peer.Close() // TODO: do I wanna be closing the conns?
+	}
 }
 
 // Send builds and sends a message to a Hobbits peer

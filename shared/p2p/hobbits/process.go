@@ -85,7 +85,7 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 		// log this?
 
 		return nil
-	case GET_BLOCK_BODIES: // TODO: this is so messed up
+	case GET_BLOCK_BODIES:
 		err := h.blockBodyRequest(id, message)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve block bodies")
@@ -117,12 +117,19 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	log.Trace("processing GOSSIP message")
 
+	// TODO: parse message hash so that it doesn't process already-gossiped messages
+
 	_, err := h.parseTopic(message)
 	if err != nil {
 		return errors.Wrap(err, "error parsing topic")
 	}
 
-	h.Broadcast(context.Background(), nil)
+	// TODO, does the node log this shit?
+	//  maybe the message hash for feedback purposes?
+
+
+
+	h.Broadcast(context.Background(), nil) // TODO: marshal into proto.Message
 
 	return nil
 }
@@ -143,15 +150,13 @@ func (h *HobbitsNode) parseMethodID(header []byte) (RPCMethod, error) {
 
 // parseTopic takes care of parsing the topic and updating the node's feeds
 func (h *HobbitsNode) parseTopic(message HobbitsMessage) (string, error) {
-	header := GossipHeader{}
+	header := new(GossipHeader)
 
 	err := bson.Unmarshal(message.Header, header)
 	if err != nil {
 		return "", errors.Wrap(err, "error unmarshaling gossip message header")
 	}
 
-	// TODO: checks against topicMapping?
-	// TODO: somehow updates h.Feeds?
 	return header.topic, nil
 }
 
