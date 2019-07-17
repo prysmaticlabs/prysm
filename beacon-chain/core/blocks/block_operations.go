@@ -36,10 +36,10 @@ func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uin
 	}
 	root, err := ssz.SigningRoot(obj)
 	if err != nil {
-		return fmt.Errorf("could not sign root for header: %v", err)
+		return fmt.Errorf("could not get signing root: %v", err)
 	}
 	if !sig.Verify(root[:], publicKey, domain) {
-		return fmt.Errorf("proposer slashing signature did not verify")
+		return fmt.Errorf("signature did not verify")
 	}
 	return nil
 }
@@ -54,7 +54,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain uin
 		return fmt.Errorf("could not convert bytes to signature: %v", err)
 	}
 	if !sig.Verify(signedData, publicKey, domain) {
-		return fmt.Errorf("proposer slashing signature did not verify")
+		return fmt.Errorf("signature did not verify")
 	}
 	return nil
 }
@@ -222,7 +222,6 @@ func ProcessRandao(
 		currentEpoch := helpers.CurrentEpoch(beaconState)
 		buf := make([]byte, 32)
 		binary.LittleEndian.PutUint64(buf, currentEpoch)
-		domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
 
 		if enableLogging {
 			log.WithFields(logrus.Fields{
@@ -231,6 +230,7 @@ func ProcessRandao(
 			}).Info("Verifying randao")
 		}
 
+		domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
 		if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
