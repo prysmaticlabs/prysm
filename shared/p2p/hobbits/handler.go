@@ -198,10 +198,10 @@ func (h *HobbitsNode) blockBodyRequest(id peer.ID, message HobbitsMessage) error
 }
 
 func (h *HobbitsNode) blockBodiesResponse(msg proto.Message) (HobbitsMessage, error) {
-	blockBodies := BlockBodyResponse{
-		Bodies: msg.(*pb.BatchedBeaconBlockResponse).BatchedBlocks,
+	blockBody := BlockBodyResponse{
+		Bodies: msg.(*pb.BeaconBlockResponse).Block,
 	}
-	body, err := bson.Marshal(blockBodies)
+	body, err := bson.Marshal(blockBody)
 	if err != nil {
 		return HobbitsMessage{}, errors.Wrap(err, "error marshaling body for BLOCK_BODIES response")
 	}
