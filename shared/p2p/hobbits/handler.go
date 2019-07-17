@@ -47,7 +47,11 @@ type BlockBodiesRequest struct {
 }
 
 type BlockBodiesResponse struct {
-	Bodies []*pb.BeaconBlock `bson:"bodies"`
+	Bodies []*pb.BeaconBlockBody `bson:"bodies"`
+}
+
+type BlockBodyResponse struct {
+	Bodies *pb.BeaconBlock `bson:"bodies"`
 }
 
 type AttestationRequest struct {
@@ -194,7 +198,7 @@ func (h *HobbitsNode) blockBodyRequest(id peer.ID, message HobbitsMessage) error
 }
 
 func (h *HobbitsNode) blockBodiesResponse(msg proto.Message) (HobbitsMessage, error) {
-	blockBodies := BlockBodiesResponse{
+	blockBodies := BlockBodyResponse{
 		Bodies: msg.(*pb.BatchedBeaconBlockResponse).BatchedBlocks,
 	}
 	body, err := bson.Marshal(blockBodies)
