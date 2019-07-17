@@ -25,6 +25,40 @@ import (
 
 var eth1DataCache = cache.NewEth1DataVoteCache()
 
+func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uint64) error {
+	publicKey, err := bls.PublicKeyFromBytes(pub)
+	if err != nil {
+		return fmt.Errorf("could not convert bytes to public key: %v", err)
+	}
+	sig, err := bls.SignatureFromBytes(signature)
+	if err != nil {
+		return fmt.Errorf("could not convert bytes to signature: %v", err)
+	}
+	root, err := ssz.SigningRoot(obj)
+	if err != nil {
+		return fmt.Errorf("could not sign root for header: %v", err)
+	}
+	if !sig.Verify(root[:], publicKey, domain) {
+		return fmt.Errorf("proposer slashing signature did not verify")
+	}
+	return nil
+}
+
+func verifySignature(signedData []byte, pub []byte, signature []byte, domain uint64) error {
+	publicKey, err := bls.PublicKeyFromBytes(pub)
+	if err != nil {
+		return fmt.Errorf("could not convert bytes to public key: %v", err)
+	}
+	sig, err := bls.SignatureFromBytes(signature)
+	if err != nil {
+		return fmt.Errorf("could not convert bytes to signature: %v", err)
+	}
+	if !sig.Verify(signedData, publicKey, domain) {
+		return fmt.Errorf("proposer slashing signature did not verify")
+	}
+	return nil
+}
+
 // ProcessEth1DataInBlock is an operation performed on each
 // beacon block to ensure the ETH1 data votes are processed
 // into the beacon state.
@@ -145,39 +179,13 @@ func ProcessBlockHeader(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 	if verifySignatures {
-		if err := verifyProposerSignature(beaconState, block, idx); err != nil {
-			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
+		currentEpoch := helpers.CurrentEpoch(beaconState)
+		domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+		if err := verifySigningRoot(block, proposer.Pubkey, block.Signature, domain); err != nil {
+			return nil, fmt.Errorf("could not verify block signature: %v", err)
 		}
 	}
 	return beaconState, nil
-}
-
-// verifyProposerSignature uses BLS signature verification to ensure
-// the correct proposer created an incoming beacon block during state
-// transition processing.
-//
-// Spec pseudocode definition:
-//   assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
-func verifyProposerSignature(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64) error {
-	proposer := beaconState.Validators[proposerIdx]
-	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
-	if err != nil {
-		return fmt.Errorf("could not deserialize proposer public key: %v", err)
-	}
-	signingRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		return fmt.Errorf("could not get signing root of header: %v", err)
-	}
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	sig, err := bls.SignatureFromBytes(block.Signature)
-	if err != nil {
-		return fmt.Errorf("could not deserialize proposer signature: %v", err)
-	}
-	if !sig.Verify(signingRoot[:], pub, domain) {
-		return fmt.Errorf("proposer signature did not verify")
-	}
-	return nil
 }
 
 // ProcessRandao checks the block proposer's
@@ -209,8 +217,21 @@ func ProcessRandao(
 		if err != nil {
 			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 		}
+		proposerPub := beaconState.Validators[proposerIdx].Pubkey
 
-		if err := verifyBlockRandao(beaconState, body, proposerIdx); err != nil {
+		currentEpoch := helpers.CurrentEpoch(beaconState)
+		buf := make([]byte, 32)
+		binary.LittleEndian.PutUint64(buf, currentEpoch)
+		domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
+
+		if enableLogging {
+			log.WithFields(logrus.Fields{
+				"epoch":         helpers.CurrentEpoch(beaconState),
+				"proposerIndex": proposerIdx,
+			}).Info("Verifying randao")
+		}
+
+		if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
 	}
@@ -225,29 +246,6 @@ func ProcessRandao(
 	}
 	beaconState.RandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
 	return beaconState, nil
-}
-
-// Verify that bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)),
-//   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
-func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, proposerIdx uint64) error {
-	proposer := beaconState.Validators[proposerIdx]
-	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
-	if err != nil {
-		return fmt.Errorf("could not deserialize proposer public key: %v", err)
-	}
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, currentEpoch)
-	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
-	sig, err := bls.SignatureFromBytes(body.RandaoReveal)
-	if err != nil {
-		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
-	}
-
-	if !sig.Verify(buf, pub, domain) {
-		return fmt.Errorf("block randao reveal signature did not verify")
-	}
-	return nil
 }
 
 // ProcessProposerSlashings is one of the operations performed
@@ -316,23 +314,12 @@ func verifyProposerSlashing(
 	}
 
 	if verifySignatures {
-		pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
-		if err != nil {
-			return fmt.Errorf("could not deserialize proposer public key: %v", err)
-		}
+		// Using headerEpoch1 here because both of the headers should have the same epoch.
+		domain := helpers.Domain(beaconState, headerEpoch1, params.BeaconConfig().DomainBeaconProposer)
 		headers := append([]*pb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
 		for _, header := range headers {
-			domain := helpers.Domain(beaconState, helpers.SlotToEpoch(header.Slot), params.BeaconConfig().DomainBeaconProposer)
-			sig, err := bls.SignatureFromBytes(header.Signature)
-			if err != nil {
-				return fmt.Errorf("could not convert bytes to signature: %v", err)
-			}
-			root, err := ssz.SigningRoot(header)
-			if err != nil {
-				return fmt.Errorf("could not sign root for header: %v", err)
-			}
-			if !sig.Verify(root[:], pub, domain) {
-				return fmt.Errorf("proposer slashing signature did not verify")
+			if err := verifySigningRoot(header, proposer.Pubkey, header.Signature, domain); err != nil {
+				return fmt.Errorf("could not verify beacon block header: %v", err)
 			}
 		}
 		return nil
@@ -886,21 +873,10 @@ func ProcessDeposit(
 	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 	if !ok {
 		if verifySignatures {
-			pub, err := bls.PublicKeyFromBytes(pubKey)
-			if err != nil {
-				return nil, fmt.Errorf("could not deserialize validator public key: %v", err)
-			}
 			domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
-			sig, err := bls.SignatureFromBytes(deposit.Data.Signature)
-			if err != nil {
-				return nil, fmt.Errorf("could not convert bytes to signature: %v", err)
-			}
-			root, err := ssz.SigningRoot(deposit.Data)
-			if err != nil {
-				return nil, fmt.Errorf("could not determine signing root for deposit data: %v", err)
-			}
-			if !sig.Verify(root[:], pub, domain) {
-				return nil, fmt.Errorf("deposit signature did not verify")
+			depositSig := deposit.Data.Signature
+			if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
+				return nil, fmt.Errorf("could not verify deposit data signature: %v", err)
 			}
 		}
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
@@ -1019,21 +995,9 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 		)
 	}
 	if verifySignatures {
-		pub, err := bls.PublicKeyFromBytes(validator.Pubkey)
-		if err != nil {
-			return fmt.Errorf("could not deserialize validator public key: %v", err)
-		}
 		domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
-		sig, err := bls.SignatureFromBytes(exit.Signature)
-		if err != nil {
-			return fmt.Errorf("could not convert bytes to signature: %v", err)
-		}
-		root, err := ssz.SigningRoot(exit)
-		if err != nil {
-			return fmt.Errorf("could not sign root for header: %v", err)
-		}
-		if !sig.Verify(root[:], pub, domain) {
-			return fmt.Errorf("voluntary exit signature did not verify")
+		if err := verifySigningRoot(exit, validator.Pubkey, exit.Signature, domain); err != nil {
+			return fmt.Errorf("could not verify voluntary exit signature: %v", err)
 		}
 	}
 	return nil
@@ -1157,21 +1121,9 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySi
 		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
 	}
 	if verifySignatures {
-		pub, err := bls.PublicKeyFromBytes(transfer.Pubkey)
-		if err != nil {
-			return fmt.Errorf("could not deserialize validator public key: %v", err)
-		}
 		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainTransfer)
-		sig, err := bls.SignatureFromBytes(transfer.Signature)
-		if err != nil {
-			return fmt.Errorf("could not convert bytes to signature: %v", err)
-		}
-		root, err := ssz.SigningRoot(transfer)
-		if err != nil {
-			return fmt.Errorf("could not sign root for header: %v", err)
-		}
-		if !sig.Verify(root[:], pub, domain) {
-			return fmt.Errorf("transfer signature did not verify")
+		if err := verifySigningRoot(transfer, transfer.Pubkey, transfer.Signature, domain); err != nil {
+			return fmt.Errorf("could not verify voluntary exit signature: %v", err)
 		}
 	}
 	return nil
