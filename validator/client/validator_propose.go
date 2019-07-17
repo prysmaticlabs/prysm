@@ -28,6 +28,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	defer span.End()
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
 
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
 	if err != nil {
@@ -46,8 +47,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		log.WithError(err).Error("Failed to request block from beacon node")
 		return
 	}
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())))
-	tpk := hex.EncodeToString([]byte(pk))[:12]
+	span.AddAttributes(trace.StringAttribute("validator", tpk))
 
 	domain, err = v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
 	if err != nil {

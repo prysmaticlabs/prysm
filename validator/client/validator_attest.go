@@ -27,8 +27,11 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
+
+	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
+
 	span.AddAttributes(
-		trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())),
+		trace.StringAttribute("validator", tpk),
 	)
 
 	v.waitToSlotMidpoint(ctx, slot)
@@ -94,8 +97,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		// Default is false until phase 1 where proof of custody gets implemented.
 		CustodyBit: false,
 	}
-
-	tpk := hex.EncodeToString([]byte(pk))[:12]
 
 	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 	if err != nil {
