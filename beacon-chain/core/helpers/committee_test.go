@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -379,10 +380,10 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			isProposer: false,
 		},
 		{
-			index:      64,
-			slot:       183,
-			committee:  []uint64{64, 33},
-			shard:      119,
+			index:      28,
+			slot:       138,
+			committee:  []uint64{14, 28},
+			shard:      74,
 			isProposer: true,
 		},
 		{
@@ -394,28 +395,30 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		ClearAllCaches()
-		committee, shard, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
-		if err != nil {
-			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
-		}
-		if shard != tt.shard {
-			t.Errorf("wanted shard %d, got shard %d for validator index %d",
-				tt.shard, shard, tt.index)
-		}
-		if slot != tt.slot {
-			t.Errorf("wanted slot %d, got slot %d for validator index %d",
-				tt.slot, slot, tt.index)
-		}
-		if isProposer != tt.isProposer {
-			t.Errorf("wanted isProposer %v, got isProposer %v for validator index %d",
-				tt.isProposer, isProposer, tt.index)
-		}
-		if !reflect.DeepEqual(committee, tt.committee) {
-			t.Errorf("wanted committee %v, got committee %v for validator index %d",
-				tt.committee, committee, tt.index)
-		}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			ClearAllCaches()
+			committee, shard, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
+			if err != nil {
+				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
+			}
+			if shard != tt.shard {
+				t.Errorf("wanted shard %d, got shard %d for validator index %d",
+					tt.shard, shard, tt.index)
+			}
+			if slot != tt.slot {
+				t.Errorf("wanted slot %d, got slot %d for validator index %d",
+					tt.slot, slot, tt.index)
+			}
+			if isProposer != tt.isProposer {
+				t.Errorf("wanted isProposer %v, got isProposer %v for validator index %d",
+					tt.isProposer, isProposer, tt.index)
+			}
+			if !reflect.DeepEqual(committee, tt.committee) {
+				t.Errorf("wanted committee %v, got committee %v for validator index %d",
+					tt.committee, committee, tt.index)
+			}
+		})
 	}
 }
 

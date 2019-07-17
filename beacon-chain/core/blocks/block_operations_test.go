@@ -279,7 +279,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	validators[6033].Slashed = false
+	validators[63463].Slashed = false
 
 	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
