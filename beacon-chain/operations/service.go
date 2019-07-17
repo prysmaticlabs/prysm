@@ -255,10 +255,8 @@ func (s *Service) removeOperations() {
 		select {
 		case <-incomingBlockSub.Err():
 			log.Debug("Subscriber closed, exiting goroutine")
-			return nil
 		case <-s.ctx.Done():
 			log.Debug("operations service context closed, exiting remove goroutine")
-			return nil
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
 			handler.SafelyHandleMessage(s.ctx, s.handleProcessedBlock, block)
