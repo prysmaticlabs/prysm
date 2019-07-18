@@ -29,7 +29,7 @@ build:remote-cache --experimental_inmemory_dotd_files
 # Import workspace options.
 import %workspace%/.bazelrc
 
-startup  --host_jvm_args=-Xmx1000m, --host_jvm_args=-Xms1000m
+startup --host_jvm_args=-Xmx1000m --host_jvm_args=-Xms1000m
 build --experimental_strict_action_env
 build --disk_cache=/tmp/bazelbuilds
 build --experimental_multi_threaded_digest
