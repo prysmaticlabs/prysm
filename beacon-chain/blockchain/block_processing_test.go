@@ -29,6 +29,13 @@ import (
 // Ensure ChainService implements interfaces.
 var _ = BlockProcessor(&ChainService{})
 
+func init() {
+	// TODO(2993): remove this after ssz is optimized for mainnet.
+	c := params.BeaconConfig()
+	c.HistoricalRootsLimit = 8192
+	params.OverrideBeaconConfig(c)
+}
+
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := chainService.beaconDB.Block(parentRoot)
