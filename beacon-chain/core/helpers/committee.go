@@ -262,7 +262,7 @@ func CommitteeAssignment(
 		}
 	}
 
-	return []uint64{}, 0, 0, false, status.Error(codes.NotFound, "validator not found found in assignments")
+	return []uint64{}, 0, 0, false, status.Error(codes.NotFound, "validator not found in assignments")
 }
 
 // ShardDelta returns the minimum number of shards get processed in one epoch.

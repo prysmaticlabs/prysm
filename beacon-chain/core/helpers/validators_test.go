@@ -175,23 +175,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  1,
-			index: 1114,
+			index: 254,
 		},
 		{
 			slot:  5,
-			index: 1207,
+			index: 391,
 		},
 		{
 			slot:  19,
-			index: 264,
+			index: 204,
 		},
 		{
 			slot:  30,
-			index: 1421,
+			index: 1051,
 		},
 		{
 			slot:  43,
-			index: 318,
+			index: 1047,
 		},
 	}
 
