@@ -52,8 +52,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	shardCount := int(params.BeaconConfig().ShardCount)
 
-	if params.BeaconConfig().HistoricalRootsLimit != 8192 {
-		t.Error("HistoricalRootsLimit should be 8192 for these tests to pass")
+	if params.BeaconConfig().HistoricalRootsLimit != 16777216 {
+		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
 	}
 
 	if params.BeaconConfig().MinGenesisActiveValidatorCount != 16384 {
@@ -211,12 +211,12 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	want, got := len(s.BlockRoots), int(params.BeaconConfig().HistoricalRootsLimit)
+	got, want := len(s.BlockRoots), int(params.BeaconConfig().SlotsPerHistoricalRoot)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
 
-	want = cap(s.BlockRoots)
+	got = cap(s.BlockRoots)
 	if want != got {
 		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}
