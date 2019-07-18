@@ -81,7 +81,6 @@ type Web3Service struct {
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
 	blockTime               time.Time   // the latest ETH1.0 chain blockTime.
 	blockCache              *blockCache // cache to store block hash/block height.
-	genesisTime             time.Time   // Chainstart time
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.MerkleTrie
