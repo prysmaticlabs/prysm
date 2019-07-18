@@ -143,8 +143,11 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 		return nil, fmt.Errorf("could not retrieve pending attest ations from operations service: %v", err)
 	}
 	// advance slot, if it is behind
-	for beaconState.Slot < expectedSlot {
-		beaconState.Slot++
+	if beaconState.Slot < expectedSlot {
+		beaconState, err = state.ProcessSlots(ctx, beaconState, expectedSlot)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var attsReadyForInclusion []*pbp2p.Attestation

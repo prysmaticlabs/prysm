@@ -140,7 +140,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		}
 	}
 
-	startEpoch := headState.PreviousCrosslinks[req.Shard].EndEpoch
+	startEpoch := headState.CurrentCrosslinks[req.Shard].EndEpoch
 	endEpoch := startEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
 	if endEpoch > targetEpoch {
 		endEpoch = targetEpoch
