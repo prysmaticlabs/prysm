@@ -4,11 +4,11 @@ package client
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -28,6 +28,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	defer span.End()
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
 
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
 	if err != nil {
@@ -46,10 +47,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		log.WithError(err).Error("Failed to request block from beacon node")
 		return
 	}
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())))
-	truncatedPk := bytesutil.Trunc([]byte(pk))
-
-	log.WithFields(logrus.Fields{"validator": truncatedPk}).Info("Performing a beacon block proposal...")
+	span.AddAttributes(trace.StringAttribute("validator", tpk))
 
 	domain, err = v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
 	if err != nil {
@@ -59,7 +57,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	root, err := ssz.SigningRoot(b)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
-			"validator": truncatedPk,
+			"pubKey": tpk,
 		}).Error("Failed to sign block")
 		return
 	}
@@ -70,7 +68,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, b)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
-			"validator": truncatedPk,
+			"pubKey": tpk,
 		}).Error("Failed to propose block")
 		return
 	}
@@ -82,7 +80,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	)
 
 	log.WithFields(logrus.Fields{
-		"validator":       truncatedPk,
+		"pubKey":          tpk,
 		"slot":            b.Slot,
 		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRoot),
 		"numAttestations": len(b.Body.Attestations),
