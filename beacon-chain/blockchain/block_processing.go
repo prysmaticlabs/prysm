@@ -217,7 +217,6 @@ func (c *ChainService) AdvanceState(
 		block,
 		&state.TransitionConfig{
 			VerifySignatures: false, // We disable signature verification for now.
-			Logging:          true,  // We enable logging in this state transition call.
 		},
 	)
 	if err != nil {
