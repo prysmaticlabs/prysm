@@ -383,7 +383,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			index:      0,
 			slot:       146,
 			committee:  []uint64{0, 3},
-			shard:      82,
+			shard:      18,
 			isProposer: true,
 		},
 		{
