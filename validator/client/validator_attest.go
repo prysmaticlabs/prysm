@@ -27,8 +27,11 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
+
+	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
+
 	span.AddAttributes(
-		trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())),
+		trace.StringAttribute("validator", tpk),
 	)
 
 	v.waitToSlotMidpoint(ctx, slot)
@@ -95,8 +98,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		CustodyBit: false,
 	}
 
-	tpk := hex.EncodeToString([]byte(pk))[:12]
-
 	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
@@ -124,7 +125,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		"shard":       data.Crosslink.Shard,
 		"sourceEpoch": data.Source.Epoch,
 		"targetEpoch": data.Target.Epoch,
-		"pubKey":   tpk,
+		"pubKey":      tpk,
 	}).Info("Attested latest head")
 
 	span.AddAttributes(

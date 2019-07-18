@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	"github.com/sirupsen/logrus"
 )
 
 var eth1DataCache = cache.NewEth1DataVoteCache()
@@ -185,7 +184,6 @@ func ProcessRandao(
 	beaconState *pb.BeaconState,
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
-	enableLogging bool,
 ) (*pb.BeaconState, error) {
 	if verifySignatures {
 		proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
@@ -193,7 +191,7 @@ func ProcessRandao(
 			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 		}
 
-		if err := verifyBlockRandao(beaconState, body, proposerIdx, enableLogging); err != nil {
+		if err := verifyBlockRandao(beaconState, body, proposerIdx); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
 	}
@@ -212,7 +210,7 @@ func ProcessRandao(
 
 // Verify that bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)),
 //   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
-func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, proposerIdx uint64, enableLogging bool) error {
+func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, proposerIdx uint64) error {
 	proposer := beaconState.Validators[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
 	if err != nil {
@@ -226,12 +224,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
-	if enableLogging {
-		log.WithFields(logrus.Fields{
-			"epoch":         helpers.CurrentEpoch(beaconState),
-			"proposerIndex": proposerIdx,
-		}).Info("Verifying randao")
-	}
+
 	if !sig.Verify(buf, pub, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}

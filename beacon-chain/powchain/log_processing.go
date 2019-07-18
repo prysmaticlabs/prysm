@@ -77,7 +77,6 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	// with the same log twice, causing an inconsistent state root.
 	index := binary.LittleEndian.Uint64(merkleTreeIndex)
 	if int64(index) <= w.lastReceivedMerkleIndex {
-		log.Debugf("log has already been processed with index %d", index)
 		return
 	}
 	w.lastReceivedMerkleIndex = int64(index)
@@ -261,7 +260,6 @@ func (w *Web3Service) requestBatchedLogs() error {
 
 	// Only process log slices which are larger than zero.
 	if len(logs) > 0 {
-		log.Debug("Processing Batched Logs")
 		for _, log := range logs {
 			w.ProcessLog(log)
 		}

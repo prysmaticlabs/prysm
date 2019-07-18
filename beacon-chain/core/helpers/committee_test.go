@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -369,52 +370,82 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			slot:       146,
 			committee:  []uint64{0, 3},
 			shard:      82,
-			isProposer: false,
+			isProposer: true,
 		},
 		{
 			index:      105,
 			slot:       160,
 			committee:  []uint64{105, 20},
-			shard:      96,
-			isProposer: false,
+			shard:      32,
+			isProposer: true,
 		},
 		{
-			index:      64,
-			slot:       183,
-			committee:  []uint64{64, 33},
-			shard:      119,
+			index:      0,
+			slot:       146,
+			committee:  []uint64{0, 3},
+			shard:      18,
 			isProposer: true,
 		},
 		{
 			index:      11,
 			slot:       135,
 			committee:  []uint64{119, 11},
-			shard:      71,
+			shard:      7,
 			isProposer: false,
 		},
 	}
 
-	for _, tt := range tests {
-		ClearAllCaches()
-		committee, shard, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			ClearAllCaches()
+			committee, shard, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
+			if err != nil {
+				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
+			}
+			if shard != tt.shard {
+				t.Errorf("wanted shard %d, got shard %d for validator index %d",
+					tt.shard, shard, tt.index)
+			}
+			if slot != tt.slot {
+				t.Errorf("wanted slot %d, got slot %d for validator index %d",
+					tt.slot, slot, tt.index)
+			}
+			if isProposer != tt.isProposer {
+				t.Errorf("wanted isProposer %v, got isProposer %v for validator index %d",
+					tt.isProposer, isProposer, tt.index)
+			}
+			if !reflect.DeepEqual(committee, tt.committee) {
+				t.Errorf("wanted committee %v, got committee %v for validator index %d",
+					tt.committee, committee, tt.index)
+			}
+		})
+	}
+}
+
+func TestCommitteeAssignment_EveryValidatorShouldPropose(t *testing.T) {
+	// Initialize 64 validators with 64 slots per epoch. Every validator
+	// in the epoch should be a proposer.
+	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		Validators:       validators,
+		Slot:             params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	ClearAllCaches()
+	for i := 0; i < len(validators); i++ {
+		_, _, _, isProposer, err := CommitteeAssignment(state, state.Slot/params.BeaconConfig().SlotsPerEpoch, uint64(i))
 		if err != nil {
-			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
+			t.Fatal(err)
 		}
-		if shard != tt.shard {
-			t.Errorf("wanted shard %d, got shard %d for validator index %d",
-				tt.shard, shard, tt.index)
-		}
-		if slot != tt.slot {
-			t.Errorf("wanted slot %d, got slot %d for validator index %d",
-				tt.slot, slot, tt.index)
-		}
-		if isProposer != tt.isProposer {
-			t.Errorf("wanted isProposer %v, got isProposer %v for validator index %d",
-				tt.isProposer, isProposer, tt.index)
-		}
-		if !reflect.DeepEqual(committee, tt.committee) {
-			t.Errorf("wanted committee %v, got committee %v for validator index %d",
-				tt.committee, committee, tt.index)
+		if !isProposer {
+			t.Errorf("validator %d should be a proposer", i)
 		}
 	}
 }
