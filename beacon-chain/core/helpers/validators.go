@@ -208,7 +208,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	// effective balance.
 	for i := uint64(0); ; i++ {
 		candidateIndex := firstCommittee[(e+i)%uint64(len(firstCommittee))]
-		b := append(seed[:], bytesutil.Bytes8(i)...)
+		b := append(seed[:], bytesutil.Bytes8(i/32)...)
 		randomByte := hashutil.Hash(b)[i%32]
 		effectiveBal := state.Validators[candidateIndex].EffectiveBalance
 		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
