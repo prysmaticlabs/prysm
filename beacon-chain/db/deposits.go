@@ -39,7 +39,7 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *
 	defer db.depositsLock.Unlock()
 	// keep the slice sorted on insertion in order to avoid costly sorting on retrival.
 	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Index >= index })
-	newDeposits := append([]*DepositContainer{{Deposit: d, block: blockNum, depositRoot: depositRoot, Index: index}}, db.deposits[heightIdx:]...)
+	newDeposits := append([]*DepositContainer{{Deposit: d, Block: blockNum, depositRoot: depositRoot, Index: index}}, db.deposits[heightIdx:]...)
 	db.deposits = append(db.deposits[:heightIdx], newDeposits...)
 	historicalDepositsCount.Inc()
 }
@@ -76,7 +76,7 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 
 	var depositCntrs []*DepositContainer
 	for _, ctnr := range db.deposits {
-		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
+		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
 			depositCntrs = append(depositCntrs, ctnr)
 		}
 	}
@@ -96,7 +96,7 @@ func (db *BeaconDB) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeig
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
-	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].block.Cmp(blockHeight) > 0 })
+	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Block.Cmp(blockHeight) > 0 })
 	// send the deposit root of the empty trie, if eth1follow distance is greater than the time of the earliest
 	// deposit.
 	if heightIdx == 0 {
@@ -118,7 +118,7 @@ func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Dep
 	for _, ctnr := range db.deposits {
 		if bytes.Equal(ctnr.Deposit.Data.Pubkey, pubKey) {
 			deposit = ctnr.Deposit
-			blockNum = ctnr.block
+			blockNum = ctnr.Block
 			break
 		}
 	}

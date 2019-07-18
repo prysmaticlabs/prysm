@@ -210,6 +210,9 @@ func (ps *ProposerServer) eth1Data(ctx context.Context) (*pbp2p.Eth1Data, error)
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	currentHeight := ps.powChainService.LatestBlockHeight()
+	if currentHeight == nil {
+		return nil, fmt.Errorf("could not get latest block height %v", err)
+	}
 	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
 	if stateLatestEth1Hash == [32]byte{} {
 		return ps.defaultEth1DataResponse(ctx, currentHeight)
@@ -358,15 +361,12 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 	// Fetch all historical deposits up to an ancestor height.
 	depositsTillHeight, depositRoot := ps.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
 	if depositsTillHeight == 0 {
-		trie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-		if err != nil {
-			return nil, fmt.Errorf("could not get new trie %v", err)
-		}
-		depositRoot = trie.Root()
+		return ps.powChainService.ChainStartETH1Data(), nil
 	}
 	return &pbp2p.Eth1Data{
-		DepositRoot: depositRoot[:],
-		BlockHash:   blockHash[:],
+		DepositRoot:  depositRoot[:],
+		BlockHash:    blockHash[:],
+		DepositCount: depositsTillHeight,
 	}, nil
 }
 

@@ -810,7 +810,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 }
 
 func TestProcessFinalUpdates_CanProcess(t *testing.T) {
-	s := buildState(params.BeaconConfig().HistoricalRootsLimit-1, params.BeaconConfig().SlotsPerEpoch)
+	s := buildState(params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch)
 	ce := helpers.CurrentEpoch(s)
 	ne := ce + 1
 	s.Eth1DataVotes = []*pb.Eth1Data{}
