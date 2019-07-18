@@ -301,8 +301,11 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 			StartEpoch: 9,
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		}},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes:       make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:        make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:        make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		LatestBlockHeader: &pbp2p.BeaconBlockHeader{StateRoot: []byte{}},
 	}
 
 	if err := db.SaveState(ctx, beaconState); err != nil {

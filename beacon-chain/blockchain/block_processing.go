@@ -87,8 +87,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		)
 	}
 
-	log.WithField("slotNumber", block.Slot).Info(
-		"Executing state transition")
+	log.WithField("slot", block.Slot).Info("Executing state transition")
 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
 	beaconState, err = c.AdvanceState(ctx, beaconState, block)
@@ -107,8 +106,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	log.WithFields(logrus.Fields{
-		"slotNumber":   block.Slot,
-		"currentEpoch": helpers.SlotToEpoch(block.Slot),
+		"slot":  block.Slot,
+		"epoch": helpers.SlotToEpoch(block.Slot),
 	}).Info("State transition complete")
 
 	// Check state root
@@ -128,7 +127,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
 	}
 
-	log.WithField("slot", block.Slot).Info("Finished processing beacon block")
+	log.WithFields(logrus.Fields{
+		"slot":         block.Slot,
+		"attestations": len(block.Body.Attestations),
+		"deposits":     len(block.Body.Deposits),
+	}).Info("Finished processing beacon block")
+
 	return beaconState, nil
 }
 

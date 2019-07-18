@@ -39,7 +39,7 @@ type BeaconChainConfig struct {
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
-	MinAttestationInclusionDelay     uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY"`     // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
+	MinAttestationInclusionDelay     uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
 	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
@@ -154,7 +154,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
 	EpochsPerSlashingsVector:  8192,
-	HistoricalRootsLimit:      8192,
+	HistoricalRootsLimit:      16777216,
 	ValidatorRegistryLimit:    1099511627776,
 
 	// Reward and penalty quotients constants.
@@ -271,7 +271,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.EpochsPerHistoricalVector = 64
 	minimalConfig.EpochsPerSlashingsVector = 64
-	minimalConfig.HistoricalRootsLimit = 16777216
 	minimalConfig.ValidatorRegistryLimit = 1099511627776
 	minimalConfig.BaseRewardFactor = 64
 	minimalConfig.WhistleBlowerRewardQuotient = 512
