@@ -80,11 +80,16 @@ func (f *faultyPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
 	return [][]byte{}, errors.New("hashing failed")
 }
 
+func (f *faultyPOWChainService) ChainStartETH1Data() *pbp2p.Eth1Data {
+	return &pbp2p.Eth1Data{}
+}
+
 type mockPOWChainService struct {
 	chainStartFeed    *event.Feed
 	latestBlockNumber *big.Int
 	hashesByHeight    map[int][]byte
 	blockTimeByHeight map[int]uint64
+	eth1Data          *pbp2p.Eth1Data
 }
 
 func (m *mockPOWChainService) HasChainStarted() bool {
@@ -144,6 +149,10 @@ func (m *mockPOWChainService) ChainStartDeposits() []*pbp2p.Deposit {
 
 func (m *mockPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
 	return [][]byte{}, nil
+}
+
+func (m *mockPOWChainService) ChainStartETH1Data() *pbp2p.Eth1Data {
+	return m.eth1Data
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {

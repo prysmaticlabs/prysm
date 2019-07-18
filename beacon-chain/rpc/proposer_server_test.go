@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -937,6 +938,72 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 			eth1data.DepositRoot,
 			beaconState.Eth1DataVotes[2].DepositRoot,
 		)
+	}
+}
+
+func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	deps := []*db.DepositContainer{
+		{
+			Index: 0,
+			Block: big.NewInt(1000),
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index: 1,
+			Block: big.NewInt(1200),
+			Deposit: &pbp2p.Deposit{
+				Data: &pbp2p.DepositData{
+					Pubkey:                []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("could not setup deposit trie: %v", err)
+	}
+	for _, dp := range deps {
+		beaconDB.InsertDeposit(context.Background(), dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+	}
+
+	powChainService := &mockPOWChainService{
+		latestBlockNumber: height,
+		hashesByHeight: map[int][]byte{
+			0:   []byte("hash0"),
+			476: []byte("hash1024"),
+		},
+	}
+	proposerServer := &ProposerServer{
+		beaconDB:        beaconDB,
+		powChainService: powChainService,
+	}
+
+	defEth1Data := &pbp2p.Eth1Data{
+		DepositCount: 10,
+		BlockHash:    []byte{'t', 'e', 's', 't'},
+		DepositRoot:  []byte{'r', 'o', 'o', 't'},
+	}
+
+	powChainService.eth1Data = defEth1Data
+
+	result, err := proposerServer.defaultEth1DataResponse(ctx, big.NewInt(1500))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !proto.Equal(result, defEth1Data) {
+		t.Errorf("Did not receive default eth1data. Wanted %v but Got %v", defEth1Data, result)
 	}
 }
 
