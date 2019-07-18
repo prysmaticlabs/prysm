@@ -201,25 +201,25 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	}
 
 	// Process finalization according to ETH2.0 specifications.
-	justification := state.JustificationBits.Bytes()
+	justification := state.JustificationBits.Bytes()[0]
 
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
-	if bytes.Equal(justification, []byte{0x0E}) && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {
+	if justification&0x0E == 0x0E && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {
 		state.FinalizedCheckpoint = oldPrevJustifiedCheckpoint
 	}
 
 	// 2nd/3rd (0b0110) most recent epochs are justified, the 2nd using the 3rd as source.
-	if bytes.Equal(justification, []byte{0x06}) && (oldPrevJustifiedCheckpoint.Epoch+2) == currentEpoch {
+	if justification&0x06 == 0x06 && (oldPrevJustifiedCheckpoint.Epoch+2) == currentEpoch {
 		state.FinalizedCheckpoint = oldPrevJustifiedCheckpoint
 	}
 
 	// 1st/2nd/3rd (0b0111) most recent epochs are justified, the 1st using the 3rd as source.
-	if bytes.Equal(justification, []byte{0x07}) && (oldCurrJustifiedCheckpoint.Epoch+2) == currentEpoch {
+	if justification&0x07 == 0x07 && (oldCurrJustifiedCheckpoint.Epoch+2) == currentEpoch {
 		state.FinalizedCheckpoint = oldCurrJustifiedCheckpoint
 	}
 
 	// The 1st/2nd (0b0011) most recent epochs are justified, the 1st using the 2nd as source
-	if bytes.Equal(justification, []byte{0x03}) && (oldCurrJustifiedCheckpoint.Epoch+1) == currentEpoch {
+	if justification&0x03 == 0x03 && (oldCurrJustifiedCheckpoint.Epoch+1) == currentEpoch {
 		state.FinalizedCheckpoint = oldCurrJustifiedCheckpoint
 	}
 
