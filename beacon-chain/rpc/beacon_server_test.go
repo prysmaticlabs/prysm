@@ -89,6 +89,7 @@ type mockPOWChainService struct {
 	latestBlockNumber *big.Int
 	hashesByHeight    map[int][]byte
 	blockTimeByHeight map[int]uint64
+	eth1Data          *pbp2p.Eth1Data
 }
 
 func (m *mockPOWChainService) HasChainStarted() bool {
@@ -151,7 +152,7 @@ func (m *mockPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
 }
 
 func (m *mockPOWChainService) ChainStartETH1Data() *pbp2p.Eth1Data {
-	return &pbp2p.Eth1Data{}
+	return m.eth1Data
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {

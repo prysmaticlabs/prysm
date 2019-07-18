@@ -66,9 +66,9 @@ func TestPendingDeposits_OK(t *testing.T) {
 	db := BeaconDB{}
 
 	db.pendingDeposits = []*DepositContainer{
-		{block: big.NewInt(2), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("A")}}},
-		{block: big.NewInt(4), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("B")}}},
-		{block: big.NewInt(6), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("c")}}},
+		{Block: big.NewInt(2), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("A")}}},
+		{Block: big.NewInt(4), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("B")}}},
+		{Block: big.NewInt(6), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("c")}}},
 	}
 
 	deposits := db.PendingDeposits(context.Background(), big.NewInt(4))
@@ -91,22 +91,22 @@ func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 	db := BeaconDB{}
 
 	db.pendingDeposits = []*DepositContainer{
-		{block: big.NewInt(2), Index: 2},
-		{block: big.NewInt(4), Index: 4},
-		{block: big.NewInt(6), Index: 6},
-		{block: big.NewInt(8), Index: 8},
-		{block: big.NewInt(10), Index: 10},
-		{block: big.NewInt(12), Index: 12},
+		{Block: big.NewInt(2), Index: 2},
+		{Block: big.NewInt(4), Index: 4},
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	db.PrunePendingDeposits(context.Background(), 0)
 	expected := []*DepositContainer{
-		{block: big.NewInt(2), Index: 2},
-		{block: big.NewInt(4), Index: 4},
-		{block: big.NewInt(6), Index: 6},
-		{block: big.NewInt(8), Index: 8},
-		{block: big.NewInt(10), Index: 10},
-		{block: big.NewInt(12), Index: 12},
+		{Block: big.NewInt(2), Index: 2},
+		{Block: big.NewInt(4), Index: 4},
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	if !reflect.DeepEqual(db.pendingDeposits, expected) {
@@ -118,20 +118,20 @@ func TestPrunePendingDeposits_OK(t *testing.T) {
 	db := BeaconDB{}
 
 	db.pendingDeposits = []*DepositContainer{
-		{block: big.NewInt(2), Index: 2},
-		{block: big.NewInt(4), Index: 4},
-		{block: big.NewInt(6), Index: 6},
-		{block: big.NewInt(8), Index: 8},
-		{block: big.NewInt(10), Index: 10},
-		{block: big.NewInt(12), Index: 12},
+		{Block: big.NewInt(2), Index: 2},
+		{Block: big.NewInt(4), Index: 4},
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	db.PrunePendingDeposits(context.Background(), 6)
 	expected := []*DepositContainer{
-		{block: big.NewInt(6), Index: 6},
-		{block: big.NewInt(8), Index: 8},
-		{block: big.NewInt(10), Index: 10},
-		{block: big.NewInt(12), Index: 12},
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	if !reflect.DeepEqual(db.pendingDeposits, expected) {
@@ -139,18 +139,18 @@ func TestPrunePendingDeposits_OK(t *testing.T) {
 	}
 
 	db.pendingDeposits = []*DepositContainer{
-		{block: big.NewInt(2), Index: 2},
-		{block: big.NewInt(4), Index: 4},
-		{block: big.NewInt(6), Index: 6},
-		{block: big.NewInt(8), Index: 8},
-		{block: big.NewInt(10), Index: 10},
-		{block: big.NewInt(12), Index: 12},
+		{Block: big.NewInt(2), Index: 2},
+		{Block: big.NewInt(4), Index: 4},
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	db.PrunePendingDeposits(context.Background(), 10)
 	expected = []*DepositContainer{
-		{block: big.NewInt(10), Index: 10},
-		{block: big.NewInt(12), Index: 12},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	if !reflect.DeepEqual(db.pendingDeposits, expected) {
