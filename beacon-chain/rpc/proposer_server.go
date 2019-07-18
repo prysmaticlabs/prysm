@@ -364,8 +364,9 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 		return ps.powChainService.ChainStartETH1Data(), nil
 	}
 	return &pbp2p.Eth1Data{
-		DepositRoot: depositRoot[:],
-		BlockHash:   blockHash[:],
+		DepositRoot:  depositRoot[:],
+		BlockHash:    blockHash[:],
+		DepositCount: depositsTillHeight,
 	}, nil
 }
 
