@@ -150,6 +150,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 	req := &pb.AttestationRequest{
 		Shard: 0,
+		Slot:  3*params.BeaconConfig().SlotsPerEpoch + 1,
 	}
 	res, err := attesterServer.RequestAttestation(context.Background(), req)
 	if err != nil {
@@ -266,6 +267,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	req := &pb.AttestationRequest{
 		Shard: 0,
+		Slot:  10000,
 	}
 	res, err := attesterServer.RequestAttestation(context.Background(), req)
 	if err != nil {

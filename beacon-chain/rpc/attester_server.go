@@ -122,7 +122,8 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch head state: %v", err)
 	}
-	headState, err = state.ProcessSlots(ctx, headState, headBlock.Slot)
+
+	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not process slot: %v", err)
 	}
@@ -140,7 +141,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		}
 	}
 
-	startEpoch := headState.PreviousCrosslinks[req.Shard].EndEpoch
+	startEpoch := headState.CurrentCrosslinks[req.Shard].EndEpoch
 	endEpoch := startEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
 	if endEpoch > targetEpoch {
 		endEpoch = targetEpoch
