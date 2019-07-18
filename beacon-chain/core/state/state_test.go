@@ -52,8 +52,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	shardCount := int(params.BeaconConfig().ShardCount)
 
-	if params.BeaconConfig().HistoricalRootsLimit != 8192 {
-		t.Error("HistoricalRootsLimit should be 8192 for these tests to pass")
+	if params.BeaconConfig().HistoricalRootsLimit != 16777216 {
+		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
 	}
 
 	if params.BeaconConfig().MinGenesisActiveValidatorCount != 16384 {
