@@ -281,7 +281,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	cfg := &powchain.Web3ServiceConfig{
 		Endpoint:        cliCtx.GlobalString(utils.Web3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
-		Client:          powClient,
+		Client:          httpClient,
 		Reader:          powClient,
 		Logger:          powClient,
 		HTTPLogger:      httpClient,
