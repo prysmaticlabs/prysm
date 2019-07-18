@@ -249,6 +249,7 @@ func CommitteeAssignment(
 			}
 			for _, index := range committee {
 				if validatorIndex == index {
+					state.Slot = slot
 					proposerIndex, err := BeaconProposerIndex(state)
 					if err != nil {
 						return nil, 0, 0, false, fmt.Errorf(
