@@ -17,7 +17,8 @@ import (
 )
 
 type genesisPowChain struct {
-	feed *event.Feed
+	feed              *event.Feed
+	depositsProcessed bool
 }
 
 func (mp *genesisPowChain) HasChainStarted() bool {
@@ -33,7 +34,7 @@ func (mp *genesisPowChain) ChainStartFeed() *event.Feed {
 }
 
 func (mp *genesisPowChain) AreAllDepositsProcessed() (bool, error) {
-	return false, nil
+	return mp.depositsProcessed, nil
 }
 
 type afterGenesisPowChain struct {
@@ -216,7 +217,7 @@ func TestSyncedInGenesis(t *testing.T) {
 		ResponseBufferSize: 100,
 		ChainService:       &mockChainService{},
 		BeaconDB:           db,
-		PowChain:           &genesisPowChain{},
+		PowChain:           &genesisPowChain{depositsProcessed: true},
 	}
 	sq := NewQuerierService(context.Background(), cfg)
 
@@ -284,4 +285,34 @@ func TestSyncedInRestarts(t *testing.T) {
 		t.Errorf("node is synced when it is not supposed to be in a restart")
 	}
 	sq.cancel()
+}
+
+func TestWaitForDepositsProcessed_OK(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	powchain := &genesisPowChain{depositsProcessed: false}
+	cfg := &QuerierConfig{
+		P2P:                &mockP2P{},
+		ResponseBufferSize: 100,
+		ChainService:       &mockChainService{},
+		BeaconDB:           db,
+		PowChain:           powchain,
+	}
+	sq := NewQuerierService(context.Background(), cfg)
+
+	sq.chainStartBuf <- time.Now()
+	exitRoutine := make(chan bool)
+	go func() {
+		sq.waitForAllDepositsToBeProcessed()
+		exitRoutine <- true
+	}()
+	if len(exitRoutine) == 1 {
+		t.Fatal("Deposits processed despite not being ready")
+	}
+
+	powchain.depositsProcessed = true
+	<-exitRoutine
+
+	sq.cancel()
+	close(exitRoutine)
 }
