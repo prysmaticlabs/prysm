@@ -1,10 +1,10 @@
 syntax = "proto3";
-package ethereum.beacon.v1alpha1;
+package ethereum.eth.v1alpha1;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "proto/beacon/v1alpha1/attestation.proto";
+import "proto/eth/v1alpha1/attestation.proto";
 
-option go_package = "github.com/prysmaticlabs/prysm/proto/beacon/v1alpha;eth";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha;eth";
 
 // The Ethereum 2.0 beacon block.
 message BeaconBlock {
