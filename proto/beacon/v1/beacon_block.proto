@@ -6,7 +6,6 @@ import "eth/v1alpha1/attestation.proto";
 
 option go_package = "github.com/prysmaticlabs/prysm/proto/beacon/v1alpha;eth";
 
-
 // The Ethereum 2.0 beacon block.
 message BeaconBlock {
     // Beacon chain slot that this block represents.
@@ -88,20 +87,19 @@ message AttesterSlashing {
 message Deposit {
     message Data {
         // 48 byte BLS public key of the validator.
-        bytes public_key = 1;
+        bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
 
         // A 32 byte hash of the withdrawal address public key.
-        bytes withdrawal_credentials = 2;
+        bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
         // Deposit amount in gwei.
         uint64 amount = 3;
 
         // 96 byte signature from the validators public key.
-        bytes signature = 4;
+        bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
     }
-
     // 32 byte roots in the deposit tree branch.
-    repeated bytes proof = 1;
+    repeated bytes proof = 1 [(gogoproto.moretags) = "ssz-size:\"33,32\""];
 
     Data data = 2;
 }
@@ -116,7 +114,7 @@ message VoluntaryExit {
     uint64 validator_index = 2;
 
     // Validator's 96 byte signature
-    bytes signature = 3;
+    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 // A beacon chain transfer is a ETH currency transfer between two validators.
@@ -137,21 +135,21 @@ message Transfer {
     uint64 slot = 5;
 
     // 48 byte sender's withdrawal public key.
-    bytes sender_withdrawal_public_key = 6;
+    bytes sender_withdrawal_public_key = 6 [(gogoproto.moretags) = "ssz-size:\"48\""];
 
     // 96 byte signature from the sender's withdrawal key.
-    bytes signature = 7;
+    bytes signature = 7 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 // Eth1Data represents references to the Ethereum 1.x deposit contract.
 message Eth1Data {
     // The 32 byte block hash of the Ethereum 1.x block considered for deposit 
     // inclusion.
-    bytes block_hash = 1;
+    bytes block_hash = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
     // The 32 byte deposit tree root for the last deposit included in this
     // block.
-    bytes deposit_root = 2;
+    bytes deposit_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];;
 
     // The total number of deposits included in the beacon chain since genesis
     // including the deposits in this block.
@@ -166,24 +164,24 @@ message BeaconBlockHeader {
     uint64 slot = 1; 
 
     // 32 byte merkle tree root of the parent ssz encoded block.
-    bytes parent_root = 2;
+    bytes parent_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];;
 
     // 32 byte merkle tree root of the resulting ssz encoded state after processing this block.
-    bytes state_root = 3;
+    bytes state_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
     // 32 byte merkle tree root of the ssz encoded block body.
-    bytes body_root = 4;
+    bytes body_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
     // 96 byte BLS signature from the validator that produced this block.
-    bytes signature = 5;
+    bytes signature = 5 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 message IndexedAttestation {
-    repeated uint64 custody_bit_0_indices = 1;
-    repeated uint64 custody_bit_1_indices = 2;
+    repeated uint64 custody_bit_0_indices = 1 [(gogoproto.moretags) = "ssz-max:\"4096\""];
+    repeated uint64 custody_bit_1_indices = 2 [(gogoproto.moretags) = "ssz-max:\"4096\""];
 
     AttestationData data = 3;
 
     // 96 bytes aggregate signature.
-    bytes signature = 4;
+    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }

@@ -127,7 +127,7 @@ message Validator {
   // 96 byte BLS public key used for the validator's activities.
   bytes pubkey = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
   // 32 byte hash of the withdrawal destination public key.
-  bytes withdrawal_credentials = 2[(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
   // The validators current effective balance in gwei.
   uint64 effective_balance = 3;
   // Whether or not the validator has been slashed.
