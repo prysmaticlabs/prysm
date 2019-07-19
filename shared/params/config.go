@@ -235,6 +235,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.MinGenesisTime = 0
+	demoConfig.Eth1FollowDistance = 16
 
 	return demoConfig
 }

@@ -1849,3 +1849,7 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 		t.Errorf("Expected sender balance %d, received %d", newState.Balances[0], expectedSender)
 	}
 }
+
+func TestEth1DataHasEnoughSupport(t *testing.T) {
+	t.Fail() // TODO
+}

@@ -9,7 +9,7 @@ import (
 )
 
 func TestHashKeyFn_OK(t *testing.T) {
-	bInfo := &blockInfo{
+	bInfo := &BlockInfo{
 		Hash: common.HexToHash("0x0123456"),
 	}
 
@@ -30,7 +30,7 @@ func TestHashKeyFn_InvalidObj(t *testing.T) {
 }
 
 func TestHeightKeyFn_OK(t *testing.T) {
-	bInfo := &blockInfo{
+	bInfo := &BlockInfo{
 		Number: big.NewInt(555),
 	}
 
@@ -75,7 +75,7 @@ func TestBlockCache_byHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !exists {
-		t.Error("Expected blockInfo to exist")
+		t.Error("Expected BlockInfo to exist")
 	}
 	if fetchedInfo.Number.Cmp(header.Number) != 0 {
 		t.Errorf(
@@ -118,7 +118,7 @@ func TestBlockCache_byHeight(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !exists {
-		t.Error("Expected blockInfo to exist")
+		t.Error("Expected BlockInfo to exist")
 	}
 	if fetchedInfo.Number.Cmp(header.Number) != 0 {
 		t.Errorf(

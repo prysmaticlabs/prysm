@@ -15,7 +15,7 @@ import (
 
 var (
 	// ErrNotABlockInfo will be returned when a cache object is not a pointer to
-	// a blockInfo struct.
+	// a BlockInfo struct.
 	ErrNotABlockInfo = errors.New("object is not a block info")
 
 	// maxCacheSize is 2x of the follow distance for additional cache padding.
@@ -38,15 +38,24 @@ var (
 	})
 )
 
-// blockInfo specifies the block information in the ETH 1.0 chain.
-type blockInfo struct {
+// BlockInfo specifies the block information in the ETH 1.0 chain.
+type BlockInfo struct {
 	Number *big.Int
 	Hash   common.Hash
+	Time   uint64
 }
 
-// hashKeyFn takes the hex string representation as the key for a blockInfo.
+func blockToBlockInfo(blk *gethTypes.Block) *BlockInfo {
+	return &BlockInfo{
+		Hash:   blk.Hash(),
+		Number: blk.Number(),
+		Time:   blk.Time(),
+	}
+}
+
+// hashKeyFn takes the hex string representation as the key for a BlockInfo.
 func hashKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*blockInfo)
+	bInfo, ok := obj.(*BlockInfo)
 	if !ok {
 		return "", ErrNotABlockInfo
 	}
@@ -55,9 +64,9 @@ func hashKeyFn(obj interface{}) (string, error) {
 }
 
 // heightKeyFn takes the string representation of the block number as the key
-// for a blockInfo.
+// for a BlockInfo.
 func heightKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*blockInfo)
+	bInfo, ok := obj.(*BlockInfo)
 	if !ok {
 		return "", ErrNotABlockInfo
 	}
@@ -72,7 +81,7 @@ type blockCache struct {
 	lock        sync.RWMutex
 }
 
-// newBlockCache creates a new block cache for storing/accessing blockInfo from
+// newBlockCache creates a new block cache for storing/accessing BlockInfo from
 // memory.
 func newBlockCache() *blockCache {
 	return &blockCache{
@@ -81,9 +90,9 @@ func newBlockCache() *blockCache {
 	}
 }
 
-// BlockInfoByHash fetches blockInfo by its block hash. Returns true with a
+// BlockInfoByHash fetches BlockInfo by its block hash. Returns true with a
 // reference to the block info, if exists. Otherwise returns false, nil.
-func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *blockInfo, error) {
+func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *BlockInfo, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -99,7 +108,7 @@ func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *blockInfo, error)
 		return false, nil, nil
 	}
 
-	bInfo, ok := obj.(*blockInfo)
+	bInfo, ok := obj.(*BlockInfo)
 	if !ok {
 		return false, nil, ErrNotABlockInfo
 	}
@@ -107,9 +116,9 @@ func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *blockInfo, error)
 	return true, bInfo, nil
 }
 
-// BlockInfoByHeight fetches blockInfo by its block number. Returns true with a
+// BlockInfoByHeight fetches BlockInfo by its block number. Returns true with a
 // reference to the block info, if exists. Otherwise returns false, nil.
-func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *blockInfo, error) {
+func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *BlockInfo, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -125,7 +134,7 @@ func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *blockInfo, error
 		return false, nil, nil
 	}
 
-	bInfo, ok := obj.(*blockInfo)
+	bInfo, ok := obj.(*BlockInfo)
 	if !ok {
 		return false, nil, ErrNotABlockInfo
 	}
@@ -133,7 +142,7 @@ func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *blockInfo, error
 	return exists, bInfo, nil
 }
 
-// AddBlock adds a blockInfo object to the cache. This method also trims the
+// AddBlock adds a BlockInfo object to the cache. This method also trims the
 // least recently added block info if the cache size has reached the max cache
 // size limit. This method should be called in sequential block number order if
 // the desired behavior is that the blocks with the highest block number should
@@ -142,10 +151,7 @@ func (b *blockCache) AddBlock(blk *gethTypes.Block) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	bInfo := &blockInfo{
-		Hash:   blk.Hash(),
-		Number: blk.Number(),
-	}
+	bInfo := blockToBlockInfo(blk)
 
 	if err := b.hashCache.AddIfNotPresent(bInfo); err != nil {
 		return err

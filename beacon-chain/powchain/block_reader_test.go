@@ -211,3 +211,7 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 		t.Fatalf("Block height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
 	}
 }
+
+func TestBlockInfoByTimestamp(t *testing.T) {
+	t.Fail() // TODO
+}
