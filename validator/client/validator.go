@@ -28,7 +28,7 @@ type validator struct {
 	attesterClient       pb.AttesterServiceClient
 	keys                 map[string]*keystore.Key
 	pubkeys              [][]byte
-	prevBalance          uint64
+	prevBalance          map[[48]byte]uint64
 	logValidatorBalances bool
 }
 
@@ -123,6 +123,11 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 	for _, status := range validatorStatuses {
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
+			log.WithFields(logrus.Fields{
+				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+				"status":    status.Status.Status.String(),
+			}).Info("Validator has been Activated")
+			continue
 		}
 		if status.Status.Status == pb.ValidatorStatus_EXITED {
 			log.WithFields(logrus.Fields{
@@ -189,18 +194,21 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
-
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
+	if slot == 0 {
+		return nil
+	}
 
 	req := &pb.AssignmentRequest{
-		EpochStart: slot,
+		EpochStart: slot / params.BeaconConfig().SlotsPerEpoch,
 		PublicKeys: v.pubkeys,
 	}
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
 		v.assignments = nil // Clear assignments so we know to retry the request.
+		log.Error(err)
 		return err
 	}
 

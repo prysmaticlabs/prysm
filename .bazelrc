@@ -1,5 +1,8 @@
 # Print warnings for tests with inappropriate test size or timeout.
 test --test_verbose_timeout_warnings
 
+# Only build test targets when running bazel test //...
+test --build_tests_only
+
 # Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
 build --host_force_python=PY2

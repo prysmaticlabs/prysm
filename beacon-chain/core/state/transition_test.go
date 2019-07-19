@@ -123,7 +123,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	blkDeposits := make([]*pb.Deposit, 16)
+	blkDeposits := make([]*pb.Deposit, 0)
 	block := &pb.BeaconBlock{
 		ParentRoot: parentRoot[:],
 		Slot:       0,
@@ -227,7 +227,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 				DepositRoot: []byte{2},
 				BlockHash:   []byte{3},
 			},
-			Deposits: make([]*pb.Deposit, 16),
+			Deposits: make([]*pb.Deposit, 0),
 		},
 	}
 	want := "could not process block attestations"
@@ -352,9 +352,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	want := "number of voluntary exits (17) in block body exceeds allowed threshold of 16"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); err == nil {
+		t.Error("Expected err, received nil")
 	}
 }
 
@@ -473,7 +472,6 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-	beaconState.Eth1DepositIndex = 0
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
@@ -564,8 +562,6 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		RandaoMixes:      make([][]byte, params.BeaconConfig().SlotsPerEpoch),
 	}
-	config := state.DefaultConfig()
-	config.Logging = true
 
 	state.ProcessEpoch(context.Background(), newState)
 }
@@ -697,7 +693,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	c := &state.TransitionConfig{
 		VerifySignatures: true,
-		Logging:          false, // We enable logging in this state transition call.
 	}
 
 	// Set up proposer slashing object for block

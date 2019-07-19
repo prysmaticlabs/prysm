@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -26,12 +27,13 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
-	span.AddAttributes(
-		trace.StringAttribute("validator", fmt.Sprintf("%#x", v.keys[pk].PublicKey.Marshal())),
-	)
-	truncatedPk := bytesutil.Trunc([]byte(pk))
 
-	log.WithField("validator", truncatedPk).Info("Attesting to a beacon block")
+	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
+
+	span.AddAttributes(
+		trace.StringAttribute("validator", tpk),
+	)
+
 	v.waitToSlotMidpoint(ctx, slot)
 
 	// We fetch the validator index as it is necessary to generate the aggregation
@@ -95,20 +97,15 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		// Default is false until phase 1 where proof of custody gets implemented.
 		CustodyBit: false,
 	}
+
 	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
-			"validator": truncatedPk,
+			"pubKey": tpk,
 		}).Error("Failed to sign attestation data and custody bit")
 		return
 	}
 	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
-
-	log.WithFields(logrus.Fields{
-		"shard":     data.Crosslink.Shard,
-		"slot":      slot,
-		"validator": truncatedPk,
-	}).Info("Attesting to beacon chain head")
 
 	attestation := &pbp2p.Attestation{
 		Data:            data,
@@ -128,7 +125,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		"shard":       data.Crosslink.Shard,
 		"sourceEpoch": data.Source.Epoch,
 		"targetEpoch": data.Target.Epoch,
-		"validator":   truncatedPk,
+		"pubKey":      tpk,
 	}).Info("Attested latest head")
 
 	span.AddAttributes(

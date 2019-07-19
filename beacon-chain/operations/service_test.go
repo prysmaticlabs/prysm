@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -27,10 +26,6 @@ type mockBroadcaster struct {
 }
 
 func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
-}
-
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
 }
 
 func TestStop_OK(t *testing.T) {
@@ -65,23 +60,6 @@ func TestServiceStatus_Error(t *testing.T) {
 	if service.Status() != err {
 		t.Error("service status did not return wanted err")
 	}
-}
-
-func TestRoutineContextClosing_Ok(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
-
-	exitRoutine := make(chan bool)
-	go func() {
-		s.removeOperations()
-		s.saveOperations()
-		<-exitRoutine
-	}()
-	s.cancel()
-	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "operations service context closed, exiting save goroutine")
 }
 
 func TestIncomingExits_Ok(t *testing.T) {

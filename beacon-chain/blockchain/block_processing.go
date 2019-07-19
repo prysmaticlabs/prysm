@@ -87,8 +87,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		)
 	}
 
-	log.WithField("slotNumber", block.Slot).Info(
-		"Executing state transition")
+	log.WithField("slot", block.Slot).Info("Executing state transition")
 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
 	beaconState, err = c.AdvanceState(ctx, beaconState, block)
@@ -107,8 +106,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	log.WithFields(logrus.Fields{
-		"slotNumber":   block.Slot,
-		"currentEpoch": helpers.SlotToEpoch(block.Slot),
+		"slot":  block.Slot,
+		"epoch": helpers.SlotToEpoch(block.Slot),
 	}).Info("State transition complete")
 
 	// Check state root
@@ -128,7 +127,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
 	}
 
-	log.WithField("slot", block.Slot).Info("Finished processing beacon block")
+	log.WithFields(logrus.Fields{
+		"slot":         block.Slot,
+		"attestations": len(block.Body.Attestations),
+		"deposits":     len(block.Body.Deposits),
+	}).Info("Finished processing beacon block")
+
 	return beaconState, nil
 }
 
@@ -217,7 +221,6 @@ func (c *ChainService) AdvanceState(
 		block,
 		&state.TransitionConfig{
 			VerifySignatures: false, // We disable signature verification for now.
-			Logging:          true,  // We enable logging in this state transition call.
 		},
 	)
 	if err != nil {
@@ -261,9 +264,7 @@ func (c *ChainService) AdvanceState(
 		if err := c.updateFFGCheckPts(ctx, newState); err != nil {
 			return newState, fmt.Errorf("could not update FFG checkpts: %v", err)
 		}
-		log.WithField(
-			"SlotsSinceGenesis", newState.Slot,
-		).Info("Epoch transition successfully processed")
+		logEpochData(newState)
 	}
 	return newState, nil
 }
@@ -307,4 +308,30 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	}
 	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
 	return nil
+}
+
+// logs epoch related data in each epoch transition
+func logEpochData(beaconState *pb.BeaconState) {
+
+	log.WithField("currentEpochAttestations", len(beaconState.CurrentEpochAttestations)).Info("Number of current epoch attestations")
+	log.WithField("prevEpochAttestations", len(beaconState.PreviousEpochAttestations)).Info("Number of previous epoch attestations")
+	log.WithField(
+		"previousJustifiedEpoch", beaconState.PreviousJustifiedCheckpoint.Epoch,
+	).Info("Previous justified epoch")
+	log.WithField(
+		"justifiedEpoch", beaconState.CurrentJustifiedCheckpoint.Epoch,
+	).Info("Justified epoch")
+	log.WithField(
+		"finalizedEpoch", beaconState.FinalizedCheckpoint.Epoch,
+	).Info("Finalized epoch")
+	log.WithField(
+		"Deposit Index", beaconState.Eth1DepositIndex,
+	).Info("ETH1 Deposit Index")
+	log.WithField(
+		"numValidators", len(beaconState.Validators),
+	).Info("Validator registry length")
+
+	log.WithField(
+		"SlotsSinceGenesis", beaconState.Slot,
+	).Info("Epoch transition successfully processed")
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ func init() {
 	})
 
 	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
 }
 
 func TestProcessDepositLog_OK(t *testing.T) {

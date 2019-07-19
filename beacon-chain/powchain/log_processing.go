@@ -33,20 +33,30 @@ func (w *Web3Service) ETH2GenesisTime() uint64 {
 // ProcessLog is the main method which handles the processing of all
 // logs from the deposit contract on the ETH1.0 chain.
 func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
+	w.processingLock.Lock()
+	defer w.processingLock.Unlock()
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		w.ProcessDepositLog(depositLog)
 		if !w.chainStarted {
+			if depositLog.BlockHash == [32]byte{} {
+				log.Error("Got empty blockhash from powchain service")
+				return
+			}
 			blk, err := w.blockFetcher.BlockByHash(w.ctx, depositLog.BlockHash)
 			if err != nil {
 				log.Errorf("Could not get eth1 block %v", err)
+				return
+			}
+			if blk == nil {
+				log.Errorf("Got empty block from powchain service %v", err)
 				return
 			}
 			timeStamp := blk.Time()
 			triggered := state.IsValidGenesisState(w.activeValidatorCount, timeStamp)
 			if triggered {
 				w.setGenesisTime(timeStamp)
-				w.ProcessChainStart(uint64(w.eth2GenesisTime))
+				w.ProcessChainStart(uint64(w.eth2GenesisTime), depositLog.BlockHash)
 			}
 		}
 		return
@@ -60,7 +70,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
-		log.Errorf("Could not unpack log %v", err)
+		log.Errorf("Could not unpack log: %v", err)
 		return
 	}
 	// If we have already seen this Merkle index, skip processing the log.
@@ -148,7 +158,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 // ProcessChainStart processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
-func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
+func (w *Web3Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte) {
 	w.chainStarted = true
 
 	chainStartTime := time.Unix(int64(genesisTime), 0)
@@ -178,6 +188,12 @@ func (w *Web3Service) ProcessChainStart(genesisTime uint64) {
 	}
 
 	w.depositTrie = sparseMerkleTrie
+	root := sparseMerkleTrie.Root()
+	w.chainStartETH1Data = &pb.Eth1Data{
+		DepositCount: uint64(len(w.chainStartDeposits)),
+		DepositRoot:  root[:],
+		BlockHash:    eth1BlockHash[:],
+	}
 
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
@@ -246,7 +262,6 @@ func (w *Web3Service) requestBatchedLogs() error {
 
 	// Only process log slices which are larger than zero.
 	if len(logs) > 0 {
-		log.Debug("Processing Batched Logs")
 		for _, log := range logs {
 			w.ProcessLog(log)
 		}

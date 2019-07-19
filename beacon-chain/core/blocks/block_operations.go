@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	"github.com/sirupsen/logrus"
 )
 
 var eth1DataCache = cache.NewEth1DataVoteCache()
@@ -49,14 +48,31 @@ func VerifyProposerSignature(
 func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, block.Body.Eth1Data)
 
-	voteCount, err := eth1DataCache.Eth1DataVote(block.Body.Eth1Data.DepositRoot)
+	hasSupport, err := Eth1DataHasEnoughSupport(beaconState, block.Body.Eth1Data)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
+		return nil, err
+	}
+
+	if hasSupport {
+		beaconState.Eth1Data = block.Body.Eth1Data
+	}
+
+	return beaconState, nil
+}
+
+// Eth1DataHasEnoughSupport returns true when the given eth1data has more than 50% votes in the
+// eth1 voting period. A vote is cast by including eth1data in a block and part of state processing
+// appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
+// votes to see if they match the eth1data.
+func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *pb.Eth1Data) (bool, error) {
+	voteCount, err := eth1DataCache.Eth1DataVote(data.DepositRoot)
+	if err != nil {
+		return false, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
 	}
 
 	if voteCount == 0 {
 		for _, vote := range beaconState.Eth1DataVotes {
-			if proto.Equal(vote, block.Body.Eth1Data) {
+			if proto.Equal(vote, data) {
 				voteCount++
 			}
 		}
@@ -65,17 +81,15 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 	}
 
 	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-		DepositRoot: block.Body.Eth1Data.DepositRoot,
+		DepositRoot: data.DepositRoot,
 		VoteCount:   voteCount,
 	}); err != nil {
-		return nil, fmt.Errorf("could not save eth1 data vote cache: %v", err)
+		return false, fmt.Errorf("could not save eth1 data vote cache: %v", err)
 	}
 
-	if voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
-		beaconState.Eth1Data = block.Body.Eth1Data
-	}
-
-	return beaconState, nil
+	// If 50+% majority converged on the same eth1data, then it has enough support to update the
+	// state.
+	return voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod, nil
 }
 
 // ProcessBlockHeader validates a block by its header.
@@ -91,8 +105,9 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 //    state.latest_block_header = BeaconBlockHeader(
 //        slot=block.slot,
 //        parent_root=block.parent_root,
-//        state_root=ZERO_HASH,  # Overwritten in next `process_slot` call
+//        # state_root: zeroed, overwritten in the next `process_slot` call
 //        body_root=hash_tree_root(block.body),
+//		  # signature is always zeroed
 //    )
 //    # Verify proposer is not slashed
 //    proposer = state.validators[get_beacon_proposer_index(state)]
@@ -184,7 +199,6 @@ func ProcessRandao(
 	beaconState *pb.BeaconState,
 	body *pb.BeaconBlockBody,
 	verifySignatures bool,
-	enableLogging bool,
 ) (*pb.BeaconState, error) {
 	if verifySignatures {
 		proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
@@ -192,7 +206,7 @@ func ProcessRandao(
 			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 		}
 
-		if err := verifyBlockRandao(beaconState, body, proposerIdx, enableLogging); err != nil {
+		if err := verifyBlockRandao(beaconState, body, proposerIdx); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
 	}
@@ -211,7 +225,7 @@ func ProcessRandao(
 
 // Verify that bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)),
 //   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
-func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, proposerIdx uint64, enableLogging bool) error {
+func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, proposerIdx uint64) error {
 	proposer := beaconState.Validators[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
 	if err != nil {
@@ -225,12 +239,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
-	if enableLogging {
-		log.WithFields(logrus.Fields{
-			"epoch":         helpers.CurrentEpoch(beaconState),
-			"proposerIndex": proposerIdx,
-		}).Info("Verifying randao")
-	}
+
 	if !sig.Verify(buf, pub, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}
@@ -479,7 +488,7 @@ func ProcessAttestations(
 //    assert data.crosslink.start_epoch == parent_crosslink.end_epoch
 //    assert data.crosslink.end_epoch == min(data.target_epoch, parent_crosslink.end_epoch + MAX_EPOCHS_PER_CROSSLINK)
 //    assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
-//    assert data.crosslink.data_root == ZERO_HASH  # [to be removed in phase 1]
+//    assert data.crosslink.data_root == Bytes32()  # [to be removed in phase 1]
 //    validate_indexed_attestation(state, convert_to_indexed(state, attestation))
 func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) (*pb.BeaconState, error) {
 	data := att.Data
@@ -654,12 +663,11 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 }
 
 // VerifyIndexedAttestation determines the validity of an indexed attestation.
-// WIP - signing is not implemented until BLS is integrated into Prysm.
 //
 // Spec pseudocode definition:
 //  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
 //    """
-//    Verify validity of ``indexed_attestation``.
+//    Check if ``indexed_attestation`` has valid indices and signature.
 //    """
 //    bit_0_indices = indexed_attestation.custody_bit_0_indices
 //    bit_1_indices = indexed_attestation.custody_bit_1_indices

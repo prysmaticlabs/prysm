@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -48,25 +49,27 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 		},
 		{
 			slot:         0,
-			stateSlot:    params.BeaconConfig().HistoricalRootsLimit,
+			stateSlot:    params.BeaconConfig().SlotsPerHistoricalRoot,
 			expectedRoot: []byte{0},
 		},
 	}
-	for _, tt := range tests {
-		s.Slot = tt.stateSlot
-		wantedSlot := tt.slot
-		result, err := BlockRootAtSlot(s, wantedSlot)
-		if err != nil {
-			t.Fatalf("failed to get block root at slot %d: %v",
-				wantedSlot, err)
-		}
-		if !bytes.Equal(result, tt.expectedRoot) {
-			t.Errorf(
-				"result block root was an unexpected value, wanted %v, got %v",
-				tt.expectedRoot,
-				result,
-			)
-		}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			s.Slot = tt.stateSlot
+			wantedSlot := tt.slot
+			result, err := BlockRootAtSlot(s, wantedSlot)
+			if err != nil {
+				t.Fatalf("failed to get block root at slot %d: %v",
+					wantedSlot, err)
+			}
+			if !bytes.Equal(result, tt.expectedRoot) {
+				t.Errorf(
+					"result block root was an unexpected value, wanted %v, got %v",
+					tt.expectedRoot,
+					result,
+				)
+			}
+		})
 	}
 }
 

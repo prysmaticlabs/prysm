@@ -64,6 +64,10 @@ func (f *faultyPOWChainService) BlockTimeByHeight(_ context.Context, height *big
 	return 0, errors.New("failed")
 }
 
+func (f *faultyPOWChainService) BlockNumberByTimestamp(_ context.Context, _ uint64) (*big.Int, error) {
+	return big.NewInt(0), nil
+}
+
 func (f *faultyPOWChainService) DepositRoot() [32]byte {
 	return [32]byte{}
 }
@@ -80,11 +84,17 @@ func (f *faultyPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
 	return [][]byte{}, errors.New("hashing failed")
 }
 
+func (f *faultyPOWChainService) ChainStartETH1Data() *pbp2p.Eth1Data {
+	return &pbp2p.Eth1Data{}
+}
+
 type mockPOWChainService struct {
-	chainStartFeed    *event.Feed
-	latestBlockNumber *big.Int
-	hashesByHeight    map[int][]byte
-	blockTimeByHeight map[int]uint64
+	chainStartFeed      *event.Feed
+	latestBlockNumber   *big.Int
+	hashesByHeight      map[int][]byte
+	blockTimeByHeight   map[int]uint64
+	blockNumberByHeight map[uint64]*big.Int
+	eth1Data            *pbp2p.Eth1Data
 }
 
 func (m *mockPOWChainService) HasChainStarted() bool {
@@ -133,6 +143,10 @@ func (m *mockPOWChainService) BlockTimeByHeight(_ context.Context, height *big.I
 	return m.blockTimeByHeight[h], nil
 }
 
+func (m *mockPOWChainService) BlockNumberByTimestamp(_ context.Context, time uint64) (*big.Int, error) {
+	return m.blockNumberByHeight[time], nil
+}
+
 func (m *mockPOWChainService) DepositRoot() [32]byte {
 	root := []byte("depositroot")
 	return bytesutil.ToBytes32(root)
@@ -144,6 +158,10 @@ func (m *mockPOWChainService) ChainStartDeposits() []*pbp2p.Deposit {
 
 func (m *mockPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
 	return [][]byte{}, nil
+}
+
+func (m *mockPOWChainService) ChainStartETH1Data() *pbp2p.Eth1Data {
+	return m.eth1Data
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {

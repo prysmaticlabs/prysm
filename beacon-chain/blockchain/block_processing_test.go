@@ -29,6 +29,13 @@ import (
 // Ensure ChainService implements interfaces.
 var _ = BlockProcessor(&ChainService{})
 
+func init() {
+	// TODO(2993): remove this after ssz is optimized for mainnet.
+	c := params.BeaconConfig()
+	c.HistoricalRootsLimit = 8192
+	params.OverrideBeaconConfig(c)
+}
+
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := chainService.beaconDB.Block(parentRoot)
@@ -126,7 +133,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
-	beaconState.Eth1DepositIndex = 0
+	beaconState.Eth1DepositIndex = 100
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
@@ -155,8 +162,9 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
-				DepositRoot: []byte("a"),
-				BlockHash:   []byte("b"),
+				DepositCount: uint64(len(deposits)),
+				DepositRoot:  []byte("a"),
+				BlockHash:    []byte("b"),
 			},
 			RandaoReveal: randaoReveal,
 			Attestations: nil,
@@ -204,7 +212,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
-	beaconState.Eth1DepositIndex = 0
+	beaconState.Eth1DepositIndex = 100
 
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
@@ -345,7 +353,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.Eth1DepositIndex = 0
+	beaconState.Eth1DepositIndex = 100
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -409,7 +417,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.Eth1DepositIndex = 0
+	beaconState.Eth1DepositIndex = 100
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -660,7 +668,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.Eth1DepositIndex = 0
+	beaconState.Eth1DepositIndex = 100
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {

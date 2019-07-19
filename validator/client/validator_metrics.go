@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -24,13 +25,13 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return nil
 	}
 
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	if epoch == 0 {
-		v.prevBalance = params.BeaconConfig().MaxEffectiveBalance
-	}
-	var totalPrevBalance uint64
 	reported := false
 	for _, pkey := range v.pubkeys {
+
+		if slot < params.BeaconConfig().SlotsPerEpoch {
+			v.prevBalance[bytesutil.ToBytes48(pkey)] = params.BeaconConfig().MaxEffectiveBalance
+		}
+
 		req := &pb.ValidatorPerformanceRequest{
 			Slot:      slot,
 			PublicKey: pkey,
@@ -61,8 +62,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
 
-		if v.prevBalance > 0 {
-			prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
+		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 {
+			prevBalance := float64(v.prevBalance[bytesutil.ToBytes48(pkey)]) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
 				"prevBalance":   prevBalance,
@@ -72,9 +73,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"pubKey":        tpk,
 			}).Info("Net gains/losses in eth")
 		}
-		totalPrevBalance += resp.Balance
+		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.Balance
 	}
 
-	v.prevBalance = totalPrevBalance
 	return nil
 }

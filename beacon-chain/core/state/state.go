@@ -4,7 +4,6 @@
 package state
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -93,6 +92,8 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		eth1Data = &pb.Eth1Data{}
 	}
 
+	eth1Data.DepositCount = uint64(len(deposits))
+
 	state := &pb.BeaconState{
 		// Misc fields.
 		Slot:        0,
@@ -180,15 +181,14 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	}
 
 	depositRoot := trie.Root()
+	state.Eth1Data.DepositRoot = depositRoot[:]
 	for i, deposit := range deposits {
-		eth1DataExists := eth1Data != nil && !bytes.Equal(eth1Data.DepositRoot, []byte{})
-		state.Eth1Data.DepositRoot = depositRoot[:]
 		state, err = b.ProcessDeposit(
 			state,
 			deposit,
 			validatorMap,
-			false,
-			eth1DataExists,
+			false, /* verify signature */
+			false, /* verify tree */
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit %d: %v", i, err)
@@ -210,9 +210,9 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator indices: %v", err)
 	}
-	genesisActiveIndexRoot, err := ssz.HashTreeRoot(activeIndices)
+	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash tree root: %v", err)
+		return nil, fmt.Errorf("could not hash tree root active indices: %v", err)
 	}
 	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
 	if err != nil {

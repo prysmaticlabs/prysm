@@ -37,9 +37,10 @@ type BeaconServer struct {
 // occur in the Deposit Contract on ETH 1.0.
 func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconService_WaitForChainStartServer) error {
 	ok := bs.powChainService.HasChainStarted()
-	genesisTime := bs.powChainService.ETH2GenesisTime()
 
 	if ok {
+		genesisTime := bs.powChainService.ETH2GenesisTime()
+
 		res := &pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,
