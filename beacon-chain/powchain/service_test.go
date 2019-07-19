@@ -10,13 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -75,7 +74,8 @@ func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethT
 func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
 	block := gethTypes.NewBlock(
 		&gethTypes.Header{
-			Number: big.NewInt(0),
+			Number: big.NewInt(15),
+			Time:   150,
 		},
 		[]*gethTypes.Transaction{},
 		[]*gethTypes.Header{},

@@ -97,7 +97,8 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 
 	block := gethTypes.NewBlock(
 		&gethTypes.Header{
-			Number: big.NewInt(0),
+			Number: big.NewInt(15),
+			Time:   150,
 		},
 		[]*gethTypes.Transaction{},
 		[]*gethTypes.Header{},
@@ -209,5 +210,25 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	}
 	if height.Cmp(block.Number()) != 0 {
 		t.Fatalf("Block height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
+	}
+}
+
+func TestBlockNumberByTimestamp(t *testing.T) {
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &goodFetcher{},
+		Client:       nil,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	bn, err := web3Service.BlockNumberByTimestamp(ctx, 150000 /* time */)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if bn.Cmp(big.NewInt(0)) == 0 {
+		t.Error("Returned a block with zero number, expected to be non zero")
 	}
 }

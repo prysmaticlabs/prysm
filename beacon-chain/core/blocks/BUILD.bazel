@@ -35,10 +35,12 @@ go_test(
     srcs = [
         "block_operations_test.go",
         "block_test.go",
+        "eth1_data_test.go",
         "validity_conditions_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/state/stateutils:go_default_library",

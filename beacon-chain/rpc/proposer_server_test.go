@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
 	"math/big"
 	"reflect"
@@ -364,7 +363,7 @@ func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
 	}
 	ps := ProposerServer{powChainService: p}
 
-	_, err := ps.deposits(context.Background())
+	_, err := ps.deposits(context.Background(), &pbp2p.Eth1Data{})
 	if err.Error() != "latest PoW block number is unknown" {
 		t.Errorf("Received unexpected error: %v", err)
 	}
@@ -463,7 +462,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		chainService:    newMockChainService(),
 	}
 
-	deposits, err := bs.deposits(ctx)
+	deposits, err := bs.deposits(ctx, &pbp2p.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -473,7 +472,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err = bs.deposits(ctx)
+	deposits, err = bs.deposits(ctx, &pbp2p.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -572,7 +571,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx)
+	deposits, err := bs.deposits(ctx, &pbp2p.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -672,7 +671,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx)
+	deposits, err := bs.deposits(ctx, &pbp2p.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -706,241 +705,8 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
-	if _, err := proposerServer.eth1Data(context.Background()); !strings.Contains(err.Error(), want) {
+	if _, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error %v, received %v", want, err)
-	}
-}
-
-func TestEth1Data_EmptyVotesOk(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	ctx := context.Background()
-
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	deps := []*db.DepositContainer{
-		{
-			Index: 0,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
-					Signature:             mockSig[:],
-					WithdrawalCredentials: mockCreds[:],
-				}},
-		},
-		{
-			Index: 1,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
-					Signature:             mockSig[:],
-					WithdrawalCredentials: mockCreds[:],
-				}},
-		},
-	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
-	for _, dp := range deps {
-		beaconDB.InsertDeposit(context.Background(), dp.Deposit, big.NewInt(0), dp.Index, depositTrie.Root())
-	}
-	depositRoot := depositTrie.Root()
-	beaconState := &pbp2p.BeaconState{
-		Eth1Data: &pbp2p.Eth1Data{
-			BlockHash:   []byte("hash0"),
-			DepositRoot: depositRoot[:],
-		},
-		Eth1DataVotes: []*pbp2p.Eth1Data{},
-	}
-
-	powChainService := &mockPOWChainService{
-		latestBlockNumber: height,
-		hashesByHeight: map[int][]byte{
-			0: []byte("hash0"),
-			1: beaconState.Eth1Data.DepositRoot,
-		},
-	}
-	proposerServer := &ProposerServer{
-		beaconDB:        beaconDB,
-		powChainService: powChainService,
-	}
-
-	if err := proposerServer.beaconDB.SaveState(ctx, beaconState); err != nil {
-		t.Fatal(err)
-	}
-	result, err := proposerServer.eth1Data(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	// If the data vote objects are empty, the deposit root should be the one corresponding
-	// to the deposit contract in the powchain service, fetched using powChainService.DepositRoot()
-	if !bytes.Equal(result.DepositRoot, depositRoot[:]) {
-		t.Errorf(
-			"Expected deposit roots to match, received %#x == %#x",
-			result.DepositRoot,
-			depositRoot,
-		)
-	}
-}
-
-func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-
-	ctx := context.Background()
-	eth1DataVotes := []*pbp2p.Eth1Data{
-		{
-			BlockHash:    []byte("block0"),
-			DepositRoot:  []byte("deposit0001234567890123456789012"),
-			DepositCount: 2,
-		},
-		{
-			BlockHash:    []byte("block1"),
-			DepositRoot:  []byte("deposit1001234567890123456789012"),
-			DepositCount: 2,
-		},
-		{
-			BlockHash:    []byte("block1"),
-			DepositRoot:  []byte("deposit1001234567890123456789012"),
-			DepositCount: 2,
-		},
-		// We include the case in which the vote counts might match, and in that
-		// case we break ties by checking which block hash has the highest
-		// block height in the eth1.0 chain.
-		{
-			BlockHash:    []byte("block2"),
-			DepositRoot:  []byte("deposit2001234567890123456789012"),
-			DepositCount: 2,
-		},
-		{
-			BlockHash:    []byte("block2"),
-			DepositRoot:  []byte("deposit2001234567890123456789012"),
-			DepositCount: 2,
-		},
-		{
-			BlockHash:    []byte("block2"),
-			DepositRoot:  []byte("deposit2001234567890123456789012"),
-			DepositCount: 2,
-		},
-		{
-			BlockHash:    []byte("block4"),
-			DepositRoot:  []byte("deposit3001234567890123456789012"),
-			DepositCount: 2,
-		},
-		{
-			BlockHash:    []byte("block4"),
-			DepositRoot:  []byte("deposit3001234567890123456789012"),
-			DepositCount: 2,
-		},
-		{
-			BlockHash:    []byte("block4"),
-			DepositRoot:  []byte("deposit3001234567890123456789012"),
-			DepositCount: 2,
-		},
-		// We include a case with higher vote count but wrong deposit count
-		// that shouldnt be counted at all.
-		{
-			BlockHash:    []byte("block4"),
-			DepositRoot:  []byte("deposit4001234567890123456789012"),
-			DepositCount: 1,
-		},
-		{
-			BlockHash:    []byte("block4"),
-			DepositRoot:  []byte("deposit4001234567890123456789012"),
-			DepositCount: 1,
-		},
-		{
-			BlockHash:    []byte("block4"),
-			DepositRoot:  []byte("deposit4001234567890123456789012"),
-			DepositCount: 1,
-		},
-		{
-			BlockHash:    []byte("block4"),
-			DepositRoot:  []byte("deposit4001234567890123456789012"),
-			DepositCount: 1,
-		},
-	}
-
-	var mockSig [96]byte
-	var mockCreds [32]byte
-	deposits := []*db.DepositContainer{
-		{
-			Index: 0,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
-					Signature:             mockSig[:],
-					WithdrawalCredentials: mockCreds[:],
-				}},
-		},
-		{
-			Index: 1,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
-					Signature:             mockSig[:],
-					WithdrawalCredentials: mockCreds[:],
-				}},
-		},
-	}
-
-	for _, dp := range deposits {
-		var root [32]byte
-		copy(root[:], eth1DataVotes[dp.Index].DepositRoot)
-		beaconDB.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, root)
-	}
-	beaconState := &pbp2p.BeaconState{
-		Eth1DataVotes: eth1DataVotes,
-		Eth1Data: &pbp2p.Eth1Data{
-			BlockHash:   []byte("stub"),
-			DepositRoot: []byte("first"),
-		},
-	}
-	if err := beaconDB.SaveState(ctx, beaconState); err != nil {
-		t.Fatal(err)
-	}
-	currentHeight := params.BeaconConfig().Eth1FollowDistance + 9
-	proposerServer := &ProposerServer{
-		beaconDB: beaconDB,
-		powChainService: &mockPOWChainService{
-			latestBlockNumber: big.NewInt(int64(currentHeight)),
-			hashesByHeight: map[int][]byte{
-				0: beaconState.Eth1Data.BlockHash,
-				// adding some not relevant blocks heights to test that search works
-				1: {1},
-				2: beaconState.Eth1DataVotes[0].BlockHash,
-				3: {3},
-				4: beaconState.Eth1DataVotes[1].BlockHash,
-				5: {5},
-				6: beaconState.Eth1DataVotes[3].BlockHash,
-				7: {7},
-				// We will give the hash at index 2 in the beacon state's latest eth1 votes
-				// priority in being selected as the best vote by giving it the highest block number.
-				8: beaconState.Eth1DataVotes[2].BlockHash,
-				9: {9},
-			},
-		},
-	}
-
-	eth1data, err := proposerServer.eth1Data(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Vote at index 2 should have won the best vote selection mechanism as it had the highest block number
-	// despite being tied at vote count with the vote at index 3.
-	if !bytes.Equal(eth1data.BlockHash, beaconState.Eth1DataVotes[2].BlockHash) {
-		t.Errorf(
-			"Expected block hashes to match, received %#x == %#x",
-			eth1data.BlockHash,
-			beaconState.Eth1DataVotes[2].BlockHash,
-		)
-	}
-	if !bytes.Equal(eth1data.DepositRoot, beaconState.Eth1DataVotes[2].DepositRoot) {
-		t.Errorf(
-			"Expected deposit roots to match, received %#x == %#x",
-			eth1data.DepositRoot,
-			beaconState.Eth1DataVotes[2].DepositRoot,
-		)
 	}
 }
 
@@ -1010,6 +776,39 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	}
 }
 
+// TODO(2312): Add more tests for edge cases and better coverage.
+func TestEth1Data(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+
+	slot := uint64(10000)
+
+	ps := &ProposerServer{
+		powChainService: &mockPOWChainService{
+			blockNumberByHeight: map[uint64]*big.Int{
+				55296: big.NewInt(4096),
+			},
+			hashesByHeight: map[int][]byte{
+				3072: []byte("3072"),
+			},
+			eth1Data: &pbp2p.Eth1Data{
+				DepositCount: 55,
+			},
+		},
+		beaconDB: beaconDB,
+	}
+
+	ctx := context.Background()
+	eth1Data, err := ps.eth1Data(ctx, slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if eth1Data.DepositCount != 55 {
+		t.Error("Expected deposit count to be 55")
+	}
+}
+
 func Benchmark_Eth1Data(b *testing.B) {
 	beaconDB := internal.SetupDB(b)
 	defer internal.TeardownDB(b, beaconDB)
@@ -1076,7 +875,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := proposerServer.eth1Data(context.Background())
+		_, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1)
 		if err != nil {
 			b.Fatal(err)
 		}

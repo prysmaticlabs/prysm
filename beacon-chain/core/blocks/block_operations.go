@@ -48,14 +48,31 @@ func VerifyProposerSignature(
 func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, block.Body.Eth1Data)
 
-	voteCount, err := eth1DataCache.Eth1DataVote(block.Body.Eth1Data.DepositRoot)
+	hasSupport, err := Eth1DataHasEnoughSupport(beaconState, block.Body.Eth1Data)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
+		return nil, err
+	}
+
+	if hasSupport {
+		beaconState.Eth1Data = block.Body.Eth1Data
+	}
+
+	return beaconState, nil
+}
+
+// Eth1DataHasEnoughSupport returns true when the given eth1data has more than 50% votes in the
+// eth1 voting period. A vote is cast by including eth1data in a block and part of state processing
+// appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
+// votes to see if they match the eth1data.
+func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *pb.Eth1Data) (bool, error) {
+	voteCount, err := eth1DataCache.Eth1DataVote(data.DepositRoot)
+	if err != nil {
+		return false, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
 	}
 
 	if voteCount == 0 {
 		for _, vote := range beaconState.Eth1DataVotes {
-			if proto.Equal(vote, block.Body.Eth1Data) {
+			if proto.Equal(vote, data) {
 				voteCount++
 			}
 		}
@@ -64,17 +81,15 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 	}
 
 	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-		DepositRoot: block.Body.Eth1Data.DepositRoot,
+		DepositRoot: data.DepositRoot,
 		VoteCount:   voteCount,
 	}); err != nil {
-		return nil, fmt.Errorf("could not save eth1 data vote cache: %v", err)
+		return false, fmt.Errorf("could not save eth1 data vote cache: %v", err)
 	}
 
-	if voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod {
-		beaconState.Eth1Data = block.Body.Eth1Data
-	}
-
-	return beaconState, nil
+	// If 50+% majority converged on the same eth1data, then it has enough support to update the
+	// state.
+	return voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod, nil
 }
 
 // ProcessBlockHeader validates a block by its header.
