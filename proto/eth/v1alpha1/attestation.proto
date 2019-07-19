@@ -21,17 +21,6 @@ message Attestation {
     bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
-message PendingAttestation {
-    // Bitfield representation of validator indices that have voted exactly
-    // the same vote and have been aggregated into this attestation.
-    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-    AttestationData data = 2;
-    // The difference of when attestation gets created and get included on chain.
-    uint64 inclusion_delay = 3;
-    // The proposer who included the attestation in the block.
-    uint64 proposer_index = 4;
-}
-
 message AttestationData {
     // Attestation data includes information on Casper the Friendly Finality Gadget's votes
     // See: https://arxiv.org/pdf/1710.09437.pdf
@@ -51,20 +40,6 @@ message AttestationData {
 
     // Crosslink voted by this attestation.
     Crosslink crosslink = 4;
-}
-
-message AttestationTarget {
-    // Used internally to track LMD GHOST block votes and to find
-    // the head of the chain.
-    uint64 slot = 1;
-    bytes block_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-    bytes parent_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
-}
-
-message AttestationDataAndCustodyBit {
-    AttestationData data = 1;
-    // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
-    bool custody_bit = 2;
 }
 
 message Checkpoint {
