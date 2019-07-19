@@ -133,7 +133,7 @@ bazel run //validator
 bazel test //...
 ```
 
-**To run our linter**, make sure you have [golangci-lint](https://https://github.com/golangci/golangci-lint) installed and then issue the command:
+**To run our linter**, make sure you have [golangci-lint](https://github.com/golangci/golangci-lint) installed and then issue the command:
 ```
 golangci-lint run
 ```
