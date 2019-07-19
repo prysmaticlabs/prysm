@@ -18,6 +18,9 @@ go_library(
     embed = [":v1alpha1_go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/v1alpha1",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
 )
 
 proto_library(

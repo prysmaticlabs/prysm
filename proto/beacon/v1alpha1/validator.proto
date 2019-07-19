@@ -1,5 +1,5 @@
 syntax = "proto3";
-package ethereum.beacon.v1alpha;
+package ethereum.beacon.v1alpha1;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "google/api/annotations.proto";
