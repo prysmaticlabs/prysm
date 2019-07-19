@@ -11,7 +11,6 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 	filter "github.com/libp2p/go-maddr-filter"
 	ma "github.com/multiformats/go-multiaddr"
-
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
