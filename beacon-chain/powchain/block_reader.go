@@ -72,7 +72,7 @@ func (w *Web3Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (u
 // This is a naive implementation that will use O(ETH1_FOLLOW_DISTANCE) calls to cache
 // or ETH1. This is called for multiple times but only changes every
 // SlotsPerEth1VotingPeriod (1024 slots) so the whole method should be cached.
-func (w *Web3Service) BlockInfoByTimestamp(ctx context.Context, time uint64) (*BlockInfo, error) {
+func (w *Web3Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
@@ -103,7 +103,7 @@ func (w *Web3Service) BlockInfoByTimestamp(ctx context.Context, time uint64) (*B
 		}
 
 		if info.Time <= time {
-			return info, nil
+			return info.Number, nil
 		}
 	}
 }

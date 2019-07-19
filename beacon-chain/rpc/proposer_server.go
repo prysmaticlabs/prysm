@@ -212,12 +212,12 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*pbp2p.Eth
 	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
 
 	// Look up most recent block up to timestamp
-	blockInfo, err := ps.powChainService.BlockInfoByTimestamp(ctx, eth1VotingPeriodStartTime)
+	blockNumber, err := ps.powChainService.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
 	if err != nil {
 		return nil, err
 	}
 
-	return ps.defaultEth1DataResponse(ctx, blockInfo.Number)
+	return ps.defaultEth1DataResponse(ctx, blockNumber)
 }
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and

@@ -15,7 +15,7 @@ import (
 
 var (
 	// ErrNotABlockInfo will be returned when a cache object is not a pointer to
-	// a BlockInfo struct.
+	// a blockInfo struct.
 	ErrNotABlockInfo = errors.New("object is not a block info")
 
 	// maxCacheSize is 2x of the follow distance for additional cache padding.
@@ -38,24 +38,24 @@ var (
 	})
 )
 
-// BlockInfo specifies the block information in the ETH 1.0 chain.
-type BlockInfo struct {
+// blockInfo specifies the block information in the ETH 1.0 chain.
+type blockInfo struct {
 	Number *big.Int
 	Hash   common.Hash
 	Time   uint64
 }
 
-func blockToBlockInfo(blk *gethTypes.Block) *BlockInfo {
-	return &BlockInfo{
+func blockToBlockInfo(blk *gethTypes.Block) *blockInfo {
+	return &blockInfo{
 		Hash:   blk.Hash(),
 		Number: blk.Number(),
 		Time:   blk.Time(),
 	}
 }
 
-// hashKeyFn takes the hex string representation as the key for a BlockInfo.
+// hashKeyFn takes the hex string representation as the key for a blockInfo.
 func hashKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*BlockInfo)
+	bInfo, ok := obj.(*blockInfo)
 	if !ok {
 		return "", ErrNotABlockInfo
 	}
@@ -64,9 +64,9 @@ func hashKeyFn(obj interface{}) (string, error) {
 }
 
 // heightKeyFn takes the string representation of the block number as the key
-// for a BlockInfo.
+// for a blockInfo.
 func heightKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*BlockInfo)
+	bInfo, ok := obj.(*blockInfo)
 	if !ok {
 		return "", ErrNotABlockInfo
 	}
@@ -81,7 +81,7 @@ type blockCache struct {
 	lock        sync.RWMutex
 }
 
-// newBlockCache creates a new block cache for storing/accessing BlockInfo from
+// newBlockCache creates a new block cache for storing/accessing blockInfo from
 // memory.
 func newBlockCache() *blockCache {
 	return &blockCache{
@@ -90,9 +90,9 @@ func newBlockCache() *blockCache {
 	}
 }
 
-// BlockInfoByHash fetches BlockInfo by its block hash. Returns true with a
+// BlockInfoByHash fetches blockInfo by its block hash. Returns true with a
 // reference to the block info, if exists. Otherwise returns false, nil.
-func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *BlockInfo, error) {
+func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *blockInfo, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -108,7 +108,7 @@ func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *BlockInfo, error)
 		return false, nil, nil
 	}
 
-	bInfo, ok := obj.(*BlockInfo)
+	bInfo, ok := obj.(*blockInfo)
 	if !ok {
 		return false, nil, ErrNotABlockInfo
 	}
@@ -116,9 +116,9 @@ func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *BlockInfo, error)
 	return true, bInfo, nil
 }
 
-// BlockInfoByHeight fetches BlockInfo by its block number. Returns true with a
+// BlockInfoByHeight fetches blockInfo by its block number. Returns true with a
 // reference to the block info, if exists. Otherwise returns false, nil.
-func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *BlockInfo, error) {
+func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *blockInfo, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -134,7 +134,7 @@ func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *BlockInfo, error
 		return false, nil, nil
 	}
 
-	bInfo, ok := obj.(*BlockInfo)
+	bInfo, ok := obj.(*blockInfo)
 	if !ok {
 		return false, nil, ErrNotABlockInfo
 	}
@@ -142,7 +142,7 @@ func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *BlockInfo, error
 	return exists, bInfo, nil
 }
 
-// AddBlock adds a BlockInfo object to the cache. This method also trims the
+// AddBlock adds a blockInfo object to the cache. This method also trims the
 // least recently added block info if the cache size has reached the max cache
 // size limit. This method should be called in sequential block number order if
 // the desired behavior is that the blocks with the highest block number should
