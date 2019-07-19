@@ -201,12 +201,12 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 	return validAtts, nil
 }
 
-// TODO write better godoc for this method.
-// Determining ETH1 data for a block
-//- Determine the timestamp for the start slot for the eth1 voting period
-//- Determine the most recent eth1 block before that timestamp
-//- Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE
-//- This is the block you want to vote on
+// eth1Data determines the appropriate eth1data for a block proposal. The algorithm for this method
+// is as follows:
+//  - Determine the timestamp for the start slot for the eth1 voting period.
+//  - Determine the most recent eth1 block before that timestamp.
+//  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
+//  - This is the eth1block to use for the block proposal.
 func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*pbp2p.Eth1Data, error) {
 	eth1VotingPeriodStartTime := ps.powChainService.ETH2GenesisTime()
 	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
@@ -245,8 +245,11 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.Bea
 	return root[:], nil
 }
 
-// deposits returns a list of pending deposits that are ready for
-// inclusion in the next beacon block.
+// deposits returns a list of pending deposits that are ready for inclusion in the next beacon
+// block. Determining deposits depends on the current eth1data vote for the block and whether or not
+// this eth1data has enough support to be considered for deposits inclusion. If current vote has
+// enough support, then use that vote for basis of determining deposits, otherwise use current state
+// eth1data.
 func (ps *ProposerServer) deposits(ctx context.Context, currentVote *pbp2p.Eth1Data) ([]*pbp2p.Deposit, error) {
 	bNum := ps.powChainService.LatestBlockHeight()
 	if bNum == nil {
