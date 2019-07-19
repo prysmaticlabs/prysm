@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "protoc-gen-swagger/options/annotations.proto";
+
+option go_package = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1;eth";
+
+option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
+    info: {
+        title: "Ethereum 2.0 APIs";
+        version: "v1alpha1";
+        license: {
+            name: "Licenced under Apache 2.0";
+            url: "http://www.apache.org/licenses/LICENSE-2.0";
+        };
+        description: "Ethereum 2.0 APIs. TODO: Add a full description with GFM.";
+    };
+    external_docs: {
+        url: "https://github.com/ethereum/eth2.0-specs";
+        description : "Ethereum 2.0 Specification on Github";
+    };
+    host: "api.prylabs.net",
+    schemes: HTTPS;
+    schemes: WSS;
+    consumes: "application/json";
+    consumes: "application/grpc-web-text";
+    consumes: "application/grpc-web-json";
+    produces: "application/json";
+    produces: "application/grpc-web-text";
+    produces: "application/grpc-web-json";
+};
