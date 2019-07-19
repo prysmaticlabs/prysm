@@ -9,32 +9,36 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/renaynay/go-hobbits/encoding"
 	log "github.com/sirupsen/logrus"
+	ttl "github.com/ReneKroon/ttlcache"
 )
 
 func NewHobbitsNode(host string, port int, peers []string, db *db.BeaconDB) HobbitsNode {
+	cache := ttl.NewCache()
+	cache.Set(string(make([]byte, 32)), true)
+
 	return HobbitsNode{
-		NodeId:      strconv.Itoa(rand.Int()),
-		Host:        host,
-		Port:        port,
-		StaticPeers: peers,
-		PeerConns:   make(map[peer.ID]net.Conn),
-		feeds:       make(map[reflect.Type]p2p.Feed),
-		DB:          db,
+		NodeId:       strconv.Itoa(rand.Int()),
+		Host:         host,
+		Port:         port,
+		StaticPeers:  peers,
+		PeerConns:    make(map[peer.ID]net.Conn),
+		feeds:        make(map[reflect.Type]p2p.Feed),
+		DB:           db,
+		MessageStore: cache,
 	}
 }
 
-
-func (h *HobbitsNode)  OpenConns() error {
+func (h *HobbitsNode) OpenConns() error {
 	for _, p := range h.StaticPeers {
 		go func(p string) {
 			var conn net.Conn
@@ -139,7 +143,6 @@ func (h *HobbitsNode) Status() error {
 func (h *HobbitsNode) Stop() error {
 	return nil
 }
+
 // Service conforms to the p2p composite interface
 type Service shared.Service
-
-

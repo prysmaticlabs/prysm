@@ -124,18 +124,14 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 		return errors.Wrap(err, "error unmarshaling gossip message header")
 	}
 
-	if !h.received(header) {
+	if h.received(header) {
 		return errors.New("GOSSIP message is duplicate, aborting process")
 	}
-
-	// TODO: parse message hash so that it doesn't process already-gossiped messages
 
 	topic := h.parseTopic(header)
 
 	// TODO, does the node log this shit?
 	//  maybe the message hash for feedback purposes?
-
-
 
 	h.Broadcast(context.Background(), nil) // TODO: marshal into proto.Message
 
@@ -143,7 +139,13 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 }
 
 func (h *HobbitsNode) received(header GossipHeader) bool {
-	if val, ok :=
+	_, exists := h.MessageStore.Get(string(header.MessageHash[:]))
+	if exists {
+		return true
+	}
+
+	h.MessageStore.Set(string(header.MessageHash[:]), true)
+	return false
 }
 
 func (h *HobbitsNode) parseMethodID(header []byte) (RPCMethod, error) {

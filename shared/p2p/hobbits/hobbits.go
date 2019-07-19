@@ -11,18 +11,20 @@ import (
 	"github.com/renaynay/go-hobbits/encoding"
 	"github.com/renaynay/go-hobbits/tcp"
 	log "github.com/sirupsen/logrus"
+	ttl "github.com/ReneKroon/ttlcache"
 )
 
 type HobbitsNode struct {
 	sync.Mutex
-	NodeId      string
-	Host        string
-	Port        int
-	StaticPeers []string
-	PeerConns   map[peer.ID]net.Conn
-	feeds       map[reflect.Type]p2p.Feed
-	Server      *tcp.Server
-	DB          *db.BeaconDB
+	NodeId       string
+	Host         string
+	Port         int
+	StaticPeers  []string
+	PeerConns    map[peer.ID]net.Conn
+	feeds        map[reflect.Type]p2p.Feed
+	Server       *tcp.Server
+	DB           *db.BeaconDB
+	MessageStore *ttl.Cache
 }
 
 type HobbitsMessage encoding.Message
