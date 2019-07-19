@@ -10,14 +10,11 @@ message Attestation {
     // A bitfield representation of validator indices that have voted exactly
     // the same vote and have been aggregated into this attestation.
     // Spec type: Bitlist[N]
-    bytes aggregation_bitfield = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
     AttestationData data = 2; 
 
     // Not used in phase 0.
-    // 
-    // TODO: Add custody bitfield information.
-    // bytes custody_bitfield = 3;
     bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
     // 96 byte BLS aggregate signature.
@@ -71,12 +68,14 @@ message AttestationDataAndCustodyBit {
 }
 
 message Checkpoint {
-    // The epoch marking the occurrence of a checkpoint
+    // A checkpoint is every epoch's first slot. The goal of Casper FFG
+    // is to link the check points together for justification and finalization.
+  
+    // epoch of the check point reference to.
     uint64 epoch = 1;
-
-    // The block root at the epoch boundary of the checkpoint.
-    bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-}
+    // block root of the check point reference to.
+    bytes root = 2;
+  }
 
 message Crosslink {
     // The shard that crosslinks to the beacon chain.
