@@ -88,7 +88,7 @@ func (h *HobbitsNode) Listen() error {
 	})
 }
 
-func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) { // TODO this is all messaged up
+func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) error { // TODO this is all messaged up
 	//for _, peer := range h.PeerConns {
 	//	err := h.Server.SendMessage(peer, encoding.Message())
 	//	if err != nil {

@@ -133,13 +133,11 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	case "BLOCK":
 		h.gossipBlock(message, header)
 	case "ATTESTATION":
-		h.gossipAttestation(message, header)
+		err := h.gossipAttestation(message, header)
+		if err != nil {
+
+		}
 	}
-
-	// TODO, does the node log this shit?
-	//  maybe the message hash for feedback purposes?
-
-	h.Broadcast(context.Background(), nil) // TODO: marshal into proto.Message
 
 	return nil
 }
