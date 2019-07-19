@@ -76,7 +76,7 @@ func (w *Web3Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
-	head, err := w.client.BlockByNumber(ctx, nil)
+	head, err := w.blockFetcher.BlockByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

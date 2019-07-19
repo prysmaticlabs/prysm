@@ -60,6 +60,10 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 	return beaconState, nil
 }
 
+// Eth1DataHasEnoughSupport returns true when the given eth1data has more than 50% votes in the
+// eth1 voting period. A vote is cast by including eth1data in a block and part of state processing
+// appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
+// votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *pb.Eth1Data) (bool, error) {
 	voteCount, err := eth1DataCache.Eth1DataVote(data.DepositRoot)
 	if err != nil {
