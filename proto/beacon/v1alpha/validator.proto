@@ -84,7 +84,7 @@ message DutiesRequest {
 message DutiesResponse {
     repeated Duty duties = 1;
     message Duty {
-        // 96 byte BLS public key for the validator who's assigned to perform the following duty.
+        // 48 byte BLS public key for the validator who's assigned to perform the following duty.
         bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
         // Slot at which a validator must attest.
         uint64 attestation_slot = 2;
