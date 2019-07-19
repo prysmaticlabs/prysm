@@ -64,6 +64,10 @@ func (f *faultyPOWChainService) BlockTimeByHeight(_ context.Context, height *big
 	return 0, errors.New("failed")
 }
 
+func (f *faultyPOWChainService) BlockNumberByTimestamp(_ context.Context, _ uint64) (*big.Int, error) {
+	return nil, nil
+}
+
 func (f *faultyPOWChainService) DepositRoot() [32]byte {
 	return [32]byte{}
 }
@@ -136,6 +140,10 @@ func (m *mockPOWChainService) BlockHashByHeight(_ context.Context, height *big.I
 func (m *mockPOWChainService) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64, error) {
 	h := int(height.Int64())
 	return m.blockTimeByHeight[h], nil
+}
+
+func (m *mockPOWChainService) BlockNumberByTimestamp(_ context.Context, _ uint64) (*big.Int, error) {
+	return nil, nil
 }
 
 func (m *mockPOWChainService) DepositRoot() [32]byte {

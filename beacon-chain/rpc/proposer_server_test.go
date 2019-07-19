@@ -364,7 +364,7 @@ func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
 	}
 	ps := ProposerServer{powChainService: p}
 
-	_, err := ps.deposits(context.Background())
+	_, err := ps.deposits(context.Background(), &pbp2p.Eth1Data{})
 	if err.Error() != "latest PoW block number is unknown" {
 		t.Errorf("Received unexpected error: %v", err)
 	}
@@ -463,7 +463,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		chainService:    newMockChainService(),
 	}
 
-	deposits, err := bs.deposits(ctx)
+	deposits, err := bs.deposits(ctx, &pbp2p.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -473,7 +473,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err = bs.deposits(ctx)
+	deposits, err = bs.deposits(ctx, &pbp2p.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -572,7 +572,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx)
+	deposits, err := bs.deposits(ctx, &pbp2p.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -672,7 +672,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx)
+	deposits, err := bs.deposits(ctx, &pbp2p.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -706,7 +706,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
-	if _, err := proposerServer.eth1Data(context.Background()); !strings.Contains(err.Error(), want) {
+	if _, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error %v, received %v", want, err)
 	}
 }
@@ -768,7 +768,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	if err := proposerServer.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	result, err := proposerServer.eth1Data(context.Background())
+	result, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -922,7 +922,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		},
 	}
 
-	eth1data, err := proposerServer.eth1Data(context.Background())
+	eth1data, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1076,7 +1076,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := proposerServer.eth1Data(context.Background())
+		_, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1)
 		if err != nil {
 			b.Fatal(err)
 		}
