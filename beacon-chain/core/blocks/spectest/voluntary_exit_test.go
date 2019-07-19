@@ -57,7 +57,7 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 	}
 }
 
-var exitPrefix = "eth2_spec_tests/tests/operations/voluntary_exit/"
+var exitPrefix = "tests/operations/voluntary_exit/"
 
 func TestVoluntaryExitMinimal(t *testing.T) {
 	filepath, err := bazel.Runfile(exitPrefix + "voluntary_exit_mainnet.yaml")

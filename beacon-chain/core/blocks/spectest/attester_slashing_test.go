@@ -57,7 +57,7 @@ func runAttesterSlashingTest(t *testing.T, filename string) {
 	}
 }
 
-var attesterSlashingPrefix = "eth2_spec_tests/tests/operations/attester_slashing/"
+var attesterSlashingPrefix = "tests/operations/attester_slashing/"
 
 func TestAttesterSlashingMinimal(t *testing.T) {
 	filepath, err := bazel.Runfile(attesterSlashingPrefix + "attester_slashing_minimal.yaml")

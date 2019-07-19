@@ -57,7 +57,7 @@ func runDepositTest(t *testing.T, filename string) {
 	}
 }
 
-var depositPrefix = "eth2_spec_tests/tests/operations/deposit/"
+var depositPrefix = "tests/operations/deposit/"
 
 func TestDepositMinimalYaml(t *testing.T) {
 	filepath, err := bazel.Runfile(depositPrefix + "deposit_minimal.yaml")

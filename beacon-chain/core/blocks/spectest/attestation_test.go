@@ -16,7 +16,7 @@ import (
 )
 
 func runAttestationTest(t *testing.T, filename string) {
-	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/operations/attestation/" + filename)
+	filepath, err := bazel.Runfile("tests/operations/attestation/" + filename)
 	if err != nil {
 		t.Fatal(err)
 	}

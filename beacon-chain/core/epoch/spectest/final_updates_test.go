@@ -62,7 +62,7 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 	}
 }
 
-const finalUpdatesPrefix = "eth2_spec_tests/tests/epoch_processing/final_updates/"
+const finalUpdatesPrefix = "tests/epoch_processing/final_updates/"
 
 func TestFinalUpdatesMinimal(t *testing.T) {
 	filepath, err := bazel.Runfile(finalUpdatesPrefix + "final_updates_minimal.yaml")

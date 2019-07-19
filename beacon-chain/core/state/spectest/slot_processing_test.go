@@ -14,7 +14,7 @@ import (
 )
 
 func TestSlotProcessingMainnet(t *testing.T) {
-	filepath, err := bazel.Runfile("/eth2_spec_tests/tests/sanity/slots/sanity_slots_mainnet.yaml")
+	filepath, err := bazel.Runfile("tests/sanity/slots/sanity_slots_mainnet.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}

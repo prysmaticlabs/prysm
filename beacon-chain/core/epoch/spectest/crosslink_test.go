@@ -42,7 +42,7 @@ func runCrosslinkProcessingTests(t *testing.T, filename string) {
 	}
 }
 
-const crosslinkPrefix = "eth2_spec_tests/tests/epoch_processing/crosslinks/"
+const crosslinkPrefix = "tests/epoch_processing/crosslinks/"
 
 func TestCrosslinksProcessingMinimal(t *testing.T) {
 	filepath, err := bazel.Runfile(crosslinkPrefix + "crosslinks_minimal.yaml")

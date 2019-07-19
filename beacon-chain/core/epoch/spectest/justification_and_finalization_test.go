@@ -97,7 +97,7 @@ func runJustificationAndFinalizationTests(t *testing.T, filename string) {
 	}
 }
 
-const justificationAndFinalizationPrefix = "eth2_spec_tests/tests/epoch_processing/justification_and_finalization/"
+const justificationAndFinalizationPrefix = "tests/epoch_processing/justification_and_finalization/"
 
 func TestJustificationAndFinalizationMinimal(t *testing.T) {
 	// TODO(#2891): Verify with ETH2 spec test.
