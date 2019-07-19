@@ -129,6 +129,12 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	}
 
 	topic := h.parseTopic(header)
+	switch topic {
+	case "BLOCK":
+		h.gossipBlock(message, header)
+	case "ATTESTATION":
+		h.gossipAttestation(message, header)
+	}
 
 	// TODO, does the node log this shit?
 	//  maybe the message hash for feedback purposes?
