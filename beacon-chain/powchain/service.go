@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -95,6 +97,7 @@ type Web3Service struct {
 	activeValidatorCount    uint64
 	depositedPubkeys        map[[48]byte]uint64
 	eth2GenesisTime         uint64
+	processingLock          sync.RWMutex
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -246,6 +249,23 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 // Client for interacting with the ETH1.0 chain.
 func (w *Web3Service) Client() Client {
 	return w.client
+}
+
+// AreAllDepositsProcessed determines if all the logs from the deposit contract
+// are processed.
+func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
+	w.processingLock.RLock()
+	defer w.processingLock.RUnlock()
+	countByte, err := w.depositContractCaller.GetDepositCount(&bind.CallOpts{})
+	if err != nil {
+		return false, fmt.Errorf("could not get deposit count %v", err)
+	}
+	count := bytesutil.FromBytes8(countByte)
+	deposits := w.beaconDB.AllDeposits(w.ctx, nil)
+	if count != uint64(len(deposits)) {
+		return false, nil
+	}
+	return true, nil
 }
 
 // initDataFromContract calls the deposit contract and finds the deposit count

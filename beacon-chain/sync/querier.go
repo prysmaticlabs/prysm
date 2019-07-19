@@ -22,6 +22,7 @@ type powChainService interface {
 	HasChainStarted() bool
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	ChainStartFeed() *event.Feed
+	AreAllDepositsProcessed() (bool, error)
 }
 
 // QuerierConfig defines the configurable properties of SyncQuerier.
@@ -91,6 +92,7 @@ func NewQuerierService(ctx context.Context,
 
 // Start begins the goroutine.
 func (q *Querier) Start() {
+	q.waitForAllDepositsToBeProcessed()
 	hasChainStarted := q.powchain.HasChainStarted()
 
 	q.chainStarted = hasChainStarted
@@ -154,7 +156,7 @@ func (q *Querier) run() {
 		ticker.Stop()
 	}()
 
-	log.Info("Polling peers for latest chain head...")
+	queryLog.Info("Polling peers for latest chain head...")
 	hasReceivedResponse := false
 	var timeout <-chan time.Time
 	for {
@@ -198,6 +200,20 @@ func (q *Querier) run() {
 				q.finalizedBlockRoot = response.FinalizedBlockRoot
 			}
 		}
+	}
+}
+
+func (q *Querier) waitForAllDepositsToBeProcessed() {
+	for {
+		processed, err := q.powchain.AreAllDepositsProcessed()
+		if err != nil {
+			queryLog.Errorf("Could not check status of deposits %v", err)
+			continue
+		}
+		if processed {
+			break
+		}
+		time.Sleep(1 * time.Second)
 	}
 }
 
