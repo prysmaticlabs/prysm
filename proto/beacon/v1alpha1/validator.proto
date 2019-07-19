@@ -4,8 +4,8 @@ package ethereum.beacon.v1alpha;
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-import "eth/v1alpha1/beacon_block.proto";
-import "eth/v1alpha1/attestation.proto";
+import "proto/beacon/v1alpha1/beacon_block.proto";
+import "proto/beacon/v1alpha1/attestation.proto";
 
 option go_package = "github.com/prysmaticlabs/prysm/proto/beacon/v1alpha;eth";
 
@@ -46,7 +46,7 @@ service BeaconNodeValidator {
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
     // be included in the beacon chain. The beacon node is expected to validate and process the
     // beacon block into its state.
-    rpc ProposeBlock(Block) returns (google.protobuf.Empty) {
+    rpc ProposeBlock(BeaconBlock) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/block"
         };

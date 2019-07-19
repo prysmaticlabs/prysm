@@ -2,7 +2,7 @@ syntax = "proto3";
 package ethereum.beacon.v1alpha;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "eth/v1alpha1/attestation.proto";
+import "proto/beacon/v1alpha1/attestation.proto";
 
 option go_package = "github.com/prysmaticlabs/prysm/proto/beacon/v1alpha;eth";
 
