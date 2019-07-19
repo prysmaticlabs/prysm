@@ -32,6 +32,10 @@ func (mp *genesisPowChain) ChainStartFeed() *event.Feed {
 	return mp.feed
 }
 
+func (mp *genesisPowChain) AreAllDepositsProcessed() (bool, error) {
+	return false, nil
+}
+
 type afterGenesisPowChain struct {
 	feed *event.Feed
 }
@@ -46,6 +50,10 @@ func (mp *afterGenesisPowChain) BlockExists(ctx context.Context, hash common.Has
 
 func (mp *afterGenesisPowChain) ChainStartFeed() *event.Feed {
 	return mp.feed
+}
+
+func (mp *afterGenesisPowChain) AreAllDepositsProcessed() (bool, error) {
+	return true, nil
 }
 
 func TestQuerier_StartStop(t *testing.T) {
