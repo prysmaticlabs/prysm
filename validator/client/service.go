@@ -104,7 +104,7 @@ func (v *ValidatorService) Start() {
 		keys:                 v.keys,
 		pubkeys:              pubkeys,
 		logValidatorBalances: v.logValidatorBalances,
-		prevBalance:          make(map[[32]byte]uint64),
+		prevBalance:          make(map[[48]byte]uint64),
 	}
 	go run(v.ctx, v.validator)
 }

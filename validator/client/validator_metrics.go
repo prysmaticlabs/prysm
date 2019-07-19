@@ -29,7 +29,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	for _, pkey := range v.pubkeys {
 
 		if slot < params.BeaconConfig().SlotsPerEpoch {
-			v.prevBalance[bytesutil.ToBytes32(pkey)] = params.BeaconConfig().MaxEffectiveBalance
+			v.prevBalance[bytesutil.ToBytes48(pkey)] = params.BeaconConfig().MaxEffectiveBalance
 		}
 
 		req := &pb.ValidatorPerformanceRequest{
@@ -62,8 +62,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
 
-		if v.prevBalance[bytesutil.ToBytes32(pkey)] > 0 {
-			prevBalance := float64(v.prevBalance[bytesutil.ToBytes32(pkey)]) / float64(params.BeaconConfig().GweiPerEth)
+		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 {
+			prevBalance := float64(v.prevBalance[bytesutil.ToBytes48(pkey)]) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
 				"prevBalance":   prevBalance,
@@ -73,7 +73,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"pubKey":        tpk,
 			}).Info("Net gains/losses in eth")
 		}
-		v.prevBalance[bytesutil.ToBytes32(pkey)] = resp.Balance
+		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.Balance
 	}
 
 	return nil
