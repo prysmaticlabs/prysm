@@ -27,7 +27,7 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 }
 
 // BlockFromHeader manufactures a block from its header. It contains all its fields,
-// expect for the block body.
+// except for the block body.
 func BlockFromHeader(header *pb.BeaconBlockHeader) *pb.BeaconBlock {
 	return &pb.BeaconBlock{
 		StateRoot:  header.StateRoot,
