@@ -68,7 +68,7 @@ func (w *Web3Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (u
 	return block.Time(), nil
 }
 
-// BlockByTimestamp returns the most recent block up to a given timestamp.
+// BlockNumberByTimestamp returns the most recent block number up to a given timestamp.
 // This is a naive implementation that will use O(ETH1_FOLLOW_DISTANCE) calls to cache
 // or ETH1. This is called for multiple times but only changes every
 // SlotsPerEth1VotingPeriod (1024 slots) so the whole method should be cached.
