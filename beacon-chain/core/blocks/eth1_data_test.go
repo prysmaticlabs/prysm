@@ -18,16 +18,16 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 	}{
 		{
 			stateVotes: []*pb.Eth1Data{
-				&pb.Eth1Data{
+				{
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
-				}, &pb.Eth1Data{
+				}, {
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
-				}, &pb.Eth1Data{
+				}, {
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
-				}, &pb.Eth1Data{
+				}, {
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
 				},
@@ -40,16 +40,16 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			votingPeriodLength: 7,
 		}, {
 			stateVotes: []*pb.Eth1Data{
-				&pb.Eth1Data{
+				{
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
-				}, &pb.Eth1Data{
+				}, {
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
-				}, &pb.Eth1Data{
+				}, {
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
-				}, &pb.Eth1Data{
+				}, {
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
 				},
@@ -62,16 +62,16 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			votingPeriodLength: 8,
 		}, {
 			stateVotes: []*pb.Eth1Data{
-				&pb.Eth1Data{
+				{
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
-				}, &pb.Eth1Data{
+				}, {
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
-				}, &pb.Eth1Data{
+				}, {
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
-				}, &pb.Eth1Data{
+				}, {
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
 				},

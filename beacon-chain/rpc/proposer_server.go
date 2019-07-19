@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -355,34 +354,4 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 		BlockHash:    blockHash[:],
 		DepositCount: depositsTillHeight,
 	}, nil
-}
-
-func (ps *ProposerServer) validateVote(
-	ctx context.Context,
-	currentHeight *big.Int,
-	depositCount uint64,
-	depositRootAtHeight [32]byte,
-	stateLatestEth1Height *big.Int,
-	vote *pbp2p.Eth1Data,
-) (bool, *big.Int, error) {
-	if ctx.Err() != nil {
-		return false, nil, ctx.Err()
-	}
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	eth1Hash := bytesutil.ToBytes32(vote.BlockHash)
-	// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
-	blockExists, blockHeight, err := ps.powChainService.BlockExists(ctx, eth1Hash)
-	if err != nil {
-		log.WithError(err).WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(eth1Hash[:]))).
-			Warn("Could not verify block with hash in ETH1 chain")
-		return false, nil, nil
-	}
-	if !blockExists {
-		return false, nil, nil
-	}
-	isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
-	isAheadStateEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
-	correctDepositCount := depositCount == vote.DepositCount
-	correctDepositRoot := bytes.Equal(vote.DepositRoot, depositRootAtHeight[:])
-	return blockExists && isBehindFollowDistance && isAheadStateEth1Data && correctDepositCount && correctDepositRoot, blockHeight, nil
 }
