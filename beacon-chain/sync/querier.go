@@ -17,6 +17,7 @@ import (
 )
 
 var queryLog = logrus.WithField("prefix", "syncQuerier")
+var logQueryInterval = 1 * time.Second
 
 type powChainService interface {
 	HasChainStarted() bool
@@ -213,7 +214,7 @@ func (q *Querier) waitForAllDepositsToBeProcessed() {
 		if processed {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(logQueryInterval)
 	}
 }
 
