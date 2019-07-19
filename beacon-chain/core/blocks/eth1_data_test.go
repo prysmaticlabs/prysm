@@ -2,11 +2,11 @@ package blocks
 
 import (
 	"fmt"
+	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"testing"
 )
 
 func TestEth1DataHasEnoughSupport(t *testing.T) {
