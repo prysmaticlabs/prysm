@@ -5,16 +5,6 @@ import (
 )
 
 var (
-	// CacheTreeHashFlag determines whether to cache tree hashes for ssz.
-	CacheTreeHashFlag = cli.BoolFlag{
-		Name:  "enable-cache-tree-hash",
-		Usage: "Cache tree hashes for ssz",
-	}
-	// VerifyAttestationSigsFlag determines whether to verify signatures for attestations.
-	VerifyAttestationSigsFlag = cli.BoolFlag{
-		Name:  "enable-attestation-signature-verification",
-		Usage: "Verify signatures for attestations.",
-	}
 	// EnableCanonicalAttestationFilter filters and sends canonical attestation to RPC requests.
 	EnableCanonicalAttestationFilter = cli.BoolFlag{
 		Name:  "enable-canonical-attestation-filter",
@@ -44,16 +34,13 @@ var (
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{
-	CacheTreeHashFlag,
-}
+var ValidatorFlags = []cli.Flag{}
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
 	EnableCanonicalAttestationFilter,
 	DisableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
-	CacheTreeHashFlag,
 	EnableExcessDepositsFlag,
 	NoGenesisDelayFlag,
 }
