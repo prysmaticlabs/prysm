@@ -3,7 +3,6 @@ package hobbits
 import (
 	"context"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -19,7 +18,7 @@ func (h *HobbitsNode) gossipBlock(message HobbitsMessage, header GossipHeader) e
 		Data: block,
 	})
 
-	err := h.Broadcast(context.Background(), //message)
+	err := h.Broadcast(context.WithValue(context.Background(), "message_hash", header.MessageHash), block)
 	if err != nil {
 		return errors.Wrap(err, "could not broadcast block")
 	}
@@ -37,7 +36,7 @@ func (h *HobbitsNode) gossipAttestation(message HobbitsMessage, header GossipHea
 		Data: attestation,
 	})
 
-	err := h.Broadcast(context.Background(), // message)
+	err := h.Broadcast(context.WithValue(context.Background(), "message_hash", header.MessageHash), attestation)
 	if err != nil {
 		return errors.Wrap(err, "could not broadcast attestation")
 	}

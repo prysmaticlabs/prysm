@@ -29,6 +29,8 @@ type HobbitsNode struct {
 
 type HobbitsMessage encoding.Message
 
+const CurrentHobbits = uint32(3)
+
 var topicMapping map[reflect.Type]string // TODO: initialize with a const? How TF do I use this??
 
 type RPCMethod uint16
@@ -41,8 +43,8 @@ const (
 	BLOCK_HEADERS
 	GET_BLOCK_BODIES
 	BLOCK_BODIES
-	GET_ATTESTATION  //TODO: define in the spec what hex this corresponds to
-	ATTESTATION      // TODO: define in the spec what this means
+	GET_ATTESTATION
+	ATTESTATION
 )
 
 // Hobbits toggles a HobbitsNode and requires a host, port and list of peers to which it tries to connect.

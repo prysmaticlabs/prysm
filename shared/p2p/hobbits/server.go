@@ -20,6 +20,7 @@ import (
 	"github.com/renaynay/go-hobbits/encoding"
 	log "github.com/sirupsen/logrus"
 	ttl "github.com/ReneKroon/ttlcache"
+	"gopkg.in/mgo.v2/bson"
 )
 
 func NewHobbitsNode(host string, port int, peers []string, db *db.BeaconDB) HobbitsNode {
@@ -88,15 +89,53 @@ func (h *HobbitsNode) Listen() error {
 	})
 }
 
-func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) error { // TODO this is all messaged up
-	//for _, peer := range h.PeerConns {
-	//	err := h.Server.SendMessage(peer, encoding.Message())
-	//	if err != nil {
-	//		return errors.Wrap(err, "error broadcasting: ")
-	//	}
-	//
-	//	peer.Close() // TODO: do I wanna be closing the conns?
-	//}
+func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) error {
+	var body []byte
+	var topic string
+
+	switch msg.(type) {
+	case *pb.BeaconBlockAnnounce:
+		body = msg.(*pb.BeaconBlockAnnounce).Hash
+		topic = "BLOCK"
+	case *pb.AttestationAnnounce:
+		body = msg.(*pb.AttestationAnnounce).Hash
+		topic = "ATTESTATION"
+	default:
+		return errors.New("message type unsupported for broadcasting")
+	}
+
+	var hash [32]byte
+	copy(hash[:], body[:32])
+
+	messageHash := ctx.Value("message_hash").([32]byte)
+
+	header := GossipHeader{
+		MethodID: 0,
+		Topic: topic,
+		Timestamp: uint64(time.Now().Second()),
+		MessageHash: messageHash,
+		Hash: hash,
+	}
+	head, err := bson.Marshal(header)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal header of gossip message for broadcast")
+	}
+
+	message := HobbitsMessage{
+		Version: CurrentHobbits,
+		Protocol: encoding.GOSSIP,
+		Header: head,
+		Body: []byte{},
+	}
+
+	for _, peer := range h.PeerConns {
+		err := h.Server.SendMessage(peer, encoding.Message(message))
+		if err != nil {
+			return errors.Wrap(err, "error broadcasting: ")
+		}
+	}
+
+	return nil
 }
 
 // Send builds and sends a message to a Hobbits peer

@@ -1,7 +1,6 @@
 package hobbits
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 
@@ -129,14 +128,21 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	}
 
 	topic := h.parseTopic(header)
+
+	var function func(HobbitsMessage, GossipHeader) error
+
 	switch topic {
 	case "BLOCK":
-		h.gossipBlock(message, header)
+		function = h.gossipBlock
 	case "ATTESTATION":
-		err := h.gossipAttestation(message, header)
-		if err != nil {
+		function = h.gossipAttestation
+	default:
+		return errors.New("message topic unsupported")
+	}
 
-		}
+	err = function(message, header)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("could not gossip %s", topic))
 	}
 
 	return nil

@@ -205,7 +205,7 @@ func (h *HobbitsNode) blockBodiesResponse(msg proto.Message) (HobbitsMessage, er
 	}
 
 	head := RPCHeader{
-		MethodID: uint16(13),
+		MethodID: BLOCK_BODIES,
 	}
 	header, err := bson.Marshal(head)
 	if err != nil {
@@ -213,7 +213,7 @@ func (h *HobbitsNode) blockBodiesResponse(msg proto.Message) (HobbitsMessage, er
 	}
 
 	return HobbitsMessage{
-		Version:  uint32(3),
+		Version:  CurrentHobbits,
 		Protocol: encoding.RPC,
 		Header:   header,
 		Body:     body,
@@ -251,7 +251,7 @@ func (h *HobbitsNode) attestationResponse(msg proto.Message) (HobbitsMessage, er
 	}
 
 	head := RPCHeader{
-		MethodID: uint16(15),
+		MethodID: ATTESTATION,
 	}
 	header, err := bson.Marshal(head)
 	if err != nil {
@@ -259,7 +259,7 @@ func (h *HobbitsNode) attestationResponse(msg proto.Message) (HobbitsMessage, er
 	}
 
 	return HobbitsMessage{
-		Version:  uint32(3),
+		Version:  CurrentHobbits,
 		Protocol: encoding.RPC,
 		Header:   header,
 		Body:     body,
