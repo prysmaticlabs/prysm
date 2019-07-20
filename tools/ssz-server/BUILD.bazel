@@ -41,7 +41,7 @@ go_image(
 container_bundle(
     name = "push_images",
     images = {
-        "gcr.io/prysmaticlabs/prysm/ssz-server:latest": ":image",
+#        "gcr.io/prysmaticlabs/prysm/ssz-server:latest": ":image",
         "gcr.io/prysmaticlabs/prysm/ssz-server:{DOCKER_TAG}": ":image",
     },
     tags = ["manual"],
