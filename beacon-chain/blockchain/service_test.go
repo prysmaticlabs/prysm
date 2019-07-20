@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -34,10 +33,6 @@ var _ = ChainFeeds(&ChainService{})
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCrosslinks:          true,
-		EnableCheckBlockStateRoot: true,
-	})
 }
 
 type mockOperationService struct{}

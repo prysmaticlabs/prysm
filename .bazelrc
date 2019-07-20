@@ -6,3 +6,5 @@ test --build_tests_only
 
 # Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
 build --host_force_python=PY2
+test --host_force_python=PY2
+run --host_force_python=PY2

@@ -14,7 +14,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -111,14 +110,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}).Info("State transition complete")
 
 	// Check state root
-	if featureconfig.FeatureConfig().EnableCheckBlockStateRoot {
-		stateRoot, err := ssz.HashTreeRoot(beaconState)
-		if err != nil {
-			return nil, fmt.Errorf("could not hash beacon state: %v", err)
-		}
-		if !bytes.Equal(block.StateRoot, stateRoot[:]) {
-			return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRoot)
-		}
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash beacon state: %v", err)
+	}
+	if !bytes.Equal(block.StateRoot, stateRoot[:]) {
+		return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRoot)
 	}
 
 	// We process the block's contained deposits, attestations, and other operations
