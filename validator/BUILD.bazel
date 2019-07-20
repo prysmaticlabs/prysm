@@ -1,6 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
 load("//tools:binary_targets.bzl", "binary_targets")
 
 go_library(
@@ -61,13 +61,12 @@ go_image(
     ],
 )
 
-container_push(
-    name = "push_image",
-    format = "Docker",
-    image = ":image",
-    registry = "gcr.io",
-    repository = "prysmaticlabs/prysm/validator",
-    tag = "{DOCKER_TAG}",
+container_bundle(
+    name = "push_images",
+    images = {
+        "gcr.io/prysmaticlabs/prysm/validator:latest": ":image",
+        "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}": ":image",
+    },
     tags = ["manual"],
 )
 
