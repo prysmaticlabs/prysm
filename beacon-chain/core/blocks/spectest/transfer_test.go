@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -33,7 +33,7 @@ func runTransferTest(t *testing.T, filename string) {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
 
-			body := &pb.BeaconBlockBody{Transfers: []*pb.Transfer{tt.Transfer}}
+			body := &ethpb.BeaconBlockBody{Transfers: []*ethpb.Transfer{tt.Transfer}}
 
 			postState, err := blocks.ProcessTransfers(tt.Pre, body, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests

@@ -10,7 +10,7 @@ bazel build //proto/...
 file_list=()
 while IFS= read -d $'\0' -r file ; do
     file_list=("${file_list[@]}" "$file")
-done < <(find -L $(bazel info bazel-bin)/proto -type f -name "*pb.go" -print0)
+done < <(find -L $(bazel info bazel-bin)/proto -type f -name "*ethpb.go" -print0)
  
 arraylength=${#file_list[@]}
 searchstring="prysm/"

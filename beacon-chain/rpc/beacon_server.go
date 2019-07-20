@@ -41,7 +41,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 	if ok {
 		genesisTime := bs.powChainService.ETH2GenesisTime()
 
-		res := &pb.ChainStartResponse{
+		res := &ethpb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,
 		}
@@ -54,7 +54,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 		select {
 		case chainStartTime := <-bs.chainStartChan:
 			log.Info("Sending ChainStart log and genesis time to connected validator clients")
-			res := &pb.ChainStartResponse{
+			res := &ethpb.ChainStartResponse{
 				Started:     true,
 				GenesisTime: uint64(chainStartTime.Unix()),
 			}
@@ -78,7 +78,7 @@ func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*
 }
 
 // BlockTree returns the current tree of saved blocks and their votes starting from the justified state.
-func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.BlockTreeResponse, error) {
+func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*ethpb.BlockTreeResponse, error) {
 	justifiedState, err := bs.beaconDB.JustifiedState()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
@@ -103,7 +103,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		}
 		fullBlockTree = append(fullBlockTree, nextLayer...)
 	}
-	tree := []*pb.BlockTreeResponse_TreeNode{}
+	tree := []*ethpb.BlockTreeResponse_TreeNode{}
 	for _, kid := range fullBlockTree {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -116,20 +116,20 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 		if err != nil {
 			return nil, err
 		}
-		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
+		tree = append(tree, &ethpb.BlockTreeResponse_TreeNode{
 			BlockRoot:         blockRoot[:],
 			Block:             kid,
 			ParticipatedVotes: uint64(participatedVotes),
 		})
 	}
-	return &pb.BlockTreeResponse{
+	return &ethpb.BlockTreeResponse{
 		Tree: tree,
 	}, nil
 }
 
 // BlockTreeBySlots returns the current tree of saved blocks and their
 // votes starting from the justified state.
-func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockSlotRequest) (*pb.BlockTreeResponse, error) {
+func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *ethpb.TreeBlockSlotRequest) (*ethpb.BlockTreeResponse, error) {
 	justifiedState, err := bs.beaconDB.JustifiedState()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
@@ -167,7 +167,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 			break
 		}
 	}
-	tree := []*pb.BlockTreeResponse_TreeNode{}
+	tree := []*ethpb.BlockTreeResponse_TreeNode{}
 	for _, kid := range fullBlockTree {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -192,7 +192,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 
 			totalVotes := helpers.TotalBalance(hState, activeValidatorIndices)
 
-			tree = append(tree, &pb.BlockTreeResponse_TreeNode{
+			tree = append(tree, &ethpb.BlockTreeResponse_TreeNode{
 				BlockRoot:         blockRoot[:],
 				Block:             kid,
 				ParticipatedVotes: uint64(participatedVotes),
@@ -200,7 +200,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 			})
 		}
 	}
-	return &pb.BlockTreeResponse{
+	return &ethpb.BlockTreeResponse{
 		Tree: tree,
 	}, nil
 }

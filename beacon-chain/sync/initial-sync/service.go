@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -134,7 +134,7 @@ func NewInitialSyncService(ctx context.Context,
 }
 
 // Start begins the goroutine.
-func (s *InitialSync) Start(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
+func (s *InitialSync) Start(chainHeadResponses map[peer.ID]*ethpb.ChainHeadResponse) {
 	go s.run(chainHeadResponses)
 }
 
@@ -150,7 +150,7 @@ func (s *InitialSync) NodeIsSynced() bool {
 	return s.nodeIsSynced
 }
 
-func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
+func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBlock, chainHead *ethpb.ChainHeadResponse) error {
 	if s.nodeIsSynced {
 		return nil
 	}
@@ -222,8 +222,8 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
-func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
-	batchedBlocksub := s.p2p.Subscribe(&pb.BatchedBeaconBlockResponse{}, s.batchedBlockBuf)
+func (s *InitialSync) run(chainHeadResponses map[peer.ID]*ethpb.ChainHeadResponse) {
+	batchedBlocksub := s.p2p.Subscribe(&ethpb.BatchedBeaconBlockResponse{}, s.batchedBlockBuf)
 	beaconStateSub := s.p2p.Subscribe(&pb.BeaconStateResponse{}, s.stateBuf)
 	defer func() {
 		beaconStateSub.Unsubscribe()
@@ -259,7 +259,7 @@ func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) 
 	}
 }
 
-func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.ChainHeadResponse, peer peer.ID) error {
+func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *ethpb.ChainHeadResponse, peer peer.ID) error {
 	fields := logrus.Fields{
 		"peer":          peer.Pretty(),
 		"canonicalSlot": chainHeadResponse.CanonicalSlot,

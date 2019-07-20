@@ -2,7 +2,7 @@ package keystore
 
 import (
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -21,8 +21,8 @@ import (
 //   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing def deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96]) along with a deposit of amount Gwei.
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
-func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*pb.DepositData, error) {
-	di := &pb.DepositData{
+func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*ethpb.DepositData, error) {
+	di := &ethpb.DepositData{
 		Pubkey:                depositKey.PublicKey.Marshal(),
 		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
 		Amount:                amountInGwei,

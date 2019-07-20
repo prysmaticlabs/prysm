@@ -15,8 +15,8 @@ import (
 // processDeposit is a copy of the core function of the same name which includes some optimizations
 // and removes the requirement to pass in beacon state. This is for determining genesis validators.
 func (w *Web3Service) processDeposit(
-	eth1Data *pb.Eth1Data,
-	deposit *pb.Deposit,
+	eth1Data *ethpb.Eth1Data,
+	deposit *ethpb.Deposit,
 ) error {
 	if err := verifyDeposit(eth1Data, deposit); err != nil {
 		return fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
@@ -60,7 +60,7 @@ func (w *Web3Service) processDeposit(
 	return nil
 }
 
-func verifyDeposit(eth1Data *pb.Eth1Data, deposit *pb.Deposit) error {
+func verifyDeposit(eth1Data *ethpb.Eth1Data, deposit *ethpb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := eth1Data.DepositRoot
 	leaf, err := hashutil.DepositHash(deposit.Data)

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -29,7 +30,7 @@ var blkAncestorCache = cache.NewBlockAncestorCache()
 // ForkChoice interface defines the methods for applying fork choice rule
 // operations to the blockchain.
 type ForkChoice interface {
-	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
+	ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
 // TargetsFetcher defines a struct which can retrieve latest attestation targets
@@ -135,7 +136,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 // associated state.
 func (c *ChainService) ApplyForkChoiceRule(
 	ctx context.Context,
-	block *pb.BeaconBlock,
+	block *ethpb.BeaconBlock,
 	postState *pb.BeaconState,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
@@ -262,10 +263,10 @@ func (c *ChainService) ApplyForkChoiceRule(
 //        head = max(children, key=get_vote_count)
 func (c *ChainService) lmdGhost(
 	ctx context.Context,
-	startBlock *pb.BeaconBlock,
+	startBlock *ethpb.BeaconBlock,
 	startState *pb.BeaconState,
 	voteTargets map[uint64]*pb.AttestationTarget,
-) (*pb.BeaconBlock, error) {
+) (*ethpb.BeaconBlock, error) {
 	highestSlot := c.beaconDB.HighestBlockSlot()
 	head := startBlock
 	for {
@@ -316,12 +317,12 @@ func (c *ChainService) lmdGhost(
 // Spec pseudocode definition:
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
-func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
+func (c *ChainService) BlockChildren(ctx context.Context, block *ethpb.BeaconBlock, highestSlot uint64) ([]*ethpb.BeaconBlock, error) {
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return nil, err
 	}
-	var children []*pb.BeaconBlock
+	var children []*ethpb.BeaconBlock
 	startSlot := block.Slot + 1
 	for i := startSlot; i <= highestSlot; i++ {
 		kids, err := c.beaconDB.BlocksBySlot(ctx, i)
@@ -331,7 +332,7 @@ func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock,
 		children = append(children, kids...)
 	}
 
-	filteredChildren := []*pb.BeaconBlock{}
+	filteredChildren := []*ethpb.BeaconBlock{}
 	for _, kid := range children {
 		parentRoot := bytesutil.ToBytes32(kid.ParentRoot)
 		if blockRoot == parentRoot {
@@ -342,7 +343,7 @@ func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock,
 }
 
 // isDescendant checks if the new head block is a descendant block of the current head.
-func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.BeaconBlock) (bool, error) {
+func (c *ChainService) isDescendant(currentHead *ethpb.BeaconBlock, newHead *ethpb.BeaconBlock) (bool, error) {
 	currentHeadRoot, err := ssz.SigningRoot(currentHead)
 	if err != nil {
 		return false, nil
@@ -395,7 +396,7 @@ func (c *ChainService) AttestationTargets(state *pb.BeaconState) (map[uint64]*pb
 //            for validator_index, target in attestation_targets
 //            if get_ancestor(store, target, block.slot) == block
 //        )
-func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]*pb.AttestationTarget, beaconDB *db.BeaconDB) (int, error) {
+func VoteCount(block *ethpb.BeaconBlock, state *pb.BeaconState, targets map[uint64]*pb.AttestationTarget, beaconDB *db.BeaconDB) (int, error) {
 	balances := 0
 	var ancestorRoot []byte
 	var err error

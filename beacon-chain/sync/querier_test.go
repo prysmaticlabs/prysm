@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -153,7 +153,7 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	response := &pb.ChainHeadResponse{
+	response := &ethpb.ChainHeadResponse{
 		CanonicalSlot:            1,
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
@@ -190,7 +190,7 @@ func TestQuerier_BestPeerAssignment(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	response := &pb.ChainHeadResponse{
+	response := &ethpb.ChainHeadResponse{
 		CanonicalSlot:            1,
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
@@ -247,7 +247,7 @@ func TestSyncedInRestarts(t *testing.T) {
 	sq := NewQuerierService(context.Background(), cfg)
 
 	bState := &pb.BeaconState{Slot: 0}
-	blk := &pb.BeaconBlock{Slot: 0}
+	blk := &ethpb.BeaconBlock{Slot: 0}
 	if err := db.SaveState(context.Background(), bState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestSyncedInRestarts(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	response := &pb.ChainHeadResponse{
+	response := &ethpb.ChainHeadResponse{
 		CanonicalSlot:            10,
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}

@@ -21,11 +21,11 @@ import (
 func TestRequestAttestation_ValidatorIndexRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{}}
+	validator.assignments = &ethpb.AssignmentResponse{ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{}}
 	defer finish()
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
 	).Return(nil /* Validator Index Response*/, errors.New("something bad happened"))
 
 	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
@@ -37,7 +37,7 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.assignments = &ethpb.AssignmentResponse{ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
@@ -45,11 +45,11 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 	}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{Index: 5}, nil)
+		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
+	).Return(&ethpb.ValidatorIndexResponse{Index: 5}, nil)
 	m.attesterClient.EXPECT().RequestAttestation(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.AttestationRequest{}),
 	).Return(nil, errors.New("something went wrong"))
 
 	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
@@ -61,7 +61,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.assignments = &ethpb.AssignmentResponse{ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
@@ -69,13 +69,13 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
+		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
+	).Return(&ethpb.ValidatorIndexResponse{
 		Index: 0,
 	}, nil)
 	m.attesterClient.EXPECT().RequestAttestation(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		BeaconBlockRoot: []byte{},
 		Target:          &pbp2p.Checkpoint{},
@@ -85,7 +85,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch2
-	).Return(&pb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 	m.attesterClient.EXPECT().SubmitAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
@@ -102,7 +102,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.assignments = &ethpb.AssignmentResponse{ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
@@ -110,13 +110,13 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
+		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
+	).Return(&ethpb.ValidatorIndexResponse{
 		Index: uint64(validatorIndex),
 	}, nil)
 	m.attesterClient.EXPECT().RequestAttestation(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		BeaconBlockRoot: []byte("A"),
 		Target:          &pbp2p.Checkpoint{Root: []byte("B")},
@@ -127,7 +127,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&pb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	var generatedAttestation *pbp2p.Attestation
 	m.attesterClient.EXPECT().SubmitAttestation(
@@ -135,7 +135,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Do(func(_ context.Context, att *pbp2p.Attestation) {
 		generatedAttestation = att
-	}).Return(&pb.AttestResponse{}, nil /* error */)
+	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 
 	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
@@ -179,24 +179,24 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AssignmentRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.AssignmentRequest{}),
 		gomock.Any(),
 	).Times(0)
 
 	m.attesterClient.EXPECT().SubmitAttestation(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.AttestationRequest{}),
 	).Times(0)
 
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
 	).Times(0)
 
 	m.attesterClient.EXPECT().SubmitAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
-	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
+	).Return(&ethpb.AttestResponse{}, nil /* error */).Times(0)
 
 	delay = 3
 	timer := time.NewTimer(time.Duration(1 * time.Second))
@@ -215,7 +215,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.assignments = &ethpb.AssignmentResponse{ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
@@ -224,7 +224,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 
 	m.attesterClient.EXPECT().RequestAttestation(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		BeaconBlockRoot: []byte("A"),
 		Target:          &pbp2p.Checkpoint{Root: []byte("B")},
@@ -236,8 +236,8 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
+		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
+	).Return(&ethpb.ValidatorIndexResponse{
 		Index: uint64(validatorIndex),
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
@@ -246,12 +246,12 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&pb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	m.attesterClient.EXPECT().SubmitAttestation(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&pb.AttestResponse{}, nil).Times(1)
+	).Return(&ethpb.AttestResponse{}, nil).Times(1)
 
 	delay = 0
 	validator.AttestToBlockHead(context.Background(), 0, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
@@ -262,7 +262,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(2)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.assignments = &ethpb.AssignmentResponse{ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 			Shard:     5,
@@ -270,13 +270,13 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
+		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
+	).Return(&ethpb.ValidatorIndexResponse{
 		Index: uint64(validatorIndex),
 	}, nil)
 	m.attesterClient.EXPECT().RequestAttestation(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.AttestationRequest{}),
 	).Return(&pbp2p.AttestationData{
 		Target:    &pbp2p.Checkpoint{Root: []byte("B")},
 		Source:    &pbp2p.Checkpoint{Root: []byte("C"), Epoch: 3},
@@ -286,7 +286,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&pb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	var generatedAttestation *pbp2p.Attestation
 	m.attesterClient.EXPECT().SubmitAttestation(
@@ -294,7 +294,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Do(func(_ context.Context, att *pbp2p.Attestation) {
 		generatedAttestation = att
-	}).Return(&pb.AttestResponse{}, nil /* error */)
+	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 
 	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 

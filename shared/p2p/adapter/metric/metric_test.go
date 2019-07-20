@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 )
@@ -25,10 +25,10 @@ func TestMessageMetrics_OK(t *testing.T) {
 	if adapter == nil {
 		t.Error("Expected metric adapter")
 	}
-	data := &pb.Attestation{
+	data := &ethpb.Attestation{
 		AggregationBits: []byte{99},
-		Data: &pb.AttestationData{
-			Crosslink: &pb.Crosslink{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
 				Shard: 0,
 			},
 		},

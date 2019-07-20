@@ -39,7 +39,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
 	pubKey := v.keys[pk].PublicKey.Marshal()
-	var assignment *pb.AssignmentResponse_ValidatorAssignment
+	var assignment *ethpb.AssignmentResponse_ValidatorAssignment
 	if v.assignments == nil {
 		log.Errorf("No assignments for validators")
 		return
@@ -50,7 +50,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 			break
 		}
 	}
-	idxReq := &pb.ValidatorIndexRequest{
+	idxReq := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
@@ -58,7 +58,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		log.Errorf("Could not fetch validator index: %v", err)
 		return
 	}
-	req := &pb.AttestationRequest{
+	req := &ethpb.AttestationRequest{
 		Slot:  slot,
 		Shard: assignment.Shard,
 	}
@@ -87,7 +87,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
 
-	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
+	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
 	if err != nil {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
 		return

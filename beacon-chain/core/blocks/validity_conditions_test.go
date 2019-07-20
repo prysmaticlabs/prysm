@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -44,7 +44,7 @@ func TestIsValidBlock_NoParent(t *testing.T) {
 
 	beaconState.Slot = 3
 
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 4,
 	}
 
@@ -68,7 +68,7 @@ func TestIsValidBlock_InvalidSlot(t *testing.T) {
 
 	beaconState.Slot = 3
 
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 4,
 	}
 
@@ -77,7 +77,7 @@ func TestIsValidBlock_InvalidSlot(t *testing.T) {
 	block.Slot = 3
 	db.hasBlock = true
 
-	beaconState.Eth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &ethpb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}
@@ -97,7 +97,7 @@ func TestIsValidBlock_InvalidPoWReference(t *testing.T) {
 
 	beaconState.Slot = 3
 
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 4,
 	}
 
@@ -106,7 +106,7 @@ func TestIsValidBlock_InvalidPoWReference(t *testing.T) {
 	db.hasBlock = true
 	block.Slot = 4
 	powClient.blockExists = false
-	beaconState.Eth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &ethpb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}
@@ -129,13 +129,13 @@ func TestIsValidBlock_InvalidGenesis(t *testing.T) {
 	powClient.blockExists = false
 
 	beaconState.Slot = 3
-	beaconState.Eth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &ethpb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}
 
 	genesisTime := time.Unix(0, 0)
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 4,
 	}
 
@@ -159,14 +159,14 @@ func TestIsValidBlock_GoodBlock(t *testing.T) {
 	powClient.blockExists = true
 
 	beaconState.Slot = 3
-	beaconState.Eth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &ethpb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}
 
 	genesisTime := time.Unix(0, 0)
 
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 4,
 	}
 

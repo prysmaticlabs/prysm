@@ -36,7 +36,7 @@ func main() {
 
 	client := pb.NewPrivateKeyServiceClient(conn)
 
-	resp, err := client.Request(ctx, &pb.PrivateKeyRequest{
+	resp, err := client.Request(ctx, &ethpb.PrivateKeyRequest{
 		PodName:      *podName,
 		NumberOfKeys: *numKeys,
 	})

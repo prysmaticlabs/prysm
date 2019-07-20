@@ -40,7 +40,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 		beaconDB: db,
 	}
 
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	if _, err := validatorServer.ValidatorIndex(context.Background(), req); err != nil {
@@ -67,7 +67,7 @@ func TestValidatorIndex_InStateNotInDB(t *testing.T) {
 		beaconDB: db,
 	}
 
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 
@@ -114,7 +114,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	req := &pb.AssignmentRequest{
+	req := &ethpb.AssignmentRequest{
 		PublicKeys: [][]byte{{1}},
 		EpochStart: 0,
 	}
@@ -143,7 +143,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	}
 
 	pubKey := make([]byte, 96)
-	req := &pb.AssignmentRequest{
+	req := &ethpb.AssignmentRequest{
 		PublicKeys: [][]byte{pubKey},
 		EpochStart: 0,
 	}
@@ -197,7 +197,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	// Test the first validator in registry.
-	req := &pb.AssignmentRequest{
+	req := &ethpb.AssignmentRequest{
 		PublicKeys: [][]byte{deposits[0].Data.Pubkey},
 		EpochStart: 0,
 	}
@@ -216,7 +216,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	// Test the last validator in registry.
 	lastValidatorIndex := depChainStart - 1
-	req = &pb.AssignmentRequest{
+	req = &ethpb.AssignmentRequest{
 		PublicKeys: [][]byte{deposits[lastValidatorIndex].Data.Pubkey},
 		EpochStart: 0,
 	}
@@ -278,7 +278,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	pubkey1 := deposits[1].Data.Pubkey
 
 	// Test the first validator in registry.
-	req := &pb.AssignmentRequest{
+	req := &ethpb.AssignmentRequest{
 		PublicKeys: [][]byte{pubkey0, pubkey1},
 		EpochStart: 0,
 	}
@@ -334,7 +334,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 			},
 		},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
@@ -393,7 +393,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 			},
 		},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
@@ -401,7 +401,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("Could not get validator status %v", err)
 	}
 
-	expected := &pb.ValidatorStatusResponse{
+	expected := &ethpb.ValidatorStatusResponse{
 		Status:               pb.ValidatorStatus_ACTIVE,
 		ActivationEpoch:      5,
 		DepositInclusionSlot: 3413,
@@ -459,7 +459,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 			},
 		},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
@@ -516,7 +516,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 			},
 		},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
@@ -573,7 +573,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 			},
 		},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
@@ -629,7 +629,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 			},
 		},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
@@ -683,7 +683,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 			},
 		},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
@@ -716,7 +716,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		powChainService:    &mockPOWChainService{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
-	req := &pb.ValidatorActivationRequest{
+	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{[]byte("A")},
 	}
 
@@ -796,7 +796,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		powChainService:    &mockPOWChainService{},
 	}
-	req := &pb.ValidatorActivationRequest{
+	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: pubKeys,
 	}
 	ctrl := gomock.NewController(t)
@@ -805,10 +805,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
 	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Send(
-		&pb.ValidatorActivationResponse{
-			Statuses: []*pb.ValidatorActivationResponse_Status{
+		&ethpb.ValidatorActivationResponse{
+			Statuses: []*ethpb.ValidatorActivationResponse_Status{
 				{PublicKey: []byte{'A'},
-					Status: &pb.ValidatorStatusResponse{
+					Status: &ethpb.ValidatorStatusResponse{
 						Status:                    pb.ValidatorStatus_ACTIVE,
 						Eth1DepositBlockNumber:    10,
 						DepositInclusionSlot:      3413,
@@ -816,7 +816,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 					},
 				},
 				{PublicKey: []byte{'B'},
-					Status: &pb.ValidatorStatusResponse{
+					Status: &ethpb.ValidatorStatusResponse{
 						ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 					},
 				},
@@ -979,7 +979,7 @@ func BenchmarkAssignment(b *testing.B) {
 		pubKeys[i] = buf
 	}
 
-	req := &pb.AssignmentRequest{
+	req := &ethpb.AssignmentRequest{
 		PublicKeys: pubKeys,
 		EpochStart: 0,
 	}

@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -85,7 +85,7 @@ type RegularSync struct {
 	attestationReqByHashBuf      chan p2p.Message
 	announceAttestationBuf       chan p2p.Message
 	exitBuf                      chan p2p.Message
-	canonicalBuf                 chan *pb.BeaconBlockAnnounce
+	canonicalBuf                 chan *ethpb.BeaconBlockAnnounce
 	highestObservedSlot          uint64
 	blocksAwaitingProcessing     map[[32]byte]p2p.Message
 	blocksAwaitingProcessingLock sync.RWMutex
@@ -153,7 +153,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		announceAttestationBuf:   make(chan p2p.Message, cfg.AttestationsAnnounceBufSize),
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
-		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
+		canonicalBuf:             make(chan *ethpb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
 		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
 		blockAnnouncements:       make(map[uint64][]byte),
 	}
@@ -184,16 +184,16 @@ func (rs *RegularSync) BlockAnnouncementFeed() *event.Feed {
 
 // run handles incoming block sync.
 func (rs *RegularSync) run() {
-	announceBlockSub := rs.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, rs.announceBlockBuf)
-	blockSub := rs.p2p.Subscribe(&pb.BeaconBlockResponse{}, rs.blockBuf)
-	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
-	batchedBlockRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
+	announceBlockSub := rs.p2p.Subscribe(&ethpb.BeaconBlockAnnounce{}, rs.announceBlockBuf)
+	blockSub := rs.p2p.Subscribe(&ethpb.BeaconBlockResponse{}, rs.blockBuf)
+	blockRequestHashSub := rs.p2p.Subscribe(&ethpb.BeaconBlockRequest{}, rs.blockRequestByHash)
+	batchedBlockRequestSub := rs.p2p.Subscribe(&ethpb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
 	stateRequestSub := rs.p2p.Subscribe(&pb.BeaconStateRequest{}, rs.stateRequestBuf)
-	attestationSub := rs.p2p.Subscribe(&pb.AttestationResponse{}, rs.attestationBuf)
+	attestationSub := rs.p2p.Subscribe(&ethpb.AttestationResponse{}, rs.attestationBuf)
 	attestationReqSub := rs.p2p.Subscribe(&pb.AttestationRequest{}, rs.attestationReqByHashBuf)
-	announceAttestationSub := rs.p2p.Subscribe(&pb.AttestationAnnounce{}, rs.announceAttestationBuf)
-	exitSub := rs.p2p.Subscribe(&pb.VoluntaryExit{}, rs.exitBuf)
-	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
+	announceAttestationSub := rs.p2p.Subscribe(&ethpb.AttestationAnnounce{}, rs.announceAttestationBuf)
+	exitSub := rs.p2p.Subscribe(&ethpb.VoluntaryExit{}, rs.exitBuf)
+	chainHeadReqSub := rs.p2p.Subscribe(&ethpb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 	canonicalBlockSub := rs.chainService.CanonicalBlockFeed().Subscribe(rs.canonicalBuf)
 
 	defer announceBlockSub.Unsubscribe()
@@ -330,9 +330,9 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleChainHeadRequest")
 	defer span.End()
 	chainHeadReq.Inc()
-	if _, ok := msg.Data.(*pb.ChainHeadRequest); !ok {
+	if _, ok := msg.Data.(*ethpb.ChainHeadRequest); !ok {
 		log.Error("message is of the incorrect type")
-		return errors.New("incoming message is not *pb.ChainHeadRequest")
+		return errors.New("incoming message is not *ethpb.ChainHeadRequest")
 	}
 
 	head, err := rs.db.ChainHead()
@@ -366,7 +366,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		return err
 	}
 
-	req := &pb.ChainHeadResponse{
+	req := &ethpb.ChainHeadResponse{
 		CanonicalSlot:             head.Slot,
 		CanonicalStateRootHash32:  stateRoot[:],
 		FinalizedStateRootHash32S: finalizedRoot[:],
@@ -391,7 +391,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	defer span.End()
 	recAttestation.Inc()
 
-	resp := msg.Data.(*pb.AttestationResponse)
+	resp := msg.Data.(*ethpb.AttestationResponse)
 	attestation := resp.Attestation
 	attestationRoot, err := hashutil.HashProto(attestation)
 	if err != nil {
@@ -461,7 +461,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) error {
 	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveExitRequest")
 	defer span.End()
 	recExit.Inc()
-	exit := msg.Data.(*pb.VoluntaryExit)
+	exit := msg.Data.(*ethpb.VoluntaryExit)
 	h, err := hashutil.HashProto(exit)
 	if err != nil {
 		log.Errorf("Could not hash incoming exit request: %v", err)
@@ -487,7 +487,7 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) error {
 	defer span.End()
 	blockReqHash.Inc()
 
-	data := msg.Data.(*pb.BeaconBlockRequest)
+	data := msg.Data.(*ethpb.BeaconBlockRequest)
 	root := bytesutil.ToBytes32(data.Hash)
 	block, err := rs.db.Block(root)
 	if err != nil {
@@ -499,7 +499,7 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) error {
 	}
 
 	defer sentBlocks.Inc()
-	if err := rs.p2p.Send(ctx, &pb.BeaconBlockResponse{
+	if err := rs.p2p.Send(ctx, &ethpb.BeaconBlockResponse{
 		Block: block,
 	}, msg.Peer); err != nil {
 		log.Error(err)
@@ -514,7 +514,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBatchedBlockRequest")
 	defer span.End()
 	batchedBlockReq.Inc()
-	req := msg.Data.(*pb.BatchedBeaconBlockRequest)
+	req := msg.Data.(*ethpb.BatchedBeaconBlockRequest)
 
 	// To prevent circuit in the chain and the potentiality peer can bomb a node building block list.
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -526,7 +526,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 	log.WithField("peer", msg.Peer).Debug("Sending response for batch blocks")
 
 	defer sentBatchedBlocks.Inc()
-	if err := rs.p2p.Send(ctx, &pb.BatchedBeaconBlockResponse{
+	if err := rs.p2p.Send(ctx, &ethpb.BatchedBeaconBlockResponse{
 		BatchedBlocks: response,
 	}, msg.Peer); err != nil {
 		log.Error(err)
@@ -558,7 +558,7 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) error {
 		"attestationRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"peer":            msg.Peer},
 	).Debug("Sending attestation to peer")
-	if err := rs.p2p.Send(ctx, &pb.AttestationResponse{
+	if err := rs.p2p.Send(ctx, &ethpb.AttestationResponse{
 		Attestation: att,
 	}, msg.Peer); err != nil {
 		log.Error(err)
@@ -576,10 +576,10 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) error {
 func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleAttestationAnnouncement")
 	defer span.End()
-	data, ok := msg.Data.(*pb.AttestationAnnounce)
+	data, ok := msg.Data.(*ethpb.AttestationAnnounce)
 	if !ok {
 		log.Errorf("message is of the incorrect type")
-		return errors.New("incoming message is not of type *pb.AttestationAnnounce")
+		return errors.New("incoming message is not of type *ethpb.AttestationAnnounce")
 	}
 
 	hasAttestation := rs.db.HasAttestation(bytesutil.ToBytes32(data.Hash))
@@ -599,7 +599,7 @@ func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) error {
 	return nil
 }
 
-func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb.BeaconBlockAnnounce) {
+func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *ethpb.BeaconBlockAnnounce) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
 	defer span.End()
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(announce.Hash))).
@@ -610,7 +610,7 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 
 // respondBatchedBlocks returns the requested block list inclusive of head block but not inclusive of the finalized block.
 // the return should look like (finalizedBlock... headBlock].
-func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*ethpb.BeaconBlock, error) {
 	// if head block was the same as the finalized block.
 	if bytes.Equal(headRoot, finalizedRoot) {
 		return nil, nil
@@ -624,7 +624,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		return nil, fmt.Errorf("nil block %#x from db", bytesutil.Trunc(headRoot))
 	}
 
-	bList := []*pb.BeaconBlock{b}
+	bList := []*ethpb.BeaconBlock{b}
 	parentRoot := b.ParentRoot
 	for !bytes.Equal(parentRoot, finalizedRoot) {
 		if ctx.Err() != nil {
@@ -639,7 +639,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		}
 
 		// Prepend parent to the beginning of the list.
-		bList = append([]*pb.BeaconBlock{b}, bList...)
+		bList = append([]*ethpb.BeaconBlock{b}, bList...)
 
 		parentRoot = b.ParentRoot
 	}

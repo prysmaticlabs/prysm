@@ -5,13 +5,13 @@ import (
 	"math/big"
 
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // VoteHierarchyMap struct that holds all the relevant data in order to count and
 // choose the best vote.
 type VoteHierarchyMap struct {
-	BestVote       *pb.Eth1Data
+	BestVote       *ethpb.Eth1Data
 	bestVoteHeight *big.Int
 	mostVotes      uint64
 	voteCountMap   map[string]voteHierarchy
@@ -22,7 +22,7 @@ type VoteHierarchyMap struct {
 type voteHierarchy struct {
 	votes    uint64
 	height   *big.Int
-	eth1Data *pb.Eth1Data
+	eth1Data *ethpb.Eth1Data
 }
 
 // EmptyVoteHierarchyMap creates and returns an empty VoteHierarchyMap.
@@ -34,7 +34,7 @@ func EmptyVoteHierarchyMap() *VoteHierarchyMap {
 
 // CountVote takes a votecount map and adds the given vote to it in the relevant
 // position while updating the best vote, most votes and best vote hash.
-func CountVote(voteMap *VoteHierarchyMap, vote *pb.Eth1Data, blockHeight *big.Int) (*VoteHierarchyMap, error) {
+func CountVote(voteMap *VoteHierarchyMap, vote *ethpb.Eth1Data, blockHeight *big.Int) (*VoteHierarchyMap, error) {
 	he, err := ssz.HashedEncoding(vote)
 	if err != nil {
 		return &VoteHierarchyMap{}, fmt.Errorf("could not get encoded hash of eth1data object: %v", err)

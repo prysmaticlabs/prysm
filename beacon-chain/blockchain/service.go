@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -127,7 +127,7 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 // initializes the state and genesis block of the beacon chain to persistent storage
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
-func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit, eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
+func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*ethpb.Deposit, eth1data *ethpb.Eth1Data) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
 	defer span.End()
 	log.Info("ChainStart time reached, starting the beacon chain!")
@@ -224,7 +224,7 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 }
 
 // UpdateCanonicalRoots sets a new head into the canonical block roots map.
-func (c *ChainService) UpdateCanonicalRoots(newHead *pb.BeaconBlock, newHeadRoot [32]byte) {
+func (c *ChainService) UpdateCanonicalRoots(newHead *ethpb.BeaconBlock, newHeadRoot [32]byte) {
 	c.canonicalBlocksLock.Lock()
 	defer c.canonicalBlocksLock.Unlock()
 	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]

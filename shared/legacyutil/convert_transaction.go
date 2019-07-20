@@ -11,7 +11,7 @@ import (
 )
 
 // TransformTransaction of proto transaction to geth's transction.
-func TransformTransaction(t *pb.Transaction) *gethTypes.Transaction {
+func TransformTransaction(t *ethpb.Transaction) *gethTypes.Transaction {
 	return gethTypes.NewTransaction(
 		t.Nonce,
 		common.BytesToAddress(t.Recipient),

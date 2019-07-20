@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -22,7 +22,7 @@ func (m *mockAttestationHandler) LatestAttestationTarget(beaconState *pb.BeaconS
 	return m.targets[idx], nil
 }
 
-func (m *mockAttestationHandler) BatchUpdateLatestAttestation(ctx context.Context, atts []*pb.Attestation) error {
+func (m *mockAttestationHandler) BatchUpdateLatestAttestation(ctx context.Context, atts []*ethpb.Attestation) error {
 	return nil
 }
 
@@ -40,7 +40,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	justifiedState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
-	justifiedState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	justifiedState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		StateRoot: []byte{},
 	}
 
@@ -152,18 +152,18 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, want)
 }
 
-func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.BeaconBlock, [][32]byte) {
+func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*ethpb.BeaconBlock, [][32]byte) {
 	// Construct the following chain:
 	//    /------B1 ----B3 ----- B5 (current head)
 	// B0 --B2 -------------B4
-	blocks := make([]*pb.BeaconBlock, 6)
+	blocks := make([]*ethpb.BeaconBlock, 6)
 	roots := make([][32]byte, 6)
 	var err error
-	blocks[0] = &pb.BeaconBlock{
+	blocks[0] = &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot,
 		ParentRoot: []byte{'A'},
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{},
 		},
 	}
 	roots[0], err = ssz.SigningRoot(blocks[0])
@@ -171,11 +171,11 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 		t.Fatalf("Could not hash block: %v", err)
 	}
 
-	blocks[1] = &pb.BeaconBlock{
+	blocks[1] = &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot + 2,
 		ParentRoot: roots[0][:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{},
 		},
 	}
 	roots[1], err = ssz.SigningRoot(blocks[1])
@@ -183,11 +183,11 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 		t.Fatalf("Could not hash block: %v", err)
 	}
 
-	blocks[2] = &pb.BeaconBlock{
+	blocks[2] = &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot + 1,
 		ParentRoot: roots[0][:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{},
 		},
 	}
 	roots[2], err = ssz.SigningRoot(blocks[2])
@@ -195,11 +195,11 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 		t.Fatalf("Could not hash block: %v", err)
 	}
 
-	blocks[3] = &pb.BeaconBlock{
+	blocks[3] = &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot + 3,
 		ParentRoot: roots[1][:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{},
 		},
 	}
 	roots[3], err = ssz.SigningRoot(blocks[3])
@@ -207,11 +207,11 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 		t.Fatalf("Could not hash block: %v", err)
 	}
 
-	blocks[4] = &pb.BeaconBlock{
+	blocks[4] = &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot + 4,
 		ParentRoot: roots[2][:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{},
 		},
 	}
 	roots[4], err = ssz.SigningRoot(blocks[4])
@@ -219,11 +219,11 @@ func constructForkedChain(t *testing.T, beaconState *pb.BeaconState) ([]*pb.Beac
 		t.Fatalf("Could not hash block: %v", err)
 	}
 
-	blocks[5] = &pb.BeaconBlock{
+	blocks[5] = &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot + 5,
 		ParentRoot: roots[3][:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{},
 		},
 	}
 	roots[5], err = ssz.SigningRoot(blocks[5])

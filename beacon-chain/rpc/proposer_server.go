@@ -33,7 +33,7 @@ type ProposerServer struct {
 
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
-func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*pbp2p.BeaconBlock, error) {
+func (ps *ProposerServer) RequestBlock(ctx context.Context, req *ethpb.BlockRequest) (*pbp2p.BeaconBlock, error) {
 
 	// Retrieve the parent block as the current head of the canonical chain
 	parent, err := ps.beaconDB.ChainHead()
@@ -101,7 +101,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
-func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
+func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*ethpb.ProposeResponse, error) {
 	root, err := ssz.SigningRoot(blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
@@ -124,7 +124,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 		"headSlot": blk.Slot,
 	}).Info("Chain head block and state updated")
 
-	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
+	return &ethpb.ProposeResponse{BlockRoot: root[:]}, nil
 }
 
 // attestations retrieves aggregated attestations kept in the beacon node's operations pool which have

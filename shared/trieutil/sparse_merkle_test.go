@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -173,7 +173,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	var withdrawalCreds [32]byte
 	var sig [96]byte
 
-	data := &pb.DepositData{
+	data := &ethpb.DepositData{
 		Pubkey:                pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
@@ -239,7 +239,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 	var withdrawalCreds [32]byte
 	var sig [96]byte
 
-	data := &pb.DepositData{
+	data := &ethpb.DepositData{
 		Pubkey:                pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],

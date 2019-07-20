@@ -30,7 +30,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
 
-	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
+	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
 	if err != nil {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
 		return
@@ -39,7 +39,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	binary.LittleEndian.PutUint64(buf, epoch)
 	randaoReveal := v.keys[pk].SecretKey.Sign(buf, domain.SignatureDomain)
 
-	b, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
+	b, err := v.proposerClient.RequestBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal.Marshal(),
 	})
@@ -49,7 +49,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	}
 	span.AddAttributes(trace.StringAttribute("validator", tpk))
 
-	domain, err = v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
+	domain, err = v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
 	if err != nil {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
 		return

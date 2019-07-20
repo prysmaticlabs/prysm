@@ -3,7 +3,7 @@ package hashutil
 import (
 	"reflect"
 
-	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -23,7 +23,7 @@ import (
 //            signature_root,
 //        ))
 //    ))
-func DepositHash(dep *pb.Deposit_Data) ([32]byte, error) {
+func DepositHash(dep *ethpb.Deposit_Data) ([32]byte, error) {
 	if dep == nil || reflect.ValueOf(dep).IsNil() {
 		return [32]byte{}, ErrNilProto
 	}

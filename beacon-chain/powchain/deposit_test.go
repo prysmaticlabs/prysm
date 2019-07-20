@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -43,7 +43,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 	root := trie.Root()
 
-	eth1Data := &pb.Eth1Data{
+	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
@@ -84,7 +84,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 
 	root := trie.Root()
 
-	eth1Data := &pb.Eth1Data{
+	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
@@ -131,7 +131,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 
 	root := trie.Root()
 
-	eth1Data := &pb.Eth1Data{
+	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
@@ -179,7 +179,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 
 	root := trie.Root()
 
-	eth1Data := &pb.Eth1Data{
+	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
@@ -226,7 +226,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 	root := trie.Root()
 
-	eth1Data := &pb.Eth1Data{
+	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
@@ -279,7 +279,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 	root := trie.Root()
 
-	eth1Data := &pb.Eth1Data{
+	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
@@ -329,7 +329,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 
 	root := trie.Root()
 
-	eth1Data := &pb.Eth1Data{
+	eth1Data := &ethpb.Eth1Data{
 		DepositCount: uint64(len(deposits)),
 		DepositRoot:  root[:],
 	}

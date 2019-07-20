@@ -3,7 +3,7 @@
 
 package spectest
 
-import pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 
 type SanitySlotsTest struct {
 	Title         string   `json:"title"`

@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -110,7 +110,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	copy(sig[:], []byte("testing"))
 	copy(withdrawalCreds[:], []byte("testing"))
 
-	data := &pb.DepositData{
+	data := &ethpb.DepositData{
 		Pubkey:                pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
@@ -181,7 +181,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositData{
+	data := &ethpb.DepositData{
 		Pubkey:                pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],

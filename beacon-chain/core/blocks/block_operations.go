@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -31,7 +31,7 @@ var eth1DataCache = cache.NewEth1DataVoteCache()
 //
 // WIP - this is stubbed out until BLS is integrated into Prysm.
 func VerifyProposerSignature(
-	_ *pb.BeaconBlock,
+	_ *ethpb.BeaconBlock,
 ) error {
 	return nil
 }
@@ -45,7 +45,7 @@ func VerifyProposerSignature(
 //    state.eth1_data_votes.append(body.eth1_data)
 //    if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
 //        state.latest_eth1_data = body.eth1_data
-func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, block.Body.Eth1Data)
 
 	hasSupport, err := Eth1DataHasEnoughSupport(beaconState, block.Body.Eth1Data)
@@ -64,7 +64,7 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) 
 // eth1 voting period. A vote is cast by including eth1data in a block and part of state processing
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
 // votes to see if they match the eth1data.
-func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *pb.Eth1Data) (bool, error) {
+func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data) (bool, error) {
 	voteCount, err := eth1DataCache.Eth1DataVote(data.DepositRoot)
 	if err != nil {
 		return false, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
@@ -116,7 +116,7 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *pb.Eth1Data) (b
 //    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
 func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	block *ethpb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	if beaconState.Slot != block.Slot {
@@ -139,7 +139,7 @@ func ProcessBlockHeader(
 		return nil, err
 	}
 	emptySig := make([]byte, 96)
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
@@ -197,7 +197,7 @@ func ProcessBlockHeader(
 //     )
 func ProcessRandao(
 	beaconState *pb.BeaconState,
-	body *pb.BeaconBlockBody,
+	body *ethpb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	if verifySignatures {
@@ -225,7 +225,7 @@ func ProcessRandao(
 
 // Verify that bls_verify(proposer.pubkey, hash_tree_root(get_current_epoch(state)),
 //   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
-func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, proposerIdx uint64) error {
+func verifyBlockRandao(beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody, proposerIdx uint64) error {
 	proposer := beaconState.Validators[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
 	if err != nil {
@@ -270,7 +270,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, body *pb.BeaconBlockBody, pr
 //    slash_validator(state, proposer_slashing.proposer_index)
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
-	body *pb.BeaconBlockBody,
+	body *ethpb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
@@ -295,8 +295,8 @@ func ProcessProposerSlashings(
 
 func verifyProposerSlashing(
 	beaconState *pb.BeaconState,
-	proposer *pb.Validator,
-	slashing *pb.ProposerSlashing,
+	proposer *ethpb.Validator,
+	slashing *ethpb.ProposerSlashing,
 	verifySignatures bool,
 ) error {
 	headerEpoch1 := helpers.SlotToEpoch(slashing.Header_1.Slot)
@@ -316,7 +316,7 @@ func verifyProposerSlashing(
 		if err != nil {
 			return fmt.Errorf("could not deserialize proposer public key: %v", err)
 		}
-		headers := append([]*pb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
+		headers := append([]*ethpb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
 		for _, header := range headers {
 			domain := helpers.Domain(beaconState, helpers.SlotToEpoch(header.Slot), params.BeaconConfig().DomainBeaconProposer)
 			sig, err := bls.SignatureFromBytes(header.Signature)
@@ -361,7 +361,7 @@ func verifyProposerSlashing(
 //    assert slashed_any
 func ProcessAttesterSlashings(
 	beaconState *pb.BeaconState,
-	body *pb.BeaconBlockBody,
+	body *ethpb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	for idx, slashing := range body.AttesterSlashings {
@@ -392,7 +392,7 @@ func ProcessAttesterSlashings(
 	return beaconState, nil
 }
 
-func verifyAttesterSlashing(beaconState *pb.BeaconState, slashing *pb.AttesterSlashing, verifySignatures bool) error {
+func verifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing, verifySignatures bool) error {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
@@ -422,13 +422,13 @@ func verifyAttesterSlashing(beaconState *pb.BeaconState, slashing *pb.AttesterSl
 //        # Surround vote
 //        (data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch)
 //    )
-func IsSlashableAttestationData(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
+func IsSlashableAttestationData(data1 *ethpb.AttestationData, data2 *ethpb.AttestationData) bool {
 	isDoubleVote := !proto.Equal(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
 	isSurroundVote := data1.Source.Epoch < data2.Source.Epoch && data2.Target.Epoch < data1.Target.Epoch
 	return isDoubleVote || isSurroundVote
 }
 
-func slashableAttesterIndices(slashing *pb.AttesterSlashing) []uint64 {
+func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_1
 	indices1 := append(att1.CustodyBit_0Indices, att1.CustodyBit_1Indices...)
@@ -441,7 +441,7 @@ func slashableAttesterIndices(slashing *pb.AttesterSlashing) []uint64 {
 // appended to the BeaconState's latest attestations.
 func ProcessAttestations(
 	beaconState *pb.BeaconState,
-	body *pb.BeaconBlockBody,
+	body *ethpb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
@@ -490,7 +490,7 @@ func ProcessAttestations(
 //    assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
 //    assert data.crosslink.data_root == Bytes32()  # [to be removed in phase 1]
 //    validate_indexed_attestation(state, convert_to_indexed(state, attestation))
-func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) (*pb.BeaconState, error) {
+func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation, verifySignatures bool) (*pb.BeaconState, error) {
 	data := att.Data
 	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
 	if err != nil {
@@ -518,7 +518,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	if err != nil {
 		return nil, err
 	}
-	pendingAtt := &pb.PendingAttestation{
+	pendingAtt := &ethpb.PendingAttestation{
 		Data:            data,
 		AggregationBits: att.AggregationBits,
 		InclusionDelay:  beaconState.Slot - attestationSlot,
@@ -537,7 +537,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 	var ffgSourceEpoch uint64
 	var ffgSourceRoot []byte
 	var ffgTargetEpoch uint64
-	var parentCrosslink *pb.Crosslink
+	var parentCrosslink *ethpb.Crosslink
 	if data.Target.Epoch == helpers.CurrentEpoch(beaconState) {
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint.Root
@@ -624,7 +624,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verify
 //        data=attestation.data,
 //        signature=attestation.signature,
 //    )
-func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.IndexedAttestation, error) {
+func ConvertToIndexed(state *pb.BeaconState, attestation *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
 	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBits)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attesting indices: %v", err)
@@ -653,7 +653,7 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 	sort.Slice(cb1i, func(i, j int) bool {
 		return cb1i[i] < cb1i[j]
 	})
-	inAtt := &pb.IndexedAttestation{
+	inAtt := &ethpb.IndexedAttestation{
 		Data:                attestation.Data,
 		Signature:           attestation.Signature,
 		CustodyBit_0Indices: cb0i,
@@ -699,7 +699,7 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *pb.Attestation) (*pb.I
 //    ):
 //        return False
 //    return True
-func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.IndexedAttestation, verifySignatures bool) error {
+func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.IndexedAttestation, verifySignatures bool) error {
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
@@ -770,8 +770,8 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.Indexe
 			pubkeys = append(pubkeys, pubkey)
 		}
 
-		cus0 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: false}
-		cus1 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: true}
+		cus0 := &ethpb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: false}
+		cus1 := &ethpb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: true}
 		cus0Root, err := ssz.HashTreeRoot(cus0)
 		if err != nil {
 			return fmt.Errorf("could not tree hash att data and custody bit 0: %v", err)
@@ -805,7 +805,7 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *pb.Indexe
 //     process_deposit(state, deposit)
 func ProcessDeposits(
 	beaconState *pb.BeaconState,
-	body *pb.BeaconBlockBody,
+	body *ethpb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
@@ -868,7 +868,7 @@ func ProcessDeposits(
 //         increase_balance(state, index, amount)
 func ProcessDeposit(
 	beaconState *pb.BeaconState,
-	deposit *pb.Deposit,
+	deposit *ethpb.Deposit,
 	valIndexMap map[[32]byte]int,
 	verifySignatures bool,
 	verifyTree bool,
@@ -903,7 +903,7 @@ func ProcessDeposit(
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
 		}
-		beaconState.Validators = append(beaconState.Validators, &pb.Validator{
+		beaconState.Validators = append(beaconState.Validators, &ethpb.Validator{
 			Pubkey:                     pubKey,
 			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -920,7 +920,7 @@ func ProcessDeposit(
 	return beaconState, nil
 }
 
-func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree bool) error {
+func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, verifyTree bool) error {
 	if verifyTree {
 		// Verify Merkle proof of deposit and deposit trie root.
 		receiptRoot := beaconState.Eth1Data.DepositRoot
@@ -969,7 +969,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit, verifyTree 
 //    initiate_validator_exit(state, exit.validator_index)
 func ProcessVoluntaryExits(
 	beaconState *pb.BeaconState,
-	body *pb.BeaconBlockBody,
+	body *ethpb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
@@ -987,7 +987,7 @@ func ProcessVoluntaryExits(
 	return beaconState, nil
 }
 
-func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
+func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit, verifySignatures bool) error {
 	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
 		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
 	}
@@ -1072,7 +1072,7 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySigna
 //    assert not (0 < state.balances[transfer.recipient] < MIN_DEPOSIT_AMOUNT)
 func ProcessTransfers(
 	beaconState *pb.BeaconState,
-	body *pb.BeaconBlockBody,
+	body *ethpb.BeaconBlockBody,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	transfers := body.Transfers
@@ -1109,7 +1109,7 @@ func ProcessTransfers(
 	return beaconState, nil
 }
 
-func verifyTransfer(beaconState *pb.BeaconState, transfer *pb.Transfer, verifySignatures bool) error {
+func verifyTransfer(beaconState *pb.BeaconState, transfer *ethpb.Transfer, verifySignatures bool) error {
 	if transfer.Sender > uint64(len(beaconState.Validators)) {
 		return errors.New("transfer sender index out of bounds in validator registry")
 	}

@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -62,7 +62,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		// Higher slot, different state, but higher last finalized slot.
 		{
 			blockSlot: 64,
-			state:     &pb.BeaconState{FinalizedCheckpoint: &pb.Checkpoint{Epoch: 2}},
+			state:     &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, same last finalized slot,
@@ -70,8 +70,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		{
 			blockSlot: 64,
 			state: &pb.BeaconState{
-				FinalizedCheckpoint:        &pb.Checkpoint{Epoch: 0},
-				CurrentJustifiedCheckpoint: &pb.Checkpoint{Epoch: 2},
+				FinalizedCheckpoint:        &ethpb.Checkpoint{Epoch: 0},
+				CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 2},
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -107,7 +107,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not tree hash state: %v", err)
 		}
-		block := &pb.BeaconBlock{
+		block := &ethpb.BeaconBlock{
 			Slot:       tt.blockSlot,
 			StateRoot:  stateRoot[:],
 			ParentRoot: genesisRoot[:],
@@ -140,7 +140,7 @@ func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
-	potentialHead := &pb.BeaconBlock{
+	potentialHead := &ethpb.BeaconBlock{
 		ParentRoot: []byte{'A'}, // We give a bogus parent root hash.
 	}
 	if err := beaconDB.SaveBlock(potentialHead); err != nil {
@@ -178,7 +178,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	potentialHead := &pb.BeaconBlock{
+	potentialHead := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: genesisRoot[:],
 	}
@@ -187,7 +187,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	potentialHead2 := &pb.BeaconBlock{
+	potentialHead2 := &ethpb.BeaconBlock{
 		Slot:       6,
 		ParentRoot: genesisRoot[:],
 	}
@@ -202,7 +202,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{Validators: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
+	beaconState := &pb.BeaconState{Validators: []*ethpb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -232,7 +232,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 
 	pubKey := []byte{'A'}
 	beaconState := &pb.BeaconState{
-		Validators: []*pb.Validator{{
+		Validators: []*ethpb.Validator{{
 			Pubkey:    pubKey,
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
 	}
@@ -241,7 +241,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 		t.Fatalf("could not save state: %v", err)
 	}
 
-	block := &pb.BeaconBlock{Slot: 100}
+	block := &ethpb.BeaconBlock{Slot: 100}
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatalf("could not save block: %v", err)
 	}
@@ -261,8 +261,8 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: beaconDB})
 
-	att := &pb.Attestation{
-		Data: &pb.AttestationData{
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
@@ -293,7 +293,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 
 	// Construct the following chain:
 	// B1 <- B2 <- B3  (State is slot 3)
-	block1 := &pb.BeaconBlock{
+	block1 := &ethpb.BeaconBlock{
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
@@ -308,7 +308,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block2 := &pb.BeaconBlock{
+	block2 := &ethpb.BeaconBlock{
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
@@ -323,7 +323,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block3 := &pb.BeaconBlock{
+	block3 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: root2[:],
 	}
@@ -340,7 +340,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	}
 
 	// When we input block B1, we should get B2 back.
-	wanted := []*pb.BeaconBlock{block2}
+	wanted := []*ethpb.BeaconBlock{block2}
 	if !reflect.DeepEqual(wanted, childrenBlock) {
 		t.Errorf("Wrong children block received, want %v, received %v", wanted, childrenBlock)
 	}
@@ -363,7 +363,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	//     /- B2
 	// B1 <- B3 (State is slot 10)
 	//      \- B4
-	block1 := &pb.BeaconBlock{
+	block1 := &ethpb.BeaconBlock{
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
@@ -378,7 +378,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block2 := &pb.BeaconBlock{
+	block2 := &ethpb.BeaconBlock{
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
@@ -389,7 +389,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block3 := &pb.BeaconBlock{
+	block3 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: root1[:],
 	}
@@ -400,7 +400,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block4 := &pb.BeaconBlock{
+	block4 := &ethpb.BeaconBlock{
 		Slot:       4,
 		ParentRoot: root1[:],
 	}
@@ -417,7 +417,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	}
 
 	// When we input block B1, we should get B2, B3 and B4 back.
-	wanted := []*pb.BeaconBlock{block2, block3, block4}
+	wanted := []*ethpb.BeaconBlock{block2, block3, block4}
 	if !reflect.DeepEqual(wanted, childrenBlock) {
 		t.Errorf("Wrong children block received")
 	}
@@ -438,7 +438,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 
 	// Construct the following chain:
 	// B1 <- B5 <- B9 (State is slot 10)
-	block1 := &pb.BeaconBlock{
+	block1 := &ethpb.BeaconBlock{
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
@@ -453,7 +453,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block5 := &pb.BeaconBlock{
+	block5 := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: root1[:],
 	}
@@ -468,7 +468,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block9 := &pb.BeaconBlock{
+	block9 := &ethpb.BeaconBlock{
 		Slot:       9,
 		ParentRoot: root2[:],
 	}
@@ -485,7 +485,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	}
 
 	// When we input block B1, we should get B5.
-	wanted := []*pb.BeaconBlock{block5}
+	wanted := []*ethpb.BeaconBlock{block5}
 	if !reflect.DeepEqual(wanted, childrenBlock) {
 		t.Errorf("Wrong children block received")
 	}
@@ -501,14 +501,14 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Slot:       10,
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
-		Validators: []*pb.Validator{{}},
+		Validators: []*ethpb.Validator{{}},
 	}
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
 
 	// Construct the following chain:
 	// B1 - B2 (State is slot 2)
-	block1 := &pb.BeaconBlock{
+	block1 := &ethpb.BeaconBlock{
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
@@ -523,7 +523,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block2 := &pb.BeaconBlock{
+	block2 := &ethpb.BeaconBlock{
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
@@ -570,7 +570,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 			params.BeaconConfig().MaxEffectiveBalance,
 			params.BeaconConfig().MaxEffectiveBalance,
 			params.BeaconConfig().MaxEffectiveBalance},
-		Validators: []*pb.Validator{{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+		Validators: []*ethpb.Validator{{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
@@ -582,7 +582,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	//    /- B2
 	// B1  - B3 (State is slot 10)
 	//    \- B4
-	block1 := &pb.BeaconBlock{
+	block1 := &ethpb.BeaconBlock{
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
@@ -597,7 +597,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block2 := &pb.BeaconBlock{
+	block2 := &ethpb.BeaconBlock{
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
@@ -612,7 +612,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block3 := &pb.BeaconBlock{
+	block3 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: root1[:],
 	}
@@ -627,7 +627,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block4 := &pb.BeaconBlock{
+	block4 := &ethpb.BeaconBlock{
 		Slot:       4,
 		ParentRoot: root1[:],
 	}
@@ -689,7 +689,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	// 	B3 is not a descendant of B4
 	//  B5 and B3 are descendants of B1
 
-	block1 := &pb.BeaconBlock{
+	block1 := &ethpb.BeaconBlock{
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
@@ -700,7 +700,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block2 := &pb.BeaconBlock{
+	block2 := &ethpb.BeaconBlock{
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
@@ -711,7 +711,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block3 := &pb.BeaconBlock{
+	block3 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: root2[:],
 	}
@@ -722,7 +722,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block4 := &pb.BeaconBlock{
+	block4 := &ethpb.BeaconBlock{
 		Slot:       4,
 		ParentRoot: root1[:],
 	}
@@ -733,7 +733,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block5 := &pb.BeaconBlock{
+	block5 := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: root4[:],
 	}
@@ -775,7 +775,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
-		Validators: []*pb.Validator{
+		Validators: []*ethpb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
@@ -787,7 +787,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	// Construct the following chain:
 	//    /- B2 - B4 - B6
 	// B1  - B3 - B5 (State is slot 10)
-	block1 := &pb.BeaconBlock{
+	block1 := &ethpb.BeaconBlock{
 		Slot:       1,
 		ParentRoot: []byte{'A'},
 	}
@@ -802,7 +802,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block2 := &pb.BeaconBlock{
+	block2 := &ethpb.BeaconBlock{
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
@@ -817,7 +817,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block3 := &pb.BeaconBlock{
+	block3 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: root1[:],
 	}
@@ -832,7 +832,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block4 := &pb.BeaconBlock{
+	block4 := &ethpb.BeaconBlock{
 		Slot:       4,
 		ParentRoot: root2[:],
 	}
@@ -847,7 +847,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block5 := &pb.BeaconBlock{
+	block5 := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: root3[:],
 	}
@@ -862,7 +862,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	block6 := &pb.BeaconBlock{
+	block6 := &ethpb.BeaconBlock{
 		Slot:       6,
 		ParentRoot: root4[:],
 	}
@@ -927,7 +927,7 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 		Slot:     epochLength,
 		Balances: balances,
 	}
-	genesis := &pb.BeaconBlock{
+	genesis := &ethpb.BeaconBlock{
 		Slot:       0,
 		ParentRoot: []byte{},
 	}
@@ -942,9 +942,9 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
-	var block *pb.BeaconBlock
+	var block *ethpb.BeaconBlock
 	for i := 1; i < int(epochLength); i++ {
-		block = &pb.BeaconBlock{
+		block = &ethpb.BeaconBlock{
 			Slot:       uint64(i),
 			ParentRoot: root[:],
 		}
@@ -1008,7 +1008,7 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 		Slot:     epochLength,
 		Balances: balances,
 	}
-	genesis := &pb.BeaconBlock{
+	genesis := &ethpb.BeaconBlock{
 		Slot:       0,
 		ParentRoot: []byte{},
 	}
@@ -1023,9 +1023,9 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
-	var block *pb.BeaconBlock
+	var block *ethpb.BeaconBlock
 	for i := 1; i < int(epochLength); i++ {
-		block = &pb.BeaconBlock{
+		block = &ethpb.BeaconBlock{
 			Slot:       uint64(i),
 			ParentRoot: root[:],
 		}
@@ -1087,7 +1087,7 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 		Slot:     epochLength,
 		Balances: balances,
 	}
-	genesis := &pb.BeaconBlock{
+	genesis := &ethpb.BeaconBlock{
 		Slot:       0,
 		ParentRoot: []byte{},
 	}
@@ -1102,9 +1102,9 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
-	var block *pb.BeaconBlock
+	var block *ethpb.BeaconBlock
 	for i := 1; i < int(epochLength); i++ {
-		block = &pb.BeaconBlock{
+		block = &ethpb.BeaconBlock{
 			Slot:       uint64(i),
 			ParentRoot: root[:],
 		}
@@ -1166,7 +1166,7 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 		Slot:     epochLength,
 		Balances: balances,
 	}
-	genesis := &pb.BeaconBlock{
+	genesis := &ethpb.BeaconBlock{
 		Slot:       0,
 		ParentRoot: []byte{},
 	}
@@ -1181,9 +1181,9 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
-	var block *pb.BeaconBlock
+	var block *ethpb.BeaconBlock
 	for i := 1; i < int(epochLength); i++ {
-		block = &pb.BeaconBlock{
+		block = &ethpb.BeaconBlock{
 			Slot:       uint64(i),
 			ParentRoot: root[:],
 		}
@@ -1280,12 +1280,12 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 
 	// Last justified check point happened at slot 0.
 	if err := chainSvc.beaconDB.SaveJustifiedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
 	// Also saved finalized block to slot 0 to test justification case only.
-	if err := chainSvc.beaconDB.SaveFinalizedBlock(&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1298,10 +1298,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
-		Body: &pb.BeaconBlockBody{
+		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature,
 		}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
@@ -1369,7 +1369,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 
 	// Also saved justified block to slot 0 to test finalized case only.
 	if err := chainSvc.beaconDB.SaveJustifiedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1379,10 +1379,10 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot:       genesisSlot + offset,
 		ParentRoot: gBlockRoot[:],
-		Body: &pb.BeaconBlockBody{
+		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature,
 		}}
 
@@ -1438,13 +1438,13 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 
 	// Last justified check point happened at slot 0.
 	if err := chainSvc.beaconDB.SaveJustifiedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
 	// Also saved finalized block to slot 0 to test justification case only.
 	if err := chainSvc.beaconDB.SaveFinalizedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1457,10 +1457,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot:       genesisSlot + lastAvailableSlot,
 		ParentRoot: gBlockRoot[:],
-		Body: &pb.BeaconBlockBody{
+		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature,
 		}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
@@ -1504,11 +1504,11 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	}
 }
 
-func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*bls.SecretKey) {
+func setupFFGTest(t *testing.T) ([32]byte, *ethpb.BeaconBlock, *pb.BeaconState, []*bls.SecretKey) {
 	genesisSlot := uint64(0)
-	var crosslinks []*pb.Crosslink
+	var crosslinks []*ethpb.Crosslink
 	for i := 0; i < int(params.BeaconConfig().ShardCount); i++ {
-		crosslinks = append(crosslinks, &pb.Crosslink{StartEpoch: 0})
+		crosslinks = append(crosslinks, &ethpb.Crosslink{StartEpoch: 0})
 	}
 	latestRandaoMixes := make(
 		[][]byte,
@@ -1517,7 +1517,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = make([]byte, 32)
 	}
-	var Validators []*pb.Validator
+	var Validators []*ethpb.Validator
 	var validatorBalances []uint64
 	var privKeys []*bls.SecretKey
 	for i := uint64(0); i < 64; i++ {
@@ -1527,13 +1527,13 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 		}
 		privKeys = append(privKeys, priv)
 		Validators = append(Validators,
-			&pb.Validator{
+			&ethpb.Validator{
 				Pubkey:    priv.PublicKey().Marshal(),
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			})
 		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxEffectiveBalance)
 	}
-	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
+	gBlock := &ethpb.BeaconBlock{Slot: genesisSlot}
 	gBlockRoot, err := ssz.SigningRoot(gBlock)
 	if err != nil {
 		t.Fatal(err)
@@ -1557,9 +1557,9 @@ func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*
 			Epoch:           0,
 		},
 		LatestBlockHeader:           gHeader,
-		CurrentJustifiedCheckpoint:  &pb.Checkpoint{},
-		PreviousJustifiedCheckpoint: &pb.Checkpoint{},
-		FinalizedCheckpoint:         &pb.Checkpoint{},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{},
 	}
 	return gBlockRoot, gBlock, gState, privKeys
 }
@@ -1576,7 +1576,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	potentialHead := &pb.BeaconBlock{
+	potentialHead := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: genesisRoot[:],
 	}
@@ -1584,7 +1584,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	potentialHead2 := &pb.BeaconBlock{
+	potentialHead2 := &ethpb.BeaconBlock{
 		Slot:       6,
 		ParentRoot: genesisRoot[:],
 	}
@@ -1599,7 +1599,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	beaconState := &pb.BeaconState{Validators: []*pb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
+	beaconState := &pb.BeaconState{Validators: []*ethpb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
 		Slot:       potentialHead.Slot,
@@ -1643,12 +1643,12 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	potentialHead := &pb.BeaconBlock{
+	potentialHead := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: genesisRoot[:],
 	}
 	pHeadHash, _ := ssz.SigningRoot(potentialHead)
-	potentialHead2 := &pb.BeaconBlock{
+	potentialHead2 := &ethpb.BeaconBlock{
 		Slot:       6,
 		ParentRoot: genesisRoot[:],
 	}
@@ -1664,7 +1664,7 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 
 	beaconState := &pb.BeaconState{
 		Balances: []uint64{1e9, 1e9},
-		Validators: []*pb.Validator{
+		Validators: []*ethpb.Validator{
 			{EffectiveBalance: 1e9},
 			{EffectiveBalance: 1e9},
 		},

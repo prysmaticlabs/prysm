@@ -9,7 +9,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -50,7 +50,7 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 			}
 
 			if expectedPostState.CurrentEpochAttestations == nil {
-				expectedPostState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+				expectedPostState.CurrentEpochAttestations = []*ethpb.PendingAttestation{}
 			}
 
 			if !reflect.DeepEqual(postState, expectedPostState) {

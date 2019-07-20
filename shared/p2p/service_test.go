@@ -17,7 +17,7 @@ import (
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -461,7 +461,7 @@ func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Me
 	return gsub.Publish(topic, createEnvelopeBytes(t, msg))
 }
 
-func createEnvelope(t *testing.T, msg proto.Message) *pb.Envelope {
+func createEnvelope(t *testing.T, msg proto.Message) *ethpb.Envelope {
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		t.Fatal(err)
@@ -469,7 +469,7 @@ func createEnvelope(t *testing.T, msg proto.Message) *pb.Envelope {
 
 	// span context test data from
 	// https://github.com/census-instrumentation/opencensus-go/blob/3b8e2721f2c3c01fa1bf4a2e455874e7b8319cd7/trace/propagation/propagation_test.go#L69
-	envelope := &pb.Envelope{
+	envelope := &ethpb.Envelope{
 		SpanContext: []byte{0, 0, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 1, 97, 98, 99, 100, 101, 102, 103, 104, 2, 1},
 		Payload:     payload,
 	}

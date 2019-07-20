@@ -199,7 +199,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := internal.NewMockBeaconService_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
-		&pb.ChainStartResponse{
+		&ethpb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		},
@@ -224,7 +224,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := internal.NewMockBeaconService_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
-		&pb.ChainStartResponse{
+		&ethpb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		},
@@ -404,7 +404,7 @@ func TestBlockTree_OK(t *testing.T) {
 		BlockRoot:  b5Root[:],
 	}
 
-	tree := []*pb.BlockTreeResponse_TreeNode{
+	tree := []*ethpb.BlockTreeResponse_TreeNode{
 		{
 			Block:             b1,
 			ParticipatedVotes: 3 * params.BeaconConfig().MaxEffectiveBalance,
@@ -615,7 +615,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		BlockRoot:  b5Root[:],
 	}
 
-	tree := []*pb.BlockTreeResponse_TreeNode{
+	tree := []*ethpb.BlockTreeResponse_TreeNode{
 		{
 			Block:             b1,
 			ParticipatedVotes: 3 * params.BeaconConfig().MaxEffectiveBalance,
@@ -661,7 +661,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		// There should be a "argument 'TreeBlockSlotRequest' cannot be nil" error
 		t.Fatal(err)
 	}
-	slotRange := &pb.TreeBlockSlotRequest{
+	slotRange := &ethpb.TreeBlockSlotRequest{
 		SlotFrom: 4,
 		SlotTo:   3,
 	}
@@ -828,7 +828,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		BlockRoot:  b5Root[:],
 	}
 
-	tree := []*pb.BlockTreeResponse_TreeNode{
+	tree := []*ethpb.BlockTreeResponse_TreeNode{
 		{
 			Block:             b1,
 			ParticipatedVotes: 3 * params.BeaconConfig().MaxEffectiveBalance,
@@ -872,7 +872,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 		beaconDB:       db,
 		targetsFetcher: &mockChainService{targets: attestationTargets},
 	}
-	slotRange := &pb.TreeBlockSlotRequest{
+	slotRange := &ethpb.TreeBlockSlotRequest{
 		SlotFrom: 3,
 		SlotTo:   4,
 	}

@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
@@ -39,7 +39,7 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
 			deposits := tt.Deposits
-			dataLeaves := make([]*pb.DepositData, len(deposits))
+			dataLeaves := make([]*ethpb.DepositData, len(deposits))
 			for i := range deposits {
 				dataLeaves[i] = deposits[i].Data
 			}
@@ -47,7 +47,7 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			eth1Data := &pb.Eth1Data{
+			eth1Data := &ethpb.Eth1Data{
 				DepositRoot:  depositRoot[:],
 				DepositCount: uint64(len(deposits)),
 				BlockHash:    tt.Eth1BlockHash,

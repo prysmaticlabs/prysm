@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -33,7 +33,7 @@ func runProposerSlashingTest(t *testing.T, filename string) {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
 
-			body := &pb.BeaconBlockBody{ProposerSlashings: []*pb.ProposerSlashing{tt.ProposerSlashing}}
+			body := &ethpb.BeaconBlockBody{ProposerSlashings: []*ethpb.ProposerSlashing{tt.ProposerSlashing}}
 
 			postState, err := blocks.ProcessProposerSlashings(tt.Pre, body, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests

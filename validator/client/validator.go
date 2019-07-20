@@ -21,7 +21,7 @@ import (
 type validator struct {
 	genesisTime          uint64
 	ticker               *slotutil.SlotTicker
-	assignments          *pb.AssignmentResponse
+	assignments          *ethpb.AssignmentResponse
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
 	beaconClient         pb.BeaconServiceClient
@@ -79,7 +79,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
-	req := &pb.ValidatorActivationRequest{
+	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: v.pubkeys,
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
@@ -118,7 +118,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	return nil
 }
 
-func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
+func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
@@ -200,7 +200,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		return nil
 	}
 
-	req := &pb.AssignmentRequest{
+	req := &ethpb.AssignmentRequest{
 		EpochStart: slot / params.BeaconConfig().SlotsPerEpoch,
 		PublicKeys: v.pubkeys,
 	}

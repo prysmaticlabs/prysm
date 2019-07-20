@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestHasVoted_OK(t *testing.T) {
 	// Setting bitlist to 11111111.
-	pendingAttestation := &pb.Attestation{
+	pendingAttestation := &ethpb.Attestation{
 		AggregationBits: []byte{0xFF, 0x01},
 	}
 
@@ -23,7 +23,7 @@ func TestHasVoted_OK(t *testing.T) {
 	}
 
 	// Setting bit field to 10101010.
-	pendingAttestation = &pb.Attestation{
+	pendingAttestation = &ethpb.Attestation{
 		AggregationBits: []byte{0xAA, 0x1},
 	}
 
@@ -40,7 +40,7 @@ func TestHasVoted_OK(t *testing.T) {
 
 func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	exitEpoch := uint64(199)
-	state := &pb.BeaconState{Validators: []*pb.Validator{{
+	state := &pb.BeaconState{Validators: []*ethpb.Validator{{
 		ExitEpoch: exitEpoch},
 	}}
 	newState, err := InitiateValidatorExit(state, 0)
@@ -56,7 +56,7 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 	exitedEpoch := uint64(100)
 	idx := uint64(3)
-	state := &pb.BeaconState{Validators: []*pb.Validator{
+	state := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch},
 		{ExitEpoch: exitedEpoch + 1},
 		{ExitEpoch: exitedEpoch + 2},
@@ -75,7 +75,7 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	exitedEpoch := uint64(100)
 	idx := uint64(4)
-	state := &pb.BeaconState{Validators: []*pb.Validator{
+	state := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
@@ -101,7 +101,7 @@ func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:      100, // epoch 2
 		Slashings: []uint64{0},
-		Validators: []*pb.Validator{
+		Validators: []*ethpb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
 		},
 	}
@@ -119,7 +119,7 @@ func TestExitValidator_OK(t *testing.T) {
 func TestExitValidator_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1000,
-		Validators: []*pb.Validator{
+		Validators: []*ethpb.Validator{
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
 	}
@@ -130,11 +130,11 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 }
 
 func TestSlashValidator_OK(t *testing.T) {
-	registry := make([]*pb.Validator, 0)
+	registry := make([]*ethpb.Validator, 0)
 	balances := make([]uint64, 0)
 	validatorsLimit := 100
 	for i := 0; i < validatorsLimit; i++ {
-		registry = append(registry, &pb.Validator{
+		registry = append(registry, &ethpb.Validator{
 			Pubkey:           []byte(strconv.Itoa(i)),
 			ActivationEpoch:  0,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -197,11 +197,11 @@ func TestSlashValidator_OK(t *testing.T) {
 }
 
 func TestInitializeValidatoreStore(t *testing.T) {
-	registry := make([]*pb.Validator, 0)
+	registry := make([]*ethpb.Validator, 0)
 	indices := make([]uint64, 0)
 	validatorsLimit := 100
 	for i := 0; i < validatorsLimit; i++ {
-		registry = append(registry, &pb.Validator{
+		registry = append(registry, &ethpb.Validator{
 			Pubkey:          []byte(strconv.Itoa(i)),
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,

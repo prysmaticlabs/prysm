@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -29,9 +29,9 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	var validators []*pb.Validator
+	var validators []*ethpb.Validator
 	for i := 0; i < 64; i++ {
-		validators = append(validators, &pb.Validator{
+		validators = append(validators, &ethpb.Validator{
 			Pubkey:          []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
@@ -44,7 +44,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
@@ -55,14 +55,14 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	attestation := &pb.Attestation{
+	attestation := &ethpb.Attestation{
 		AggregationBits: bitfield.Bitlist{0x03},
-		Data: &pb.AttestationData{
-			Crosslink: &pb.Crosslink{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
 				Shard: 1,
 			},
-			Target: &pb.Checkpoint{},
-			Source: &pb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
+			Source: &ethpb.Checkpoint{},
 		},
 	}
 
@@ -102,9 +102,9 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	var validators []*pb.Validator
+	var validators []*ethpb.Validator
 	for i := 0; i < 64; i++ {
-		validators = append(validators, &pb.Validator{
+		validators = append(validators, &ethpb.Validator{
 			Pubkey:          []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
@@ -114,7 +114,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 		Slot:       1,
 		Validators: validators,
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
@@ -125,10 +125,10 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	}
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-	attestation := &pb.Attestation{
+	attestation := &ethpb.Attestation{
 		AggregationBits: bitfield.Bitlist{0x80, 0x01},
-		Data: &pb.AttestationData{
-			Crosslink: &pb.Crosslink{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
 				Shard: 1,
 			},
 		},
@@ -145,7 +145,7 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 	ctx := context.Background()
 
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		Validators: []*pb.Validator{{}},
+		Validators: []*ethpb.Validator{{}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -169,12 +169,12 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		Validators: []*pb.Validator{{Pubkey: pubKey}},
+		Validators: []*ethpb.Validator{{Pubkey: pubKey}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 
-	block := &pb.BeaconBlock{Slot: 999}
+	block := &ethpb.BeaconBlock{Slot: 999}
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatalf("could not save block: %v", err)
 	}
@@ -192,8 +192,8 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	attestation := &pb.Attestation{
-		Data: &pb.AttestationData{
+	attestation := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
@@ -220,9 +220,9 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	var validators []*pb.Validator
+	var validators []*ethpb.Validator
 	for i := 0; i < 64; i++ {
-		validators = append(validators, &pb.Validator{
+		validators = append(validators, &ethpb.Validator{
 			Pubkey:          []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
@@ -235,7 +235,7 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators:       validators,
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
@@ -245,14 +245,14 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-	attestation := &pb.Attestation{
+	attestation := &ethpb.Attestation{
 		AggregationBits: bitfield.Bitlist{0xC0, 0x01},
-		Data: &pb.AttestationData{
-			Crosslink: &pb.Crosslink{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
 				Shard: 1,
 			},
-			Target: &pb.Checkpoint{},
-			Source: &pb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
+			Source: &ethpb.Checkpoint{},
 		},
 	}
 
@@ -270,11 +270,11 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	var validators []*pb.Validator
+	var validators []*ethpb.Validator
 	var latestRandaoMixes [][]byte
 	var latestActiveIndexRoots [][]byte
 	for i := 0; i < 64; i++ {
-		validators = append(validators, &pb.Validator{
+		validators = append(validators, &ethpb.Validator{
 			Pubkey:          []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
@@ -289,7 +289,7 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 		RandaoMixes:      latestRandaoMixes,
 		ActiveIndexRoots: latestActiveIndexRoots,
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
@@ -301,12 +301,12 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.poolLimit = 9
 	for i := 0; i < 10; i++ {
-		attestation := &pb.Attestation{
+		attestation := &ethpb.Attestation{
 			AggregationBits: bitfield.Bitlist{0x80},
-			Data: &pb.AttestationData{
-				Target: &pb.Checkpoint{Epoch: 2},
-				Source: &pb.Checkpoint{},
-				Crosslink: &pb.Crosslink{
+			Data: &ethpb.AttestationData{
+				Target: &ethpb.Checkpoint{Epoch: 2},
+				Source: &ethpb.Checkpoint{},
+				Crosslink: &ethpb.Crosslink{
 					Shard: 1,
 				},
 			},
@@ -325,9 +325,9 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
-	var validators []*pb.Validator
+	var validators []*ethpb.Validator
 	for i := 0; i < 64; i++ {
-		validators = append(validators, &pb.Validator{
+		validators = append(validators, &ethpb.Validator{
 			Pubkey:          []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
@@ -340,7 +340,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators:       validators,
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
 	if err := beaconDB.SaveBlock(block); err != nil {
@@ -350,16 +350,16 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-	attestations := make([]*pb.Attestation, 0)
+	attestations := make([]*ethpb.Attestation, 0)
 	for i := 0; i < 10; i++ {
-		attestations = append(attestations, &pb.Attestation{
+		attestations = append(attestations, &ethpb.Attestation{
 			AggregationBits: bitfield.Bitlist{0x80, 0x01},
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard: 1,
 				},
-				Target: &pb.Checkpoint{},
-				Source: &pb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
+				Source: &ethpb.Checkpoint{},
 			},
 		})
 	}

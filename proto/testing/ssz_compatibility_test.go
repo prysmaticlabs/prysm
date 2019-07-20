@@ -10,8 +10,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
 	sszspectest "github.com/prysmaticlabs/go-ssz/spectests"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -42,7 +41,7 @@ func TestYamlStatic(t *testing.T) {
 func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 	for _, testCase := range s.TestCases {
 		if !testutil.IsEmpty(testCase.Attestation.Value) {
-			p := &eth.Attestation{}
+			p := &ethpb.Attestation{}
 			if err := testutil.ConvertToPb(testCase.Attestation.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -62,7 +61,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.AttestationData.Value) {
-			p := &eth.AttestationData{}
+			p := &ethpb.AttestationData{}
 			if err := testutil.ConvertToPb(testCase.AttestationData.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -75,7 +74,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.AttestationDataAndCustodyBit.Value) {
-			p := &pb.AttestationDataAndCustodyBit{}
+			p := &ethpb.AttestationDataAndCustodyBit{}
 			if err := testutil.ConvertToPb(testCase.AttestationDataAndCustodyBit.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -88,7 +87,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.AttesterSlashing.Value) {
-			p := &eth.AttesterSlashing{}
+			p := &ethpb.AttesterSlashing{}
 			if err := testutil.ConvertToPb(testCase.AttesterSlashing.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -101,7 +100,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.BeaconBlock.Value) {
-			p := &eth.BeaconBlock{}
+			p := &ethpb.BeaconBlock{}
 			if err := testutil.ConvertToPb(testCase.BeaconBlock.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -121,7 +120,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.BeaconBlockBody.Value) {
-			p := &eth.BeaconBlockBody{}
+			p := &ethpb.BeaconBlockBody{}
 			if err := testutil.ConvertToPb(testCase.BeaconBlockBody.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -134,7 +133,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.BeaconBlockHeader.Value) {
-			p := &eth.BeaconBlockHeader{}
+			p := &ethpb.BeaconBlockHeader{}
 			if err := testutil.ConvertToPb(testCase.BeaconBlockHeader.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -154,7 +153,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.BeaconState.Value) {
-			p := &pb.BeaconState{}
+			p := &ethpb.BeaconState{}
 			if err := testutil.ConvertToPb(testCase.BeaconState.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -167,7 +166,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.Crosslink.Value) {
-			c := &eth.Crosslink{}
+			c := &ethpb.Crosslink{}
 			if err := testutil.ConvertToPb(testCase.Crosslink.Value, c); err != nil {
 				t.Fatal(err)
 			}
@@ -180,7 +179,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.Deposit.Value) {
-			p := &eth.Deposit{}
+			p := &ethpb.Deposit{}
 			if err := testutil.ConvertToPb(testCase.Deposit.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -193,7 +192,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.DepositData.Value) {
-			p := &eth.Deposit_Data{}
+			p := &ethpb.Deposit_Data{}
 			if err := testutil.ConvertToPb(testCase.DepositData.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -213,7 +212,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.Eth1Data.Value) {
-			p := &eth.Eth1Data{}
+			p := &ethpb.Eth1Data{}
 			if err := testutil.ConvertToPb(testCase.Eth1Data.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -226,7 +225,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.Fork.Value) {
-			p := &pb.Fork{}
+			p := &ethpb.Fork{}
 			if err := testutil.ConvertToPb(testCase.Fork.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -239,7 +238,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.HistoricalBatch.Value) {
-			p := &pb.HistoricalBatch{}
+			p := &ethpb.HistoricalBatch{}
 			if err := testutil.ConvertToPb(testCase.HistoricalBatch.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -252,7 +251,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.IndexedAttestation.Value) {
-			p := &eth.IndexedAttestation{}
+			p := &ethpb.IndexedAttestation{}
 			if err := testutil.ConvertToPb(testCase.IndexedAttestation.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -272,7 +271,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.PendingAttestation.Value) {
-			p := &pb.PendingAttestation{}
+			p := &ethpb.PendingAttestation{}
 			if err := testutil.ConvertToPb(testCase.PendingAttestation.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -285,7 +284,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.ProposerSlashing.Value) {
-			p := &eth.ProposerSlashing{}
+			p := &ethpb.ProposerSlashing{}
 			if err := testutil.ConvertToPb(testCase.ProposerSlashing.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -298,7 +297,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.Transfer.Value) {
-			p := &eth.Transfer{}
+			p := &ethpb.Transfer{}
 			if err := testutil.ConvertToPb(testCase.Transfer.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -318,7 +317,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.Validator.Value) {
-			p := &eth.Validator{}
+			p := &ethpb.Validator{}
 			if err := testutil.ConvertToPb(testCase.Validator.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -331,7 +330,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.VoluntaryExit.Value) {
-			p := &eth.VoluntaryExit{}
+			p := &ethpb.VoluntaryExit{}
 			if err := testutil.ConvertToPb(testCase.VoluntaryExit.Value, p); err != nil {
 				t.Fatal(err)
 			}
