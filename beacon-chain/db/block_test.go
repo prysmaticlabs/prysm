@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func init() {
@@ -24,7 +25,7 @@ func TestNilDB_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{}
-	h, _ := hashutil.HashBeaconBlock(block)
+	h, _ := ssz.SigningRoot(block)
 
 	hasBlock := db.HasBlock(h)
 	if hasBlock {
@@ -45,7 +46,7 @@ func TestSaveBlock_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block1 := &pb.BeaconBlock{}
-	h1, _ := hashutil.HashBeaconBlock(block1)
+	h1, _ := ssz.SigningRoot(block1)
 
 	err := db.SaveBlock(block1)
 	if err != nil {
@@ -56,7 +57,7 @@ func TestSaveBlock_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	h1Prime, _ := hashutil.HashBeaconBlock(b1Prime)
+	h1Prime, _ := ssz.SigningRoot(b1Prime)
 
 	if b1Prime == nil || h1 != h1Prime {
 		t.Fatalf("get should return b1: %x", h1)
@@ -65,7 +66,7 @@ func TestSaveBlock_OK(t *testing.T) {
 	block2 := &pb.BeaconBlock{
 		Slot: 0,
 	}
-	h2, _ := hashutil.HashBeaconBlock(block2)
+	h2, _ := ssz.SigningRoot(block2)
 
 	err = db.SaveBlock(block2)
 	if err != nil {
@@ -76,7 +77,7 @@ func TestSaveBlock_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	h2Prime, _ := hashutil.HashBeaconBlock(b2Prime)
+	h2Prime, _ := ssz.SigningRoot(b2Prime)
 	if b2Prime == nil || h2 != h2Prime {
 		t.Fatalf("get should return b2: %x", h2)
 	}
@@ -87,7 +88,7 @@ func TestSaveBlock_NilBlkInCache(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{Slot: 999}
-	h1, _ := hashutil.HashBeaconBlock(block)
+	h1, _ := ssz.SigningRoot(block)
 
 	// Save a nil block to with block root.
 	db.blocks[h1] = nil
@@ -115,7 +116,7 @@ func TestSaveBlockInCache_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{Slot: 999}
-	h, _ := hashutil.HashBeaconBlock(block)
+	h, _ := ssz.SigningRoot(block)
 
 	err := db.SaveBlock(block)
 	if err != nil {
@@ -139,8 +140,8 @@ func TestDeleteBlock_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
-	h, _ := hashutil.HashBeaconBlock(block)
+	block := &pb.BeaconBlock{Slot: 0}
+	h, _ := ssz.SigningRoot(block)
 
 	err := db.SaveBlock(block)
 	if err != nil {
@@ -170,8 +171,8 @@ func TestDeleteBlockInCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
-	h, _ := hashutil.HashBeaconBlock(block)
+	block := &pb.BeaconBlock{Slot: 0}
+	h, _ := ssz.SigningRoot(block)
 
 	err := db.SaveBlock(block)
 	if err != nil {
@@ -203,19 +204,26 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
-	slotNum := params.BeaconConfig().GenesisSlot + 3
+	slotNum := uint64(3)
 	b1 := &pb.BeaconBlock{
-		Slot:         slotNum,
-		RandaoReveal: []byte("A"),
+		Slot:       slotNum,
+		ParentRoot: []byte("A"),
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte("A"),
+		},
 	}
 	b2 := &pb.BeaconBlock{
-		Slot:         slotNum,
-		RandaoReveal: []byte("B"),
-	}
+		Slot:       slotNum,
+		ParentRoot: []byte("B"),
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte("B"),
+		}}
 	b3 := &pb.BeaconBlock{
-		Slot:         slotNum,
-		RandaoReveal: []byte("C"),
-	}
+		Slot:       slotNum,
+		ParentRoot: []byte("C"),
+		Body: &pb.BeaconBlockBody{
+			RandaoReveal: []byte("C"),
+		}}
 	if err := db.SaveBlock(b1); err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +234,7 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blocks, _ := db.BlocksBySlot(ctx, params.BeaconConfig().GenesisSlot+3)
+	blocks, _ := db.BlocksBySlot(ctx, 3)
 	if len(blocks) != 3 {
 		t.Errorf("Wanted %d blocks, received %d", 3, len(blocks))
 	}
@@ -238,8 +246,8 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
+	err := db.InitializeState(context.Background(), genesisTime, deposits, nil)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -260,8 +268,8 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
+	err := db.InitializeState(context.Background(), genesisTime, deposits, nil)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -270,7 +278,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get genesis block: %v", err)
 	}
-	bHash, err := hashutil.HashBeaconBlock(block)
+	bHash, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatalf("failed to get hash of b: %v", err)
 	}
@@ -281,10 +289,10 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	}
 
 	block2 := &pb.BeaconBlock{
-		Slot:             params.BeaconConfig().GenesisSlot + 1,
-		ParentRootHash32: bHash[:],
+		Slot:       1,
+		ParentRoot: bHash[:],
 	}
-	b2Hash, err := hashutil.HashBeaconBlock(block2)
+	b2Hash, err := ssz.SigningRoot(block2)
 	if err != nil {
 		t.Fatalf("failed to hash b2: %v", err)
 	}
@@ -295,7 +303,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to record the new head of the main chain: %v", err)
 	}
 
-	b2Prime, err := db.CanonicalBlockBySlot(ctx, params.BeaconConfig().GenesisSlot+1)
+	b2Prime, err := db.CanonicalBlockBySlot(ctx, 1)
 	if err != nil {
 		t.Fatalf("failed to retrieve slot 1: %v", err)
 	}
@@ -304,11 +312,11 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to retrieve head: %v", err)
 	}
 
-	b2PrimeHash, err := hashutil.HashBeaconBlock(b2Prime)
+	b2PrimeHash, err := ssz.SigningRoot(b2Prime)
 	if err != nil {
 		t.Fatalf("failed to hash b2Prime: %v", err)
 	}
-	b2SigmaHash, err := hashutil.HashBeaconBlock(b2Sigma)
+	b2SigmaHash, err := ssz.SigningRoot(b2Sigma)
 	if err != nil {
 		t.Fatalf("failed to hash b2Sigma: %v", err)
 	}
@@ -327,8 +335,8 @@ func TestChainProgress_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	err := db.InitializeState(context.Background(), genesisTime, deposits, nil)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -459,7 +467,7 @@ func TestHasBlock_returnsTrue(t *testing.T) {
 		Slot: uint64(44),
 	}
 
-	root, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -503,7 +511,7 @@ func TestClearBlockCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}
+	block := &pb.BeaconBlock{Slot: 0}
 
 	err := db.SaveBlock(block)
 	if err != nil {

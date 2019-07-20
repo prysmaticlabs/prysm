@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -18,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/go-ssz"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -149,6 +147,7 @@ func main() {
 		}
 
 		client := ethclient.NewClient(rpcClient)
+		depositAmountInGwei := uint64(depositAmount)
 		depositAmount = depositAmount * 1e9
 
 		// User inputs private key, sign tx with private key
@@ -205,19 +204,15 @@ func main() {
 		}
 
 		for _, validatorKey := range validatorKeys {
-			data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey)
+			data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
 			if err != nil {
 				log.Errorf("Could not generate deposit input data: %v", err)
 				continue
 			}
 
-			serializedData := new(bytes.Buffer)
-			if err := ssz.Encode(serializedData, data); err != nil {
-				log.Errorf("could not serialize deposit data: %v", err)
-			}
-
 			for i := int64(0); i < numberOfDeposits; i++ {
-				tx, err := depositContract.Deposit(txOps, serializedData.Bytes())
+				//TODO(#2658): Use actual compressed pubkeys in G1 here
+				tx, err := depositContract.Deposit(txOps, data.Pubkey, data.WithdrawalCredentials, data.Signature)
 				if err != nil {
 					log.Error("unable to send transaction to contract")
 				}

@@ -4,26 +4,20 @@ package attestation
 import (
 	"context"
 	"fmt"
-	"sort"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "attestation")
-var committeeCache = cache.NewCommitteesCache()
 
 // TargetHandler provides an interface for fetching latest attestation targets
 // and updating attestations in batches.
@@ -87,7 +81,7 @@ func (a *Service) Stop() error {
 }
 
 // Status always returns nil.
-// TODO(1201): Add service health checks.
+// TODO(#1201): Add service health checks.
 func (a *Service) Status() error {
 	return nil
 }
@@ -106,10 +100,10 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
 func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
-	if index >= uint64(len(beaconState.ValidatorRegistry)) {
+	if index >= uint64(len(beaconState.Validators)) {
 		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
-	validator := beaconState.ValidatorRegistry[index]
+	validator := beaconState.Validators[index]
 
 	pubKey := bytesutil.ToBytes48(validator.Pubkey)
 	a.store.RLock()
@@ -122,7 +116,7 @@ func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uin
 	if attestation == nil {
 		return nil, nil
 	}
-	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRoot)
 	if !a.beaconDB.HasBlock(targetRoot) {
 		return nil, nil
 	}
@@ -162,11 +156,14 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 		// This sets the pool limit, once the old pool is cleared out. It does by using the number of active
 		// validators per slot as an estimate. The active indices here are not used in the actual processing
 		// of attestations.
-		activeIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
-		attPerSlot := len(activeIndices) / int(params.BeaconConfig().SlotsPerEpoch)
+		count, err := helpers.ActiveValidatorCount(state, helpers.CurrentEpoch(state))
+		if err != nil {
+			return err
+		}
+		attPerSlot := count / params.BeaconConfig().SlotsPerEpoch
 		// we only set the limit at 70% of the calculated amount to be safe so that relevant attestations
 		// arent carried over to the next batch.
-		a.poolLimit = attPerSlot * 7 / 10
+		a.poolLimit = int(attPerSlot) * 7 / 10
 		if a.poolLimit == 0 {
 			a.poolLimit++
 		}
@@ -190,15 +187,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	if err != nil {
 		return err
 	}
-	head, err := a.beaconDB.ChainHead()
-	if err != nil {
-		return err
-	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return err
-	}
-	return a.updateAttestation(ctx, headRoot, beaconState, attestation)
+	return a.updateAttestation(beaconState, attestation)
 }
 
 // BatchUpdateLatestAttestation updates multiple attestations and adds them into the attestation store
@@ -214,19 +203,9 @@ func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations
 	if err != nil {
 		return err
 	}
-	head, err := a.beaconDB.ChainHead()
-	if err != nil {
-		return err
-	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return err
-	}
-
-	attestations = a.sortAttestations(attestations)
 
 	for _, attestation := range attestations {
-		if err := a.updateAttestation(ctx, headRoot, beaconState, attestation); err != nil {
+		if err := a.updateAttestation(beaconState, attestation); err != nil {
 			log.Error(err)
 		}
 	}
@@ -242,91 +221,53 @@ func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestatio
 	a.store.m[pubkey] = att
 }
 
-func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beaconState *pb.BeaconState,
-	attestation *pb.Attestation) error {
+func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb.Attestation) error {
 	totalAttestationSeen.Inc()
 
-	slot := attestation.Data.Slot
-	var committee []uint64
-	var cachedCommittees *cache.CommitteesInSlot
-	var err error
-
-	for beaconState.Slot < slot {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
-		)
-		if err != nil {
-			return fmt.Errorf("could not execute head transition: %v", err)
-		}
-	}
-
-	cachedCommittees, err = committeeCache.CommitteesInfoBySlot(slot)
+	committee, err := helpers.CrosslinkCommittee(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Crosslink.Shard)
 	if err != nil {
 		return err
 	}
-	if cachedCommittees == nil {
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false /* registryChange */)
-		if err != nil {
-			return err
-		}
-		cachedCommittees = helpers.ToCommitteeCache(slot, crosslinkCommittees)
-		if err := committeeCache.AddCommittees(cachedCommittees); err != nil {
-			return err
-		}
+	slot, err := helpers.AttestationDataSlot(beaconState, attestation.Data)
+	if err != nil {
+		return fmt.Errorf("could not get attestation slot: %v", err)
 	}
-
-	// Find committee for shard.
-	for _, v := range cachedCommittees.Committees {
-		if v.Shard == attestation.Data.Shard {
-			committee = v.Committee
-			break
-		}
-	}
-
 	log.WithFields(logrus.Fields{
-		"attestationSlot":    attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
-		"attestationShard":   attestation.Data.Shard,
-		"committeesShard":    cachedCommittees.Committees[0].Shard,
-		"committeesList":     cachedCommittees.Committees[0].Committee,
-		"lengthOfCommittees": len(cachedCommittees.Committees),
+		"attestationSlot":    slot,
+		"attestationShard":   attestation.Data.Crosslink.Shard,
+		"committeesList":     committee,
+		"lengthOfCommittees": len(committee),
 	}).Debug("Updating latest attestation")
-
-	// The participation bitfield from attestation is represented in bytes,
-	// here we multiply by 8 to get an accurate validator count in bits.
-	bitfield := attestation.AggregationBitfield
-	totalBits := len(bitfield) * 8
 
 	// Check each bit of participation bitfield to find out which
 	// attester has submitted new attestation.
 	// This is has O(n) run time and could be optimized down the line.
-	for i := 0; i < totalBits; i++ {
-		bitSet, err := bitutil.CheckBit(bitfield, i)
-		if err != nil {
-			return err
-		}
-		if !bitSet {
+	for i := uint64(0); i < attestation.AggregationBits.Len(); i++ {
+		if !attestation.AggregationBits.BitAt(i) {
 			continue
 		}
 
-		if i >= len(committee) {
-			log.Debugf("bitfield points to an invalid index in the committee: bitfield %08b", bitfield)
+		if i >= uint64(len(committee)) {
+			// This should never happen.
+			log.Warnf("bitfield points to an invalid index in the committee: bitfield %08b", attestation.AggregationBits)
 			return nil
 		}
 
-		if int(committee[i]) >= len(beaconState.ValidatorRegistry) {
-			log.Debugf("index doesn't exist in validator registry: index %d", committee[i])
+		if int(committee[i]) >= len(beaconState.Validators) {
+			// This should never happen.
+			log.Warnf("index doesn't exist in validator registry: index %d", committee[i])
 			return nil
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
-		pubkey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[committee[i]].Pubkey)
-		newAttestationSlot := attestation.Data.Slot
+		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].Pubkey)
+		newAttestationSlot := slot
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
 		defer a.store.Unlock()
 		if _, exists := a.store.m[pubkey]; exists {
-			currentAttestationSlot = a.store.m[pubkey].Data.Slot
+			currentAttestationSlot = slot
 		}
 		// If the attestation is newer than this attester's one in pool.
 		if newAttestationSlot > currentAttestationSlot {
@@ -334,12 +275,12 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 
 			log.WithFields(
 				logrus.Fields{
-					"attestationSlot": attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
-					"justifiedEpoch":  attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+					"attestationSlot": slot,
+					"sourceEpoch":     attestation.Data.Source.Epoch,
 				},
 			).Debug("Attestation store updated")
 
-			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRoot)
 			votedBlock, err := a.beaconDB.Block(blockRoot)
 			if err != nil {
 				return err
@@ -348,13 +289,4 @@ func (a *Service) updateAttestation(ctx context.Context, headRoot [32]byte, beac
 		}
 	}
 	return nil
-}
-
-// sortAttestations sorts attestations by their slot number in ascending order.
-func (a *Service) sortAttestations(attestations []*pb.Attestation) []*pb.Attestation {
-	sort.SliceStable(attestations, func(i, j int) bool {
-		return attestations[i].Data.Slot < attestations[j].Data.Slot
-	})
-
-	return attestations
 }

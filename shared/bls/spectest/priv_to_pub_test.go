@@ -27,7 +27,7 @@ func TestPrivToPubYaml(t *testing.T) {
 				t.Fatalf("Cannot unmarshal input to secret key: %v", err)
 			}
 			if !bytes.Equal(tt.Output, sk.PublicKey().Marshal()) {
-				t.Fatal("Output does not marshalled public key bytes")
+				t.Fatal("Output does not marshaled public key bytes")
 			}
 		})
 	}

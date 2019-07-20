@@ -29,7 +29,7 @@ To generate the abi using the vyper compiler, you can use
 
 ```
 
-vyper -f abi  ./depositContract.v.py
+vyper -f abi  ./depositContract.v.py > abi.json
 
 ```
 
@@ -39,7 +39,7 @@ To generate the bytecode you can then use
 
 ```
 
-vyper  ./depositContract.v.py
+vyper  ./depositContract.v.py > bytecode.bin
 
 ```
 

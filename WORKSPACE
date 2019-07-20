@@ -1,4 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "bazel_skylib",
@@ -9,8 +10,11 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "f04d2373bcaf8aa09bccb08a98a57e721306c8f6043a2a0ee610fd6853dcde3d",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.6/rules_go-0.18.6.tar.gz",
+    sha256 = "8df59f11fb697743cbb3f26cfb8750395f30471e9eabde0d174c3aebc7a1cd39",
+    urls = [
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/0.19.1/rules_go-0.19.1.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/0.19.1/rules_go-0.19.1.tar.gz",
+    ],
 )
 
 http_archive(
@@ -46,22 +50,34 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_k8s/archive/e68d5d765c2c670943a0baeb04ad8d9cb3661e54.tar.gz",
 )
 
+git_repository(
+    name = "graknlabs_bazel_distribution",
+    commit = "fe1e3a8253158c9a766ad76c502ee7a4aa4e39a5",
+    # Update this after https://github.com/graknlabs/bazel-distribution/pull/169 is merged.
+    remote = "https://github.com/prestonvanloon/bazel-distribution",
+)
+
+# Override default import in rules_go with special patch until
+# https://github.com/gogo/protobuf/pull/582 is merged.
+git_repository(
+    name = "com_github_gogo_protobuf",
+    commit = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c",  # v1.2.1, as of 2019-03-03
+    patch_args = ["-p1"],
+    patches = [
+        "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
+        "//third_party:com_github_gogo_protobuf-equal.patch",
+    ],
+    remote = "https://github.com/gogo/protobuf",
+    shallow_since = "1550471403 +0200",
+    # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
+)
+
 load(
     "@io_bazel_rules_docker//repositories:repositories.bzl",
     container_repositories = "repositories",
 )
 
 container_repositories()
-
-load("@build_bazel_rules_nodejs//:defs.bzl", "node_repositories", "yarn_install")
-
-node_repositories()
-
-yarn_install(
-    name = "npm",
-    package_json = "//:package.json",
-    yarn_lock = "//:yarn.lock",
-)
 
 # This requires rules_docker to be fully instantiated before it is pulled in.
 load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults", "k8s_repositories")
@@ -140,8 +156,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "56847989737e816ab7d23f3bb2422347dfa81271bae81a94de512c01461fab25",
-    url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.7.1/base64_encoded_archive.tar.gz",
+    sha256 = "a531804ac35d2398d37cfa755a686280d8cb3a9649e993e3cf89640f06191d5e",
+    url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.8.1/base64_encoded_archive.tar.gz",
 )
 
 http_archive(
@@ -154,28 +170,28 @@ load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_depen
 
 buildifier_dependencies()
 
-http_archive(
-    name = "com_github_prysmaticlabs_go_ssz",
-    sha256 = "f6fd5d623a988337810b956ddaf612dce771d9d0f9256934c8f4b1379f1cb2f6",
-    strip_prefix = "go-ssz-2e84733edbac32aca6d47feafc4441e43b10047f",
-    url = "https://github.com/prysmaticlabs/go-ssz/archive/2e84733edbac32aca6d47feafc4441e43b10047f.tar.gz",
-)
-
-load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
-
-go_ssz_dependencies()
-
 go_repository(
     name = "com_github_golang_mock",
     commit = "51421b967af1f557f93a59e0057aaf15ca02e29c",  # v1.2.0
     importpath = "github.com/golang/mock",
 )
 
+git_repository(
+    name = "com_google_protobuf",
+    commit = "09745575a923640154bcf307fba8aedff47f240a",
+    remote = "https://github.com/protocolbuffers/protobuf",
+    shallow_since = "1558721209 -0700",
+)
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
+
 # External dependencies
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "099afb3fd89784f9e3e594b7c2ed11335ca02a9b",
+    commit = "981f27aaf9bdce45391d0cd8bb522df514e0b566",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -184,6 +200,12 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
+)
+
+go_repository(
+    name = "com_github_prysmaticlabs_go_ssz",
+    commit = "ecf08adca3c19f69aea911fcde9b5e71d6bbfe28",
+    importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
 go_repository(
@@ -502,7 +524,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "a34e9553db1e492c9a76e60db2296ae7e5fbb772",
+    commit = "fae7ac547cb717d141c433a2a173315e216b64c4",
     importpath = "golang.org/x/sys",
 )
 
@@ -538,7 +560,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "8dd112bcdc25174059e45e07517d9fc663123347",
+    commit = "4def268fd1a49955bfb3dda92fe3db4f924f2285",
     importpath = "golang.org/x/crypto",
 )
 
@@ -807,6 +829,7 @@ go_repository(
 
 go_repository(
     name = "io_k8s_client_go",
+    build_extra_args = ["-exclude=vendor"],
     commit = "8abb21031259350aad0799bb42ba213ee8bb3399",
     importpath = "k8s.io/client-go",
 )
@@ -1102,4 +1125,81 @@ go_repository(
     name = "com_github_libp2p_go_eventbus",
     commit = "4afad1f6206cb9222914f2ec6ab9d0b414705c54",  # v0.0.3
     importpath = "github.com/libp2p/go-eventbus",
+)
+
+go_repository(
+    name = "in_gopkg_d4l3k_messagediff_v1",
+    commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",
+    importpath = "gopkg.in/d4l3k/messagediff.v1",
+)
+
+go_repository(
+    name = "com_github_prysmaticlabs_go_bitfield",
+    commit = "ec88cc4d1d143cad98308da54b73d0cdb04254eb",
+    importpath = "github.com/prysmaticlabs/go-bitfield",
+)
+
+load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
+
+go_ssz_dependencies()
+
+go_repository(
+    name = "com_github_burntsushi_toml",
+    commit = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005",
+    importpath = "github.com/BurntSushi/toml",
+)
+
+go_repository(
+    name = "org_golang_google_grpc",
+    build_file_proto_mode = "disable",
+    commit = "24b2fb8959201be9ce659bc87b0d590a34c67eae",
+    importpath = "google.golang.org/grpc",
+)
+
+go_repository(
+    name = "org_golang_x_net",
+    commit = "da137c7871d730100384dbcf36e6f8fa493aef5b",
+    importpath = "golang.org/x/net",
+)
+
+go_repository(
+    name = "org_golang_x_text",
+    commit = "342b2e1fbaa52c93f31447ad2c6abc048c63e475",
+    importpath = "golang.org/x/text",
+)
+
+go_repository(
+    name = "com_github_golang_glog",
+    commit = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
+    importpath = "github.com/golang/glog",
+)
+
+go_repository(
+    name = "org_golang_x_time",
+    commit = "9d24e82272b4f38b78bc8cff74fa936d31ccd8ef",
+    importpath = "golang.org/x/time",
+)
+
+go_repository(
+    name = "com_github_gregjones_httpcache",
+    commit = "901d90724c7919163f472a9812253fb26761123d",
+    importpath = "github.com/gregjones/httpcache",
+)
+
+go_repository(
+    name = "com_github_peterbourgon_diskv",
+    commit = "0be1b92a6df0e4f5cb0a5d15fb7f643d0ad93ce6",
+    importpath = "github.com/peterbourgon/diskv",
+)
+
+go_repository(
+    name = "com_github_googleapis_gnostic",
+    commit = "25d8b0b6698593f520d9d8dc5a88e6b16ca9ecc0",
+    importpath = "github.com/googleapis/gnostic",
+)
+
+go_repository(
+    name = "com_github_google_btree",
+    commit = "20236160a414454a9c64b6c8829381c6f4bddcaa",
+    importpath = "github.com/google/btree",
 )
