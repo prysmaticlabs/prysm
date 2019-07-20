@@ -12,17 +12,17 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type genesisPowChain struct {
-	feed *event.Feed
+	feed              *event.Feed
+	depositsProcessed bool
 }
 
-func (mp *genesisPowChain) HasChainStartLogOccurred() (bool, uint64, error) {
-	return false, 0, nil
+func (mp *genesisPowChain) HasChainStarted() bool {
+	return false
 }
 
 func (mp *genesisPowChain) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
@@ -33,12 +33,16 @@ func (mp *genesisPowChain) ChainStartFeed() *event.Feed {
 	return mp.feed
 }
 
+func (mp *genesisPowChain) AreAllDepositsProcessed() (bool, error) {
+	return mp.depositsProcessed, nil
+}
+
 type afterGenesisPowChain struct {
 	feed *event.Feed
 }
 
-func (mp *afterGenesisPowChain) HasChainStartLogOccurred() (bool, uint64, error) {
-	return true, 0, nil
+func (mp *afterGenesisPowChain) HasChainStarted() bool {
+	return true
 }
 
 func (mp *afterGenesisPowChain) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
@@ -47,6 +51,10 @@ func (mp *afterGenesisPowChain) BlockExists(ctx context.Context, hash common.Has
 
 func (mp *afterGenesisPowChain) ChainStartFeed() *event.Feed {
 	return mp.feed
+}
+
+func (mp *afterGenesisPowChain) AreAllDepositsProcessed() (bool, error) {
+	return true, nil
 }
 
 func TestQuerier_StartStop(t *testing.T) {
@@ -158,7 +166,7 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 
 	expMsg := fmt.Sprintf(
 		"Latest chain head is at slot: %d and state root: %#x",
-		response.CanonicalSlot-params.BeaconConfig().GenesisSlot, response.CanonicalStateRootHash32,
+		response.CanonicalSlot, response.CanonicalStateRootHash32,
 	)
 
 	<-exitRoutine
@@ -209,7 +217,7 @@ func TestSyncedInGenesis(t *testing.T) {
 		ResponseBufferSize: 100,
 		ChainService:       &mockChainService{},
 		BeaconDB:           db,
-		PowChain:           &genesisPowChain{},
+		PowChain:           &genesisPowChain{depositsProcessed: true},
 	}
 	sq := NewQuerierService(context.Background(), cfg)
 
@@ -277,4 +285,34 @@ func TestSyncedInRestarts(t *testing.T) {
 		t.Errorf("node is synced when it is not supposed to be in a restart")
 	}
 	sq.cancel()
+}
+
+func TestWaitForDepositsProcessed_OK(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	powchain := &genesisPowChain{depositsProcessed: false}
+	cfg := &QuerierConfig{
+		P2P:                &mockP2P{},
+		ResponseBufferSize: 100,
+		ChainService:       &mockChainService{},
+		BeaconDB:           db,
+		PowChain:           powchain,
+	}
+	sq := NewQuerierService(context.Background(), cfg)
+
+	sq.chainStartBuf <- time.Now()
+	exitRoutine := make(chan bool)
+	go func() {
+		sq.waitForAllDepositsToBeProcessed()
+		exitRoutine <- true
+	}()
+	if len(exitRoutine) == 1 {
+		t.Fatal("Deposits processed despite not being ready")
+	}
+
+	powchain.depositsProcessed = true
+	<-exitRoutine
+
+	sq.cancel()
+	close(exitRoutine)
 }

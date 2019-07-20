@@ -1,85 +1,99 @@
 package helpers
 
 import (
+	"fmt"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// EffectiveBalance returns the balance at stake for the validator.
-// Beacon chain allows validators to top off their balance above MAX_DEPOSIT,
-// but they can be slashed at most MAX_DEPOSIT at any time.
-//
-// Spec pseudocode definition:
-//   def get_effective_balance(state: State, index: int) -> int:
-//     """
-//     Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
-//     """
-//     return min(state.validator_balances[idx], MAX_DEPOSIT)
-func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
-	if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
-		return params.BeaconConfig().MaxDepositAmount
-	}
-	return state.ValidatorBalances[idx]
-}
+var totalActiveBalanceCache = cache.NewActiveBalanceCache()
 
-// TotalBalance returns the total deposited amount at stake in Gwei
-// of all active validators.
+// TotalBalance returns the total amount at stake in Gwei
+// of input validators.
 //
 // Spec pseudocode definition:
-//   def get_total_balance(state: BeaconState, validators: List[ValidatorIndex]) -> Gwei:
+//   def get_total_balance(state: BeaconState, indices: Set[ValidatorIndex]) -> Gwei:
 //    """
-//    Return the combined effective balance of an array of validators.
+//    Return the combined effective balance of the ``indices``. (1 Gwei minimum to avoid divisions by zero.)
 //    """
-//    return sum([get_effective_balance(state, i) for i in validators])
-func TotalBalance(state *pb.BeaconState, validators []uint64) uint64 {
-	var totalBalance uint64
-
-	for _, idx := range validators {
-		totalBalance += EffectiveBalance(state, idx)
+//    return Gwei(max(1, sum([state.validators[index].effective_balance for index in indices])))
+func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
+	total := uint64(0)
+	for _, idx := range indices {
+		total += state.Validators[idx].EffectiveBalance
 	}
-	return totalBalance
+
+	// Return 1 Gwei minimum to avoid divisions by zero
+	if total == 0 {
+		return 1
+	}
+
+	return total
 }
 
-// BaseRewardQuotient takes the previous total balance and calculates for
-// the quotient of the base reward.
+// TotalActiveBalance returns the total amount at stake in Gwei
+// of active validators.
 //
 // Spec pseudocode definition:
-//    base_reward_quotient =
-//      integer_squareroot(previous_total_balance) // BASE_REWARD_QUOTIENT
-func BaseRewardQuotient(prevTotalBalance uint64) uint64 {
-	return mathutil.IntegerSquareRoot(prevTotalBalance) / params.BeaconConfig().BaseRewardQuotient
+//   def get_total_active_balance(state: BeaconState) -> Gwei:
+//    """
+//    Return the combined effective balance of the active validators.
+//    """
+//    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
+func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
+	epoch := CurrentEpoch(state)
+	total, err := totalActiveBalanceCache.ActiveBalanceInEpoch(epoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve total balance from cache: %v", err)
+	}
+	if total != params.BeaconConfig().FarFutureEpoch {
+		return total, nil
+	}
+
+	total = 0
+	for i, v := range state.Validators {
+		if IsActiveValidator(v, epoch) {
+			total += state.Validators[i].EffectiveBalance
+		}
+	}
+
+	if err := totalActiveBalanceCache.AddActiveBalance(&cache.ActiveBalanceByEpoch{
+		Epoch:         epoch,
+		ActiveBalance: total,
+	}); err != nil {
+		return 0, fmt.Errorf("could not save active balance for cache: %v", err)
+	}
+	return total, nil
 }
 
-// BaseReward takes state and validator index to calculate for
-// individual validator's base reward.
+// IncreaseBalance increases validator with the given 'index' balance by 'delta' in Gwei.
 //
 // Spec pseudocode definition:
-//    base_reward(state, index) =
-//    	get_effective_balance(state, index) // base_reward_quotient // 5
-func BaseReward(
-	state *pb.BeaconState,
-	validatorIndex uint64,
-	baseRewardQuotient uint64) uint64 {
-
-	validatorBalance := EffectiveBalance(state, validatorIndex)
-	return validatorBalance / baseRewardQuotient / 5
+//  def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
+//    """
+//    Increase the validator balance at index ``index`` by ``delta``.
+//    """
+//    state.balances[index] += delta
+func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
+	state.Balances[idx] += delta
+	return state
 }
 
-// InactivityPenalty takes state and validator index to calculate for
-// individual validator's penalty for being offline.
+// DecreaseBalance decreases validator with the given 'index' balance by 'delta' in Gwei.
 //
 // Spec pseudocode definition:
-//    inactivity_penalty(state, index, epochs_since_finality) =
-//    	base_reward(state, index) + get_effective_balance(state, index)
-//    	* epochs_since_finality // INACTIVITY_PENALTY_QUOTIENT // 2
-func InactivityPenalty(
-	state *pb.BeaconState,
-	validatorIndex uint64,
-	baseRewardQuotient uint64,
-	epochsSinceFinality uint64) uint64 {
-
-	baseReward := BaseReward(state, validatorIndex, baseRewardQuotient)
-	validatorBalance := EffectiveBalance(state, validatorIndex)
-	return baseReward + validatorBalance*epochsSinceFinality/params.BeaconConfig().InactivityPenaltyQuotient/2
+//  def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
+//    """
+//    Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
+//    """
+//    state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
+func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
+	if delta > state.Balances[idx] {
+		state.Balances[idx] = 0
+		return state
+	}
+	state.Balances[idx] -= delta
+	return state
 }

@@ -7,11 +7,10 @@ import (
 	"sort"
 
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -70,17 +69,17 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *pb.ChainH
 
 // requestBatchedBlocks sends out a request for multiple blocks that's between finalized roots
 // and head roots.
-func (s *InitialSync) requestBatchedBlocks(ctx context.Context, finalizedRoot []byte, canonicalRoot []byte, peer peer.ID) {
+func (s *InitialSync) requestBatchedBlocks(ctx context.Context, FinalizedRoot []byte, canonicalRoot []byte, peer peer.ID) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestBatchedBlocks")
 	defer span.End()
 	sentBatchedBlockReq.Inc()
 
 	log.WithFields(logrus.Fields{
-		"finalizedBlkRoot": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedRoot[:])),
+		"finalizedBlkRoot": fmt.Sprintf("%#x", bytesutil.Trunc(FinalizedRoot[:])),
 		"headBlkRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(canonicalRoot[:]))},
 	).Debug("Requesting batched blocks")
 	if err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
-		FinalizedRoot: finalizedRoot,
+		FinalizedRoot: FinalizedRoot,
 		CanonicalRoot: canonicalRoot,
 	}, peer); err != nil {
 		log.Errorf("Could not send batch block request to peer %s: %v", peer.Pretty(), err)
@@ -95,7 +94,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if block == nil {
 		return errors.New("received nil block")
 	}
-	root, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.SigningRoot(block)
 	if err != nil {
 		return err
 	}
@@ -110,7 +109,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	log.WithFields(logrus.Fields{
 		"root": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
-		"slot": block.Slot - params.BeaconConfig().GenesisSlot,
+		"slot": block.Slot,
 	}).Info("Saving block")
 
 	s.mutex.Lock()
@@ -128,11 +127,11 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       block.Slot,
 		BlockRoot:  root[:],
-		ParentRoot: block.ParentRootHash32,
+		ParentRoot: block.ParentRoot,
 	}); err != nil {
 		return fmt.Errorf("could not to save attestation target: %v", err)
 	}
-	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
+	state, err = s.chainService.AdvanceState(ctx, state, block)
 	if err != nil {
 		return fmt.Errorf("could not apply block state transition: %v", err)
 	}

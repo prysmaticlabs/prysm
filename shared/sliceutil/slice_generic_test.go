@@ -1,19 +1,11 @@
 package sliceutil
 
 import (
-	"bytes"
 	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
-
-func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		CacheTreeHash: false,
-	})
-}
 
 func TestGenericIntersection(t *testing.T) {
 	testCases := []struct {
@@ -58,14 +50,12 @@ func TestGenericIntersectionWithSSZ(t *testing.T) {
 		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
-		b1 := new(bytes.Buffer)
-		err := ssz.Encode(b1, tt.setA)
 
-		b2 := new(bytes.Buffer)
-		err1 := ssz.Encode(b2, tt.setA)
+		b1, err := ssz.Marshal(tt.setA)
+		b2, err1 := ssz.Marshal(tt.setB)
 		if err1 == nil && err == nil {
 
-			result, err := GenericIntersection(b1.Bytes(), b2.Bytes())
+			result, err := GenericIntersection(b1, b2)
 			if err != nil {
 				if !reflect.DeepEqual(result, tt.out) {
 					t.Errorf("got %v, want %d", result, tt.out)
@@ -534,14 +524,11 @@ func BenchmarkGenericIntersectionWithSSZ(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			b1 := new(bytes.Buffer)
-			err := ssz.Encode(b1, tt.setA)
-
-			b2 := new(bytes.Buffer)
-			err1 := ssz.Encode(b2, tt.setA)
+			b1, err := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
-				res, err := GenericIntersection(b1.Bytes(), b2.Bytes())
+				res, err := GenericIntersection(b1, b2)
 				if err != nil {
 					b.Errorf("Benchmark error for %v", res)
 				}
@@ -568,14 +555,12 @@ func BenchmarkIntersectionWithSSZ(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			b1 := new(bytes.Buffer)
-			err := ssz.Encode(b1, tt.setA)
 
-			b2 := new(bytes.Buffer)
-			err1 := ssz.Encode(b2, tt.setA)
+			b1, err := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
-				ByteIntersection(b1.Bytes(), b2.Bytes())
+				ByteIntersection(b1, b2)
 
 			}
 
@@ -600,14 +585,11 @@ func BenchmarkGenericUnionWithSSZ(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			b1 := new(bytes.Buffer)
-			err := ssz.Encode(b1, tt.setA)
-
-			b2 := new(bytes.Buffer)
-			err1 := ssz.Encode(b2, tt.setA)
+			b1, err := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
-				res, err := GenericUnion(b1.Bytes(), b2.Bytes())
+				res, err := GenericUnion(b1, b2)
 				if err != nil {
 					b.Errorf("Benchmark error for %v", res)
 				}
@@ -634,14 +616,11 @@ func BenchmarkUnionWithSSZ(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			b1 := new(bytes.Buffer)
-			err := ssz.Encode(b1, tt.setA)
-
-			b2 := new(bytes.Buffer)
-			err1 := ssz.Encode(b2, tt.setA)
+			b1, err := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
-				ByteUnion(b1.Bytes(), b2.Bytes())
+				ByteUnion(b1, b2)
 
 			}
 
@@ -666,14 +645,11 @@ func BenchmarkGenericNotWithSSZ(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			b1 := new(bytes.Buffer)
-			err := ssz.Encode(b1, tt.setA)
-
-			b2 := new(bytes.Buffer)
-			err1 := ssz.Encode(b2, tt.setA)
+			b1, err := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
 
-				res, err := GenericNot(b1.Bytes(), b2.Bytes())
+				res, err := GenericNot(b1, b2)
 				if err != nil {
 					b.Errorf("Benchmark error for %v", res)
 				}
@@ -700,13 +676,10 @@ func BenchmarkNotWithSSZ(b *testing.B) {
 			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
-			b1 := new(bytes.Buffer)
-			err := ssz.Encode(b1, tt.setA)
-
-			b2 := new(bytes.Buffer)
-			err1 := ssz.Encode(b2, tt.setA)
+			b1, err := ssz.Marshal(tt.setA)
+			b2, err1 := ssz.Marshal(tt.setB)
 			if err1 == nil && err == nil {
-				ByteNot(b1.Bytes(), b2.Bytes())
+				ByteNot(b1, b2)
 
 			}
 

@@ -1,12 +1,13 @@
 syntax = "proto3";
 
-package ethereum.testing;
+package testing;
 
 import "google/protobuf/timestamp.proto";
 
 message TestMessage {
   string foo = 1;
 }
+
 
 // Used in shared/p2p/feed_example_test.go
 message Puzzle {

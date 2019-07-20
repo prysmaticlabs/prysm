@@ -5,6 +5,28 @@ import (
 	"testing"
 )
 
+func TestSubsetUint64(t *testing.T) {
+	testCases := []struct {
+		setA []uint64
+		setB []uint64
+		out  bool
+	}{
+		{[]uint64{1}, []uint64{1, 2, 3, 4}, true},
+		{[]uint64{1, 2, 3, 4}, []uint64{1, 2, 3, 4}, true},
+		{[]uint64{1, 1}, []uint64{1, 2, 3, 4}, false},
+		{[]uint64{}, []uint64{1}, true},
+		{[]uint64{1}, []uint64{}, false},
+		{[]uint64{1, 2, 3, 4, 5}, []uint64{1, 2, 3, 4}, false},
+	}
+	for _, tt := range testCases {
+		result := SubsetUint64(tt.setA, tt.setB)
+		if result != tt.out {
+			t.Errorf("%v, got %v, want %v", tt.setA, result, tt.out)
+		}
+
+	}
+}
+
 func TestIntersectionUint64(t *testing.T) {
 	testCases := []struct {
 		setA []uint64
@@ -24,6 +46,25 @@ func TestIntersectionUint64(t *testing.T) {
 		result := IntersectionUint64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
+		}
+
+	}
+}
+
+func TestIsSortedUint64(t *testing.T) {
+	testCases := []struct {
+		setA []uint64
+		out  bool
+	}{
+		{[]uint64{1, 2, 3}, true},
+		{[]uint64{3, 1, 3}, false},
+		{[]uint64{1}, true},
+		{[]uint64{}, true},
+	}
+	for _, tt := range testCases {
+		result := IsUint64Sorted(tt.setA)
+		if result != tt.out {
+			t.Errorf("got %v, want %v", result, tt.out)
 		}
 
 	}

@@ -5,6 +5,20 @@ import (
 	"encoding/binary"
 )
 
+// ToBytes returns integer x to bytes in little-endian format at the specified length.
+// Spec pseudocode definition:
+//   def int_to_bytes(integer: int, length: int) -> bytes:
+//     return integer.to_bytes(length, 'little')
+func ToBytes(x uint64, length int) []byte {
+	makeLength := length
+	if length < 8 {
+		makeLength = 8
+	}
+	bytes := make([]byte, makeLength)
+	binary.LittleEndian.PutUint64(bytes, x)
+	return bytes[:length]
+}
+
 // Bytes1 returns integer x to bytes in little-endian format, x.to_bytes(1, 'big').
 func Bytes1(x uint64) []byte {
 	bytes := make([]byte, 8)
@@ -26,21 +40,35 @@ func Bytes3(x uint64) []byte {
 	return bytes[:3]
 }
 
-// Bytes4 returns integer x to bytes in little-endian format, x.to_bytes(4, 'big').
+// Bytes4 returns integer x to bytes in little-endian format, x.to_bytes(4, 'little').
 func Bytes4(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:4]
 }
 
-// Bytes8 returns integer x to bytes in little-endian format, x.to_bytes(8, 'big').
+// Bytes8 returns integer x to bytes in little-endian format, x.to_bytes(8, 'little').
 func Bytes8(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes
 }
 
-// FromBytes8 returns an integer which is stored in the little-endian format(8, 'big')
+// Bytes32 returns integer x to bytes in little-endian format, x.to_bytes(8, 'little').
+func Bytes32(x uint64) []byte {
+	bytes := make([]byte, 32)
+	binary.LittleEndian.PutUint64(bytes, x)
+	return bytes
+}
+
+// FromBytes4 returns an integer which is stored in the little-endian format(4, 'little')
+// from a byte array.
+func FromBytes4(x []byte) uint64 {
+	empty4bytes := make([]byte, 4)
+	return binary.LittleEndian.Uint64(append(x[:4], empty4bytes...))
+}
+
+// FromBytes8 returns an integer which is stored in the little-endian format(8, 'little')
 // from a byte array.
 func FromBytes8(x []byte) uint64 {
 	return binary.LittleEndian.Uint64(x)

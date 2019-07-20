@@ -1,5 +1,30 @@
 package sliceutil
 
+// SubsetUint64 returns true if the first array is
+// completely contained in the second array with time
+// complexity of approximately o(n).
+func SubsetUint64(a []uint64, b []uint64) bool {
+	if len(a) > len(b) {
+		return false
+	}
+
+	set := make(map[uint64]uint64)
+	for _, v := range b {
+		set[v]++
+	}
+
+	for _, v := range a {
+		if count, found := set[v]; !found {
+			return false
+		} else if count < 1 {
+			return false
+		} else {
+			set[v] = count - 1
+		}
+	}
+	return true
+}
+
 // IntersectionUint64 of two uint64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
@@ -37,6 +62,19 @@ func UnionUint64(a []uint64, b []uint64) []uint64 {
 		}
 	}
 	return set
+}
+
+// IsUint64Sorted verifies if a uint64 slice is sorted in ascending order.
+func IsUint64Sorted(a []uint64) bool {
+	if len(a) == 0 || len(a) == 1 {
+		return true
+	}
+	for i := 1; i < len(a); i++ {
+		if a[i-1] > a[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // NotUint64 returns the uint64 in slice a that are
