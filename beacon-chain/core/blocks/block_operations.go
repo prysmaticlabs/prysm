@@ -223,13 +223,6 @@ func ProcessRandao(
 		buf := make([]byte, 32)
 		binary.LittleEndian.PutUint64(buf, currentEpoch)
 
-		if enableLogging {
-			log.WithFields(logrus.Fields{
-				"epoch":         helpers.CurrentEpoch(beaconState),
-				"proposerIndex": proposerIdx,
-			}).Info("Verifying randao")
-		}
-
 		domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
 		if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
