@@ -33,7 +33,7 @@ func TestAggregateSignaturesYaml(t *testing.T) {
 			}
 			sig := bls.AggregateSignatures(sigs)
 			if !bytes.Equal(tt.Output, sig.Marshal()) {
-				t.Fatal("Output does not equal marshalled aggregated sig bytes")
+				t.Fatal("Output does not equal marshaled aggregated sig bytes")
 			}
 		})
 	}

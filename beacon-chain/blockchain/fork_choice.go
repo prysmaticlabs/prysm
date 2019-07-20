@@ -8,13 +8,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -43,7 +42,7 @@ type TargetsFetcher interface {
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
 func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconState) error {
-	lastJustifiedSlot := helpers.StartSlot(state.JustifiedEpoch)
+	lastJustifiedSlot := helpers.StartSlot(state.CurrentJustifiedCheckpoint.Epoch)
 	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
 		return err
@@ -60,7 +59,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		// until we can get a block.
 		lastAvailBlkSlot := lastJustifiedSlot
 		for newJustifiedBlock == nil {
-			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
+			log.WithField("slot", lastAvailBlkSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
 			newJustifiedBlock, err = c.beaconDB.CanonicalBlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
@@ -68,7 +67,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 			}
 		}
 
-		newJustifiedRoot, err := hashutil.HashBeaconBlock(newJustifiedBlock)
+		newJustifiedRoot, err := ssz.SigningRoot(newJustifiedBlock)
 		if err != nil {
 			return err
 		}
@@ -85,7 +84,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		}
 	}
 
-	lastFinalizedSlot := helpers.StartSlot(state.FinalizedEpoch)
+	lastFinalizedSlot := helpers.StartSlot(state.FinalizedCheckpoint.Epoch)
 	savedFinalizedBlock, err := c.beaconDB.FinalizedBlock()
 	// If the last processed finalized slot in state is greater than
 	// the slot of finalized block saved in DB.
@@ -102,7 +101,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 		// until we can get a block.
 		lastAvailBlkSlot := lastFinalizedSlot
 		for newFinalizedBlock == nil {
-			log.WithField("slot", lastAvailBlkSlot-params.BeaconConfig().GenesisSlot).Debug("Missing block in DB, looking one slot back")
+			log.WithField("slot", lastAvailBlkSlot).Debug("Missing block in DB, looking one slot back")
 			lastAvailBlkSlot--
 			newFinalizedBlock, err = c.beaconDB.CanonicalBlockBySlot(ctx, lastAvailBlkSlot)
 			if err != nil {
@@ -110,7 +109,7 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 			}
 		}
 
-		newFinalizedRoot, err := hashutil.HashBeaconBlock(newFinalizedBlock)
+		newFinalizedRoot, err := ssz.SigningRoot(newFinalizedBlock)
 		if err != nil {
 			return err
 		}
@@ -160,7 +159,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
-	newHeadRoot, err := hashutil.HashBeaconBlock(newHead)
+	newHeadRoot, err := ssz.SigningRoot(newHead)
 	if err != nil {
 		return fmt.Errorf("could not hash new head block: %v", err)
 	}
@@ -172,7 +171,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err != nil {
 		return fmt.Errorf("could not retrieve chain head: %v", err)
 	}
-	currentHeadRoot, err := hashutil.HashBeaconBlock(currentHead)
+	currentHeadRoot, err := ssz.SigningRoot(currentHead)
 	if err != nil {
 		return fmt.Errorf("could not hash current head block: %v", err)
 	}
@@ -185,9 +184,9 @@ func (c *ChainService) ApplyForkChoiceRule(
 	newState := postState
 	if !isDescendant && !proto.Equal(currentHead, newHead) {
 		log.WithFields(logrus.Fields{
-			"currentSlot": currentHead.Slot - params.BeaconConfig().GenesisSlot,
+			"currentSlot": currentHead.Slot,
 			"currentRoot": fmt.Sprintf("%#x", bytesutil.Trunc(currentHeadRoot[:])),
-			"newSlot":     newHead.Slot - params.BeaconConfig().GenesisSlot,
+			"newSlot":     newHead.Slot,
 			"newRoot":     fmt.Sprintf("%#x", bytesutil.Trunc(newHeadRoot[:])),
 		}).Warn("Reorg happened")
 		// Only regenerate head state if there was a reorg.
@@ -204,7 +203,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 
 	if proto.Equal(currentHead, newHead) {
 		log.WithFields(logrus.Fields{
-			"currentSlot": currentHead.Slot - params.BeaconConfig().GenesisSlot,
+			"currentSlot": currentHead.Slot,
 			"currentRoot": fmt.Sprintf("%#x", bytesutil.Trunc(currentHeadRoot[:])),
 		}).Warn("Head did not change after fork choice, current head has the most votes")
 	}
@@ -220,14 +219,14 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if err := c.beaconDB.UpdateChainHead(ctx, newHead, newState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
-	h, err := hashutil.HashBeaconBlock(newHead)
+	h, err := ssz.SigningRoot(newHead)
 	if err != nil {
 		return fmt.Errorf("could not hash head: %v", err)
 	}
 	log.WithFields(logrus.Fields{
 		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
-		"headSlot":  newHead.Slot - params.BeaconConfig().GenesisSlot,
-		"stateSlot": newState.Slot - params.BeaconConfig().GenesisSlot,
+		"headSlot":  newHead.Slot,
+		"stateSlot": newState.Slot,
 	}).Info("Chain head block and state updated")
 
 	return nil
@@ -288,11 +287,11 @@ func (c *ChainService) lmdGhost(
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
-			maxChildRoot, err := hashutil.HashBeaconBlock(maxChild)
+			maxChildRoot, err := ssz.SigningRoot(maxChild)
 			if err != nil {
 				return nil, err
 			}
-			candidateChildRoot, err := hashutil.HashBeaconBlock(children[i])
+			candidateChildRoot, err := ssz.SigningRoot(children[i])
 			if err != nil {
 				return nil, err
 			}
@@ -318,7 +317,7 @@ func (c *ChainService) lmdGhost(
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
 func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock, highestSlot uint64) ([]*pb.BeaconBlock, error) {
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +333,7 @@ func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock,
 
 	filteredChildren := []*pb.BeaconBlock{}
 	for _, kid := range children {
-		parentRoot := bytesutil.ToBytes32(kid.ParentRootHash32)
+		parentRoot := bytesutil.ToBytes32(kid.ParentRoot)
 		if blockRoot == parentRoot {
 			filteredChildren = append(filteredChildren, kid)
 		}
@@ -344,15 +343,15 @@ func (c *ChainService) BlockChildren(ctx context.Context, block *pb.BeaconBlock,
 
 // isDescendant checks if the new head block is a descendant block of the current head.
 func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.BeaconBlock) (bool, error) {
-	currentHeadRoot, err := hashutil.HashBeaconBlock(currentHead)
+	currentHeadRoot, err := ssz.SigningRoot(currentHead)
 	if err != nil {
 		return false, nil
 	}
 	for newHead.Slot > currentHead.Slot {
-		if bytesutil.ToBytes32(newHead.ParentRootHash32) == currentHeadRoot {
+		if bytesutil.ToBytes32(newHead.ParentRoot) == currentHeadRoot {
 			return true, nil
 		}
-		newHead, err = c.beaconDB.Block(bytesutil.ToBytes32(newHead.ParentRootHash32))
+		newHead, err = c.beaconDB.Block(bytesutil.ToBytes32(newHead.ParentRoot))
 		if err != nil {
 			return false, err
 		}
@@ -367,7 +366,11 @@ func (c *ChainService) isDescendant(currentHead *pb.BeaconBlock, newHead *pb.Bea
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
 func (c *ChainService) AttestationTargets(state *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
-	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
+	indices, err := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
+	if err != nil {
+		return nil, err
+	}
+
 	attestationTargets := make(map[uint64]*pb.AttestationTarget)
 	for i, index := range indices {
 		target, err := c.attsService.LatestAttestationTarget(state, index)
@@ -397,7 +400,7 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 	var ancestorRoot []byte
 	var err error
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return 0, err
 	}
@@ -417,7 +420,7 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		}
 
 		if bytes.Equal(blockRoot[:], ancestorRoot) {
-			balances += int(helpers.EffectiveBalance(state, validatorIndex))
+			balances += int(state.Validators[validatorIndex].EffectiveBalance)
 		}
 	}
 	return balances, nil
@@ -454,7 +457,7 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 	newTarget := &pb.AttestationTarget{
 		Slot:       parent.Slot,
 		BlockRoot:  parentRoot[:],
-		ParentRoot: parent.ParentRootHash32,
+		ParentRoot: parent.ParentRoot,
 	}
 	return BlockAncestor(newTarget, slot, beaconDB)
 }
@@ -485,7 +488,7 @@ func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.Be
 	ancestorTarget := &pb.AttestationTarget{
 		Slot:       ancestor.Slot,
 		BlockRoot:  ancestorRoot,
-		ParentRoot: ancestor.ParentRootHash32,
+		ParentRoot: ancestor.ParentRoot,
 	}
 	if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
 		Height: height,

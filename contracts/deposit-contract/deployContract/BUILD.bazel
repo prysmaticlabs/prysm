@@ -68,7 +68,7 @@ container_push(
     image = ":image",
     registry = "gcr.io",
     repository = "prysmaticlabs/prysm/deploy-deposit-contract",
-    tag = "latest",
+    tag = "{DOCKER_TAG}",
     tags = ["manual"],
     visibility = ["//visibility:private"],
 )

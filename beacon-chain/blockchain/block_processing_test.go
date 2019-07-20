@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -27,8 +29,15 @@ import (
 // Ensure ChainService implements interfaces.
 var _ = BlockProcessor(&ChainService{})
 
+func init() {
+	// TODO(2993): remove this after ssz is optimized for mainnet.
+	c := params.BeaconConfig()
+	c.HistoricalRootsLimit = 8192
+	params.OverrideBeaconConfig(c)
+}
+
 func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := chainService.beaconDB.Block(parentRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -37,19 +46,18 @@ func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *Chain
 	if err != nil {
 		t.Fatalf("Unable to retrieve state %v", err)
 	}
-	saveLatestBlock := beaconState.LatestBlock
 
-	computedState, err := chainService.ApplyBlockStateTransition(context.Background(), block, beaconState)
+	computedState, err := chainService.AdvanceState(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatalf("could not apply block state transition: %v", err)
 	}
 
-	computedState.LatestBlock = saveLatestBlock
-	stateRoot, err := hashutil.HashProto(computedState)
+	stateRoot, err := ssz.HashTreeRoot(computedState)
 	if err != nil {
 		t.Fatalf("could not tree hash state: %v", err)
 	}
-	block.StateRootHash32 = stateRoot[:]
+
+	block.StateRoot = stateRoot[:]
 	t.Logf("state root after block: %#x", stateRoot)
 }
 
@@ -58,8 +66,8 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
@@ -71,7 +79,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		Slot: 1,
 	}
 
-	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
+	parentRoot, err := ssz.SigningRoot(parentBlock)
 	if err != nil {
 		t.Fatalf("Unable to tree hash block %v", err)
 	}
@@ -81,11 +89,13 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: parentRoot[:],
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
+		Slot:       2,
+		ParentRoot: parentRoot[:],
+		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockHash:   []byte("b"),
+			},
 		},
 	}
 
@@ -98,35 +108,41 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 }
 
 func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: false,
+	})
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, privKeys := setupInitialDeposits(t, 100)
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	stateRoot, err := hashutil.HashProto(beaconState)
-	if err != nil {
-		t.Fatalf("Could not tree hash state: %v", err)
-	}
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	genesis := b.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	beaconState.Eth1DepositIndex = 100
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
-	parentHash, err := hashutil.HashBeaconBlock(genesis)
+	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
-		t.Fatalf("Unable to get tree hash root of canonical head: %v", err)
+		t.Fatal(err)
 	}
 
-	if err := db.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
+	if err := db.SaveHistoricalState(ctx, beaconState, parentRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -135,23 +151,25 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	}
 
 	beaconState.Slot++
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	block := &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     randaoReveal,
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
-		},
+		Slot:       beaconState.Slot,
+		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositCount: uint64(len(deposits)),
+				DepositRoot:  []byte("a"),
+				BlockHash:    []byte("b"),
+			},
+			RandaoReveal: randaoReveal,
 			Attestations: nil,
 		},
 	}
-
-	initBlockStateRoot(t, block, chainService)
 
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
@@ -165,31 +183,36 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
-
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
 func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCheckBlockStateRoot: false,
+	})
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, _ := setupInitialDeposits(t, 100)
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-
-	stateRoot, err := hashutil.HashProto(beaconState)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	genesis := b.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
-		t.Fatalf("Could not tree hash state: %v", err)
+		t.Fatal(err)
 	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	beaconState.Eth1DepositIndex = 100
 
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
@@ -198,21 +221,24 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
 	block := &pb.BeaconBlock{
-		Slot:             beaconState.Slot + 4,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     []byte{},
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
-		},
+		Slot:       beaconState.Slot + 4,
+		StateRoot:  []byte{},
+		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockHash:   []byte("b"),
+			},
+			RandaoReveal: []byte{},
 			Attestations: nil,
 		},
 	}
-	initBlockStateRoot(t, block, chainService)
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -230,19 +256,25 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, db, nil)
-	deposits, _ := setupInitialDeposits(t, 100)
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	attsService := attestation.NewAttestationService(
+		context.Background(),
+		&attestation.Config{BeaconDB: db})
+	chainService := setupBeaconChain(t, db, attsService)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	stateRoot, err := hashutil.HashProto(beaconState)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	genesis := b.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
-		t.Fatalf("Could not tree hash state: %v", err)
+		t.Fatal(err)
+	}
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
 	}
 
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
@@ -255,27 +287,29 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 
 	beaconState.Slot++
 
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     []byte{},
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
-		},
+		Slot:       beaconState.Slot,
+		StateRoot:  []byte{},
+		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
-			Attestations: []*pb.Attestation{
-				{
-					Data: &pb.AttestationData{
-						JustifiedEpoch: params.BeaconConfig().GenesisSlot * 100,
-					},
-				},
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockHash:   []byte("b"),
 			},
+			RandaoReveal: []byte{},
+			Attestations: []*pb.Attestation{{
+				Data: &pb.AttestationData{
+					Target: &pb.Checkpoint{Epoch: 5},
+				},
+			}},
 		},
 	}
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +319,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	case *BlockFailedProcessingErr:
 		t.Log("Block failed processing as expected")
 	default:
-		t.Errorf("Unexpected block processing error: %v", err)
+		t.Errorf("Expected block processing to fail, received: %v", err)
 	}
 
 	savedBlock, err := db.Block(blockRoot)
@@ -314,16 +348,23 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
-	deposits, privKeys := setupInitialDeposits(t, 100)
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-
+	beaconState.Eth1DepositIndex = 100
+	genesis := b.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
@@ -334,11 +375,23 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	}
 
 	beaconState.Slot++
+	parentRoot, err := ssz.SigningRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	goodStateBlock := &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Slot:       beaconState.Slot,
+		ParentRoot: parentRoot[:],
+		Body: &pb.BeaconBlockBody{
+			Eth1Data:     &pb.Eth1Data{},
+			RandaoReveal: randaoReveal,
+		},
 	}
 	beaconState.Slot--
 	initBlockStateRoot(t, goodStateBlock, chainService)
@@ -357,16 +410,24 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, db, nil)
-	deposits, privKeys := setupInitialDeposits(t, 100)
 	ctx := context.Background()
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	beaconState.Eth1DepositIndex = 100
+	genesis := b.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
@@ -378,12 +439,24 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	}
 
 	beaconState.Slot++
+	parentRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	invalidStateBlock := &pb.BeaconBlock{
-		Slot:             beaconState.Slot,
-		StateRootHash32:  []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Slot:       beaconState.Slot,
+		StateRoot:  []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
+		ParentRoot: parentRoot[:],
+		Body: &pb.BeaconBlockBody{
+			Eth1Data:     &pb.Eth1Data{},
+			RandaoReveal: randaoReveal,
+		},
 	}
 	beaconState.Slot--
 
@@ -406,15 +479,24 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
-	deposits, privKeys := setupInitialDeposits(t, 100)
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	genesis := b.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	beaconState.Eth1Data.DepositCount = 1
+	beaconState.Eth1DepositIndex = 0
 	if err := chainService.beaconDB.SaveJustifiedState(beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -422,7 +504,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
@@ -432,57 +514,69 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	currentSlot := params.BeaconConfig().GenesisSlot
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+	currentSlot := uint64(0)
+
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	pendingDeposits := []*pb.Deposit{
-		createPreChainStartDeposit(t, []byte{'F'}, beaconState.DepositIndex),
+		createPreChainStartDeposit([]byte{'F'}),
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
 	for i, pd := range pendingDeposits {
-		pendingDepositsData[i] = pd.DepositData
+		h, err := hashutil.DepositHash(pd.Data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pendingDepositsData[i] = h[:]
 	}
 	depositTrie, err := trieutil.GenerateTrieFromItems(pendingDepositsData, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not generate deposit trie: %v", err)
 	}
 	for i := range pendingDeposits {
-		pendingDeposits[i].MerkleTreeIndex = 0
-		proof, err := depositTrie.MerkleProof(int(pendingDeposits[i].MerkleTreeIndex))
+		proof, err := depositTrie.MerkleProof(0)
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}
-		pendingDeposits[i].MerkleProofHash32S = proof
+		pendingDeposits[i].Proof = proof
 	}
 	depositRoot := depositTrie.Root()
-	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
+	beaconState.Eth1Data.DepositRoot = depositRoot[:]
 	if err := db.SaveHistoricalState(context.Background(), beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 
+	parentRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &pb.BeaconBlock{
-		Slot:             currentSlot + 1,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
-		RandaoReveal:     randaoReveal,
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
-		},
+		Slot:       currentSlot + 1,
+		StateRoot:  stateRoot[:],
+		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
-			Deposits: pendingDeposits,
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockHash:   []byte("b"),
+			},
+			RandaoReveal: randaoReveal,
+			Deposits:     pendingDeposits,
 		},
 	}
 
-	beaconState.LatestBlock = block
 	beaconState.Slot--
-	beaconState.DepositIndex = 0
+
+	beaconState.Eth1DepositIndex = 0
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	initBlockStateRoot(t, block, chainService)
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
 	}
@@ -495,7 +589,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	for _, dep := range pendingDeposits {
-		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
+		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0), 0, [32]byte{})
 	}
 
 	if len(db.PendingDeposits(chainService.ctx, nil)) != len(pendingDeposits) || len(pendingDeposits) == 0 {
@@ -513,11 +607,11 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < len(beaconState.ValidatorRegistry); i++ {
-		pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[i].Pubkey)
+	for i := 0; i < len(beaconState.Validators); i++ {
+		pubKey := bytesutil.ToBytes48(beaconState.Validators[i].Pubkey)
 		attsService.InsertAttestationIntoStore(pubKey, &pb.Attestation{
 			Data: &pb.AttestationData{
-				BeaconBlockRootHash32: blockRoot[:],
+				BeaconBlockRoot: blockRoot[:],
 			}},
 		)
 	}
@@ -569,56 +663,74 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, privKeys := setupInitialDeposits(t, 100)
-	eth1Data := &pb.Eth1Data{
-		DepositRootHash32: []byte{},
-		BlockHash32:       []byte{},
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	stateRoot, err := hashutil.HashProto(beaconState)
+	beaconState.Eth1DepositIndex = 100
+	genesis := b.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
-	beaconState.LatestBlock = genesisBlock
+	_, genesisBlock := setupGenesisBlock(t, chainService)
 	if err := db.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveFinalizedState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	genesisSlot := params.BeaconConfig().GenesisSlot
+	genesisSlot := uint64(0)
+
+	parentRoot, err := ssz.SigningRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Top chain slots (see graph)
 	blockSlots := []uint64{1, 2, 3, 5, 8}
 	for _, slot := range blockSlots {
 		block := &pb.BeaconBlock{
-			Slot:             genesisSlot + slot,
-			StateRootHash32:  stateRoot[:],
-			ParentRootHash32: parentHash[:],
-			RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-			Body:             &pb.BeaconBlockBody{},
+			Slot:       genesisSlot + slot,
+			StateRoot:  stateRoot[:],
+			ParentRoot: parentRoot[:],
+			Body: &pb.BeaconBlockBody{
+				Eth1Data:     &pb.Eth1Data{},
+				RandaoReveal: randaoReveal,
+			},
 		}
 		initBlockStateRoot(t, block, chainService)
 		computedState, err := chainService.ReceiveBlock(ctx, block)
 		if err != nil {
 			t.Fatal(err)
 		}
-		stateRoot, err = hashutil.HashProto(computedState)
+		stateRoot, err = ssz.HashTreeRoot(computedState)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if err = db.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
-		computedState.LatestBlock = block
 		if err = db.UpdateChainHead(ctx, block, computedState); err != nil {
 			t.Fatal(err)
 		}
-		parentHash, err = hashutil.HashBeaconBlock(block)
+		parentRoot, err = ssz.SigningRoot(block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -630,39 +742,48 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parentHash, err = hashutil.HashBeaconBlock(commonAncestor)
+	parentRoot, err = ssz.SigningRoot(commonAncestor)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	beaconState, err = db.HistoricalStateFromSlot(ctx, commonAncestor.Slot, parentHash)
+	beaconState, err = db.HistoricalStateFromSlot(ctx, commonAncestor.Slot, parentRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	stateRoot, err = hashutil.HashProto(beaconState)
+	stateRoot, err = ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	epoch = helpers.CurrentEpoch(beaconState)
+	randaoReveal, err = helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Then we receive the block `f` from slot 6
 	blockF := &pb.BeaconBlock{
-		Slot:             genesisSlot + 6,
-		ParentRootHash32: parentHash[:],
-		StateRootHash32:  stateRoot[:],
-		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Slot:       genesisSlot + 6,
+		ParentRoot: parentRoot[:],
+		StateRoot:  stateRoot[:],
+		Body: &pb.BeaconBlockBody{
+			Eth1Data:     &pb.Eth1Data{},
+			RandaoReveal: randaoReveal,
+		},
 	}
-	rootF, _ := hashutil.HashBeaconBlock(blockF)
+	rootF, _ := ssz.SigningRoot(blockF)
 	if err := db.SaveHistoricalState(ctx, beaconState, rootF); err != nil {
 		t.Fatal(err)
 	}
-	initBlockStateRoot(t, blockF, chainService)
 
+	initBlockStateRoot(t, blockF, chainService)
 	computedState, err := chainService.ReceiveBlock(ctx, blockF)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	stateRoot, err = hashutil.HashProto(computedState)
+	stateRoot, err = ssz.HashTreeRoot(computedState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -671,18 +792,26 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parentHash, err = hashutil.HashBeaconBlock(blockF)
+	parentRoot, err = ssz.SigningRoot(blockF)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	epoch = helpers.CurrentEpoch(beaconState)
+	randaoReveal, err = helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Then we apply block `g` from slot 7
 	blockG := &pb.BeaconBlock{
-		Slot:             genesisSlot + 7,
-		ParentRootHash32: parentHash[:],
-		StateRootHash32:  stateRoot[:],
-		RandaoReveal:     createRandaoReveal(t, computedState, privKeys),
-		Body:             &pb.BeaconBlockBody{},
+		Slot:       genesisSlot + 7,
+		ParentRoot: parentRoot[:],
+		StateRoot:  stateRoot[:],
+		Body: &pb.BeaconBlockBody{
+			Eth1Data:     &pb.Eth1Data{},
+			RandaoReveal: randaoReveal,
+		},
 	}
 	initBlockStateRoot(t, blockG, chainService)
 
@@ -703,63 +832,79 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
-	deposits, privKeys := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(ctx)
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}
+	genesis := b.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+	}
 	block := &pb.BeaconBlock{
-		ParentRootHash32: []byte{'a'},
+		ParentRoot: []byte{'a'},
 	}
 
 	if err := chainService.VerifyBlockValidity(ctx, block, beaconState); err == nil {
 		t.Fatal("block processing succeeded despite block having no parent saved")
 	}
 
-	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
+	beaconState.Slot = 10
 
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	genesis := b.NewGenesisBlock([]byte{})
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("cannot save block: %v", err)
 	}
-	parentRoot, err := hashutil.HashBeaconBlock(genesis)
+	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("unable to get root of canonical head: %v", err)
 	}
 
-	beaconState.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: []byte{2},
-		BlockHash32:       []byte{3},
+	beaconState.Eth1Data = &pb.Eth1Data{
+		DepositRoot: []byte{2},
+		BlockHash:   []byte{3},
 	}
-	beaconState.Slot = params.BeaconConfig().GenesisSlot
+	beaconState.Slot = 0
 
-	currentSlot := params.BeaconConfig().GenesisSlot + 1
-	attestationSlot := params.BeaconConfig().GenesisSlot
+	currentSlot := uint64(1)
 
-	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block2 := &pb.BeaconBlock{
-		Slot:             currentSlot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentRoot[:],
-		RandaoReveal:     randaoReveal,
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("b"),
-		},
+		Slot:       currentSlot,
+		StateRoot:  stateRoot[:],
+		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
+			Eth1Data: &pb.Eth1Data{
+				DepositRoot: []byte("a"),
+				BlockHash:   []byte("b"),
+			},
+			RandaoReveal: randaoReveal,
 			Attestations: []*pb.Attestation{{
-				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				AggregationBits: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot:                     attestationSlot,
-					JustifiedBlockRootHash32: parentRoot[:],
+					Source: &pb.Checkpoint{Root: parentRoot[:]},
+					Crosslink: &pb.Crosslink{
+						Shard: 960,
+					},
 				},
 			}},
 		},
@@ -785,8 +930,8 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 		})
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Validators: validators,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
@@ -827,8 +972,8 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 		})
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Validators: validators,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
@@ -854,7 +999,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(100)
 
-	// Tried to insert 5 active indices to DB with only 3 validators in state.
+	// Tried to insert 5 active indices to DB with only 3 validators in state
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2, 3, 4})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
@@ -865,8 +1010,8 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		})
 	}
 	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+		Validators: validators,
+		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
@@ -886,7 +1031,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
 	}
 
-	// Verify the skipped validators are included in the next epoch.
+	// Verify the skipped validators are included in the next epoch
 	if !reflect.DeepEqual(v.ActivatedValFromEpoch(epoch+2), []uint64{3, 4}) {
 		t.Error("Did not get wanted validator from activation queue")
 	}

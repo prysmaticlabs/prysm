@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -14,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/go-ssz"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
@@ -66,11 +64,11 @@ func newServer(
 	}
 }
 
-func (s *server) makeDeposit(data []byte) error {
+func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signature []byte) error {
 	txOps := bind.NewKeyedTransactor(s.txPk)
 	txOps.Value = s.depositAmount
 	txOps.GasLimit = gasLimit
-	tx, err := s.contract.Deposit(txOps, data)
+	tx, err := s.contract.Deposit(txOps, pubkey, withdrawalCredentials, signature)
 	if err != nil {
 		return fmt.Errorf("deposit failed: %v", err)
 	}
@@ -143,17 +141,13 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 
 		// Make the validator deposit
 		// NOTE: This uses the validator key as the withdrawal key
-		di, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/)
+		di, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/, new(big.Int).Div(s.depositAmount, big.NewInt(1e9)).Uint64())
 		if err != nil {
 			return nil, err
 		}
-		serializedData := new(bytes.Buffer)
-		if err := ssz.Encode(serializedData, di); err != nil {
-			return nil, fmt.Errorf("could not serialize deposit data: %v", err)
-		}
 
 		// Do the actual deposit
-		if err := s.makeDeposit(serializedData.Bytes()); err != nil {
+		if err := s.makeDeposit(di.Pubkey, di.WithdrawalCredentials, di.Signature); err != nil {
 			return nil, err
 		}
 		// Store in database

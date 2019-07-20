@@ -3,17 +3,15 @@ package db
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func init() {
@@ -22,43 +20,21 @@ func init() {
 	})
 }
 
-func setupInitialDeposits(t testing.TB, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
-	privKeys := make([]*bls.SecretKey, numDeposits)
-	deposits := make([]*pb.Deposit, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositInput := &pb.DepositInput{
-			Pubkey: priv.PublicKey().Marshal(),
-		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-		privKeys[i] = priv
-	}
-	return deposits, privKeys
-}
-
 func TestInitializeState_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
 	if err != nil {
 		t.Fatalf("Failed to get chain head: %v", err)
 	}
-	if b.GetSlot() != params.BeaconConfig().GenesisSlot {
+	if b.GetSlot() != 0 {
 		t.Fatalf("Expected block height to equal 1. Got %d", b.GetSlot())
 	}
 
@@ -93,8 +69,8 @@ func TestFinalizeState_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 20)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 20, false)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -123,8 +99,8 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(b, 10)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(b, 10, false)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -141,7 +117,7 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 	savedState := &pb.BeaconState{}
 	savedState.Unmarshal(db.serializedState)
 
-	if savedState.Slot != params.BeaconConfig().GenesisSlot+1 {
+	if savedState.Slot != 1 {
 		b.Fatal("cache should be prepared on state after saving to DB")
 	}
 
@@ -232,32 +208,32 @@ func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 	}{
 		{
 			state: &pb.BeaconState{
-				Slot:           66,
-				FinalizedEpoch: 1,
+				Slot:                66,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           72,
-				FinalizedEpoch: 1,
+				Slot:                72,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           96,
-				FinalizedEpoch: 1,
+				Slot:                96,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           130,
-				FinalizedEpoch: 2,
+				Slot:                130,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 2},
 			},
 		},
 		{
 			state: &pb.BeaconState{
-				Slot:           300,
-				FinalizedEpoch: 4,
+				Slot:                300,
+				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 4},
 			},
 		},
 	}
@@ -287,9 +263,6 @@ func TestHistoricalState_Pruning(t *testing.T) {
 	ctx := context.Background()
 
 	epochSize := params.BeaconConfig().SlotsPerEpoch
-	slotGen := func(slot uint64) uint64 {
-		return params.BeaconConfig().GenesisSlot + slot
-	}
 
 	tests := []struct {
 		histState1 *pb.BeaconState
@@ -297,50 +270,50 @@ func TestHistoricalState_Pruning(t *testing.T) {
 	}{
 		{
 			histState1: &pb.BeaconState{
-				Slot: slotGen(0 * epochSize),
+				Slot: 2 * epochSize,
 			},
 			histState2: &pb.BeaconState{
-				Slot: slotGen(1 * epochSize),
+				Slot: 3 * epochSize,
 			},
 		},
 		{
 			histState1: &pb.BeaconState{
-				Slot: slotGen(1 * epochSize),
+				Slot: 1 * epochSize,
 			},
 			histState2: &pb.BeaconState{
-				Slot: slotGen(4 * epochSize),
+				Slot: 4 * epochSize,
 			},
 		},
 		{
 			histState1: &pb.BeaconState{
-				Slot: slotGen(2 * epochSize),
+				Slot: 2 * epochSize,
 			},
 			histState2: &pb.BeaconState{
-				Slot: slotGen(5 * epochSize),
+				Slot: 5 * epochSize,
 			},
 		},
 		{
 			histState1: &pb.BeaconState{
-				Slot: slotGen(6 * epochSize),
+				Slot: 6 * epochSize,
 			},
 			histState2: &pb.BeaconState{
-				Slot: slotGen(14 * epochSize),
+				Slot: 14 * epochSize,
 			},
 		},
 		{
 			histState1: &pb.BeaconState{
-				Slot: slotGen(12 * epochSize),
+				Slot: 12 * epochSize,
 			},
 			histState2: &pb.BeaconState{
-				Slot: slotGen(103 * epochSize),
+				Slot: 103 * epochSize,
 			},
 		},
 		{
 			histState1: &pb.BeaconState{
-				Slot: slotGen(100 * epochSize),
+				Slot: 100 * epochSize,
 			},
 			histState2: &pb.BeaconState{
-				Slot: slotGen(600 * epochSize),
+				Slot: 600 * epochSize,
 			},
 		},
 	}
@@ -360,26 +333,26 @@ func TestHistoricalState_Pruning(t *testing.T) {
 		}
 
 		// Save a dummy genesis state so that db doesnt return an error.
-		if err := db.SaveHistoricalState(context.Background(), &pb.BeaconState{Slot: slotGen(0), FinalizedEpoch: 1}, root); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), &pb.BeaconState{Slot: 0, FinalizedCheckpoint: &pb.Checkpoint{}}, root); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 
 		retState, err := db.HistoricalStateFromSlot(ctx, tt.histState1.Slot, root)
 		if err != nil {
-			t.Fatalf("Unable to retrieve state %v", err)
+			t.Errorf("Unable to retrieve state %v", err)
 		}
 
 		if proto.Equal(tt.histState1, retState) {
-			t.Errorf("Saved and retrieved states are equal when they supposed to be different %d", tt.histState1.Slot-params.BeaconConfig().GenesisSlot)
+			t.Errorf("Saved and retrieved states are equal when they supposed to be different %d", tt.histState1.Slot)
 		}
 
 		retState, err = db.HistoricalStateFromSlot(ctx, tt.histState2.Slot, root)
 		if err != nil {
-			t.Fatalf("Unable to retrieve state %v", err)
+			t.Errorf("Unable to retrieve state %v", err)
 		}
 
 		if !proto.Equal(tt.histState2, retState) {
-			t.Errorf("Saved and retrieved states are not equal when they supposed to be for slot %d", tt.histState2.Slot-params.BeaconConfig().GenesisSlot)
+			t.Errorf("Saved and retrieved states are not equal when they supposed to be for slot %d", tt.histState2.Slot)
 		}
 
 	}

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -72,9 +71,9 @@ func decodeDepositData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	di := &pb.DepositInput{}
+	di := &pb.DepositData{}
 
-	if err := ssz.Decode(bytes.NewReader(encodedData), di); err != nil {
+	if err := ssz.Unmarshal(encodedData, di); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := fmt.Fprintf(w, "Failed to decode SSZ data: %v", err)
 		if err != nil {

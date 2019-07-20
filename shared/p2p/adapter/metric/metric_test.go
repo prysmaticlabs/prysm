@@ -26,9 +26,11 @@ func TestMessageMetrics_OK(t *testing.T) {
 		t.Error("Expected metric adapter")
 	}
 	data := &pb.Attestation{
-		AggregationBitfield: []byte{99},
+		AggregationBits: []byte{99},
 		Data: &pb.AttestationData{
-			Slot: 0,
+			Crosslink: &pb.Crosslink{
+				Shard: 0,
+			},
 		},
 	}
 	h := adapter(func(p2p.Message) { time.Sleep(10 * time.Millisecond) })

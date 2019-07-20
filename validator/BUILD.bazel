@@ -1,6 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+load("//tools:binary_targets.bzl", "binary_targets")
 
 go_library(
     name = "go_default_library",
@@ -66,7 +67,7 @@ container_push(
     image = ":image",
     registry = "gcr.io",
     repository = "prysmaticlabs/prysm/validator",
-    tag = "latest",
+    tag = "{DOCKER_TAG}",
     tags = ["manual"],
 )
 
@@ -76,3 +77,15 @@ go_binary(
     pure = "on",  # Enabled unless there is a valid reason to include cgo dep.
     visibility = ["//validator:__subpackages__"],
 )
+
+[go_binary(
+    name = "validator-{}-{}".format(
+        pair[0],
+        pair[1],
+    ),
+    embed = [":go_default_library"],
+    goarch = pair[1],
+    goos = pair[0],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+) for pair in binary_targets]

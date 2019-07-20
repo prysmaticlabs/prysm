@@ -2,17 +2,13 @@ package sync
 
 import (
 	"context"
-	"crypto/rand"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func NotSyncQuerierConfig() *QuerierConfig {
@@ -45,35 +41,12 @@ func initializeTestSyncService(ctx context.Context, cfg *Config, synced bool) *S
 	return services
 }
 
-func setupInitialDeposits(t *testing.T) ([]*pb.Deposit, []*bls.SecretKey) {
-	numOfDeposits := 10
-	privKeys := make([]*bls.SecretKey, numOfDeposits)
-	deposits := make([]*pb.Deposit, numOfDeposits)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositInput := &pb.DepositInput{
-			Pubkey: priv.PublicKey().Marshal(),
-		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-		privKeys[i] = priv
-	}
-	return deposits, privKeys
-}
-
 func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 	db := internal.SetupDB(t)
 
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, &pb.Eth1Data{}); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 

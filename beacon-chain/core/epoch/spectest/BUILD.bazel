@@ -1,0 +1,39 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["epoch_processing_test.yaml.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/spectest",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = ["//proto/beacon/p2p/v1:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "medium",
+    srcs = [
+        "crosslink_test.go",
+        "final_updates_test.go",
+        "justification_and_finalization_test.go",
+        "registry_test.go",
+        "slashings_test.go",
+    ],
+    data = [
+        "@eth2_spec_tests//:test_data",
+    ],
+    embed = [":go_default_library"],
+    tags = [
+        "spectest",
+    ],
+    deps = [
+        "//beacon-chain/core/epoch:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/params/spectest:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_ghodss_yaml//:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+        "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+    ],
+)
