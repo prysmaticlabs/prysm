@@ -25,13 +25,9 @@ var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
-	VerifyAttestationSigs         bool // VerifyAttestationSigs declares if the client will verify attestations.
-	EnableCrosslinks              bool // EnableCrosslinks in epoch processing.
-	EnableCheckBlockStateRoot     bool // EnableCheckBlockStateRoot in block processing.
 	DisableHistoricalStatePruning bool // DisableHistoricalStatePruning when updating finalized states.
 	DisableGossipSub              bool // DisableGossipSub in p2p messaging.
 	EnableCommitteesCache         bool // EnableCommitteesCache for state transition.
-	CacheTreeHash                 bool // CacheTreeHash determent whether tree hashes will be cached.
 	EnableExcessDeposits          bool // EnableExcessDeposits in validator balances.
 	NoGenesisDelay                bool // NoGenesisDelay when processing a chain start genesis event.
 }
@@ -55,22 +51,6 @@ func InitFeatureConfig(c *FeatureFlagConfig) {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
-	if ctx.GlobalBool(VerifyAttestationSigsFlag.Name) {
-		log.Info("Verifying signatures for attestations")
-		cfg.VerifyAttestationSigs = true
-	}
-	if ctx.GlobalBool(EnableCrosslinksFlag.Name) {
-		log.Info("Enabled crosslink computations")
-		cfg.EnableCrosslinks = true
-	}
-	if ctx.GlobalBool(EnableCheckBlockStateRootFlag.Name) {
-		log.Info("Enabled check block state root")
-		cfg.EnableCheckBlockStateRoot = true
-	}
-	if ctx.GlobalBool(CacheTreeHashFlag.Name) {
-		log.Info("Cache tree hashes for ssz")
-		cfg.CacheTreeHash = true
-	}
 	if ctx.GlobalBool(DisableHistoricalStatePruningFlag.Name) {
 		log.Info("Enabled historical state pruning")
 		cfg.DisableHistoricalStatePruning = true
@@ -90,14 +70,5 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 // on what flags are enabled for the validator client.
 func ConfigureValidatorFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
-	if ctx.GlobalBool(VerifyAttestationSigsFlag.Name) {
-		log.Info("Verifying signatures for attestations")
-		cfg.VerifyAttestationSigs = true
-	}
-	if ctx.GlobalBool(CacheTreeHashFlag.Name) {
-		log.Info("Cache tree hashes for ssz")
-		cfg.CacheTreeHash = true
-	}
-
 	InitFeatureConfig(cfg)
 }

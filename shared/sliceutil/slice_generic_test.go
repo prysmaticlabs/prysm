@@ -5,14 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
-
-func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		CacheTreeHash: false,
-	})
-}
 
 func TestGenericIntersection(t *testing.T) {
 	testCases := []struct {
