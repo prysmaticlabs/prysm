@@ -279,8 +279,6 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	validators[63463].Slashed = false
-
 	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
@@ -291,7 +289,6 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate private key got: %v", err)
 	}
-	validators[6033].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
@@ -309,6 +306,14 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
 	}
+
+	proposerIdx, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validators[proposerIdx].Slashed = false
+	validators[proposerIdx].Pubkey = priv.PublicKey().Marshal()
+
 	newState, err := blocks.ProcessBlockHeader(state, block, true)
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
