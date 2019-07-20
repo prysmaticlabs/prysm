@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -108,9 +107,6 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 }
 
 func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCheckBlockStateRoot: false,
-	})
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -150,15 +146,15 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	beaconState.Slot++
-	epoch := helpers.CurrentEpoch(beaconState)
+	slot := beaconState.Slot + 1
+	epoch := helpers.SlotToEpoch(slot)
 	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:       beaconState.Slot,
+		Slot:       slot,
 		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
 			Eth1Data: &pb.Eth1Data{
@@ -170,6 +166,16 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
+
+	s, err := chainService.AdvanceState(ctx, beaconState, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := ssz.HashTreeRoot(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.StateRoot = stateRoot[:]
 
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
@@ -187,9 +193,6 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 }
 
 func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCheckBlockStateRoot: false,
-	})
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -225,9 +228,11 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
+	beaconState, err = state.ProcessSlots(ctx, beaconState, beaconState.Slot+3)
 	block := &pb.BeaconBlock{
-		Slot:       beaconState.Slot + 4,
+		Slot:       beaconState.Slot + 1,
 		StateRoot:  []byte{},
 		ParentRoot: parentRoot[:],
 		Body: &pb.BeaconBlockBody{
@@ -239,6 +244,17 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 			Attestations: nil,
 		},
 	}
+
+	s, err := chainService.AdvanceState(ctx, beaconState, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := ssz.HashTreeRoot(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.StateRoot = stateRoot[:]
+
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -249,9 +265,6 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 }
 
 func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCheckBlockStateRoot: false,
-	})
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -333,9 +346,6 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if !db.IsEvilBlockHash(blockRoot) {
 		t.Error("Expected block root to have been blacklisted")
 	}
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableCheckBlockStateRoot: true,
-	})
 }
 
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {

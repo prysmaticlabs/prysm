@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -29,9 +28,6 @@ import (
 )
 
 func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		CacheTreeHash: false,
-	})
 	logrus.SetOutput(ioutil.Discard) // Ignore "validator activated" logs
 }
 
