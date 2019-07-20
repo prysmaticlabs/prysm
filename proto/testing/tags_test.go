@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestSSZTagSize(t *testing.T) {

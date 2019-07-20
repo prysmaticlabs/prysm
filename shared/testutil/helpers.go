@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,7 +23,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 		var sig [96]byte
 		var withdrawalCreds [32]byte
 		copy(withdrawalCreds[:], []byte("testing"))
-		depositData := &pb.DepositData{
+		depositData := &pb.Deposit_Data{
 			Amount:                params.BeaconConfig().MaxEffectiveBalance,
 			WithdrawalCredentials: withdrawalCreds[:],
 		}
@@ -34,7 +34,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			}
 			privKeys[i] = priv
 			pubkey = priv.PublicKey().Marshal()
-			depositData.Pubkey = pubkey
+			depositData.PublicKey = pubkey
 			domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
 			root, err := ssz.SigningRoot(depositData)
 			if err != nil {
@@ -48,7 +48,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			pubkey = make([]byte, params.BeaconConfig().BLSPubkeyLength)
 			copy(pubkey[:], []byte(strconv.FormatUint(uint64(i), 10)))
 			copy(sig[:], []byte("testing"))
-			depositData.Pubkey = pubkey
+			depositData.PublicKey = pubkey
 			depositData.Signature = sig[:]
 		}
 

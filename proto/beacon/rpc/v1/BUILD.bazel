@@ -12,6 +12,7 @@ go_proto_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/sharding/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:v1alpha1_go_proto",
         "@go_googleapis//google/api:annotations_go_proto",
         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
     ],
@@ -29,6 +30,7 @@ go_proto_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/sharding/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:v1alpha1_go_proto",
         "@go_googleapis//google/api:annotations_go_proto",
         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
     ],
@@ -50,6 +52,7 @@ proto_library(
     deps = [
         "//proto/beacon/p2p/v1:v1_proto",
         "//proto/sharding/p2p/v1:v1_proto",
+        "//proto/eth/v1alpha1:v1alpha1_proto",
         "@com_google_protobuf//:empty_proto",
         "@com_google_protobuf//:timestamp_proto",
         "@go_googleapis//google/api:annotations_proto",
