@@ -618,10 +618,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < len(beaconState.Validators); i++ {
-		pubKey := bytesutil.ToBytes48(beaconState.Validators[i].Pubkey)
+		pubKey := bytesutil.ToBytes48(beaconState.Validators[i].PublicKey)
 		attsService.InsertAttestationIntoStore(pubKey, &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: blockRoot[:],
+				BlockRoot: blockRoot[:],
 			}},
 		)
 	}
@@ -936,7 +936,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.PutUvarint(pubKeyBuf, uint64(i))
 		validators = append(validators, &ethpb.Validator{
-			Pubkey: pubKeyBuf,
+			PublicKey: pubKeyBuf,
 		})
 	}
 	state := &pb.BeaconState{
@@ -951,7 +951,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 		t.Fatalf("Could not delete validator idx: %v", err)
 	}
 	wantedIdx := uint64(1)
-	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
 	}
@@ -960,7 +960,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	}
 
 	wantedIdx = uint64(2)
-	if chainService.beaconDB.HasValidator(validators[wantedIdx].Pubkey) {
+	if chainService.beaconDB.HasValidator(validators[wantedIdx].PublicKey) {
 		t.Errorf("Validator index %d should have been deleted", wantedIdx)
 	}
 	if v.ExitedValFromEpoch(epoch) != nil {
@@ -978,7 +978,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.PutUvarint(pubKeyBuf, uint64(i))
 		validators = append(validators, &ethpb.Validator{
-			Pubkey: pubKeyBuf,
+			PublicKey: pubKeyBuf,
 		})
 	}
 	state := &pb.BeaconState{
@@ -991,7 +991,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	}
 
 	wantedIdx := uint64(2)
-	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
 	}
@@ -1016,7 +1016,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.PutUvarint(pubKeyBuf, uint64(i))
 		validators = append(validators, &ethpb.Validator{
-			Pubkey: pubKeyBuf,
+			PublicKey: pubKeyBuf,
 		})
 	}
 	state := &pb.BeaconState{
@@ -1029,7 +1029,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	}
 
 	wantedIdx := uint64(2)
-	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
 	}

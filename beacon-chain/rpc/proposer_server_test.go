@@ -400,7 +400,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Index: 0,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -409,7 +409,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Index: 1,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -421,7 +421,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Index: 2,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("c"),
+					PublicKey:             []byte("c"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -430,7 +430,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Index: 3,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("d"),
+					PublicKey:             []byte("d"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -515,7 +515,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			Index: 0,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -524,7 +524,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			Index: 1,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -537,7 +537,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			Index: i,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte{byte(i)},
+					PublicKey:             []byte{byte(i)},
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -615,7 +615,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			Index: 0,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -624,7 +624,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			Index: 1,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -637,7 +637,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			Index: i,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte{byte(i)},
+					PublicKey:             []byte{byte(i)},
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -722,7 +722,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 			Block: big.NewInt(1000),
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -732,7 +732,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 			Block: big.NewInt(1200),
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -829,7 +829,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 			Index: 0,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -838,7 +838,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 			Index: 1,
 			Deposit: &pbp2p.Deposit{
 				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},

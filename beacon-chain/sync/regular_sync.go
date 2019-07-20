@@ -399,7 +399,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRoot)),
+		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BlockRoot)),
 		"justifiedEpoch": attestation.Data.Source.Epoch,
 	}).Debug("Received an attestation")
 

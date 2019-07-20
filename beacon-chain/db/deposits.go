@@ -116,7 +116,7 @@ func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.
 	var deposit *ethpb.Deposit
 	var blockNum *big.Int
 	for _, ctnr := range db.deposits {
-		if bytes.Equal(ctnr.Deposit.Data.Pubkey, pubKey) {
+		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
 			deposit = ctnr.Deposit
 			blockNum = ctnr.Block
 			break

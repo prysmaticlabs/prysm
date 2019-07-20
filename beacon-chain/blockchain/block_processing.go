@@ -280,7 +280,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 			idxNotInState = append(idxNotInState, idx)
 			continue
 		}
-		pubKey := state.Validators[idx].Pubkey
+		pubKey := state.Validators[idx].PublicKey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
 			return fmt.Errorf("could not save validator index: %v", err)
 		}
@@ -298,7 +298,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range exitedValidators {
-		pubKey := state.Validators[idx].Pubkey
+		pubKey := state.Validators[idx].PublicKey
 		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
 			return fmt.Errorf("could not delete validator index: %v", err)
 		}

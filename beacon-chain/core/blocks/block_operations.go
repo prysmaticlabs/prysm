@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -156,7 +157,7 @@ func ProcessBlockHeader(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 	if verifySignatures {
-		pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
+		pub, err := bls.PublicKeyFromBytes(proposer.PublicKey)
 		if err != nil {
 			return nil, fmt.Errorf("could not deserialize proposer public key: %v", err)
 		}
@@ -227,7 +228,7 @@ func ProcessRandao(
 //   block.body.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
 func verifyBlockRandao(beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody, proposerIdx uint64) error {
 	proposer := beaconState.Validators[proposerIdx]
-	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
+	pub, err := bls.PublicKeyFromBytes(proposer.PublicKey)
 	if err != nil {
 		return fmt.Errorf("could not deserialize proposer public key: %v", err)
 	}
@@ -308,11 +309,11 @@ func verifyProposerSlashing(
 		return errors.New("expected slashing headers to differ")
 	}
 	if !helpers.IsSlashableValidator(proposer, helpers.CurrentEpoch(beaconState)) {
-		return fmt.Errorf("validator with key %#x is not slashable", proposer.Pubkey)
+		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 
 	if verifySignatures {
-		pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
+		pub, err := bls.PublicKeyFromBytes(proposer.PublicKey)
 		if err != nil {
 			return fmt.Errorf("could not deserialize proposer public key: %v", err)
 		}
@@ -518,7 +519,7 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation, ver
 	if err != nil {
 		return nil, err
 	}
-	pendingAtt := &ethpb.PendingAttestation{
+	pendingAtt := &pb.PendingAttestation{
 		Data:            data,
 		AggregationBits: att.AggregationBits,
 		InclusionDelay:  beaconState.Slot - attestationSlot,
@@ -742,12 +743,12 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 		domain := helpers.Domain(beaconState, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
 		var pubkeys []*bls.PublicKey
 		if len(custodyBit0Indices) > 0 {
-			pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit0Indices[0]].Pubkey)
+			pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit0Indices[0]].PublicKey)
 			if err != nil {
 				return fmt.Errorf("could not deserialize validator public key: %v", err)
 			}
 			for _, i := range custodyBit0Indices[1:] {
-				pk, err := bls.PublicKeyFromBytes(beaconState.Validators[i].Pubkey)
+				pk, err := bls.PublicKeyFromBytes(beaconState.Validators[i].PublicKey)
 				if err != nil {
 					return fmt.Errorf("could not deserialize validator public key: %v", err)
 				}
@@ -756,12 +757,12 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 			pubkeys = append(pubkeys, pubkey)
 		}
 		if len(custodyBit1Indices) > 0 {
-			pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit1Indices[0]].Pubkey)
+			pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit1Indices[0]].PublicKey)
 			if err != nil {
 				return fmt.Errorf("could not deserialize validator public key: %v", err)
 			}
 			for _, i := range custodyBit1Indices[1:] {
-				pk, err := bls.PublicKeyFromBytes(beaconState.Validators[i].Pubkey)
+				pk, err := bls.PublicKeyFromBytes(beaconState.Validators[i].PublicKey)
 				if err != nil {
 					return fmt.Errorf("could not deserialize validator public key: %v", err)
 				}
@@ -770,8 +771,8 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 			pubkeys = append(pubkeys, pubkey)
 		}
 
-		cus0 := &ethpb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: false}
-		cus1 := &ethpb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: true}
+		cus0 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: false}
+		cus1 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: true}
 		cus0Root, err := ssz.HashTreeRoot(cus0)
 		if err != nil {
 			return fmt.Errorf("could not tree hash att data and custody bit 0: %v", err)
@@ -815,7 +816,7 @@ func ProcessDeposits(
 	for _, deposit := range deposits {
 		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap, verifySignatures, true)
 		if err != nil {
-			return nil, fmt.Errorf("could not process deposit from %#x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
+			return nil, fmt.Errorf("could not process deposit from %#x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
 		}
 	}
 	return beaconState, nil
@@ -874,10 +875,10 @@ func ProcessDeposit(
 	verifyTree bool,
 ) (*pb.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
-		return nil, fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
+		return nil, fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
 	}
 	beaconState.Eth1DepositIndex++
-	pubKey := deposit.Data.Pubkey
+	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 	if !ok {
@@ -904,7 +905,7 @@ func ProcessDeposit(
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
 		}
 		beaconState.Validators = append(beaconState.Validators, &ethpb.Validator{
-			Pubkey:                     pubKey,
+			PublicKey:                  pubKey,
 			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
 			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
@@ -1015,7 +1016,7 @@ func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit, verifySi
 		)
 	}
 	if verifySignatures {
-		pub, err := bls.PublicKeyFromBytes(validator.Pubkey)
+		pub, err := bls.PublicKeyFromBytes(validator.PublicKey)
 		if err != nil {
 			return fmt.Errorf("could not deserialize validator public key: %v", err)
 		}
@@ -1047,7 +1048,7 @@ func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit, verifySi
 //	  assert state.balances[transfer.sender] >= max(transfer.amount + transfer.fee, transfer.amount, transfer.fee)
 //    # A transfer is valid in only one slot
 //    assert state.slot == transfer.slot
-//    # Sender must satisfy at least one of the following conditions in the parenthesis:
+//    # SenderIndex must satisfy at least one of the following conditions in the parenthesis:
 //    assert (
 //		  # * Has not been activated
 //        state.validator_registry[transfer.sender].activation_eligibility_epoch == FAR_FUTURE_EPOCH or
@@ -1082,8 +1083,8 @@ func ProcessTransfers(
 			return nil, fmt.Errorf("could not verify transfer %d: %v", idx, err)
 		}
 		// Process the transfer between accounts.
-		beaconState = helpers.DecreaseBalance(beaconState, transfer.Sender, transfer.Amount+transfer.Fee)
-		beaconState = helpers.IncreaseBalance(beaconState, transfer.Recipient, transfer.Amount)
+		beaconState = helpers.DecreaseBalance(beaconState, transfer.SenderIndex, transfer.Amount+transfer.Fee)
+		beaconState = helpers.IncreaseBalance(beaconState, transfer.RecipientIndex, transfer.Amount)
 		proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not determine beacon proposer index: %v", err)
@@ -1091,18 +1092,18 @@ func ProcessTransfers(
 		beaconState = helpers.IncreaseBalance(beaconState, proposerIndex, transfer.Fee)
 
 		// Finally, we verify balances will not go below the mininum.
-		if beaconState.Balances[transfer.Sender] < params.BeaconConfig().MinDepositAmount &&
-			0 < beaconState.Balances[transfer.Sender] {
+		if beaconState.Balances[transfer.SenderIndex] < params.BeaconConfig().MinDepositAmount &&
+			0 < beaconState.Balances[transfer.SenderIndex] {
 			return nil, fmt.Errorf(
 				"sender balance below critical level: %v",
-				beaconState.Balances[transfer.Sender],
+				beaconState.Balances[transfer.SenderIndex],
 			)
 		}
-		if beaconState.Balances[transfer.Recipient] < params.BeaconConfig().MinDepositAmount &&
-			0 < beaconState.Balances[transfer.Recipient] {
+		if beaconState.Balances[transfer.RecipientIndex] < params.BeaconConfig().MinDepositAmount &&
+			0 < beaconState.Balances[transfer.RecipientIndex] {
 			return nil, fmt.Errorf(
 				"recipient balance below critical level: %v",
-				beaconState.Balances[transfer.Recipient],
+				beaconState.Balances[transfer.RecipientIndex],
 			)
 		}
 	}
@@ -1110,7 +1111,7 @@ func ProcessTransfers(
 }
 
 func verifyTransfer(beaconState *pb.BeaconState, transfer *ethpb.Transfer, verifySignatures bool) error {
-	if transfer.Sender > uint64(len(beaconState.Validators)) {
+	if transfer.SenderIndex > uint64(len(beaconState.Validators)) {
 		return errors.New("transfer sender index out of bounds in validator registry")
 	}
 
@@ -1121,8 +1122,8 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *ethpb.Transfer, verif
 	if transfer.Amount+transfer.Fee > maxVal {
 		maxVal = transfer.Amount + transfer.Fee
 	}
-	sender := beaconState.Validators[transfer.Sender]
-	senderBalance := beaconState.Balances[transfer.Sender]
+	sender := beaconState.Validators[transfer.SenderIndex]
+	senderBalance := beaconState.Balances[transfer.SenderIndex]
 	// Verify the balance the covers amount and fee (with overflow protection).
 	if senderBalance < maxVal {
 		return fmt.Errorf("expected sender balance %d >= %d", senderBalance, maxVal)
@@ -1147,13 +1148,13 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *ethpb.Transfer, verif
 	}
 	// Verify that the pubkey is valid.
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
-	hashed := hashutil.Hash(transfer.Pubkey)
+	hashed := hashutil.Hash(transfer.SenderWithdrawalPublicKey)
 	buf = append(buf, hashed[:][1:]...)
 	if !bytes.Equal(sender.WithdrawalCredentials, buf) {
 		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
 	}
 	if verifySignatures {
-		pub, err := bls.PublicKeyFromBytes(transfer.Pubkey)
+		pub, err := bls.PublicKeyFromBytes(transfer.SenderWithdrawalPublicKey)
 		if err != nil {
 			return fmt.Errorf("could not deserialize validator public key: %v", err)
 		}

@@ -225,7 +225,7 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 //	2.) retrieve the canonical block by using voted block's slot number
 //	3.) return true if voted block root and the canonical block root are the same
 func (s *Service) IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error) {
-	votedBlk, err := s.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+	votedBlk, err := s.beaconDB.Block(bytesutil.ToBytes32(att.Data.BlockRoot))
 	if err != nil {
 		return false, fmt.Errorf("could not hash block: %v", err)
 	}
@@ -243,7 +243,7 @@ func (s *Service) IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (b
 	if err != nil {
 		return false, fmt.Errorf("could not hash block: %v", err)
 	}
-	return bytes.Equal(att.Data.BeaconBlockRoot, canonicalRoot[:]), nil
+	return bytes.Equal(att.Data.BlockRoot, canonicalRoot[:]), nil
 }
 
 // removeOperations removes the processed operations from operation pool and DB.

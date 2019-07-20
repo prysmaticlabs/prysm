@@ -32,7 +32,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	var validators []*ethpb.Validator
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &ethpb.Validator{
-			Pubkey:          []byte{byte(i)},
+			PublicKey:       []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
 		})
@@ -69,7 +69,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48(beaconState.Validators[10].Pubkey)
+	pubkey := bytesutil.ToBytes48(beaconState.Validators[10].PublicKey)
 	if service.store.m[pubkey].Data.Crosslink.Shard !=
 		attestation.Data.Crosslink.Shard {
 		t.Errorf("Incorrect shard stored, wanted: %d, got: %d",
@@ -105,7 +105,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	var validators []*ethpb.Validator
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &ethpb.Validator{
-			Pubkey:          []byte{byte(i)},
+			PublicKey:       []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
 		})
@@ -169,7 +169,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
-		Validators: []*ethpb.Validator{{Pubkey: pubKey}},
+		Validators: []*ethpb.Validator{{PublicKey: pubKey}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	attestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: blockRoot[:],
+			BlockRoot: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	service.store.m[pubKey48] = attestation
@@ -223,7 +223,7 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	var validators []*ethpb.Validator
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &ethpb.Validator{
-			Pubkey:          []byte{byte(i)},
+			PublicKey:       []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
 		})
@@ -275,7 +275,7 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	var latestActiveIndexRoots [][]byte
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &ethpb.Validator{
-			Pubkey:          []byte{byte(i)},
+			PublicKey:       []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
 		})
@@ -328,7 +328,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	var validators []*ethpb.Validator
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &ethpb.Validator{
-			Pubkey:          []byte{byte(i)},
+			PublicKey:       []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
 		})

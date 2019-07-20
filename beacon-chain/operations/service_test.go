@@ -310,7 +310,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: r1[:]}}
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BlockRoot: r1[:]}}
 	canonical, err := s.IsAttCanonical(context.Background(), att1)
 	if err != nil {
 		t.Fatal(err)
@@ -356,7 +356,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: r1[:]}}
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BlockRoot: r1[:]}}
 	canonical, err = s.IsAttCanonical(context.Background(), att1)
 	if err != nil {
 		t.Fatal(err)

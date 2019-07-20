@@ -78,7 +78,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 		}
 
 		for i, validator := range beaconState.Validators {
-			h := hashutil.Hash(validator.Pubkey)
+			h := hashutil.Hash(validator.PublicKey)
 			buf := make([]byte, binary.MaxVarintLen64)
 			n := binary.PutUvarint(buf, uint64(i))
 			if err := validatorBkt.Put(h[:], buf[:n]); err != nil {

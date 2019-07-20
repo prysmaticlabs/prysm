@@ -19,9 +19,9 @@ func (w *Web3Service) processDeposit(
 	deposit *ethpb.Deposit,
 ) error {
 	if err := verifyDeposit(eth1Data, deposit); err != nil {
-		return fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
+		return fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
 	}
-	pubKey := bytesutil.ToBytes48(deposit.Data.Pubkey)
+	pubKey := bytesutil.ToBytes48(deposit.Data.PublicKey)
 	amount := deposit.Data.Amount
 	currBal, ok := w.depositedPubkeys[pubKey]
 	if !ok {

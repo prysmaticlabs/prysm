@@ -39,7 +39,7 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
 			deposits := tt.Deposits
-			dataLeaves := make([]*ethpb.DepositData, len(deposits))
+			dataLeaves := make([]*ethpb.Deposit_Data, len(deposits))
 			for i := range deposits {
 				dataLeaves[i] = deposits[i].Data
 			}

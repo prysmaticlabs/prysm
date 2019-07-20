@@ -110,8 +110,8 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	copy(sig[:], []byte("testing"))
 	copy(withdrawalCreds[:], []byte("testing"))
 
-	data := &ethpb.DepositData{
-		Pubkey:                pubkey[:],
+	data := &ethpb.Deposit_Data{
+		PublicKey:             pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
 	}
@@ -181,8 +181,8 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &ethpb.DepositData{
-		Pubkey:                pubkey[:],
+	data := &ethpb.Deposit_Data{
+		PublicKey:             pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
 	}
@@ -214,7 +214,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 	}
 
-	if !bytes.Equal(loggedPubkey, data.Pubkey) {
+	if !bytes.Equal(loggedPubkey, data.PublicKey) {
 		t.Errorf("Pubkey is not the same as the data that was put in %v", loggedPubkey)
 	}
 

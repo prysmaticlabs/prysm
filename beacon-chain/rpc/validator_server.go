@@ -455,7 +455,7 @@ func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 	pubkeys := make(map[[96]byte]bool)
 	deposits := vs.powChainService.ChainStartDeposits()
 	for _, dep := range deposits {
-		pubkeys[bytesutil.ToBytes96(dep.Data.Pubkey)] = true
+		pubkeys[bytesutil.ToBytes96(dep.Data.PublicKey)] = true
 	}
 	return pubkeys
 }

@@ -63,7 +63,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			BeaconBlockRoot: root[:],
+			BlockRoot: root[:],
 			Crosslink: &pbp2p.Crosslink{
 				Shard:    935,
 				DataRoot: []byte{'a'},
@@ -163,7 +163,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 
 	expectedInfo := &pbp2p.AttestationData{
-		BeaconBlockRoot: blockRoot[:],
+		BlockRoot: blockRoot[:],
 		Source: &pbp2p.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
@@ -280,7 +280,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 
 	expectedInfo := &pbp2p.AttestationData{
-		BeaconBlockRoot: blockRoot[:],
+		BlockRoot: blockRoot[:],
 		Source: &pbp2p.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),
 			Root:  justifiedBlockRoot[:],

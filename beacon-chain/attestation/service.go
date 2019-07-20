@@ -105,7 +105,7 @@ func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uin
 	}
 	validator := beaconState.Validators[index]
 
-	pubKey := bytesutil.ToBytes48(validator.Pubkey)
+	pubKey := bytesutil.ToBytes48(validator.PublicKey)
 	a.store.RLock()
 	defer a.store.RUnlock()
 	if _, exists := a.store.m[pubKey]; !exists {
@@ -116,7 +116,7 @@ func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uin
 	if attestation == nil {
 		return nil, nil
 	}
-	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRoot)
+	targetRoot := bytesutil.ToBytes32(attestation.Data.BlockRoot)
 	if !a.beaconDB.HasBlock(targetRoot) {
 		return nil, nil
 	}
@@ -261,7 +261,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
-		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].Pubkey)
+		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].PublicKey)
 		newAttestationSlot := slot
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
@@ -280,7 +280,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 				},
 			).Debug("Attestation store updated")
 
-			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRoot)
+			blockRoot := bytesutil.ToBytes32(attestation.Data.BlockRoot)
 			votedBlock, err := a.beaconDB.Block(blockRoot)
 			if err != nil {
 				return err

@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -337,7 +338,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*ethpb.PendingAttestation{}
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
@@ -464,7 +465,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		},
 	}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*ethpb.PendingAttestation{}
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
 		t.Fatal(err)
@@ -492,7 +493,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
-	atts := []*ethpb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1}}}}
+	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1}}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{CurrentEpochAttestations: atts})
 	if !strings.Contains(err.Error(), "could not get target atts prev epoch") {
 		t.Fatal("Did not receive wanted error")
@@ -502,7 +503,7 @@ func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
 func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 	epoch := uint64(1)
 
-	atts := []*ethpb.PendingAttestation{{Data: &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{Shard: 100}}}}
+	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{Shard: 100}}}}
 	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
 		Slot:                     epoch * params.BeaconConfig().SlotsPerEpoch,
 		BlockRoots:               make([][]byte, 128),
@@ -518,7 +519,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
-	atts := []*ethpb.PendingAttestation{{Data: &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{Shard: 0}, Target: &ethpb.Checkpoint{}}}}
+	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{Shard: 0}, Target: &ethpb.Checkpoint{}}}}
 	var crosslinks []*ethpb.Crosslink
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &ethpb.Crosslink{
@@ -578,9 +579,9 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	var atts []*ethpb.PendingAttestation
+	var atts []*pb.PendingAttestation
 	for i := uint64(0); i < shardCount; i++ {
-		atts = append(atts, &ethpb.PendingAttestation{
+		atts = append(atts, &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
@@ -727,9 +728,9 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	// Set up deposit object for block
 	deposit := &ethpb.Deposit{
-		Data: &ethpb.DepositData{
-			Pubkey: []byte{1, 2, 3},
-			Amount: params.BeaconConfig().MaxEffectiveBalance,
+		Data: &ethpb.Deposit_Data{
+			PublicKey: []byte{1, 2, 3},
+			Amount:    params.BeaconConfig().MaxEffectiveBalance,
 		},
 	}
 	leaf, err := ssz.HashTreeRoot(deposit.Data)
@@ -756,7 +757,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	s.Validators[proposerIdx].Pubkey = priv.PublicKey().Marshal()
+	s.Validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
 	domain := helpers.Domain(s, 0, params.BeaconConfig().DomainRandao)
@@ -765,12 +766,12 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	// Set up transfer object for block
 	transfers := []*ethpb.Transfer{
 		{
-			Slot:      s.Slot,
-			Sender:    3,
-			Recipient: 4,
-			Fee:       params.BeaconConfig().MinDepositAmount,
-			Amount:    params.BeaconConfig().MinDepositAmount,
-			Pubkey:    []byte("A"),
+			Slot:                      s.Slot,
+			SenderIndex:               3,
+			RecipientIndex:            4,
+			Fee:                       params.BeaconConfig().MinDepositAmount,
+			Amount:                    params.BeaconConfig().MinDepositAmount,
+			SenderWithdrawalPublicKey: []byte("A"),
 		},
 	}
 	buf = []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}

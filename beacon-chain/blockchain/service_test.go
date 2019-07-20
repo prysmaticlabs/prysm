@@ -148,7 +148,7 @@ var _ = p2p.Broadcaster(&mockBroadcaster{})
 
 func createPreChainStartDeposit(pk []byte) *ethpb.Deposit {
 	balance := params.BeaconConfig().MaxEffectiveBalance
-	depositData := &ethpb.DepositData{Pubkey: pk, Amount: balance, Signature: make([]byte, 96)}
+	depositData := &ethpb.Deposit_Data{PublicKey: pk, Amount: balance, Signature: make([]byte, 96)}
 
 	return &ethpb.Deposit{
 		Data: depositData,

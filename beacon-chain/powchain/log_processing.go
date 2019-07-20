@@ -86,9 +86,9 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
 	validData := true
-	depositData := &ethpb.DepositData{
+	depositData := &ethpb.Deposit_Data{
 		Amount:                bytesutil.FromBytes8(amount),
-		Pubkey:                pubkey,
+		PublicKey:             pubkey,
 		Signature:             signature,
 		WithdrawalCredentials: withdrawalCredentials,
 	}
@@ -117,7 +117,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted && validData {
-		var pubkey = fmt.Sprintf("#%x", depositData.Pubkey)
+		var pubkey = fmt.Sprintf("#%x", depositData.PublicKey)
 		if w.beaconDB.PubkeyInChainstart(w.ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
 		} else {
@@ -145,7 +145,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
-			"publicKey":       fmt.Sprintf("%#x", depositData.Pubkey),
+			"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
 			"merkleTreeIndex": index,
 		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()

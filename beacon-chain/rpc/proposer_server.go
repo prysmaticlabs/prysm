@@ -175,7 +175,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 
 			log.WithError(err).WithFields(logrus.Fields{
 				"slot":     slot,
-				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot))}).Info(
+				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BlockRoot))}).Info(
 				"Deleting failed pending attestation from DB")
 			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, fmt.Errorf("could not delete failed attestation: %v", err)

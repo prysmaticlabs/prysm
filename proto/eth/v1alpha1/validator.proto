@@ -125,7 +125,7 @@ message Validator {
 
     // Epoch when the validator became eligible for activation. This field may
     // be zero if the validator was present in the Ethereum 2.0 genesis.
-    uint64 activation_eligiblity_epoch = 3;
+    uint64 activation_eligibility_epoch = 3;
 
     // Epoch when the validator was activated. This field may be zero if the
     // validator was present in the Ethereum 2.0 genesis.

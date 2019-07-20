@@ -177,7 +177,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	validators := make([]*ethpb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
-			Pubkey: []byte(strconv.Itoa(i)),
+			PublicKey: []byte(strconv.Itoa(i)),
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
@@ -255,7 +255,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	validators := make([]*ethpb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
-			Pubkey: []byte(strconv.Itoa(i)),
+			PublicKey: []byte(strconv.Itoa(i)),
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())

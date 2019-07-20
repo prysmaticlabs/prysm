@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -22,9 +23,9 @@ import (
 // MatchedAttestations is an object that contains the correctly
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
-	source []*ethpb.PendingAttestation
-	Target []*ethpb.PendingAttestation
-	head   []*ethpb.PendingAttestation
+	source []*pb.PendingAttestation
+	Target []*pb.PendingAttestation
+	head   []*pb.PendingAttestation
 }
 
 // MatchAttestations matches the attestations gathered in a span of an epoch
@@ -59,7 +60,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	}
 
 	// Decide if the source attestations are coming from current or previous epoch.
-	var srcAtts []*ethpb.PendingAttestation
+	var srcAtts []*pb.PendingAttestation
 	if epoch == currentEpoch {
 		srcAtts = state.CurrentEpochAttestations
 	} else {
@@ -70,8 +71,8 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
 	}
 
-	tgtAtts := make([]*ethpb.PendingAttestation, 0, len(srcAtts))
-	headAtts := make([]*ethpb.PendingAttestation, 0, len(srcAtts))
+	tgtAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
+	headAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
 	for _, srcAtt := range srcAtts {
 		// If the target root matches attestation's target root,
 		// then we know this attestation has correctly voted for target.
@@ -89,7 +90,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 		if err != nil {
 			return nil, fmt.Errorf("could not get block root for slot %d: %v", slot, err)
 		}
-		if bytes.Equal(srcAtt.Data.BeaconBlockRoot, headRoot) {
+		if bytes.Equal(srcAtt.Data.BlockRoot, headRoot) {
 			headAtts = append(headAtts, srcAtt)
 		}
 	}
@@ -110,7 +111,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 // Spec pseudocode definition:
 //  def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
 //    return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
-func AttestingBalance(state *pb.BeaconState, atts []*ethpb.PendingAttestation) (uint64, error) {
+func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uint64, error) {
 	indices, err := unslashedAttestingIndices(state, atts)
 	if err != nil {
 		return 0, fmt.Errorf("could not get attesting indices: %v", err)
@@ -530,7 +531,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Set historical root accumulator.
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
 	if nextEpoch%epochsPerHistoricalRoot == 0 {
-		historicalBatch := &ethpb.HistoricalBatch{
+		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots,
 			StateRoots: state.StateRoots,
 		}
@@ -543,7 +544,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Rotate current and previous epoch attestations.
 	state.PreviousEpochAttestations = state.CurrentEpochAttestations
-	state.CurrentEpochAttestations = []*ethpb.PendingAttestation{}
+	state.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	return state, nil
 }
@@ -557,7 +558,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    for a in attestations:
 //        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bitfield))
 //    return sorted(filter(lambda index: not state.validator_registry[index].slashed, list(output)))
-func unslashedAttestingIndices(state *pb.BeaconState, atts []*ethpb.PendingAttestation) ([]uint64, error) {
+func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
 	for _, att := range atts {
 		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
@@ -596,7 +597,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*ethpb.PendingAttes
 //    winning_attestations = [a for a in attestations if a.data.crosslink == winning_crosslink]
 //    return winning_crosslink, get_unslashed_attesting_indices(state, winning_attestations)
 func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb.Crosslink, []uint64, error) {
-	var shardAtts []*ethpb.PendingAttestation
+	var shardAtts []*pb.PendingAttestation
 	matchedAtts, err := MatchAttestations(state, epoch)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get matching attestations: %v", err)
@@ -633,7 +634,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb
 			ParentRoot: params.BeaconConfig().ZeroHash[:],
 		}, nil, nil
 	}
-	var crosslinkAtts []*ethpb.PendingAttestation
+	var crosslinkAtts []*pb.PendingAttestation
 	var winnerBalance uint64
 	var winnerCrosslink *ethpb.Crosslink
 	// Out of the existing shard crosslinks, pick the one that has the
@@ -774,14 +775,14 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get source, target and head attestations: %v", err)
 	}
-	var attsPackage [][]*ethpb.PendingAttestation
+	var attsPackage [][]*pb.PendingAttestation
 	attsPackage = append(attsPackage, atts.source)
 	attsPackage = append(attsPackage, atts.Target)
 	attsPackage = append(attsPackage, atts.head)
 
 	// Cache the validators who voted correctly for source in a map
 	// to calculate earliest attestation rewards later.
-	attestersVotedSoruce := make(map[uint64]*ethpb.PendingAttestation)
+	attestersVotedSoruce := make(map[uint64]*pb.PendingAttestation)
 	// Compute rewards / penalties for each attestation in the list and update
 	// the rewards and penalties lists.
 	for i, matchAtt := range attsPackage {
@@ -794,7 +795,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		// Construct a map to look up validators that voted for source, target or head.
 		for _, index := range indices {
 			if i == 0 {
-				attestersVotedSoruce[index] = &ethpb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
+				attestersVotedSoruce[index] = &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
 			}
 			attested[index] = true
 		}
@@ -945,8 +946,8 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 }
 
 // attsForCrosslink returns the attestations of the input crosslink.
-func attsForCrosslink(crosslink *ethpb.Crosslink, atts []*ethpb.PendingAttestation) []*ethpb.PendingAttestation {
-	var crosslinkAtts []*ethpb.PendingAttestation
+func attsForCrosslink(crosslink *ethpb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
+	var crosslinkAtts []*pb.PendingAttestation
 	for _, a := range atts {
 		if proto.Equal(a.Data.Crosslink, crosslink) {
 			crosslinkAtts = append(crosslinkAtts, a)

@@ -233,7 +233,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	pubKey := []byte{'A'}
 	beaconState := &pb.BeaconState{
 		Validators: []*ethpb.Validator{{
-			Pubkey:    pubKey,
+			PublicKey: pubKey,
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
 	}
 
@@ -263,7 +263,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: blockRoot[:],
+			BlockRoot: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	attsService.InsertAttestationIntoStore(pubKey48, att)
@@ -1528,7 +1528,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *ethpb.BeaconBlock, *pb.BeaconState, 
 		privKeys = append(privKeys, priv)
 		Validators = append(Validators,
 			&ethpb.Validator{
-				Pubkey:    priv.PublicKey().Marshal(),
+				PublicKey: priv.PublicKey().Marshal(),
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			})
 		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxEffectiveBalance)

@@ -316,17 +316,17 @@ func (m *AttestationDataRequest) GetShard() uint64 {
 }
 
 type Validator struct {
-	PublicKey                 []byte   `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
-	WithdrawalCredentials     []byte   `protobuf:"bytes,2,opt,name=withdrawal_credentials,json=withdrawalCredentials,proto3" json:"withdrawal_credentials,omitempty" ssz-size:"32"`
-	ActivationEligiblityEpoch uint64   `protobuf:"varint,3,opt,name=activation_eligiblity_epoch,json=activationEligiblityEpoch,proto3" json:"activation_eligiblity_epoch,omitempty"`
-	ActivationEpoch           uint64   `protobuf:"varint,4,opt,name=activation_epoch,json=activationEpoch,proto3" json:"activation_epoch,omitempty"`
-	ExitEpoch                 uint64   `protobuf:"varint,5,opt,name=exit_epoch,json=exitEpoch,proto3" json:"exit_epoch,omitempty"`
-	WithdrawableEpoch         uint64   `protobuf:"varint,6,opt,name=withdrawable_epoch,json=withdrawableEpoch,proto3" json:"withdrawable_epoch,omitempty"`
-	Slashed                   bool     `protobuf:"varint,7,opt,name=slashed,proto3" json:"slashed,omitempty"`
-	EffectiveBalance          uint64   `protobuf:"varint,8,opt,name=effective_balance,json=effectiveBalance,proto3" json:"effective_balance,omitempty"`
-	XXX_NoUnkeyedLiteral      struct{} `json:"-"`
-	XXX_unrecognized          []byte   `json:"-"`
-	XXX_sizecache             int32    `json:"-"`
+	PublicKey                  []byte   `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
+	WithdrawalCredentials      []byte   `protobuf:"bytes,2,opt,name=withdrawal_credentials,json=withdrawalCredentials,proto3" json:"withdrawal_credentials,omitempty" ssz-size:"32"`
+	ActivationEligibilityEpoch uint64   `protobuf:"varint,3,opt,name=activation_eligibility_epoch,json=activationEligibilityEpoch,proto3" json:"activation_eligibility_epoch,omitempty"`
+	ActivationEpoch            uint64   `protobuf:"varint,4,opt,name=activation_epoch,json=activationEpoch,proto3" json:"activation_epoch,omitempty"`
+	ExitEpoch                  uint64   `protobuf:"varint,5,opt,name=exit_epoch,json=exitEpoch,proto3" json:"exit_epoch,omitempty"`
+	WithdrawableEpoch          uint64   `protobuf:"varint,6,opt,name=withdrawable_epoch,json=withdrawableEpoch,proto3" json:"withdrawable_epoch,omitempty"`
+	Slashed                    bool     `protobuf:"varint,7,opt,name=slashed,proto3" json:"slashed,omitempty"`
+	EffectiveBalance           uint64   `protobuf:"varint,8,opt,name=effective_balance,json=effectiveBalance,proto3" json:"effective_balance,omitempty"`
+	XXX_NoUnkeyedLiteral       struct{} `json:"-"`
+	XXX_unrecognized           []byte   `json:"-"`
+	XXX_sizecache              int32    `json:"-"`
 }
 
 func (m *Validator) Reset()         { *m = Validator{} }
@@ -376,9 +376,9 @@ func (m *Validator) GetWithdrawalCredentials() []byte {
 	return nil
 }
 
-func (m *Validator) GetActivationEligiblityEpoch() uint64 {
+func (m *Validator) GetActivationEligibilityEpoch() uint64 {
 	if m != nil {
-		return m.ActivationEligiblityEpoch
+		return m.ActivationEligibilityEpoch
 	}
 	return 0
 }
@@ -691,10 +691,10 @@ func (m *Validator) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintValidator(dAtA, i, uint64(len(m.WithdrawalCredentials)))
 		i += copy(dAtA[i:], m.WithdrawalCredentials)
 	}
-	if m.ActivationEligiblityEpoch != 0 {
+	if m.ActivationEligibilityEpoch != 0 {
 		dAtA[i] = 0x18
 		i++
-		i = encodeVarintValidator(dAtA, i, uint64(m.ActivationEligiblityEpoch))
+		i = encodeVarintValidator(dAtA, i, uint64(m.ActivationEligibilityEpoch))
 	}
 	if m.ActivationEpoch != 0 {
 		dAtA[i] = 0x20
@@ -860,8 +860,8 @@ func (m *Validator) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovValidator(uint64(l))
 	}
-	if m.ActivationEligiblityEpoch != 0 {
-		n += 1 + sovValidator(uint64(m.ActivationEligiblityEpoch))
+	if m.ActivationEligibilityEpoch != 0 {
+		n += 1 + sovValidator(uint64(m.ActivationEligibilityEpoch))
 	}
 	if m.ActivationEpoch != 0 {
 		n += 1 + sovValidator(uint64(m.ActivationEpoch))
@@ -1567,9 +1567,9 @@ func (m *Validator) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ActivationEligiblityEpoch", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ActivationEligibilityEpoch", wireType)
 			}
-			m.ActivationEligiblityEpoch = 0
+			m.ActivationEligibilityEpoch = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowValidator
@@ -1579,7 +1579,7 @@ func (m *Validator) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.ActivationEligiblityEpoch |= uint64(b&0x7F) << shift
+				m.ActivationEligibilityEpoch |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}

@@ -10,6 +10,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
 	sszspectest "github.com/prysmaticlabs/go-ssz/spectests"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -74,7 +75,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.AttestationDataAndCustodyBit.Value) {
-			p := &ethpb.AttestationDataAndCustodyBit{}
+			p := &pb.AttestationDataAndCustodyBit{}
 			if err := testutil.ConvertToPb(testCase.AttestationDataAndCustodyBit.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -153,7 +154,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.BeaconState.Value) {
-			p := &ethpb.BeaconState{}
+			p := &pb.BeaconState{}
 			if err := testutil.ConvertToPb(testCase.BeaconState.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -225,7 +226,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.Fork.Value) {
-			p := &ethpb.Fork{}
+			p := &pb.Fork{}
 			if err := testutil.ConvertToPb(testCase.Fork.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -238,7 +239,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.HistoricalBatch.Value) {
-			p := &ethpb.HistoricalBatch{}
+			p := &pb.HistoricalBatch{}
 			if err := testutil.ConvertToPb(testCase.HistoricalBatch.Value, p); err != nil {
 				t.Fatal(err)
 			}
@@ -271,7 +272,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 			}
 		}
 		if !testutil.IsEmpty(testCase.PendingAttestation.Value) {
-			p := &ethpb.PendingAttestation{}
+			p := &pb.PendingAttestation{}
 			if err := testutil.ConvertToPb(testCase.PendingAttestation.Value, p); err != nil {
 				t.Fatal(err)
 			}

@@ -102,7 +102,7 @@ func TestExitValidator_OK(t *testing.T) {
 		Slot:      100, // epoch 2
 		Slashings: []uint64{0},
 		Validators: []*ethpb.Validator{
-			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
+			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, PublicKey: []byte{'B'}},
 		},
 	}
 	newState := ExitValidator(state, 0)
@@ -135,7 +135,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	validatorsLimit := 100
 	for i := 0; i < validatorsLimit; i++ {
 		registry = append(registry, &ethpb.Validator{
-			Pubkey:           []byte(strconv.Itoa(i)),
+			PublicKey:        []byte(strconv.Itoa(i)),
 			ActivationEpoch:  0,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
@@ -202,7 +202,7 @@ func TestInitializeValidatoreStore(t *testing.T) {
 	validatorsLimit := 100
 	for i := 0; i < validatorsLimit; i++ {
 		registry = append(registry, &ethpb.Validator{
-			Pubkey:          []byte(strconv.Itoa(i)),
+			PublicKey:       []byte(strconv.Itoa(i)),
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 		})

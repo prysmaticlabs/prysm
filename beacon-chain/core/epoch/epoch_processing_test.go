@@ -10,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -25,9 +26,9 @@ func init() {
 
 func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	// Generate 2 attestations.
-	atts := make([]*ethpb.PendingAttestation, 2)
+	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
+		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{Epoch: 0},
 				Crosslink: &ethpb.Crosslink{
@@ -80,9 +81,9 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	// Generate 2 attestations.
-	atts := make([]*ethpb.PendingAttestation, 2)
+	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
+		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard: uint64(i),
@@ -131,21 +132,21 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 	// The correct epoch for source is the first epoch
 	// The correct vote for target is '1'
 	// The correct vote for head is '2'
-	prevAtts := []*ethpb.PendingAttestation{
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{}}},                                             // source
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},                              // source, target
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{3}}}},                              // source
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},                              // source, target
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{}}},                // source, head
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{4}, Target: &ethpb.Checkpoint{}}},                 // source
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{1}}}}, // source, target, head
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{5}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},  // source, target
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{6}}}}, // source, head
+	prevAtts := []*pb.PendingAttestation{
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{}}},                                       // source
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},                        // source, target
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{3}}}},                        // source
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},                        // source, target
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{}}},                // source, head
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{4}, Target: &ethpb.Checkpoint{}}},                 // source
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{1}}}}, // source, target, head
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{5}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},  // source, target
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{6}}}}, // source, head
 	}
 
-	currentAtts := []*ethpb.PendingAttestation{
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + e + 1}, Target: &ethpb.Checkpoint{}}},                                            // none
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + e + 1}, BeaconBlockRoot: []byte{2}, Target: &ethpb.Checkpoint{Root: []byte{1}}}}, // none
+	currentAtts := []*pb.PendingAttestation{
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + e + 1}, Target: &ethpb.Checkpoint{}}},                                      // none
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + e + 1}, BlockRoot: []byte{2}, Target: &ethpb.Checkpoint{Root: []byte{1}}}}, // none
 	}
 
 	blockRoots := make([][]byte, 128)
@@ -166,35 +167,35 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wantedSrcAtts := []*ethpb.PendingAttestation{
+	wantedSrcAtts := []*pb.PendingAttestation{
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{}}},
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{3}}}},
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{4}, Target: &ethpb.Checkpoint{}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{5}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{6}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{4}, Target: &ethpb.Checkpoint{}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{5}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{6}}}},
 	}
 	if !reflect.DeepEqual(mAtts.source, wantedSrcAtts) {
 		t.Error("source attestations don't match")
 	}
 
-	wantedTgtAtts := []*ethpb.PendingAttestation{
+	wantedTgtAtts := []*pb.PendingAttestation{
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{5}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{5}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
 	}
 	if !reflect.DeepEqual(mAtts.Target, wantedTgtAtts) {
 		t.Error("target attestations don't match")
 	}
 
-	wantedHeadAtts := []*ethpb.PendingAttestation{
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{6}}}},
+	wantedHeadAtts := []*pb.PendingAttestation{
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{1}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{6}}}},
 	}
 	if !reflect.DeepEqual(mAtts.head, wantedHeadAtts) {
 		t.Error("head attestations don't match")
@@ -209,18 +210,18 @@ func TestMatchAttestations_CurrentEpoch(t *testing.T) {
 	// The correct epoch for source is the first epoch
 	// The correct vote for target is '65'
 	// The correct vote for head is '66'
-	prevAtts := []*ethpb.PendingAttestation{
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{}}},                                            // none
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{2}, Target: &ethpb.Checkpoint{Root: []byte{1}}}}, // none
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{5}, Target: &ethpb.Checkpoint{Root: []byte{1}}}}, // none
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{2}, Target: &ethpb.Checkpoint{Root: []byte{6}}}}, // none
+	prevAtts := []*pb.PendingAttestation{
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{}}},                                      // none
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{2}, Target: &ethpb.Checkpoint{Root: []byte{1}}}}, // none
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{5}, Target: &ethpb.Checkpoint{Root: []byte{1}}}}, // none
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{2}, Target: &ethpb.Checkpoint{Root: []byte{6}}}}, // none
 	}
 
-	currentAtts := []*ethpb.PendingAttestation{
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{}}},                                              // source
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{65}}}}, // source, target, head
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{69}, Target: &ethpb.Checkpoint{Root: []byte{65}}}}, // source, target
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{68}}}}, // source, head
+	currentAtts := []*pb.PendingAttestation{
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{}}},                                        // source
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{65}}}}, // source, target, head
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{69}, Target: &ethpb.Checkpoint{Root: []byte{65}}}}, // source, target
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{68}}}}, // source, head
 	}
 
 	blockRoots := make([][]byte, 128)
@@ -239,27 +240,27 @@ func TestMatchAttestations_CurrentEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wantedSrcAtts := []*ethpb.PendingAttestation{
+	wantedSrcAtts := []*pb.PendingAttestation{
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, Target: &ethpb.Checkpoint{}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{69}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{68}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{69}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{68}}}},
 	}
 	if !reflect.DeepEqual(mAtts.source, wantedSrcAtts) {
 		t.Error("source attestations don't match")
 	}
 
-	wantedTgtAtts := []*ethpb.PendingAttestation{
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{69}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
+	wantedTgtAtts := []*pb.PendingAttestation{
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{69}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
 	}
 	if !reflect.DeepEqual(mAtts.Target, wantedTgtAtts) {
 		t.Error("target attestations don't match")
 	}
 
-	wantedHeadAtts := []*ethpb.PendingAttestation{
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
-		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BeaconBlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{68}}}},
+	wantedHeadAtts := []*pb.PendingAttestation{
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{65}}}},
+		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{Shard: s + 1}, BlockRoot: []byte{66}, Target: &ethpb.Checkpoint{Root: []byte{68}}}},
 	}
 	if !reflect.DeepEqual(mAtts.head, wantedHeadAtts) {
 		t.Error("head attestations don't match")
@@ -277,13 +278,13 @@ func TestAttsForCrosslink_CanGetAttestations(t *testing.T) {
 	c := &ethpb.Crosslink{
 		DataRoot: []byte{'B'},
 	}
-	atts := []*ethpb.PendingAttestation{
+	atts := []*pb.PendingAttestation{
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{DataRoot: []byte{'A'}}, Target: &ethpb.Checkpoint{}}},
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{DataRoot: []byte{'B'}}, Target: &ethpb.Checkpoint{}}}, // Selected
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{DataRoot: []byte{'C'}}, Target: &ethpb.Checkpoint{}}},
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{DataRoot: []byte{'B'}}, Target: &ethpb.Checkpoint{}}}} // Selected
 
-	if !reflect.DeepEqual(attsForCrosslink(c, atts), []*ethpb.PendingAttestation{
+	if !reflect.DeepEqual(attsForCrosslink(c, atts), []*pb.PendingAttestation{
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{DataRoot: []byte{'B'}}, Target: &ethpb.Checkpoint{}}},
 		{Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{}, Crosslink: &ethpb.Crosslink{DataRoot: []byte{'B'}}, Target: &ethpb.Checkpoint{}}}}) {
 		t.Error("Incorrect attestations for crosslink")
@@ -306,7 +307,7 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Slot:                      gs + e + 2,
-		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
+		PreviousEpochAttestations: []*pb.PendingAttestation{},
 		BlockRoots:                make([][]byte, 128),
 		CurrentCrosslinks:         []*ethpb.Crosslink{{StartEpoch: ge}},
 	}
@@ -335,7 +336,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	gs := uint64(0) // genesis slot
 	ge := uint64(0) // genesis epoch
 
-	atts := []*ethpb.PendingAttestation{
+	atts := []*pb.PendingAttestation{
 		{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
@@ -478,10 +479,10 @@ func TestProcessCrosslinks_SuccessfulUpdate(t *testing.T) {
 			DataRoot:   []byte{'B'},
 		}
 	}
-	var atts []*ethpb.PendingAttestation
+	var atts []*pb.PendingAttestation
 	startShard := uint64(960)
 	for s := uint64(0); s < params.BeaconConfig().SlotsPerEpoch; s++ {
-		atts = append(atts, &ethpb.PendingAttestation{
+		atts = append(atts, &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{},
 				Crosslink: &ethpb.Crosslink{
 					Shard:    startShard + s,
@@ -963,9 +964,9 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 	helpers.ClearShuffledValidatorCache()
 	state := buildState(e+2, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	startShard := uint64(960)
-	atts := make([]*ethpb.PendingAttestation, 2)
+	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
+		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard:    startShard + uint64(i),
@@ -1059,9 +1060,9 @@ func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 
 	state := buildState(e+2, 1)
-	atts := make([]*ethpb.PendingAttestation, 2)
+	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
+		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard: uint64(i),
@@ -1087,9 +1088,9 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 32
 	state := buildState(e+2, validatorCount)
 	//startShard := uint64(960)
-	atts := make([]*ethpb.PendingAttestation, 2)
+	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
+		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard:    uint64(i),
@@ -1132,9 +1133,9 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 8
 	state := buildState(e+2, validatorCount)
 	startShard := uint64(960)
-	atts := make([]*ethpb.PendingAttestation, 3)
+	atts := make([]*pb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
+		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard:    startShard + uint64(i),
@@ -1214,9 +1215,9 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 8
 	state := buildState(e+4, validatorCount)
 	startShard := uint64(960)
-	atts := make([]*ethpb.PendingAttestation, 3)
+	atts := make([]*pb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
+		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard:    startShard + uint64(i),
@@ -1426,9 +1427,9 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 8
 	state := buildState(e+2, validatorCount)
 	startShard := uint64(960)
-	atts := make([]*ethpb.PendingAttestation, 3)
+	atts := make([]*pb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
+		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard:    startShard + uint64(i),
