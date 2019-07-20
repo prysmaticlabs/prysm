@@ -93,5 +93,4 @@ func decodeDepositData(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Failed to write data to client: %v\n", err)
 	}
-	fmt.Println("ok")
 }

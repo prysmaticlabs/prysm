@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
+load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 
 IMPORT_PATH = "github.com/prysmaticlabs/prysm/tools/faucet"
 
@@ -54,10 +55,16 @@ go_image(
 )
 
 container_bundle(
-    name = "push_images",
+    name = "image_bundle",
     images = {
         "gcr.io/prysmaticlabs/prysm/faucet:latest": ":image",
         "gcr.io/prysmaticlabs/prysm/faucet:{DOCKER_TAG}": ":image",
     },
+    tags = ["manual"],
+)
+
+docker_push(
+    name = "push_images",
+    bundle = ":image_bundle",
     tags = ["manual"],
 )
