@@ -79,7 +79,7 @@ func newDB(dbPath string) *db {
 		// Iterate over all of the pod assigned keys (one to many).
 		c := tx.Bucket(assignedPkBucket).Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			pks := &ethpb.PrivateKeys{}
+			pks := &pb.PrivateKeys{}
 			if err := proto.Unmarshal(v, pks); err != nil {
 				log.WithError(err).Error("Unable to unmarshal private key")
 				continue
@@ -100,8 +100,8 @@ func newDB(dbPath string) *db {
 }
 
 // UnallocatedPKs returns unassigned private keys, if any are available.
-func (d *db) UnallocatedPKs(_ context.Context, numKeys uint64) (*ethpb.PrivateKeys, error) {
-	pks := &ethpb.PrivateKeys{}
+func (d *db) UnallocatedPKs(_ context.Context, numKeys uint64) (*pb.PrivateKeys, error) {
+	pks := &pb.PrivateKeys{}
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(unassignedPkBucket).Cursor()
 		i := uint64(0)
@@ -118,8 +118,8 @@ func (d *db) UnallocatedPKs(_ context.Context, numKeys uint64) (*ethpb.PrivateKe
 }
 
 // PodPK returns an assigned private key to the given pod name, if one exists.
-func (d *db) PodPKs(_ context.Context, podName string) (*ethpb.PrivateKeys, error) {
-	pks := &ethpb.PrivateKeys{}
+func (d *db) PodPKs(_ context.Context, podName string) (*pb.PrivateKeys, error) {
+	pks := &pb.PrivateKeys{}
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(assignedPkBucket).Get([]byte(podName))
 
@@ -157,7 +157,7 @@ func (d *db) RemovePKAssignment(_ context.Context, podName string) error {
 			return nil
 		}
 
-		pks := &ethpb.PrivateKeys{}
+		pks := &pb.PrivateKeys{}
 		if err := proto.Unmarshal(data, pks); err != nil {
 			log.WithError(err).Error("Failed to unmarshal pks, deleting from db")
 			return tx.Bucket(assignedPkBucket).Delete([]byte(podName))
@@ -177,7 +177,7 @@ func (d *db) RemovePKAssignment(_ context.Context, podName string) error {
 }
 
 // AssignExistingPKs assigns a PK from the unassigned bucket to a given pod.
-func (d *db) AssignExistingPKs(_ context.Context, pks *ethpb.PrivateKeys, podName string) error {
+func (d *db) AssignExistingPKs(_ context.Context, pks *pb.PrivateKeys, podName string) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		for _, pk := range pks.PrivateKeys {
 			if bytes.Equal(tx.Bucket(unassignedPkBucket).Get(pk), dummyVal) {
@@ -190,7 +190,7 @@ func (d *db) AssignExistingPKs(_ context.Context, pks *ethpb.PrivateKeys, podNam
 
 		// If pod assignment exists, append to it.
 		if existing := tx.Bucket(assignedPkBucket).Get([]byte(podName)); existing != nil {
-			existingKeys := &ethpb.PrivateKeys{}
+			existingKeys := &pb.PrivateKeys{}
 			if err := proto.Unmarshal(existing, existingKeys); err != nil {
 				pks.PrivateKeys = append(pks.PrivateKeys, existingKeys.PrivateKeys...)
 			}
@@ -223,7 +223,7 @@ func (d *db) Allocations() (map[string][][]byte, error) {
 	m := make(map[string][][]byte)
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		return tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {
-			pks := &ethpb.PrivateKeys{}
+			pks := &pb.PrivateKeys{}
 			if err := proto.Unmarshal(v, pks); err != nil {
 				return err
 			}
@@ -253,7 +253,7 @@ func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
 	pubkeys := make([][]byte, 0)
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		return tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {
-			pks := &ethpb.PrivateKeys{}
+			pks := &pb.PrivateKeys{}
 			if err := proto.Unmarshal(v, pks); err != nil {
 				return err
 			}
@@ -289,7 +289,7 @@ func (d *db) RemovePKFromPod(podName string, key []byte) error {
 			log.WithField("podName", podName).Warn("Nil private key returned from db")
 			return nil
 		}
-		pks := &ethpb.PrivateKeys{}
+		pks := &pb.PrivateKeys{}
 		if err := proto.Unmarshal(data, pks); err != nil {
 			log.WithError(err).Error("Unable to unmarshal private keys, deleting assignment from db")
 			return tx.Bucket(assignedPkBucket).Delete([]byte(podName))

@@ -77,7 +77,7 @@ func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signat
 	return nil
 }
 
-func (s *server) Request(ctx context.Context, req *ethpb.PrivateKeyRequest) (*ethpb.PrivateKeyResponse, error) {
+func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.PrivateKeyResponse, error) {
 	s.clientLock.Lock()
 	defer s.clientLock.Unlock()
 
@@ -97,7 +97,7 @@ func (s *server) Request(ctx context.Context, req *ethpb.PrivateKeyRequest) (*et
 	}
 	if pks != nil && len(pks.PrivateKeys) > 0 {
 		log.WithField("pod", req.PodName).Debug("Returning existing assignment(s)")
-		return &ethpb.PrivateKeyResponse{
+		return &pb.PrivateKeyResponse{
 			PrivateKeys: pks,
 		}, nil
 	}
@@ -127,10 +127,10 @@ func (s *server) Request(ctx context.Context, req *ethpb.PrivateKeyRequest) (*et
 		return nil, err
 	}
 
-	return &ethpb.PrivateKeyResponse{PrivateKeys: pks}, nil
+	return &pb.PrivateKeyResponse{PrivateKeys: pks}, nil
 }
 
-func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys int) (*ethpb.PrivateKeys, error) {
+func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys int) (*pb.PrivateKeys, error) {
 	pks := make([][]byte, numKeys)
 
 	for i := 0; i < numKeys; i++ {
@@ -147,7 +147,7 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 		}
 
 		// Do the actual deposit
-		if err := s.makeDeposit(di.Pubkey, di.WithdrawalCredentials, di.Signature); err != nil {
+		if err := s.makeDeposit(di.PublicKey, di.WithdrawalCredentials, di.Signature); err != nil {
 			return nil, err
 		}
 		// Store in database
@@ -158,5 +158,5 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 		pks[i] = secret
 	}
 
-	return &ethpb.PrivateKeys{PrivateKeys: pks}, nil
+	return &pb.PrivateKeys{PrivateKeys: pks}, nil
 }

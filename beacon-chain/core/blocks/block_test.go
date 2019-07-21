@@ -24,7 +24,15 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 
 func TestHeaderFromBlock(t *testing.T) {
 	dummyBody := &ethpb.BeaconBlockBody{
+		Eth1Data: &ethpb.Eth1Data{},
+		Graffiti: []byte{},
 		RandaoReveal: []byte("Reveal"),
+		AttesterSlashings: []*ethpb.AttesterSlashing{},
+		ProposerSlashings: []*ethpb.ProposerSlashing{},
+		Attestations: []*ethpb.Attestation{},
+		Transfers: []*ethpb.Transfer{},
+		Deposits: []*ethpb.Deposit{},
+		VoluntaryExits: []*ethpb.VoluntaryExit{},
 	}
 
 	dummyBlock := &ethpb.BeaconBlock{

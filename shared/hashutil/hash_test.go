@@ -57,10 +57,10 @@ func TestHashKeccak256(t *testing.T) {
 }
 
 func TestHashProto(t *testing.T) {
-	msg1 := &ethpb.Puzzle{
+	msg1 := &pb.Puzzle{
 		Challenge: "hello",
 	}
-	msg2 := &ethpb.Puzzle{
+	msg2 := &pb.Puzzle{
 		Challenge: "hello",
 	}
 	h1, err := hashutil.HashProto(msg1)
@@ -80,7 +80,7 @@ func TestHashProtoFuzz(t *testing.T) {
 	f := fuzz.New().NilChance(.2)
 
 	for i := 0; i < 1000; i++ {
-		msg := &ethpb.AddressBook{}
+		msg := &pb.AddressBook{}
 		f.Fuzz(msg)
 		_, _ = hashutil.HashProto(msg)
 	}
