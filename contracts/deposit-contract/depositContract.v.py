@@ -1,120 +1,121 @@
-## compiled with v0.1.0-beta.8 ##
-DEPOSIT_TREE_DEPTH: constant(uint256) = 32
-TWO_TO_POWER_OF_TREE_DEPTH: constant(uint256) = 4294967296  # 2**32
+## compiled with v0.1.0-beta.9 ##
+DEPOSIT_CONTRACT_TREE_DEPTH: constant(uint256) = 32
 SECONDS_PER_DAY: constant(uint256) = 86400
-MAX_64_BIT_VALUE: constant(uint256) = 18446744073709551615  # 2**64 - 1
+MAX_DEPOSIT_COUNT: constant(uint256) = 4294967295 # 2**DEPOSIT_CONTRACT_TREE_DEPTH - 1
+PUBKEY_LENGTH: constant(uint256) = 48  # bytes
+WITHDRAWAL_CREDENTIALS_LENGTH: constant(uint256) = 32  # bytes
+AMOUNT_LENGTH: constant(uint256) = 8  # bytes
+SIGNATURE_LENGTH: constant(uint256) = 96  # bytes
 
-Deposit: event({deposit_root: bytes32, data: bytes[528], merkle_tree_index: bytes[8], branch: bytes32[32]})
-ChainStart: event({deposit_root: bytes32, time: bytes[8]})
+DepositEvent: event({
+    pubkey: bytes[48],
+    withdrawal_credentials: bytes[32],
+    amount: bytes[8],
+    signature: bytes[96],
+    index: bytes[8],
+})
 
-CHAIN_START_FULL_DEPOSIT_THRESHOLD: public(uint256)
 MIN_DEPOSIT_AMOUNT: public(uint256) # Gwei
-MAX_DEPOSIT_AMOUNT: public(uint256) # Gwei
-zerohashes: bytes32[32]
-branch: bytes32[32]
+zero_hashes: bytes32[DEPOSIT_CONTRACT_TREE_DEPTH]
+branch: bytes32[DEPOSIT_CONTRACT_TREE_DEPTH]
 deposit_count: public(uint256)
-full_deposit_count: public(uint256)
-custom_chainstart_delay: public(uint256)
-genesisTime: public(bytes[8])
 drain_address: public(address)
 
 @public
 def __init__( # Parameters for debugging, not for production use!
-        depositThreshold: uint256, 
         minDeposit: uint256,
-        maxDeposit: uint256, 
-        customChainstartDelay: uint256,
         _drain_address: address):
-    self.CHAIN_START_FULL_DEPOSIT_THRESHOLD = depositThreshold
     self.MIN_DEPOSIT_AMOUNT = minDeposit
-    self.MAX_DEPOSIT_AMOUNT = maxDeposit
-    self.custom_chainstart_delay = customChainstartDelay
     self.drain_address = _drain_address
-    for i in range(31):
-        self.zerohashes[i+1] = sha3(concat(self.zerohashes[i], self.zerohashes[i]))
-        self.branch[i+1] = self.zerohashes[i+1]
+    for i in range(DEPOSIT_CONTRACT_TREE_DEPTH - 1):
+        self.zero_hashes[i+1] = sha256(concat(self.zero_hashes[i], self.zero_hashes[i]))
 
 @private
 @constant
 def to_bytes8(value: uint256) -> bytes[8]:
     return slice(convert(value, bytes32), start=24, len=8)
 
-@public
+
+@private
 @constant
 def to_little_endian_64(value: uint256) -> bytes[8]:
-    assert value <= MAX_64_BIT_VALUE
-
-    big_endian_64: bytes[8] = self.to_bytes8(value)
-
-    # array access for bytes[] not currently supported in vyper so
-    # reversing bytes using bitwise uint256 manipulations
-    x: uint256 = convert(big_endian_64, uint256)
+    # Reversing bytes using bitwise uint256 manipulations
+    # Note: array accesses of bytes[] are not currently supported in Vyper
+    # Note: this function is only called when `value < 2**64`
     y: uint256 = 0
-    for i in range(8):
+    x: uint256 = value
+    for _ in range(8):
         y = shift(y, 8)
         y = y + bitwise_and(x, 255)
         x = shift(x, -8)
+    return slice(convert(y, bytes32), start=24, len=8)
 
-    return self.to_bytes8(y)
 
 @public
 @constant
-def get_deposit_root() -> bytes32:
-    root:bytes32 = 0x0000000000000000000000000000000000000000000000000000000000000000
-    size:uint256 = self.deposit_count
-    for h in range(32):
-        if size % 2 == 1:
-            root = sha3(concat(self.branch[h], root))
+def get_hash_tree_root() -> bytes32:
+    zero_bytes32: bytes32 = 0x0000000000000000000000000000000000000000000000000000000000000000
+    node: bytes32 = zero_bytes32
+    size: uint256 = self.deposit_count
+    for height in range(DEPOSIT_CONTRACT_TREE_DEPTH):
+        if bitwise_and(size, 1) == 1:  # More gas efficient than `size % 2 == 1`
+            node = sha256(concat(self.branch[height], node))
         else:
-            root = sha3(concat(root, self.zerohashes[h]))
+            node = sha256(concat(node, self.zero_hashes[height]))
         size /= 2
-    return root
+    return sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
+
+
+@public
+@constant
+def get_deposit_count() -> bytes[8]:
+    return self.to_little_endian_64(self.deposit_count)
+
 
 @payable
 @public
-def deposit(deposit_input: bytes[512]):
+def deposit(pubkey: bytes[PUBKEY_LENGTH],
+            withdrawal_credentials: bytes[WITHDRAWAL_CREDENTIALS_LENGTH],
+            signature: bytes[SIGNATURE_LENGTH]):
+    # Avoid overflowing the Merkle tree (and prevent edge case in computing `self.branch`)
+    assert self.deposit_count < MAX_DEPOSIT_COUNT
+
+    # Validate deposit data
     deposit_amount: uint256 = msg.value / as_wei_value(1, "gwei")
-
     assert deposit_amount >= self.MIN_DEPOSIT_AMOUNT
-    assert deposit_amount <= self.MAX_DEPOSIT_AMOUNT
+    assert len(pubkey) == PUBKEY_LENGTH
+    assert len(withdrawal_credentials) == WITHDRAWAL_CREDENTIALS_LENGTH
+    assert len(signature) == SIGNATURE_LENGTH
 
-    index: uint256 = self.deposit_count
-    deposit_timestamp: uint256 = as_unitless_number(block.timestamp)
-    deposit_data: bytes[528] = concat(self.to_little_endian_64(deposit_amount), self.to_little_endian_64(deposit_timestamp), deposit_input)
+    # Emit `DepositEvent` log
+    amount: bytes[8] = self.to_little_endian_64(deposit_amount)
+    log.DepositEvent(pubkey, withdrawal_credentials, amount, signature, self.to_little_endian_64(self.deposit_count))
 
-    # add deposit to merkle tree
-    i: int128 = 0
-    power_of_two: uint256 = 2
-    for _ in range(32):
-        if (index+1) % power_of_two != 0:
-            break
-        i += 1
-        power_of_two *= 2
-    value:bytes32 = sha3(deposit_data)
-    for j in range(32):
-        if j < i:
-            value = sha3(concat(self.branch[j], value))
-    self.branch[i] = value
+    # Compute `DepositData` hash tree root
+    zero_bytes32: bytes32 = 0x0000000000000000000000000000000000000000000000000000000000000000
+    pubkey_root: bytes32 = sha256(concat(pubkey, slice(zero_bytes32, start=0, len=64 - PUBKEY_LENGTH)))
+    signature_root: bytes32 = sha256(concat(
+        sha256(slice(signature, start=0, len=64)),
+        sha256(concat(slice(signature, start=64, len=SIGNATURE_LENGTH - 64), zero_bytes32)),
+    ))
+    node: bytes32 = sha256(concat(
+        sha256(concat(pubkey_root, withdrawal_credentials)),
+        sha256(concat(amount, slice(zero_bytes32, start=0, len=32 - AMOUNT_LENGTH), signature_root)),
+    ))
 
+    # Add `DepositData` hash tree root to Merkle tree (update a single `branch` node)
     self.deposit_count += 1
-    new_deposit_root: bytes32 = self.get_deposit_root()
-    log.Deposit(new_deposit_root, deposit_data, self.to_little_endian_64(index), self.branch)
-
-    if deposit_amount == self.MAX_DEPOSIT_AMOUNT:
-        self.full_deposit_count += 1
-        if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
-            if self.custom_chainstart_delay > 0:
-                timestamp_boundary: uint256 = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % self.custom_chainstart_delay + self.custom_chainstart_delay
-                self.genesisTime = self.to_little_endian_64(timestamp_boundary)
-                log.ChainStart(self.get_deposit_root(), self.genesisTime)
-            else:
-                timestamp_day_boundary: uint256 = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % SECONDS_PER_DAY + SECONDS_PER_DAY
-                self.genesisTime = self.to_little_endian_64(timestamp_day_boundary)
-                log.ChainStart(new_deposit_root, self.genesisTime)
+    size: uint256 = self.deposit_count
+    for height in range(DEPOSIT_CONTRACT_TREE_DEPTH):
+        if bitwise_and(size, 1) == 1:  # More gas efficient than `size % 2 == 1`
+            self.branch[height] = node
+            break
+        node = sha256(concat(self.branch[height], node))
+        size /= 2
 
 
 # !!! DEBUG ONLY !!!
-# This method is NOT part of the final ETH2.0 deposit contract, but we use it 
+# This method is NOT part of the final ETH2.0 deposit contract, but we use it
 # to recover test funds.
 @public
 def drain():

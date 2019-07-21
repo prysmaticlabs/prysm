@@ -5,35 +5,10 @@ import (
 )
 
 var (
-	// CacheTreeHashFlag determines whether to cache tree hashes for ssz.
-	CacheTreeHashFlag = cli.BoolFlag{
-		Name:  "enable-cache-tree-hash",
-		Usage: "Cache tree hashes for ssz",
-	}
-	// VerifyAttestationSigsFlag determines whether to verify signatures for attestations.
-	VerifyAttestationSigsFlag = cli.BoolFlag{
-		Name:  "enable-attestation-signature-verification",
-		Usage: "Verify signatures for attestations.",
-	}
-	// EnableComputeStateRootFlag enables the implemenation for the proposer RPC
-	// method to compute the state root of a given block.
-	// This feature is not
-	// necessary for the first iteration of the test network, but critical to
-	// future work. This flag can be removed once we are satisified that it works
-	// well without issue.
-	EnableComputeStateRootFlag = cli.BoolFlag{
-		Name:  "enable-compute-state-root",
-		Usage: "Enable server side compute state root. Default is a no-op implementation.",
-	}
-	// EnableCrosslinksFlag enables the processing of crosslinks in epoch processing. It is disabled by default.
-	EnableCrosslinksFlag = cli.BoolFlag{
-		Name:  "enable-crosslinks",
-		Usage: "Enable crosslinks in epoch processing, default is disabled.",
-	}
-	// EnableCheckBlockStateRootFlag check block state root in block processing. It is disabled by default.
-	EnableCheckBlockStateRootFlag = cli.BoolFlag{
-		Name:  "enable-check-block-state-root",
-		Usage: "Enable check block state root in block processing, default is disabled.",
+	// EnableCanonicalAttestationFilter filters and sends canonical attestation to RPC requests.
+	EnableCanonicalAttestationFilter = cli.BoolFlag{
+		Name:  "enable-canonical-attestation-filter",
+		Usage: "Enable filtering and sending canonical attestations to RPC request, default is disabled.",
 	}
 	// DisableHistoricalStatePruningFlag allows the database to keep old historical states.
 	DisableHistoricalStatePruningFlag = cli.BoolFlag{
@@ -51,20 +26,21 @@ var (
 		Name:  "enables-excess-deposit",
 		Usage: "Enables balances more than max deposit amount for a validator",
 	}
+	// NoGenesisDelayFlag disables the standard genesis delay.
+	NoGenesisDelayFlag = cli.BoolFlag{
+		Name:  "no-genesis-delay",
+		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{
-	CacheTreeHashFlag,
-}
+var ValidatorFlags = []cli.Flag{}
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
-	EnableComputeStateRootFlag,
-	EnableCrosslinksFlag,
-	EnableCheckBlockStateRootFlag,
+	EnableCanonicalAttestationFilter,
 	DisableHistoricalStatePruningFlag,
 	DisableGossipSubFlag,
-	CacheTreeHashFlag,
 	EnableExcessDepositsFlag,
+	NoGenesisDelayFlag,
 }

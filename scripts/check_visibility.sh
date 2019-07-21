@@ -13,7 +13,7 @@ exec 5>&1
 
 # Run gazelle while piping a copy of the output to stdout via 5.
 changes=$(
-bazel --batch --bazelrc=.buildkite-bazelrc query 'visible(//... except (//beacon-chain/... union //validator/...), (//beacon-chain/... union //validator/...))' | tee >(cat - >&5)
+bazel --batch --bazelrc=.buildkite-bazelrc query 'visible(//... except (//beacon-chain/... union //validator/...), (//beacon-chain/... union //validator/...)) except attr("tags", "manual", //...)' | tee >(cat - >&5)
 )
 
 # If the captured stdout is not empty then targets are exposed!

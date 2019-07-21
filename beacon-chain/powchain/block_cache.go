@@ -42,6 +42,15 @@ var (
 type blockInfo struct {
 	Number *big.Int
 	Hash   common.Hash
+	Time   uint64
+}
+
+func blockToBlockInfo(blk *gethTypes.Block) *blockInfo {
+	return &blockInfo{
+		Hash:   blk.Hash(),
+		Number: blk.Number(),
+		Time:   blk.Time(),
+	}
 }
 
 // hashKeyFn takes the hex string representation as the key for a blockInfo.
@@ -142,10 +151,7 @@ func (b *blockCache) AddBlock(blk *gethTypes.Block) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	bInfo := &blockInfo{
-		Hash:   blk.Hash(),
-		Number: blk.Number(),
-	}
+	bInfo := blockToBlockInfo(blk)
 
 	if err := b.hashCache.AddIfNotPresent(bInfo); err != nil {
 		return err

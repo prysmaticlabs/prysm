@@ -3,22 +3,21 @@ package helpers
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"strings"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestRandaoMix_OK(t *testing.T) {
-	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestRandaoMixes: randaoMixes}
+	state := &pb.BeaconState{RandaoMixes: randaoMixes}
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -33,15 +32,12 @@ func TestRandaoMix_OK(t *testing.T) {
 		},
 		{
 			epoch:     99999,
-			randaoMix: randaoMixes[99999%params.BeaconConfig().LatestRandaoMixesLength],
+			randaoMix: randaoMixes[99999%params.BeaconConfig().EpochsPerHistoricalVector],
 		},
 	}
 	for _, test := range tests {
 		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
-		mix, err := RandaoMix(state, test.epoch)
-		if err != nil {
-			t.Fatalf("Could not get randao mix: %v", err)
-		}
+		mix := RandaoMix(state, test.epoch)
 		if !bytes.Equal(test.randaoMix, mix) {
 			t.Errorf("Incorrect randao mix. Wanted: %#x, got: %#x",
 				test.randaoMix, mix)
@@ -49,82 +45,129 @@ func TestRandaoMix_OK(t *testing.T) {
 	}
 }
 
-func TestRandaoMix_OutOfBound(t *testing.T) {
-	wanted := fmt.Sprintf(
-		"input randaoMix epoch %d out of bounds: %d <= epoch < %d",
-		100, 0, 0,
-	)
-	if _, err := RandaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
-	}
-}
-
-func TestActiveIndexRoot_OK(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
-	for i := 0; i < len(activeIndexRoots); i++ {
+func TestRandaoMix_CopyOK(t *testing.T) {
+	ClearAllCaches()
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
-		activeIndexRoots[i] = intInBytes
+		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestIndexRootHash32S: activeIndexRoots}
+	state := &pb.BeaconState{RandaoMixes: randaoMixes}
 	tests := []struct {
 		epoch     uint64
-		indexRoot []byte
+		randaoMix []byte
 	}{
 		{
-			epoch:     34,
-			indexRoot: activeIndexRoots[34],
+			epoch:     10,
+			randaoMix: randaoMixes[10],
 		},
 		{
-			epoch:     3444,
-			indexRoot: activeIndexRoots[3444],
+			epoch:     2344,
+			randaoMix: randaoMixes[2344],
 		},
 		{
-			epoch:     999999,
-			indexRoot: activeIndexRoots[999999%params.BeaconConfig().LatestActiveIndexRootsLength],
+			epoch:     99999,
+			randaoMix: randaoMixes[99999%params.BeaconConfig().EpochsPerHistoricalVector],
 		},
 	}
 	for _, test := range tests {
 		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
-		indexRoot, err := ActiveIndexRoot(state, test.epoch)
-		if err != nil {
-			t.Fatalf("Could not get index root: %v", err)
+		mix := RandaoMix(state, test.epoch)
+		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
+		binary.LittleEndian.PutUint64(mix, uniqueNumber)
+
+		for _, mx := range randaoMixes {
+			mxNum := bytesutil.FromBytes8(mx)
+			if mxNum == uniqueNumber {
+				t.Fatalf("two distinct slices which have different representations in memory still contain"+
+					"the same value: %d", mxNum)
+			}
 		}
-		if !bytes.Equal(test.indexRoot, indexRoot) {
-			t.Errorf("Incorrect index root. Wanted: %#x, got: %#x",
-				test.indexRoot, indexRoot)
-		}
 	}
 }
 
-func TestActiveIndexRoot_OutOfBound(t *testing.T) {
-	wanted := fmt.Sprintf(
-		"input indexRoot epoch %d out of bounds: %d <= epoch < %d",
-		100, 0, 0,
-	)
-	if _, err := ActiveIndexRoot(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
-	}
-}
+func TestActiveIndexRoot_OK(t *testing.T) {
 
-func TestGenerateSeed_OutOfBound(t *testing.T) {
-	wanted := fmt.Sprintf(
-		"input randaoMix epoch %d out of bounds: %d <= epoch < %d",
-		100-params.BeaconConfig().MinSeedLookahead, 0, 0,
-	)
-	if _, err := GenerateSeed(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
-	}
-}
-
-func TestGenerateSeed_OK(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
-	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
+	state := &pb.BeaconState{ActiveIndexRoots: activeIndexRoots}
+	tests := []struct {
+		epoch uint64
+	}{
+		{
+			epoch: 34,
+		},
+		{
+			epoch: 3444,
+		},
+		{
+			epoch: 999999,
+		},
+	}
+	for _, test := range tests {
+		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
+		for i := 0; i <= int(params.BeaconConfig().ActivationExitDelay); i++ {
+			indexRoot := ActiveIndexRoot(state, test.epoch+uint64(i))
+
+			if !bytes.Equal(activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().EpochsPerHistoricalVector], indexRoot) {
+				t.Errorf("Incorrect index root. Wanted: %#x, got: %#x",
+					activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().EpochsPerHistoricalVector], indexRoot)
+			}
+		}
+
+	}
+}
+
+func TestActiveIndexRoot_CopyOK(t *testing.T) {
+	ClearAllCaches()
+	conf := params.BeaconConfig()
+	conf.EpochsPerHistoricalVector = 100
+	params.OverrideBeaconConfig(conf)
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(activeIndexRoots); i++ {
+		intInBytes := make([]byte, 32)
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
+		activeIndexRoots[i] = intInBytes
+	}
+	state := &pb.BeaconState{ActiveIndexRoots: activeIndexRoots}
+	tests := []struct {
+		epoch uint64
+	}{
+		{
+			epoch: 34,
+		},
+	}
+	for _, test := range tests {
+		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
+		indexRoot := ActiveIndexRoot(state, test.epoch)
+		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
+		binary.LittleEndian.PutUint64(indexRoot, uniqueNumber)
+
+		for _, root := range activeIndexRoots {
+			rootNum := bytesutil.FromBytes8(root)
+			if rootNum == uniqueNumber {
+				t.Fatalf("two distinct slices which have different representations in memory still contain"+
+					"the same value: %d", rootNum)
+			}
+		}
+	}
+}
+
+func TestGenerateSeed_OK(t *testing.T) {
+	ClearAllCaches()
+
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(activeIndexRoots); i++ {
+		intInBytes := make([]byte, 32)
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
+		activeIndexRoots[i] = intInBytes
+	}
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
@@ -132,16 +175,17 @@ func TestGenerateSeed_OK(t *testing.T) {
 	}
 	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		LatestIndexRootHash32S: activeIndexRoots,
-		LatestRandaoMixes:      randaoMixes,
-		Slot:                   slot}
+		ActiveIndexRoots: activeIndexRoots,
+		RandaoMixes:      randaoMixes,
+		Slot:             slot}
 
-	got, err := GenerateSeed(state, 10)
+	got, err := Seed(state, 10)
 	if err != nil {
-		t.Fatalf("Could not generate seed: %v", err)
+		t.Fatal(err)
 	}
-	wanted := [32]byte{242, 35, 140, 234, 201, 60, 23, 152, 187, 111, 227, 129, 108, 254, 108, 63,
-		192, 111, 114, 225, 0, 159, 145, 106, 133, 217, 25, 25, 251, 58, 175, 168}
+
+	wanted := [32]byte{141, 205, 112, 76, 60, 173, 127, 10, 1, 214, 151, 41, 69, 40, 108, 88, 247,
+		210, 88, 5, 150, 112, 64, 93, 208, 110, 194, 137, 234, 180, 40, 245}
 	if got != wanted {
 		t.Errorf("Incorrect generated seeds. Got: %v, wanted: %v",
 			got, wanted)

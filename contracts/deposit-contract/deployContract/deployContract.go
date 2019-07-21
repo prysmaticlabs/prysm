@@ -90,7 +90,7 @@ func main() {
 		},
 		cli.Int64Flag{
 			Name:        "chainStart",
-			Value:       params.ContractConfig().DepositsForChainStart.Int64(),
+			Value:       params.ContractConfig().MinGenesisActiveValidatorCount.Int64(),
 			Usage:       "Number of validators required for chain start",
 			Destination: &depositsForChainStart,
 		},
@@ -102,7 +102,7 @@ func main() {
 		},
 		cli.Int64Flag{
 			Name:        "maxDeposit",
-			Value:       params.ContractConfig().MaxDepositAmount.Int64(),
+			Value:       params.ContractConfig().MaxEffectiveBalance.Int64(),
 			Usage:       "Maximum deposit value allowed in contract",
 			Destination: &maxDepositAmount,
 		},
@@ -180,10 +180,7 @@ func main() {
 		addr, tx, _, err := contracts.DeployDepositContract(
 			txOps,
 			client,
-			big.NewInt(depositsForChainStart),
 			big.NewInt(minDepositAmount),
-			big.NewInt(maxDepositAmount),
-			big.NewInt(int64(customChainstartDelay)),
 			drain,
 		)
 

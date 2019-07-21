@@ -103,6 +103,9 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
+	if len(pubKeys) == 0 {
+		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
+	}
 	var keys []*g1.PublicKey
 	for _, v := range pubKeys {
 		keys = append(keys, v.val)
@@ -123,4 +126,21 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 		ss = append(ss, v.val)
 	}
 	return &Signature{val: g1.AggregateSignatures(ss)}
+}
+
+// Domain returns the bls domain given by the domain type and the operation 4 byte fork version.
+//
+// Spec pseudocode definition:
+//  def get_domain(state: BeaconState, domain_type: DomainType, message_epoch: Epoch=None) -> Domain:
+//    """
+//    Return the signature domain (fork version concatenated with domain type) of a message.
+//    """
+//    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
+//    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
+//    return compute_domain(domain_type, fork_version)
+func Domain(domainType []byte, forkVersion []byte) uint64 {
+	b := []byte{}
+	b = append(b, domainType[:4]...)
+	b = append(b, forkVersion[:4]...)
+	return bytesutil.FromBytes8(b)
 }
