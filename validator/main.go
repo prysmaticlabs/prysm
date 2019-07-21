@@ -135,6 +135,7 @@ contract in order to activate the validator client`,
 	app.Flags = []cli.Flag{
 		types.NoCustomConfigFlag,
 		types.BeaconRPCProviderFlag,
+		types.CertFlag,
 		types.KeystorePathFlag,
 		types.PasswordFlag,
 		types.DisablePenaltyRewardLogFlag,
