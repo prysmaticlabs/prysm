@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -61,7 +61,7 @@ type Querier struct {
 	chainStarted              bool
 	atGenesis                 bool
 	bestPeer                  peer.ID
-	chainHeadResponses        map[peer.ID]*ethpb.ChainHeadResponse
+	chainHeadResponses        map[peer.ID]*pb.ChainHeadResponse
 	canonicalBlockRoot        []byte
 	finalizedBlockRoot        []byte
 }
@@ -87,7 +87,7 @@ func NewQuerierService(ctx context.Context,
 		atGenesis:          true,
 		powchain:           cfg.PowChain,
 		chainStartBuf:      make(chan time.Time, 1),
-		chainHeadResponses: make(map[peer.ID]*ethpb.ChainHeadResponse),
+		chainHeadResponses: make(map[peer.ID]*pb.ChainHeadResponse),
 	}
 }
 
@@ -146,7 +146,7 @@ func (q *Querier) listenForStateInitialization() {
 }
 
 func (q *Querier) run() {
-	responseSub := q.p2p.Subscribe(&ethpb.ChainHeadResponse{}, q.responseBuf)
+	responseSub := q.p2p.Subscribe(&pb.ChainHeadResponse{}, q.responseBuf)
 	// Ticker so that service will keep on requesting for chain head
 	// until they get a response.
 	ticker := time.NewTicker(1 * time.Second)
@@ -184,7 +184,7 @@ func (q *Querier) run() {
 				timeout = time.After(10 * time.Second)
 				hasReceivedResponse = true
 			}
-			response := msg.Data.(*ethpb.ChainHeadResponse)
+			response := msg.Data.(*pb.ChainHeadResponse)
 			if _, ok := q.chainHeadResponses[msg.Peer]; !ok {
 				queryLog.WithFields(logrus.Fields{
 					"peerID":      msg.Peer.Pretty(),
@@ -221,7 +221,7 @@ func (q *Querier) waitForAllDepositsToBeProcessed() {
 // RequestLatestHead broadcasts a request for
 // the latest chain head slot and state root to a peer.
 func (q *Querier) RequestLatestHead() {
-	request := &ethpb.ChainHeadRequest{}
+	request := &pb.ChainHeadRequest{}
 	q.p2p.Broadcast(context.Background(), request)
 }
 

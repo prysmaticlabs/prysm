@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -26,7 +27,7 @@ type BeaconServer struct {
 	chainService        chainService
 	targetsFetcher      blockchain.TargetsFetcher
 	operationService    operationService
-	incomingAttestation chan *pbp2p.Attestation
+	incomingAttestation chan *ethpb.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
 	chainStartChan      chan time.Time
 }
@@ -41,7 +42,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 	if ok {
 		genesisTime := bs.powChainService.ETH2GenesisTime()
 
-		res := &ethpb.ChainStartResponse{
+		res := &pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,
 		}
@@ -54,7 +55,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 		select {
 		case chainStartTime := <-bs.chainStartChan:
 			log.Info("Sending ChainStart log and genesis time to connected validator clients")
-			res := &ethpb.ChainStartResponse{
+			res := &pb.ChainStartResponse{
 				Started:     true,
 				GenesisTime: uint64(chainStartTime.Unix()),
 			}
@@ -69,7 +70,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
-func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*pbp2p.BeaconBlock, error) {
+func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
 	block, err := bs.beaconDB.ChainHead()
 	if err != nil {
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
@@ -78,7 +79,7 @@ func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*
 }
 
 // BlockTree returns the current tree of saved blocks and their votes starting from the justified state.
-func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*ethpb.BlockTreeResponse, error) {
+func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.BlockTreeResponse, error) {
 	justifiedState, err := bs.beaconDB.JustifiedState()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
@@ -92,7 +93,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*ethpb.
 		return nil, err
 	}
 	highestSlot := bs.beaconDB.HighestBlockSlot()
-	fullBlockTree := []*pbp2p.BeaconBlock{}
+	fullBlockTree := []*ethpb.BeaconBlock{}
 	for i := justifiedBlock.Slot + 1; i < highestSlot; i++ {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -103,7 +104,7 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*ethpb.
 		}
 		fullBlockTree = append(fullBlockTree, nextLayer...)
 	}
-	tree := []*ethpb.BlockTreeResponse_TreeNode{}
+	tree := []*pb.BlockTreeResponse_TreeNode{}
 	for _, kid := range fullBlockTree {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -116,20 +117,20 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*ethpb.
 		if err != nil {
 			return nil, err
 		}
-		tree = append(tree, &ethpb.BlockTreeResponse_TreeNode{
+		tree = append(tree, &pb.BlockTreeResponse_TreeNode{
 			BlockRoot:         blockRoot[:],
 			Block:             kid,
 			ParticipatedVotes: uint64(participatedVotes),
 		})
 	}
-	return &ethpb.BlockTreeResponse{
+	return &pb.BlockTreeResponse{
 		Tree: tree,
 	}, nil
 }
 
 // BlockTreeBySlots returns the current tree of saved blocks and their
 // votes starting from the justified state.
-func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *ethpb.TreeBlockSlotRequest) (*ethpb.BlockTreeResponse, error) {
+func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockSlotRequest) (*pb.BlockTreeResponse, error) {
 	justifiedState, err := bs.beaconDB.JustifiedState()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
@@ -149,7 +150,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *ethpb.TreeBlo
 		return nil, fmt.Errorf("upper limit (%d) of slot range cannot be lower than the lower limit (%d)", req.SlotTo, req.SlotFrom)
 	}
 	highestSlot := bs.beaconDB.HighestBlockSlot()
-	fullBlockTree := []*pbp2p.BeaconBlock{}
+	fullBlockTree := []*ethpb.BeaconBlock{}
 	for i := justifiedBlock.Slot + 1; i < highestSlot; i++ {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -167,7 +168,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *ethpb.TreeBlo
 			break
 		}
 	}
-	tree := []*ethpb.BlockTreeResponse_TreeNode{}
+	tree := []*pb.BlockTreeResponse_TreeNode{}
 	for _, kid := range fullBlockTree {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -192,7 +193,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *ethpb.TreeBlo
 
 			totalVotes := helpers.TotalBalance(hState, activeValidatorIndices)
 
-			tree = append(tree, &ethpb.BlockTreeResponse_TreeNode{
+			tree = append(tree, &pb.BlockTreeResponse_TreeNode{
 				BlockRoot:         blockRoot[:],
 				Block:             kid,
 				ParticipatedVotes: uint64(participatedVotes),
@@ -200,12 +201,12 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *ethpb.TreeBlo
 			})
 		}
 	}
-	return &ethpb.BlockTreeResponse{
+	return &pb.BlockTreeResponse{
 		Tree: tree,
 	}, nil
 }
 
-func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
+func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
 	proof, err := trie.MerkleProof(index)
 	if err != nil {
 		return nil, fmt.Errorf(

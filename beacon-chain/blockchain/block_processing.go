@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -175,7 +176,7 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *ethpb.B
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}
 	// Announce the new block to the network.
-	c.p2p.Broadcast(ctx, &ethpb.BeaconBlockAnnounce{
+	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       blockRoot[:],
 		SlotNumber: block.Slot,
 	})

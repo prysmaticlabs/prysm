@@ -13,20 +13,20 @@ import (
 )
 
 var topicMappings = map[pb.Topic]proto.Message{
-	pb.Topic_BEACON_BLOCK_ANNOUNCE:               &ethpb.BeaconBlockAnnounce{},
-	pb.Topic_BEACON_BLOCK_REQUEST:                &ethpb.BeaconBlockRequest{},
-	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &ethpb.BeaconBlockRequestBySlotNumber{},
-	pb.Topic_BEACON_BLOCK_RESPONSE:               &ethpb.BeaconBlockResponse{},
-	pb.Topic_BATCHED_BEACON_BLOCK_REQUEST:        &ethpb.BatchedBeaconBlockRequest{},
-	pb.Topic_BATCHED_BEACON_BLOCK_RESPONSE:       &ethpb.BatchedBeaconBlockResponse{},
-	pb.Topic_CHAIN_HEAD_REQUEST:                  &ethpb.ChainHeadRequest{},
-	pb.Topic_CHAIN_HEAD_RESPONSE:                 &ethpb.ChainHeadResponse{},
+	pb.Topic_BEACON_BLOCK_ANNOUNCE:               &pb.BeaconBlockAnnounce{},
+	pb.Topic_BEACON_BLOCK_REQUEST:                &pb.BeaconBlockRequest{},
+	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &pb.BeaconBlockRequestBySlotNumber{},
+	pb.Topic_BEACON_BLOCK_RESPONSE:               &pb.BeaconBlockResponse{},
+	pb.Topic_BATCHED_BEACON_BLOCK_REQUEST:        &pb.BatchedBeaconBlockRequest{},
+	pb.Topic_BATCHED_BEACON_BLOCK_RESPONSE:       &pb.BatchedBeaconBlockResponse{},
+	pb.Topic_CHAIN_HEAD_REQUEST:                  &pb.ChainHeadRequest{},
+	pb.Topic_CHAIN_HEAD_RESPONSE:                 &pb.ChainHeadResponse{},
 	pb.Topic_BEACON_STATE_HASH_ANNOUNCE:          &pb.BeaconStateHashAnnounce{},
 	pb.Topic_BEACON_STATE_REQUEST:                &pb.BeaconStateRequest{},
 	pb.Topic_BEACON_STATE_RESPONSE:               &pb.BeaconStateResponse{},
-	pb.Topic_ATTESTATION_ANNOUNCE:                &ethpb.AttestationAnnounce{},
+	pb.Topic_ATTESTATION_ANNOUNCE:                &pb.AttestationAnnounce{},
 	pb.Topic_ATTESTATION_REQUEST:                 &pb.AttestationRequest{},
-	pb.Topic_ATTESTATION_RESPONSE:                &ethpb.AttestationResponse{},
+	pb.Topic_ATTESTATION_RESPONSE:                &pb.AttestationResponse{},
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {

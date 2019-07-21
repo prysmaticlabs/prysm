@@ -32,7 +32,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			v.prevBalance[bytesutil.ToBytes48(pkey)] = params.BeaconConfig().MaxEffectiveBalance
 		}
 
-		req := &ethpb.ValidatorPerformanceRequest{
+		req := &pb.ValidatorPerformanceRequest{
 			Slot:      slot,
 			PublicKey: pkey,
 		}

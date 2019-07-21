@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -78,7 +79,7 @@ func TestReceiveBlockAnnounce_SkipsBlacklistedBlock(t *testing.T) {
 	db.MarkEvilBlockHash(blockRoot)
 	msg := p2p.Message{
 		Ctx: context.Background(),
-		Data: &ethpb.BeaconBlockAnnounce{
+		Data: &pb.BeaconBlockAnnounce{
 			Hash: blockRoot[:],
 		},
 	}
@@ -127,7 +128,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 
 	for _, block := range blocksMissingParent {
 		msg := p2p.Message{
-			Data: &ethpb.BeaconBlockResponse{
+			Data: &pb.BeaconBlockResponse{
 				Block: block,
 			},
 			Ctx: context.Background(),
@@ -145,7 +146,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	}
 	for _, block := range parents {
 		msg := p2p.Message{
-			Data: &ethpb.BeaconBlockResponse{
+			Data: &pb.BeaconBlockResponse{
 				Block: block,
 			},
 			Ctx: context.Background(),

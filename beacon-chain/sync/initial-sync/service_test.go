@@ -11,6 +11,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -139,12 +140,12 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	msg := p2p.Message{
 		Ctx: context.Background(),
-		Data: &ethpb.BatchedBeaconBlockResponse{
+		Data: &pb.BatchedBeaconBlockResponse{
 			BatchedBlocks: batchedBlocks,
 		},
 	}
 
-	chainHead := &ethpb.ChainHeadResponse{}
+	chainHead := &pb.ChainHeadResponse{}
 
 	ss.processBatchedBlocks(msg, chainHead)
 }
@@ -184,7 +185,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			ParentRoot: parentHash,
 		}
 
-		chainHead := &ethpb.ChainHeadResponse{}
+		chainHead := &pb.ChainHeadResponse{}
 
 		ss.processBlock(context.Background(), block, chainHead)
 

@@ -415,7 +415,7 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 
 			for _, index := range crossComm {
 				validator := state.Validators[index]
-				compactCommArray[shard].PublicKeys = append(compactCommArray[shard].PublicKeys, validator.PublicKey)
+				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.PublicKey)
 				compactValidator := compressValidator(validator, index)
 				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
 
@@ -444,7 +444,7 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 
 			for _, index := range crossComm {
 				validator := state.Validators[index]
-				compactCommArray[shard].PublicKeys = append(compactCommArray[shard].PublicKeys, validator.PublicKey)
+				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.PublicKey)
 				compactValidator := compressValidator(validator, index)
 				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
 

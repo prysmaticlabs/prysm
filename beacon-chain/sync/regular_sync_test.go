@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -151,7 +152,7 @@ func TestProcessBlockRoot_OK(t *testing.T) {
 	ss := NewRegularSyncService(context.Background(), cfg)
 
 	announceHash := hashutil.Hash([]byte{})
-	hashAnnounce := &ethpb.BeaconBlockAnnounce{
+	hashAnnounce := &pb.BeaconBlockAnnounce{
 		Hash: announceHash[:],
 	}
 
@@ -228,7 +229,7 @@ func TestProcessBlock_OK(t *testing.T) {
 		},
 	}
 
-	responseBlock := &ethpb.BeaconBlockResponse{
+	responseBlock := &pb.BeaconBlockResponse{
 		Block:       data,
 		Attestation: attestation,
 	}
@@ -298,7 +299,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		},
 	}
 
-	responseBlock1 := &ethpb.BeaconBlockResponse{
+	responseBlock1 := &pb.BeaconBlockResponse{
 		Block: data1,
 		Attestation: &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
@@ -327,7 +328,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		},
 	}
 
-	responseBlock2 := &ethpb.BeaconBlockResponse{
+	responseBlock2 := &pb.BeaconBlockResponse{
 		Block: data2,
 		Attestation: &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
@@ -388,7 +389,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	request1 := &ethpb.AttestationResponse{
+	request1 := &pb.AttestationResponse{
 		Attestation: &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
@@ -442,7 +443,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	request1 := &ethpb.AttestationResponse{
+	request1 := &pb.AttestationResponse{
 		Attestation: &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
@@ -549,7 +550,7 @@ func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 
 	if err := ss.handleAttestationAnnouncement(p2p.Message{
 		Ctx:  context.Background(),
-		Data: &ethpb.AttestationAnnounce{Hash: hash[:]},
+		Data: &pb.AttestationAnnounce{Hash: hash[:]},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -594,7 +595,7 @@ func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
 
 	if err := ss.handleAttestationAnnouncement(p2p.Message{
 		Ctx:  context.Background(),
-		Data: &ethpb.AttestationAnnounce{Hash: hash[:]},
+		Data: &pb.AttestationAnnounce{Hash: hash[:]},
 	}); err != nil {
 		t.Error(err)
 	}

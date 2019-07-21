@@ -7,13 +7,13 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"go.opencensus.io/trace"
 )
 
-func (s *InitialSync) processState(msg p2p.Message, chainHead *ethpb.ChainHeadResponse) error {
+func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processState")
 	defer span.End()
 	data := msg.Data.(*pb.BeaconStateResponse)

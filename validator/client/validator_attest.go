@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -39,7 +40,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
 	pubKey := v.keys[pk].PublicKey.Marshal()
-	var assignment *ethpb.AssignmentResponse_ValidatorAssignment
+	var assignment *pb.AssignmentResponse_ValidatorAssignment
 	if v.assignments == nil {
 		log.Errorf("No assignments for validators")
 		return
@@ -50,7 +51,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 			break
 		}
 	}
-	idxReq := &ethpb.ValidatorIndexRequest{
+	idxReq := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
@@ -58,7 +59,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		log.Errorf("Could not fetch validator index: %v", err)
 		return
 	}
-	req := &ethpb.AttestationRequest{
+	req := &pb.AttestationRequest{
 		Slot:  slot,
 		Shard: assignment.Shard,
 	}
@@ -87,7 +88,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
 
-	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
 	if err != nil {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
 		return
@@ -107,7 +108,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	}
 	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
 
-	attestation := &pbp2p.Attestation{
+	attestation := &ethpb.Attestation{
 		Data:            data,
 		CustodyBits:     custodyBitfield,
 		AggregationBits: aggregationBitfield,
@@ -121,7 +122,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	}
 
 	log.WithFields(logrus.Fields{
-		"headRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot)),
+		"headRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(data.BlockRoot)),
 		"shard":       data.Crosslink.Shard,
 		"sourceEpoch": data.Source.Epoch,
 		"targetEpoch": data.Target.Epoch,
@@ -132,7 +133,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		trace.Int64Attribute("slot", int64(slot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.Root)),
 		trace.Int64Attribute("shard", int64(data.Crosslink.Shard)),
-		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
+		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BlockRoot)),
 		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),

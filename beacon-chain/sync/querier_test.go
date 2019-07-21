@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -153,7 +154,7 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	response := &ethpb.ChainHeadResponse{
+	response := &pb.ChainHeadResponse{
 		CanonicalSlot:            1,
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
@@ -190,7 +191,7 @@ func TestQuerier_BestPeerAssignment(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	response := &ethpb.ChainHeadResponse{
+	response := &pb.ChainHeadResponse{
 		CanonicalSlot:            1,
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
@@ -264,7 +265,7 @@ func TestSyncedInRestarts(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	response := &ethpb.ChainHeadResponse{
+	response := &pb.ChainHeadResponse{
 		CanonicalSlot:            10,
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}

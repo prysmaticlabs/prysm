@@ -8,6 +8,7 @@ import (
 
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -18,7 +19,7 @@ import (
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
-func (s *InitialSync) processBlock(ctx context.Context, block *ethpb.BeaconBlock, chainHead *ethpb.ChainHeadResponse) error {
+func (s *InitialSync) processBlock(ctx context.Context, block *ethpb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.processBlock")
 	defer span.End()
 	recBlock.Inc()
@@ -40,12 +41,12 @@ func (s *InitialSync) processBlock(ctx context.Context, block *ethpb.BeaconBlock
 
 // processBatchedBlocks processes all the received blocks from
 // the p2p message.
-func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *ethpb.ChainHeadResponse) error {
+func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBatchedBlocks")
 	defer span.End()
 	batchedBlockReq.Inc()
 
-	response := msg.Data.(*ethpb.BatchedBeaconBlockResponse)
+	response := msg.Data.(*pb.BatchedBeaconBlockResponse)
 	batchedBlocks := response.BatchedBlocks
 	if len(batchedBlocks) == 0 {
 		// Do not process empty responses.
@@ -78,7 +79,7 @@ func (s *InitialSync) requestBatchedBlocks(ctx context.Context, FinalizedRoot []
 		"finalizedBlkRoot": fmt.Sprintf("%#x", bytesutil.Trunc(FinalizedRoot[:])),
 		"headBlkRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(canonicalRoot[:]))},
 	).Debug("Requesting batched blocks")
-	if err := s.p2p.Send(ctx, &ethpb.BatchedBeaconBlockRequest{
+	if err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
 		FinalizedRoot: FinalizedRoot,
 		CanonicalRoot: canonicalRoot,
 	}, peer); err != nil {

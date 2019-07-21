@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -21,7 +22,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	defer span.End()
 	recBlockAnnounce.Inc()
 
-	data := msg.Data.(*ethpb.BeaconBlockAnnounce)
+	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	h := bytesutil.ToBytes32(data.Hash[:32])
 
 	isEvilBlock := rs.db.IsEvilBlockHash(h)
@@ -51,7 +52,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(h[:]))).Debug("Received incoming block root, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
-	if err := rs.p2p.Send(ctx, &ethpb.BeaconBlockRequest{Hash: h[:]}, msg.Peer); err != nil {
+	if err := rs.p2p.Send(ctx, &pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -112,7 +113,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.validateAndProcessBlock")
 	defer span.End()
 
-	response := blockMsg.Data.(*ethpb.BeaconBlockResponse)
+	response := blockMsg.Data.(*pb.BeaconBlockResponse)
 	block := response.Block
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
@@ -223,7 +224,7 @@ func (rs *RegularSync) insertPendingBlock(ctx context.Context, blockRoot [32]byt
 	}
 	rs.blocksAwaitingProcessing[blockRoot] = blockMsg
 	blocksAwaitingProcessingGauge.Inc()
-	rs.p2p.Broadcast(ctx, &ethpb.BeaconBlockRequest{Hash: blockRoot[:]})
+	rs.p2p.Broadcast(ctx, &pb.BeaconBlockRequest{Hash: blockRoot[:]})
 }
 
 func (rs *RegularSync) clearPendingBlock(blockRoot [32]byte) {

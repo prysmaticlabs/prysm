@@ -11,8 +11,8 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -38,17 +38,17 @@ func publicKeys(keys map[string]*keystore.Key) [][]byte {
 	return pks
 }
 
-func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
-	multipleStatus := make([]*ethpb.ValidatorActivationResponse_Status, len(pubkeys))
+func generateMockStatusResponse(pubkeys [][]byte) *pb.ValidatorActivationResponse {
+	multipleStatus := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
 	for i, key := range pubkeys {
-		multipleStatus[i] = &ethpb.ValidatorActivationResponse_Status{
+		multipleStatus[i] = &pb.ValidatorActivationResponse_Status{
 			PublicKey: key,
-			Status: &ethpb.ValidatorStatusResponse{
+			Status: &pb.ValidatorStatusResponse{
 				Status: pb.ValidatorStatus_UNKNOWN_STATUS,
 			},
 		}
 	}
-	return &ethpb.ValidatorActivationResponse{Statuses: multipleStatus}
+	return &pb.ValidatorActivationResponse{Statuses: multipleStatus}
 }
 
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
@@ -67,7 +67,7 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 		&ptypes.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
+		&pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesis,
 		},
@@ -100,7 +100,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 		&ptypes.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
+		&pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesis,
 		},
@@ -176,12 +176,12 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&ethpb.ValidatorActivationResponse{
+		&pb.ValidatorActivationResponse{
 			ActivatedPublicKeys: publicKeys(v.keys),
 		},
 		nil,
@@ -209,7 +209,7 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, errors.New("failed stream"))
@@ -234,7 +234,7 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
@@ -266,7 +266,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
@@ -308,7 +308,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pbp2p.BeaconBlock{Slot: 0}, nil)
+	).Return(&ethpb.BeaconBlock{Slot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -335,7 +335,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: v.pubkeys,
 		},
 	).Return(clientStream, nil)
@@ -366,7 +366,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		gomock.Any(),
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&ethpb.ValidatorActivationResponse{
+		&pb.ValidatorActivationResponse{
 			ActivatedPublicKeys: make([][]byte, 0),
 		},
 		nil,
@@ -389,8 +389,8 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 	v := validator{
 		keys:            keyMap,
 		validatorClient: client,
-		assignments: &ethpb.AssignmentResponse{
-			ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{
+		assignments: &pb.AssignmentResponse{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Committee: []uint64{},
 					Slot:      10,
@@ -417,8 +417,8 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	v := validator{
 		keys:            keyMap,
 		validatorClient: client,
-		assignments: &ethpb.AssignmentResponse{
-			ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{
+		assignments: &pb.AssignmentResponse{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Shard: 1,
 				},
@@ -447,8 +447,8 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	resp := &ethpb.AssignmentResponse{
-		ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{
+	resp := &pb.AssignmentResponse{
+		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 			{
 				Slot:       params.BeaconConfig().SlotsPerEpoch,
 				Shard:      100,
@@ -485,8 +485,8 @@ func TestUpdateAssignments_OK(t *testing.T) {
 func TestRolesAt_OK(t *testing.T) {
 
 	v := validator{
-		assignments: &ethpb.AssignmentResponse{
-			ValidatorAssignment: []*ethpb.AssignmentResponse_ValidatorAssignment{
+		assignments: &pb.AssignmentResponse{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Shard:      1,
 					Slot:       1,
