@@ -204,7 +204,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "ecf08adca3c19f69aea911fcde9b5e71d6bbfe28",
+    commit = "e0e450364c42117b8e372c7157821c18dad900a4",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -830,14 +830,14 @@ go_repository(
 go_repository(
     name = "io_k8s_client_go",
     build_extra_args = ["-exclude=vendor"],
-    commit = "8abb21031259350aad0799bb42ba213ee8bb3399",
+    commit = "0c47f9da00011ea9a8717671127ac21625c7a6c0",
     importpath = "k8s.io/client-go",
 )
 
 go_repository(
     name = "io_k8s_apimachinery",
     build_file_proto_mode = "disable_global",
-    commit = "4a9a8137c0a17bc4594f544987b3f0d48b2e3d3a",
+    commit = "bfcf53abc9f82bad3e534fcb1c36599d3c989ebf",
     importpath = "k8s.io/apimachinery",
 )
 
@@ -856,7 +856,7 @@ go_repository(
 go_repository(
     name = "io_k8s_api",
     build_file_proto_mode = "disable_global",
-    commit = "b7bd5f2d334ce968edc54f5fdb2ac67ce39c56d5",
+    commit = "3043179095b6baa0087e8735d796bd6dfa881f8e",
     importpath = "k8s.io/api",
 )
 
@@ -1202,4 +1202,58 @@ go_repository(
     name = "com_github_google_btree",
     commit = "20236160a414454a9c64b6c8829381c6f4bddcaa",
     importpath = "github.com/google/btree",
+)
+
+go_repository(
+    name = "in_gopkg_inf_v0",
+    commit = "d2d2541c53f18d2a059457998ce2876cc8e67cbf",
+    importpath = "gopkg.in/inf.v0",
+)
+
+go_repository(
+    name = "com_github_davecgh_go_spew",
+    commit = "d8f796af33cc11cb798c1aaeb27a4ebc5099927d",
+    importpath = "github.com/davecgh/go-spew",
+)
+
+go_repository(
+    name = "io_k8s_sigs_yaml",
+    commit = "4cd0c284b15f1735b8cc247df097d262b8903f9f",
+    importpath = "sigs.k8s.io/yaml",
+)
+
+go_repository(
+    name = "com_github_google_go_cmp",
+    commit = "1b316004397f1f336546ca058ddb5b95c41a8772",
+    importpath = "github.com/google/go-cmp",
+)
+
+go_repository(
+    name = "com_github_modern_go_reflect2",
+    commit = "94122c33edd36123c84d5368cfb2b69df93a0ec8",
+    importpath = "github.com/modern-go/reflect2",
+)
+
+go_repository(
+    name = "com_github_json_iterator_go",
+    commit = "27518f6661eba504be5a7a9a9f6d9460d892ade3",
+    importpath = "github.com/json-iterator/go",
+)
+
+go_repository(
+    name = "com_github_modern_go_concurrent",
+    commit = "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94",
+    importpath = "github.com/modern-go/concurrent",
+)
+
+go_repository(
+    name = "io_k8s_utils",
+    commit = "3dccf664f023863740c508fb4284e49742bedfa4",
+    importpath = "k8s.io/utils",
+)
+
+go_repository(
+    name = "com_github_googleapis_gnostic",
+    commit = "25d8b0b6698593f520d9d8dc5a88e6b16ca9ecc0",
+    importpath = "github.com/googleapis/gnostic",
 )
