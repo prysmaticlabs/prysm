@@ -305,6 +305,17 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Errorf("unable to marshal the beacon state: %v", err)
 		return err
 	}
+	finalizedBlk, err := rs.db.FinalizedBlock()
+	if err != nil {
+		log.Error("could not get finalized block")
+		return err
+	}
+	finalRoot, _ := ssz.SigningRoot(finalizedBlk)
+	blkRoot, _ := ssz.SigningRoot(fState.LatestBlockHeader)
+
+	if blkRoot != finalRoot {
+		log.Error("header and block not equal in finalized state")
+	}
 	if root != bytesutil.ToBytes32(req.FinalizedStateRootHash32S) {
 		log.WithFields(logrus.Fields{
 			"requested": fmt.Sprintf("%#x", req.FinalizedStateRootHash32S),

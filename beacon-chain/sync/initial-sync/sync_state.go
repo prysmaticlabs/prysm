@@ -37,11 +37,12 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	finalizedBlockRoot, err := ssz.HashTreeRoot(finalizedState.LatestBlockHeader)
+	finalizedBlockRoot, err := ssz.SigningRoot(finalizedState.LatestBlockHeader)
 	if err != nil {
 		log.Errorf("Could not hash finalized block %v", err)
 		return nil
 	}
+	log.Infof("finalized block root %#x", finalizedBlockRoot)
 
 	if err := s.db.SaveHistoricalState(ctx, finalizedState, finalizedBlockRoot); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
