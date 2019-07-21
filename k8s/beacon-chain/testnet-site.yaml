@@ -1,0 +1,257 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: testnet-site-alpha
+  namespace: beacon-chain
+  labels:
+    app: beacon-chain
+    component: testnet-site
+    version: alpha
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: beacon-chain
+      component: testnet-site
+      version: alpha
+  template:
+    metadata:
+      labels:
+        app: beacon-chain
+        component: testnet-site
+        version: alpha
+    spec:
+      priorityClassName: best-effort-priority
+      containers:
+      - name: proxy-cache
+        image: gcr.io/prysmaticlabs/prysm/testnet-proxy-cache:latest
+        ports:
+        - containerPort: 80
+          name: http-cache
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 4000
+          initialDelaySeconds: 3
+          periodSeconds: 15
+        resources:
+          requests:
+            cpu: "100m"
+      - name: site
+        image: gcr.io/prysmaticlabs/prysm-testnet-site:latest
+        ports:
+        - containerPort: 4000
+          name: http
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 4000
+          initialDelaySeconds: 3
+          periodSeconds: 15
+        resources:
+          requests:
+            cpu: "100m"
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: testnet-site-production
+  namespace: beacon-chain
+  labels:
+    app: beacon-chain
+    component: testnet-site
+    version: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: beacon-chain
+      component: testnet-site
+      version: production
+  template:
+    metadata:
+      labels:
+        app: beacon-chain
+        component: testnet-site
+        version: production
+    spec:
+      priorityClassName: production-priority
+      containers:
+        - name: proxy-cache
+          image: gcr.io/prysmaticlabs/prysm/testnet-proxy-cache:latest
+          ports:
+            - containerPort: 80
+              name: http-cache
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4000
+            initialDelaySeconds: 3
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "100m"
+        - name: site
+          image: gcr.io/prysmaticlabs/prysm-testnet-site:sapphire
+          ports:
+            - containerPort: 4000
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4000
+            initialDelaySeconds: 3
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "100m"
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: testnet-site-alpha
+  namespace: beacon-chain
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: testnet-site-alpha
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 80
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: testnet-site-production
+  namespace: beacon-chain
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: testnet-site-production
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 80
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: testnet-site-alpha
+  namespace: beacon-chain
+spec:
+  selector:
+    app: beacon-chain
+    component: testnet-site
+    version: alpha
+  ports:
+  - port: 4000
+    targetPort: 4000
+    name: http-ng
+  - port: 80
+    targetPort: 80
+    name: http-nginx
+  type: ClusterIP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: testnet-site-production
+  namespace: beacon-chain
+spec:
+  selector:
+    app: beacon-chain
+    component: testnet-site
+    version: production
+  ports:
+    - port: 4000
+      targetPort: 4000
+      name: http-ng
+    - port: 80
+      targetPort: 80
+      name: http-nginx
+  type: ClusterIP
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: alpha-prylabs-net
+  namespace: istio-system
+spec:
+  hosts:
+  - alpha.prylabs.net
+  gateways:
+  - prylabs-wildcard-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /ssz
+    rewrite:
+      uri: /api
+    route:
+    - destination:
+        port:
+          number: 4000
+        host: ssz-server.beacon-chain.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+      - '*'
+      allowMethods:
+      - POST
+      allowHeaders: 
+      - content-type
+      maxAge: '24h'
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 80
+        host: testnet-site-alpha.beacon-chain.svc.cluster.local
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: prylabs-net
+  namespace: istio-system
+spec:
+  hosts:
+  - prylabs.net
+  gateways:
+  - prylabs-wildcard-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /ssz
+    rewrite:
+      uri: /api
+    route:
+    - destination:
+        port:
+          number: 4000
+        host: ssz-server.beacon-chain.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+      - '*'
+      allowMethods:
+      - POST
+      allowHeaders:
+      - content-type
+      maxAge: '24h'
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port: 
+          number: 80
+        host: testnet-site-production.beacon-chain.svc.cluster.local

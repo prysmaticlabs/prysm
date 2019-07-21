@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+package(default_testonly = True)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "broadcaster_mock.go",
+        "feed_mock.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/shared/p2p/mock",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//shared/event:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_golang_mock//gomock:go_default_library",
+    ],
+)

@@ -1,0 +1,108 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata: 
+  name: contract-address-http
+  namespace: beacon-chain
+  labels:
+    app: beacon-chain
+    component: contract-address-http
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: beacon-chain
+      component: contract-address-http
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: beacon-chain
+        component: contract-address-http
+        version: v1
+    spec:
+      priorityClassName: production-priority
+      containers:
+      - name: site
+        image: gcr.io/prysmaticlabs/prysm/contract-addr:latest
+        readinessProbe:
+          httpGet:
+            path: /contract
+            port: 8080
+          initialDelaySeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /contract
+            port: 8080 
+          initialDelaySeconds: 10
+        args:
+          - --address-path=/etc/address/DEPOSIT_CONTRACT_ADDRESS
+        ports: 
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/address
+      volumes:
+      - name: config-volume
+        configMap:
+          name: beacon-config
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: contract-address-http
+  namespace: beacon-chain
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: contract-address-http
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 80
+---
+kind: Service
+apiVersion: v1
+metadata: 
+  name: contract-address-http
+  namespace: beacon-chain
+spec:
+  selector:
+    app: beacon-chain
+    component: contract-address-http
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata: 
+  name: contract-address-http
+  namespace: istio-system
+spec:
+  hosts:
+  - beta.prylabs.net
+  gateways:
+  - prylabs-wildcard-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /contract
+    route:
+    - destination:
+        port:
+          number: 8080
+        host: contract-address-http.beacon-chain.svc.cluster.local
+    corsPolicy:
+      allowOrigin:
+      - '*'
+      allowMethods:
+      - GET
+      maxAge: '24h'

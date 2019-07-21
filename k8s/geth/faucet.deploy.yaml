@@ -1,0 +1,36 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: public-faucet
+  namespace: pow
+  labels:
+    component: public-faucet
+    app: goerli
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: goerli 
+      version: v1
+      component: public-faucet
+  template:
+    metadata:
+      labels:
+        app: goerli
+        version: v1
+        component: public-faucet
+    spec:
+      priorityClassName: production-priority
+      containers:
+      - name: faucet-grpc
+        image: gcr.io/prysmaticlabs/prysm/faucet:latest
+        args: 
+        - --recaptcha_secret=6LdX85EUAAAAAO-_qMEOdecIzxV3eH222ekzi1Y9
+        - --private-key=fbaaed3bc1d751efc8f19cc577437a6c6e852f680c16e6f5ee05e8ca2e83973e
+        - --rpc=http://public-rpc-nodes:8545
+        - --port=8000
+        ports: 
+        - containerPort: 8000
+          name: grpc-faucet
+

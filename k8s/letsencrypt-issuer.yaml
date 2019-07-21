@@ -1,0 +1,39 @@
+# See: https://github.com/stefanprodan/istio-gke/blob/master/docs/istio/05-letsencrypt-setup.md
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Issuer
+metadata:
+  name: letsencrypt-prod
+  namespace: istio-system
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: contact@prysmaticlabs.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    dns01:
+      providers:
+       - name: cloud-dns
+         clouddns:
+           serviceAccountSecretRef:
+             name: cert-manager-credentials
+             key: gcp-dns-admin.json
+           project: prysmaticlabs
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: istio-gateway
+  namespace: istio-system
+spec:
+  secretname: istio-ingressgateway-certs
+  issuerRef:
+    name: letsencrypt-prod
+  commonName: "*.prylabs.net"
+  dnsNames: 
+    - "prylabs.net"
+  acme:
+    config:
+    - dns01:
+        provider: cloud-dns
+      domains:
+      - "prylabs.net"

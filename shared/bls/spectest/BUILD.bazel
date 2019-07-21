@@ -1,0 +1,40 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    testonly = True,
+    srcs = [
+        "aggregate_pubkeys_test.yaml.go",
+        "aggregate_sigs_test.yaml.go",
+        "g2_compressed_test.yaml.go",
+        "g2_uncompressed_test.yaml.go",
+        "priv_to_pub_test.yaml.go",
+        "sign_message_test.yaml.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/shared/bls/spectest",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "small",
+    srcs = [
+        "aggregate_pubkeys_test.go",
+        "aggregate_sigs_test.go",
+        "g2_compressed_test.go",
+        "g2_uncompressed_test.go",
+        "helper_test.go",
+        "priv_to_pub_test.go",
+        "sign_message_test.go",
+    ],
+    data = ["@eth2_spec_tests//:test_data"],
+    embed = [":go_default_library"],
+    tags = ["spectest"],
+    deps = [
+        "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "@com_github_ghodss_yaml//:go_default_library",
+        "@com_github_phoreproject_bls//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+    ],
+)

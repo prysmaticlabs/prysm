@@ -1,0 +1,11 @@
+# gazelle:ignore
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+go_proto_library(
+    name = "faucet_go_proto",
+    importpath = "github.com/prysmaticlabs/prysm/proto/faucet",
+    proto = "@prysm_testnet_site//:faucet_proto",
+    compiler = "//:grpc_proto_compiler",
+    visibility = ["//visibility:public"],
+)
+

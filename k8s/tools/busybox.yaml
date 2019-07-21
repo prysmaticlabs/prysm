@@ -1,0 +1,30 @@
+# Busybox is a general utility container that can be used to run arbirary 
+# commands from within the cluster. 
+# 
+# Examples:
+# Print environment variables
+# kubectl exec -it busybox -- printenv 
+# 
+# Lookup address via kube-dns
+# kubectl exec -it busybox -- nslookup kubernetes.default.svc.cluster.local
+kind: Pod
+apiVersion: v1
+metadata:
+  name: busybox
+  labels:
+    name: busybox
+spec:
+  priorityClassName: best-effort-priority
+  containers:
+  - name: busybox
+    image: busybox
+    command:
+      - sleep
+      - "3600"
+    resources:
+      requests:
+        memory: "25Mi"
+        cpu: "25m"
+      limits:
+        memory: "50Mi"
+        cpu: "50m"

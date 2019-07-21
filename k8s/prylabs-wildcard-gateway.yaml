@@ -1,0 +1,32 @@
+# Note: Gateways cannot share the same TLS certificates so this wild card 
+# gateway should be used for all services requesting *.prylabs.net.
+# See: https://github.com/istio/istio/issues/9429
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: prylabs-wildcard-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway 
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*.prylabs.net"
+    - "prylabs.net"
+    tls:
+      httpsRedirect: true
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "*.prylabs.net"
+    - "prylabs.net"
+    tls:
+      mode: SIMPLE
+      privateKey: /etc/istio/ingressgateway-certs/tls.key
+      serverCertificate: /etc/istio/ingressgateway-certs/tls.crt

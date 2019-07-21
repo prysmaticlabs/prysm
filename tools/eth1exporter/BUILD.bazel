@@ -1,0 +1,56 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
+load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/eth1exporter",
+    visibility = ["//visibility:private"],
+    deps = [
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
+        "@com_github_ethereum_go_ethereum//params:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "eth1exporter",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "image",
+    srcs = ["main.go"],
+    goarch = "amd64",
+    goos = "linux",
+    importpath = "github.com/prysmaticlabs/prysm/tools/eth1exporter",
+    race = "off",
+    static = "off",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
+        "@com_github_ethereum_go_ethereum//params:go_default_library",
+        "@org_uber_go_automaxprocs//:go_default_library",
+    ],
+)
+
+container_bundle(
+    name = "image_bundle",
+    images = {
+        "gcr.io/prysmaticlabs/prysm/eth1monitor:latest": ":image",
+        "gcr.io/prysmaticlabs/prysm/eth1monitor:{DOCKER_TAG}": ":image",
+    },
+    tags = ["manual"],
+)
+
+docker_push(
+    name = "push_images",
+    bundle = ":image_bundle",
+    tags = ["manual"],
+)

@@ -1,0 +1,346 @@
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+import "proto/eth/v1alpha1/attestation.proto";
+import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/validator.proto";
+
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha;eth";
+
+// Beacon chain API
+//
+// The beacon chain API can be used to access data relevant to the Ethereum 2.0
+// phase 0 beacon chain.
+service BeaconChain {
+    // TODO(preston): Batch requests?
+
+    // Retrieve attestations by block root, slot, or epoch. 
+    // 
+    // The server may return an empty list when no attestations match the given 
+    // filter criteria. This RPC should not return NOT_FOUND. Only one filter 
+    // criteria should be used.
+    rpc ListAttestations(ListAttestationsRequest) returns (ListAttestationsResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/attestations"
+        };
+    }
+
+    // Retrieve pending attestations.
+    //
+    // The server returns a list of attestations that have been seen but not
+    // yet processed. Pending attestations eventually expire as the slot
+    // advances, so an attestation missing from this request does not imply
+    // that it was included in a block. The attestation may have expired.
+    // Refer to the ethereum 2.0 specification for more details on how
+    // attestations are processed and when they are no longer valid.
+    // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
+    rpc ListPendingAttestations(google.protobuf.Empty) returns (ListPendingAttestationsResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/attestations/pending"
+        };
+    }
+
+    // Retrieve blocks by root, slot, or epoch. 
+    // 
+    // The server may return multiple blocks in the case that a slot or epoch is
+    // provided as the filter criteria. The server may return an empty list when
+    // no blocks in their database match the filter criteria. This RPC should 
+    // not return NOT_FOUND. Only one filter criteria should be used.
+    rpc ListBlocks(ListBlocksRequest) returns (ListBlocksResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/blocks"
+        };
+    }
+
+    // Retrieve information about the head of the beacon chain from the view of
+    // the beacon chain node. 
+    // 
+    // This includes the head block slot and root as well as information about
+    // the most recent finalized and justified slots.
+    rpc GetChainHead(google.protobuf.Empty) returns (ChainHead) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/chainhead"
+        };
+    }
+
+    // Retrieve validator balances for a given set of public keys at a specific 
+    // epoch in time.
+    rpc ListValidatorBalances(GetValidatorBalancesRequest) returns (ValidatorBalances) { 
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validators/balances"
+        };
+    }
+
+    // Retrieve the current list of active validators. 
+    //
+    // The request may include an optional historical epoch to retrieve a 
+    // specific validator set in time.
+    rpc GetValidators(GetValidatorsRequest) returns (Validators) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validators"
+        };
+    }
+
+    // Retrieve the active set changes for a given epoch. 
+    // 
+    // This data includes any activations, voluntary exits, and involuntary
+    // ejections.
+    rpc GetValidatorActiveSetChanges(GetValidatorActiveSetChangesRequest) returns (ActiveSetChanges) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validators/activesetchanges"
+        };
+    }
+
+    // Retrieve the current validator queue information.
+    rpc GetValidatorQueue(google.protobuf.Empty) returns (ValidatorQueue) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validators/queue"
+        };
+    }
+
+    // Retrieve the validator assignments for a given epoch.
+    //
+    // This request may specify optional validator indices or public keys to
+    // filter validator assignments.
+    rpc ListValidatorAssignments(ListValidatorAssignmentsRequest) returns (ValidatorAssignments) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validators/assignments"
+        };
+    }
+
+    // Retrieve the validator participation information for a given epoch.
+    //
+    // This method returns information about the global participation of 
+    // validator attestations.
+    rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipation) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validators/participation"
+        };
+    }
+}
+
+// Request for attestations.
+message ListAttestationsRequest {
+    // TODO(preston): Test oneof with gRPC gateway.
+
+    oneof query_filter {
+        // Filter attestations by a specific block root.
+        bytes block_root = 1;
+
+        // Filter attestations by slot number.
+        uint64 slot = 2;
+
+        // Filter attestations by epoch number.
+        uint64 epoch = 3;
+    }
+}
+
+message ListAttestationsResponse {
+    repeated Attestation attestations = 1;
+}
+
+message ListBlocksRequest {
+    oneof query_filter {
+        // Block root filter to return a single block.
+        bytes root = 1;
+
+        // Slot to lookup a block. If the slot is not yet finalized, this
+        // criteria may yield multiple valid blocks if the node has seen blocks
+        // from another fork. 
+        uint64 slot = 2; 
+
+        // Epoch to lookup blocks. This method may return multiple blocks for a 
+        // slot if the epoch has not been finalized and the node has seen blocks
+        // from another fork.
+        uint64 epoch = 3;
+    }
+}
+
+message ListBlocksResponse {
+    repeated BeaconBlock blocks = 1;
+}
+
+// Information about the head of the beacon chain.
+message ChainHead {
+    // 32 byte merkle tree root of the canonical head block in the beacon node.
+    bytes block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+
+    // Slot of the head block.
+    uint64 block_slot = 2;
+
+    // Most recent finalized slot.
+    uint64 finalized_slot = 3;
+    
+    // Most recent 32 byte finalized block root.
+    bytes finalized_block_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+
+    // Most recent justified slot.
+    uint64 justified_slot = 5;
+
+    // Most recent 32 byte justified block root.
+    bytes justified_block_root = 6 [(gogoproto.moretags) = "ssz-size:\"32\""];
+
+    // Previous justified slot.
+    uint64 previous_justified_slot = 7;
+
+    // Previous 32 byte justified block root.
+    bytes previous_justified_block_root = 8 [(gogoproto.moretags) = "ssz-size:\"32\""];
+}
+
+message GetValidatorBalancesRequest {
+    // Retrieve validator balance at the given epoch.
+    uint64 epoch = 1;
+
+    // Validator 48 byte BLS public keys to filter validators for the given
+    // epoch.
+    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+        
+    // Validator indices to filter validators for the given epoch.
+    repeated uint64 indices = 3;
+}
+
+message ValidatorBalances {
+    message Balance {
+        // Validator's 48 byte BLS public key. 
+        bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
+
+        // Validator's index in the validator set.
+        uint64 index = 2;
+
+        // Validator's balance in gwei.
+        uint64 balance = 3;
+    }
+
+    repeated Balance balances = 1;
+}
+
+message GetValidatorsRequest {
+    oneof query_filter {
+        // Optional criteria to retrieve validators at a specific epoch. 
+        // Omitting this field or setting it to zero will retrieve a response
+        // with the current active validator set.
+        uint64 epoch = 1;
+
+        // Optional criteria to retrieve the genesis set of validators.
+        bool genesis = 2;
+    }
+}
+
+message Validators {
+    // Epoch which the state was considered to determine the active validator 
+    // set. This field is not optional. Zero value epoch indicates the validator
+    // set is from the Ethereum 2.0 genesis set.
+    uint64 epoch = 1;
+
+    repeated Validator validators = 2;
+}
+
+
+message GetValidatorActiveSetChangesRequest {
+    uint64 epoch = 1;
+}
+
+message ActiveSetChanges {
+    // Epoch which the state was considered to determine the active validator 
+    // set. 
+    uint64 epoch = 1;
+
+    // 48 byte validator public keys that have been activated in this epoch.
+    repeated bytes activated_public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+
+    // 48 byte validator public keys that have been voluntarily exited in this
+    // epoch.
+    repeated bytes exited_public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+
+    // 48 byte validator public keys that have been involuntarily ejected in 
+    // this epoch.
+    repeated bytes ejected_public_keys = 4 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+}
+
+message ValidatorQueue {
+    // The amount of ether in gwei allowed to enter or exit the active 
+    // validator set.
+    uint64 churn_limit = 1;
+
+    // Ordered list of 48 byte public keys awaiting activation. 0th index is the
+    // next key to be processed.
+    repeated bytes activation_public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+
+    // Ordered list of public keys awaiting exit. 0th index is the next key to
+    // be processed.
+    repeated bytes exit_public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+}
+
+message ListValidatorAssignmentsRequest {
+    // Retrieve the validator assignments at the given epoch.
+    uint64 epoch = 1;
+
+    // 48 byte validator public keys to filter assignments for the given epoch.
+    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+        
+    // Validator indicies to filter assignments for the given epoch.
+    repeated uint64 indices = 3;
+}
+
+message ValidatorAssignments {
+    message CommitteeAssignment {
+        // Crosslink committees is responsible for crosslinking shard data back to the beacon chain,
+        // they also attest and produce beacon chain blocks. This is a list of validator indices that
+        // are in the same committee as requested validator, everyone in the committee is assigned to the
+        // same slot and same shard.
+        repeated uint64 crosslink_committees = 1;
+        
+        // The shard index of which the validator must perform the attestation
+        // or block proposal.
+        uint64 shard = 2;
+
+        // Beacon chain slot in which the validator must perform its assigned 
+        // duty.
+        uint64 slot = 3;
+
+        // Whether or not the validator is assigned to propose at this slot. If
+        // This field is false, then they are only to attest during the
+        // assignment time.
+        bool proposer = 4;
+
+        // 48 byte BLS public key 
+        bytes public_key = 5 [(gogoproto.moretags) = "ssz-size:\"48\""];
+    }
+
+    // The epoch for which this set of validator assignments is valid.
+    uint64 epoch = 1;
+
+    repeated CommitteeAssignment assignments = 2;
+}
+
+message GetValidatorParticipationRequest {
+    // Epoch to request participation information.
+    uint64 epoch = 1;
+}
+
+message ValidatorParticipation {
+    // Epoch which this message is applicable.
+    uint64 epoch = 1;
+
+    // Whether or not epoch has been finalized.
+    bool finalized = 2;
+
+    // Percentage of validator participation in the given epoch. This field
+    // contains a value between 0 and 1.
+    float global_participation_rate = 3;
+
+    // The total amount of ether, in gwei, that has been used in voting.
+    uint64 voted_ether = 4;
+
+    // The total amount of ether, in gwei, that is eligible for voting.
+    uint64 eligible_ether = 5;   
+}
+
+message ListPendingAttestationsResponse {
+  repeated Attestation pending_attestations = 1;
+}

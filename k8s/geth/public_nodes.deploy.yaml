@@ -1,0 +1,334 @@
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: public-node
+  namespace: pow
+  labels:
+    universe: geth
+    component: public-rpc-node
+    app: goerli
+    version: v1
+spec:
+  replicas: 3
+  serviceName: "public-rpc-node"
+  selector: 
+    matchLabels:
+      universe: geth
+      component: public-rpc-node
+      app: goerli
+      version: v1
+  template:
+    metadata:
+      labels:
+        universe: geth
+        component: public-rpc-node
+        app: goerli
+        version: v1
+    spec:
+      priorityClassName: production-priority
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  component: public-rpc-node
+                  version: v1
+              topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    component: public-rpc-node
+                    version: v1
+                topologyKey: failure-domain.beta.kubernetes.io/zone
+      containers:
+        - name: prober
+          image: gcr.io/prysmaticlabs/prysm/geth-prober 
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+          resources:
+            requests:
+              memory: "10Mi"
+              cpu: "20m"
+            limits:
+              memory: "10Mi"
+              cpu: "20m"
+        - name: node
+          image: ethereum/client-go:latest
+          ports: 
+           - containerPort: 8545
+             name: http-rpc
+           - containerPort: 8546
+             name: http-ws
+           - containerPort: 8547
+             name: http-graphql
+           - containerPort: 30303
+             name: discovery-tcp
+             protocol: TCP
+           - containerPort: 30303
+             name: discovery-udp
+             protocol: UDP
+          # Use /bin/sh -c to execute geth so that we have access to HOSTNAME in 
+          # the command arguments.
+          # https://github.com/kubernetes/kubernetes/issues/57726
+          command:
+            - "/bin/sh"
+            - "-c"
+            - >
+              geth
+              --networkid=5
+              --bootnodesv4=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V4_SERVICE_HOST):$(GETH_BOOTNODE_V4_SERVICE_PORT_BOOTNODE_UDP)
+              --bootnodesv5=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
+              --ethstats=💎prylabs-$HOSTNAME:$(ETHSTATS_WS_SECRET)@wss://stats.goerli.net
+              --v5disc
+              --rpc
+              --rpcaddr=0.0.0.0
+              --rpccorsdomain="*"
+              --rpcvhosts="*"
+              --ws
+              --wsaddr=0.0.0.0
+              --wsorigins="*"
+              --graphql
+              --graphql.rpccorsdomain="*"
+              --graphql.rpcvhosts="*"
+              --graphql.port=8547
+              --datadir=/ethereum
+              --keystore=/keystore
+              --debug
+              --verbosity=3
+              --nousb
+              --lightserv=50
+              --metrics
+          volumeMounts:
+            - name: chaindata
+              mountPath: /ethereum
+          env:
+            - name: ETHSTATS_WS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ethstats-secrets
+                  key: ws
+            - name: BOOTNODE_PUBKEY
+              valueFrom:
+                secretKeyRef:
+                  name: geth-bootnode-secret
+                  key: public_key
+          resources:
+            requests:
+              memory: "500Mi"
+              cpu: "50m"
+            limits:
+              memory: "1000Mi"
+              cpu: "200m"
+      initContainers:
+        - name: copy-staticnodes
+          image: busybox
+          command: ["cp", "/data/static-nodes.json", "/ethereum/static-nodes.json"] 
+          volumeMounts:
+            - name: networkdata
+              mountPath: "/data"
+              readOnly: true
+            - name: chaindata
+              mountPath: "/ethereum"
+        - name: init-genesis
+          image: ethereum/client-go:alltools-stable
+          command: ["geth"]
+          args: ["--datadir=/ethereum", "init", "/data/genesis.json"]
+          volumeMounts:
+            - name: networkdata
+              mountPath: "/data"
+              readOnly: true
+            - name: chaindata
+              mountPath: "/ethereum"
+      volumes:
+        - name: networkdata
+          configMap: 
+            name: goerli
+            items:
+              - key: genesis
+                path: genesis.json
+              - key: staticnodes
+                path: static-nodes.json
+        - name: chaindata
+          emptyDir: {} # Caching the chain seems to have issues with impossible reorg
+#  volumeClaimTemplates:
+#    - metadata:
+#        name: chaindata
+#      spec:
+#        accessModes: [ "ReadWriteOnce" ]
+#        resources:
+#          requests:
+#            storage: 10Gi
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: public-node
+  namespace: pow
+  labels:
+    universe: geth
+    component: public-rpc-node
+    app: goerli
+    version: v1-stable
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      universe: geth
+      component: public-rpc-node
+      app: goerli
+      version: v1-stable
+  strategy: 
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: "25%"
+  minReadySeconds: 15
+  template:
+    metadata:
+      labels:
+        universe: geth
+        component: public-rpc-node
+        app: goerli
+        version: v1-stable
+    spec:
+      priorityClassName: production-priority
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    component: public-rpc-node
+                    version: v1-stable
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: prober
+          image: gcr.io/prysmaticlabs/prysm/geth-prober 
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+          resources:
+            requests:
+              memory: "10Mi"
+              cpu: "20m"
+            limits:
+              memory: "10Mi"
+              cpu: "20m"
+        - name: node
+          image: ethereum/client-go:stable
+          ports: 
+           - containerPort: 8545
+             name: http-rpc
+           - containerPort: 8546
+             name: http-ws
+           - containerPort: 8547
+             name: http-graphql
+           - containerPort: 30303
+             name: discovery-tcp
+             protocol: TCP
+           - containerPort: 30303
+             name: discovery-udp
+             protocol: UDP
+          # Use /bin/sh -c to execute geth so that we have access to HOSTNAME in 
+          # the command arguments.
+          # https://github.com/kubernetes/kubernetes/issues/57726
+          command:
+            - "/bin/sh"
+            - "-c"
+            - >
+              geth
+              --networkid=5
+              --bootnodesv4=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V4_SERVICE_HOST):$(GETH_BOOTNODE_V4_SERVICE_PORT_BOOTNODE_UDP)
+              --bootnodesv5=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
+              --v5disc
+              --rpc
+              --rpcaddr=0.0.0.0
+              --rpccorsdomain="*"
+              --rpcvhosts="*"
+              --ws
+              --wsaddr=0.0.0.0
+              --wsorigins="*"
+              --datadir=/ethereum
+              --keystore=/keystore
+              --debug
+              --verbosity=3
+              --nousb
+              --lightserv=50
+              --metrics
+          volumeMounts:
+            - name: chaindata
+              mountPath: /ethereum
+          env:
+            - name: ETHSTATS_WS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ethstats-secrets
+                  key: ws
+            - name: BOOTNODE_PUBKEY
+              valueFrom:
+                secretKeyRef:
+                  name: geth-bootnode-secret
+                  key: public_key
+          resources:
+            requests:
+              memory: "500Mi"
+              cpu: "50m"
+            limits:
+              memory: "1000Mi"
+              cpu: "200m"
+      initContainers:
+        - name: copy-staticnodes
+          image: busybox
+          command: ["cp", "/data/static-nodes.json", "/ethereum/static-nodes.json"] 
+          volumeMounts:
+            - name: networkdata
+              mountPath: "/data"
+              readOnly: true
+            - name: chaindata
+              mountPath: "/ethereum"
+        - name: init-genesis
+          image: ethereum/client-go:alltools-stable
+          command: ["geth"]
+          args: ["--datadir=/ethereum", "init", "/data/genesis.json"]
+          volumeMounts:
+            - name: networkdata
+              mountPath: "/data"
+              readOnly: true
+            - name: chaindata
+              mountPath: "/ethereum"
+      volumes:
+        - name: networkdata
+          configMap: 
+            name: goerli
+            items:
+              - key: genesis
+                path: genesis.json
+              - key: staticnodes
+                path: static-nodes.json
+        - name: chaindata
+          emptyDir: {} 
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: public-node
+  namespace: pow
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: public-node
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 80 

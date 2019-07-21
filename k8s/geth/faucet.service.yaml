@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: public-faucet
+  namespace: pow
+spec:
+  selector:
+    component: public-faucet
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: grpc-web-port 
+  type: ClusterIP

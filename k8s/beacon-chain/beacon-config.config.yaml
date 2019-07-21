@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: beacon-config
+  namespace: beacon-chain
+data:
+ DEPOSIT_CONTRACT_ADDRESS: "0xEE18Fa5bcfE1ae7E2Dbd38A6D0b19B481325C60E"

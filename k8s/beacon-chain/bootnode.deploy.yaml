@@ -1,0 +1,39 @@
+kind: StatefulSet
+apiVersion: apps/v1
+metadata: 
+  name: bootnode
+  namespace: beacon-chain
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  replicas: 1
+  serviceName: bootnode
+  selector:
+    matchLabels:
+      component: bootnode
+  template:
+    metadata:
+      labels:
+        component: bootnode
+    spec:
+      priorityClassName: production-priority
+      containers:
+        - name: bootnode
+          image: gcr.io/prysmaticlabs/prysm/bootnode:latest
+          args:
+            - "-debug"
+            - "-port=4000"
+            - "-private=$(PRIVATE_KEY)"
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "100m"
+          ports:
+            - containerPort: 4000
+              name: bootnodeport
+          env:
+            - name: PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bootnode-secrets
+                  key: private_key

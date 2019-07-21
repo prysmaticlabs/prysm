@@ -1,0 +1,106 @@
+package(default_visibility = ["//k8s:__subpackages__"])
+
+load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
+load("@k8s_configmap//:defaults.bzl", "k8s_configmap")
+load("@k8s_deploy//:defaults.bzl", "k8s_deploy")
+load("@k8s_namespace//:defaults.bzl", "k8s_namespace")
+load("@k8s_secret//:defaults.bzl", "k8s_secret")
+load("@k8s_service//:defaults.bzl", "k8s_service")
+load("//tools:kubesec.bzl", "k8s_encrypted_secret")
+
+k8s_objects(
+    name = "everything",
+    objects = [
+        ":namespace",  # Must be first
+        ":configs",
+        ":deployments",
+        ":secrets",
+        ":services",
+    ],
+    tags = ["manual"],
+)
+
+_NAMESPACE = "pow"
+
+_configs = [
+    "goerli",
+]
+
+_deployments = [
+    "bootnode",
+    "faucet",
+    "nodes",
+    "public_nodes",
+]
+
+_services = [
+    "faucet",
+    "public_nodes",
+]
+
+_secrets = [
+    "bootnode",
+    "ethstats",
+    "goerli_validator",
+]
+
+k8s_namespace(
+    name = "namespace",
+    template = "namespace.yaml",
+)
+
+k8s_objects(
+    name = "configs",
+    objects = [":" + name + ".config" for name in _configs],
+)
+
+[k8s_configmap(
+    name = name + ".config",
+    template = name + ".config.yaml",
+    namespace = _NAMESPACE,
+) for name in _configs]
+
+k8s_objects(
+    name = "deployments",
+    objects = [":" + name + ".deploy" for name in _deployments],
+)
+
+[k8s_deploy(
+    name = name + ".deploy",
+    template = name + ".deploy.yaml",
+    namespace = _NAMESPACE,
+) for name in _deployments]
+
+k8s_objects(
+    name = "secrets",
+    objects = [":" + name + ".secret" for name in _secrets],
+    tags = ["manual"],
+)
+
+[k8s_secret(
+    name = name + ".secret",
+    template = name + ".secret.yaml",
+    namespace = _NAMESPACE,
+    tags = ["manual"],
+) for name in _secrets]
+
+[k8s_encrypted_secret(
+    name = name + ".encrypted_secret",
+    template = name + ".encrypted_secret.yaml",
+    out = name + ".secret.yaml",
+    tags = [
+        "local",
+        "manual",
+    ],
+) for name in _secrets]
+
+k8s_objects(
+    name = "services",
+    objects = [":" + name + ".service" for name in _services],
+)
+
+[k8s_service(
+    name = name + ".service",
+    template = name + ".service.yaml",
+    namespace = _NAMESPACE,
+) for name in _services]

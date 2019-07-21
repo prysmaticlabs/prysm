@@ -1,0 +1,71 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: public-rpc-nodes
+  namespace: pow
+spec:
+  selector:
+    component: public-rpc-node
+    universe: geth
+  ports:
+    - port: 8545
+      targetPort: 8545
+      name: http-rpc
+      protocol: TCP
+    - port: 8546
+      targetPort: 8546
+      name: http-ws
+      protocol: TCP
+    - port: 8547
+      targetPort: 8547
+      name: http-graphql
+  type: ClusterIP
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: goerli-prylabs-net
+  namespace: istio-system
+spec:
+  hosts:
+  - goerli.prylabs.net
+  gateways:
+  - prylabs-wildcard-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /websocket
+    route:
+    - destination: 
+        port:
+          number: 8546
+        host: public-rpc-nodes.pow.svc.cluster.local
+    websocketUpgrade: true
+  - match:
+    - uri:
+        prefix: /graphql
+    route:
+    - destination: 
+        port:
+          number: 8547
+        host: public-rpc-nodes.pow.svc.cluster.local
+  - match: # Must be last
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 8545
+        host: public-rpc-nodes.pow.svc.cluster.local
+---
+ apiVersion: networking.istio.io/v1alpha3
+ kind: DestinationRule
+ metadata:
+   name: public-rpc-nodes
+   namespace: pow
+ spec:
+   host: public-rpc-nodes.pow.svc.cluster.local
+   trafficPolicy:
+     loadBalancer:
+       consistentHash:
+         useSourceIp: true

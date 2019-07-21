@@ -1,0 +1,39 @@
+kind: StatefulSet
+apiVersion: apps/v1
+metadata: 
+  name: relay
+  namespace: beacon-chain
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  replicas: 1
+  serviceName: relay
+  selector:
+    matchLabels:
+      component: relay
+  template:
+    metadata:
+      labels:
+        component: relay
+    spec:
+      priorityClassName: production-priority
+      containers:
+        - name: relay
+          image: gcr.io/prysmaticlabs/prysm/relaynode:latest
+          args:
+            - "-debug"
+            - "-port=4000"
+            - "-private=$(PRIVATE_KEY)"
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "100m"
+          ports:
+            - containerPort: 4000
+              name: relayport
+          env:
+            - name: PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: relay-secrets
+                  key: private_key 

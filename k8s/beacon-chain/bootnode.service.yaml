@@ -1,0 +1,48 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: bootnode-gateway
+  namespace: beacon-chain
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 30001
+      name: tcp-p2p-bootnode
+      protocol: TCP
+    hosts:
+    - '*'
+---
+kind: VirtualService
+apiVersion: networking.istio.io/v1alpha3
+metadata:
+  name: bootnode
+  namespace: beacon-chain
+spec:
+  hosts:
+  - '*'
+  gateways:
+  - bootnode-gateway
+  tcp:
+  - match:
+    - port: 30001
+    route:
+    - destination:
+        host: bootnode.beacon-chain.svc.cluster.local
+        port: 
+          number: 4000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: bootnode
+  namespace: beacon-chain
+spec:
+  selector:
+    component: bootnode
+  ports:
+    - port: 4000
+      targetPort: 4000
+      name: bootnodeport
+  type: ClusterIP

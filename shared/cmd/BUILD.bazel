@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "customflags.go",
+        "defaults.go",
+        "flags.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/shared/cmd",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_urfave_cli//:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "small",
+    srcs = ["customflags_test.go"],
+    embed = [":go_default_library"],
+)

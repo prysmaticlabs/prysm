@@ -1,0 +1,34 @@
+load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
+load("@k8s_priority_class//:defaults.bzl", "k8s_priority_class")
+load("@k8s_issuer//:defaults.bzl", "k8s_issuer")
+load("@k8s_gateway//:defaults.bzl", "k8s_gateway")
+
+k8s_objects(
+    name = "everything",
+    objects = [
+        ":priority_class",
+        ":letsencrypt_issuer",
+        ":prylabs_wildcard_gateway",
+        "//k8s/geth:everything",
+        "//k8s/beacon-chain:everything",
+    ],
+    tags = ["manual"],
+)
+
+k8s_priority_class(
+    name = "priority_class",
+    template = "priority.yaml",
+    namespace = "default",
+)
+
+k8s_issuer(
+    name = "letsencrypt_issuer",
+    template = "letsencrypt-issuer.yaml",
+    namespace = "istio-system",
+)
+
+k8s_gateway(
+    name = "prylabs_wildcard_gateway",
+    template = "prylabs-wildcard-gateway.yaml",
+    namespace = "istio-system",
+)

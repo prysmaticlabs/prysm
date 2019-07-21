@@ -1,0 +1,9 @@
+package(default_visibility = ["//k8s:__subpackages__"])
+
+load("@k8s_pod//:defaults.bzl", "k8s_pod")
+
+k8s_pod(
+    name = "busybox.pod",
+    template = "busybox.yaml",
+    namespace = "default",
+)

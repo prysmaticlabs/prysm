@@ -1,0 +1,55 @@
+# Priority classes
+# 
+# These values allow us to assign importance to pods so that the scheduler can
+# appropriately preempt low priority pods when a higher priority pod is pending
+# scheduling.
+#
+# Example:
+# 1) Running a tool to query production data for one-off analysis: best-effort-priority. 
+# This tool is not mission critical and should not use resources that are 
+# necessary for production applications
+#
+# 2) A long running cron job that encodes data with a large SLO window. This
+# would be ideal for a batch-priority job since would be acceptable for 
+# temporary evictions if high priority jobs need to scale.
+#
+# 3) User facing application services. This type of work falls under the default
+# priority: production-priority. This is suitable for anything that cannot 
+# tolerate eviction or user experience will suffer.
+#
+# 4) A job that alerts when mission critical containers are offline. This type
+# of job should have a very high priority and never be evicted. This is
+# considered the monitoring-priority and should be used sparingly. 
+#  
+# See: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: best-effort-priority
+value: 0
+globalDefault: false
+description: "Free quota tier. Unlikely to stay scheduled."
+---
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: batch-priority
+value: 100
+globalDefault: false
+description: "Suitable for batch jobs that can tolerate occasional downtime."
+---
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: production-priority
+value: 200
+globalDefault: true
+description: "Default priority for production jobs."
+---
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: monitoring-priority
+value: 300
+globalDefault: false
+description: "Reserved for monitoring health of production services."

@@ -1,0 +1,48 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: relay-gateway
+  namespace: beacon-chain
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 30000
+      name: tcp-p2p-relay
+      protocol: TCP
+    hosts:
+    - '*'
+---
+kind: VirtualService
+apiVersion: networking.istio.io/v1alpha3
+metadata:
+  name: relay
+  namespace: beacon-chain
+spec:
+  hosts:
+  - '*'
+  gateways:
+  - relay-gateway
+  tcp:
+  - match:
+    - port: 30000
+    route:
+    - destination:
+        host: relay.beacon-chain.svc.cluster.local
+        port:
+          number: 4000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: relay
+  namespace: beacon-chain
+spec:
+  selector:
+    component: relay
+  ports:
+    - port: 4000
+      targetPort: 4000
+      name: relayport
+  type: ClusterIP

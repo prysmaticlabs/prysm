@@ -1,0 +1,102 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: geth-bootnode-v4
+  namespace: pow
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: bootnode-v4
+        universe: geth
+        app: goerli
+        version: v1
+    spec:
+      priorityClassName: production-priority
+      containers:
+      - name: bootnode
+        image: ethereum/client-go:alltools-stable
+        ports: 
+          - containerPort: 8545
+            name: http-rpc
+          - containerPort: 30303
+            name: discovery-tcp
+            protocol: TCP
+          - containerPort: 30303
+            name: discovery-udp
+            protocol: UDP
+          - containerPort: 30301
+            name: bootnode-udp
+            protocol: UDP
+        command: ["bootnode"]
+        args:
+          - "--nodekey=/data/private_key"
+          - "--verbosity=4"
+        volumeMounts:
+          - name: secrets
+            mountPath: "/data/"
+            readOnly: true
+        resources:
+          requests:
+            memory: "25Mi"
+            cpu: "25m"
+          limits:
+            memory: "100Mi"
+            cpu: "150m"
+      volumes:
+        - name: secrets
+          secret:
+            secretName: geth-bootnode-secret
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: geth-bootnode-v5
+  namespace: pow
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: bootnode-v5
+        universe: geth
+        app: goerli
+        version: v1
+    spec:
+      priorityClassName: production-priority
+      containers:
+      - name: bootnode
+        image: ethereum/client-go:alltools-stable
+        ports: 
+          - containerPort: 8545
+            name: http-rpc
+          - containerPort: 30303
+            name: discovery-tcp
+            protocol: TCP
+          - containerPort: 30303
+            name: discovery-udp
+            protocol: UDP
+          - containerPort: 30301
+            name: bootnode-udp
+            protocol: UDP
+        command: ["bootnode"]
+        args:
+          - "--nodekey=/data/private_key"
+          - "--verbosity=4"
+          - "--v5"
+        volumeMounts:
+          - name: secrets
+            mountPath: "/data/"
+            readOnly: true
+        resources:
+          requests:
+            memory: "25Mi"
+            cpu: "25m"
+          limits:
+            memory: "100Mi"
+            cpu: "150m"
+      volumes:
+        - name: secrets
+          secret:
+            secretName: geth-bootnode-secret

@@ -1,0 +1,156 @@
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: node
+  namespace: pow
+  labels:
+    universe: geth
+    component: node
+    app: goerli
+    version: v1
+spec:
+  replicas: 1
+  serviceName: "node"
+  selector: 
+    matchLabels:
+      universe: geth
+      component: node
+      app: goerli
+      version: v1
+  template:
+    metadata:
+      labels:
+        universe: geth
+        component: node
+        app: goerli
+        version: v1
+    spec:
+      priorityClassName: production-priority
+      containers:
+        - name: prober
+          image: gcr.io/prysmaticlabs/prysm/geth-prober 
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+        - name: node
+          image: ethereum/client-go:alltools-stable
+          ports: 
+           - containerPort: 30303
+             name: discovery-tcp
+             protocol: TCP
+           - containerPort: 30303
+             name: discovery-udp
+             protocol: UDP
+          # Use /bin/sh -c to execute geth so that we have access to HOSTNAME in 
+          # the command arguments.
+          # https://github.com/kubernetes/kubernetes/issues/57726
+          command:
+            - "/bin/sh"
+            - "-c"
+            - >
+              geth
+              --networkid=5
+              --ethstats=💎prylabs-$HOSTNAME:$(ETHSTATS_WS_SECRET)@wss://stats.goerli.net
+              --rpc
+              --rpcapi=eth
+              --datadir=/ethereum
+              --keystore=/keystore
+              --verbosity=3
+              --nousb
+              --metrics
+              --mine
+              --unlock=0xd9a5179f091d85051d3c982785efd1455cec8699
+              --password=/secret/password
+              --etherbase=0xd9a5179f091d85051d3c982785efd1455cec8699
+              --extradata="💎 @prylabs $HOSTNAME 💎"
+          volumeMounts:
+            - name: chaindata
+              mountPath: /ethereum
+            - name: keystore
+              mountPath: /keystore
+              readOnly: true
+            - name: validator-pk
+              mountPath: /secret
+              readOnly: true
+          env:
+            - name: ETHSTATS_WS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ethstats-secrets
+                  key: ws
+            - name: BOOTNODE_PUBKEY
+              valueFrom:
+                secretKeyRef:
+                  name: geth-bootnode-secret
+                  key: public_key
+          resources:
+            requests:
+              memory: "250Mi"
+              cpu: "200m"
+            limits:
+              memory: "1000Mi"
+              cpu: "200m"
+      initContainers:
+        - name: copy-staticnodes
+          image: busybox
+          command: ["cp", "/data/static-nodes.json", "/ethereum/static-nodes.json"] 
+          volumeMounts:
+            - name: networkdata
+              mountPath: "/data"
+              readOnly: true
+            - name: chaindata
+              mountPath: "/ethereum"
+        - name: import-validator-account
+          image: ethereum/client-go:alltools-stable
+          command: ["geth"]
+          args:
+            - account
+            - import
+            - /secret/privatekey
+            - --datadir=/ethereum
+            - --keystore=/keystore
+            - --password=/secret/password
+          volumeMounts:
+            - name: chaindata
+              mountPath: /ethereum
+            - name: validator-pk
+              mountPath: /secret
+              readOnly: true
+            - name: keystore
+              mountPath: /keystore
+        - name: init-genesis
+          image: ethereum/client-go:alltools-stable
+          command: ["geth"]
+          args: ["--datadir=/ethereum", "init", "/data/genesis.json"]
+          volumeMounts:
+            - name: networkdata
+              mountPath: "/data"
+              readOnly: true
+            - name: chaindata
+              mountPath: "/ethereum"
+      volumes:
+        - name: networkdata
+          configMap: 
+            name: goerli
+            items:
+              - key: genesis
+                path: genesis.json
+              - key: staticnodes
+                path: static-nodes.json
+        - name: validator-pk
+          secret:
+            secretName: goerli-validator-pk
+        - name: keystore
+          emptyDir: {}
+        - name: chaindata
+          emptyDir: {} # Caching the chain seems to have issues with impossible reorg
+#  volumeClaimTemplates:
+#    - metadata:
+#        name: chaindata
+#      spec:
+#        accessModes: [ "ReadWriteOnce" ]
+#        resources:
+#          requests:
+#            storage: 50Gi

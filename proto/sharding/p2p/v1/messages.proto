@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package ethereum.sharding.p2p.v1;
+
+enum Topic {
+  UNKNOWN = 0;
+  COLLATION_BODY_REQUEST = 1;
+  COLLATION_BODY_RESPONSE = 2;
+  TRANSACTIONS = 3;
+}
+
+message CollationBodyRequest {
+  uint64 shard_id = 1;
+  uint64 period = 2;
+  bytes chunk_root = 3;
+  bytes proposer_address = 4;
+  bytes signature = 5;
+}
+
+message CollationBodyResponse {
+  bytes header_hash = 1;
+  bytes body = 2;
+}
+
+message Transaction {
+  uint64 nonce = 1;
+  uint64 gas_price = 2;
+  uint64 gas_limit = 3;
+  bytes recipient = 4;
+  uint64 value = 5;
+  bytes input = 6;
+  Signature signature = 7;
+}
+
+message Signature {
+  uint64 v = 1;
+  uint64 r = 2;
+  uint64 s = 3;
+}

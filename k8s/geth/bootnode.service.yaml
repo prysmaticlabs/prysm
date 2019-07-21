@@ -1,0 +1,55 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: geth-bootnode-v4
+  namespace: pow
+spec:
+  selector:
+    component: bootnode-v4
+    universe: geth
+  ports:
+    - port: 8545
+      targetPort: 8545
+      name: rpc
+      protocol: TCP
+    - port: 30303
+      targetPort: 30303
+      name: discovery-tcp
+      protocol: TCP
+    - port: 30303
+      targetPort: 30303
+      name: discovery-udp
+      protocol: UDP
+    - port: 30301
+      targetPort: 30301
+      name: bootnode-udp
+      protocol: UDP
+  type: ClusterIP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: geth-bootnode-v5
+  namespace: pow
+spec:
+  selector:
+    component: bootnode-v5
+    universe: geth
+  ports:
+    - port: 8545
+      targetPort: 8545
+      name: rpc
+      protocol: TCP
+    - port: 30303
+      targetPort: 30303
+      name: discovery-tcp
+      protocol: TCP
+    - port: 30303
+      targetPort: 30303
+      name: discovery-udp
+      protocol: UDP
+    - port: 30301
+      targetPort: 30301
+      name: bootnode-udp
+      protocol: UDP
+  type: ClusterIP 

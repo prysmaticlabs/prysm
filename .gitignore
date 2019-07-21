@@ -1,1 +1,24 @@
-/Users/terencetsao/go/src/github.com/prysmaticlabs/prysm/.gitignore
+# Ignore bazel directories
+bazel-*
+
+.DS_Store
+.swp
+
+# IntelliJ
+.idea
+.ijwb
+
+# delve debugger output (not sure how to get rid of these)
+**/debug.test
+
+# Coverage outputs
+coverage.txt
+profile.out
+
+# Nodejs
+node_modules
+yarn-error.log
+.vscode/
+
+# Ignore password file
+password.txt 
