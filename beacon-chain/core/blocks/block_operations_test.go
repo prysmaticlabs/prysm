@@ -74,7 +74,6 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to generate private key got: %v", err)
 	}
-	wrongBlockSig := priv2.Sign([]byte("hello"), dt)
 	validators[5896].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
 		Slot: 0,
@@ -82,10 +81,15 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
 		ParentRoot: lbhsr[:],
-		Signature:  wrongBlockSig.Marshal(),
 	}
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Failed to get signing root of block: %v", err)
+	}
+	blockSig := priv2.Sign(signingRoot[:], dt)
+	block.Signature = blockSig.Marshal()[:]
 
-	_, err = blocks.ProcessBlockHeader(state, block, false)
+	_, err = blocks.ProcessBlockHeader(state, block, true)
 	want := "verify signature failed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -275,8 +279,6 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	validators[63463].Slashed = false
-
 	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
@@ -287,21 +289,32 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate private key got: %v", err)
 	}
-	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[6033].Pubkey = priv.PublicKey().Marshal()
 	block := &pb.BeaconBlock{
 		Slot: 0,
 		Body: &pb.BeaconBlockBody{
 			RandaoReveal: []byte{'A', 'B', 'C'},
 		},
 		ParentRoot: latestBlockSignedRoot[:],
-		Signature:  blockSig.Marshal(),
 	}
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Failed to get signing root of block: %v", err)
+	}
+	blockSig := priv.Sign(signingRoot[:], dt)
+	block.Signature = blockSig.Marshal()[:]
 	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
 	}
-	newState, err := blocks.ProcessBlockHeader(state, block, false)
+
+	proposerIdx, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validators[proposerIdx].Slashed = false
+	validators[proposerIdx].Pubkey = priv.PublicKey().Marshal()
+
+	newState, err := blocks.ProcessBlockHeader(state, block, true)
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
@@ -346,7 +359,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 		},
 	}
 
-	want := "block randao reveal signature did not verify"
+	want := "block randao: signature did not verify"
 	if _, err := blocks.ProcessRandao(
 		beaconState,
 		block.Body,
