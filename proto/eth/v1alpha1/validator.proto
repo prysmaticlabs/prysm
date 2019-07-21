@@ -123,25 +123,25 @@ message Validator {
     // 32 byte hash of the withdrawal destination public key.
     bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
+    // The validators current effective balance in gwei.
+    uint64 effective_balance = 3;
+
+    // Whether or not the validator has been slashed.
+    bool slashed = 4;
+
     // Epoch when the validator became eligible for activation. This field may
     // be zero if the validator was present in the Ethereum 2.0 genesis.
-    uint64 activation_eligiblity_epoch = 3;
+    uint64 activation_eligibility_epoch = 5;
 
     // Epoch when the validator was activated. This field may be zero if the
     // validator was present in the Ethereum 2.0 genesis.
-    uint64 activation_epoch = 4;
+    uint64 activation_epoch = 6;
 
     // Epoch when the validator was exited. This field may be zero if the
     // validator has not exited.
-    uint64 exit_epoch = 5;
+    uint64 exit_epoch = 7;
 
     // Epoch when the validator is eligible to withdraw their funds. This field
     // may be zero if the validator has not exited.
-    uint64 withdrawable_epoch = 6;
-
-    // Whether or not the validator has been slashed.
-    bool slashed = 7;
-
-    // The validators current effective balance in gwei.
-    uint64 effective_balance = 8;
+    uint64 withdrawable_epoch = 8;
 }
