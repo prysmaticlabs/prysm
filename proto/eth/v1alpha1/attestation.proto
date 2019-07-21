@@ -26,7 +26,7 @@ message AttestationData {
     // See: https://arxiv.org/pdf/1710.09437.pdf
 
     // 32 byte root of the LMD GHOST block vote.
-    bytes block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes beacon_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
     // Source contains information relating to the recent justified epoch
     // as well as the 32 byte root of the epoch boundary block at the

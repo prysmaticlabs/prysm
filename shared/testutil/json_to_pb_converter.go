@@ -3,7 +3,6 @@ package testutil
 import (
 	"bytes"
 	"encoding/json"
-
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 )

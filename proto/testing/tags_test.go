@@ -39,7 +39,7 @@ func TestSSZTagSize(t *testing.T) {
 		t.Errorf("wanted signature size: %d, got: %d", rootSize, sizes[0])
 	}
 
-	sizes, err = sszTagSizes(pb.Validator{}, "Pubkey")
+	sizes, err = sszTagSizes(pb.Validator{}, "PublicKey")
 	if err != nil {
 		t.Fatal(err)
 	}
