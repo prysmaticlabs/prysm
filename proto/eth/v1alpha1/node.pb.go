@@ -5,11 +5,12 @@ package eth
 
 import (
 	fmt "fmt"
+	io "io"
+	math "math"
+
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
-	io "io"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
