@@ -204,7 +204,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "ecf08adca3c19f69aea911fcde9b5e71d6bbfe28",
+    commit = "e0e450364c42117b8e372c7157821c18dad900a4",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1204,7 +1204,6 @@ go_repository(
     importpath = "github.com/google/btree",
 )
 
-
 go_repository(
     name = "in_gopkg_inf_v0",
     commit = "d2d2541c53f18d2a059457998ce2876cc8e67cbf",
@@ -1251,12 +1250,6 @@ go_repository(
     name = "io_k8s_utils",
     commit = "3dccf664f023863740c508fb4284e49742bedfa4",
     importpath = "k8s.io/utils",
-)
-
-go_repository(
-    name = "org_golang_x_time",
-    commit = "9d24e82272b4f38b78bc8cff74fa936d31ccd8ef",
-    importpath = "golang.org/x/time",
 )
 
 go_repository(
