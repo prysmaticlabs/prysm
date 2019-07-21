@@ -9,7 +9,7 @@ option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha;eth";
 // The Ethereum 2.0 beacon block.
 message BeaconBlock {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1; 
+    uint64 slot = 1;
 
     // 32 byte root of the parent block.
     bytes parent_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
@@ -34,7 +34,7 @@ message BeaconBlockBody {
 
     // 32 byte field of arbitrary data. This field may contain any data and
     // is not used for anything other than a fun message.
-    bytes graffiti = 3 [(gogoproto.moretags) = "ssz-size:\"32\""]; 
+    bytes graffiti = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
     // Block operations
     // Refer to spec constants at https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
@@ -60,7 +60,7 @@ message BeaconBlockBody {
 }
 
 // Proposer slashings are proofs that a slashable offense has been committed by
-// proposing two conflicting blocks from the same validator. 
+// proposing two conflicting blocks from the same validator.
 message ProposerSlashing {
     // Validator index of the validator that proposed the two conflicting block
     // headers.
@@ -108,7 +108,7 @@ message Deposit {
 // withdraw from the active validator set.
 message VoluntaryExit {
     // The epoch on when exit request becomes valid.
-    uint64 epoch = 1; 
+    uint64 epoch = 1;
 
     // Index of the exiting validator.
     uint64 validator_index = 2;
@@ -122,11 +122,11 @@ message Transfer {
     // Validator index of the sender.
     uint64 sender_index = 1;
 
-    // Validator index of the recipient. 
+    // Validator index of the recipient.
     uint64 recipient_index = 2;
 
     // Amount in gwei sent to the recipient.
-    uint64 amount = 3; 
+    uint64 amount = 3;
 
     // Fee in gwei for the block proposer to include this transfer.
     uint64 fee = 4;
@@ -161,7 +161,7 @@ message Eth1Data {
 // lightweight than a full beacon block.
 message BeaconBlockHeader {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1; 
+    uint64 slot = 1;
 
     // 32 byte merkle tree root of the parent ssz encoded block.
     bytes parent_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
