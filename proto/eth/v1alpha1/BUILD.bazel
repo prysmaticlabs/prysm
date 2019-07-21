@@ -1,5 +1,5 @@
 # gazelle:ignore
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 
 go_proto_library(
@@ -36,8 +36,18 @@ proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_protobuf//:empty_proto",
-        "@go_googleapis//google/api:annotations_proto",
         "@com_google_protobuf//:timestamp_proto",
+        "@go_googleapis//google/api:annotations_proto",
         "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "small",
+    srcs = ["compatability_test.go"],
+    embed = ["go_default_library"],
+    deps = [
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
