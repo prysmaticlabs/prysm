@@ -12,7 +12,7 @@ message Attestation {
     // Spec type: Bitlist[N]
     bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
-    AttestationData data = 2; 
+    AttestationData data = 2;
 
     // Not used in phase 0.
     bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
@@ -26,7 +26,7 @@ message AttestationData {
     // See: https://arxiv.org/pdf/1710.09437.pdf
 
     // 32 byte root of the LMD GHOST block vote.
-    bytes block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes beacon_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
     // Source contains information relating to the recent justified epoch
     // as well as the 32 byte root of the epoch boundary block at the
@@ -34,7 +34,7 @@ message AttestationData {
     Checkpoint source = 2;
 
     // Target contains information relating to the epoch the attestation
-    // is targeting as well as the 32 byte root of the epoch boundary 
+    // is targeting as well as the 32 byte root of the epoch boundary
     // block at the source epoch.
     Checkpoint target = 3;
 
@@ -45,28 +45,28 @@ message AttestationData {
 message Checkpoint {
     // A checkpoint is every epoch's first slot. The goal of Casper FFG
     // is to link the check points together for justification and finalization.
-  
+
     // epoch of the check point reference to.
     uint64 epoch = 1;
     // block root of the check point reference to.
-    bytes root = 2;
-  }
+    bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+}
 
 message Crosslink {
     // The shard that crosslinks to the beacon chain.
     uint64 shard = 1;
 
+    // 32 byte root of the parent crosslink.
+    bytes parent_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+
     // Start epoch must match the parent crosslink's end epoch.
-    uint64 start_epoch = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];;
+    uint64 start_epoch = 3;
 
     // Ending epoch for this crosslink period. This field matches the attestation
     // target epoch or the start epoch + MAX_EPOCHS_PER_CROSSLINK, whichever is
-    // less. 
-    uint64 end_epoch = 3;
-
-    // 32 byte root of the parent crosslink.
-    bytes parent_root = 4;
+    // less.
+    uint64 end_epoch = 4;
 
     // 32 byte root of the crosslinked shard data since the previous crosslink.
-    bytes data_root = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];;
+    bytes data_root = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
