@@ -869,7 +869,8 @@ func ProcessDeposit(
 			domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
 			depositSig := deposit.Data.Signature
 			if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
-				return nil, fmt.Errorf("could not verify deposit data signature: %v", err)
+				//ignore this error as in the spec pseudo code
+				return beaconState, nil
 			}
 		}
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
