@@ -14,7 +14,7 @@ func ExampleServer_Feed() {
 	}
 
 	// Let's wait for a puzzle from our peers then try to solve it.
-	feed := s.Feed(&ethpb.Puzzle{})
+	feed := s.Feed(&pb.Puzzle{})
 
 	ch := make(chan Message, 5) // Small buffer size. I don't expect many puzzles.
 	sub := feed.Subscribe(ch)
@@ -25,7 +25,7 @@ func ExampleServer_Feed() {
 
 	// Wait until we have a puzzle to solve.
 	msg := <-ch
-	puzzle, ok := msg.Data.(*ethpb.Puzzle)
+	puzzle, ok := msg.Data.(*pb.Puzzle)
 
 	if !ok {
 		panic("Received a message that wasn't a puzzle!")

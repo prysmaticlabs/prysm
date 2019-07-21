@@ -3,7 +3,10 @@
 
 package spectest
 
-import ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+import (
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+)
 
 type GenesisInitializationTest struct {
 	Title         string   `json:"title"`

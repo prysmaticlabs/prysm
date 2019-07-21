@@ -34,7 +34,7 @@ type ProposerServer struct {
 
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
-func (ps *ProposerServer) RequestBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
+func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
 
 	// Retrieve the parent block as the current head of the canonical chain
 	parent, err := ps.beaconDB.ChainHead()

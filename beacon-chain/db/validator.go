@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -49,7 +49,7 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 		}
 		for i := 0; i < len(state.Validators); i++ {
 			v := state.Validators[i]
-			if bytes.Equal(v.Pubkey, pubKey) {
+			if bytes.Equal(v.PublicKey, pubKey) {
 				if err := db.SaveValidatorIndex(pubKey, i); err != nil {
 					return 0, err
 				}
@@ -121,7 +121,7 @@ func (db *BeaconDB) HasAnyValidators(state *pb.BeaconState, pubKeys [][]byte) (b
 		for _, pubKey := range pubKeys {
 			for i := 0; i < len(state.Validators); i++ {
 				v := state.Validators[i]
-				if bytes.Equal(v.Pubkey, pubKey) {
+				if bytes.Equal(v.PublicKey, pubKey) {
 					if err := db.SaveValidatorIndex(pubKey, i); err != nil {
 						return false, err
 					}
