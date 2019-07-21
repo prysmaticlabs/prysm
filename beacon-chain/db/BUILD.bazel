@@ -39,7 +39,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "small",
+    size = "medium",
     srcs = [
         "attestation_test.go",
         "block_operations_test.go",
