@@ -214,6 +214,16 @@ func TestProtoCompatability(t *testing.T) {
 			for i, propA := range propsA.Prop {
 				propB := propsB.Prop[i]
 
+				if propA.Name != propB.Name {
+					t.Errorf(
+						"%T.%s field is named differently than %T.%s",
+						tt.a,
+						propA.Name,
+						tt.b,
+						propB.Name,
+					)
+				}
+
 				if propA.Wire != propB.Wire {
 					t.Errorf(
 						"%T.%s has different wire (%s) than %T.%s (%s)",
