@@ -1050,7 +1050,7 @@ go_repository(
 
 go_repository(
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "8fd5fd9d19ce68183a6b0934519dfe7fe6269612",  # v1.9.0
+    commit = "740ef2ee80c49ed4a272e8c3b54ebf352109f572",
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
 )
 
@@ -1256,4 +1256,10 @@ go_repository(
     name = "com_github_googleapis_gnostic",
     commit = "25d8b0b6698593f520d9d8dc5a88e6b16ca9ecc0",
     importpath = "github.com/googleapis/gnostic",
+)
+
+go_repository(
+    name = "com_github_prysmaticlabs_ethereumapis",
+    commit = "2e6244b41af83930d4568e9577afd900893c9b1d",
+    importpath = "github.com/prysmaticlabs/ethereumapis",
 )
