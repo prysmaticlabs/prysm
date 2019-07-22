@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/node"
-	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -25,8 +24,8 @@ import (
 )
 
 func startNode(ctx *cli.Context) error {
-	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
-	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	keystoreDirectory := ctx.String(KeystorePathFlag.Name)
+	keystorePassword := ctx.String(PasswordFlag.Name)
 
 	exists, err := accounts.Exists(keystoreDirectory)
 	if err != nil {
@@ -71,8 +70,8 @@ func startNode(ctx *cli.Context) error {
 }
 
 func createValidatorAccount(ctx *cli.Context) (string, string, error) {
-	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
-	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	keystoreDirectory := ctx.String(KeystorePathFlag.Name)
+	keystorePassword := ctx.String(PasswordFlag.Name)
 	if keystorePassword == "" {
 		reader := bufio.NewReader(os.Stdin)
 		logrus.Info("Create a new validator account for eth2")
@@ -120,8 +119,8 @@ func main() {
 this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit
 contract in order to activate the validator client`,
 					Flags: []cli.Flag{
-						types.KeystorePathFlag,
-						types.PasswordFlag,
+						KeystorePathFlag,
+						PasswordFlag,
 					},
 					Action: func(ctx *cli.Context) {
 						if keystoreDir, _, err := createValidatorAccount(ctx); err != nil {

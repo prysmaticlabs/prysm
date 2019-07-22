@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client"
-	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -55,7 +54,7 @@ func NewValidatorClient(ctx *cli.Context, password string) (*ValidatorClient, er
 	}
 
 	// Use custom config values if the --no-custom-config flag is set.
-	if !ctx.GlobalBool(types.NoCustomConfigFlag.Name) {
+	if !ctx.Bool("no-custom-config") {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
@@ -128,10 +127,10 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 }
 
 func (s *ValidatorClient) registerClientService(ctx *cli.Context, password string) error {
-	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
-	keystoreDirectory := ctx.GlobalString(types.KeystorePathFlag.Name)
-	logValidatorBalances := !ctx.GlobalBool(types.DisablePenaltyRewardLogFlag.Name)
-	cert := ctx.GlobalString(types.CertFlag.Name)
+	endpoint := ctx.String("beacon-rpc-provider")
+	keystoreDirectory := ctx.String("keystore-path")
+	logValidatorBalances := !ctx.Bool("disable-rewards-penalties-logging")
+	cert := ctx.String("tls-cert")
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:             endpoint,
 		KeystorePath:         keystoreDirectory,
