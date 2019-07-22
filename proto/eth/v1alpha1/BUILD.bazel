@@ -32,19 +32,19 @@ go_test(
 )
 
 go_proto_library(
-    name = "v1alpha1_go_proto",
+    name = "go_default_library",
     compiler = "//:grpc_proto_compiler",
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1",
     proto = ":v1alpha1_proto",
-    visibility = ["//proto:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
     ],
 )
 
-go_library(
-    name = "go_default_library",
-    embed = [":v1alpha1_go_proto"],
-    visibility = ["//visibility:public"],
-)
+#go_library(
+#    name = "go_default_library",
+#    embed = [":v1alpha1_go_proto"],
+#    visibility = ["//visibility:public"],
+#)
