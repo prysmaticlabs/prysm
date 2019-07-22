@@ -10,8 +10,8 @@ import (
 // BeaconChainServer defines a server implementation of the gRPC Beacon Chain service,
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
-type BeaconChainServer struct{
-	beaconDB            *db.BeaconDB
+type BeaconChainServer struct {
+	beaconDB *db.BeaconDB
 }
 
 // ListValidatorBalances retrieves the validator balances for a given set of public key at
@@ -23,7 +23,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
 
-	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys) + len(req.Indices))
+	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validator to prevent duplication
 
 	balances, err := bs.beaconDB.Balances(ctx)
@@ -47,8 +47,8 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 
 		res = append(res, &ethpb.ValidatorBalances_Balance{
 			PublicKey: pubkey,
-			Index: index,
-			Balance: balances[index],
+			Index:     index,
+			Balance:   balances[index],
 		})
 	}
 
@@ -56,12 +56,11 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		if !filtered[index] {
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: validators[index].PublicKey,
-				Index: index,
-				Balance: balances[index],
+				Index:     index,
+				Balance:   balances[index],
 			})
 		}
 	}
 
 	return &ethpb.ValidatorBalances{Balances: res}, nil
 }
-
