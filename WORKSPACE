@@ -1188,7 +1188,7 @@ go_repository(
 
 go_repository(
     name = "com_github_peterbourgon_diskv",
-    commit = "0be1b92a6df0e4f5cb0a5d15fb7f643d0ad93ce6",
+    commit = "0be1b92a6df0e4f5cb0a5d15fb7f643d0ad93ce6",  # v3.0.0
     importpath = "github.com/peterbourgon/diskv",
 )
 
