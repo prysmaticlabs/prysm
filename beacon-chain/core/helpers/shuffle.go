@@ -1,5 +1,5 @@
 // Package utils defines utility functions for the beacon-chain.
-package utils
+package helpers
 
 import (
 	"encoding/binary"
