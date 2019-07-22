@@ -79,6 +79,7 @@ func (h *HobbitsNode) Listen() error {
 
 		err := h.processHobbitsMessage(id, HobbitsMessage(message))
 		if err != nil {
+			log.Println("closing conn and deleting peer") // TODO delete
 			log.Error(err)
 			_ = conn.Close()
 			delete(h.PeerConns, id)
@@ -89,7 +90,7 @@ func (h *HobbitsNode) Listen() error {
 	})
 }
 
-func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) error {
+func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) {
 	var body []byte
 	var topic string
 
@@ -101,7 +102,7 @@ func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) error {
 		body = msg.(*pb.AttestationAnnounce).Hash
 		topic = "ATTESTATION"
 	default:
-		return errors.New("message type unsupported for broadcasting")
+		log.Trace("message type unsupported for broadcasting")
 	}
 
 	var hash [32]byte
@@ -118,7 +119,7 @@ func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) error {
 	}
 	head, err := bson.Marshal(header)
 	if err != nil {
-		return errors.Wrap(err, "could not marshal header of gossip message for broadcast")
+		log.Trace("could not marshal header of gossip message for broadcast")
 	}
 
 	message := HobbitsMessage{
@@ -131,11 +132,9 @@ func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) error {
 	for _, peer := range h.PeerConns {
 		err := h.Server.SendMessage(peer, encoding.Message(message))
 		if err != nil {
-			return errors.Wrap(err, "error broadcasting: ")
+			log.Trace("error broadcasting: ")
 		}
 	}
-
-	return nil
 }
 
 // Send builds and sends a message to a Hobbits peer

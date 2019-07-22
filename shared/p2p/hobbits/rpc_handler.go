@@ -131,6 +131,7 @@ func (h *HobbitsNode) rpcHello() Hello {
 
 	finalizedState, err := h.DB.FinalizedState()
 	if err != nil {
+		finalizedState = nil // TODO: testing purposes, remove
 		log.Printf("error getting FinalizedState data from db: %s", err.Error())
 	} else {
 		response.LatestFinalizedEpoch = finalizedState.Slot / 64 // finalized epoch

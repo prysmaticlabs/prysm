@@ -6,21 +6,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/context"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/renaynay/go-hobbits/encoding"
 	"gopkg.in/mgo.v2/bson"
 )
 
 func TestHobbitsNode_Listen(t *testing.T) {
-	fakeDB, err := db.NewDB("")
+	fakeDB, err := db.NewDB("tmp/rene/")
 	if err != nil {
 		t.Errorf("could not generate new DB, %s", err.Error())
 	}
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 5, false)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+
+	err = fakeDB.SaveState(context.Background(), beaconState)
+	if err != nil {
+		t.Errorf("error saving genesis state, %s", err.Error())
+	}
 
 	hobNode := Hobbits("127.0.0.1", 0, []string{}, fakeDB)
 
@@ -85,7 +91,7 @@ func TestHobbitsNode_Listen(t *testing.T) {
 //func TestHobbitsNode_Broadcast(t *testing.T) {
 //	db, err := db.NewDB("go/src/renaynay/db")
 //	if err != nil {
-//		t.Errorf("can't construct new DB")
+//		t.Errorf("can't construct new DB")baz
 //	}
 //
 //	hobNode := Hobbits("127.0.0.1", 0, []string{}, db)

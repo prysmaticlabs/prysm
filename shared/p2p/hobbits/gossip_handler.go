@@ -3,12 +3,11 @@ package hobbits
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
-func (h *HobbitsNode) gossipBlock(message HobbitsMessage, header GossipHeader) error {
+func (h *HobbitsNode) gossipBlock(message HobbitsMessage, header GossipHeader) {
 	block := &pb.BeaconBlockAnnounce{
 		Hash: header.Hash[:],
 	}
@@ -18,15 +17,10 @@ func (h *HobbitsNode) gossipBlock(message HobbitsMessage, header GossipHeader) e
 		Data: block,
 	})
 
-	err := h.Broadcast(context.WithValue(context.Background(), "message_hash", header.MessageHash), block)
-	if err != nil {
-		return errors.Wrap(err, "could not broadcast block")
-	}
-
-	return nil
+	h.Broadcast(context.WithValue(context.Background(), "message_hash", header.MessageHash), block)
 }
 
-func (h *HobbitsNode) gossipAttestation(message HobbitsMessage, header GossipHeader) error {
+func (h *HobbitsNode) gossipAttestation(message HobbitsMessage, header GossipHeader) {
 	attestation := &pb.AttestationAnnounce{
 		Hash: header.Hash[:],
 	}
@@ -36,10 +30,5 @@ func (h *HobbitsNode) gossipAttestation(message HobbitsMessage, header GossipHea
 		Data: attestation,
 	})
 
-	err := h.Broadcast(context.WithValue(context.Background(), "message_hash", header.MessageHash), attestation)
-	if err != nil {
-		return errors.Wrap(err, "could not broadcast attestation")
-	}
-
-	return nil
+	h.Broadcast(context.WithValue(context.Background(), "message_hash", header.MessageHash), attestation)
 }

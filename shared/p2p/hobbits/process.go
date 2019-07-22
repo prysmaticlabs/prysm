@@ -129,7 +129,7 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 
 	topic := h.parseTopic(header)
 
-	var function func(HobbitsMessage, GossipHeader) error
+	var function func(HobbitsMessage, GossipHeader)
 
 	switch topic {
 	case "BLOCK":
@@ -140,10 +140,7 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 		return errors.New("message topic unsupported")
 	}
 
-	err = function(message, header)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("could not gossip %s", topic))
-	}
+	function(message, header)
 
 	return nil
 }
