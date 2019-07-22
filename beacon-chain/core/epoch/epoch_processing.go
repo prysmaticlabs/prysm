@@ -472,7 +472,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Reset ETH1 data votes.
 	if (state.Slot+1)%params.BeaconConfig().SlotsPerEth1VotingPeriod == 0 {
-		state.Eth1DataVotes = nil
+		state.Eth1DataVotes = []*ethpb.Eth1Data{}
 	}
 
 	// Update effective balances with hysteresis.

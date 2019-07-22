@@ -43,10 +43,6 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 				t.Fatal(err)
 			}
 
-			if tt.Post.CurrentEpochAttestations == nil {
-				tt.Post.CurrentEpochAttestations = []*pb.PendingAttestation{}
-			}
-
 			if !reflect.DeepEqual(postState, tt.Post) {
 				t.Error("Did not get expected state")
 				diff, _ := messagediff.PrettyDiff(tt.Post, postState)

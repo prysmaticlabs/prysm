@@ -13,7 +13,6 @@ import (
 	"net/http"
 
 	ssz "github.com/prysmaticlabs/go-ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	_ "go.uber.org/automaxprocs"
 )
 
@@ -71,7 +70,7 @@ func decodeDepositData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	di := &ethpb.Deposit_Data{}
+	di := &ethpb.DepositData{}
 
 	if err := ssz.Unmarshal(encodedData, di); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

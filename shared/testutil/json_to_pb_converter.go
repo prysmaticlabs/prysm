@@ -3,7 +3,7 @@ package testutil
 import (
 	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 )
 
 var json = jsoniter.Config{
