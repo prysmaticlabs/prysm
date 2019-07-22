@@ -1129,7 +1129,7 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_d4l3k_messagediff_v1",
-    commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",
+    commit = "29f32d820d112dbd66e58492a6ffb7cc3106312b",  # v1.2.1
     importpath = "gopkg.in/d4l3k/messagediff.v1",
 )
 
