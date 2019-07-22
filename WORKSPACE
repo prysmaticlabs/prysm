@@ -1224,7 +1224,7 @@ go_repository(
 
 go_repository(
     name = "com_github_google_go_cmp",
-    commit = "1b316004397f1f336546ca058ddb5b95c41a8772",
+    commit = "6f77996f0c42f7b84e5a2b252227263f93432e9b",  # v0.3.0
     importpath = "github.com/google/go-cmp",
 )
 
