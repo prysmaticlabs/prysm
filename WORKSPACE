@@ -1230,7 +1230,7 @@ go_repository(
 
 go_repository(
     name = "com_github_modern_go_reflect2",
-    commit = "94122c33edd36123c84d5368cfb2b69df93a0ec8",
+    commit = "94122c33edd36123c84d5368cfb2b69df93a0ec8",  # v1.0.1
     importpath = "github.com/modern-go/reflect2",
 )
 
