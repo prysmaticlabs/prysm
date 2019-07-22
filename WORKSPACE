@@ -1200,7 +1200,7 @@ go_repository(
 
 go_repository(
     name = "com_github_google_btree",
-    commit = "20236160a414454a9c64b6c8829381c6f4bddcaa",
+    commit = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306",  # v1.0.0
     importpath = "github.com/google/btree",
 )
 
