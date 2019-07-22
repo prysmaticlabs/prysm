@@ -21,14 +21,14 @@ import (
 type validator struct {
 	genesisTime          uint64
 	ticker               *slotutil.SlotTicker
-	assignments          *pb.CommitteeAssignmentResponse
+	assignments          *pb.AssignmentResponse
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
 	beaconClient         pb.BeaconServiceClient
 	attesterClient       pb.AttesterServiceClient
 	keys                 map[string]*keystore.Key
 	pubkeys              [][]byte
-	prevBalance          uint64
+	prevBalance          map[[48]byte]uint64
 	logValidatorBalances bool
 }
 
@@ -123,6 +123,11 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 	for _, status := range validatorStatuses {
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
+			log.WithFields(logrus.Fields{
+				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
+				"status":    status.Status.Status.String(),
+			}).Info("Validator has been Activated")
+			continue
 		}
 		if status.Status.Status == pb.ValidatorStatus_EXITED {
 			log.WithFields(logrus.Fields{
@@ -138,7 +143,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 			}).Info("Not yet included in state...")
 			continue
 		}
-		if status.Status.ActivationEpoch == (params.BeaconConfig().FarFutureEpoch - params.BeaconConfig().GenesisEpoch) {
+		if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 			log.WithFields(logrus.Fields{
 				"publicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
 				"status":                    status.Status.Status.String(),
@@ -165,7 +170,7 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	defer span.End()
 	head, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		return params.BeaconConfig().GenesisSlot, err
+		return 0, err
 	}
 	return head.Slot, nil
 }
@@ -177,7 +182,7 @@ func (v *validator) NextSlot() <-chan uint64 {
 
 // SlotDeadline is the start time of the next slot.
 func (v *validator) SlotDeadline(slot uint64) time.Time {
-	secs := (slot + 1 - params.BeaconConfig().GenesisSlot) * params.BeaconConfig().SecondsPerSlot
+	secs := (slot + 1) * params.BeaconConfig().SecondsPerSlot
 	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(time.Duration(secs) * time.Second)
 }
 
@@ -189,25 +194,28 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
-
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
+	if slot == 0 {
+		return nil
+	}
 
-	req := &pb.CommitteeAssignmentsRequest{
-		EpochStart: slot,
+	req := &pb.AssignmentRequest{
+		EpochStart: slot / params.BeaconConfig().SlotsPerEpoch,
 		PublicKeys: v.pubkeys,
 	}
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
 		v.assignments = nil // Clear assignments so we know to retry the request.
+		log.Error(err)
 		return err
 	}
 
 	v.assignments = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		for _, assignment := range v.assignments.Assignment {
+		for _, assignment := range v.assignments.ValidatorAssignment {
 			var proposerSlot uint64
 			var attesterSlot uint64
 			assignmentKey := hex.EncodeToString(assignment.PublicKey)
@@ -225,12 +233,12 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 			} else {
 				attesterSlot = assignment.Slot
 			}
-			lFields["attesterSlot"] = attesterSlot - params.BeaconConfig().GenesisSlot
+			lFields["attesterSlot"] = attesterSlot
 			lFields["proposerSlot"] = "Not proposing"
 			lFields["shard"] = assignment.Shard
 
 			if assignment.IsProposer {
-				lFields["proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
+				lFields["proposerSlot"] = proposerSlot
 			}
 			log.WithFields(lFields).Info("New assignment")
 
@@ -238,7 +246,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 
 	log.WithFields(logrus.Fields{
-		"assignments": len(v.assignments.Assignment),
+		"assignments": len(v.assignments.ValidatorAssignment),
 	}).Info("Updated validator assignments")
 
 	return nil
@@ -249,7 +257,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
 	rolesAt := make(map[string]pb.ValidatorRole)
-	for _, assignment := range v.assignments.Assignment {
+	for _, assignment := range v.assignments.ValidatorAssignment {
 		var role pb.ValidatorRole
 		if assignment == nil {
 			role = pb.ValidatorRole_UNKNOWN

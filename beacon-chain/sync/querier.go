@@ -17,11 +17,13 @@ import (
 )
 
 var queryLog = logrus.WithField("prefix", "syncQuerier")
+var logQueryInterval = 1 * time.Second
 
 type powChainService interface {
-	HasChainStartLogOccurred() (bool, uint64, error)
+	HasChainStarted() bool
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	ChainStartFeed() *event.Feed
+	AreAllDepositsProcessed() (bool, error)
 }
 
 // QuerierConfig defines the configurable properties of SyncQuerier.
@@ -91,11 +93,8 @@ func NewQuerierService(ctx context.Context,
 
 // Start begins the goroutine.
 func (q *Querier) Start() {
-	hasChainStarted, _, err := q.powchain.HasChainStartLogOccurred()
-	if err != nil {
-		queryLog.Errorf("Unable to get current state of the deposit contract %v", err)
-		return
-	}
+	q.waitForAllDepositsToBeProcessed()
+	hasChainStarted := q.powchain.HasChainStarted()
 
 	q.chainStarted = hasChainStarted
 	q.atGenesis = !hasChainStarted
@@ -158,7 +157,7 @@ func (q *Querier) run() {
 		ticker.Stop()
 	}()
 
-	log.Info("Polling peers for latest chain head...")
+	queryLog.Info("Polling peers for latest chain head...")
 	hasReceivedResponse := false
 	var timeout <-chan time.Time
 	for {
@@ -172,7 +171,7 @@ func (q *Querier) run() {
 			queryLog.WithField("peerID", q.bestPeer.Pretty()).Info("Peer with highest canonical head")
 			queryLog.Infof(
 				"Latest chain head is at slot: %d and state root: %#x",
-				q.currentHeadSlot-params.BeaconConfig().GenesisSlot, q.currentStateRoot,
+				q.currentHeadSlot, q.currentStateRoot,
 			)
 			ticker.Stop()
 			responseSub.Unsubscribe()
@@ -189,7 +188,7 @@ func (q *Querier) run() {
 			if _, ok := q.chainHeadResponses[msg.Peer]; !ok {
 				queryLog.WithFields(logrus.Fields{
 					"peerID":      msg.Peer.Pretty(),
-					"highestSlot": response.CanonicalSlot - params.BeaconConfig().GenesisSlot,
+					"highestSlot": response.CanonicalSlot,
 				}).Info("Received chain head from peer")
 				q.chainHeadResponses[msg.Peer] = response
 			}
@@ -202,6 +201,20 @@ func (q *Querier) run() {
 				q.finalizedBlockRoot = response.FinalizedBlockRoot
 			}
 		}
+	}
+}
+
+func (q *Querier) waitForAllDepositsToBeProcessed() {
+	for {
+		processed, err := q.powchain.AreAllDepositsProcessed()
+		if err != nil {
+			queryLog.Errorf("Could not check status of deposits %v", err)
+			continue
+		}
+		if processed {
+			break
+		}
+		time.Sleep(logQueryInterval)
 	}
 }
 

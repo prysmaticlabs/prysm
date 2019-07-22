@@ -82,7 +82,7 @@ func (a *AncestorBlockCache) AncestorBySlot(blockHash []byte, height uint64) (*A
 
 	aInfo, ok := obj.(*AncestorInfo)
 	if !ok {
-		return nil, ErrNotACommitteeInfo
+		return nil, ErrNotAncestorCacheObj
 	}
 
 	return aInfo, nil

@@ -6,7 +6,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 )
 
-const prefix = "/eth2_spec_tests/tests/bls/"
+const prefix = "tests/bls/"
 
 // Load BLS yaml from spec test bls directory. The file parameter should be in
 // the format of the path starting at the bls directory.

@@ -13,7 +13,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -338,7 +340,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve chain head: %v", err)
 		return err
 	}
-	headBlkRoot, err := hashutil.HashBeaconBlock(head)
+	headBlkRoot, err := ssz.SigningRoot(head)
 	if err != nil {
 		log.Errorf("Could not hash chain head: %v", err)
 	}
@@ -347,7 +349,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		log.Errorf("Could not retrieve finalized block: %v", err)
 		return err
 	}
-	finalizedBlkRoot, err := hashutil.HashBeaconBlock(finalizedBlk)
+	finalizedBlkRoot, err := ssz.SigningRoot(finalizedBlk)
 	if err != nil {
 		log.Errorf("Could not hash finalized block: %v", err)
 	}
@@ -397,8 +399,8 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRootHash32)),
-		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRoot)),
+		"justifiedEpoch": attestation.Data.Source.Epoch,
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
@@ -411,16 +413,33 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	highestSlot := rs.db.HighestBlockSlot()
+	head, err := rs.db.ChainHead()
+	if err != nil {
+		return err
+	}
+	highestSlot := head.Slot
+
+	headState, err := rs.db.HeadState(rs.ctx)
+	if err != nil {
+		return err
+	}
+	slot, err := helpers.AttestationDataSlot(headState, attestation.Data)
+	if err != nil {
+		return fmt.Errorf("could not get attestation slot: %v", err)
+	}
 
 	span.AddAttributes(
-		trace.Int64Attribute("attestation.Data.Slot", int64(attestation.Data.Slot)),
+		trace.Int64Attribute("attestation.Data.Slot", int64(slot)),
 		trace.Int64Attribute("finalized state slot", int64(highestSlot-params.BeaconConfig().SlotsPerEpoch)),
 	)
-	if attestation.Data.Slot < highestSlot-params.BeaconConfig().SlotsPerEpoch {
+	oneEpochAgo := uint64(0)
+	if highestSlot > params.BeaconConfig().SlotsPerEpoch {
+		oneEpochAgo = highestSlot - params.BeaconConfig().SlotsPerEpoch
+	}
+	if slot < oneEpochAgo {
 		log.WithFields(logrus.Fields{
-			"receivedSlot": attestation.Data.Slot,
-			"epochSlot":    highestSlot - params.BeaconConfig().SlotsPerEpoch},
+			"receivedSlot": slot,
+			"epochSlot":    oneEpochAgo},
 		).Debug("Skipping received attestation with slot smaller than one epoch ago")
 		return nil
 	}
@@ -606,7 +625,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 	}
 
 	bList := []*pb.BeaconBlock{b}
-	parentRoot := b.ParentRootHash32
+	parentRoot := b.ParentRoot
 	for !bytes.Equal(parentRoot, finalizedRoot) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -622,7 +641,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		// Prepend parent to the beginning of the list.
 		bList = append([]*pb.BeaconBlock{b}, bList...)
 
-		parentRoot = b.ParentRootHash32
+		parentRoot = b.ParentRoot
 	}
 	return bList, nil
 }

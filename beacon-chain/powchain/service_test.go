@@ -3,7 +3,6 @@ package powchain
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
@@ -11,16 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -79,7 +74,8 @@ func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethT
 func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
 	block := gethTypes.NewBlock(
 		&gethTypes.Header{
-			Number: big.NewInt(0),
+			Number: big.NewInt(15),
+			Time:   150,
 		},
 		[]*gethTypes.Transaction{},
 		[]*gethTypes.Header{},
@@ -95,54 +91,7 @@ func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*get
 	}, nil
 }
 
-var amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
-var depositsReqForChainStart = 8
-
-type testAccount struct {
-	addr         common.Address
-	contract     *contracts.DepositContract
-	contractAddr common.Address
-	backend      *backends.SimulatedBackend
-	txOpts       *bind.TransactOpts
-}
-
-func setup() (*testAccount, error) {
-	genesis := make(core.GenesisAlloc)
-	privKey, _ := crypto.GenerateKey()
-	pubKeyECDSA, ok := privKey.Public().(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("error casting public key to ECDSA")
-	}
-
-	// strip off the 0x and the first 2 characters 04 which is always the EC prefix and is not required.
-	publicKeyBytes := crypto.FromECDSAPub(pubKeyECDSA)[4:]
-	var pubKey = make([]byte, 48)
-	copy(pubKey[:], []byte(publicKeyBytes))
-
-	addr := crypto.PubkeyToAddress(privKey.PublicKey)
-	txOpts := bind.NewKeyedTransactor(privKey)
-	startingBalance, _ := new(big.Int).SetString("1000000000000000000000", 10)
-	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
-	backend := backends.NewSimulatedBackend(genesis, 2100000000)
-
-	depositsRequired := big.NewInt(int64(depositsReqForChainStart))
-	minDeposit := big.NewInt(1e9)
-	maxDeposit := big.NewInt(32e9)
-	contractAddr, _, contract, err := contracts.DeployDepositContract(
-		txOpts,
-		backend,
-		depositsRequired,
-		minDeposit,
-		maxDeposit,
-		big.NewInt(1),
-		addr,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
-}
+var depositsReqForChainStart = 64
 
 func TestNewWeb3Service_OK(t *testing.T) {
 	endpoint := "http://127.0.0.1"
@@ -188,7 +137,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
@@ -199,18 +148,18 @@ func TestStart_OK(t *testing.T) {
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
 	web3Service.Start()
 
@@ -226,23 +175,23 @@ func TestStart_OK(t *testing.T) {
 func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 
 	if err := web3Service.Stop(); err != nil {
 		t.Fatalf("Unable to stop web3 ETH1.0 chain service: %v", err)
@@ -263,28 +212,23 @@ func TestStop_OK(t *testing.T) {
 
 func TestInitDataFromContract_OK(t *testing.T) {
 
-	testAcc, err := setup()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.txOpts.Value = amount32Eth
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, []byte{'a'}); err != nil {
-		t.Fatalf("Could not deposit to deposit contract %v", err)
-	}
-	testAcc.backend.Commit()
-
+	testAcc.Backend.Commit()
 	if err := web3Service.initDataFromContract(); err != nil {
 		t.Fatalf("Could not init from deposit contract: %v", err)
 	}
@@ -292,24 +236,24 @@ func TestInitDataFromContract_OK(t *testing.T) {
 
 func TestWeb3Service_BadReader(t *testing.T) {
 	hook := logTest.NewGlobal()
-
-	testAcc, err := setup()
+	depositcontract.Amount32Eth()
+	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
+		DepositContract: testAcc.ContractAddr,
 		Reader:          &badReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.backend,
+		ContractBackend: testAcc.Backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
+	testAcc.Backend.Commit()
 	web3Service.reader = &badReader{}
 	web3Service.logger = &goodLogger{}
 	web3Service.run(web3Service.ctx.Done())

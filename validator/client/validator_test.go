@@ -308,13 +308,13 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pbp2p.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}, nil)
+	).Return(&pbp2p.BeaconBlock{Slot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if headSlot != params.BeaconConfig().GenesisSlot {
-		t.Errorf("Mismatch slots, wanted: %v, received: %v", params.BeaconConfig().GenesisSlot, headSlot)
+	if headSlot != 0 {
+		t.Errorf("Mismatch slots, wanted: %v, received: %v", 0, headSlot)
 	}
 }
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
@@ -381,8 +381,6 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 }
 
 func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
-	// TODO(2167): Unskip this test.
-	t.Skip()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
@@ -391,8 +389,8 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 	v := validator{
 		keys:            keyMap,
 		validatorClient: client,
-		assignments: &pb.CommitteeAssignmentResponse{
-			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		assignments: &pb.AssignmentResponse{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Committee: []uint64{},
 					Slot:      10,
@@ -419,8 +417,8 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	v := validator{
 		keys:            keyMap,
 		validatorClient: client,
-		assignments: &pb.CommitteeAssignmentResponse{
-			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		assignments: &pb.AssignmentResponse{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Shard: 1,
 				},
@@ -449,8 +447,8 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	resp := &pb.CommitteeAssignmentResponse{
-		Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+	resp := &pb.AssignmentResponse{
+		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 			{
 				Slot:       params.BeaconConfig().SlotsPerEpoch,
 				Shard:      100,
@@ -473,13 +471,13 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
 
-	if v.assignments.Assignment[0].Slot != params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignments.Assignment[0].Slot)
+	if v.assignments.ValidatorAssignment[0].Slot != params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignments.ValidatorAssignment[0].Slot)
 	}
-	if v.assignments.Assignment[0].Shard != resp.Assignment[0].Shard {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.Assignment[0].Shard, v.assignments.Assignment[0].Slot)
+	if v.assignments.ValidatorAssignment[0].Shard != resp.ValidatorAssignment[0].Shard {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.ValidatorAssignment[0].Shard, v.assignments.ValidatorAssignment[0].Slot)
 	}
-	if !v.assignments.Assignment[0].IsProposer {
+	if !v.assignments.ValidatorAssignment[0].IsProposer {
 		t.Errorf("Unexpected validator assignments. want: proposer=true")
 	}
 }
@@ -487,8 +485,8 @@ func TestUpdateAssignments_OK(t *testing.T) {
 func TestRolesAt_OK(t *testing.T) {
 
 	v := validator{
-		assignments: &pb.CommitteeAssignmentResponse{
-			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		assignments: &pb.AssignmentResponse{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Shard:      1,
 					Slot:       1,

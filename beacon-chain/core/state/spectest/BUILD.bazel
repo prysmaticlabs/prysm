@@ -1,0 +1,39 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "genesis_initialization.yaml.go",
+        "genesis_validity.yaml.go",
+        "sanity_slots_test.yaml.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/state/spectest",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = ["//proto/beacon/p2p/v1:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "large",
+    srcs = [
+        "genesis_test.go",
+        "slot_processing_test.go",
+    ],
+    data = [
+        "@eth2_spec_tests//:test_data",
+    ],
+    embed = [":go_default_library"],
+    tags = ["spectest"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/params/spectest:go_default_library",
+        "@com_github_ghodss_yaml//:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+    ],
+)

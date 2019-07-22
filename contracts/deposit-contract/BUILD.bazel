@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "ETH1logs.go",
         "depositContract.go",
+        "testutils.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/contracts/deposit-contract",
     visibility = ["//visibility:public"],
@@ -12,8 +13,11 @@ go_library(
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
     ],
 )
@@ -24,12 +28,7 @@ go_test(
     srcs = ["depositContract_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/hashutil:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
-        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
-        "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
-        "@com_github_ethereum_go_ethereum//core:go_default_library",
-        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
     ],
 )

@@ -38,14 +38,14 @@ func (m *MockValidatorServiceClient) EXPECT() *MockValidatorServiceClientMockRec
 }
 
 // CommitteeAssignment mocks base method
-func (m *MockValidatorServiceClient) CommitteeAssignment(arg0 context.Context, arg1 *v1.CommitteeAssignmentsRequest, arg2 ...grpc.CallOption) (*v1.CommitteeAssignmentResponse, error) {
+func (m *MockValidatorServiceClient) CommitteeAssignment(arg0 context.Context, arg1 *v1.AssignmentRequest, arg2 ...grpc.CallOption) (*v1.AssignmentResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CommitteeAssignment", varargs...)
-	ret0, _ := ret[0].(*v1.CommitteeAssignmentResponse)
+	ret0, _ := ret[0].(*v1.AssignmentResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -55,6 +55,26 @@ func (mr *MockValidatorServiceClientMockRecorder) CommitteeAssignment(arg0, arg1
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitteeAssignment", reflect.TypeOf((*MockValidatorServiceClient)(nil).CommitteeAssignment), varargs...)
+}
+
+// DomainData mocks base method
+func (m *MockValidatorServiceClient) DomainData(arg0 context.Context, arg1 *v1.DomainRequest, arg2 ...grpc.CallOption) (*v1.DomainResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DomainData", varargs...)
+	ret0, _ := ret[0].(*v1.DomainResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DomainData indicates an expected call of DomainData
+func (mr *MockValidatorServiceClientMockRecorder) DomainData(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainData", reflect.TypeOf((*MockValidatorServiceClient)(nil).DomainData), varargs...)
 }
 
 // ExitedValidators mocks base method
