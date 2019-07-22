@@ -193,9 +193,9 @@ func (s *Service) Start() {
 		powChainService:    s.powChainService,
 	}
 	nodeServer := &NodeServer{
-		beaconDB:       s.beaconDB,
-		serviceFetcher: s.grpcServer,
-		syncChecker:    s.syncService,
+		beaconDB:    s.beaconDB,
+		server:      s.grpcServer,
+		syncChecker: s.syncService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

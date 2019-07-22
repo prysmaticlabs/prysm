@@ -15,17 +15,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type serviceInfoFetcher interface {
-	GetServiceInfo() map[string]grpc.ServiceInfo
-}
-
 // NodeServer defines a server implementation of the gRPC Node service,
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type NodeServer struct {
-	syncChecker    sync.SyncChecker
-	serviceFetcher serviceInfoFetcher
-	beaconDB       *db.BeaconDB
+	syncChecker sync.SyncChecker
+	server      *grpc.Server
+	beaconDB    *db.BeaconDB
 }
 
 // GetSyncStatus checks the current network sync status of the node.
@@ -69,7 +65,7 @@ func (ns *NodeServer) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.V
 // PERMISSION_DENIED. The server may also support fetching services by grpc
 // reflection.
 func (ns *NodeServer) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) (*ethpb.ImplementedServices, error) {
-	serviceInfo := ns.serviceFetcher.GetServiceInfo()
+	serviceInfo := ns.server.GetServiceInfo()
 	serviceNames := make([]string, 0, len(serviceInfo))
 	for svc := range serviceInfo {
 		serviceNames = append(serviceNames, svc)

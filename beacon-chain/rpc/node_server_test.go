@@ -3,21 +3,20 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"reflect"
-	"sort"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc/reflection"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 )
-
-var _ = serviceInfoFetcher(&grpc.Server{})
 
 type mockSyncChecker struct {
 	syncing bool
@@ -25,18 +24,6 @@ type mockSyncChecker struct {
 
 func (m *mockSyncChecker) Syncing() bool {
 	return m.syncing
-}
-
-type mockInfoFetcher struct {
-	serviceNames []string
-}
-
-func (m *mockInfoFetcher) GetServiceInfo() map[string]grpc.ServiceInfo {
-	res := make(map[string]grpc.ServiceInfo)
-	for _, s := range m.serviceNames {
-		res[s] = grpc.ServiceInfo{}
-	}
-	return res
 }
 
 func TestNodeServer_GetSyncStatus(t *testing.T) {
@@ -108,25 +95,19 @@ func TestNodeServer_GetVersion(t *testing.T) {
 }
 
 func TestNodeServer_GetImplementedServices(t *testing.T) {
-	serviceNames := []string{"Validator", "Beacon Node", "Attestations"}
-	mFetcher := &mockInfoFetcher{
-		serviceNames,
-	}
+	server := grpc.NewServer()
 	ns := &NodeServer{
-		serviceFetcher: mFetcher,
+		server: server,
 	}
+	ethpb.RegisterNodeServer(server, ns)
+	reflection.Register(server)
+
 	res, err := ns.ListImplementedServices(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Services) == 0 {
-		t.Errorf("Expected %d services, received %d", len(serviceNames), len(res.Services))
-	}
-	if reflect.DeepEqual(res.Services, serviceNames) {
-		t.Error("Expected list of services to be sorted")
-	}
-	sort.Strings(serviceNames)
-	if !reflect.DeepEqual(res.Services, serviceNames) {
-		t.Errorf("Wanted ListImplementedServices() = %v, received %v", serviceNames, res.Services)
+	// We verify the services include the node service + the registered reflection service.
+	if len(res.Services) != 2 {
+		t.Errorf("Expected 2 services, received %d: %v", len(res.Services), res.Services)
 	}
 }
