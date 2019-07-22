@@ -1152,7 +1152,7 @@ go_repository(
 go_repository(
     name = "org_golang_google_grpc",
     build_file_proto_mode = "disable",
-    commit = "24b2fb8959201be9ce659bc87b0d590a34c67eae",
+    commit = "1d89a3c832915b2314551c1d2a506874d62e53f7",  # v1.22.0
     importpath = "google.golang.org/grpc",
 )
 
