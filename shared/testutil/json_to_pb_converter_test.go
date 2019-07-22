@@ -6,6 +6,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
 )
 
+const baz = "baz"
+
 func TestOverrideSpecName(t *testing.T) {
 	input := struct {
 		Foo string `json:"foo"`
@@ -22,7 +24,7 @@ func TestOverrideSpecName(t *testing.T) {
 	if output.Foo != "foo" {
 		t.Error("Expected output.Foo to be foo")
 	}
-	if output.Bar != "baz" {
+	if output.Bar != baz {
 		t.Errorf("Expected output.Bar to be baz")
 	}
 }
@@ -56,7 +58,7 @@ func TestOverrideSpecName_NestedProto(t *testing.T) {
 	if output.Msg.Foo != "foo" {
 		t.Error("Expected output.Msg.Foo to be foo")
 	}
-	if output.Msg.Bar != "baz" {
+	if output.Msg.Bar != baz {
 		t.Errorf("Expected output.Msg.Bar to be baz")
 	}
 }
