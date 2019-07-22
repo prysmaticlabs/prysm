@@ -1194,7 +1194,7 @@ go_repository(
 
 go_repository(
     name = "com_github_googleapis_gnostic",
-    commit = "25d8b0b6698593f520d9d8dc5a88e6b16ca9ecc0",
+    commit = "e73c7ec21d36ddb0711cb36d1502d18363b5c2c9",  # v0.3.0
     importpath = "github.com/googleapis/gnostic",
 )
 
