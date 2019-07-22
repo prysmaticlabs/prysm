@@ -1164,7 +1164,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_text",
-    commit = "342b2e1fbaa52c93f31447ad2c6abc048c63e475",
+    commit = "342b2e1fbaa52c93f31447ad2c6abc048c63e475",  # v0.3.2
     importpath = "golang.org/x/text",
 )
 
