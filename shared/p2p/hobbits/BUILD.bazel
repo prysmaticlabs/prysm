@@ -39,9 +39,11 @@ go_test(
     deps = [
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/testutil:go_default_library",
-        "@com_github_prysmaticlabs_prysm//bazel-prysm/external/go_sdk/src/context:go_default_library",
         "@com_github_renaynay_go_hobbits//encoding:go_default_library",
+        "@com_github_renaynay_go_hobbits//tcp:go_default_library",
+        "@com_github_renekroon_ttlcache//:go_default_library",
         "@in_gopkg_mgo_v2//bson:go_default_library",
     ],
 )
