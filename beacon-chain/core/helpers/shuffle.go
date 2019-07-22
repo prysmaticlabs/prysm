@@ -1,4 +1,3 @@
-// Package utils defines utility functions for the beacon-chain.
 package helpers
 
 import (
