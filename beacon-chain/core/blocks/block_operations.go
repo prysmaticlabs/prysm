@@ -369,7 +369,6 @@ func verifyProposerSlashing(
 	if !helpers.IsSlashableValidator(proposer, helpers.CurrentEpoch(beaconState)) {
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
-
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
 	domain := helpers.Domain(beaconState, headerEpoch1, params.BeaconConfig().DomainBeaconProposer)
 	headers := append([]*ethpb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
@@ -1171,7 +1170,7 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *ethpb.Transfer) error
 
 	domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainTransfer)
 	if err := verifySigningRoot(transfer, transfer.SenderWithdrawalPublicKey, transfer.Signature, domain); err != nil {
-		return fmt.Errorf("could not verify voluntary exit signature: %v", err)
+		return fmt.Errorf("could not verify transfer signature: %v", err)
 	}
 
 	return nil

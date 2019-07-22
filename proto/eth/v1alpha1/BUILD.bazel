@@ -20,17 +20,6 @@ proto_library(
     ],
 )
 
-go_test(
-    name = "go_default_test",
-    size = "small",
-    srcs = ["compatability_test.go"],
-    deps = [
-        ":go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-    ],
-)
-
 go_proto_library(
     name = "go_default_library",
     compiler = "//:grpc_proto_compiler",
