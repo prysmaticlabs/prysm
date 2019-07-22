@@ -52,7 +52,7 @@ http_archive(
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "fe1e3a8253158c9a766ad76c502ee7a4aa4e39a5",
+    commit = "9aec6881eb524b3388e2482e2c8565ce8026e2a3",
     # Update this after https://github.com/graknlabs/bazel-distribution/pull/169 is merged.
     remote = "https://github.com/prestonvanloon/bazel-distribution",
 )
