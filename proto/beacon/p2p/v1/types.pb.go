@@ -2899,7 +2899,7 @@ func (m *AttestationTarget) Unmarshal(dAtA []byte) error {
 			}
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BlockRoot", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field BeaconBlockRoot", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {

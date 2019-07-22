@@ -622,7 +622,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		pubKey := bytesutil.ToBytes48(beaconState.Validators[i].PublicKey)
 		attsService.InsertAttestationIntoStore(pubKey, &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				BlockRoot: blockRoot[:],
+				BeaconBlockRoot: blockRoot[:],
 			}},
 		)
 	}

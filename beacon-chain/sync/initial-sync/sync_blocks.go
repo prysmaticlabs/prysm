@@ -126,9 +126,9 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 		return err
 	}
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  root[:],
-		ParentRoot: block.ParentRoot,
+		Slot:            block.Slot,
+		BeaconBlockRoot: root[:],
+		ParentRoot:      block.ParentRoot,
 	}); err != nil {
 		return fmt.Errorf("could not to save attestation target: %v", err)
 	}

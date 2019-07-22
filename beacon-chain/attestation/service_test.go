@@ -184,9 +184,9 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 		log.Fatalf("could not hash block: %v", err)
 	}
 	if err := beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
-		ParentRoot: []byte{},
+		Slot:            block.Slot,
+		BeaconBlockRoot: blockRoot[:],
+		ParentRoot:      []byte{},
 	}); err != nil {
 		log.Fatalf("could not save att target: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 
 	attestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			BlockRoot: blockRoot[:],
+			BeaconBlockRoot: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	service.store.m[pubKey48] = attestation
@@ -210,8 +210,8 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 		t.Fatalf("Could not get latest attestation: %v", err)
 	}
 
-	if !bytes.Equal(blockRoot[:], latestAttestedTarget.BlockRoot) {
-		t.Errorf("Wanted: %v, got: %v", blockRoot[:], latestAttestedTarget.BlockRoot)
+	if !bytes.Equal(blockRoot[:], latestAttestedTarget.BeaconBlockRoot) {
+		t.Errorf("Wanted: %v, got: %v", blockRoot[:], latestAttestedTarget.BeaconBlockRoot)
 	}
 }
 

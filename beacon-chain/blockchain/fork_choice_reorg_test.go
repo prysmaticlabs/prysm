@@ -113,15 +113,15 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	// Give the block from the forked chain, B4, the most votes.
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
-		Slot:       blocks[5].Slot,
-		BlockRoot:  roots[5][:],
-		ParentRoot: blocks[5].ParentRoot,
+		Slot:            blocks[5].Slot,
+		BeaconBlockRoot: roots[5][:],
+		ParentRoot:      blocks[5].ParentRoot,
 	}
 	for i := 1; i < len(deposits); i++ {
 		voteTargets[uint64(i)] = &pb.AttestationTarget{
-			Slot:       blocks[4].Slot,
-			BlockRoot:  roots[4][:],
-			ParentRoot: blocks[4].ParentRoot,
+			Slot:            blocks[4].Slot,
+			BeaconBlockRoot: roots[4][:],
+			ParentRoot:      blocks[4].ParentRoot,
 		}
 	}
 	attHandler := &mockAttestationHandler{

@@ -154,9 +154,9 @@ func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
-		Slot:       potentialHead.Slot,
-		BlockRoot:  headRoot[:],
-		ParentRoot: potentialHead.ParentRoot,
+		Slot:            potentialHead.Slot,
+		BeaconBlockRoot: headRoot[:],
+		ParentRoot:      potentialHead.ParentRoot,
 	}
 	count, err := VoteCount(genesisBlock, &pb.BeaconState{}, voteTargets, beaconDB)
 	if err != nil {
@@ -206,14 +206,14 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconState := &pb.BeaconState{Validators: []*ethpb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
-		Slot:       potentialHead.Slot,
-		BlockRoot:  headRoot1[:],
-		ParentRoot: potentialHead.ParentRoot,
+		Slot:            potentialHead.Slot,
+		BeaconBlockRoot: headRoot1[:],
+		ParentRoot:      potentialHead.ParentRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
-		Slot:       potentialHead2.Slot,
-		BlockRoot:  headRoot2[:],
-		ParentRoot: potentialHead2.ParentRoot,
+		Slot:            potentialHead2.Slot,
+		BeaconBlockRoot: headRoot2[:],
+		ParentRoot:      potentialHead2.ParentRoot,
 	}
 	count, err := VoteCount(genesisBlock, beaconState, voteTargets, beaconDB)
 	if err != nil {
@@ -251,9 +251,9 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 		t.Fatalf("could not hash block: %v", err)
 	}
 	if err := beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
-		ParentRoot: []byte{},
+		Slot:            block.Slot,
+		BeaconBlockRoot: blockRoot[:],
+		ParentRoot:      []byte{},
 	}); err != nil {
 		t.Fatalf("could not save att tgt: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			BlockRoot: blockRoot[:],
+			BeaconBlockRoot: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	attsService.InsertAttestationIntoStore(pubKey48, att)
@@ -542,9 +542,9 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	// The only vote is on block 2.
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
-		Slot:       block2.Slot,
-		BlockRoot:  block2Root[:],
-		ParentRoot: block2.ParentRoot,
+		Slot:            block2.Slot,
+		BeaconBlockRoot: block2Root[:],
+		ParentRoot:      block2.ParentRoot,
 	}
 
 	// LMDGhost should pick block 2.
@@ -646,24 +646,24 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	// Give block 4 the most votes (2).
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
-		Slot:       block2.Slot,
-		BlockRoot:  root2[:],
-		ParentRoot: block2.ParentRoot,
+		Slot:            block2.Slot,
+		BeaconBlockRoot: root2[:],
+		ParentRoot:      block2.ParentRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
-		Slot:       block3.Slot,
-		BlockRoot:  root3[:],
-		ParentRoot: block3.ParentRoot,
+		Slot:            block3.Slot,
+		BeaconBlockRoot: root3[:],
+		ParentRoot:      block3.ParentRoot,
 	}
 	voteTargets[2] = &pb.AttestationTarget{
-		Slot:       block4.Slot,
-		BlockRoot:  root4[:],
-		ParentRoot: block4.ParentRoot,
+		Slot:            block4.Slot,
+		BeaconBlockRoot: root4[:],
+		ParentRoot:      block4.ParentRoot,
 	}
 	voteTargets[3] = &pb.AttestationTarget{
-		Slot:       block4.Slot,
-		BlockRoot:  root4[:],
-		ParentRoot: block4.ParentRoot,
+		Slot:            block4.Slot,
+		BeaconBlockRoot: root4[:],
+		ParentRoot:      block4.ParentRoot,
 	}
 	// LMDGhost should pick block 4.
 	head, err := chainService.lmdGhost(ctx, block1, beaconState, voteTargets)
@@ -881,19 +881,19 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	// Give block 5 the most votes (2).
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
-		Slot:       block6.Slot,
-		BlockRoot:  root6[:],
-		ParentRoot: block6.ParentRoot,
+		Slot:            block6.Slot,
+		BeaconBlockRoot: root6[:],
+		ParentRoot:      block6.ParentRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
-		Slot:       block5.Slot,
-		BlockRoot:  root5[:],
-		ParentRoot: block5.ParentRoot,
+		Slot:            block5.Slot,
+		BeaconBlockRoot: root5[:],
+		ParentRoot:      block5.ParentRoot,
 	}
 	voteTargets[2] = &pb.AttestationTarget{
-		Slot:       block5.Slot,
-		BlockRoot:  root5[:],
-		ParentRoot: block5.ParentRoot,
+		Slot:            block5.Slot,
+		BeaconBlockRoot: root5[:],
+		ParentRoot:      block5.ParentRoot,
 	}
 	// LMDGhost should pick block 5.
 	head, err := chainService.lmdGhost(ctx, block1, beaconState, voteTargets)
@@ -968,9 +968,9 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	target := &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRoot,
+		Slot:            block.Slot,
+		BeaconBlockRoot: blockRoot[:],
+		ParentRoot:      block.ParentRoot,
 	}
 	for i := 0; i < validatorCount; i++ {
 		voteTargets[uint64(i)] = target
@@ -1049,9 +1049,9 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	target := &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRoot,
+		Slot:            block.Slot,
+		BeaconBlockRoot: blockRoot[:],
+		ParentRoot:      block.ParentRoot,
 	}
 	for i := 0; i < validatorCount; i++ {
 		voteTargets[uint64(i)] = target
@@ -1128,9 +1128,9 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	target := &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRoot,
+		Slot:            block.Slot,
+		BeaconBlockRoot: blockRoot[:],
+		ParentRoot:      block.ParentRoot,
 	}
 	for i := 0; i < validatorCount; i++ {
 		voteTargets[uint64(i)] = target
@@ -1207,9 +1207,9 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	target := &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRoot,
+		Slot:            block.Slot,
+		BeaconBlockRoot: blockRoot[:],
+		ParentRoot:      block.ParentRoot,
 	}
 	for i := 0; i < validatorCount; i++ {
 		voteTargets[uint64(i)] = target
@@ -1603,14 +1603,14 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 	beaconState := &pb.BeaconState{Validators: []*ethpb.Validator{{EffectiveBalance: 1e9}, {EffectiveBalance: 1e9}}}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
-		Slot:       potentialHead.Slot,
-		BlockRoot:  pHeadHash[:],
-		ParentRoot: potentialHead.ParentRoot,
+		Slot:            potentialHead.Slot,
+		BeaconBlockRoot: pHeadHash[:],
+		ParentRoot:      potentialHead.ParentRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
-		Slot:       potentialHead2.Slot,
-		BlockRoot:  pHeadHash2[:],
-		ParentRoot: potentialHead2.ParentRoot,
+		Slot:            potentialHead2.Slot,
+		BeaconBlockRoot: pHeadHash2[:],
+		ParentRoot:      potentialHead2.ParentRoot,
 	}
 	count, err := VoteCount(genesisBlock, beaconState, voteTargets, beaconDB)
 	if err != nil {
@@ -1627,7 +1627,7 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Verify the cached block ancestor is genesis block.
-	if bytesutil.ToBytes32(cachedInfo.Target.BlockRoot) != genesisRoot {
+	if bytesutil.ToBytes32(cachedInfo.Target.BeaconBlockRoot) != genesisRoot {
 		t.Error("could not retrieve the correct ancestor block")
 	}
 }
@@ -1672,28 +1672,28 @@ func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
 	}
 	voteTargets := make(map[uint64]*pb.AttestationTarget)
 	voteTargets[0] = &pb.AttestationTarget{
-		Slot:       potentialHead.Slot,
-		BlockRoot:  pHeadHash[:],
-		ParentRoot: potentialHead.ParentRoot,
+		Slot:            potentialHead.Slot,
+		BeaconBlockRoot: pHeadHash[:],
+		ParentRoot:      potentialHead.ParentRoot,
 	}
 	voteTargets[1] = &pb.AttestationTarget{
-		Slot:       potentialHead2.Slot,
-		BlockRoot:  pHeadHash2[:],
-		ParentRoot: potentialHead2.ParentRoot,
+		Slot:            potentialHead2.Slot,
+		BeaconBlockRoot: pHeadHash2[:],
+		ParentRoot:      potentialHead2.ParentRoot,
 	}
 
 	aInfo := &cache.AncestorInfo{
 		Target: &pb.AttestationTarget{
-			Slot:       genesisBlock.Slot,
-			BlockRoot:  genesisRoot[:],
-			ParentRoot: genesisBlock.ParentRoot,
+			Slot:            genesisBlock.Slot,
+			BeaconBlockRoot: genesisRoot[:],
+			ParentRoot:      genesisBlock.ParentRoot,
 		},
 	}
 	// Presave cached ancestor blocks before running vote count.
 	if err := blkAncestorCache.AddBlockAncestor(aInfo); err != nil {
 		t.Fatal(err)
 	}
-	aInfo.Target.BlockRoot = pHeadHash2[:]
+	aInfo.Target.BeaconBlockRoot = pHeadHash2[:]
 	if err := blkAncestorCache.AddBlockAncestor(aInfo); err != nil {
 		t.Fatal(err)
 	}

@@ -60,9 +60,9 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRoot))
 	}
 	attTarget := &pbp2p.AttestationTarget{
-		Slot:       slot,
-		BlockRoot:  att.Data.BeaconBlockRoot,
-		ParentRoot: head.ParentRoot,
+		Slot:            slot,
+		BeaconBlockRoot: att.Data.BeaconBlockRoot,
+		ParentRoot:      head.ParentRoot,
 	}
 	if err := as.beaconDB.SaveAttestationTarget(ctx, attTarget); err != nil {
 		return nil, fmt.Errorf("could not save attestation target")
@@ -154,7 +154,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	}
 	res = &ethpb.AttestationData{
 		BeaconBlockRoot: headRoot[:],
-		Source:    headState.CurrentJustifiedCheckpoint,
+		Source:          headState.CurrentJustifiedCheckpoint,
 		Target: &ethpb.Checkpoint{
 			Epoch: targetEpoch,
 			Root:  targetRoot,

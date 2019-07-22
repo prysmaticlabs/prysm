@@ -64,7 +64,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 
 	req := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			BlockRoot: root[:],
+			BeaconBlockRoot: root[:],
 			Crosslink: &ethpb.Crosslink{
 				Shard:    935,
 				DataRoot: []byte{'a'},
@@ -164,7 +164,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 
 	expectedInfo := &ethpb.AttestationData{
-		BlockRoot: blockRoot[:],
+		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
@@ -281,7 +281,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 
 	expectedInfo := &ethpb.AttestationData{
-		BlockRoot: blockRoot[:],
+		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),
 			Root:  justifiedBlockRoot[:],

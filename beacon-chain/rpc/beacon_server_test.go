@@ -342,67 +342,67 @@ func TestBlockTree_OK(t *testing.T) {
 	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
 	// We give block A 3 votes.
 	attestationTargets[0] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[1] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[2] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 
 	// We give block C 2 votes.
 	attestationTargets[3] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 	attestationTargets[4] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 
 	// We give block D 2 votes.
 	attestationTargets[5] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 	attestationTargets[6] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 
 	// We give block B 3 votes.
 	attestationTargets[7] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[8] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[9] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 
 	// We give block E 1 vote.
 	attestationTargets[10] = &pbp2p.AttestationTarget{
-		Slot:       b5.Slot,
-		ParentRoot: b5.ParentRoot,
-		BlockRoot:  b5Root[:],
+		Slot:            b5.Slot,
+		ParentRoot:      b5.ParentRoot,
+		BeaconBlockRoot: b5Root[:],
 	}
 
 	tree := []*pb.BlockTreeResponse_TreeNode{
@@ -553,67 +553,67 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
 	// We give block A 3 votes.
 	attestationTargets[0] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[1] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[2] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 
 	// We give block C 2 votes.
 	attestationTargets[3] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 	attestationTargets[4] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 
 	// We give block D 2 votes.
 	attestationTargets[5] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 	attestationTargets[6] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 
 	// We give block B 3 votes.
 	attestationTargets[7] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[8] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[9] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 
 	// We give block E 1 vote.
 	attestationTargets[10] = &pbp2p.AttestationTarget{
-		Slot:       b5.Slot,
-		ParentRoot: b5.ParentRoot,
-		BlockRoot:  b5Root[:],
+		Slot:            b5.Slot,
+		ParentRoot:      b5.ParentRoot,
+		BeaconBlockRoot: b5Root[:],
 	}
 
 	tree := []*pb.BlockTreeResponse_TreeNode{
@@ -766,67 +766,67 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
 	// We give block A 3 votes.
 	attestationTargets[0] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[1] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[2] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 
 	// We give block C 2 votes.
 	attestationTargets[3] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 	attestationTargets[4] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 
 	// We give block D 2 votes.
 	attestationTargets[5] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 	attestationTargets[6] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 
 	// We give block B 3 votes.
 	attestationTargets[7] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[8] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[9] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 
 	// We give block E 1 vote.
 	attestationTargets[10] = &pbp2p.AttestationTarget{
-		Slot:       b5.Slot,
-		ParentRoot: b5.ParentRoot,
-		BlockRoot:  b5Root[:],
+		Slot:            b5.Slot,
+		ParentRoot:      b5.ParentRoot,
+		BeaconBlockRoot: b5Root[:],
 	}
 
 	tree := []*pb.BlockTreeResponse_TreeNode{

@@ -156,9 +156,9 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:       genBlock.Slot,
-		BlockRoot:  genBlockRoot[:],
-		ParentRoot: genBlock.ParentRoot,
+		Slot:            genBlock.Slot,
+		BeaconBlockRoot: genBlockRoot[:],
+		ParentRoot:      genBlock.ParentRoot,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to save attestation target: %v", err)
 	}

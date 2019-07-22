@@ -175,9 +175,9 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  root[:],
-		ParentRoot: block.ParentRoot,
+		Slot:            block.Slot,
+		BeaconBlockRoot: root[:],
+		ParentRoot:      block.ParentRoot,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}

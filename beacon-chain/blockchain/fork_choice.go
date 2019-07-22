@@ -442,7 +442,7 @@ func VoteCount(block *ethpb.BeaconBlock, state *pb.BeaconState, targets map[uint
 //        return get_ancestor(store, store.get_parent(block), slot)
 func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.BeaconDB) ([]byte, error) {
 	if targetBlock.Slot == slot {
-		return targetBlock.BlockRoot[:], nil
+		return targetBlock.BeaconBlockRoot[:], nil
 	}
 	if targetBlock.Slot < slot {
 		return nil, nil
@@ -456,9 +456,9 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 		return nil, fmt.Errorf("parent block does not exist: %v", err)
 	}
 	newTarget := &pb.AttestationTarget{
-		Slot:       parent.Slot,
-		BlockRoot:  parentRoot[:],
-		ParentRoot: parent.ParentRoot,
+		Slot:            parent.Slot,
+		BeaconBlockRoot: parentRoot[:],
+		ParentRoot:      parent.ParentRoot,
 	}
 	return BlockAncestor(newTarget, slot, beaconDB)
 }
@@ -467,12 +467,12 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 // if it's not there it looks up the block tree get it and cache it.
 func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.BeaconDB) ([]byte, error) {
 	// check if the ancestor block of from a given block height was cached.
-	cachedAncestorInfo, err := blkAncestorCache.AncestorBySlot(target.BlockRoot, height)
+	cachedAncestorInfo, err := blkAncestorCache.AncestorBySlot(target.BeaconBlockRoot, height)
 	if err != nil {
 		return nil, nil
 	}
 	if cachedAncestorInfo != nil {
-		return cachedAncestorInfo.Target.BlockRoot, nil
+		return cachedAncestorInfo.Target.BeaconBlockRoot, nil
 	}
 
 	ancestorRoot, err := BlockAncestor(target, height, beaconDB)
@@ -487,13 +487,13 @@ func cachedAncestor(target *pb.AttestationTarget, height uint64, beaconDB *db.Be
 		return nil, nil
 	}
 	ancestorTarget := &pb.AttestationTarget{
-		Slot:       ancestor.Slot,
-		BlockRoot:  ancestorRoot,
-		ParentRoot: ancestor.ParentRoot,
+		Slot:            ancestor.Slot,
+		BeaconBlockRoot: ancestorRoot,
+		ParentRoot:      ancestor.ParentRoot,
 	}
 	if err := blkAncestorCache.AddBlockAncestor(&cache.AncestorInfo{
 		Height: height,
-		Hash:   target.BlockRoot,
+		Hash:   target.BeaconBlockRoot,
 		Target: ancestorTarget,
 	}); err != nil {
 		return nil, err
