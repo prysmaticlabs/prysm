@@ -43,8 +43,7 @@ func (db *BeaconDB) VerifyContractAddress(ctx context.Context, addr common.Addre
 
 		expectedAddress := chainInfo.Get(depositContractAddressKey)
 		if expectedAddress == nil {
-			chainInfo.Put(depositContractAddressKey, addr.Bytes())
-			return nil
+			return chainInfo.Put(depositContractAddressKey, addr.Bytes())
 		}
 
 		if !bytes.Equal(expectedAddress, addr.Bytes()) {
