@@ -7,23 +7,26 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/renaynay/go-hobbits/encoding"
 	"gopkg.in/mgo.v2/bson"
 )
 
 func TestHobbitsNode_Listen(t *testing.T) {
-	db, err := db.NewDB("go/src/renaynay/db")
+	fakeDB, err := db.NewDB("")
 	if err != nil {
-		t.Errorf("can't construct new DB")
+		t.Errorf("could not generate new DB, %s", err.Error())
 	}
 
-	hobNode := Hobbits("127.0.0.1", 0, []string{}, db)
+	deposits, _ := testutil.SetupInitialDeposits(t, 5, false)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+
+	hobNode := Hobbits("127.0.0.1", 0, []string{}, fakeDB)
 
 	go func() {
 		hobNode.Listen()
 	}()
-
-	time.Sleep(3000000000)
 
 	for {
 		if hobNode.Server.Addr() != nil {
@@ -61,16 +64,13 @@ func TestHobbitsNode_Listen(t *testing.T) {
 	}
 
 	msg := HobbitsMessage{
-		Version:  "12.4", // TODO: hits an error when over 2 decimals
+		Version:  CurrentHobbits,
 		Protocol: encoding.RPC,
 		Header:   marshHeader,
 		Body:     marshBody,
 	}
 
-	toSend, err := encoding.Marshal(encoding.Message(msg))
-	if err != nil {
-		t.Errorf("could not marshal message for writing to conn")
-	}
+	toSend := encoding.Marshal(encoding.Message(msg))
 
 	_, err = conn.Write([]byte(toSend))
 	if err != nil {
@@ -81,3 +81,60 @@ func TestHobbitsNode_Listen(t *testing.T) {
 
 	select {}
 }
+
+//func TestHobbitsNode_Broadcast(t *testing.T) {
+//	db, err := db.NewDB("go/src/renaynay/db")
+//	if err != nil {
+//		t.Errorf("can't construct new DB")
+//	}
+//
+//	hobNode := Hobbits("127.0.0.1", 0, []string{}, db)
+//
+//	go func() {
+//		hobNode.Listen()
+//	}()
+//
+//	time.Sleep(3000000000)
+//
+//	for {
+//		if hobNode.Server.Addr() != nil {
+//			break
+//		}
+//
+//		time.Sleep(1)
+//	}
+//
+//	conn, err := net.Dial("tcp", hobNode.Server.Addr().String())
+//	if err != nil {
+//		t.Error("could not connect to TCP server: ", err)
+//	}
+//
+//	header := GossipHeader{
+//		MethodID: 0,
+//		Topic: "ATTESTATION",
+//		Timestamp: uint64(time.Now().Unix()),
+//		MessageHash: [32]byte{},
+//		Hash: [32]byte{},
+//	}
+//
+//	marshHeader, := bson.Marshal(header)
+//
+//
+//	msg := HobbitsMessage{
+//		Version:  CurrentHobbits,
+//		Protocol: encoding.RPC,
+//		Header:   marshHeader,
+//		Body:     marshBody,
+//	}
+//
+//	toSend := encoding.Marshal(encoding.Message(msg))
+//
+//	_, err = conn.Write([]byte(toSend))
+//	if err != nil {
+//		t.Error("could not write to the TCP server: ", err)
+//	}
+//
+//	fmt.Println("writing...")
+//
+//	select {}
+//}
