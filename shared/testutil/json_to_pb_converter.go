@@ -26,6 +26,8 @@ func ConvertToPb(i interface{}, p proto.Message) error {
 	return nil
 }
 
+// UnmarshalYaml using a customized json encoder that supports "spec-name"
+// override tag.
 func UnmarshalYaml(y []byte, dest interface{}) error {
 	j, err := yaml.YAMLToJSON(y)
 	if err != nil {
