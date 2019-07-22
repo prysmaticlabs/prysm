@@ -10,6 +10,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -53,7 +54,7 @@ import (
 //         state.active_index_roots[index] = active_index_root
 //         state.compact_committees_roots[index] = committee_root
 //     return state
-func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb.Eth1Data) (*pb.BeaconState, error) {
+func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = make([]byte, 32)
@@ -68,9 +69,9 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 
 	compactRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 
-	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
+	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(crosslinks); i++ {
-		crosslinks[i] = &pb.Crosslink{
+		crosslinks[i] = &ethpb.Crosslink{
 			ParentRoot: make([]byte, 32),
 			DataRoot:   make([]byte, 32),
 		}
@@ -89,7 +90,7 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
 	if eth1Data == nil {
-		eth1Data = &pb.Eth1Data{}
+		eth1Data = &ethpb.Eth1Data{}
 	}
 
 	eth1Data.DepositCount = uint64(len(deposits))
@@ -106,23 +107,23 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 		},
 
 		// Validator registry fields.
-		Validators: []*pb.Validator{},
+		Validators: []*ethpb.Validator{},
 		Balances:   []uint64{},
 
 		// Randomness and committees.
 		RandaoMixes: randaoMixes,
 
 		// Finality.
-		PreviousJustifiedCheckpoint: &pb.Checkpoint{
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-		CurrentJustifiedCheckpoint: &pb.Checkpoint{
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 		JustificationBits: []byte{0},
-		FinalizedCheckpoint: &pb.Checkpoint{
+		FinalizedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
@@ -141,16 +142,16 @@ func GenesisBeaconState(deposits []*pb.Deposit, genesisTime uint64, eth1Data *pb
 
 		// Eth1 data.
 		Eth1Data:         eth1Data,
-		Eth1DataVotes:    []*pb.Eth1Data{},
+		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
 
-	bodyRoot, err := ssz.HashTreeRoot(&pb.BeaconBlockBody{})
+	bodyRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlockBody{})
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
 	}
 
-	state.LatestBlockHeader = &pb.BeaconBlockHeader{
+	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		ParentRoot: zeroHash,
 		StateRoot:  zeroHash,
 		BodyRoot:   bodyRoot[:],

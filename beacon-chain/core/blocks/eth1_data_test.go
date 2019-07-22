@@ -6,18 +6,19 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestEth1DataHasEnoughSupport(t *testing.T) {
 	tests := []struct {
-		stateVotes         []*pb.Eth1Data
-		data               *pb.Eth1Data
+		stateVotes         []*ethpb.Eth1Data
+		data               *ethpb.Eth1Data
 		hasSupport         bool
 		votingPeriodLength uint64
 	}{
 		{
-			stateVotes: []*pb.Eth1Data{
+			stateVotes: []*ethpb.Eth1Data{
 				{
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
@@ -32,14 +33,14 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 					DepositRoot:  []byte("root"),
 				},
 			},
-			data: &pb.Eth1Data{
+			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),
 			},
 			hasSupport:         true,
 			votingPeriodLength: 7,
 		}, {
-			stateVotes: []*pb.Eth1Data{
+			stateVotes: []*ethpb.Eth1Data{
 				{
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
@@ -54,14 +55,14 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 					DepositRoot:  []byte("root"),
 				},
 			},
-			data: &pb.Eth1Data{
+			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),
 			},
 			hasSupport:         false,
 			votingPeriodLength: 8,
 		}, {
-			stateVotes: []*pb.Eth1Data{
+			stateVotes: []*ethpb.Eth1Data{
 				{
 					DepositCount: 1,
 					DepositRoot:  []byte("root"),
@@ -76,7 +77,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 					DepositRoot:  []byte("root"),
 				},
 			},
-			data: &pb.Eth1Data{
+			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),
 			},

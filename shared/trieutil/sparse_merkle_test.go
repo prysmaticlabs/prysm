@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -173,8 +173,8 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	var withdrawalCreds [32]byte
 	var sig [96]byte
 
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
+	data := &ethpb.Deposit_Data{
+		PublicKey:             pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
 		Amount:                big.NewInt(0).Div(contracts.Amount32Eth(), big.NewInt(1e9)).Uint64(), // In Gwei
@@ -184,11 +184,11 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	testAcc.TxOpts.GasLimit = 1000000
 
 	for i := 0; i < 100; i++ {
-		copy(data.Pubkey, []byte(strconv.Itoa(i)))
+		copy(data.PublicKey, []byte(strconv.Itoa(i)))
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
 		copy(data.Signature, []byte(strconv.Itoa(i)))
 
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -239,8 +239,8 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 	var withdrawalCreds [32]byte
 	var sig [96]byte
 
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
+	data := &ethpb.Deposit_Data{
+		PublicKey:             pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
 		Amount:                big.NewInt(0).Div(contracts.Amount32Eth(), big.NewInt(1e9)).Uint64(), // In Gwei
@@ -250,15 +250,15 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 	testAcc.TxOpts.GasLimit = 1000000
 
 	for i := 0; i < 100; i++ {
-		copy(data.Pubkey, []byte(strconv.Itoa(i)))
+		copy(data.PublicKey, []byte(strconv.Itoa(i)))
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
 		copy(data.Signature, []byte(strconv.Itoa(i)))
 
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
-		copy(data.Pubkey, []byte(strconv.Itoa(i+10)))
+		copy(data.PublicKey, []byte(strconv.Itoa(i+10)))
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i+10)))
 		copy(data.Signature, []byte(strconv.Itoa(i+10)))
 

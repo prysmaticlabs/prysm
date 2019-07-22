@@ -19,7 +19,7 @@ go_test(
     srcs = ["metric_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/prometheus:go_default_library",
     ],

@@ -8,7 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -17,7 +17,7 @@ func TestNilDB_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{}
+	block := &ethpb.BeaconBlock{}
 	h, _ := ssz.SigningRoot(block)
 
 	hasBlock := db.HasBlock(h)
@@ -38,7 +38,7 @@ func TestSaveBlock_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block1 := &pb.BeaconBlock{}
+	block1 := &ethpb.BeaconBlock{}
 	h1, _ := ssz.SigningRoot(block1)
 
 	err := db.SaveBlock(block1)
@@ -56,7 +56,7 @@ func TestSaveBlock_OK(t *testing.T) {
 		t.Fatalf("get should return b1: %x", h1)
 	}
 
-	block2 := &pb.BeaconBlock{
+	block2 := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
 	h2, _ := ssz.SigningRoot(block2)
@@ -80,7 +80,7 @@ func TestSaveBlock_NilBlkInCache(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: 999}
+	block := &ethpb.BeaconBlock{Slot: 999}
 	h1, _ := ssz.SigningRoot(block)
 
 	// Save a nil block to with block root.
@@ -108,7 +108,7 @@ func TestSaveBlockInCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: 999}
+	block := &ethpb.BeaconBlock{Slot: 999}
 	h, _ := ssz.SigningRoot(block)
 
 	err := db.SaveBlock(block)
@@ -133,7 +133,7 @@ func TestDeleteBlock_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: 0}
+	block := &ethpb.BeaconBlock{Slot: 0}
 	h, _ := ssz.SigningRoot(block)
 
 	err := db.SaveBlock(block)
@@ -164,7 +164,7 @@ func TestDeleteBlockInCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: 0}
+	block := &ethpb.BeaconBlock{Slot: 0}
 	h, _ := ssz.SigningRoot(block)
 
 	err := db.SaveBlock(block)
@@ -198,23 +198,23 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 	ctx := context.Background()
 
 	slotNum := uint64(3)
-	b1 := &pb.BeaconBlock{
+	b1 := &ethpb.BeaconBlock{
 		Slot:       slotNum,
 		ParentRoot: []byte("A"),
-		Body: &pb.BeaconBlockBody{
+		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: []byte("A"),
 		},
 	}
-	b2 := &pb.BeaconBlock{
+	b2 := &ethpb.BeaconBlock{
 		Slot:       slotNum,
 		ParentRoot: []byte("B"),
-		Body: &pb.BeaconBlockBody{
+		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: []byte("B"),
 		}}
-	b3 := &pb.BeaconBlock{
+	b3 := &ethpb.BeaconBlock{
 		Slot:       slotNum,
 		ParentRoot: []byte("C"),
-		Body: &pb.BeaconBlockBody{
+		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: []byte("C"),
 		}}
 	if err := db.SaveBlock(b1); err != nil {
@@ -249,7 +249,7 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
 
-	block := &pb.BeaconBlock{Slot: 1}
+	block := &ethpb.BeaconBlock{Slot: 1}
 	if err := db.UpdateChainHead(ctx, block, beaconState); err == nil {
 		t.Fatalf("expected UpdateChainHead to fail if the block does not exist: %v", err)
 	}
@@ -281,7 +281,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
 
-	block2 := &pb.BeaconBlock{
+	block2 := &ethpb.BeaconBlock{
 		Slot:       1,
 		ParentRoot: bHash[:],
 	}
@@ -340,7 +340,7 @@ func TestChainProgress_OK(t *testing.T) {
 	}
 	cycleLength := params.BeaconConfig().SlotsPerEpoch
 
-	block1 := &pb.BeaconBlock{Slot: 1}
+	block1 := &ethpb.BeaconBlock{Slot: 1}
 	if err := db.SaveBlock(block1); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestChainProgress_OK(t *testing.T) {
 		t.Fatalf("expected height to equal %d, got %d", block1.Slot, heighestBlock.Slot)
 	}
 
-	block2 := &pb.BeaconBlock{Slot: cycleLength}
+	block2 := &ethpb.BeaconBlock{Slot: cycleLength}
 	if err := db.SaveBlock(block2); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
@@ -370,7 +370,7 @@ func TestChainProgress_OK(t *testing.T) {
 		t.Fatalf("expected height to equal %d, got %d", block2.Slot, heighestBlock.Slot)
 	}
 
-	block3 := &pb.BeaconBlock{Slot: 3}
+	block3 := &ethpb.BeaconBlock{Slot: 3}
 	if err := db.SaveBlock(block3); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
@@ -401,7 +401,7 @@ func TestJustifiedBlock_CanSaveRetrieve(t *testing.T) {
 	defer teardownDB(t, db)
 
 	blkSlot := uint64(10)
-	block1 := &pb.BeaconBlock{
+	block1 := &ethpb.BeaconBlock{
 		Slot: blkSlot,
 	}
 
@@ -434,7 +434,7 @@ func TestFinalizedBlock_CanSaveRetrieve(t *testing.T) {
 	defer teardownDB(t, db)
 
 	blkSlot := uint64(22)
-	block1 := &pb.BeaconBlock{
+	block1 := &ethpb.BeaconBlock{
 		Slot: blkSlot,
 	}
 
@@ -456,7 +456,7 @@ func TestHasBlock_returnsTrue(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: uint64(44),
 	}
 
@@ -478,7 +478,7 @@ func TestHighestBlockSlot_UpdatedOnSaveBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 23,
 	}
 
@@ -504,7 +504,7 @@ func TestClearBlockCache_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block := &pb.BeaconBlock{Slot: 0}
+	block := &ethpb.BeaconBlock{Slot: 0}
 
 	err := db.SaveBlock(block)
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -50,7 +50,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
-	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -110,8 +110,8 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	copy(sig[:], []byte("testing"))
 	copy(withdrawalCreds[:], []byte("testing"))
 
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
+	data := &ethpb.Deposit_Data{
+		PublicKey:             pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
 	}
@@ -119,11 +119,11 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
-	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
-	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
@@ -181,15 +181,15 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	copy(sig[:], []byte("sig"))
 	copy(withdrawalCreds[:], []byte("withdrawCreds"))
 
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
+	data := &ethpb.Deposit_Data{
+		PublicKey:             pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
-	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+	if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 	testAcc.Backend.Commit()
@@ -214,7 +214,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 	}
 
-	if !bytes.Equal(loggedPubkey, data.Pubkey) {
+	if !bytes.Equal(loggedPubkey, data.PublicKey) {
 		t.Errorf("Pubkey is not the same as the data that was put in %v", loggedPubkey)
 	}
 
@@ -266,7 +266,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.TxOpts.Value = contracts.Amount32Eth()
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -331,7 +331,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		data := deposits[i].Data
 		testAcc.TxOpts.Value = contracts.Amount32Eth()
 		testAcc.TxOpts.GasLimit = 1000000
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 

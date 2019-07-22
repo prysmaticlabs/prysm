@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestTotalBalance_OK(t *testing.T) {
-	state := &pb.BeaconState{Validators: []*pb.Validator{
+	state := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{EffectiveBalance: 27 * 1e9}, {EffectiveBalance: 28 * 1e9},
 		{EffectiveBalance: 32 * 1e9}, {EffectiveBalance: 40 * 1e9},
 	}}
@@ -23,7 +24,7 @@ func TestTotalBalance_OK(t *testing.T) {
 }
 
 func TestTotalBalance_ReturnsOne(t *testing.T) {
-	state := &pb.BeaconState{Validators: []*pb.Validator{}}
+	state := &pb.BeaconState{Validators: []*ethpb.Validator{}}
 
 	balance := TotalBalance(state, []uint64{})
 	wanted := uint64(1)
@@ -34,7 +35,7 @@ func TestTotalBalance_ReturnsOne(t *testing.T) {
 }
 
 func TestTotalActiveBalance_OK(t *testing.T) {
-	state := &pb.BeaconState{Validators: []*pb.Validator{
+	state := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{
 			EffectiveBalance: 32 * 1e9,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -107,7 +108,7 @@ func TestIncreaseBalance_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		state := &pb.BeaconState{
-			Validators: []*pb.Validator{
+			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
 		}
@@ -132,7 +133,7 @@ func TestDecreseBalance_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		state := &pb.BeaconState{
-			Validators: []*pb.Validator{
+			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 3}},
 			Balances: test.b,
 		}

@@ -3,7 +3,10 @@
 
 package spectest
 
-import pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import (
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+)
 
 type GenesisInitializationTest struct {
 	Title         string   `json:"title"`
@@ -14,10 +17,10 @@ type GenesisInitializationTest struct {
 	Runner        string   `json:"runner"`
 	Handler       string   `json:"handler"`
 	TestCases     []struct {
-		Description   string          `json:"description"`
-		Eth1BlockHash []byte          `json:"eth1_block_hash"`
-		Eth1Timestamp uint64          `json:"eth1_timestamp"`
-		Deposits      []*pb.Deposit   `json:"deposits"`
-		State         *pb.BeaconState `json:"state"`
+		Description   string           `json:"description"`
+		Eth1BlockHash []byte           `json:"eth1_block_hash"`
+		Eth1Timestamp uint64           `json:"eth1_timestamp"`
+		Deposits      []*ethpb.Deposit `json:"deposits"`
+		State         *pb.BeaconState  `json:"state"`
 	} `json:"test_cases"`
 }
