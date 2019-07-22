@@ -39,11 +39,11 @@ func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethp
 func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
 	beaconState, err := ns.beaconDB.FinalizedState()
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "could not retrieve beacon state: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not retrieve beacon state: %v", err)
 	}
 	address, err := ns.beaconDB.DepositContractAddress(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "could not retrieve deposit contract address: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not retrieve deposit contract address: %v", err)
 	}
 	genesisTimestamp := time.Unix(int64(beaconState.GenesisTime), 0)
 	genesisProtoTimestamp, err := ptypes.TimestampProto(genesisTimestamp)
