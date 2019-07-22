@@ -1263,3 +1263,21 @@ go_repository(
     commit = "2e6244b41af83930d4568e9577afd900893c9b1d",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
+
+go_repository(
+    name = "com_github_renaynay_go_hobbits",
+    commit = "229eb82b5f691b080305ebb1123419bd2e21d5b8",
+    importpath = "github.com/renaynay/go-hobbits",
+)
+
+go_repository(
+    name = "com_github_renekroon_ttlcache",
+    commit = "823b876cf6d187eefec1635650de1877e39e8cc6",
+    importpath = "github.com/ReneKroon/ttlcache",
+)
+
+go_repository(
+    name = "in_gopkg_mgo_v2",
+    commit = "9856a29383ce1c59f308dd1cf0363a79b5bef6b5",
+    importpath = "gopkg.in/mgo.v2",
+)
