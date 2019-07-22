@@ -7,6 +7,7 @@ import (
 )
 
 const baz = "baz"
+const foo = "foo"
 
 func TestOverrideSpecName(t *testing.T) {
 	input := struct {
@@ -21,7 +22,7 @@ func TestOverrideSpecName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if output.Foo != "foo" {
+	if output.Foo != foo {
 		t.Error("Expected output.Foo to be foo")
 	}
 	if output.Bar != baz {
@@ -55,7 +56,7 @@ func TestOverrideSpecName_NestedProto(t *testing.T) {
 	if output.Fuzz != "fuzz" {
 		t.Error("Expected output.fuzz to be fuzz")
 	}
-	if output.Msg.Foo != "foo" {
+	if output.Msg.Foo != foo {
 		t.Error("Expected output.Msg.Foo to be foo")
 	}
 	if output.Msg.Bar != baz {
