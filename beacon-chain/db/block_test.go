@@ -240,7 +240,7 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, nil)
+	err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, nil)
+	err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -329,7 +329,7 @@ func TestChainProgress_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, nil)
+	err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}

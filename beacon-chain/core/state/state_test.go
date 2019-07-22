@@ -203,7 +203,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	helpers.ClearAllCaches()
-	s, err := state.GenesisBeaconState(nil, 0, nil)
+	s, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}

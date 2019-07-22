@@ -4,6 +4,7 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -90,7 +91,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
 	if eth1Data == nil {
-		eth1Data = &ethpb.Eth1Data{}
+		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
 	eth1Data.DepositCount = uint64(len(deposits))

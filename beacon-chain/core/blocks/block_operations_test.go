@@ -337,7 +337,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +371,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 
 func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -867,7 +867,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		},
 	}
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -914,7 +914,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		},
 	}
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -956,7 +956,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1019,7 +1019,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1083,7 +1083,7 @@ func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
 		},
 	}
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1154,7 +1154,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 		},
 	}
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount/8, false)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
