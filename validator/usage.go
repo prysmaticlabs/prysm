@@ -70,6 +70,7 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			types.NoCustomConfigFlag,
 			types.BeaconRPCProviderFlag,
+			types.CertFlag,
 			types.KeystorePathFlag,
 			types.PasswordFlag,
 			types.DisablePenaltyRewardLogFlag,
