@@ -7,9 +7,6 @@ import (
 	context "context"
 	encoding_binary "encoding/binary"
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	_ "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger/options"
@@ -17,6 +14,8 @@ import (
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -3656,7 +3655,7 @@ func (m *ProposeResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BeaconBlockRoot", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field BlockRoot", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -5864,7 +5863,7 @@ func (m *BlockTreeResponse_TreeNode) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BeaconBlockRoot", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field BlockRoot", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {

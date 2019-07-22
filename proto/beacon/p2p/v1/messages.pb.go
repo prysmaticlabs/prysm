@@ -5,12 +5,11 @@ package ethereum_beacon_p2p_v1
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -4829,7 +4828,7 @@ func (m *FinalizedStateAnnounce) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BeaconBlockRoot", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field BlockRoot", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
