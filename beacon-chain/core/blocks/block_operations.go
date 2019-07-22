@@ -21,7 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "blocks")
 
 var eth1DataCache = cache.NewEth1DataVoteCache()
 
@@ -870,6 +873,7 @@ func ProcessDeposit(
 			depositSig := deposit.Data.Signature
 			if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
 				//ignore this error as in the spec pseudo code
+				log.Errorf("could not verify deposit data signature: %v", err)
 				return beaconState, nil
 			}
 		}
