@@ -11,6 +11,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type serviceInfoFetcher interface {
@@ -37,19 +39,16 @@ func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethp
 func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
 	beaconState, err := ns.beaconDB.FinalizedState()
 	if err != nil {
-		// TODO: return grpc Error.
-		return nil, err
+		return nil, status.Errorf(codes.NotFound, "could not retrieve beacon state: %v", err)
 	}
 	address, err := ns.beaconDB.DepositContractAddress(ctx)
 	if err != nil {
-		// TODO: return grpc Error.
-		return nil, err
+		return nil, status.Errorf(codes.NotFound, "could not retrieve deposit contract address: %v", err)
 	}
 	genesisTimestamp := time.Unix(int64(beaconState.GenesisTime), 0)
 	genesisProtoTimestamp, err := ptypes.TimestampProto(genesisTimestamp)
 	if err != nil {
-		// TODO: return grpc Error.
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "could not convert genesis time to proto timestamp: %v", err)
 	}
 	return &ethpb.Genesis{
 		DepositContractAddress: address,
